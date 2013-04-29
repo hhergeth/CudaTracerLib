@@ -1,0 +1,215 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Base\CudaRandom.h" />
+    <ClInclude Include="Base\FileStream.h" />
+    <ClInclude Include="Base\FrameworkInterop.h" />
+    <ClInclude Include="Base\SpectrumConverter.h" />
+    <ClInclude Include="Base\TangentSpace.h" />
+    <ClInclude Include="Base\Timer.h" />
+    <ClInclude Include="Defines.h" />
+    <ClInclude Include="Engine\e_AnimatedMesh.h" />
+    <ClInclude Include="Engine\e_Brdf.h" />
+    <ClInclude Include="Engine\e_Camera.h" />
+    <ClInclude Include="Engine\e_DataStream.h" />
+    <ClInclude Include="Engine\e_DynamicScene.h" />
+    <ClInclude Include="Engine\e_ErrorHandler.h" />
+    <ClInclude Include="Engine\e_FPCamera.h" />
+    <ClInclude Include="Engine\e_HostDeviceBuffer.h" />
+    <ClInclude Include="Engine\e_KernelMaterial.h" />
+    <ClInclude Include="Engine\e_Light.h" />
+    <ClInclude Include="Engine\e_Mesh.h" />
+    <ClInclude Include="Engine\e_Node.h" />
+    <ClInclude Include="Engine\e_PointBVH.h" />
+    <ClInclude Include="Engine\e_Sampler.h" />
+    <ClInclude Include="Engine\e_SceneBVH.h" />
+    <ClInclude Include="Engine\e_SceneInitData.h" />
+    <ClInclude Include="Engine\e_Terrain.h" />
+    <ClInclude Include="Engine\e_TerrainHeader.h" />
+    <ClInclude Include="Engine\e_Texture.h" />
+    <ClInclude Include="Engine\e_TriangleData.h" />
+    <ClInclude Include="Engine\e_Volumes.h" />
+    <ClInclude Include="Engine\SceneBuilder\BVH.hpp" />
+    <ClInclude Include="Engine\SceneBuilder\BVHNode.hpp" />
+    <ClInclude Include="Engine\SceneBuilder\CudaBVH.hpp" />
+    <ClInclude Include="Engine\SceneBuilder\CudaTracerKernels.hpp" />
+    <ClInclude Include="Engine\SceneBuilder\Importer.h" />
+    <ClInclude Include="Engine\SceneBuilder\MD5Parser.h" />
+    <ClInclude Include="Engine\SceneBuilder\Platform.hpp" />
+    <ClInclude Include="Engine\SceneBuilder\RayBuffer.hpp" />
+    <ClInclude Include="Engine\SceneBuilder\RayBufferKernels.hpp" />
+    <ClInclude Include="Engine\SceneBuilder\RendererKernels.hpp" />
+    <ClInclude Include="Engine\SceneBuilder\Scene.hpp" />
+    <ClInclude Include="Engine\SceneBuilder\SplitBVHBuilder.hpp" />
+    <ClInclude Include="Engine\SceneBuilder\Util.hpp" />
+    <ClInclude Include="Kernel\k_PathTracer.h" />
+    <ClInclude Include="Kernel\k_PrimTracer.h" />
+    <ClInclude Include="Kernel\k_sPpmTracer.h" />
+    <ClInclude Include="Kernel\k_TraceHelper.h" />
+    <ClInclude Include="Kernel\k_Tracer.h" />
+    <ClInclude Include="Math\AABB.h" />
+    <ClInclude Include="Math\cutil_math.h" />
+    <ClInclude Include="Math\half.h" />
+    <ClInclude Include="Math\Int24.h" />
+    <ClInclude Include="Math\Montecarlo.h" />
+    <ClInclude Include="Math\Ray.h" />
+    <ClInclude Include="Math\vector.h" />
+    <ClInclude Include="Renderer.h" />
+    <ClInclude Include="SkyrimImporter.h" />
+    <ClInclude Include="StdAfx.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Base\SpectrumConverter.cpp" />
+    <ClCompile Include="Engine\e_AnimatedMesh.cpp" />
+    <ClCompile Include="Engine\e_DynamicScene.cpp" />
+    <ClCompile Include="Engine\e_FPCamera.cpp" />
+    <ClCompile Include="Engine\e_Mesh.cpp" />
+    <ClCompile Include="Engine\e_PointBVH.cpp" />
+    <ClCompile Include="Engine\e_SceneBVH.cpp" />
+    <ClCompile Include="Engine\e_Terrain.cpp" />
+    <ClCompile Include="Engine\e_Texture.cpp" />
+    <ClCompile Include="Engine\SceneBuilder\BVH.cpp" />
+    <ClCompile Include="Engine\SceneBuilder\BVHNode.cpp" />
+    <ClCompile Include="Engine\SceneBuilder\CudaBVH.cpp" />
+    <ClCompile Include="Engine\SceneBuilder\Importer.cpp" />
+    <ClCompile Include="Engine\SceneBuilder\MD5Parser.cpp" />
+    <ClCompile Include="Engine\SceneBuilder\RayBuffer.cpp" />
+    <ClCompile Include="Engine\SceneBuilder\Scene.cpp" />
+    <ClCompile Include="Engine\SceneBuilder\SplitBVHBuilder.cpp" />
+    <ClCompile Include="Engine\SceneBuilder\Util.cpp" />
+    <ClCompile Include="Kernel\k_sPpmTracer.cpp" />
+    <ClCompile Include="SkyrimImporter.cpp" />
+    <ClCompile Include="stdafx.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="Engine\e_AnimatedMeshKernels.cu" />
+    <CudaCompile Include="Kernel\k_PathTracer.cu" />
+    <CudaCompile Include="Kernel\k_PrimTracer.cu" />
+    <CudaCompile Include="Kernel\k_SceneTrace.cu" />
+    <CudaCompile Include="Kernel\k_sPpmTracer.cu" />
+    <CudaCompile Include="Kernel\k_sPpmTracer_EyePass.cu" />
+    <CudaCompile Include="Kernel\k_sPpmTracer_PhotonPass.cu" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{B2C397D2-90E0-4E10-8C94-9F085B9D92A3}</ProjectGuid>
+    <RootNamespace>Cuda4TracerLib</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 4.2.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <IncludePath>$(ProjectDir);C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs\niflib-0.8.3-src\include;C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs;C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs\gpu-ray-traversal\src\framework;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs;C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs\gpu-ray-traversal\build\$(Platform)_$(Configuration)\framework;$(LibraryPath)</LibraryPath>
+    <IntDir>Build\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>Build\$(Platform)\$(Configuration)\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <IncludePath>$(ProjectDir);C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs\niflib-0.8.3-src\include;C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs;C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs\gpu-ray-traversal\src\framework;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs;C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs\gpu-ray-traversal\build\$(Platform)_$(Configuration)\framework;$(LibraryPath)</LibraryPath>
+    <IntDir>Build\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>Build\$(Platform)\$(Configuration)\</OutDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>NOMINMAX;FW_DO_NOT_OVERRIDE_NEW_DELETE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <MinimalRebuild>false</MinimalRebuild>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Console</SubSystem>
+      <AdditionalDependencies>opengl32.lib;cudart.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;Shlwapi.lib;framework.lib;niflib_dll_$(Configuration).lib;zlibstat.lib;C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs\$(Platform)\FreeImage.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <IgnoreSpecificDefaultLibraries>LIBC.lib</IgnoreSpecificDefaultLibraries>
+    </Link>
+    <PostBuildEvent>
+      <Command>echo copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"
+copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
+    </PostBuildEvent>
+    <CudaCompile>
+      <Keep>true</Keep>
+    </CudaCompile>
+    <CudaCompile>
+      <TargetMachinePlatform>32</TargetMachinePlatform>
+      <KeepDir>Build\$(Platform)\$(Configuration)\PTX_DIR</KeepDir>
+      <CodeGeneration>compute_30,sm_30</CodeGeneration>
+    </CudaCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>NOMINMAX;FW_DO_NOT_OVERRIDE_NEW_DELETE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <MinimalRebuild>false</MinimalRebuild>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <SubSystem>Console</SubSystem>
+      <AdditionalDependencies>opengl32.lib;cudart.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;Shlwapi.lib;framework.lib;niflib_dll_$(Configuration).lib;zlibstat.lib;C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs\$(Platform)\FreeImage.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <IgnoreSpecificDefaultLibraries>LIBC.lib</IgnoreSpecificDefaultLibraries>
+    </Link>
+    <PostBuildEvent>
+      <Command>echo copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"
+copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
+    </PostBuildEvent>
+    <CudaCompile>
+      <Keep>true</Keep>
+    </CudaCompile>
+    <CudaCompile>
+      <KeepDir>Build\$(Platform)\$(Configuration)\PTX_DIR</KeepDir>
+    </CudaCompile>
+    <CudaCompile>
+      <TargetMachinePlatform>32</TargetMachinePlatform>
+      <CodeGeneration>compute_30,sm_30</CodeGeneration>
+      <FastMath>false</FastMath>
+      <Optimization>O3</Optimization>
+    </CudaCompile>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 4.2.targets" />
+  </ImportGroup>
+</Project>

@@ -1,0 +1,266 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Engine">
+      <UniqueIdentifier>{30ed2fcb-ab84-445d-ba36-803df0058010}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base">
+      <UniqueIdentifier>{497921db-e4ac-4fa2-9c60-d9743eb99eaf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Kernel">
+      <UniqueIdentifier>{96e57313-1bcc-4332-a0c5-62f8867ed2c1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Math">
+      <UniqueIdentifier>{bcc32243-a9df-44b0-a940-7d3f174d5601}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\SceneBuilder">
+      <UniqueIdentifier>{829f18e1-23ee-4558-9061-92630861811a}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Base\CudaRandom.h">
+      <Filter>Base</Filter>
+    </ClInclude>
+    <ClInclude Include="Base\FileStream.h">
+      <Filter>Base</Filter>
+    </ClInclude>
+    <ClInclude Include="Base\FrameworkInterop.h">
+      <Filter>Base</Filter>
+    </ClInclude>
+    <ClInclude Include="Base\TangentSpace.h">
+      <Filter>Base</Filter>
+    </ClInclude>
+    <ClInclude Include="Base\Timer.h">
+      <Filter>Base</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_TriangleData.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_AnimatedMesh.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_Camera.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_DataStream.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_DynamicScene.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_ErrorHandler.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_FPCamera.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_HostDeviceBuffer.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_Light.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_Mesh.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_Node.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_PointBVH.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_SceneBVH.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_Terrain.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_TerrainHeader.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_Texture.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\SceneBuilder\BVH.hpp">
+      <Filter>Engine\SceneBuilder</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\SceneBuilder\BVHNode.hpp">
+      <Filter>Engine\SceneBuilder</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\SceneBuilder\CudaBVH.hpp">
+      <Filter>Engine\SceneBuilder</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\SceneBuilder\CudaTracerKernels.hpp">
+      <Filter>Engine\SceneBuilder</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\SceneBuilder\Importer.h">
+      <Filter>Engine\SceneBuilder</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\SceneBuilder\Platform.hpp">
+      <Filter>Engine\SceneBuilder</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\SceneBuilder\RayBuffer.hpp">
+      <Filter>Engine\SceneBuilder</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\SceneBuilder\RayBufferKernels.hpp">
+      <Filter>Engine\SceneBuilder</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\SceneBuilder\RendererKernels.hpp">
+      <Filter>Engine\SceneBuilder</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\SceneBuilder\Scene.hpp">
+      <Filter>Engine\SceneBuilder</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\SceneBuilder\SplitBVHBuilder.hpp">
+      <Filter>Engine\SceneBuilder</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\SceneBuilder\Util.hpp">
+      <Filter>Engine\SceneBuilder</Filter>
+    </ClInclude>
+    <ClInclude Include="Kernel\k_Tracer.h">
+      <Filter>Kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\AABB.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\cutil_math.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\half.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\Int24.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\Ray.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\vector.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Defines.h" />
+    <ClInclude Include="Renderer.h" />
+    <ClInclude Include="SkyrimImporter.h" />
+    <ClInclude Include="Engine\e_Brdf.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\Montecarlo.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="StdAfx.h" />
+    <ClInclude Include="Engine\e_KernelMaterial.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_Sampler.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Kernel\k_TraceHelper.h">
+      <Filter>Kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="Kernel\k_PathTracer.h">
+      <Filter>Kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="Kernel\k_PrimTracer.h">
+      <Filter>Kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="Kernel\k_sPpmTracer.h">
+      <Filter>Kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_Volumes.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\SceneBuilder\MD5Parser.h">
+      <Filter>Engine\SceneBuilder</Filter>
+    </ClInclude>
+    <ClInclude Include="Base\SpectrumConverter.h">
+      <Filter>Base</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_SceneInitData.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Engine\e_AnimatedMesh.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\e_DynamicScene.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\e_FPCamera.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\e_Mesh.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\e_PointBVH.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\e_SceneBVH.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\e_Terrain.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\e_Texture.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\SceneBuilder\BVH.cpp">
+      <Filter>Engine\SceneBuilder</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\SceneBuilder\BVHNode.cpp">
+      <Filter>Engine\SceneBuilder</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\SceneBuilder\CudaBVH.cpp">
+      <Filter>Engine\SceneBuilder</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\SceneBuilder\Importer.cpp">
+      <Filter>Engine\SceneBuilder</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\SceneBuilder\RayBuffer.cpp">
+      <Filter>Engine\SceneBuilder</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\SceneBuilder\Scene.cpp">
+      <Filter>Engine\SceneBuilder</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\SceneBuilder\SplitBVHBuilder.cpp">
+      <Filter>Engine\SceneBuilder</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\SceneBuilder\Util.cpp">
+      <Filter>Engine\SceneBuilder</Filter>
+    </ClCompile>
+    <ClCompile Include="SkyrimImporter.cpp" />
+    <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="Engine\SceneBuilder\MD5Parser.cpp">
+      <Filter>Engine\SceneBuilder</Filter>
+    </ClCompile>
+    <ClCompile Include="Kernel\k_sPpmTracer.cpp">
+      <Filter>Kernel</Filter>
+    </ClCompile>
+    <ClCompile Include="Base\SpectrumConverter.cpp">
+      <Filter>Base</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="Kernel\k_PathTracer.cu">
+      <Filter>Kernel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Kernel\k_PrimTracer.cu">
+      <Filter>Kernel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Kernel\k_SceneTrace.cu">
+      <Filter>Kernel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Kernel\k_sPpmTracer.cu">
+      <Filter>Kernel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Kernel\k_sPpmTracer_PhotonPass.cu">
+      <Filter>Kernel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Kernel\k_sPpmTracer_EyePass.cu">
+      <Filter>Kernel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\e_AnimatedMeshKernels.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+  </ItemGroup>
+</Project>
