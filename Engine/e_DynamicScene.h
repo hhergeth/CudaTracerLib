@@ -174,6 +174,7 @@ public:
 			*mats(i) = *N->m_pMesh->m_sMatInfo(i);
 		mats.Invalidate();
 	}
+	AABB getAABB(e_Node* N, char* name, unsigned int* a_Mi = 0);
 	e_Light* createLight(e_Node* N, char* name, const float3& col);
 	e_Light* createLight(e_Node* N, const float3& col, char* sourceName, char* destName);
 };

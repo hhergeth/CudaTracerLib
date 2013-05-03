@@ -201,6 +201,7 @@ public:
 	void DebugPixel(int2 p)
 	{
 		//getCurrent()->Debug(p);
+		m_pTracer_0->Debug(p);
 		m_pTracer_1->Debug(p);
 	}
 };

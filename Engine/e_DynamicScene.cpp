@@ -322,7 +322,7 @@ unsigned int e_DynamicScene::getCudaBufferSize()
 	return i;
 }
 
-AABB getAABB(e_DynamicScene* S, e_Node* N, char* name, unsigned int* a_Mi = 0)
+AABB e_DynamicScene::getAABB(e_Node* N, char* name, unsigned int* a_Mi)
 {
 	AABB box = AABB::Identity();
 	int mi = -1;
@@ -367,7 +367,7 @@ AABB getAABB(e_DynamicScene* S, e_Node* N, char* name, unsigned int* a_Mi = 0)
 e_Light* e_DynamicScene::createLight(e_Node* N, char* name, const float3& col)
 {
 	unsigned int mi;
-	AABB box = getAABB(this, N, name, &mi);
+	AABB box = getAABB(N, name, &mi);
 	e_KernelMaterial* ref = N->m_pMesh->m_sMatInfo(mi);
 	ref->Emission = col;
 	this->UpdateMaterial(ref);
@@ -377,7 +377,7 @@ e_Light* e_DynamicScene::createLight(e_Node* N, char* name, const float3& col)
 e_Light* e_DynamicScene::createLight(e_Node* N, const float3& col, char* sourceName, char* destName)
 {
 	unsigned int mi;
-	AABB srcBox = getAABB(this, N, sourceName, &mi), destBox = getAABB(this, N, destName);
+	AABB srcBox = getAABB(N, sourceName, &mi), destBox = getAABB( N, destName);
 	e_KernelMaterial* ref = N->m_pMesh->m_sMatInfo(mi);
 	ref->Emission = col;
 	this->UpdateMaterial(ref);

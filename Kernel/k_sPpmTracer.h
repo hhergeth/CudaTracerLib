@@ -11,7 +11,7 @@
 struct k_pPpmPhoton
 {
 	float3 Pos;
-	RGBE L;
+	float3 L;
 	uchar2 Wi;
 	uchar2 Nor;
 	unsigned int next;
@@ -20,7 +20,7 @@ struct k_pPpmPhoton
 	{
 		Pos = p;
 		Nor = NormalizedFloat3ToUchar2(n);
-		L = Float3ToRGBE(l);
+		L = (l);
 		Wi = NormalizedFloat3ToUchar2(wi);
 		next = ne;
 	}
@@ -34,7 +34,7 @@ struct k_pPpmPhoton
 	}
 	CUDA_FUNC_IN float3 getL()
 	{
-		return RGBEToFloat3(L);
+		return (L);
 	}
 	CUDA_FUNC_IN uint4 toUint4()
 	{/*
@@ -54,6 +54,13 @@ struct k_pPpmPhoton
 		Nor = make_uchar2((v.z >> 16) & 0xff, v.z >> 24);
 		next = v.w;
 	}*/
+};
+
+enum k_StoreResult
+{
+	Success = 1,
+	NotValid = 2,
+	Full = 3,
 };
 
 struct k_sPpmPixel
@@ -231,10 +238,10 @@ template<typename HASH> struct k_PhotonMap
 	void StartNewRendering(const AABB& box, float a_InitRadius);
 
 #ifdef __CUDACC__
-	CUDA_ONLY_FUNC bool StorePhoton(const float3& p, const float3& l, const float3& wi, const float3& n, unsigned int* a_PhotonCounter) const
+	CUDA_ONLY_FUNC k_StoreResult StorePhoton(const float3& p, const float3& l, const float3& wi, const float3& n, unsigned int* a_PhotonCounter) const
 	{
 		if(!m_sHash.IsValidHash(p))
-			return false;
+			return k_StoreResult::NotValid;
 		uint3 i0 = m_sHash.Transform(p);
 		unsigned int i = m_sHash.Hash(i0);
 		unsigned int j = atomicInc(a_PhotonCounter, -1);
@@ -242,9 +249,9 @@ template<typename HASH> struct k_PhotonMap
 		{
 			unsigned int k = atomicExch(m_pDeviceHashGrid + i, j);
 			m_pDevicePhotons[j] = k_pPpmPhoton(p, l, wi, n, k);//m_sHash.EncodePos(p, i0)
-			return true;
+			return k_StoreResult::Success;
 		}
-		return false;
+		return k_StoreResult::Full;
 	}
 
 	CUDA_ONLY_FUNC float3 L_Surface(float a_r, float a_NumPhotonEmitted, CudaRNG& rng, const e_KernelBSDF* bsdf, const float3& n, const float3& p, const float3& wo) const;
@@ -281,7 +288,7 @@ struct k_PhotonMapCollection
 
 	void StartNewRendering(const AABB& sbox, const AABB& vbox, float a_R);
 
-	template<bool SURFACE> CUDA_ONLY_FUNC bool StorePhoton(const float3& p, const float3& l, const float3& wi, const float3& n)
+	template<bool SURFACE> CUDA_ONLY_FUNC k_StoreResult StorePhoton(const float3& p, const float3& l, const float3& wi, const float3& n)
 	{
 		if(SURFACE)
 			return m_sSurfaceMap.StorePhoton(p, l, wi, n, &m_uPhotonNumStored);

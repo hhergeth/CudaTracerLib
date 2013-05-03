@@ -23,13 +23,22 @@ public:
 	}
 };*/
 
+enum e_KernelTexture_DataType
+{
+	vtRGBE,//possible return types : float3, float4
+	vtRGBCOL,//possible return types : float3, float4
+	vtGeneric,////possible return types : T
+};
+
 class CUDA_ALIGN(16) e_KernelTexture
 {
 public:
 	RGBCOL* m_pDeviceData;
 	float2 m_fDim;
+	int2 m_uDim;
 	unsigned int m_uWidth;
-public:
+	e_KernelTexture_DataType m_uType;
+public:/*
 	CUDA_FUNC_IN float4 Sample(const float2& a_UV) const
 	{
 		float2 a_Coords = make_float2(frac(a_UV.x), frac(1.0f-a_UV.y));
@@ -45,6 +54,48 @@ public:
 		unsigned int x = (unsigned int)a_Coords.x, y = (unsigned int)a_Coords.y;
 		T c = ((T*)m_pDeviceData)[y * m_uWidth + x];
 		return c;
+	}*/
+
+	template<typename T> CUDA_FUNC_IN T Sample(const float2& a_UV) const
+	{
+		return *at<T>(a_UV);
+	}
+	template<> CUDA_FUNC_IN float4 Sample(const float2& a_UV) const
+	{
+		if(m_uType == e_KernelTexture_DataType::vtGeneric)
+			return *at<float4>(a_UV);
+		else return make_float4(Sample<float3>(a_UV), 1);
+	}
+	template<> CUDA_FUNC_IN float3 Sample(const float2& a_UV) const
+	{
+		if(m_uType == e_KernelTexture_DataType::vtGeneric)
+			return *at<float3>(a_UV);
+		else
+		{
+			float2 q = a_UV * m_fDim;
+			int2 v = make_int2(q.x, q.y);
+			float3 a = ld(v), b = ld(v + make_int2(1, 0)), c = ld(v + make_int2(0, 1)), d = ld(v + make_int2(1, 1));
+			float3 e = lerp(a, b, frac(q.x)), f = lerp(c, d, frac(q.x));
+			return lerp(e, f, frac(q.y));
+		}
+	}
+private:
+	template<typename T> CUDA_FUNC_IN T* at(const float2& a_UV) const
+	{
+		float2 a_Coords = make_float2(frac(a_UV.x), frac(1.0f-a_UV.y));
+		a_Coords = make_float2(m_fDim.x * a_Coords.x, m_fDim.y * a_Coords.y);
+		unsigned int x = (unsigned int)a_Coords.x, y = (unsigned int)a_Coords.y;
+		return (T*)m_pDeviceData + y * m_uWidth + x;
+	}
+	CUDA_FUNC_IN float3 ld(const int2& uva) const
+	{
+		int2 uv = clamp(uva, make_int2(0, 0), m_uDim);
+		float3 r;
+		if(m_uType == e_KernelTexture_DataType::vtRGBCOL)
+			r = COLORREFToFloat3(m_pDeviceData[uv.y * m_uWidth + uv.x]);
+		else if(m_uType == e_KernelTexture_DataType::vtRGBCOL)
+			r = RGBEToFloat3(((RGBE*)m_pDeviceData)[uv.y * m_uWidth + uv.x]);
+		return r;
 	}
 };
 
@@ -55,6 +106,7 @@ private:
 	unsigned int m_uWidth;
 	unsigned int m_uHeight;
 	unsigned int m_uBpp;
+	e_KernelTexture_DataType m_uType;
 	e_KernelTexture m_sKernelData;
 public:
 	e_Texture() {m_pDeviceData = 0; m_uWidth = m_uHeight = m_uBpp = -1;}
@@ -65,6 +117,12 @@ public:
 		cudaFree(m_pDeviceData);
 	}
 	static void CompileToBinary(const char* a_InputFile, OutputStream& a_Out);
+	static void CompileToBinary(const char* in, const char* out)
+	{
+		OutputStream o(out);
+		CompileToBinary(in, o);
+		o.Close();
+	}
 	e_KernelTexture CreateKernelTexture();
 	e_KernelTexture getKernelData()
 	{

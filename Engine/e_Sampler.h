@@ -16,17 +16,20 @@ public:
 	{
 		m_uType = 0;
 		m_sValue = v;
+		memset(m_sPath, 0, sizeof(m_sPath));
 	}
 
 	e_Sampler(const T* v)
 	{
 		m_uType = 0;
 		m_sValue = *v;
+		memset(m_sPath, 0, sizeof(m_sPath));
 	}
 
 	e_Sampler(char* path, bool THIS_IS_REALLY_THE_RIGHT_CONSTRUCTOR_NO_FLOAT_0_SHIT)
 	{
 		m_uType = 1;
+		memset(m_sPath, 0, sizeof(m_sPath));
 		memcpy(m_sPath, path, strlen(path)); 
 	}
 
@@ -38,6 +41,11 @@ public:
 
 	CUDA_FUNC_IN T Sample(const float2& uv) const
 	{
-		return m_uType ? m_pTex->SampleT<T>(uv) : m_sValue;
+		return m_uType ? m_pTex->Sample<T>(uv) : m_sValue;
+	}
+
+	CUDA_FUNC_IN bool HasTexture() const
+	{
+		return m_uType;
 	}
 };

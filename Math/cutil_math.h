@@ -814,6 +814,16 @@ inline __host__ __device__ bool operator==(int3 &a, int3 &b)
 	return a.x == b.x && a.y == b.y && a.z == b.z;
 }
 
+inline __device__ __host__ int2 clamp(int2 v, int a, int b)
+{
+    return make_int2(clamp(v.x, a, b), clamp(v.y, a, b));
+}
+
+inline __device__ __host__ int2 clamp(int2 v, int2 a, int2 b)
+{
+    return make_int2(clamp(v.x, a.x, b.x), clamp(v.y, a.y, b.y));
+}
+
 
 // uint3 functions
 ////////////////////////////////////////////////////////////////////////////////

@@ -97,6 +97,11 @@ public:
 		float3 ng;
 		Onb sys = lerpOnb(baryCoords, localToWorld, &ng);
 		float2 uv = lerpUV(baryCoords);
+
+		float3 nor;
+		if(a_Mats[getMatIndex(off)].SampleNormalMap(uv, &nor))
+			sys.m_normal = normalize(sys.localToworld(nor*2.0f-make_float3(1)));
+
 		e_KernelBSDF bsdf(sys, ng);
 		a_Mats[getMatIndex(off)].GetBSDF(uv, &bsdf);
 		return bsdf;

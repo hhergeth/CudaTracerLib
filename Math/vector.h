@@ -694,6 +694,11 @@ CUDA_FUNC_IN RGBCOL Float3ToCOLORREF(float3& c)
 {
 	return make_uchar4(toInt(c.x), toInt(c.y), toInt(c.z), 255);
 }
+
+CUDA_FUNC_IN float3 COLORREFToFloat3(RGBCOL c)
+{
+	return make_float3((float)c.x / 255.0f, (float)c.y / 255.0f, (float)c.z / 255.0f);
+}
 #undef toInt
 
 CUDA_FUNC_IN float frac(float f)

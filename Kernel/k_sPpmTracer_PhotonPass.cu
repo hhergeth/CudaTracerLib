@@ -11,15 +11,17 @@ CUDA_FUNC_IN float3 smapleHG(float g, CudaRNG& rng, float3& wi)
 	float r = rng.randomFloat();
 	float sinPhi = sinf(2*PI*r), cosPhi = cosf(2*PI*r);
 	float3 r2 = make_float3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
-	return Onb(-1.0f * wi).localToworld(r2);
+	return -Onb(-1.0f * wi).localToworld(r2);
 }
 
 CUDA_ONLY_FUNC bool TracePhoton(Ray& r, float3 Le, CudaRNG& rng)
 {
+	r.direction = normalize(r.direction);
 	e_KernelAggregateVolume& V = g_SceneData.m_sVolume;
 	TraceResult r2;
 	r2.Init();
 	int depth = -1;
+	bool inMesh = false;
 	while(++depth < 12 && k_TraceRay<true>(r.direction, r.origin, &r2))
 	{
 		if(V.HasVolumes())
@@ -27,21 +29,15 @@ CUDA_ONLY_FUNC bool TracePhoton(Ray& r, float3 Le, CudaRNG& rng)
 			float minT, maxT;
 			while(V.IntersectP(r, 0, r2.m_fDist, &minT, &maxT))
 			{
-				if(minT != 0)
-				{
-					maxT -= minT;
-					r2.m_fDist -= minT;
-					r.origin += r.direction * minT;
-					minT = 0;
-				}
 				float3 x = r(minT), w = -r.direction;
 				float3 sigma_s = V.sigma_s(x, w), sigma_t = V.sigma_t(x, w);
-				float d = 1.0f / (fsumf(sigma_t) / 3.0f);//-logf(rng.randomFloat())
-				bool cancel = d >= (maxT - minT) || d >= r2.m_fDist;
-				d = clamp(d, 0.0f, maxT - minT);
-				float3 transmittance = exp(-V.tau(r, 0, d));
-				Le = Le * transmittance;
-				if(!g_Map.StorePhoton<false>(r(minT + d * 0.5f), Le, w, make_float3(0,0,0)))
+				float d = -logf(rng.randomFloat()) / (fsumf(sigma_t) / 3.0f);//-logf(rng.randomFloat())
+				bool cancel = d >= (maxT - minT) || d >= r2.m_fDist;// || minT + d < r2.m_fDist
+				d = clamp(d, minT, maxT);
+				float3 transmittance = exp(-V.tau(r, minT, minT + d));
+				//Le = Le * transmittance;
+				Le += V.Lve(x, w) * d;
+				if(g_Map.StorePhoton<false>(r(minT + d * rng.randomFloat()), Le, w, make_float3(0,0,0)) == k_StoreResult::Full)
 					return false;
 				if(cancel)
 					break;
@@ -52,7 +48,7 @@ CUDA_ONLY_FUNC bool TracePhoton(Ray& r, float3 Le, CudaRNG& rng)
 					//float3 wo = r.direction;
 					float3 wo = smapleHG(((e_HomogeneousVolumeDensity*)V.m_pVolumes)->g, rng, w);
 					Le *= V.p(x, w, wo);
-					r.origin = r(d);
+					r.origin = r(minT + d);
 					r.direction = wo;
 					r2.Init();
 					if(!k_TraceRay<true>(r.direction, r.origin, &r2))
@@ -65,7 +61,7 @@ CUDA_ONLY_FUNC bool TracePhoton(Ray& r, float3 Le, CudaRNG& rng)
 		e_KernelBSDF bsdf = r2.m_pTri->GetBSDF(r2.m_fUV, r2.m_pNode->getWorldMatrix(), g_SceneData.m_sMatData.Data, r2.m_pNode->m_uMaterialOffset);
 		float3 wo = -r.direction, wi;
 		if(bsdf.NumComponents(BxDFType(BSDF_REFLECTION | BSDF_TRANSMISSION | BSDF_DIFFUSE )))
-			if(!g_Map.StorePhoton<true>(x, Le, wo, bsdf.ng))
+			if(g_Map.StorePhoton<true>(x, Le, wo, bsdf.sys.m_normal) == k_StoreResult::Full)
 				return false;
 		float pdf;
 		BxDFType sampledType;
@@ -73,11 +69,16 @@ CUDA_ONLY_FUNC bool TracePhoton(Ray& r, float3 Le, CudaRNG& rng)
 		if(pdf == 0 || fsumf(f) == 0)
 			break;
 		float3 ac = Le * f * AbsDot(wi, bsdf.sys.m_normal) / pdf;
-		float prob = MIN(1.0f, fmaxf(ac) / fmaxf(Le));
-		if(rng.randomFloat() > prob)
-			break;
-		Le = ac / prob;
-		r = Ray(r(r2.m_fDist), wi);
+		//if(depth > 3)
+		{
+			float prob = MIN(1.0f, fmaxf(ac) / fmaxf(Le));
+			if(rng.randomFloat() > prob)
+				break;
+			Le = ac / prob;
+		}
+		//else Le = ac;
+		inMesh = dot(r.direction, bsdf.ng) < 0;
+		r = Ray(r(r2.m_fDist), normalize(wi));
 		r2.Init();
 	}
 	return true;
@@ -99,7 +100,7 @@ __global__ void k_PhotonPass(unsigned int spp, float angle, float angle2)
 		/*photonRay.origin = g_SceneData.m_sLightData[li].box.Center();// + make_float3(0,-35,0)
 		photonRay.direction = normalize(make_float3(rng.randomFloat() * 2.0f - 1.0f, -rng.randomFloat(), rng.randomFloat() * 2.0f - 1.0f));
 		float a = acos(-photonRay.direction.y);
-		if((a < Radians(angle) || a > Radians(angle + angle2)) && rng.randomFloat() < 0.75f)
+		if((a < Radians(angle) || a > Radians(angle + angle2)) && rng.randomFloat() < 1.95f)
 			goto label001;*/
 		if(pdf == 0 || ISBLACK(Le))
 			continue;

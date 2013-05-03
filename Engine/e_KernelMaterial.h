@@ -288,12 +288,15 @@ public:
 public:
 	e_String Name;
 	float3 Emission;
+	e_Sampler<float3> NormalMap;
 public:
 	e_KernelMaterial()
+		: NormalMap(make_float3(0))
 	{
-
+		memset(Name, 0, sizeof(Name));
 	}
 	e_KernelMaterial(const char* name)
+		: NormalMap(make_float3(0))
 	{
 		memcpy(Name, name, strlen(name));
 		Emission = make_float3(0);
@@ -318,12 +321,23 @@ public:
 
 	template<typename L> void LoadTextures(L callback)
 	{
+		NormalMap.LoadTextures(callback);
 		CALL_FUNC(return, LoadTextures<L>(callback))
 	}
 
 	template<typename T> T* As()
 	{
 		return (T*)Data;
+	}
+
+	CUDA_FUNC_IN bool SampleNormalMap(const float2& uv, float3* normal) const
+	{
+		if(NormalMap.HasTexture())
+		{
+			*normal = NormalMap.Sample(uv);
+			return true;
+		}
+		else return false;
 	}
 #undef CALL_TYPE
 #undef CALL_FUNC

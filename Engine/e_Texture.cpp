@@ -10,6 +10,7 @@ e_Texture::e_Texture(InputStream& a_In)
 	a_In >> m_uWidth;
 	a_In >> m_uHeight;
 	a_In >> m_uBpp;
+	a_In.operator>>(*(int*)&m_uType);
 	unsigned int q = m_uWidth * m_uHeight * m_uBpp;
 	if(cudaMalloc(&m_pDeviceData, q))
 		BAD_CUDA_ALLOC(q)
@@ -26,6 +27,7 @@ e_Texture::e_Texture(float4& col)
 	*(RGBCOL*)g_CopyData = Float4ToCOLORREF(col);
 	if(cudaMemcpy(m_pDeviceData, g_CopyData, sizeof(RGBCOL), cudaMemcpyHostToDevice))
 		BAD_HOST_DEVICE_COPY(m_pDeviceData, sizeof(RGBCOL))
+	m_uType = e_KernelTexture_DataType::vtGeneric;
 }
 
 void e_Texture::CompileToBinary(const char* a_InputFile, OutputStream& a_Out)
@@ -46,16 +48,20 @@ void e_Texture::CompileToBinary(const char* a_InputFile, OutputStream& a_Out)
 		FREE_IMAGE_TYPE imageType = FreeImage_GetImageType(dib);
 		unsigned int bpp = FreeImage_GetBPP(dib);
 		BYTE *bits = (BYTE *)FreeImage_GetBits(dib);
+		e_KernelTexture_DataType type = e_KernelTexture_DataType::vtRGBCOL;
 
 		RGBCOL* tar = new RGBCOL[w * h], *ori = tar;
 		if (((imageType == FIT_RGBAF) && (bpp == 128)) || ((imageType == FIT_RGBF) && (bpp == 96)))
 		{
+			type = e_KernelTexture_DataType::vtRGBE;
+			RGBE* tar2 = (RGBE*)tar;
 				for (unsigned int y = 0; y < h; ++y)
 				{
 						FIRGBAF *pixel = (FIRGBAF *)bits;
 						for (unsigned int x = 0; x < w; ++x)
 						{
-							*tar++ = Float4ToCOLORREF(make_float4(pixel->red, pixel->green, pixel->blue, pixel->alpha));
+							//*tar++ = Float4ToCOLORREF(make_float4(pixel->red, pixel->green, pixel->blue, pixel->alpha));
+							*(RGBE*)tar++ = Float3ToRGBE(make_float3(pixel->red, pixel->green, pixel->blue));
 							pixel = (FIRGBAF*)((long long)pixel + bpp / 8);
 						}
 						bits += pitch;
@@ -94,6 +100,7 @@ void e_Texture::CompileToBinary(const char* a_InputFile, OutputStream& a_Out)
 		a_Out << w;
 		a_Out << h;
 		a_Out << unsigned int(4);
+		a_Out << (int)type;
 		a_Out.Write(ori, w * h * sizeof(RGBCOL));
 	}
 	else
@@ -135,6 +142,8 @@ e_KernelTexture e_Texture::CreateKernelTexture()
 	r.m_fDim = make_float2(m_uWidth - 1, m_uHeight - 1);
 	r.m_pDeviceData = m_pDeviceData;
 	r.m_uWidth = m_uWidth;
+	r.m_uType = m_uType;
+	r.m_uDim = make_int2(m_uWidth-1, m_uHeight-1);
 	m_sKernelData = r;
 	return r;
 }
