@@ -178,6 +178,12 @@
     <ClInclude Include="Engine\e_SceneInitData.h">
       <Filter>Engine</Filter>
     </ClInclude>
+    <ClInclude Include="Engine\e_ShapeSet.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Kernel\k_IntegrateHelper.h">
+      <Filter>Kernel</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\e_AnimatedMesh.cpp">

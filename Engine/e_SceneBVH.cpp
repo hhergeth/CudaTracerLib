@@ -130,14 +130,18 @@ void e_SceneBVH::Build(e_Node* a_Nodes, unsigned int a_Count)
 		*m_pInvTransforms->getHost(i) = a_Nodes[i].getInvWorldMatrix().Transpose();
 	}
 	if(a_Count)
+	{
 		startNode = RecurseNative(a_Count, data, nativelist<e_BVHNodeData>(m_pNodes->getHost(0)), bottom, top);
+	}
 	else
 	{
 		startNode = 0;
 		m_pNodes->getHost(0)->setDummy();
+		//m_sBox = a_Nodes->getWorldBox();
 	}
 	m_pNodes->Invalidate(DataStreamRefresh_Immediate);
 	m_pTransforms->Invalidate(DataStreamRefresh_Immediate);
 	m_pInvTransforms->Invalidate(DataStreamRefresh_Immediate);
 	_mm_free(data);
+	m_sBox = TOBOX(bottom, top);
 }

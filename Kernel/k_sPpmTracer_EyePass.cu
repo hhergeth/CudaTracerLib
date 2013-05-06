@@ -1,5 +1,6 @@
 #include "k_sPpmTracer.h"
 #include "k_TraceHelper.h"
+#include "k_IntegrateHelper.h"
 
 //texture<uint4, 1> t_PhotonTex;
 //texture<unsigned int, 1> t_HashTex;
@@ -102,7 +103,7 @@ template<typename HASH> CUDA_ONLY_FUNC float3 k_PhotonMap<HASH>::L_Volume(float 
 	return L_n;
 }
 
-__global__ void k_EyePass(int2 off, int w, int h, RGBCOL* a_Target, k_sPpmPixel* a_Pixels, float a_PassIndex, float a_rSurface, float a_rVolume)
+template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, RGBCOL* a_Target, k_sPpmPixel* a_Pixels, float a_PassIndex, float a_rSurface, float a_rVolume)
 {
 	if(off.x)
 		a_PassIndex++;
@@ -149,6 +150,8 @@ __global__ void k_EyePass(int2 off, int w, int h, RGBCOL* a_Target, k_sPpmPixel*
 				}
 
 				float3 p = s.r(r2.m_fDist);
+				if(DIRECT)
+					L += s.fs * UniformSampleAllLights(p, bsdf.ng, -s.r.direction, &bsdf, rng, 4);
 				L += s.fs * r2.m_pTri->Le(r2.m_fUV, bsdf.ng, -s.r.direction, g_SceneData.m_sMatData.Data, r2.m_pNode->m_uMaterialOffset);
 				if(bsdf.NumComponents(BxDFType(BSDF_REFLECTION | BSDF_TRANSMISSION | BSDF_DIFFUSE)))
 				{
@@ -253,7 +256,9 @@ void k_sPpmTracer::doEyePass(RGBCOL* a_Buf)
 	k_INITIALIZE(m_pScene->getKernelSceneData());
 	k_STARTPASS(m_pScene, m_pCamera, m_sRngs);
 	const unsigned int p = 16;
-	k_EyePass<<<dim3( w / p + 1, h / p + 1, 1), dim3(p, p, 1)>>>(make_int2(0,0), w, h, a_Buf, m_pDevicePixels, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3));
+	if(m_bDirect)
+		k_EyePass<true><<<dim3( w / p + 1, h / p + 1, 1), dim3(p, p, 1)>>>(make_int2(0,0), w, h, a_Buf, m_pDevicePixels, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3));
+	else k_EyePass<false><<<dim3( w / p + 1, h / p + 1, 1), dim3(p, p, 1)>>>(make_int2(0,0), w, h, a_Buf, m_pDevicePixels, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3));
 }
 
 void k_sPpmTracer::Debug(int2 pixel)
@@ -262,5 +267,5 @@ void k_sPpmTracer::Debug(int2 pixel)
 	k_INITIALIZE(m_pScene->getKernelSceneData());
 	k_STARTPASS(m_pScene, m_pCamera, m_sRngs);
 	const unsigned int p = 16;
-	k_EyePass<<<1, 1>>>(pixel, w, h, (RGBCOL*)m_pDevicePixels, m_pDevicePixels, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3));
+	k_EyePass<true><<<1, 1>>>(pixel, w, h, (RGBCOL*)m_pDevicePixels, m_pDevicePixels, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3));
 }

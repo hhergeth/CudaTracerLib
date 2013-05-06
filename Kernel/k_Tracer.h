@@ -7,25 +7,6 @@
 
 typedef void (*SliderCreateCallback)(float, float, bool, float*, FW::String);
 
-struct TraceResult
-{
-	float m_fDist;
-	float2 m_fUV;
-	e_TriangleData* m_pTri;
-	e_Node* m_pNode;
-	CUDA_FUNC_IN bool hasHit()
-	{
-		return m_pTri != 0;
-	}
-	CUDA_FUNC_IN void Init()
-	{
-		m_fDist = FLT_MAX;
-		m_fUV = make_float2(0,0);
-		m_pNode = 0;
-		m_pTri = 0;
-	}
-};
-
 class k_Tracer
 {
 public:

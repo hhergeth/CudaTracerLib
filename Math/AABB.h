@@ -1,7 +1,6 @@
 #pragma once
 #include "float.h"
 #include "Vector.h"
-#include "Ray.h"
 
 struct AABB
 {
@@ -18,7 +17,7 @@ struct AABB
 			float3 maxV;
 		};
 	};
-	CUDA_FUNC_IN AABB(float _min[3],float _max[3])
+	CUDA_FUNC_IN AABB(const float _min[3], const float _max[3])
 	{
 		min[0] = _min[0]; 
 		min[1] = _min[1]; 
@@ -30,7 +29,7 @@ struct AABB
 	CUDA_FUNC_IN AABB()
 	{
 	}
-	CUDA_FUNC_IN AABB(float3& min, float3& max)
+	CUDA_FUNC_IN AABB(const float3& min, const float3& max)
 	{
 		minV = min;
 		maxV = max;
@@ -67,7 +66,7 @@ struct AABB
 	CUDA_FUNC_IN float w() const { return max[0]-min[0]; }
 	CUDA_FUNC_IN float h() const { return max[1]-min[1]; }
 	CUDA_FUNC_IN float d() const { return max[2]-min[2]; }
-	CUDA_FUNC_IN AABB Transform(float4x4& mat) const
+	CUDA_FUNC_IN AABB Transform(const float4x4& mat) const
 	{
 		float3 d = maxV - minV;
 #define A(x,y,z) make_float3(x,y,z) * d + minV

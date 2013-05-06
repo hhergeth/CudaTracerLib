@@ -61,6 +61,7 @@ void k_sPpmTracer::DoRender(RGBCOL* a_Buf)
 	}
 	else
 	{
+		m_uPassesDone = 1;
 		cudaMemset(m_pDevicePixels, 0, sizeof(k_sPpmPixel) * w * h);
 		cudaMemset(a_Buf, 0, sizeof(RGBCOL) * w * h);
 		doEyePass(a_Buf);
@@ -87,6 +88,7 @@ static float GGGf0;
 static float GGGf1;
 void k_sPpmTracer::StartNewTrace(RGBCOL* a_Buf)
 {
+	m_bDirect = !m_pScene->getVolumes().getLength();m_bDirect=0;
 	if(m_uModus == 1)
 	{
 		initNewPass(a_Buf);
@@ -100,5 +102,6 @@ void k_sPpmTracer::StartNewTrace(RGBCOL* a_Buf)
 		updateBuffer();
 		while(!m_sMaps.PassFinished())
 			doPhotonPass();
+		m_uPassesDone = 1;
 	}
 }

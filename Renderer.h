@@ -117,7 +117,7 @@ public:
 		m_uState = m_uState == 1 ? 2 : 1;
 		oldMove0 = oldMove1 = true;
 	}
-	void Render(FW::GLContext* gl, e_DynamicScene* S, e_Camera* C, FW::Image* I, bool a_DrawSceneBvh, bool a_DrawObjectBvhs, e_Node* N)
+	void Render(FW::GLContext* gl, e_DynamicScene* S, e_Camera* C, FW::Image* I, bool a_DrawSceneBvh, bool a_DrawObjectBvhs, const e_Node* N)
 	{
 		bool& b = m_uState == 1 ? oldMove0 : oldMove1;
 		bool moved = C->Update() || b;
@@ -135,11 +135,10 @@ public:
 		float4x4 vpq = C->getViewProjection();
 		if(m_uState == 1)
 		{
+			AABB box = S->getKernelSceneData().m_sBox;
+			float eps = Distance(box.maxV, box.minV) / 100.0f;
 			for(int i = 0; i < S->getLightCount(); i++)
-			{
-				e_DirectionalLight* L = (e_DirectionalLight*)S->getLights(i);
-				plotBox(L->getBox(), vpq, gl, make_float3(1,0,0));
-			}
+				plotBox(S->getLights(i)->getBox(eps), vpq, gl, make_float3(1,0,0));
 			for(int i = 0; i < S->getVolumes().getLength(); i++)
 			{
 				AABB box = S->getVolumes()(i)->WorldBound();
@@ -155,8 +154,6 @@ public:
 			plotBox(N->getWorldBox(), vp, gl, make_float3(0,0,1));
 		if(a_DrawSceneBvh)
 		{
-			for(int i = 0; i < S->m_pLightStream->UsedElements(); i++)
-				plotBox(S->m_pLightStream->getHost(i)->getBox(), vp, gl, make_float3(1,0,0));
 			//plot(S->getSceneBVH()->m_pNodes->getHost(0), S->getSceneBVH()->m_pNodes->getHost(0), 0, vp, gl);
 		}
 		//for(int i = 0; i < g_pScene->getNodeCount(); i++)
@@ -255,11 +252,11 @@ public:
 		m_vOldHit = m.Translation();
 		S->SetNodeTransform(m, N);
 	}
-	void HandleUp(e_Node* N, e_DynamicScene* S, e_Camera* C, int2 p, int2 s)
+	void HandleUp(e_Node* N, e_DynamicScene* S, const e_Camera* C, int2 p, int2 s)
 	{
 		m_uActiveComponent = 0;
 	}
-	void DrawPlanes(e_Node* N, e_Camera* C, FW::GLContext* O)
+	void DrawPlanes(const e_Node* N, const e_Camera* C, FW::GLContext* O)
 	{
 		float4x4 m = N->getWorldMatrix(), vp = C->getViewProjection();
 		float3 r = normalize(m.Right()), u = normalize(m.Up()), f = normalize(m.Forward());

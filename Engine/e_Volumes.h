@@ -351,6 +351,8 @@ public:
 	{
 		CALL_FUNC(return, tau(ray, minT, maxT, step, offset))
 	}
+#undef CALL_FUNC
+#undef CALL_TYPE
 };
 
 struct e_KernelAggregateVolume

@@ -41,7 +41,7 @@ e_DynamicScene::e_DynamicScene(e_SceneInitData a_Data)
 	m_pMeshBuffer = new e_CachedHostDeviceBuffer<e_Mesh, e_KernelMesh>(a_Data.m_uNumNodes, sizeof(e_AnimatedMesh));
 	m_pNodeStream = new e_DataStream<e_Node>(a_Data.m_uNumNodes);
 	m_pTextureBuffer = new e_CachedHostDeviceBuffer<e_Texture, e_KernelTexture>(a_Data.m_uNumTextures);
-	m_pLightStream = new e_HostDeviceBuffer<e_Light, e_KernelLight>(a_Data.m_uNumLights, maxLightSize());
+	m_pLightStream = new e_DataStream<e_KernelLight>(a_Data.m_uNumLights);
 	m_pVolumes = new e_DataStream<e_VolumeRegion>(128);
 	m_pBVH = new e_SceneBVH(a_Data.m_uNumNodes);
 	//cudaMalloc(&m_pDeviceTmpFloats, sizeof(e_TmpVertex) * a_MaxTriangles * 3);
@@ -303,6 +303,7 @@ e_KernelDynamicScene e_DynamicScene::getKernelSceneData()
 	r.m_sVolume = e_KernelAggregateVolume(m_pVolumes->UsedElements());
 	r.m_sSceneBVH = m_pBVH->getData();
 	r.m_sTerrain = m_pTerrain->getKernelData();
+	r.m_sBox = m_pBVH->m_sBox;
 	return r;
 }
 
@@ -350,7 +351,7 @@ AABB e_DynamicScene::getAABB(e_Node* N, char* name, unsigned int* a_Mi)
 		if(*ind < -1 || *ind >= N->m_pMesh->m_sTriInfo.getLength())
 			break;
 		e_TriangleData* d = N->m_pMesh->m_sTriInfo(*ind);
-		if(d->getMatIndex(0) == mi)
+		if(d->getMatIndex(N->m_uMaterialOffset) == mi)
 		{
 			float3 a, b, c;
 			sec->getData(a, b, c);
@@ -364,6 +365,7 @@ AABB e_DynamicScene::getAABB(e_Node* N, char* name, unsigned int* a_Mi)
 	return box;
 }
 
+/*
 e_Light* e_DynamicScene::createLight(e_Node* N, char* name, const float3& col)
 {
 	unsigned int mi;
@@ -382,4 +384,4 @@ e_Light* e_DynamicScene::createLight(e_Node* N, const float3& col, char* sourceN
 	ref->Emission = col;
 	this->UpdateMaterial(ref);
 	return this->addDirectedLight(destBox, srcBox, col);
-}
+}*/

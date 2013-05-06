@@ -11,10 +11,10 @@ CUDA_FUNC_IN float3 smapleHG(float g, CudaRNG& rng, float3& wi)
 	float r = rng.randomFloat();
 	float sinPhi = sinf(2*PI*r), cosPhi = cosf(2*PI*r);
 	float3 r2 = make_float3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
-	return -Onb(-1.0f * wi).localToworld(r2);
+	return Onb(-1.0f * wi).localToworld(r2);
 }
 
-CUDA_ONLY_FUNC bool TracePhoton(Ray& r, float3 Le, CudaRNG& rng)
+template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, float3 Le, CudaRNG& rng)
 {
 	r.direction = normalize(r.direction);
 	e_KernelAggregateVolume& V = g_SceneData.m_sVolume;
@@ -60,9 +60,10 @@ CUDA_ONLY_FUNC bool TracePhoton(Ray& r, float3 Le, CudaRNG& rng)
 		float3 x = r(r2.m_fDist);
 		e_KernelBSDF bsdf = r2.m_pTri->GetBSDF(r2.m_fUV, r2.m_pNode->getWorldMatrix(), g_SceneData.m_sMatData.Data, r2.m_pNode->m_uMaterialOffset);
 		float3 wo = -r.direction, wi;
-		if(bsdf.NumComponents(BxDFType(BSDF_REFLECTION | BSDF_TRANSMISSION | BSDF_DIFFUSE )))
-			if(g_Map.StorePhoton<true>(x, Le, wo, bsdf.sys.m_normal) == k_StoreResult::Full)
-				return false;
+		if((DIRECT && depth > 0) || !DIRECT)
+			if(bsdf.NumComponents(BxDFType(BSDF_REFLECTION | BSDF_TRANSMISSION | BSDF_DIFFUSE )))
+				if(g_Map.StorePhoton<true>(x, Le, wo, bsdf.sys.m_normal) == k_StoreResult::Full)
+					return false;
 		float pdf;
 		BxDFType sampledType;
 		float3 f = bsdf.Sample_f(wo, &wi, BSDFSample(rng), &pdf, BSDF_ALL, &sampledType);
@@ -84,28 +85,23 @@ CUDA_ONLY_FUNC bool TracePhoton(Ray& r, float3 Le, CudaRNG& rng)
 	return true;
 }
 
-__global__ void k_PhotonPass(unsigned int spp, float angle, float angle2)
+template<bool DIRECT> __global__ void k_PhotonPass(unsigned int spp, float angle, float angle2)
 { 
 	const unsigned int a_MaxDepth = 10;
 	CudaRNG rng = g_RNGData();
 	for(int _photonNum = 0; _photonNum < spp; _photonNum++)
 	{
-		int li = (int)((float)g_SceneData.m_sLightData.UsedCount * rng.randomFloat());
+		int li = (int)float(g_SceneData.m_sLightData.UsedCount) * rng.randomFloat();
 		float lightPdf = 1.0f / (float)g_SceneData.m_sLightData.UsedCount;
 	label001:
 		Ray photonRay;
 		float3 Nl;
 		float pdf;
-		float3 Le = g_SceneData.m_sLightData[li].Sample_L(rng, &photonRay, &Nl, &pdf);
-		/*photonRay.origin = g_SceneData.m_sLightData[li].box.Center();// + make_float3(0,-35,0)
-		photonRay.direction = normalize(make_float3(rng.randomFloat() * 2.0f - 1.0f, -rng.randomFloat(), rng.randomFloat() * 2.0f - 1.0f));
-		float a = acos(-photonRay.direction.y);
-		if((a < Radians(angle) || a > Radians(angle + angle2)) && rng.randomFloat() < 1.95f)
-			goto label001;*/
+		float3 Le = g_SceneData.m_sLightData[li].Sample_L(g_SceneData, LightSample(rng), rng.randomFloat(), rng.randomFloat(), &photonRay, &Nl, &pdf); 
 		if(pdf == 0 || ISBLACK(Le))
 			continue;
 		float3 alpha = (AbsDot(Nl, photonRay.direction) * Le) / (pdf * lightPdf);
-		if(TracePhoton(photonRay, alpha, rng))
+		if(TracePhoton<DIRECT>(photonRay, alpha, rng))
 			atomicInc(&g_Map.m_uPhotonNumEmitted, -1);
 		else break;
 	}
@@ -118,7 +114,9 @@ void k_sPpmTracer::doPhotonPass()
 	k_INITIALIZE(m_pScene->getKernelSceneData());
 	k_STARTPASS(m_pScene, m_pCamera, m_sRngs);
 	const unsigned long long p0 = 6 * 32, spp = 3, n = 180, PhotonsPerPass = p0 * n * spp;
-	k_PhotonPass<<< n, p0 >>>(spp,20,5);
+	if(m_bDirect)
+		k_PhotonPass<true><<< n, p0 >>>(spp,20,5);
+	else k_PhotonPass<false><<< n, p0 >>>(spp,20,5);
 	cudaThreadSynchronize();
 	cudaMemcpyFromSymbol(&m_sMaps, g_Map, sizeof(k_PhotonMapCollection));
 }

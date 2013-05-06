@@ -1,5 +1,6 @@
 #include "k_PathTracer.h"
 #include "k_TraceHelper.h"
+#include "k_IntegrateHelper.h"
 #include <time.h>
 
 __device__ float3 radiance(float3& a_Dir, float3& a_Ori, CudaRNG& rnd)
@@ -9,6 +10,7 @@ __device__ float3 radiance(float3& a_Dir, float3& a_Ori, CudaRNG& rnd)
 	float3 cl = make_float3(0,0,0);   // accumulated color
 	float3 cf = make_float3(1,1,1);  // accumulated reflectance
 	int depth = 0;
+	bool specularBounce = false;
 	while (depth++ < 7)
 	{
 		r.Init();
@@ -20,8 +22,13 @@ __device__ float3 radiance(float3& a_Dir, float3& a_Ori, CudaRNG& rnd)
 		float3 inc;
 		float pdf;
 		e_KernelBSDF bsdf = r.m_pTri->GetBSDF(r.m_fUV, r.m_pNode->getWorldMatrix(), g_SceneData.m_sMatData.Data, r.m_pNode->m_uMaterialOffset);
-		cl += cf * r.m_pTri->Le(r.m_fUV, bsdf.ng, -r0.direction, g_SceneData.m_sMatData.Data, r.m_pNode->m_uMaterialOffset);
-		float3 f = bsdf.Sample_f(-r0.direction, &inc, BSDFSample(rnd), &pdf);
+		if(depth == 1 || specularBounce)
+			cl += cf * r.m_pTri->Le(r.m_fUV, bsdf.ng, -r0.direction, g_SceneData.m_sMatData.Data, r.m_pNode->m_uMaterialOffset);
+		cl += cf * UniformSampleAllLights(r0(r.m_fDist), bsdf.ng, -r0.direction, &bsdf, rnd, 1);
+		BxDFType flags;
+		float3 f = bsdf.Sample_f(-r0.direction, &inc, BSDFSample(rnd), &pdf, BSDF_ALL, &flags);
+		specularBounce = (flags & BSDF_SPECULAR) != 0;
+		inc = normalize(inc);
 		float p = f.x>f.y && f.x>f.z ? f.x : f.y>f.z ? f.y : f.z; 
 		if (depth > 5)
 			if (rnd.randomFloat() < p)
@@ -30,34 +37,6 @@ __device__ float3 radiance(float3& a_Dir, float3& a_Ori, CudaRNG& rnd)
 		if(!pdf)
 			break;
 		cf = cf * bsdf.IntegratePdf(f, pdf, inc);
-		/*
-		float3 x = r0(r.m_fDist), nl = bsdf.ng;
-		
-		float3 toLight;
-		int le = -1;
-		for(int i = 0; i < g_SceneData.m_sLightData.UsedCount; i++)
-		{
-			float3 toLightT = g_SceneData.m_sLightData[i].SampleRandomPoint(rnd) - x;
-			float l = length(toLightT), l2 = l / 1200.0f;
-			if(rnd.randomFloat() > l2)
-			{
-				toLight = toLightT / l;
-				le = i;
-				break;
-			}
-		}
-		if(le != -1)
-		{
-			float diffuse = MAX(0.0f, dot(toLight, nl));
-			TraceResult r2;
-			r2.Init();
-			float3 p0 = x + nl * 0.01f;
-			k_TraceRay<true>(toLight, p0, &r2);
-			float d2, d3;
-			if(rayBoxIntersectionA(toLight, p0, &g_SceneData.m_sLightData[le].box.minV, &d2, &d3) && r2.m_fDist >= d2)			
-				cl += cf * diffuse * g_SceneData.m_sLightData[le].m_cPower;
-		}*/
-
 		r0 = Ray(r0(r.m_fDist), inc);
 	}
 	return cl;

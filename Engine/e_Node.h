@@ -27,11 +27,11 @@ public:
 		strcpy(m_cFile, file);
 		m_uMaterialOffset = mesh->m_sMatInfo.getIndex();
 	}
-	bool usesInstanciatedMaterials()
+	bool usesInstanciatedMaterials() const
 	{
 		return m_uMaterialOffset != m_pMesh->m_sMatInfo.getIndex();
 	}
-	char* getFilePath()
+	const char* getFilePath() const
 	{
 		return m_cFile;
 	}
@@ -40,19 +40,19 @@ public:
 		m_uMeshIndex = m2;
 		m_pMesh = m;
 	}
-	AABB getWorldBox()
+	AABB getWorldBox() const
 	{
 		return m_pMesh->m_sLocalBox.Transform(m_sWorldMatrix);
 	}
-	CUDA_FUNC_IN float4x4 getWorldMatrix()
+	CUDA_FUNC_IN float4x4 getWorldMatrix() const
 	{
 		return m_sWorldMatrix;
 	}
-	CUDA_FUNC_IN float4x4 getInvWorldMatrix()
+	CUDA_FUNC_IN float4x4 getInvWorldMatrix() const
 	{
 		return m_sInvWorldMatrix;
 	}
-	void setTransform(float4x4& m)
+	void setTransform(const float4x4& m)
 	{
 		m_sWorldMatrix = m;
 		m_sInvWorldMatrix = m.Inverse();

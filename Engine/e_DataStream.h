@@ -238,7 +238,7 @@ public:
 	{
 		return numElements;
 	}
-	e_DataStreamReference<T> translatePointer(T* val)
+	e_DataStreamReference<T> translatePointer(const T* val)
 	{
 		unsigned long long t0 = ((unsigned long long)val - (unsigned long long)host) / sizeof(T), t1 = ((unsigned long long)val - (unsigned long long)device) / sizeof(T);
 		unsigned int i = t0 < numElements ? t0 : t1;

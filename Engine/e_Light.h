@@ -3,225 +3,394 @@
 #include "..\Base\CudaRandom.h"
 #include "..\Math\vector.h"
 #include "..\Math\AABB.h"
+#include "e_ShapeSet.h"
+#include "e_KernelDynamicScene.h"
 
-enum e_LightType  : unsigned int { LT_Directional, LT_Sphere, LT_Directed};
+#define MAX_SHAPE_LENGTH 32
+
+struct e_VisibilitySegment
+{
+	Ray r;
+	float tmin;
+	float tmax;
+
+	CUDA_FUNC_IN e_VisibilitySegment()
+	{
+
+	}
+
+	CUDA_FUNC_IN void SetSegment(const float3& o, float offo, const float3& t, float offt)
+	{
+		r.direction = normalize(t - o);
+		r.origin = o;
+		tmin = offo;
+		tmax = length(t - o) + offt;//trust in the compiler :D
+	}
+
+	CUDA_FUNC_IN void SetRay(const float3& o, float offo, const float3& d)
+	{
+		r.direction = d;
+		r.origin = o;
+		tmin = offo;
+		tmax = FLT_MAX;
+	}
+
+	CUDA_FUNC_IN bool IsValidHit(float thit) const
+	{
+		return tmin <= thit && thit <= tmax;
+	}
+};
+
+struct e_LightBase
+{
+	bool IsDelta;
+
+	e_LightBase(bool d)
+		: IsDelta(d)
+	{
+	}
+};
+
+#define e_PointLight_TYPE 1
+struct e_PointLight : public e_LightBase
+{
+	float3 lightPos;
+    float3 Intensity;
+
+	e_PointLight(float3 p, float3 L)
+		: e_LightBase(true), lightPos(p), Intensity(L)
+	{
+
+	}
+
+	CUDA_FUNC_IN float3 Power(const e_KernelDynamicScene& scene) const
+	{
+		return 4.f * PI * Intensity;
+	}
+
+	CUDA_FUNC_IN float Pdf(const e_KernelDynamicScene& scene, const float3 &p, const float3 &wi) const
+	{
+		return 0.0f;
+	}
+
+	CUDA_FUNC_IN float3 Sample_L(const e_KernelDynamicScene& scene, const LightSample &ls, float u1, float u2, Ray *ray, float3 *Ns, float *pdf) const
+	{
+		*ray = Ray(lightPos, UniformSampleSphere(ls.uPos[0], ls.uPos[1]));
+		*Ns = ray->direction;
+		*pdf = UniformSpherePdf();
+		return Intensity;
+	}
+
+	CUDA_FUNC_IN float3 Sample_L(const e_KernelDynamicScene& scene, const float3& p, const LightSample& ls, float* pdf, e_VisibilitySegment* seg) const
+	{
+		seg->SetSegment(p, 0, lightPos, 0);
+		*pdf = 1.0f;
+		return Intensity / DistanceSquared(lightPos, p);
+	}
+
+	CUDA_FUNC_IN float3 Le(const e_KernelDynamicScene& scene, const Ray& r) const
+	{
+		return make_float3(0.0f);
+	}
+	
+	CUDA_FUNC_IN float3 L(const float3 &p, const float3 &n, const float3 &w) const
+	{
+		return make_float3(0);
+	}
+
+	CUDA_FUNC_IN bool HasTriangle(unsigned int i) const
+	{
+		return false;
+	}
+
+	AABB getBox(float eps) const
+	{
+		return AABB(lightPos - make_float3(eps), lightPos + make_float3(eps));
+	}
+public:
+	static const unsigned int TYPE;
+};
+
+#define e_DiffuseLight_TYPE 2
+struct e_DiffuseLight : public e_LightBase
+{
+	float3 Lemit;
+    ShapeSet<MAX_SHAPE_LENGTH> shapeSet;
+
+	e_DiffuseLight(float3 L, ShapeSet<MAX_SHAPE_LENGTH>& s)
+		: e_LightBase(false), shapeSet(s), Lemit(L)
+	{
+
+	}
+
+	CUDA_FUNC_IN float3 Power(const e_KernelDynamicScene& scene) const
+	{
+		return Lemit * shapeSet.Area() * PI;
+	}
+
+	CUDA_FUNC_IN float Pdf(const e_KernelDynamicScene& scene, const float3 &p, const float3 &wi) const
+	{
+		return shapeSet.Pdf(p, wi, scene.m_sBVHIntData.Data);
+	}
+
+	CUDA_FUNC_IN float3 Sample_L(const e_KernelDynamicScene& scene, const LightSample &ls, float u1, float u2, Ray *ray, float3 *Ns, float *pdf) const
+	{
+		float3 org = shapeSet.Sample(ls, Ns, scene.m_sBVHIntData.Data);
+		float3 dir = UniformSampleSphere(u1, u2);
+		if (dot(dir, *Ns) < 0.)
+			dir *= -1.f;
+		*ray = Ray(org, dir);
+		*pdf = shapeSet.Pdf(org) * INV_TWOPI;
+		float3 Ls = L(org, *Ns, dir);
+		return Ls;
+	}
+
+	CUDA_FUNC_IN float3 Sample_L(const e_KernelDynamicScene& scene, const float3& p, const LightSample& ls, float* pdf, e_VisibilitySegment* seg) const
+	{
+		float3 ns;
+		float3 ps = shapeSet.Sample(p, ls, &ns, scene.m_sBVHIntData.Data);
+		seg->SetSegment(p, 0, ps, 0);
+		*pdf = shapeSet.Pdf(p, seg->r.direction, scene.m_sBVHIntData.Data);
+		return L(ps, ns, -seg->r.direction);
+	}
+
+	CUDA_FUNC_IN float3 Le(const e_KernelDynamicScene& scene, const Ray& r) const
+	{
+		return make_float3(0.0f);
+	}
+
+	CUDA_FUNC_IN float3 L(const float3 &p, const float3 &n, const float3 &w) const
+	{
+        return dot(n, w) > 0.f ? Lemit : make_float3(0);
+    }
+
+	CUDA_FUNC_IN bool HasTriangle(unsigned int i) const
+	{
+		return shapeSet.Contains(i);
+	}
+
+	AABB getBox(float eps) const
+	{
+		return shapeSet.getBox();
+	}
+public:
+	static const unsigned int TYPE;
+};
+
+#define e_DistantLight_TYPE 3
+struct e_DistantLight : public e_LightBase
+{
+	float3 lightDir;
+    float3 _L;
+	Onb sys;
+
+	e_DistantLight(float3 l, float3 d)
+		: e_LightBase(true), lightDir(d), _L(l), sys(d)
+	{
+
+	}
+
+	CUDA_FUNC_IN float3 Power(const e_KernelDynamicScene& scene) const
+	{
+		float3 worldCenter = scene.m_sBox.Center();
+		float worldRadius = Distance(scene.m_sBox.maxV, scene.m_sBox.minV) / 2.0f;
+		return _L * PI * worldRadius * worldRadius;
+	}
+
+	CUDA_FUNC_IN float Pdf(const e_KernelDynamicScene& scene, const float3 &p, const float3 &wi) const
+	{
+		return 0.0f;
+	}
+
+	CUDA_FUNC_IN float3 Sample_L(const e_KernelDynamicScene& scene, const LightSample &ls, float u1, float u2, Ray *ray, float3 *Ns, float *pdf) const
+	{
+		float3 worldCenter = scene.m_sBox.Center();
+		float worldRadius = Distance(scene.m_sBox.maxV, scene.m_sBox.minV) / 2.0f;
+		float d1, d2;
+		ConcentricSampleDisk(ls.uPos[0], ls.uPos[1], &d1, &d2);
+		float3 Pdisk = worldCenter + worldRadius * (d1 * sys.m_binormal + d2 * sys.m_tangent);
+		*ray = Ray(Pdisk + worldRadius * lightDir, -1.0f * lightDir);
+		*Ns = -1.0f * lightDir;
+		*pdf = 1.f / (PI * worldRadius * worldRadius);
+		return _L;
+	}
+
+	CUDA_FUNC_IN float3 Sample_L(const e_KernelDynamicScene& scene, const float3& p, const LightSample& ls, float* pdf, e_VisibilitySegment* seg) const
+	{
+		seg->SetRay(p, 0, lightDir);
+		*pdf = 1.0f;
+		return _L;
+	}
+	
+	CUDA_FUNC_IN float3 L(const float3 &p, const float3 &n, const float3 &w) const
+	{
+		return make_float3(0);
+	}
+
+	CUDA_FUNC_IN float3 Le(const e_KernelDynamicScene& scene, const Ray& r) const
+	{
+		return make_float3(0.0f);
+	}
+
+	CUDA_FUNC_IN bool HasTriangle(unsigned int i) const
+	{
+		return false;
+	}
+	
+	AABB getBox(float eps) const
+	{
+		return AABB(make_float3(0), make_float3(0));
+	}
+public:
+	static const unsigned int TYPE;
+};
+
+#define e_SpotLight_TYPE 4
+struct e_SpotLight : public e_LightBase
+{
+    float3 lightPos;
+    float3 Intensity;
+    float cosTotalWidth, cosFalloffStart;
+	Onb sys;
+
+	e_SpotLight(float3 p, float3 t, float3 L, float width, float fall)
+		: e_LightBase(true), lightPos(p), Intensity(L)
+	{
+		cosTotalWidth = cosf(Radians(width));
+		cosFalloffStart = cosf(Radians(fall));
+		sys = Onb(t - p);
+	}
+
+	CUDA_FUNC_IN float3 Power(const e_KernelDynamicScene& scene) const
+	{
+		return Intensity * 2.f * PI * (1.f - .5f * (cosFalloffStart + cosTotalWidth));
+	}
+
+	CUDA_FUNC_IN float Pdf(const e_KernelDynamicScene& scene, const float3 &p, const float3 &wi) const
+	{
+		return 0.0f;
+	}
+
+	CUDA_FUNC_IN float3 Sample_L(const e_KernelDynamicScene& scene, const LightSample &ls, float u1, float u2, Ray *ray, float3 *Ns, float *pdf) const
+	{
+		float3 v = UniformSampleCone(ls.uPos[0], ls.uPos[1], cosTotalWidth);
+		*ray = Ray(lightPos, sys.localToworld(v));
+		*Ns = ray->direction;
+		*pdf = UniformConePdf(cosTotalWidth);
+		return Intensity * Falloff(v);
+	}
+
+	CUDA_FUNC_IN float3 Sample_L(const e_KernelDynamicScene& scene, const float3& p, const LightSample& ls, float* pdf, e_VisibilitySegment* seg) const
+	{
+		seg->SetSegment(p, 0, lightPos, 0);
+		*pdf = 1.0f;
+		return Intensity * Falloff(sys.worldTolocal(-seg->r.direction)) / DistanceSquared(lightPos, p);
+	}
+	
+	CUDA_FUNC_IN float3 L(const float3 &p, const float3 &n, const float3 &w) const
+	{
+		return make_float3(0);
+	}
+
+	CUDA_FUNC_IN float3 Le(const e_KernelDynamicScene& scene, const Ray& r) const
+	{
+		return make_float3(0.0f);
+	}
+
+	CUDA_FUNC_IN bool HasTriangle(unsigned int i) const
+	{
+		return false;
+	}
+	
+	AABB getBox(float eps) const
+	{
+		return AABB(lightPos - make_float3(eps), lightPos + make_float3(eps));
+	}
+private:
+	CUDA_FUNC_IN float Falloff(const float3 &w) const
+	{
+		float3 wl = normalize(w);
+		float costheta = wl.z;
+		if (costheta < cosTotalWidth)     return 0.;
+		if (costheta > cosFalloffStart)   return 1.;
+		// Compute falloff inside spotlight cone
+		float delta = (costheta - cosTotalWidth) / (cosFalloffStart - cosTotalWidth);
+		return delta*delta*delta*delta;
+	}
+public:
+	static const unsigned int TYPE;
+};
 
 struct e_KernelLight
 {
-	float3 m_cPower;
-	AABB box;
-	//union
-	//{
-		//struct//LT_Directional
-		//{
-			float3 m_vDirection;
-			float3 m_vOrigin;
-			float3 m_vSpan;
-		//};
-		//struct//LT_Sphere
-		//{
-			float3 m_vSphereOrigin;
-			float m_fRadius;
-			float m_fRadSqr;
-		//};
-		//struct//LT_Directed
-		//{
-			float3 m_vOriginS;
-			float3 m_vSpanS;
-			float3 m_vOriginD;
-			float3 m_vSpanD;
-			float3 m_vNormal;
-		//}
-	//};
-	e_LightType Type;
-	CUDA_FUNC_IN float3 L(const float3 &p, const float3 &n, const float3 &w) const 
-	{
-		return dot(n, w) > 0.f ? m_cPower : make_float3(0);
-	}
-	CUDA_ONLY_FUNC float3 Sample_L(CudaRNG& rng, Ray* photonRay, float3* nor = 0, float* pdf = 0) const
-	{
-		if(pdf)
-			*pdf = 1;
-		float3 n;
-		Ray r;
-		if(Type == LT_Directional)
-		{
-			float3 o = m_vOrigin + m_vSpan * make_float3(rng.randomFloat(), rng.randomFloat(), rng.randomFloat());
-			r = Ray(o, SampleCosineHemisphere(m_vDirection, rng.randomFloat(), rng.randomFloat()));
-			n = m_vDirection;
-		}
-		else if(Type == LT_Sphere)
-		{
-			float3 d = normalize(make_float3(rng.randomFloat(), rng.randomFloat(), rng.randomFloat()) * 2.0f - 1.0f);
-			r =  Ray(m_vSphereOrigin + d * m_fRadius * 1.01f, d);
-			n = d;
-		}
-		else if(Type == LT_Directed)
-		{
-			float3 o = m_vOriginS + m_vSpanS * make_float3(rng.randomFloat(), rng.randomFloat(), rng.randomFloat());
-			float3 h = m_vOriginD + m_vSpanD * make_float3(rng.randomFloat(), rng.randomFloat(), rng.randomFloat());
-			float3 d = normalize(h - o);
-			r =  Ray(o, d);
-			n = m_vNormal;
-		}
-		if(nor)
-			*nor = n;
-		*photonRay = r;
-		return this->L(r.origin, n, r.direction);
-	}
-	CUDA_ONLY_FUNC unsigned int CheckHit(float3& p)
-	{
-		const float eps = 0.05f, e = 1.0f + eps;
-		if(Type == LT_Directional)
-		{
-			float3 c = (p - m_vOrigin) / m_vSpan;
-			return c.x < e && c.x > -eps && c.y < e && c.y > -eps && c.z < e && c.z > -eps;
-		}
-		else if(Type == LT_Sphere)
-		{
-			float3 c = p - m_vSphereOrigin;
-			return dot(c, c) < m_fRadSqr * e;
-		}
-	}
-	CUDA_ONLY_FUNC float3 SampleRandomPoint(CudaRNG& rng)
-	{
-		if(Type == LT_Directional)
-			return m_vOrigin + m_vSpan * make_float3(rng.randomFloat(), rng.randomFloat(), rng.randomFloat());
-			//return m_vOrigin + m_vSpan * make_float3(0.5f,0,0.5f);
-		else if(Type == LT_Sphere)
-		{
-			float3 d = normalize(make_float3(rng.randomFloat(), rng.randomFloat(), rng.randomFloat()) * 2.0f - 1.0f);
-			return m_vSphereOrigin + d * m_fRadius * 1.01f;
-		}
-	}
-};
-
-class e_Light
-{
-protected:
-	float3 m_cPower;
-public:
-	e_Light(float3 a_Power)
-	{
-		m_cPower = a_Power;
-	}
-	virtual e_KernelLight getKernelData() = 0;
-	virtual AABB getBox() = 0;
-};
-
-class e_DirectionalLight : public e_Light
-{
 private:
-	float3 m_vDirection;
-	float3 m_vOrigin;
-	float3 m_vSpan;
-public:
-	e_DirectionalLight(AABB& box, float3& dir, float3& col)
-		: e_Light(col)
-	{
-		box = box.Inflate();
-		m_vDirection = dir;
-		m_vOrigin = box.minV;
-		m_vSpan = box.maxV - box.minV;
-	}
-	virtual e_KernelLight getKernelData()
-	{
-		e_KernelLight r;
-		r.Type = LT_Directional;
-		r.m_cPower = m_cPower;
-		r.m_vDirection = m_vDirection;
-		r.m_vOrigin = m_vOrigin;
-		r.m_vSpan = m_vSpan;
-		r.box = getBox();
-		return r;
-	}
-	virtual AABB getBox()
-	{
-		return AABB(m_vOrigin - make_float3(0.1f), m_vOrigin + m_vSpan + make_float3(0.1f));
-	}
-};
-
-class e_SphereLight : public e_Light
-{
-private:
-	float3 m_vPoint;
-	float m_fRadius;
-public:
-	e_SphereLight(float3 pos, float rad, float3& col)
-		: e_Light(col)
-	{
-		m_vPoint = pos;
-		m_fRadius = rad;
-	}
-	virtual e_KernelLight getKernelData()
-	{
-		e_KernelLight r;
-		r.Type = LT_Sphere;
-		r.m_cPower = m_cPower;
-		r.m_vSphereOrigin = m_vPoint;
-		r.m_fRadius = m_fRadius;
-		r.m_fRadSqr = m_fRadius * m_fRadius;
-		r.box = getBox();
-		return r;
-	}
-	virtual AABB getBox()
-	{
-		float3 r = make_float3(m_fRadius);
-		return AABB(m_vPoint - r, m_vPoint + r);
-	}
-};
-
-class e_DirectedLight : public e_Light
-{
-private:
+	unsigned char Data[sizeof(ShapeSet<MAX_SHAPE_LENGTH>) * 4];
 	unsigned int type;
-	e_Node* m_pTarget0;
-	AABB m_pTarget1;
-	float3 m_vOrigin;
-	float3 m_vSpan;
+#define CALL_TYPE(t,f,r) \
+	case t##_TYPE : \
+		r ((t*)Data)->f; \
+		break;
+#define CALL_FUNC(r,f) \
+	switch (type) \
+	{ \
+		CALL_TYPE(e_PointLight, f, r) \
+		CALL_TYPE(e_DiffuseLight, f, r) \
+		CALL_TYPE(e_DistantLight, f, r) \
+		CALL_TYPE(e_SpotLight, f, r) \
+	}
 public:
-	e_DirectedLight(e_Node* N, float3& a_Origin, float3& a_Span, float3& col)
-		: e_Light(col)
+	template<typename T> void Set(T& val)
 	{
-		type = 1;
-		m_pTarget0 = N;
-		m_vOrigin = a_Origin;
-		m_vSpan = a_Span;
+		*(T*)Data = val;
+		type = T::TYPE;
 	}
-	e_DirectedLight(AABB& dest, float3& a_Origin, float3& a_Span, float3& col)
-		: e_Light(col)
+
+	CUDA_FUNC_IN float3 Power(const e_KernelDynamicScene& scene) const
 	{
-		type = 2;
-		m_pTarget1 = dest;
-		m_vOrigin = a_Origin;
-		m_vSpan = a_Span;
+		CALL_FUNC(return, Power(scene))
 	}
-	virtual e_KernelLight getKernelData()
+
+	CUDA_FUNC_IN float Pdf(const e_KernelDynamicScene& scene, const float3 &p, const float3 &wi) const
 	{
-		e_KernelLight r;
-		r.m_cPower = m_cPower;
-		r.Type = LT_Directed;
-		r.m_vOriginS = m_vOrigin;
-		r.m_vSpanS = m_vSpan;
-		AABB b = type == 1 ? m_pTarget0->getWorldBox() : m_pTarget1;
-		r.m_vOriginD = b.minV; 
-		r.m_vSpanD = b.maxV - b.minV;
-		r.box = getBox();
-		float3 d2 = b.Center() - r.box.Center(), d= fabsf(d2);
-		if(d.x > d.y && d.x > d.z)
-			r.m_vNormal = make_float3(signf(d2.x),0,0);
-		else if(d.y > d.z)
-			r.m_vNormal = make_float3(0,signf(d2.y),0);
-		else r.m_vNormal = make_float3(0,0,signf(d2.z));
-		return r;
+		CALL_FUNC(return, Pdf(scene, p, wi))
 	}
-	virtual AABB getBox()
+
+	CUDA_FUNC_IN float3 Sample_L(const e_KernelDynamicScene& scene, const LightSample &ls, float u1, float u2, Ray *ray, float3 *Ns, float *pdf) const
 	{
-		return AABB(m_vOrigin, m_vOrigin + m_vSpan);
+		CALL_FUNC(return, Sample_L(scene, ls, u1, u2, ray, Ns, pdf))
 	}
+
+	CUDA_FUNC_IN float3 Sample_L(const e_KernelDynamicScene& scene, const float3& p, const LightSample& ls, float* pdf, e_VisibilitySegment* seg) const
+	{
+		CALL_FUNC(return, Sample_L(scene, p, ls, pdf, seg))
+	}
+
+	CUDA_FUNC_IN float3 Le(const e_KernelDynamicScene& scene, const Ray& r) const
+	{
+		CALL_FUNC(return, Le(scene, r))
+	}
+	
+	CUDA_FUNC_IN float3 L(const float3 &p, const float3 &n, const float3 &w) const
+	{
+		CALL_FUNC(return, L(p, n, w))
+	}
+
+	CUDA_FUNC_IN bool HasTriangle(unsigned int i) const
+	{
+		CALL_FUNC(return, HasTriangle(i))
+	}
+
+	CUDA_FUNC_IN bool IsDeltaLight() const
+	{
+		return ((e_LightBase*)Data)->IsDelta;
+	}
+
+	AABB getBox(float eps) const
+	{
+		CALL_FUNC(return, getBox(eps))
+	}
+
+#undef CALL_FUNC
+#undef CALL_TYPE
 };
 
-inline int maxLightSize()
-{
-	return MAX(sizeof(e_DirectionalLight), sizeof(e_SphereLight), sizeof(e_DirectedLight));
-}

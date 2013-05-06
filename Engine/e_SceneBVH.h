@@ -20,6 +20,7 @@ public:
 	e_DataStream<float4x4>* m_pTransforms;
 	e_DataStream<float4x4>* m_pInvTransforms;
 	int startNode;
+	AABB m_sBox;
 public:
 	e_SceneBVH(unsigned int a_NodeCount)
 	{
@@ -27,6 +28,7 @@ public:
 		m_pTransforms = new e_DataStream<float4x4>(a_NodeCount);
 		m_pInvTransforms = new e_DataStream<float4x4>(a_NodeCount);
 		startNode = -1;
+		m_sBox = AABB::Identity();
 	}
 	~e_SceneBVH()
 	{

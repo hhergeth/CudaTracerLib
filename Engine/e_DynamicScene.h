@@ -9,25 +9,9 @@
 #include "e_TerrainHeader.h"
 #include "Engine/e_KernelMaterial.h"
 #include "e_Volumes.h"
+#include "e_KernelDynamicScene.h"
 
 class e_Terrain;
-
-struct e_KernelDynamicScene
-{
-	e_KernelDataStream<e_TriangleData> m_sTriData;
-	e_KernelDataStream<e_TriIntersectorData> m_sBVHIntData;
-	e_KernelDataStream<e_BVHNodeData> m_sBVHNodeData;
-	e_KernelDataStream<int> m_sBVHIndexData;
-	e_KernelDataStream<e_KernelMaterial> m_sMatData;
-	e_KernelHostDeviceBuffer<e_KernelTexture> m_sTexData;
-	e_KernelHostDeviceBuffer<e_KernelMesh> m_sMeshData;
-	e_KernelDataStream<e_Node> m_sNodeData;
-	e_KernelHostDeviceBuffer<e_KernelLight> m_sLightData;
-	e_KernelDataStream<char> m_sAnimData;
-	e_KernelSceneBVH m_sSceneBVH;
-	e_KernelTerrainData m_sTerrain;
-	e_KernelAggregateVolume m_sVolume;
-};
 
 #include "e_SceneInitData.h"
 #include "e_AnimatedMesh.h"
@@ -47,7 +31,7 @@ public:
 	e_DataStream<e_Node>* m_pNodeStream;
 	e_DataStream<e_VolumeRegion>* m_pVolumes;
 	e_DataStream<char>* m_pAnimStream;
-	e_HostDeviceBuffer<e_Light, e_KernelLight>* m_pLightStream;
+	e_DataStream<e_KernelLight>* m_pLightStream;
 	e_SceneBVH* m_pBVH;
 	e_TmpVertex* m_pDeviceTmpFloats;
 	e_Terrain* m_pTerrain;
@@ -59,7 +43,7 @@ public:
 	void Serialize(OutputStream& a_Out);
 	e_Node* CreateNode(const char* a_MeshFile);
 	e_HostDeviceBufferReference<e_Texture, e_KernelTexture> LoadTexture(char* file);
-	void SetNodeTransform(float4x4& mat, e_Node* a_Node)
+	void SetNodeTransform(const float4x4& mat, e_Node* a_Node)
 	{
 		m_uModified = 1;
 		a_Node->setTransform(mat);
@@ -90,9 +74,9 @@ public:
 	}
 	unsigned int getLightCount()
 	{
-		return m_pLightStream->UsedElements();
+		return m_pLightStream->UsedElements().getLength();
 	}
-	e_Light* getLights(unsigned int i = 0)
+	e_KernelLight* getLights(unsigned int i = 0)
 	{
 		return m_pLightStream->operator()(i);
 	}
@@ -116,7 +100,7 @@ public:
 			r += m_pNodeStream[0](i)->m_pMesh->getTriangleCount();
 		return r;
 	}
-	e_DirectionalLight* addDirectionalLight(AABB& box, float3 dir, float3 col)
+	/*e_DirectionalLight* addDirectionalLight(AABB& box, float3 dir, float3 col)
 	{
 		e_HostDeviceBufferReference<e_Light, e_KernelLight> r = m_pLightStream->malloc(1);
 		new(r(0)) e_DirectionalLight(box, dir, col);
@@ -143,7 +127,7 @@ public:
 		new (r(0)) e_DirectedLight(dest, src.minV, src.maxV - src.minV, col);
 		m_pLightStream->Invalidate(r);
 		return (e_DirectedLight*)r(0);
-	}
+	}*/
 	void setTerrain(e_Terrain* T);
 	void printStatus(char* dest)
 	{
@@ -175,6 +159,58 @@ public:
 		mats.Invalidate();
 	}
 	AABB getAABB(e_Node* N, char* name, unsigned int* a_Mi = 0);
-	e_Light* createLight(e_Node* N, char* name, const float3& col);
-	e_Light* createLight(e_Node* N, const float3& col, char* sourceName, char* destName);
+	template<int N> ShapeSet<N> CreateShape(e_Node* Node, char* name)
+	{
+		e_TriIntersectorData* n[N];
+		unsigned int n2[N];
+		unsigned int c = 0, mi = -1;
+		
+		for(int j = 0; j < Node->m_pMesh->m_sMatInfo.getLength(); j++)
+			if(strstr(Node->m_pMesh->m_sMatInfo(j)->Name, name))
+			{
+				mi = j;
+				break;
+			}
+		if(mi == -1)
+			throw 1;
+
+		int i = 0, e = Node->m_pMesh->m_sIntInfo.getLength() * 4;
+		while(i < e)
+		{
+			e_TriIntersectorData* sec = (e_TriIntersectorData*)((float4*)Node->m_pMesh->m_sIntInfo.operator()(0) + i);
+			int* ind = Node->m_pMesh->m_sIndicesInfo(i);
+			if(*ind == -1)
+			{
+				i++;
+				continue;
+			}
+			if(*ind < -1 || *ind >= Node->m_pMesh->m_sTriInfo.getLength())
+				break;
+			e_TriangleData* d = Node->m_pMesh->m_sTriInfo(*ind);
+			if(d->getMatIndex(Node->m_uMaterialOffset) == mi)
+			{
+				int k = 0;
+				for(; k < c; k++)
+					if(n2[k] == *ind)
+						break;
+				if(k == c)
+				{
+					n[c] = sec;
+					n2[c++] = *ind;
+				}
+			}
+			i += 3;
+		}
+
+		ShapeSet<N> r = ShapeSet<N>(n, m_pTriIntStream->getHost(0), n2, c);
+		return r;
+	}
+	template<typename T> e_KernelLight* creatLight(T& val)
+	{
+		e_DataStreamReference<e_KernelLight> r = m_pLightStream->malloc(1);
+		r()->Set(val);
+		return r();
+	}
+	/*e_Light* createLight(e_Node* N, char* name, const float3& col);
+	e_Light* createLight(e_Node* N, const float3& col, char* sourceName, char* destName);*/
 };

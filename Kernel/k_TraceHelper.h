@@ -4,7 +4,6 @@
 
 //TODO : EXP scene doenst work with pppm
 #define USE_EXP_SCENE
-//#define SAMPLE_NORMALS
 
 texture<float4, 1> t_nodesA;
 texture<float4, 1> t_tris;
@@ -31,7 +30,7 @@ CUDA_ALIGN(16) __device__ unsigned int g_NextRayCounter;
 CUDA_ALIGN(16) __constant__ e_CameraData g_CameraData;
 CUDA_ALIGN(16) __constant__ k_TracerRNGBuffer g_RNGData;
 
-template<bool USE_ALPHA> inline __device__ bool k_TraceRayNode(float3& dir, float3& ori, TraceResult* a_Result, e_Node* N)
+template<bool USE_ALPHA> inline __device__ bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResult* a_Result, const e_Node* N)
 {
 	unsigned int mIndex = N->m_uMeshIndex;
 	e_KernelMesh mesh = g_SceneData.m_sMeshData[mIndex];
@@ -174,9 +173,8 @@ template<bool USE_ALPHA> inline __device__ bool k_TraceRayNode(float3& dir, floa
 //a_Result->m_fDist = length(modl2.TransformNormal(d*a_Result->m_fDist));
 
 #ifdef USE_EXP_SCENE
-template<bool USE_ALPHA> inline __device__ bool k_TraceRay(float3& dir, float3& ori, TraceResult* a_Result)
+template<bool USE_ALPHA> inline __device__ bool k_TraceRay(const float3& dir, const float3& ori, TraceResult* a_Result)
 {
-	dir = normalize(dir);
 	if(!g_SceneData.m_sNodeData.UsedCount)
 		return false;
 	int traversalStackOuter[64];
@@ -253,26 +251,12 @@ template<bool USE_ALPHA> inline __device__ bool k_TraceRay(float3& dir, float3& 
 	return a_Result->hasHit();
 }
 #else
-template<bool USE_ALPHA> inline __device__ bool k_TraceRay(float3& dir, float3& ori, TraceResult* a_Result)
+template<bool USE_ALPHA> inline __device__ bool k_TraceRay(const float3& dir, const float3& ori, TraceResult* a_Result)
 {
 	e_Node* N = g_SceneData.m_sNodeData.Data;
 	return k_TraceRayNode<USE_ALPHA>(dir, ori, a_Result, N);
 }
 #endif
-/*
-inline __device__ float3 k_SampleNormal(float2& uv, e_TriangleData* tri, e_KernelMaterial* m)
-{
-#ifdef SAMPLE_NORMALS
-	if(m->m_uNormalTexIndex != -1)
-	{
-		Onb sys = tri->lerpOnb(uv);
-		float4 q = g_SceneData.m_sTexData[m->m_uNormalTexIndex].Sample(tri->lerpTexCoord(uv));
-		return normalize(sys.localToworld(make_float3(q.x, q.y, q.z) * 2.0f - make_float3(1)));
-	}
-	else
-#endif
-		return tri->lerpOnb(uv).m_normal;
-}*/
 
 //do not!!! use a method here, the compiler will fuck up the textures.
 #define k_INITIALIZE(a_Data) \

@@ -838,7 +838,8 @@ void createNode(Hasher& H, e_DynamicScene* S, IMember* obj, IMember* cell)
 			float s = 50;
 			AABB box = (bo ? bo->box() : AABB(make_float3(-s), make_float3(s))).Transform(mat);
 			float3 col = !COLORREFToFloat4(d->rgb) * 3;
-			S->addSphereLight(box.minV + (box.maxV - box.minV) / 2.0f, length(box.maxV - box.minV) / 2.0f, col);
+			S->creatLight(e_PointLight(box.Center(), col));
+			//S->addSphereLight(box.minV + (box.maxV - box.minV) / 2.0f, length(box.maxV - box.minV) / 2.0f, col);
 			//S->addDirectionalLight(box, make_float3(0,-1,0), col);
 		}
 		else if(f->type == "ARMO")

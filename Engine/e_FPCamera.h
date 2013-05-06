@@ -37,19 +37,19 @@ public:
 	{
 		aspect = (float)w / (float)h;
 	}
-	virtual void getData(e_CameraData& c)
+	virtual void getData(e_CameraData& c) const
 	{
 		c.p = m_vPos;
-		float4x4 p = getProj(), v = float4x4::Translate(-m_vPos) * m_mView;
+		float4x4 p = getProj(), v = float4x4::Translate(-1.0f * m_vPos) * m_mView;
 		c.proj = p.Inverse();
 		c.view = v.Inverse();
 		c.m_mViewProj = v * p;
 		c.dist = m_fDist;
 		c.apperture = apperture;
 	}
-	virtual float4x4 getViewProjection()
+	virtual float4x4 getViewProjection() const
 	{
-		return (float4x4::Translate(-m_vPos) * (m_mView * float4x4(1,0,0,0,0,-1,0,0,0,0,1,0,0,0,0,1))) * getProj();
+		return (float4x4::Translate(-1.0f * m_vPos) * (m_mView * float4x4(1,0,0,0,0,-1,0,0,0,0,1,0,0,0,0,1))) * getProj();
 	}
 	virtual bool Update();
 	virtual void Set(float3& pos, float3& tar)
@@ -77,17 +77,17 @@ public:
 	{
 		Speed = speed;
 	}
-	float4x4 getProj()
+	float4x4 getProj() const
 	{
 		return float4x4::Perspective(fovy, aspect, 1, 1000);
 	}
-	float3 getPos()
+	float3 getPos() const
 	{
 		e_CameraData q;
 		getData(q);
 		return q.p;
 	}
-	float3 getDir()
+	float3 getDir() const
 	{
 		e_CameraData q;
 		getData(q);
@@ -124,19 +124,19 @@ public:
 		aspect = (float)w / (float)h;
 		m_bChanged = true;
 	}
-	virtual void getData(e_CameraData& c)
+	virtual void getData(e_CameraData& c) const
 	{
 		c.p = m_vPos;
-		float4x4 p = getProj(), v = float4x4::Translate(-m_vPos) * m_mView;
+		float4x4 p = getProj(), v = float4x4::Translate(-1.0f * m_vPos) * m_mView;
 		c.proj = p.Inverse();
 		c.view = v.Inverse();
 		c.m_mViewProj = v * p;
 		c.dist = m_fDist;
 		c.apperture = apperture;
 	}
-	virtual float4x4 getViewProjection()
+	virtual float4x4 getViewProjection() const
 	{
-		return (float4x4::Translate(-m_vPos) * (m_mView * float4x4(1,0,0,0,0,-1,0,0,0,0,1,0,0,0,0,1))) * getProj();
+		return (float4x4::Translate(-1.0f * m_vPos) * (m_mView * float4x4(1,0,0,0,0,-1,0,0,0,0,1,0,0,0,0,1))) * getProj();
 	}
 	virtual void Set(float3& pos, float3& tar)
 	{
@@ -169,7 +169,7 @@ public:
 	virtual void setSpeed(float speed)
 	{
 	}
-	float4x4 getProj()
+	float4x4 getProj() const
 	{
 		return float4x4::Perspective(fovy, aspect, 1, 1000);
 	}

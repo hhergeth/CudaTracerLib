@@ -2,6 +2,23 @@
 
 #include "..\Base\CudaRandom.h"
 
+struct LightSample
+{
+	CUDA_FUNC_IN LightSample() { }
+	CUDA_FUNC_IN LightSample(CudaRNG &rng)
+	{
+		uPos[0] = rng.randomFloat();
+		uPos[1] = rng.randomFloat();
+		uComponent = rng.randomFloat();
+	}
+	CUDA_FUNC_IN LightSample(float up0, float up1, float ucomp)
+	{
+		uPos[0] = up0; uPos[1] = up1;
+		uComponent = ucomp;
+	}
+	float uPos[2], uComponent;
+};
+
 CUDA_FUNC_IN float AbsDot(const float3& a, const float3& b)
 {
 	return abs(dot(a, b));
@@ -64,6 +81,13 @@ CUDA_FUNC_IN int Float2Int(float val) {
 
 CUDA_FUNC_IN int Ceil2Int(float val) {
     return (int)ceilf(val);
+}
+
+CUDA_FUNC_IN void UniformSampleTriangle(float u1, float u2, float *u, float *v)
+{
+    float su1 = sqrtf(u1);
+    *u = 1.f - su1;
+    *v = u2 * su1;
 }
 
 
@@ -339,3 +363,102 @@ CUDA_FUNC_IN float SphericalPhi(const float3 &v)
     float p = atan2f(v.y, v.x);
     return (p < 0.f) ? p + 2.f * PI : p;
 }
+
+CUDA_FUNC_IN float BalanceHeuristic(int nf, float fPdf, int ng, float gPdf)
+{
+    return (nf * fPdf) / (nf * fPdf + ng * gPdf);
+}
+
+
+CUDA_FUNC_IN float PowerHeuristic(int nf, float fPdf, int ng, float gPdf)
+{
+    float f = nf * fPdf, g = ng * gPdf;
+    return (f*f) / (f*f + g*g);
+}
+
+template<typename T> CUDA_FUNC_IN void STL_Sort(T* a_Array, unsigned int a_Length, int (*cmp)(T*, T*))
+{
+	for (int i = 0; i < a_Length -1; ++i)
+		for (int j = 0; j < a_Length - i - 1; ++j)
+			if (cmp(a_Array[j], a_Array[j + 1]) > 0) 
+				swap(a_Array[j], a_Array[j + 1]);
+}
+
+
+
+template<typename T> CUDA_FUNC_IN void STL_Sort(T* a_Array, unsigned int a_Length)
+{
+	for (int i = 0; i < a_Length -1; ++i)
+		for (int j = 0; j < a_Length - i - 1; ++j)
+			if (a_Array[j] > a_Array[j + 1]) 
+				swap(a_Array[j], a_Array[j + 1]);
+}
+
+template<typename T> CUDA_FUNC_IN const T* STL_upper_bound(const T* first, const T* last, const T& value)
+{
+	const T* f = first;
+	do
+	{
+		if(*f > value)
+			return f;
+	}
+	while(f++ <= last);
+	return first;
+}
+
+template<int N> struct Distribution1D
+{
+	Distribution1D()
+	{
+
+	}
+    Distribution1D(const float *f, int n)
+	{
+		if(n > N)
+			throw 1;
+        count = n;
+        memcpy(func, f, n*sizeof(float));
+        cdf[0] = 0.0f;
+        for (int i = 1; i < count+1; ++i)
+            cdf[i] = cdf[i-1] + func[i-1] / float(n);
+        funcInt = cdf[count];
+        if (funcInt == 0.f)
+            for (int i = 1; i < n+1; ++i)
+                cdf[i] = float(i) / float(n);
+        else for (int i = 1; i < n+1; ++i)
+                cdf[i] /= funcInt;
+    }
+    CUDA_FUNC_IN float SampleContinuous(float u, float *pdf, int *off = NULL) const
+	{
+        float *ptr = STL_upper_bound(cdf, cdf+count+1, u);
+        int offset = MAX(0, int(ptr-cdf-1));
+        if (off)
+			*off = offset;
+        Assert(offset < count);
+        Assert(u >= cdf[offset] && u < cdf[offset+1]);
+
+        // Compute offset along CDF segment
+        float du = (u - cdf[offset]) / (cdf[offset+1] - cdf[offset]);
+        Assert(!isnan(du));
+
+        // Compute PDF for sampled offset
+        if (pdf) *pdf = func[offset] / funcInt;
+
+        // Return $x\in{}[0,1)$ corresponding to sample
+        return (offset + du) / count;
+    }
+    CUDA_FUNC_IN int SampleDiscrete(float u, float *pdf) const
+	{
+        const float *ptr = STL_upper_bound(cdf, cdf+count+1, u);
+		int offset = MAX(0, int(ptr-cdf-1));
+        Assert(offset < count);
+        Assert(u >= cdf[offset] && u < cdf[offset+1]);
+        if (pdf) *pdf = func[offset] / (funcInt * count);
+        return offset;
+    }
+private:
+    float func[N];
+	float cdf[N];
+    float funcInt;
+    int count;
+};

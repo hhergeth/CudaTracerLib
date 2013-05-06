@@ -949,6 +949,17 @@ CUDA_FUNC_IN float4 fsqrtf(const float4& v)
 	return make_float4(sqrtf(v.x), sqrtf(v.y), sqrtf(v.z), sqrtf(v.w));
 }
 
+CUDA_FUNC_IN float DistanceSquared(const float3& a, const float3& b)
+{
+	float3 q = a - b;
+	return dot(q, q);
+}
+
+CUDA_FUNC_IN float Distance(const float3& a, const float3& b)
+{
+	return sqrtf(DistanceSquared(a, b));
+}
+
 typedef uchar4 RGBE;
 
 CUDA_FUNC_IN RGBE Float3ToRGBE(float3& c)

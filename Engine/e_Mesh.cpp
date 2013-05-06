@@ -6,6 +6,7 @@
 #undef TS_DEC_FRAMEWORK
 #include <Windows.h>
 #include "e_Volumes.h"
+#include "e_Light.h"
 
 const unsigned int e_KernelMaterial_Glass::TYPE = e_KernelMaterial_Glass_TYPE;
 const unsigned int e_KernelMaterial_Matte::TYPE = e_KernelMaterial_Matte_TYPE;
@@ -17,6 +18,11 @@ const unsigned int e_KernelMaterial_Substrate::TYPE = e_KernelMaterial_Substrate
 
 const unsigned int e_HomogeneousVolumeDensity::TYPE = e_HomogeneousVolumeDensity_TYPE;
 const unsigned int e_SphereVolumeDensity::TYPE = e_SphereVolumeDensity_TYPE;
+
+const unsigned int e_PointLight::TYPE = e_PointLight_TYPE;
+const unsigned int e_DiffuseLight::TYPE = e_DiffuseLight_TYPE;
+const unsigned int e_DistantLight::TYPE = e_DistantLight_TYPE;
+const unsigned int e_SpotLight::TYPE = e_SpotLight_TYPE;
 
 #include "niflib.h"
 #include "obj\NiObject.h"

@@ -4,6 +4,27 @@
 #include "e_Brdf.h"
 #include "e_KernelMaterial.h"
 
+struct e_TriangleData;
+class e_Node;
+struct TraceResult
+{
+	float m_fDist;
+	float2 m_fUV;
+	const e_TriangleData* m_pTri;
+	const e_Node* m_pNode;
+	CUDA_FUNC_IN bool hasHit() const
+	{
+		return m_pTri != 0;
+	}
+	CUDA_FUNC_IN void Init()
+	{
+		m_fDist = FLT_MAX;
+		m_fUV = make_float2(0,0);
+		m_pNode = 0;
+		m_pTri = 0;
+	}
+};
+
 #define EXT_TRI
 
 #define TOFLOAT3(a,b,c) ((make_float3(a,b,c) / make_float3(127)) - make_float3(1))

@@ -34,6 +34,7 @@
     <ClInclude Include="Engine\e_Sampler.h" />
     <ClInclude Include="Engine\e_SceneBVH.h" />
     <ClInclude Include="Engine\e_SceneInitData.h" />
+    <ClInclude Include="Engine\e_ShapeSet.h" />
     <ClInclude Include="Engine\e_Terrain.h" />
     <ClInclude Include="Engine\e_TerrainHeader.h" />
     <ClInclude Include="Engine\e_Texture.h" />
@@ -52,6 +53,7 @@
     <ClInclude Include="Engine\SceneBuilder\Scene.hpp" />
     <ClInclude Include="Engine\SceneBuilder\SplitBVHBuilder.hpp" />
     <ClInclude Include="Engine\SceneBuilder\Util.hpp" />
+    <ClInclude Include="Kernel\k_IntegrateHelper.h" />
     <ClInclude Include="Kernel\k_PathTracer.h" />
     <ClInclude Include="Kernel\k_PrimTracer.h" />
     <ClInclude Include="Kernel\k_sPpmTracer.h" />

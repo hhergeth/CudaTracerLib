@@ -312,6 +312,7 @@ class k_sPpmTracer : public k_RandTracerBase
 private:
 	k_PhotonMapCollection m_sMaps;
 	k_sPpmPixel* m_pDevicePixels;
+	bool m_bDirect;
 
 	float m_fInitialRadius;
 	unsigned long long m_uPhotonsEmitted;
