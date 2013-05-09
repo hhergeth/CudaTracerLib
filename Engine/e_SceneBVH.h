@@ -1,6 +1,6 @@
 #pragma once
 
-#include "e_DataStream.h"
+#include "e_Buffer.h"
 #include "..\Math\vector.h"
 #include "e_Node.h"
 
@@ -16,17 +16,17 @@ struct e_KernelSceneBVH
 class e_SceneBVH
 {
 public:
-	e_DataStream<e_BVHNodeData>* m_pNodes;
-	e_DataStream<float4x4>* m_pTransforms;
-	e_DataStream<float4x4>* m_pInvTransforms;
+	e_Stream<e_BVHNodeData>* m_pNodes;
+	e_Stream<float4x4>* m_pTransforms;
+	e_Stream<float4x4>* m_pInvTransforms;
 	int startNode;
 	AABB m_sBox;
 public:
 	e_SceneBVH(unsigned int a_NodeCount)
 	{
-		m_pNodes = new e_DataStream<e_BVHNodeData>(a_NodeCount * 2);//largest binary tree has the same amount of inner nodes
-		m_pTransforms = new e_DataStream<float4x4>(a_NodeCount);
-		m_pInvTransforms = new e_DataStream<float4x4>(a_NodeCount);
+		m_pNodes = new e_Stream<e_BVHNodeData>(a_NodeCount * 2);//largest binary tree has the same amount of inner nodes
+		m_pTransforms = new e_Stream<float4x4>(a_NodeCount);
+		m_pInvTransforms = new e_Stream<float4x4>(a_NodeCount);
 		startNode = -1;
 		m_sBox = AABB::Identity();
 	}
@@ -36,14 +36,14 @@ public:
 		delete m_pTransforms;
 		delete m_pInvTransforms;
 	}
-	void Build(e_Node* a_Nodes, unsigned int a_Count);
+	void Build(e_StreamReference(e_Node), e_BufferReference<e_Mesh, e_KernelMesh> a_Meshes);
 	e_KernelSceneBVH getData()
 	{
 		e_KernelSceneBVH q;
-		q.m_pNodes = m_pNodes->getDevice(0);
+		q.m_pNodes = m_pNodes->getKernelData().Data;
 		q.m_sStartNode = startNode;
-		q.m_pNodeTransforms = m_pTransforms->getDevice(0);
-		q.m_pInvNodeTransforms = m_pInvTransforms->getDevice(0);
+		q.m_pNodeTransforms = m_pTransforms->getKernelData().Data;
+		q.m_pInvNodeTransforms = m_pInvTransforms->getKernelData().Data;
 		return q;
 	}
 	unsigned int getSizeInBytes()

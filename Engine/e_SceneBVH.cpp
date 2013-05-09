@@ -112,13 +112,13 @@ int RecurseNative(int size, BBoxTmp* work, nativelist<e_BVHNodeData>& a_Nodes, _
 	return a_Nodes.index(n);
 }
 
-void e_SceneBVH::Build(e_Node* a_Nodes, unsigned int a_Count)
+void e_SceneBVH::Build(e_StreamReference(e_Node) a_Nodes, e_BufferReference<e_Mesh, e_KernelMesh> a_Meshes)
 {
 	__m128 bottom(_mm_set1_ps(FLT_MAX)), top(_mm_set1_ps(-FLT_MAX));
-	BBoxTmp* data = (BBoxTmp*)_mm_malloc(a_Count * sizeof(BBoxTmp), 128);
-	for(unsigned int i = 0; i < a_Count; i++)
+	BBoxTmp* data = (BBoxTmp*)_mm_malloc(a_Nodes.getLength() * sizeof(BBoxTmp), 128);
+	for(unsigned int i = 0; i < a_Nodes.getLength(); i++)
 	{
-		AABB box = a_Nodes[i].getWorldBox();
+		AABB box = a_Nodes(i)->getWorldBox(a_Meshes(a_Nodes(i)->m_uMeshIndex));
 		__m128 q0 = TOSSE3(box.minV), q1 = TOSSE3(box.maxV);
 		data[i]._bottom = q0;
 		data[i]._top = q1;
@@ -126,22 +126,22 @@ void e_SceneBVH::Build(e_Node* a_Nodes, unsigned int a_Count)
 		data[i]._pNode = i;
 		bottom = _mm_min_ps(bottom, data[i]._bottom);
 		top = _mm_max_ps(top, data[i]._top);
-		*m_pTransforms->getHost(i) = a_Nodes[i].getWorldMatrix().Transpose();
-		*m_pInvTransforms->getHost(i) = a_Nodes[i].getInvWorldMatrix().Transpose();
+		*m_pTransforms->operator()(i) = a_Nodes[i].getWorldMatrix().Transpose();
+		*m_pInvTransforms->operator()(i) = a_Nodes[i].getInvWorldMatrix().Transpose();
 	}
-	if(a_Count)
+	if(a_Nodes.getLength())
 	{
-		startNode = RecurseNative(a_Count, data, nativelist<e_BVHNodeData>(m_pNodes->getHost(0)), bottom, top);
+		startNode = RecurseNative(a_Nodes.getLength(), data, nativelist<e_BVHNodeData>(m_pNodes->operator()()), bottom, top);
 	}
 	else
 	{
 		startNode = 0;
-		m_pNodes->getHost(0)->setDummy();
+		m_pNodes->operator()(0)->setDummy();
 		//m_sBox = a_Nodes->getWorldBox();
 	}
-	m_pNodes->Invalidate(DataStreamRefresh_Immediate);
-	m_pTransforms->Invalidate(DataStreamRefresh_Immediate);
-	m_pInvTransforms->Invalidate(DataStreamRefresh_Immediate);
+	m_pNodes->Invalidate();
+	m_pTransforms->Invalidate();
+	m_pInvTransforms->Invalidate();
 	_mm_free(data);
 	m_sBox = TOBOX(bottom, top);
 }

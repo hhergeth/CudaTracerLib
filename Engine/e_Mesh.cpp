@@ -43,7 +43,7 @@ using namespace Niflib;
 
 #include "SceneBuilder\Importer.h"
 
-e_Mesh::e_Mesh(InputStream& a_In, e_DataStream<e_TriIntersectorData>* a_Stream0, e_DataStream<e_TriangleData>* a_Stream1, e_DataStream<e_BVHNodeData>* a_Stream2, e_DataStream<int>* a_Stream3, e_DataStream<e_KernelMaterial>* a_Stream4)
+e_Mesh::e_Mesh(InputStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<int>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4)
 {
 	a_In >> m_sLocalBox;
 
@@ -51,33 +51,33 @@ e_Mesh::e_Mesh(InputStream& a_In, e_DataStream<e_TriIntersectorData>* a_Stream0,
 	a_In >> m_uTriangleCount;
 	m_sTriInfo = a_Stream1->malloc(m_uTriangleCount);
 	a_In.Read(m_sTriInfo(0), m_sTriInfo.getSizeInBytes());
-	a_Stream1->Invalidate(DataStreamRefresh_Buffered, m_sTriInfo);
+	m_sTriInfo.Invalidate();
 
 	unsigned int m_uMaterialCount;
 	a_In >> m_uMaterialCount;
 	m_sMatInfo = a_Stream4->malloc(m_uMaterialCount);
 	a_In.Read(m_sMatInfo(0), m_sMatInfo.getSizeInBytes());
-	a_Stream4->Invalidate(DataStreamRefresh_Buffered, m_sMatInfo);
+	m_sMatInfo.Invalidate();
 
 	a_In >> m_uMaterialCount;
 	unsigned long long m_uNodeSize;
 	a_In >> m_uNodeSize;
 	m_sNodeInfo = a_Stream2->malloc(m_uNodeSize / 64);
 	a_In.Read(m_sNodeInfo(0), m_uNodeSize);
-	a_Stream2->Invalidate(DataStreamRefresh_Buffered, m_sNodeInfo);
+	m_sNodeInfo.Invalidate();
 
 	unsigned long long m_uIntSize;
 	a_In >> m_uIntSize;
 	float C = ceil((float)m_uIntSize / 48.0f);
 	m_sIntInfo = a_Stream0->malloc((int)C);
 	a_In.Read(m_sIntInfo(0), m_uIntSize);
-	a_Stream0->Invalidate(DataStreamRefresh_Buffered, m_sIntInfo);
+	m_sIntInfo.Invalidate();
 
 	unsigned long long m_uIndicesSize;
 	a_In >> m_uIndicesSize;
 	m_sIndicesInfo = a_Stream3->malloc(m_uIndicesSize / 4);
 	a_In.Read(m_sIndicesInfo(0), m_sIndicesInfo.getSizeInBytes());
-	a_Stream3->Invalidate(DataStreamRefresh_Buffered, m_sIndicesInfo);
+	m_sIndicesInfo.Invalidate();
 	
 	createKernelData();
 }
@@ -114,7 +114,7 @@ e_SceneInitData e_Mesh::ParseBinary(const char* a_InputFile)
 	return e_SceneInitData::CreateForSpecificMesh(m_uTriangleCount, (int)ceilf((float)m_uIntSize / 48.0f), m_uNodeSize / 64, m_uIndicesSize / 4, 255, 128);
 }
 
-void e_Mesh::Free(e_DataStream<e_TriIntersectorData>& a_Stream0, e_DataStream<e_TriangleData>& a_Stream1, e_DataStream<e_BVHNodeData>& a_Stream2, e_DataStream<int>& a_Stream3, e_DataStream<e_KernelMaterial>& a_Stream4)
+void e_Mesh::Free(e_Stream<e_TriIntersectorData>& a_Stream0, e_Stream<e_TriangleData>& a_Stream1, e_Stream<e_BVHNodeData>& a_Stream2, e_Stream<int>& a_Stream3, e_Stream<e_KernelMaterial>& a_Stream4)
 {
 	a_Stream0.dealloc(m_sIntInfo);
 	a_Stream1.dealloc(m_sTriInfo);

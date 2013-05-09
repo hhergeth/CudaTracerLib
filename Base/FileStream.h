@@ -13,7 +13,7 @@ private:
 		Read((char*)&a, sizeof(T));
 	}
 public:
-	virtual void Read(char* a_Out, unsigned int a_Size) = 0;
+	virtual void Read(void* a_Out, unsigned int a_Size) = 0;
 	virtual unsigned long long getPos() = 0;
 	virtual unsigned long long getFileSize() = 0;
 public:
@@ -144,7 +144,7 @@ public:
 	{
 		return numBytesRead;
 	}
-	virtual void Read(char* a_Data, unsigned int a_Size)
+	virtual void Read(void* a_Data, unsigned int a_Size)
 	{
 		DWORD a;
 		BOOL b = ReadFile(H, a_Data, a_Size, &a, 0);

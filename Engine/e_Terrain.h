@@ -1,7 +1,9 @@
 #include "..\Math\vector.h"
-#include "e_DataStream.h"
 #include <limits.h>
 #include "e_TerrainHeader.h"
+#include <vector>
+#include "e_Buffer.h"
+#include "..\Base\FileStream.h"
 
 // ---------
 // | 0 | 1 | 
@@ -227,8 +229,8 @@ public:
 
 class e_Terrain
 {
-	e_DataStream<e_TerrainData_Inner>* m_pStream;
-	e_DataStream<CACHE_LEVEL_TYPE>* m_pCacheStream;
+	e_Stream<e_TerrainData_Inner>* m_pStream;
+	e_Stream<CACHE_LEVEL_TYPE>* m_pCacheStream;
 	float2 m_sMin;
 	float2 m_sMax;
 	float2 m_sSpan;
@@ -238,22 +240,22 @@ public:
 	{
 		m_uDepth = MAX(1, a_Depth - 1);
 		unsigned int N = sum_pow4(m_uDepth);
-		m_pStream = new e_DataStream<e_TerrainData_Inner>(N);
-		m_pCacheStream = new e_DataStream<CACHE_LEVEL_TYPE>(pow4(CACHE_LEVEL));
+		m_pStream = new e_Stream<e_TerrainData_Inner>(N);
+		m_pCacheStream = new e_Stream<CACHE_LEVEL_TYPE>(pow4(CACHE_LEVEL));
 		m_sMin = m;
 		m_sMax = M;
-		m_sSpan = make_float2(FLT_MAX, -FLT_MAX);
+		m_sSpan = make_float2(FLT_MAX, -FLT_MAX);/*
 		int4 z0 = make_int4(0,0,0,0);
 		unsigned int mi = calcIndex(0,0,m_uDepth - 1, m_uDepth);
-		int4* nend = (int4*)m_pStream[0](0u) + mi;
-		for(int4* n = (int4*)m_pStream[0](0u); n < nend; n++)
+		int4* nend = (int4*)m_pStream->operator()(mi).operator e_TerrainData_Inner *();
+		for(int4* n = (int4*)m_pStream->operator()().operator e_TerrainData_Inner *(); n < nend; n++)
 			*n = z0;
-		nend = (int4*)m_pStream[0](N - 1) + 1;
+		nend = (int4*)m_pStream->operator()(N - 1).operator e_TerrainData_Inner *() + 1;
 		float f0 = -FLT_MAX;
 		int f2 = *(int*)&f0;
 		z0 = make_int4(f2,0,0,0);
-		for(int4* n = (int4*)m_pStream[0](mi); n < nend; n++)
-			*n = z0;
+		for(int4* n = (int4*)m_pStream->operator()(mi).operator e_TerrainData_Inner *(); n < nend; n++)
+			*n = z0;*/
 	}
 	~e_Terrain()
 	{
@@ -268,8 +270,8 @@ public:
 	e_KernelTerrainData getKernelData()
 	{
 		e_KernelTerrainData q;
-		q.m_pNodes = m_pStream->getDevice();
-		q.m_pCacheData = m_pCacheStream->getDevice();
+		q.m_pNodes = m_pStream->getKernelData().Data;
+		q.m_pCacheData = m_pCacheStream->getKernelData().Data;
 		q.m_sMax = make_float3(m_sMax.x, m_sSpan.y, m_sMax.y);
 		q.m_sMin = make_float3(m_sMin.x, m_sSpan.x, m_sMin.y);
 		q.m_uDepth = m_uDepth;
@@ -302,8 +304,8 @@ public:
 		a_In >> m_sMax;
 		a_In >> m_sSpan;
 		a_In >> m_uDepth;
-		m_pStream = new e_DataStream<e_TerrainData_Inner>(a_In);
-		m_pCacheStream = new e_DataStream<CACHE_LEVEL_TYPE>(a_In);
+		m_pStream = new e_Stream<e_TerrainData_Inner>(a_In);
+		m_pCacheStream = new e_Stream<CACHE_LEVEL_TYPE>(a_In);
 	}
 	void Move(float x, float z)
 	{

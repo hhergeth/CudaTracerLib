@@ -13,36 +13,33 @@ public:
 	unsigned int m_uMeshIndex;
 	unsigned int m_uMaterialOffset;
 public:
-	//host side data
-	e_Mesh* m_pMesh;
 	char m_cFile[256];
 public:
 	e_Node() {}
 	e_Node(unsigned int MeshIndex, e_Mesh* mesh, const char* file)
 	{
-		m_pMesh = mesh;
 		m_uMeshIndex = MeshIndex;
 		m_sWorldMatrix = m_sInvWorldMatrix = float4x4::Identity();
 		ZeroMemory(m_cFile, sizeof(m_cFile));
 		strcpy(m_cFile, file);
 		m_uMaterialOffset = mesh->m_sMatInfo.getIndex();
 	}
-	bool usesInstanciatedMaterials() const
+	bool usesInstanciatedMaterials(e_Mesh* mesh) const
 	{
-		return m_uMaterialOffset != m_pMesh->m_sMatInfo.getIndex();
+		return m_uMaterialOffset != mesh->m_sMatInfo.getIndex();
 	}
 	const char* getFilePath() const
 	{
 		return m_cFile;
-	}
+	}/*
 	void loadMesh(e_Mesh* m, unsigned int m2)
 	{
 		m_uMeshIndex = m2;
 		m_pMesh = m;
-	}
-	AABB getWorldBox() const
+	}*/
+	AABB getWorldBox(e_Mesh* mesh) const
 	{
-		return m_pMesh->m_sLocalBox.Transform(m_sWorldMatrix);
+		return mesh->m_sLocalBox.Transform(m_sWorldMatrix);
 	}
 	CUDA_FUNC_IN float4x4 getWorldMatrix() const
 	{

@@ -20,12 +20,11 @@
     <ClInclude Include="Defines.h" />
     <ClInclude Include="Engine\e_AnimatedMesh.h" />
     <ClInclude Include="Engine\e_Brdf.h" />
+    <ClInclude Include="Engine\e_Buffer.h" />
     <ClInclude Include="Engine\e_Camera.h" />
-    <ClInclude Include="Engine\e_DataStream.h" />
     <ClInclude Include="Engine\e_DynamicScene.h" />
     <ClInclude Include="Engine\e_ErrorHandler.h" />
     <ClInclude Include="Engine\e_FPCamera.h" />
-    <ClInclude Include="Engine\e_HostDeviceBuffer.h" />
     <ClInclude Include="Engine\e_KernelMaterial.h" />
     <ClInclude Include="Engine\e_Light.h" />
     <ClInclude Include="Engine\e_Mesh.h" />
@@ -97,7 +96,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="Engine\e_AnimatedMeshKernels.cu" />
+    <CudaCompile Include="Engine\e_AnimatedMesh.cu" />
     <CudaCompile Include="Kernel\k_PathTracer.cu" />
     <CudaCompile Include="Kernel\k_PrimTracer.cu" />
     <CudaCompile Include="Kernel\k_SceneTrace.cu" />

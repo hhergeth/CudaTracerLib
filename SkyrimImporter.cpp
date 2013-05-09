@@ -86,9 +86,9 @@ public:
 		memcpy(&a_Data, data + pos, sizeof(T));
 		pos += sizeof(T);
 	}
-	virtual void Read(char* a_Out, unsigned int a_Size)
+	virtual void Read(void* a_Out, unsigned int a_Size)
 	{
-		Read<char>(a_Out, a_Size);
+		Read<char>((char*)a_Out, a_Size);
 	}
 	virtual unsigned long long getPos()
 	{
@@ -866,7 +866,7 @@ void createNode(Hasher& H, e_DynamicScene* S, IMember* obj, IMember* cell)
 
 		if(path[0])
 		{
-			e_Node* N = S->CreateNode(path);
+			e_StreamReference(e_Node) N = S->CreateNode(path);
 			S->SetNodeTransform(mat, N);
 		}
 	}

@@ -85,19 +85,15 @@ __global__ void g_ComputeBVHState(e_TriIntersectorData* a_BVHIntersectionData, e
 	}
 }
 
-void e_AnimatedMesh::k_ComputeState(unsigned int a_Anim, unsigned int a_Frame, float a_Lerp, e_KernelDynamicScene a_Data, e_DataStream<e_BVHNodeData>* a_BVHNodeStream, e_TmpVertex* a_DeviceTmp)
+void e_AnimatedMesh::k_ComputeState(unsigned int a_Anim, unsigned int a_Frame, float a_Lerp, e_KernelDynamicScene a_Data, e_Stream<e_BVHNodeData>* a_BVHNodeStream, e_TmpVertex* a_DeviceTmp)
 {
 	unsigned int n = (a_Frame + 1) % m_pAnimations[a_Anim].m_uNumFrames;
 	float4x4* m0 = TRANS(m_pAnimData + m_pAnimations[a_Anim].m_uDataOffset + k_Data.m_uJointCount * a_Frame), *m1 = TRANS(m_pAnimData + m_pAnimations[a_Anim].m_uDataOffset + k_Data.m_uJointCount * n);
 	g_ComputeVertices<<<k_Data.m_uVertexCount / 256 + 1, 256>>>(a_DeviceTmp, TRANS(m_pVertices), m0, m1, a_Lerp, k_Data.m_uVertexCount);
-	SYNC_BAD_CUDA_CALLD
 	g_ComputeTriangles<<<k_Data.m_uTriangleCount / 256 + 1, 256>>>(a_DeviceTmp, TRANS(m_pTriangles), a_Data.m_sTriData.Data + m_sTriInfo.getIndex(), k_Data.m_uTriangleCount);
-	SYNC_BAD_CUDA_CALLD
 	for(int l = k_Data.m_uBVHLevelCount - 1; l > 0; l--)
 		g_ComputeBVHState<<<m_pLevels[l].y / 256 + 1, 256>>>(a_Data.m_sBVHIntData.Data + m_sIntInfo.getIndex(), a_Data.m_sBVHNodeData.Data + m_sNodeInfo.getIndex(), a_Data.m_sBVHIndexData.Data + m_sIndicesInfo.getIndex(), a_DeviceTmp, TRANS(m_pTriangles), TRANS(m_pLevelEntries + m_pLevels[l].x), m_pLevels[l].y);
-	SYNC_BAD_CUDA_CALLD
-
-	a_BVHNodeStream->CopyDeviceToHost(m_sNodeInfo.getIndex(), m_sNodeInfo.getLength());
+	a_BVHNodeStream->Invalidate(m_sNodeInfo);
 	AABB l, r;
 	a_BVHNodeStream[0](m_sNodeInfo.getIndex())->getBox(l, r);
 	l.Enlarge(r);

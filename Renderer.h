@@ -117,7 +117,7 @@ public:
 		m_uState = m_uState == 1 ? 2 : 1;
 		oldMove0 = oldMove1 = true;
 	}
-	void Render(FW::GLContext* gl, e_DynamicScene* S, e_Camera* C, FW::Image* I, bool a_DrawSceneBvh, bool a_DrawObjectBvhs, const e_Node* N)
+	void Render(FW::GLContext* gl, e_DynamicScene* S, e_Camera* C, FW::Image* I, bool a_DrawSceneBvh, bool a_DrawObjectBvhs, e_StreamReference(e_Node) N)
 	{
 		bool& b = m_uState == 1 ? oldMove0 : oldMove1;
 		bool moved = C->Update() || b;
@@ -138,7 +138,7 @@ public:
 			AABB box = S->getKernelSceneData().m_sBox;
 			float eps = Distance(box.maxV, box.minV) / 100.0f;
 			for(int i = 0; i < S->getLightCount(); i++)
-				plotBox(S->getLights(i)->getBox(eps), vpq, gl, make_float3(1,0,0));
+				plotBox(S->getLights()(i)->getBox(eps), vpq, gl, make_float3(1,0,0));
 			for(int i = 0; i < S->getVolumes().getLength(); i++)
 			{
 				AABB box = S->getVolumes()(i)->WorldBound();
@@ -150,8 +150,8 @@ public:
 			return;
 
 		float4x4 vp = C->getViewProjection();
-		if(N != 0)
-			plotBox(N->getWorldBox(), vp, gl, make_float3(0,0,1));
+		if(N)
+			plotBox(S->getBox(N), vp, gl, make_float3(0,0,1));
 		if(a_DrawSceneBvh)
 		{
 			//plot(S->getSceneBVH()->m_pNodes->getHost(0), S->getSceneBVH()->m_pNodes->getHost(0), 0, vp, gl);
@@ -162,8 +162,8 @@ public:
 		{
 			for(int i = 0; i < S->getNodeCount(); i++)
 			{
-				unsigned int j = S->getNodes()[i].m_pMesh->getKernelData().m_uBVHNodeOffset / 4;
-				plot(0, S->m_pBVHStream->getHost(j), 0, S->getNodes()[i].getWorldMatrix(), vp, gl);
+				unsigned int j = S->getMesh(S->getNodes()(i))->getKernelData().m_uBVHNodeOffset / 4;
+				plot(0, S->m_pBVHStream->operator()(j), 0, S->getNodes()[i].getWorldMatrix(), vp, gl);
 			}
 		}
 	}
@@ -219,7 +219,7 @@ public:
 		m_uActiveComponent = 0;
 		m_cActiveColor = make_float3(1,0,1);
 	}
-	bool HandleDown(e_Node* N, e_DynamicScene* S, e_Camera* C, int2 p, int2 s)
+	bool HandleDown(e_StreamReference(e_Node) N, e_DynamicScene* S, e_Camera* C, int2 p, int2 s)
 	{
 		e_CameraData c;
 		C->getData(c);
@@ -239,7 +239,7 @@ public:
 		}
 		return m_uActiveComponent;
 	}
-	void HandleMove(e_Node* N, e_DynamicScene* S, e_Camera* C, int2 p, int2 s)
+	void HandleMove(e_StreamReference(e_Node) N, e_DynamicScene* S, e_Camera* C, int2 p, int2 s)
 	{
 		e_CameraData c;
 		C->getData(c);
@@ -252,11 +252,11 @@ public:
 		m_vOldHit = m.Translation();
 		S->SetNodeTransform(m, N);
 	}
-	void HandleUp(e_Node* N, e_DynamicScene* S, const e_Camera* C, int2 p, int2 s)
+	void HandleUp(e_StreamReference(e_Node) N, e_DynamicScene* S, const e_Camera* C, int2 p, int2 s)
 	{
 		m_uActiveComponent = 0;
 	}
-	void DrawPlanes(const e_Node* N, const e_Camera* C, FW::GLContext* O)
+	void DrawPlanes(const e_StreamReference(e_Node) N, const e_Camera* C, FW::GLContext* O)
 	{
 		float4x4 m = N->getWorldMatrix(), vp = C->getViewProjection();
 		float3 r = normalize(m.Right()), u = normalize(m.Up()), f = normalize(m.Forward());

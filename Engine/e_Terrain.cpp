@@ -4,7 +4,8 @@
 
 e_TerrainData_Leaf* e_Terrain::getValAt(unsigned int x, unsigned int y)
 {
-	return (e_TerrainData_Leaf*)m_pStream[0](calcIndex(x, y, m_uDepth - 1, m_uDepth));
+	return 0;
+	//return (e_TerrainData_Leaf*)m_pStream->operator()(calcIndex(x, y, m_uDepth - 1, m_uDepth));
 }
 
 bool upd(e_TerrainData_Inner* root, CACHE_LEVEL_TYPE* data, int d, int t, int x, int y, float2& ret, float2 sdxy)
@@ -59,9 +60,9 @@ bool upd(e_TerrainData_Inner* root, CACHE_LEVEL_TYPE* data, int d, int t, int x,
 
 void e_Terrain::updateFromTriangles()
 {
-	upd(m_pStream->getHost(), m_pCacheStream->getHost(), 0, m_uDepth, 0, 0, m_sSpan, getKernelData().getsdxy());
-	m_pStream->Invalidate(DataStreamRefresh_Buffered);
-	m_pCacheStream->Invalidate(DataStreamRefresh_Buffered);
+	//upd(m_pStream->getHost(), m_pCacheStream->getHost(), 0, m_uDepth, 0, 0, m_sSpan, getKernelData().getsdxy());
+	//m_pStream->Invalidate(DataStreamRefresh_Buffered);
+	//m_pCacheStream->Invalidate(DataStreamRefresh_Buffered);
 }
 
 void prnt(e_TerrainData_Inner* root,unsigned int lvl, uchar3* data, unsigned int d, unsigned int t, int x, int y, float2 rng, float2 val)
@@ -98,5 +99,5 @@ void prnt(e_TerrainData_Inner* root,unsigned int lvl, uchar3* data, unsigned int
 
 void e_Terrain::printLevelMap(unsigned int lvl, uchar3* data)
 {
-	prnt(m_pStream->operator()(0u), lvl, data, 0, m_uDepth, 0, 0, m_sSpan, m_sSpan);
+	//prnt(m_pStream->operator()(0u), lvl, data, 0, m_uDepth, 0, 0, m_sSpan, m_sSpan);
 }

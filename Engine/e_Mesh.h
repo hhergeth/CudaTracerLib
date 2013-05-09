@@ -1,10 +1,9 @@
 #pragma once
 
 #include "..\Math\vector.h"
-#include "e_DataStream.h"
 #include "e_TriangleData.h"
-#include "e_HostDeviceBuffer.h"
 #include "e_KernelMaterial.h"
+#include "e_Buffer.h"
 
 struct e_KernelMesh
 {
@@ -142,26 +141,21 @@ class e_Mesh
 public:
 	AABB m_sLocalBox;
 public:
-	e_DataStreamReference<e_TriangleData> m_sTriInfo;
-	e_DataStreamReference<e_KernelMaterial> m_sMatInfo;
-	e_DataStreamReference<e_BVHNodeData> m_sNodeInfo;
-	e_DataStreamReference<e_TriIntersectorData> m_sIntInfo;
-	e_DataStreamReference<int> m_sIndicesInfo;
+	e_StreamReference(e_TriangleData) m_sTriInfo;
+	e_StreamReference(e_KernelMaterial) m_sMatInfo;
+	e_StreamReference(e_BVHNodeData) m_sNodeInfo;
+	e_StreamReference(e_TriIntersectorData) m_sIntInfo;
+	e_StreamReference(int) m_sIndicesInfo;
 	e_KernelMesh m_sData;
 public:
-	e_Mesh() {}
-	e_Mesh(InputStream& a_In, e_DataStream<e_TriIntersectorData>* a_Stream0, e_DataStream<e_TriangleData>* a_Stream1, e_DataStream<e_BVHNodeData>* a_Stream2, e_DataStream<int>* a_Stream3, e_DataStream<e_KernelMaterial>* a_Stream4);
-	void Free(e_DataStream<e_TriIntersectorData>& a_Stream0, e_DataStream<e_TriangleData>& a_Stream1, e_DataStream<e_BVHNodeData>& a_Stream2, e_DataStream<int>& a_Stream3, e_DataStream<e_KernelMaterial>& a_Stream4);
+	e_Mesh(InputStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<int>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4);
+	void Free(e_Stream<e_TriIntersectorData>& a_Stream0, e_Stream<e_TriangleData>& a_Stream1, e_Stream<e_BVHNodeData>& a_Stream2, e_Stream<int>& a_Stream3, e_Stream<e_KernelMaterial>& a_Stream4);
 	static void CompileObjToBinary(const char* a_InputFile, OutputStream& a_Out);
 	static void CompileNifToBinary(const char* a_InputFile, OutputStream& a_Out);
 	static e_SceneInitData ParseBinary(const char* a_InputFile);
 	e_KernelMesh getKernelData()
 	{
 		return m_sData;
-	}
-	e_DataStreamReference<e_KernelMaterial> getMaterialInfo()
-	{
-		return m_sMatInfo;
 	}
 	e_KernelMesh createKernelData()
 	{

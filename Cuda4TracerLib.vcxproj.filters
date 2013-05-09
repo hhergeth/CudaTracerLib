@@ -42,9 +42,6 @@
     <ClInclude Include="Engine\e_Camera.h">
       <Filter>Engine</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\e_DataStream.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
     <ClInclude Include="Engine\e_DynamicScene.h">
       <Filter>Engine</Filter>
     </ClInclude>
@@ -52,9 +49,6 @@
       <Filter>Engine</Filter>
     </ClInclude>
     <ClInclude Include="Engine\e_FPCamera.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_HostDeviceBuffer.h">
       <Filter>Engine</Filter>
     </ClInclude>
     <ClInclude Include="Engine\e_Light.h">
@@ -184,6 +178,9 @@
     <ClInclude Include="Kernel\k_IntegrateHelper.h">
       <Filter>Kernel</Filter>
     </ClInclude>
+    <ClInclude Include="Engine\e_Buffer.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\e_AnimatedMesh.cpp">
@@ -265,7 +262,7 @@
     <CudaCompile Include="Kernel\k_sPpmTracer_EyePass.cu">
       <Filter>Kernel</Filter>
     </CudaCompile>
-    <CudaCompile Include="Engine\e_AnimatedMeshKernels.cu">
+    <CudaCompile Include="Engine\e_AnimatedMesh.cu">
       <Filter>Engine</Filter>
     </CudaCompile>
   </ItemGroup>

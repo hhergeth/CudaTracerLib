@@ -80,11 +80,11 @@ void constructLayout(std::vector<std::vector<e_BVHLevelEntry>>& a_Out, e_BVHNode
 	}
 }
 
-e_AnimatedMesh::e_AnimatedMesh(InputStream& a_In, e_DataStream<e_TriIntersectorData>* a_Stream0, e_DataStream<e_TriangleData>* a_Stream1, e_DataStream<e_BVHNodeData>* a_Stream2, e_DataStream<int>* a_Stream3, e_DataStream<e_KernelMaterial>* a_Stream4, e_DataStream<char>* a_Stream5)
+e_AnimatedMesh::e_AnimatedMesh(InputStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<int>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4, e_Stream<char>* a_Stream5)
 	: e_Mesh(a_In, a_Stream0, a_Stream1, a_Stream2, a_Stream3, a_Stream4)
 {
-	BASEHOST = a_Stream5->getHost(0);
-	BASEDEVICE = a_Stream5->getDevice(0);
+	BASEHOST = a_Stream5->operator()();
+	BASEDEVICE = a_Stream5->operator()();
 	unsigned int numVertices;
 	a_In >> numVertices;
 	unsigned int BLOCKSIZE;
@@ -117,7 +117,7 @@ e_AnimatedMesh::e_AnimatedMesh(InputStream& a_In, e_DataStream<e_TriIntersectorD
 	e_Animation* lA = m_pAnimations + k_Data.m_uAnimCount - 1;
 	unsigned int numB = lA->m_uDataOffset + lA->m_uNumFrames * k_Data.m_uJointCount;
 	APPEND(sizeof(float4x4) * numB)
-	a_Stream5->Invalidate(DataStreamRefresh_Buffered, m_pOffset);
+	a_Stream5->Invalidate(m_pOffset);
 }
 
 void e_AnimatedMesh::CompileToBinary(char* a_InputFile, c_StringArray& a_Anims, OutputStream& a_Out)

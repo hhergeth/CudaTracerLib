@@ -2,7 +2,7 @@
 
 #include "..\Math\vector.h"
 #include "..\Math\AABB.h"
-#include "e_DataStream.h"
+#include "e_Buffer.h"
 
 CUDA_FUNC_IN float PhaseHG(const float3 &w, const float3 &wp, float g)
 {
@@ -366,13 +366,13 @@ public:
 	{
 
 	}
-	e_KernelAggregateVolume(e_DataStreamReference<e_VolumeRegion>& D)
+	e_KernelAggregateVolume(e_Stream<e_VolumeRegion>* D)
 	{
-		m_uVolumeCount = D.getLength();
-		m_pVolumes = D.getDevice();
+		m_uVolumeCount = D->UsedElements().getLength();
+		m_pVolumes = D->getKernelData().Data;
 		box = AABB::Identity();
-		for(int i = 0; i < D.getLength(); i++)
-			box.Enlarge(D.getHost(i)->WorldBound());
+		for(int i = 0; i < m_uVolumeCount; i++)
+			box.Enlarge(D->operator()(i)->WorldBound());
 	}
 
 	//Calculates the intersection of the ray with the bound of the volume

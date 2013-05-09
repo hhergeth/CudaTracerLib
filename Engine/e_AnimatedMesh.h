@@ -1,6 +1,7 @@
 #pragma once
 
 #include "e_Mesh.h"
+#include <vector>
 
 struct e_BVHLevelEntry
 {
@@ -78,7 +79,7 @@ struct c_StringArray
 struct e_KernelDynamicScene;
 class e_AnimatedMesh : public e_Mesh
 {
-	e_DataStreamReference<char> m_pOffset;
+	e_StreamReference(char) m_pOffset;
 	e_KernelAnimatedMesh k_Data;
 
 	char* BASEHOST, *BASEDEVICE;
@@ -92,12 +93,11 @@ class e_AnimatedMesh : public e_Mesh
 	{
 		return (T*)(((unsigned long long)p - (unsigned long long)BASEHOST) + BASEDEVICE);
 	}
-	e_AnimatedMesh() {}
 public:
-	e_AnimatedMesh(InputStream& a_In, e_DataStream<e_TriIntersectorData>* a_Stream0, e_DataStream<e_TriangleData>* a_Stream1, e_DataStream<e_BVHNodeData>* a_Stream2, e_DataStream<int>* a_Stream3, e_DataStream<e_KernelMaterial>* a_Stream4, e_DataStream<char>* a_Stream5);
+	e_AnimatedMesh(InputStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<int>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4, e_Stream<char>* a_Stream5);
 	static void CompileToBinary(char* a_InputFile, c_StringArray& a_Anims, OutputStream& a_Out);
-	void k_ComputeState(unsigned int a_Anim, unsigned int a_Frame, float a_Lerp, e_KernelDynamicScene a_Data, e_DataStream<e_BVHNodeData>* a_BVHNodeStream, e_TmpVertex* a_DeviceTmp);
-	void CreateNewMesh(e_AnimatedMesh* A, e_DataStream<e_TriIntersectorData>* a_Stream0, e_DataStream<e_TriangleData>* a_Stream1, e_DataStream<e_BVHNodeData>* a_Stream2, e_DataStream<int>* a_Stream3, e_DataStream<e_KernelMaterial>* a_Stream4, e_DataStream<char>* a_Stream5)
+	void k_ComputeState(unsigned int a_Anim, unsigned int a_Frame, float a_Lerp, e_KernelDynamicScene a_Data, e_Stream<e_BVHNodeData>* a_BVHNodeStream, e_TmpVertex* a_DeviceTmp);
+	void CreateNewMesh(e_AnimatedMesh* A, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<int>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4, e_Stream<char>* a_Stream5)
 	{
 		A->m_sLocalBox = m_sLocalBox;
 		A->m_sMatInfo = m_sMatInfo;
