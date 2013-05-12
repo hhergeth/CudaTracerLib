@@ -134,7 +134,7 @@ public:
 	}
 	template<typename T> void Read(T* a_Data, unsigned int a_Size)
 	{
-		Read((char*)a_Data, a_Size);
+		Read((void*)a_Data, a_Size);
 	}
 	template<typename T> void Read(const T& a_Data)
 	{

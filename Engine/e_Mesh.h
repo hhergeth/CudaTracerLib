@@ -5,6 +5,8 @@
 #include "e_KernelMaterial.h"
 #include "e_Buffer.h"
 
+#define MAX_AREALIGHT_NUM 32
+
 struct e_KernelMesh
 {
 	unsigned int m_uTriangleOffset;
@@ -130,11 +132,15 @@ struct e_BVHNodeData
 	}
 };
 
-
-
 #include "cuda_runtime.h"
 #include "..\Base\FileStream.h"
 #include "e_SceneInitData.h"
+
+struct e_MeshPartLight
+{
+	e_String MatName;
+	float3 L;
+};
 
 class e_Mesh
 {
@@ -146,6 +152,8 @@ public:
 	e_StreamReference(e_BVHNodeData) m_sNodeInfo;
 	e_StreamReference(e_TriIntersectorData) m_sIntInfo;
 	e_StreamReference(int) m_sIndicesInfo;
+	e_MeshPartLight m_sLights[MAX_AREALIGHT_NUM];
+	unsigned int m_uUsedLights;
 	e_KernelMesh m_sData;
 public:
 	e_Mesh(InputStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<int>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4);

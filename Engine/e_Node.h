@@ -12,6 +12,7 @@ private:
 public:
 	unsigned int m_uMeshIndex;
 	unsigned int m_uMaterialOffset;
+	unsigned int m_uLightIndices[MAX_AREALIGHT_NUM];
 public:
 	char m_cFile[256];
 public:
@@ -23,6 +24,13 @@ public:
 		ZeroMemory(m_cFile, sizeof(m_cFile));
 		strcpy(m_cFile, file);
 		m_uMaterialOffset = mesh->m_sMatInfo.getIndex();
+	}
+	void setLightData( unsigned int* li, unsigned int lic)
+	{
+		for(int i = 0; i < lic; i++)
+			m_uLightIndices[i] = li[i];
+		for(int i = lic; i < sizeof(m_uLightIndices) / sizeof(unsigned int); i++)
+			m_uLightIndices[i] = -1;
 	}
 	bool usesInstanciatedMaterials(e_Mesh* mesh) const
 	{
@@ -53,5 +61,12 @@ public:
 	{
 		m_sWorldMatrix = m;
 		m_sInvWorldMatrix = m.Inverse();
+	}
+	unsigned int getNextFreeLightIndex()
+	{
+		for(int i = 0; i < sizeof(m_uLightIndices) / sizeof(unsigned int); i++)
+			if(m_uLightIndices[i] != -1)
+				return i;
+		return -1;
 	}
 };

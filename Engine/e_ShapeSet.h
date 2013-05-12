@@ -12,17 +12,13 @@ template<int N> struct ShapeSet
 		CUDA_ALIGN(16) float3 p[3];
 		CUDA_ALIGN(16) float3 n;
 		float area;
-		unsigned int index;
+		const e_TriIntersectorData* datRef;
 		
 		triData(){}
-		triData(const e_TriIntersectorData* a_Int, const e_TriIntersectorData* start, unsigned int i)
+		triData(const e_TriIntersectorData* a_Int, float4x4& mat)
 		{
-			dat = *a_Int;
-			index = i;
-			a_Int->getData(p[0], p[1], p[2]);
-			n = -cross(p[2] - p[0], p[1] - p[0]);
-			area = length(n);
-			n *= 1.0f / area;
+			datRef = a_Int;
+			Recalculate(mat);
 		}
 		CUDA_FUNC_IN float3 rndPoint(float b1, float b2) const
 		{
@@ -46,9 +42,19 @@ template<int N> struct ShapeSet
 				b.Enlarge(p[i]);
 			return b;
 		}
+		void Recalculate(float4x4& mat)
+		{
+			dat = *datRef;
+			datRef->getData(p[0], p[1], p[2]);
+			for(int i = 0; i < 3; i++)
+				p[i] = mat * p[i];
+			n = -cross(p[2] - p[0], p[1] - p[0]);
+			area = length(n);
+			n *= 1.0f / area;
+		}
 	};
 public:
-    ShapeSet(e_TriIntersectorData** indices, e_TriIntersectorData* A, unsigned int* indices2, unsigned int indexCount)
+    ShapeSet(e_TriIntersectorData** indices, unsigned int indexCount, float4x4& mat)
 	{
 		if(indexCount > N)
 			throw 1;
@@ -57,7 +63,7 @@ public:
 		sumArea = 0;
 		for(int i = 0; i < count; i++)
 		{
-			tris[i] = triData(indices[i], A, indices2[i]);
+			tris[i] = triData(indices[i], mat);
 			areas[i] = tris[i].area;
 			sumArea += tris[i].area;
 		}
@@ -105,19 +111,24 @@ public:
 	{
 		return float(count) / sumArea;
 	}
-	CUDA_FUNC_IN bool Contains(unsigned int index) const
-	{
-		for(int i = 0; i < count; i++)
-			if(index == tris[i].index)
-				return true;
-		return false;
-	}
 	AABB getBox() const
 	{
 		AABB b = AABB::Identity();
 		for(int i = 0; i < count; i++)
 			b.Enlarge(tris[i].box());
 		return b;
+	}
+	void Recalculate(float4x4& mat)
+	{
+		float areas[N];
+		sumArea = 0;
+		for(int i = 0; i < count; i++)
+		{
+			tris[i].Recalculate(mat);
+			areas[i] = tris[i].area;
+			sumArea += tris[i].area;
+		}
+		areaDistribution = Distribution1D<N>(areas, count);
 	}
 private:
     triData tris[N];

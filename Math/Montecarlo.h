@@ -462,3 +462,43 @@ private:
     float funcInt;
     int count;
 };
+
+CUDA_FUNC_IN float RdIntegral(float alphap, float A)
+{
+    float sqrtTerm = sqrtf(3.f * (1.f - alphap));
+    return alphap / 2.f * (1.f + expf(-4.f/3.f * A * sqrtTerm)) * expf(-sqrtTerm);
+}
+
+CUDA_FUNC_IN float RdToAlphap(float reflectance, float A)
+{
+    float alphaLow = 0., alphaHigh = 1.f;
+    float kd0 = RdIntegral(alphaLow, A);
+    float kd1 = RdIntegral(alphaHigh, A);
+    for (int i = 0; i < 16; ++i) {
+        Assert(kd0 <= reflectance && kd1 >= reflectance);
+        float alphaMid = (alphaLow + alphaHigh) * 0.5f;
+        float kd = RdIntegral(alphaMid, A);
+        if (kd < reflectance) { alphaLow = alphaMid;  kd0 = kd; }
+        else                  { alphaHigh = alphaMid; kd1 = kd; }
+    }
+    return (alphaLow + alphaHigh) * 0.5f;
+}
+
+CUDA_FUNC_IN void SubsurfaceFromDiffuse(const float3 &Kd, float meanPathLength, float eta, float3 *sigma_a, float3 *sigma_prime_s)
+{
+    float A = (1.f + Fdr(eta)) / (1.f - Fdr(eta));
+    float rgb[3];
+    rgb[0] = Kd.x; rgb[1] = Kd.y; rgb[2] = Kd.z;
+    float sigma_prime_s_rgb[3], sigma_a_rgb[3];
+    for (int i = 0; i < 3; ++i)
+	{
+       // Compute $\alpha'$ for RGB component, compute scattering properties
+       float alphap = RdToAlphap(rgb[i], A);
+       float sigma_tr = 1.f / meanPathLength;
+       float sigma_prime_t = sigma_tr / sqrtf(3.f * 1.f - alphap);
+       sigma_prime_s_rgb[i] = alphap * sigma_prime_t;
+       sigma_a_rgb[i] = sigma_prime_t - sigma_prime_s_rgb[i];
+    }
+    *sigma_a = make_float3(sigma_a_rgb[0], sigma_a_rgb[1], sigma_a_rgb[2]);
+    *sigma_prime_s = make_float3(sigma_prime_s_rgb[0], sigma_prime_s_rgb[1], sigma_prime_s_rgb[2]);
+}

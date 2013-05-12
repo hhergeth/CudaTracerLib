@@ -15,6 +15,8 @@ const unsigned int e_KernelMaterial_Metal::TYPE = e_KernelMaterial_Metal_TYPE;
 const unsigned int e_KernelMaterial_ShinyMetal::TYPE = e_KernelMaterial_ShinyMetal_TYPE;
 const unsigned int e_KernelMaterial_Plastic::TYPE = e_KernelMaterial_Plastic_TYPE;
 const unsigned int e_KernelMaterial_Substrate::TYPE = e_KernelMaterial_Substrate_TYPE;
+const unsigned int e_KernelMaterial_Subsurface::TYPE = e_KernelMaterial_Subsurface_TYPE;
+const unsigned int e_KernelMaterial_KdSubsurface::TYPE = e_KernelMaterial_KdSubsurface_TYPE;
 
 const unsigned int e_HomogeneousVolumeDensity::TYPE = e_HomogeneousVolumeDensity_TYPE;
 const unsigned int e_SphereVolumeDensity::TYPE = e_SphereVolumeDensity_TYPE;
@@ -46,6 +48,8 @@ using namespace Niflib;
 e_Mesh::e_Mesh(InputStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<int>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4)
 {
 	a_In >> m_sLocalBox;
+	a_In.Read(m_sLights, sizeof(m_sLights));
+	a_In >> m_uUsedLights;
 
 	unsigned int m_uTriangleCount;
 	a_In >> m_uTriangleCount;
@@ -143,7 +147,8 @@ void e_Mesh::CompileObjToBinary(const char* a_InputFile, OutputStream& a_Out)
 	ZeroMemory(v_BiTangents, sizeof(float3) * m_numVertices);
 	ComputeTangentSpace(MB, v_Normals, v_Tangents, v_BiTangents);
 #endif
-	int c = 0;
+	e_MeshPartLight m_sLights[MAX_AREALIGHT_NUM];
+	int c = 0, lc = 0;
 	for (int submesh = 0; submesh < MB->numSubmeshes(); submesh++)
 	{
 		FW::MeshBase::Material& M = MB->material(submesh);
@@ -165,7 +170,13 @@ void e_Mesh::CompileObjToBinary(const char* a_InputFile, OutputStream& a_Out)
 		{
 			mat.SetData(e_KernelMaterial_Glass(e_Sampler<float3>(make_float3(0)), e_Sampler<float3>(M.Tf), e_Sampler<float>(M.IndexOfRefraction)));
 		}
-		mat.Emission = M.emission;
+		if(length(M.emission) != 0)
+		{
+			ZeroMemory(m_sLights + lc, sizeof(e_MeshPartLight));
+			m_sLights[lc].L = M.emission;
+			strcpy(m_sLights[lc].MatName, M.Name.getPtr());
+			mat.NodeLightIndex = lc++;
+		}
 		/*
 #ifdef EXT_TRI
 		if(M.textures[0].hasData())
@@ -204,6 +215,9 @@ void e_Mesh::CompileObjToBinary(const char* a_InputFile, OutputStream& a_Out)
 	*(FW::Vec3f*)&box.maxV = b;
 
 	a_Out << box;
+	a_Out.Write(m_sLights, sizeof(m_sLights));
+	a_Out << lc;
+
 	a_Out << m_numTriangles;
 	a_Out.Write(triData, sizeof(e_TriangleData) * m_numTriangles);
 	a_Out << (unsigned int)matData.size();
@@ -231,6 +245,7 @@ void e_Mesh::CompileNifToBinary(const char* a_InputFile, OutputStream& a_Out)
 	FW::Mesh<FW::VertexP> M2;
 	unsigned int off = 0;
 	std::vector<Ref<NiObject>> Root = ReadNifList(str);
+	e_MeshPartLight m_sLights[MAX_AREALIGHT_NUM];
 	for(int i = 0; i < Root.size(); i++)
 	{
 		Ref<NiObject> c = Root.at(i);
@@ -404,6 +419,8 @@ void e_Mesh::CompileNifToBinary(const char* a_InputFile, OutputStream& a_Out)
 	}
 	M2.compact();
 	a_Out << box;
+	a_Out.Write(m_sLights, sizeof(m_sLights));
+	a_Out << 0;
 	a_Out << (unsigned int)triData.size();
 	a_Out.Write(&triData[0], sizeof(e_TriangleData) * triData.size());
 	a_Out << (unsigned int)matData.size();

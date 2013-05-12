@@ -127,9 +127,17 @@ public:
 		a_Mats[getMatIndex(off)].GetBSDF(uv, &bsdf);
 		return bsdf;
 	}
-	CUDA_FUNC_IN float3 Le(const float2& baryCoords, const float3& n, const float3& w, const e_KernelMaterial* a_Mats, const unsigned int off) const 
+	CUDA_FUNC_IN bool GetBSSRDF(const float2& baryCoords, const float4x4& localToWorld, const e_KernelMaterial* a_Mats, const unsigned int off, e_KernelBSSRDF* bssrdf) const 
 	{
-		return dot(w, n) > 0 ? a_Mats[getMatIndex(off)].Emission : make_float3(0);
+		float3 ng;
+		Onb sys = lerpOnb(baryCoords, localToWorld, &ng);
+		float2 uv = lerpUV(baryCoords);
+
+		float3 nor;
+		if(a_Mats[getMatIndex(off)].SampleNormalMap(uv, &nor))
+			sys.m_normal = normalize(sys.localToworld(nor*2.0f-make_float3(1)));
+
+		return a_Mats[getMatIndex(off)].GetBSSRDF(uv, bssrdf);	
 	}
 };
 #else

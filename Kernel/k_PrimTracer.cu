@@ -62,6 +62,12 @@ __global__ void primaryKernel(long long width, long long height, RGBCOL* a_Data)
 			c += trace(r, rng);
 		}
 		c /= N;
+		/*
+		Ray r = g_CameraData.GenRay(x, y, width, height, rng.randomFloat(), rng.randomFloat());
+		TraceResult r2;
+		r2.Init();
+		k_TraceRay<true>(r.direction, r.origin, &r2);
+		float3 c = make_float3(r2.m_fDist/length(g_SceneData.m_sBox.Size())*2.0f);*/
 
 		unsigned int cl2 = toABGR(c);
 		((unsigned int*)a_Data)[y * width + x] = cl2;
@@ -86,6 +92,8 @@ void k_PrimTracer::DoRender(RGBCOL* a_Buf)
 	k_STARTPASS(m_pScene, m_pCamera, m_sRngs);
 	primaryKernel<<< 180, dim3(32, MaxBlockHeight, 1)>>>(w, h, a_Buf);
 	cudaError_t r = cudaThreadSynchronize();
+	m_uRaysTraced = w * h;
+	m_uPassesDone = 1;
 }
 
 void k_PrimTracer::Debug(int2 pixel)

@@ -45,7 +45,8 @@ void k_sPpmTracer::DoRender(RGBCOL* a_Buf)
 	if(m_uModus == 1)
 	{
 		updateBuffer();
-		doPhotonPass();
+		if(!m_uPhotonsEmitted)
+			doPhotonPass();
 		cudaThreadSynchronize();
 		if(m_sMaps.PassFinished())
 		{
@@ -77,7 +78,21 @@ void k_sPpmTracer::initNewPass(RGBCOL* a_Buf)
 	m_sEyeBox.minV -= make_float3(r);
 	m_sEyeBox.maxV += make_float3(r);
 	m_fInitialRadius = r;
-	m_sMaps.StartNewRendering(m_sEyeBox, m_pScene->getKernelSceneData().m_sVolume.box, r);
+	AABB volBox = m_pScene->getKernelSceneData().m_sVolume.box;
+	for(int i = 0; i < m_pScene->getNodeCount(); i++)
+	{
+		e_StreamReference(e_Node) n = m_pScene->getNodes()(i);
+		e_BufferReference<e_Mesh, e_KernelMesh> m = m_pScene->getMesh(n);
+		for(int j = 0; j < m->m_sMatInfo.getLength(); j++)
+		{
+			e_KernelBSSRDF b;
+			if(m->m_sMatInfo(j)->GetBSSRDF(make_float2(0, 0), &b))
+			{
+				volBox.Enlarge(n->getWorldBox(m.operator->()));
+			}
+		}
+	}
+	m_sMaps.StartNewRendering(m_sEyeBox, volBox, r);
 	m_sMaps.StartNewPass();
 	cudaMemset(m_pDevicePixels, 0, sizeof(k_sPpmPixel) * w * h);
 	cudaMemset(a_Buf, 0, sizeof(RGBCOL) * w * h);

@@ -258,6 +258,18 @@ template<bool USE_ALPHA> inline __device__ bool k_TraceRay(const float3& dir, co
 }
 #endif
 
+CUDA_FUNC_IN float3 Le(const float3& p, const float3& n, const float3& w, TraceResult& r2, e_KernelDynamicScene& scene) 
+{
+	unsigned int i = scene.m_sMatData[r2.m_pTri->getMatIndex(r2.m_pNode->m_uMaterialOffset)].NodeLightIndex;
+	if(i == -1)
+		return make_float3(0);
+	unsigned int j = r2.m_pNode->m_uLightIndices[i];
+	if(j == -1)
+		return make_float3(0);
+	e_KernelLight& l = scene.m_sLightData[j];
+	return dot(w, n) > 0 ? l.L(p, n, w) : make_float3(0);
+}
+
 //do not!!! use a method here, the compiler will fuck up the textures.
 #define k_INITIALIZE(a_Data) \
 	{ \

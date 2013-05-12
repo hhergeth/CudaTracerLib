@@ -98,11 +98,6 @@ struct e_PointLight : public e_LightBase
 		return make_float3(0);
 	}
 
-	CUDA_FUNC_IN bool HasTriangle(unsigned int i) const
-	{
-		return false;
-	}
-
 	AABB getBox(float eps) const
 	{
 		return AABB(lightPos - make_float3(eps), lightPos + make_float3(eps));
@@ -163,11 +158,6 @@ struct e_DiffuseLight : public e_LightBase
 	{
         return dot(n, w) > 0.f ? Lemit : make_float3(0);
     }
-
-	CUDA_FUNC_IN bool HasTriangle(unsigned int i) const
-	{
-		return shapeSet.Contains(i);
-	}
 
 	AABB getBox(float eps) const
 	{
@@ -231,11 +221,6 @@ struct e_DistantLight : public e_LightBase
 	{
 		return make_float3(0.0f);
 	}
-
-	CUDA_FUNC_IN bool HasTriangle(unsigned int i) const
-	{
-		return false;
-	}
 	
 	AABB getBox(float eps) const
 	{
@@ -295,11 +280,6 @@ struct e_SpotLight : public e_LightBase
 	CUDA_FUNC_IN float3 Le(const e_KernelDynamicScene& scene, const Ray& r) const
 	{
 		return make_float3(0.0f);
-	}
-
-	CUDA_FUNC_IN bool HasTriangle(unsigned int i) const
-	{
-		return false;
 	}
 	
 	AABB getBox(float eps) const
@@ -375,11 +355,6 @@ public:
 		CALL_FUNC(return, L(p, n, w))
 	}
 
-	CUDA_FUNC_IN bool HasTriangle(unsigned int i) const
-	{
-		CALL_FUNC(return, HasTriangle(i))
-	}
-
 	CUDA_FUNC_IN bool IsDeltaLight() const
 	{
 		return ((e_LightBase*)Data)->IsDelta;
@@ -388,6 +363,11 @@ public:
 	AABB getBox(float eps) const
 	{
 		CALL_FUNC(return, getBox(eps))
+	}
+
+	template<typename T> T* As()
+	{
+		return (T*)Data;
 	}
 
 #undef CALL_FUNC

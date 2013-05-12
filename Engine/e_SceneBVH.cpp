@@ -114,6 +114,14 @@ int RecurseNative(int size, BBoxTmp* work, nativelist<e_BVHNodeData>& a_Nodes, _
 
 void e_SceneBVH::Build(e_StreamReference(e_Node) a_Nodes, e_BufferReference<e_Mesh, e_KernelMesh> a_Meshes)
 {
+	e_StreamReference(float4x4) tr0 = m_pTransforms->operator()(0, m_pTransforms->getLength()), tr1 = m_pInvTransforms->operator()(0, m_pInvTransforms->getLength());
+	e_StreamReference(e_BVHNodeData) nds = m_pNodes->operator()(0, m_pNodes->getLength());
+	if(startNode == -1)
+	{
+		tr0 = m_pTransforms->malloc(m_pTransforms->getLength());
+		tr1 = m_pInvTransforms->malloc(m_pInvTransforms->getLength());
+		nds = m_pNodes->malloc(m_pNodes->getLength());
+	}
 	__m128 bottom(_mm_set1_ps(FLT_MAX)), top(_mm_set1_ps(-FLT_MAX));
 	BBoxTmp* data = (BBoxTmp*)_mm_malloc(a_Nodes.getLength() * sizeof(BBoxTmp), 128);
 	for(unsigned int i = 0; i < a_Nodes.getLength(); i++)
@@ -131,7 +139,7 @@ void e_SceneBVH::Build(e_StreamReference(e_Node) a_Nodes, e_BufferReference<e_Me
 	}
 	if(a_Nodes.getLength())
 	{
-		startNode = RecurseNative(a_Nodes.getLength(), data, nativelist<e_BVHNodeData>(m_pNodes->operator()()), bottom, top);
+		startNode = RecurseNative(a_Nodes.getLength(), data, nativelist<e_BVHNodeData>(nds.operator->()), bottom, top);
 	}
 	else
 	{
@@ -140,8 +148,11 @@ void e_SceneBVH::Build(e_StreamReference(e_Node) a_Nodes, e_BufferReference<e_Me
 		//m_sBox = a_Nodes->getWorldBox();
 	}
 	m_pNodes->Invalidate();
+	m_pNodes->UpdateInvalidated();
 	m_pTransforms->Invalidate();
+	m_pTransforms->UpdateInvalidated();
 	m_pInvTransforms->Invalidate();
+	m_pInvTransforms->UpdateInvalidated();
 	_mm_free(data);
 	m_sBox = TOBOX(bottom, top);
 }

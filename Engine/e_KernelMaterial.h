@@ -265,6 +265,90 @@ public:
 	static const unsigned int TYPE;
 };
 
+#define e_KernelMaterial_KdSubsurface_TYPE 8
+struct e_KernelMaterial_KdSubsurface
+{
+	e_KernelMaterial_KdSubsurface(e_Sampler<float3> kd, e_Sampler<float3> kr, e_Sampler<float> meanfreepath, e_Sampler<float> eta)
+		: host_Kd(kd), host_Kr(kr), host_MeanFreePath(meanfreepath), host_Eta(eta)
+	{
+	}
+
+	CUDA_FUNC_IN void GetBSDF(const float2& uv, e_KernelBSDF* r) const
+	{
+		float e = host_Eta.Sample(uv);
+		float3 kr = host_Kr.Sample(uv);
+		if(!ISBLACK(kr))
+			r->Add(CREATE_e_KernelBXDFL(e_KernelBrdf_SpecularReflection, e_KernelBrdf_SpecularReflection(kr, e_KernelFresnel(1.0f, e))));
+	}
+
+	CUDA_FUNC_IN bool GetBSSRDF(const float2& uv, e_KernelBSSRDF* res) const
+	{
+		float e = host_Eta.Sample(uv);
+		float mfp = host_MeanFreePath.Sample(uv);
+		float3 kd = host_Kd.Sample(uv);
+		float3 sigma_a, sigma_prime_s;
+		SubsurfaceFromDiffuse(kd, mfp, e, &sigma_a, &sigma_prime_s);
+		*res = e_KernelBSSRDF(e, sigma_a, sigma_prime_s);
+		return true;
+	}
+
+	template<typename L> void LoadTextures(L callback)
+	{
+		host_Kd.LoadTextures(callback);
+		host_Kr.LoadTextures(callback);
+		host_MeanFreePath.LoadTextures(callback);
+		host_Eta.LoadTextures(callback);
+	}
+public:
+	e_Sampler<float3> host_Kd;
+	e_Sampler<float3> host_Kr;
+	e_Sampler<float> host_MeanFreePath;
+	e_Sampler<float> host_Eta;
+public:
+	static const unsigned int TYPE;
+};
+
+#define e_KernelMaterial_Subsurface_TYPE 9
+struct e_KernelMaterial_Subsurface
+{
+	e_KernelMaterial_Subsurface(e_Sampler<float3> kr, e_Sampler<float3> sigma_a, e_Sampler<float3> Sigma_prime_s, e_Sampler<float> eta, float _scale = 1.0f)
+		: host_Kr(kr), host_Sigma_a(sigma_a), host_Sigma_prime_s(Sigma_prime_s), host_Eta(eta), scale(_scale)
+	{
+	}
+
+	CUDA_FUNC_IN void GetBSDF(const float2& uv, e_KernelBSDF* r) const
+	{
+		float e = host_Eta.Sample(uv);
+		float3 kr = host_Kr.Sample(uv);
+		if(!ISBLACK(kr))
+			r->Add(CREATE_e_KernelBXDFL(e_KernelBrdf_SpecularReflection, e_KernelBrdf_SpecularReflection(kr, e_KernelFresnel(1.0f, e))));
+			//r->Add(CREATE_e_KernelBXDFL(e_KernelBrdf_Lambertain, e_KernelBrdf_Lambertain(kr)));
+	}
+
+	CUDA_FUNC_IN bool GetBSSRDF(const float2& uv, e_KernelBSSRDF* res) const
+	{
+		float e = host_Eta.Sample(uv);
+		*res = e_KernelBSSRDF(e, host_Sigma_a.Sample(uv) * scale, host_Sigma_prime_s.Sample(uv) * scale);
+		return true;
+	}
+
+	template<typename L> void LoadTextures(L callback)
+	{
+		host_Kr.LoadTextures(callback);
+		host_Sigma_a.LoadTextures(callback);
+		host_Sigma_prime_s.LoadTextures(callback);
+		host_Eta.LoadTextures(callback);
+	}
+public:
+	e_Sampler<float3> host_Kr;
+	e_Sampler<float3> host_Sigma_a;
+	e_Sampler<float3> host_Sigma_prime_s;
+	e_Sampler<float> host_Eta;
+	float scale;
+public:
+	static const unsigned int TYPE;
+};
+
 struct e_KernelMaterial
 {
 public:
@@ -284,10 +368,12 @@ public:
 		CALL_TYPE(e_KernelMaterial_ShinyMetal, f, r) \
 		CALL_TYPE(e_KernelMaterial_Plastic, f, r) \
 		CALL_TYPE(e_KernelMaterial_Substrate, f, r) \
+		CALL_TYPE(e_KernelMaterial_KdSubsurface, f, r) \
+		CALL_TYPE(e_KernelMaterial_Subsurface, f, r) \
 	}
 public:
 	e_String Name;
-	float3 Emission;
+	unsigned int NodeLightIndex;
 	e_Sampler<float3> NormalMap;
 public:
 	e_KernelMaterial()
@@ -299,7 +385,7 @@ public:
 		: NormalMap(make_float3(0))
 	{
 		memcpy(Name, name, strlen(name));
-		Emission = make_float3(0);
+		NodeLightIndex = -1;
 	}
 	template<typename T> void SetData(T& val)
 	{

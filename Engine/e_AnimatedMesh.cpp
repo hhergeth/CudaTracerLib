@@ -137,6 +137,8 @@ void e_AnimatedMesh::CompileToBinary(char* a_InputFile, c_StringArray& a_Anims, 
 	unsigned int off = 0;
 	unsigned int vCount;
 	ComputeTangentSpace(&M, &v_Data, &v_Pos, &vCount);
+	e_MeshPartLight m_sLights[MAX_AREALIGHT_NUM];
+	unsigned int lc = 0;
 	for(int s = 0; s < M.meshes.size(); s++)
 	{/*
 		e_Material mat;
@@ -169,6 +171,8 @@ void e_AnimatedMesh::CompileToBinary(char* a_InputFile, c_StringArray& a_Anims, 
 	}
 	M2.compact();
 	a_Out << box;
+	a_Out.Write(m_sLights, sizeof(m_sLights));
+	a_Out << lc;
 	a_Out << (unsigned int)triData.size();
 	a_Out.Write(&triData[0], sizeof(e_TriangleData) * triData.size());throw 1;
 	//a_Out << (unsigned int)matData.size();

@@ -128,6 +128,10 @@ public:
 			m_sDeallocated.push_back(std::make_pair<unsigned int, unsigned int>(a_Ref.getIndex(), a_Ref.getLength()));
 		}
 	}
+	void dealloc(unsigned int i, unsigned int j = 1)
+	{
+		dealloc(operator()(i, j));
+	}
 	void Invalidate()
 	{
 		m_sInvalidated.clear();
@@ -147,6 +151,10 @@ public:
 		}
 		m_sInvalidated.push_back(std::make_pair<unsigned int, unsigned int>(a_Ref.getIndex(), a_Ref.getLength()));
 	}
+	void Invalidate(unsigned int i, unsigned int j = 1)
+	{
+		Invalidate(operator()(i, j));
+	}
 	void UpdateInvalidated()
 	{
 		for(unsigned int i = 0; i < m_sInvalidated.size(); i++)
@@ -154,7 +162,7 @@ public:
 			for(unsigned int j = 0; j < m_sInvalidated[i].second; j++)
 			{
 				unsigned int k = j + m_sInvalidated[i].first;
-				deviceMapped[k] = operator()(i)->getKernelData();
+				deviceMapped[k] = operator()(k)->getKernelData();
 			}
 		}
 		for(unsigned int i = 0; i < m_sInvalidated.size(); i++)
@@ -269,7 +277,8 @@ public:
 	}
 	template<typename U> U* operator()(unsigned int i = 0)
 	{
-		return (U*)m_pStream->host + i;
+		U* a = (U*)(m_pStream->host + m_uIndex);
+		return a + i;
 	}
 };
 
@@ -444,6 +453,10 @@ public:
 			m_sDeallocated.push_back(std::make_pair<unsigned int, unsigned int>(a_Ref.getIndex(), a_Ref.getLength()));
 		}
 	}
+	void dealloc(unsigned int i, unsigned int j = 1)
+	{
+		dealloc(operator()(i, j));
+	}
 	void Invalidate()
 	{
 		m_sInvalidated.clear();
@@ -462,6 +475,10 @@ public:
 			}
 		}
 		m_sInvalidated.push_back(std::make_pair<unsigned int, unsigned int>(a_Ref.getIndex(), a_Ref.getLength()));
+	}
+	void Invalidate(unsigned int i, unsigned int j = 1)
+	{
+		Invalidate(operator()(i, j));
 	}
 	void UpdateInvalidated()
 	{

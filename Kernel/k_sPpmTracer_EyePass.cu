@@ -64,15 +64,15 @@ template<typename HASH> CUDA_ONLY_FUNC float3 k_PhotonMap<HASH>::L_Surface(float
 
 CUDA_DEVICE k_PhotonMapCollection g_Map;
 
-template<typename HASH> CUDA_ONLY_FUNC float3 k_PhotonMap<HASH>::L_Volume(float a_r, float a_NumPhotonEmitted, CudaRNG& rng, const Ray& r, float tmin, float tmax, const float3& Li) const
+template<typename HASH> template<bool VOL> CUDA_ONLY_FUNC float3 k_PhotonMap<HASH>::L_Volume(float a_r, float a_NumPhotonEmitted, CudaRNG& rng, const Ray& r, float tmin, float tmax, const float3& sigt) const
 {
 	float Vs = 1.0f / ((4.0f / 3.0f) * PI * a_r * a_r * a_r * a_NumPhotonEmitted), r2 = a_r * a_r;
 	float3 L_n = make_float3(0);
 	float a,b;
 	if(!m_sHash.getAABB().Intersect(r, &a, &b))
 		return L_n;//that would be dumb
-	a = clamp(a, tmin + a_r, tmax - a_r);
-	b = clamp(b, tmin + a_r, tmax - a_r);
+	a = clamp(a, tmin , tmax );
+	b = clamp(b, tmin , tmax );
 	float d = 2.0f * a_r;
 	while(b > a)
 	{
@@ -90,14 +90,18 @@ template<typename HASH> CUDA_ONLY_FUNC float3 k_PhotonMap<HASH>::L_Volume(float 
 						float3 wi = e.getWi(), l = e.getL(), P = e.Pos;
 						if(dot(P - x, P - x) < r2)
 						{
-							float p = g_SceneData.m_sVolume.p(x, -wi, r.direction);
+							float p;
+							if(VOL)
+								p = g_SceneData.m_sVolume.p(x, -wi, r.direction);
+							else p = 1.f / (4.f * PI);
 							L += p * l * Vs;
 						}
 						i = e.next;
 					}
 				}
-		//sum "stupid" page says : 1.0f / g_SceneData.m_sVolume.sigma_s(x, r.direction) * 
-		L_n = L * d + L_n * exp(-g_SceneData.m_sVolume.tau(r, b - d, b)) + g_SceneData.m_sVolume.Lve(x, -1.0f * r.direction) * d;
+		if(VOL)
+			L_n = L * d + L_n * exp(-g_SceneData.m_sVolume.tau(r, b - d, b)) + g_SceneData.m_sVolume.Lve(x, -1.0f * r.direction) * d;
+		else L_n = L * d + L_n * exp(sigt * -d);
 		b -= d;
 	}
 	return L_n;
@@ -145,19 +149,25 @@ template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, RGBCOL* 
 				{
 					float tmin, tmax;
 					g_SceneData.m_sVolume.IntersectP(s.r, 0, r2.m_fDist, &tmin, &tmax);
-					L += s.fs * g_Map.L(a_rVolume, rng, s.r, tmin, tmax, make_float3(0));
+					L += s.fs * g_Map.L<true>(a_rVolume, rng, s.r, tmin, tmax, make_float3(0));
 					s.fs = s.fs * exp(-g_SceneData.m_sVolume.tau(r, tmin, tmax));
 				}
 
 				float3 p = s.r(r2.m_fDist);
 				if(DIRECT)
 					L += s.fs * UniformSampleAllLights(p, bsdf.ng, -s.r.direction, &bsdf, rng, 4);
-				L += s.fs * r2.m_pTri->Le(r2.m_fUV, bsdf.ng, -s.r.direction, g_SceneData.m_sMatData.Data, r2.m_pNode->m_uMaterialOffset);
-				if(bsdf.NumComponents(BxDFType(BSDF_REFLECTION | BSDF_TRANSMISSION | BSDF_DIFFUSE)))
+				L += s.fs * Le(r(r2.m_fDist), bsdf.ng, -r.direction, r2, g_SceneData);
+				e_KernelBSSRDF bssrdf;
+				if(r2.m_pTri->GetBSSRDF(r2.m_fUV, r2.m_pNode->getWorldMatrix(), g_SceneData.m_sMatData.Data, r2.m_pNode->m_uMaterialOffset, &bssrdf))
 				{
-					L += s.fs * g_Map.L(a_rSurface, rng, &bsdf, bsdf.sys.m_normal, p, -s.r.direction);
-					continue;
+					float3 dir = refract(r.direction, bsdf.sys.m_normal, 1.0f / bssrdf.e);
+					TraceResult r3;
+					r3.Init();
+					k_TraceRay<true>(dir, p, &r3);
+					L += s.fs * g_Map.L<false>(a_rVolume, rng, Ray(p, dir), 0, r3.m_fDist, bssrdf.sigp_s + bssrdf.sig_a);
 				}
+				if(bsdf.NumComponents(BxDFType(BSDF_REFLECTION | BSDF_TRANSMISSION | BSDF_DIFFUSE)))
+					L += s.fs * g_Map.L(a_rSurface, rng, &bsdf, bsdf.sys.m_normal, p, -s.r.direction);
 				if(s.d < 5 && stackPos < stackN - 1)
 				{/*
 					if(bsdf.NumComponents(BxDFType(BSDF_REFLECTION | BSDF_TRANSMISSION | BSDF_GLOSSY)))
@@ -191,7 +201,7 @@ template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, RGBCOL* 
 			{
 				float tmin, tmax;
 				g_SceneData.m_sVolume.IntersectP(s.r, 0, r2.m_fDist, &tmin, &tmax);
-				L += s.fs * g_Map.L(a_rVolume, rng, s.r, tmin, tmax, make_float3(0));
+				L += s.fs * g_Map.L<true>(a_rVolume, rng, s.r, tmin, tmax, make_float3(0));
 			}
 		}
 		a_Pixels[y * w + x].m_vPixelColor += L;

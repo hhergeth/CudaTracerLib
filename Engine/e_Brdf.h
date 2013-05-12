@@ -1101,6 +1101,10 @@ public:
 
 struct e_KernelBSSRDF
 {
+	CUDA_FUNC_IN e_KernelBSSRDF()
+	{
+	}
+
 	CUDA_FUNC_IN e_KernelBSSRDF(float _e, float3& sa, float3& sps)
 	{
 		e = _e;

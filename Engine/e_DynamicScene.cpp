@@ -193,6 +193,13 @@ e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_MeshFile2)
 	}
 	e_StreamReference(e_Node) N = m_pNodeStream->malloc(1);
 	new(N.operator->()) e_Node(M.getIndex(), M.operator->(), strA.c_str());
+	unsigned int li[MAX_AREALIGHT_NUM];
+	for(unsigned int i = 0; i < M->m_uUsedLights; i++)
+	{
+		ShapeSet<MAX_SHAPE_LENGTH> s = CreateShape<MAX_SHAPE_LENGTH>(N, M->m_sLights[i].MatName);
+		li[i] = createLight(e_DiffuseLight(M->m_sLights[i].L, s)).getIndex();
+	}
+	N->setLightData(li, M->m_uUsedLights);
 	N.Invalidate();
 	return N;
 }

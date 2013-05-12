@@ -31,11 +31,9 @@ template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, float3 Le, CudaRNG
 			{
 				float3 x = r(minT), w = -r.direction;
 				float3 sigma_s = V.sigma_s(x, w), sigma_t = V.sigma_t(x, w);
-				float d = -logf(rng.randomFloat()) / (fsumf(sigma_t) / 3.0f);//-logf(rng.randomFloat())
-				bool cancel = d >= (maxT - minT) || d >= r2.m_fDist;// || minT + d < r2.m_fDist
+				float d = -logf(rng.randomFloat()) / (fsumf(sigma_t) / 3.0f);
+				bool cancel = d >= (maxT - minT) || d >= r2.m_fDist;
 				d = clamp(d, minT, maxT);
-				float3 transmittance = exp(-V.tau(r, minT, minT + d));
-				//Le = Le * transmittance;
 				Le += V.Lve(x, w) * d;
 				if(g_Map.StorePhoton<false>(r(minT + d * rng.randomFloat()), Le, w, make_float3(0,0,0)) == k_StoreResult::Full)
 					return false;
@@ -45,7 +43,6 @@ template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, float3 Le, CudaRNG
 				if(rng.randomFloat() <= A)
 				{
 					Le /= A;
-					//float3 wo = r.direction;
 					float3 wo = smapleHG(((e_HomogeneousVolumeDensity*)V.m_pVolumes)->g, rng, w);
 					Le *= V.p(x, w, wo);
 					r.origin = r(minT + d);
@@ -58,18 +55,58 @@ template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, float3 Le, CudaRNG
 			}
 		}
 		float3 x = r(r2.m_fDist);
-		e_KernelBSDF bsdf = r2.m_pTri->GetBSDF(r2.m_fUV, r2.m_pNode->getWorldMatrix(), g_SceneData.m_sMatData.Data, r2.m_pNode->m_uMaterialOffset);
-		float3 wo = -r.direction, wi;
-		if((DIRECT && depth > 0) || !DIRECT)
-			if(bsdf.NumComponents(BxDFType(BSDF_REFLECTION | BSDF_TRANSMISSION | BSDF_DIFFUSE )))
-				if(g_Map.StorePhoton<true>(x, Le, wo, bsdf.sys.m_normal) == k_StoreResult::Full)
+		e_KernelBSSRDF bssrdf;
+		float3 ac, wi;
+		if(r2.m_pTri->GetBSSRDF(r2.m_fUV, r2.m_pNode->getWorldMatrix(), g_SceneData.m_sMatData.Data, r2.m_pNode->m_uMaterialOffset, &bssrdf))
+		{
+			inMesh = false;
+			ac = Le;
+			while(true)
+			{
+				float3 w = -r.direction;
+				TraceResult r3;
+				r3.Init();
+				k_TraceRay<true>(r.direction, x, &r3);//that can't be false
+				float3 sigma_s = bssrdf.sigp_s, sigma_t = bssrdf.sigp_s + bssrdf.sig_a;
+				float d = -logf(rng.randomFloat()) / (fsumf(sigma_t) / 3.0f);
+				bool cancel = d >= (r3.m_fDist);
+				d = clamp(d, 0.0f, r3.m_fDist);
+				if(g_Map.StorePhoton<false>(x + r.direction * (d * rng.randomFloat()), ac, w, make_float3(0,0,0)) == k_StoreResult::Full)
 					return false;
-		float pdf;
-		BxDFType sampledType;
-		float3 f = bsdf.Sample_f(wo, &wi, BSDFSample(rng), &pdf, BSDF_ALL, &sampledType);
-		if(pdf == 0 || fsumf(f) == 0)
-			break;
-		float3 ac = Le * f * AbsDot(wi, bsdf.sys.m_normal) / pdf;
+				if(cancel)
+				{
+					x = x + r.direction * r3.m_fDist;
+					wi = refract(r.direction, r3.m_pTri->lerpOnb(r3.m_fUV, r3.m_pNode->getWorldMatrix()).m_normal, bssrdf.e);
+					break;
+				}
+				float A = fsumf(sigma_s / sigma_t) / 3.0f;
+				if(rng.randomFloat() <= A)
+				{
+					ac /= A;
+					float3 wo = smapleHG(0, rng, w);
+					ac *= 1.f / (4.f * PI);
+					r.origin = x + r.direction * d;
+					r.direction = wo;
+				}
+				else return true;
+			}
+		}
+		else
+		{
+			e_KernelBSDF bsdf = r2.m_pTri->GetBSDF(r2.m_fUV, r2.m_pNode->getWorldMatrix(), g_SceneData.m_sMatData.Data, r2.m_pNode->m_uMaterialOffset);
+			float3 wo = -r.direction;
+			if((DIRECT && depth > 0) || !DIRECT)
+				if(bsdf.NumComponents(BxDFType(BSDF_REFLECTION | BSDF_TRANSMISSION | BSDF_DIFFUSE )))
+					if(g_Map.StorePhoton<true>(x, Le, wo, bsdf.sys.m_normal) == k_StoreResult::Full)
+						return false;
+			float pdf;
+			BxDFType sampledType;
+			float3 f = bsdf.Sample_f(wo, &wi, BSDFSample(rng), &pdf, BSDF_ALL, &sampledType);
+			if(pdf == 0 || fsumf(f) == 0)
+				break;
+			inMesh = dot(r.direction, bsdf.ng) < 0;
+			ac = Le * f * AbsDot(wi, bsdf.sys.m_normal) / pdf;
+		}
 		//if(depth > 3)
 		{
 			float prob = MIN(1.0f, fmaxf(ac) / fmaxf(Le));
@@ -78,8 +115,7 @@ template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, float3 Le, CudaRNG
 			Le = ac / prob;
 		}
 		//else Le = ac;
-		inMesh = dot(r.direction, bsdf.ng) < 0;
-		r = Ray(r(r2.m_fDist), normalize(wi));
+		r = Ray(x, normalize(wi));
 		r2.Init();
 	}
 	return true;

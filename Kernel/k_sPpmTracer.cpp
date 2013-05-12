@@ -4,12 +4,17 @@
 #define LNG 200
 
 k_sPpmTracer::k_sPpmTracer()
-	: k_RandTracerBase(), m_uGridLength(LNG*LNG*LNG), m_uNewPhotonsPerRun(5)
+	: k_RandTracerBase(), m_uGridLength(LNG*LNG*LNG)
 {
+#ifdef DEBUG
+	m_uNewPhotonsPerRun = 0.1f;
+#else
+	m_uNewPhotonsPerRun = 5;
+#endif
 	m_uModus = 1;
 	m_pDevicePixels = 0;
 	m_fInitialRadiusScale = 1;
-	m_sMaps = k_PhotonMapCollection(1000000 * 5, m_uGridLength);
+	m_sMaps = k_PhotonMapCollection((int)(1000000.0f * m_uNewPhotonsPerRun), m_uGridLength);
 }
 
 void k_sPpmTracer::PrintStatus(std::vector<FW::String>& a_Buf)

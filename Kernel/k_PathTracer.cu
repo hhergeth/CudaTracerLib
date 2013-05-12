@@ -23,7 +23,7 @@ __device__ float3 radiance(float3& a_Dir, float3& a_Ori, CudaRNG& rnd)
 		float pdf;
 		e_KernelBSDF bsdf = r.m_pTri->GetBSDF(r.m_fUV, r.m_pNode->getWorldMatrix(), g_SceneData.m_sMatData.Data, r.m_pNode->m_uMaterialOffset);
 		if(depth == 1 || specularBounce)
-			cl += cf * r.m_pTri->Le(r.m_fUV, bsdf.ng, -r0.direction, g_SceneData.m_sMatData.Data, r.m_pNode->m_uMaterialOffset);
+			cl += cf * Le(r0(r.m_fDist), bsdf.ng, -r0.direction, r, g_SceneData);
 		cl += cf * UniformSampleAllLights(r0(r.m_fDist), bsdf.ng, -r0.direction, &bsdf, rnd, 1);
 		BxDFType flags;
 		float3 f = bsdf.Sample_f(-r0.direction, &inc, BSDFSample(rnd), &pdf, BSDF_ALL, &flags);
