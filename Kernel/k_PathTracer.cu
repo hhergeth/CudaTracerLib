@@ -2,45 +2,7 @@
 #include "k_TraceHelper.h"
 #include "k_IntegrateHelper.h"
 #include <time.h>
-
-__device__ float3 radiance(float3& a_Dir, float3& a_Ori, CudaRNG& rnd)
-{
-	Ray r0 = Ray(a_Ori, a_Dir);
-	TraceResult r;
-	float3 cl = make_float3(0,0,0);   // accumulated color
-	float3 cf = make_float3(1,1,1);  // accumulated reflectance
-	int depth = 0;
-	bool specularBounce = false;
-	while (depth++ < 7)
-	{
-		r.Init();
-		if(!k_TraceRay<true>(r0.direction, r0.origin, &r))
-		{
-			//cl = cf * make_float3(0.7f);
-			break;
-		}
-		float3 inc;
-		float pdf;
-		e_KernelBSDF bsdf = r.m_pTri->GetBSDF(r.m_fUV, r.m_pNode->getWorldMatrix(), g_SceneData.m_sMatData.Data, r.m_pNode->m_uMaterialOffset);
-		if(depth == 1 || specularBounce)
-			cl += cf * Le(r0(r.m_fDist), bsdf.ng, -r0.direction, r, g_SceneData);
-		cl += cf * UniformSampleAllLights(r0(r.m_fDist), bsdf.ng, -r0.direction, &bsdf, rnd, 1);
-		BxDFType flags;
-		float3 f = bsdf.Sample_f(-r0.direction, &inc, BSDFSample(rnd), &pdf, BSDF_ALL, &flags);
-		specularBounce = (flags & BSDF_SPECULAR) != 0;
-		inc = normalize(inc);
-		float p = f.x>f.y && f.x>f.z ? f.x : f.y>f.z ? f.y : f.z; 
-		if (depth > 5)
-			if (rnd.randomFloat() < p)
-				f = f / p;
-			else break;
-		if(!pdf)
-			break;
-		cf = cf * bsdf.IntegratePdf(f, pdf, inc);
-		r0 = Ray(r0(r.m_fDist), inc);
-	}
-	return cl;
-}
+#include "k_TraceAlgorithms.h"
 
 __global__ void pathKernel(unsigned int width, unsigned int height, RGBCOL* a_Data, unsigned int a_PassIndex, float4* a_DataTmp)
 {
@@ -71,7 +33,7 @@ __global__ void pathKernel(unsigned int width, unsigned int height, RGBCOL* a_Da
 		unsigned int x = rayidx % width, y = rayidx / width;
 		Ray r = g_CameraData.GenRay(x, y, width, height,  rng.randomFloat(), rng.randomFloat());
 		
-		float3 col = radiance(r.direction, r.origin, rng);
+		float3 col = PathTrace<true>(r.direction, r.origin, rng);
 		
 		float4* data = a_DataTmp + y * width + x;
 		*data += make_float4(col, 0);
@@ -86,7 +48,7 @@ __global__ void debugPixel(unsigned int width, unsigned int height, int2 p)
 	CudaRNG rng = g_RNGData();
 	Ray r = g_CameraData.GenRay(p.x, p.y, width, height,  rng.randomFloat(), rng.randomFloat());
 		
-	radiance(r.direction, r.origin, rng);
+	PathTrace<true>(r.direction, r.origin, rng);
 }
 
 void k_PathTracer::DoRender(RGBCOL* a_Buf)

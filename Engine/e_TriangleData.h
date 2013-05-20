@@ -23,6 +23,10 @@ struct TraceResult
 		m_pNode = 0;
 		m_pTri = 0;
 	}
+	CUDA_FUNC_IN operator bool() const
+	{
+		return hasHit();
+	}
 };
 
 #define EXT_TRI

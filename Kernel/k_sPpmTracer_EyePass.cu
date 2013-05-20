@@ -116,7 +116,7 @@ template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, RGBCOL* 
 	x += off.x; y += off.y;
 	if(x < w && y < h)
 	{
-		Ray r = g_CameraData.GenRay(x, y, w, h, rng.randomFloat(), rng.randomFloat());
+		Ray ro = g_CameraData.GenRay(x, y, w, h, rng.randomFloat(), rng.randomFloat());
 
 		struct stackEntry
 		{
@@ -134,7 +134,7 @@ template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, RGBCOL* 
 		float3 L = make_float3(0);
 		const unsigned int stackN = 16;
 		stackEntry stack[stackN];
-		stack[0] = stackEntry(r, make_float3(1), 0);
+		stack[0] = stackEntry(ro, make_float3(1), 0);
 		unsigned int stackPos = 1;
 		while(stackPos)
 		{
@@ -150,17 +150,17 @@ template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, RGBCOL* 
 					float tmin, tmax;
 					g_SceneData.m_sVolume.IntersectP(s.r, 0, r2.m_fDist, &tmin, &tmax);
 					L += s.fs * g_Map.L<true>(a_rVolume, rng, s.r, tmin, tmax, make_float3(0));
-					s.fs = s.fs * exp(-g_SceneData.m_sVolume.tau(r, tmin, tmax));
+					s.fs = s.fs * exp(-g_SceneData.m_sVolume.tau(s.r, tmin, tmax));
 				}
 
 				float3 p = s.r(r2.m_fDist);
 				if(DIRECT)
 					L += s.fs * UniformSampleAllLights(p, bsdf.ng, -s.r.direction, &bsdf, rng, 4);
-				L += s.fs * Le(r(r2.m_fDist), bsdf.ng, -r.direction, r2, g_SceneData);
+				L += s.fs * Le(s.r(r2.m_fDist), bsdf.ng, -s.r.direction, r2, g_SceneData);
 				e_KernelBSSRDF bssrdf;
 				if(r2.m_pTri->GetBSSRDF(r2.m_fUV, r2.m_pNode->getWorldMatrix(), g_SceneData.m_sMatData.Data, r2.m_pNode->m_uMaterialOffset, &bssrdf))
 				{
-					float3 dir = refract(r.direction, bsdf.sys.m_normal, 1.0f / bssrdf.e);
+					float3 dir = refract(s.r.direction, bsdf.sys.m_normal, 1.0f / bssrdf.e);
 					TraceResult r3;
 					r3.Init();
 					k_TraceRay<true>(dir, p, &r3);

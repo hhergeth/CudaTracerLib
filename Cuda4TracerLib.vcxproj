@@ -25,6 +25,7 @@
     <ClInclude Include="Engine\e_DynamicScene.h" />
     <ClInclude Include="Engine\e_ErrorHandler.h" />
     <ClInclude Include="Engine\e_FPCamera.h" />
+    <ClInclude Include="Engine\e_Grid.h" />
     <ClInclude Include="Engine\e_KernelMaterial.h" />
     <ClInclude Include="Engine\e_Light.h" />
     <ClInclude Include="Engine\e_Mesh.h" />
@@ -53,9 +54,11 @@
     <ClInclude Include="Engine\SceneBuilder\SplitBVHBuilder.hpp" />
     <ClInclude Include="Engine\SceneBuilder\Util.hpp" />
     <ClInclude Include="Kernel\k_IntegrateHelper.h" />
+    <ClInclude Include="Kernel\k_IrradianceCache.h" />
     <ClInclude Include="Kernel\k_PathTracer.h" />
     <ClInclude Include="Kernel\k_PrimTracer.h" />
     <ClInclude Include="Kernel\k_sPpmTracer.h" />
+    <ClInclude Include="Kernel\k_TraceAlgorithms.h" />
     <ClInclude Include="Kernel\k_TraceHelper.h" />
     <ClInclude Include="Kernel\k_Tracer.h" />
     <ClInclude Include="Math\AABB.h" />
@@ -97,6 +100,7 @@
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="Engine\e_AnimatedMesh.cu" />
+    <CudaCompile Include="Kernel\k_IrradianceCache.cu" />
     <CudaCompile Include="Kernel\k_PathTracer.cu" />
     <CudaCompile Include="Kernel\k_PrimTracer.cu" />
     <CudaCompile Include="Kernel\k_SceneTrace.cu" />

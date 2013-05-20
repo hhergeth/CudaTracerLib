@@ -178,14 +178,14 @@ public:
 private:
 	CUDA_FUNC_IN float3 FresnelApproxEta(const float3 &Fr) const
 	{
-		float3 reflectance = saturate(Fr);
+		float3 reflectance = clamp(Fr, 0, 0.9999f);
 		return (make_float3(1.0f) + fsqrtf(reflectance)) / (make_float3(1.0f) - fsqrtf(reflectance));
 	}
 
 	CUDA_FUNC_IN float3 FresnelApproxK(const float3 &Fr) const
 	{
-		float3 reflectance = saturate(Fr);
-		return 2.f * fsqrtf(reflectance / (make_float3(1.) - reflectance));
+		float3 reflectance = clamp(Fr, 0, 0.9999f);
+		return 2.f * fsqrtf(reflectance / (make_float3(1.0f) - reflectance));
 	}
 public:
 	static const unsigned int TYPE;

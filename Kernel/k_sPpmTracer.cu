@@ -45,8 +45,8 @@ void k_sPpmTracer::DoRender(RGBCOL* a_Buf)
 	if(m_uModus == 1)
 	{
 		updateBuffer();
-		if(!m_uPhotonsEmitted)
-			doPhotonPass();
+		//if(!m_uPhotonsEmitted)
+		doPhotonPass();
 		cudaThreadSynchronize();
 		if(m_sMaps.PassFinished())
 		{

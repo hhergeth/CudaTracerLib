@@ -181,6 +181,15 @@
     <ClInclude Include="Engine\e_Buffer.h">
       <Filter>Engine</Filter>
     </ClInclude>
+    <ClInclude Include="Kernel\k_TraceAlgorithms.h">
+      <Filter>Kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="Kernel\k_IrradianceCache.h">
+      <Filter>Kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_Grid.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\e_AnimatedMesh.cpp">
@@ -264,6 +273,9 @@
     </CudaCompile>
     <CudaCompile Include="Engine\e_AnimatedMesh.cu">
       <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Kernel\k_IrradianceCache.cu">
+      <Filter>Kernel</Filter>
     </CudaCompile>
   </ItemGroup>
 </Project>
