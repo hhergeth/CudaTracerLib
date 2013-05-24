@@ -26,7 +26,7 @@ template<bool DIRECT> CUDA_ONLY_FUNC float3 PathTrace(float3& a_Dir, float3& a_O
 		if(!DIRECT || (depth == 1 || specularBounce))
 			cl += cf * Le(r0(r.m_fDist), bsdf.ng, -r0.direction, r, g_SceneData);
 		if(DIRECT)
-			cl += cf * UniformSampleAllLights(r0(r.m_fDist), bsdf.ng, -r0.direction, &bsdf, rnd, 1);
+			cl += cf * UniformSampleAllLights(r0(r.m_fDist), bsdf.sys.m_normal, -r0.direction, &bsdf, rnd, 1);
 		BxDFType flags;
 		float3 f = bsdf.Sample_f(-r0.direction, &wi, BSDFSample(rnd), &pdf, BSDF_ALL, &flags);
 		specularBounce = (flags & BSDF_SPECULAR) != 0;

@@ -2,13 +2,8 @@
 #include "k_TraceHelper.h"
 #include "k_IntegrateHelper.h"
 
-//texture<uint4, 1> t_PhotonTex;
-//texture<unsigned int, 1> t_HashTex;
-
 void k_PhotonMapCollection::StartNewRendering(const AABB& sbox, const AABB& vbox, float a_R)
 {
-	//cudaChannelFormatDesc cd0 = cudaCreateChannelDesc<uint4>();
-	//cudaBindTexture(0, &t_PhotonTex, m_pPhotons, &cd0, m_uPhotonBufferLength * sizeof(k_pPpmPhoton));
 	m_sVolumeMap.StartNewRendering(vbox, a_R);
 	m_sSurfaceMap.StartNewRendering(sbox, a_R);
 }
@@ -17,14 +12,11 @@ template<typename HASH> void k_PhotonMap<HASH>::StartNewRendering(const AABB& bo
 {
 	m_sHash = HASH(box, a_InitRadius, m_uGridLength);
 	cudaMemset(m_pDeviceHashGrid, -1, sizeof(unsigned int) * m_uGridLength);
-
-	//cudaChannelFormatDesc cd1 = cudaCreateChannelDesc<unsigned int>();		
-	//cudaBindTexture(0, &t_HashTex, m_pDeviceHashGrid, &cd1, m_uGridLength * sizeof(unsigned int));
 }
 
 template<typename HASH> CUDA_ONLY_FUNC float3 k_PhotonMap<HASH>::L_Surface(float a_r, float a_NumPhotonEmitted, CudaRNG& rng, const e_KernelBSDF* bsdf, const float3& n, const float3& p, const float3& wo) const
 {
-	Onb sys(n);
+	Onb sys = bsdf->sys;
 	sys.m_tangent *= a_r;
 	sys.m_binormal *= a_r;
 	float3 low = fminf(p - sys.m_tangent + sys.m_binormal, p + sys.m_tangent - sys.m_binormal), high = fmaxf(p - sys.m_tangent + sys.m_binormal, p + sys.m_tangent - sys.m_binormal);
@@ -37,14 +29,13 @@ template<typename HASH> CUDA_ONLY_FUNC float3 k_PhotonMap<HASH>::L_Surface(float
 		for(int b = lo.y; b <= hi.y; b++)
 			for(int c = lo.z; c <= hi.z; c++)
 			{
-				unsigned int i0 = m_sHash.Hash(make_uint3(a,b,c)), i = m_pDeviceHashGrid[i0], q = 0;//tex1Dfetch(t_HashTex, i0)
+				unsigned int i0 = m_sHash.Hash(make_uint3(a,b,c)), i = m_pDeviceHashGrid[i0], q = 0;
 				while(i != -1 && q++ < 1000)
 				{
 					k_pPpmPhoton e = m_pDevicePhotons[i];
-					//k_pPpmPhoton e(tex1Dfetch(t_PhotonTex, i));
-					float3 nor = e.getNormal(), wi = e.getWi(), l = e.getL(), P = e.Pos;//m_sHash.DecodePos(e.Pos, make_uint3(a,b,c))
+					float3 nor = e.getNormal(), wi = e.getWi(), l = e.getL(), P = e.Pos;
 					float dist2 = dot(P - p, P - p);
-					if(dist2 < r2 && AbsDot(nor, n) > 0.95f)//
+					if(dist2 < r2 && dot(nor, n) > 0.95f)
 					{
 						float s = 1.0f - dist2 * r4, k = 3.0f * INV_PI * s * s * r3;
 						if(glossy)
@@ -155,8 +146,8 @@ template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, RGBCOL* 
 
 				float3 p = s.r(r2.m_fDist);
 				if(DIRECT)
-					L += s.fs * UniformSampleAllLights(p, bsdf.ng, -s.r.direction, &bsdf, rng, 4);
-				L += s.fs * Le(s.r(r2.m_fDist), bsdf.ng, -s.r.direction, r2, g_SceneData);
+					L += s.fs * UniformSampleAllLights(p, bsdf.sys.m_normal, -s.r.direction, &bsdf, rng, 4);
+				L += s.fs * Le(s.r(r2.m_fDist), bsdf.sys.m_normal, -s.r.direction, r2, g_SceneData);
 				e_KernelBSSRDF bssrdf;
 				if(r2.m_pTri->GetBSSRDF(r2.m_fUV, r2.m_pNode->getWorldMatrix(), g_SceneData.m_sMatData.Data, r2.m_pNode->m_uMaterialOffset, &bssrdf))
 				{

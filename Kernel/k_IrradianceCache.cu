@@ -21,21 +21,20 @@ template<bool DIRECT, int N> CUDA_DEVICE void E2(Ray& r, TraceResult& r2, CudaRN
 {
 	float3 e = make_float3(0);
 	float air = 0;
-	if(awi)
-		*awi = make_float3(0);
+	float3 w = make_float3(0);
 	for(int i = 0; i < N; i++)
 	{
 		float q;
-		e += E1<DIRECT>(r, r2, rng, bsdf, &q, awi);
+		e += E1<DIRECT>(r, r2, rng, bsdf, &q, &w);
 		air += 1.0f / q;
 	}
 	*ar = float(N) / air;
 	if(awi)
-		*awi = *awi / float(N);
+		*awi = w / float(N);
 	*ae = e / float(N) * PI;
 }
 
-template<bool DIRECT, int N> CUDA_DEVICE float3 E(Ray& r, TraceResult& r2, CudaRNG& rng, e_KernelBSDF* bsdf, k_IrrEntry* entries, unsigned int entryNum, unsigned int* grid, float3* awi = 0)
+template<bool DIRECT, int N> CUDA_DEVICE float3 E(Ray& r, TraceResult& r2, CudaRNG& rng, e_KernelBSDF* bsdf, k_IrrEntry* entries, unsigned int entryNum, unsigned int* grid, float rScale, float3* awi = 0)
 {/*
 		float3 ae;
 		float ar;
@@ -55,7 +54,7 @@ template<bool DIRECT, int N> CUDA_DEVICE float3 E(Ray& r, TraceResult& r2, CudaR
 		float ar;
 		float3 wi;
 		E2<DIRECT, N>(r, r2, rng, bsdf, &ae, &ar, &wi);
-		entries[j] = k_IrrEntry(r(r2.m_fDist), ae, bsdf->sys.m_normal, ar, k, wi);
+		entries[j] = k_IrrEntry(r(r2.m_fDist), ae, bsdf->sys.m_normal, ar * rScale, k, wi);
 		if(awi)
 			*awi = wi;
 		return ae;
@@ -63,7 +62,7 @@ template<bool DIRECT, int N> CUDA_DEVICE float3 E(Ray& r, TraceResult& r2, CudaR
 	return make_float3(0);
 }
 
-template<bool DIRECT, int N> __global__ void kFirstPass(int w, int h, k_IrrEntry* entries, unsigned int entryNum, unsigned int* grid)
+template<bool DIRECT, int N> __global__ void kFirstPass(int w, int h, k_IrrEntry* entries, unsigned int entryNum, unsigned int* grid, float rScale)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x, y = blockIdx.y * blockDim.y + threadIdx.y;
 	CudaRNG rng = g_RNGData();
@@ -75,12 +74,12 @@ template<bool DIRECT, int N> __global__ void kFirstPass(int w, int h, k_IrrEntry
 		{
 			e_KernelBSDF bsdf = r2.m_pTri->GetBSDF(r2.m_fUV, r2.m_pNode->getWorldMatrix(), g_SceneData.m_sMatData.Data, r2.m_pNode->m_uMaterialOffset);
 			if(bsdf.NumComponents(BxDFType(BSDF_REFLECTION | BSDF_TRANSMISSION | BSDF_DIFFUSE)) && g_sHash.IsValidHash(r(r2.m_fDist)))
-				E<DIRECT, N>(r, r2, rng, &bsdf, entries, entryNum, grid);
+				E<DIRECT, N>(r, r2, rng, &bsdf, entries, entryNum, grid, rScale);
 		}
 	}
 }
 
-template<bool DIRECT, int N, int M, int O> __global__ void kScndPass(int w, int h, RGBCOL* a_Target, k_IrrEntry* entries, unsigned int entryNum, unsigned int* grid, unsigned int gridLength)
+template<bool DIRECT, int N, int M, int O> __global__ void kScndPass(int w, int h, RGBCOL* a_Target, k_IrrEntry* entries, unsigned int entryNum, unsigned int* grid, unsigned int gridLength, float rScale)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x, y = blockIdx.y * blockDim.y + threadIdx.y;
 	CudaRNG rng = g_RNGData();
@@ -174,7 +173,7 @@ template<bool DIRECT, int N, int M, int O> __global__ void kScndPass(int w, int 
 					}
 					else
 					{
-						e = E<DIRECT, N>(s.r, r2, rng, &bsdf, entries, entryNum, grid, &wi);
+						e = E<DIRECT, N>(s.r, r2, rng, &bsdf, entries, entryNum, grid, rScale, &wi);
 						L = make_float3(1,0,0);
 						break;
 					}
@@ -203,9 +202,7 @@ template<bool DIRECT, int N, int M, int O> __global__ void kScndPass(int w, int 
 }
 
 void k_IrradianceCache::DoRender(RGBCOL* a_Buf)
-{
-
-	
+{	
 	m_uPassesDone++;
 }
 
@@ -221,9 +218,9 @@ void k_IrradianceCache::StartNewTrace(RGBCOL* a_Buf)
 	m_sGrid = k_HashGrid_Irreg(m_sEyeBox, r, m_uGridLength);
 	cudaMemcpyToSymbol(g_sHash, &m_sGrid, sizeof(m_sGrid));
 	int p = 16, p2 = 64;
-	kFirstPass<false, 4><<<dim3( p2 / p, p2 / p, 1), dim3(p, p, 1)>>>(p2, p2, m_pEntries, m_uEntryNum, m_pGrid);
-	cudaThreadSynchronize();
-	kScndPass<false, 16, 4, 10><<<dim3( w / p + 1, h / p + 1, 1), dim3(p, p, 1)>>>(w, h, a_Buf, m_pEntries, m_uEntryNum, m_pGrid, m_uGridLength);
+	//kFirstPass<false, 4><<<dim3( p2 / p, p2 / p, 1), dim3(p, p, 1)>>>(p2, p2, m_pEntries, m_uEntryNum, m_pGrid, rScale);
+	//cudaThreadSynchronize();
+	kScndPass<false, 16, 4, 10><<<dim3( w / p + 1, h / p + 1, 1), dim3(p, p, 1)>>>(w, h, a_Buf, m_pEntries, m_uEntryNum, m_pGrid, m_uGridLength, rScale);
 	cudaThreadSynchronize();
 }
 

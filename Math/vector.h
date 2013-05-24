@@ -591,38 +591,6 @@ CUDA_FUNC_IN Quaternion slerp(const Quaternion &q1, const Quaternion &q2, float 
 	return result;
 }
 
-class Ray
-{
-public:  //Data
-
-  // basic information about a ray
-  float3 origin;
-  float3 direction;
-  
-public:  // Methods
-	CUDA_FUNC Ray()
-	{
-	}
-	// Set up the ray with a give origin and direction (and optionally a ray depth)
-	CUDA_FUNC_IN Ray( const float3 &orig, const float3 &dir )
-		: origin(orig), direction(dir)
-	{
-	}
-	// Normalize ray direction
-	CUDA_FUNC_IN void NormalizeRayDirection( void ) { direction = normalize(direction); }	
-
-	CUDA_FUNC_IN float3 getOrigin() const{return origin;}
-	CUDA_FUNC_IN float3 getDirection() const{return direction;}
-	CUDA_FUNC_IN Ray operator *(const float4x4& m) const
-	{
-		return Ray(m * origin, m.TransformNormal(direction));
-	}
-	CUDA_FUNC_IN float3 operator()(float d) const
-	{
-		return origin + d * direction;
-	}
-};
-
 __device__ inline unsigned int toABGR(float4 v)
 {
     return
@@ -862,6 +830,12 @@ struct Onb
 		r.m_binormal = normalize(m.TransformNormal(m_binormal));
 		return r;
 	}
+	CUDA_FUNC_IN void RecalculateFromNormal(const float3& nor)
+	{
+		m_normal = nor;
+		m_tangent = normalize(cross(nor, m_binormal));
+		m_binormal = normalize(cross(nor, m_tangent));
+	}
 
 	float3 m_tangent;
 	float3 m_binormal;
@@ -940,4 +914,11 @@ CUDA_FUNC_IN float y(float3& v)
 	return YWeight[0] * v.x + YWeight[1] * v.y + YWeight[2] * v.z;
 }
 
+template<typename T> CUDA_FUNC_IN T bilerp(const float2& uv, const T& lt, const T& rt, const T& ld, const T& rd)
+{
+	T a = lt + (rt - lt) * uv.x, b = ld + (rd - ld) * uv.x;
+	return a + (b - a) * uv.y;
+}
+
 #include "Montecarlo.h"
+#include "Ray.h"

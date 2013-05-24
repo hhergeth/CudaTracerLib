@@ -8,7 +8,7 @@
 
 e_SceneInitData e_SceneInitData::CreateFor_S_SanMiguel(unsigned int a_SceneNodes, unsigned int a_Lights)
 {
-	return CreateForSpecificMesh(1487716 + 100, 1701833 + 100, 786998 + 100, 5905498 + 100, 255, a_Lights, a_SceneNodes);
+	return CreateForSpecificMesh(2487716 + 100, 2701833 + 100, 2586998 + 100, 12905498 + 100, 1024, a_Lights, a_SceneNodes);
 	//return CreateForSpecificMesh(10000, 10000, 10000, 15000, 255, a_Lights);
 	//return CreateForSpecificMesh(7880512, 9359209, 2341126, 28077626, 255, a_Lights);
 }

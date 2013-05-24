@@ -38,24 +38,7 @@ public:
 	int2 m_uDim;
 	unsigned int m_uWidth;
 	e_KernelTexture_DataType m_uType;
-public:/*
-	CUDA_FUNC_IN float4 Sample(const float2& a_UV) const
-	{
-		float2 a_Coords = make_float2(frac(a_UV.x), frac(1.0f-a_UV.y));
-		a_Coords = make_float2(m_fDim.x * a_Coords.x, m_fDim.y * a_Coords.y);
-		unsigned int x = (unsigned int)a_Coords.x, y = (unsigned int)a_Coords.y;
-		RGBCOL c = m_pDeviceData[y * m_uWidth + x];
-		return COLORREFToFloat4(c);
-	}
-	template<typename T> CUDA_FUNC_IN T SampleT(const float2& a_UV) const
-	{
-		float2 a_Coords = make_float2(frac(a_UV.x), frac(1.0f-a_UV.y));
-		a_Coords = make_float2(m_fDim.x * a_Coords.x, m_fDim.y * a_Coords.y);
-		unsigned int x = (unsigned int)a_Coords.x, y = (unsigned int)a_Coords.y;
-		T c = ((T*)m_pDeviceData)[y * m_uWidth + x];
-		return c;
-	}*/
-
+public:
 	template<typename T> CUDA_FUNC_IN T Sample(const float2& a_UV) const
 	{
 		return *at<T>(a_UV);
@@ -72,14 +55,36 @@ public:/*
 			return *at<float3>(a_UV);
 		else
 		{
-			float2 q = a_UV * m_fDim;
+			float2 q = make_float2(frac(a_UV.x), frac(1.0f-a_UV.y)) * m_fDim;
 			int2 v = make_int2(q.x, q.y);
 			float3 a = ld(v), b = ld(v + make_int2(1, 0)), c = ld(v + make_int2(0, 1)), d = ld(v + make_int2(1, 1));
 			float3 e = lerp(a, b, frac(q.x)), f = lerp(c, d, frac(q.x));
 			return lerp(e, f, frac(q.y));
 		}
 	}
+	template<int W> CUDA_FUNC_IN void Gather(const float2& a_UV, float* data) const
+	{
+		float2 q = make_float2(frac(a_UV.x), frac(1.0f-a_UV.y)) * m_fDim;
+		int2 v = make_int2(q.x, q.y);
+		for(int i = -1; i < (W - 1); i++)
+			for(int j = -1; j < (W - 1); j++)
+			{
+				float h;
+				if(m_uType == e_KernelTexture_DataType::vtGeneric)
+					h = *ld<float>(v, i, j);
+				else if(m_uType == e_KernelTexture_DataType::vtRGBCOL)
+					h = COLORREFToFloat3(*ld<RGBCOL>(v, i, j)).x;
+				else if(m_uType == e_KernelTexture_DataType::vtRGBE)
+					h = RGBEToFloat3(*ld<RGBE>(v, i, j)).x;
+				data[(j + 1) * W + i + 1] = h;
+			}
+	}
 private:
+	template<typename T> CUDA_FUNC_IN T* ld(const int2& p2, int xo = 0, int yo = 0) const
+	{
+		int2 p = clamp(p2 + make_int2(xo, yo), make_int2(0,0), make_int2(m_fDim.x, m_fDim.y));
+		return (T*)m_pDeviceData + p.y * m_uWidth + p.x;
+	}
 	template<typename T> CUDA_FUNC_IN T* at(const float2& a_UV) const
 	{
 		float2 a_Coords = make_float2(frac(a_UV.x), frac(1.0f-a_UV.y));
@@ -93,7 +98,7 @@ private:
 		float3 r;
 		if(m_uType == e_KernelTexture_DataType::vtRGBCOL)
 			r = COLORREFToFloat3(m_pDeviceData[uv.y * m_uWidth + uv.x]);
-		else if(m_uType == e_KernelTexture_DataType::vtRGBCOL)
+		else if(m_uType == e_KernelTexture_DataType::vtRGBE)
 			r = RGBEToFloat3(((RGBE*)m_pDeviceData)[uv.y * m_uWidth + uv.x]);
 		return r;
 	}

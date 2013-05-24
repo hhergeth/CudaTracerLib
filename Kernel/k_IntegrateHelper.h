@@ -48,7 +48,7 @@ CUDA_ONLY_FUNC float3 EstimateDirect(const float3& p, const float3& n, const flo
 			}
 		}
 	}
-	
+	/*
 	if(!light->IsDeltaLight())
 	{
 		BxDFType sampledType;
@@ -76,7 +76,7 @@ CUDA_ONLY_FUNC float3 EstimateDirect(const float3& p, const float3& n, const flo
 				Ld += Li * f * AbsDot(wi, n) * weight / bsdfPdf;
 			}
 		}
-	}
+	}*/
 
 	return Ld;
 }

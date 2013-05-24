@@ -34,7 +34,17 @@ struct e_CameraData
 		float3 b = normalize(!a);
 		float3 tar = b * dist, p0 = make_float3(u,v,0) * apperture, d = tar - p0;
 		return Ray(view * p0, normalize(view.TransformNormal(d)));
-	}
+	}/*
+	CUDA_ONLY_FUNC RayDifferential GenRayDiff(float x, float y, float w, float h, float u, float v) const
+	{
+		float4 a = make_float4(2.0f * ((float)x / (float)w) - 1.0f, -(2.0f * ((float)y / (float)h) - 1.0f), 0, 1.0f);
+		a = proj * a;
+		a /= a.w;
+		float3 b = normalize(!a);
+		float3 tar = b * dist, p0 = make_float3(u,v,0) * apperture, d = tar - p0;
+		float3 o = view * p0, d2 = normalize(view.TransformNormal(d));
+		return RayDifferential(o, d2, o, o, 1, 1);
+	}*/
 };
 
 class e_Camera

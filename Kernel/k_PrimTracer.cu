@@ -8,15 +8,15 @@ __device__ float3 trace(Ray& r, CudaRNG& rng)
 	float3 c = make_float3(1);
 	unsigned int depth = 0;
 	while(k_TraceRay<true>(r.direction, r.origin, &r2) && depth++ < 5)
-	{//return make_float3(r.m_fDist/3);
+	{
 		if(g_SceneData.m_sVolume.HasVolumes())
 			c = c * exp(-g_SceneData.m_sVolume.tau(r, 0, r2.m_fDist));
 		float3 wi;
 		float pdf;
-		e_KernelBSDF bsdf = r2.m_pTri->GetBSDF(r2.m_fUV, r2.m_pNode->getWorldMatrix(), g_SceneData.m_sMatData.Data, r2.m_pNode->m_uMaterialOffset);
+		e_KernelBSDF bsdf = r2.GetBSDF(g_SceneData.m_sMatData.Data);
 		BxDFType sampledType;
 		float3 f = bsdf.Sample_f(-r.direction, &wi, BSDFSample(0.64563f, 0.173f, rng.randomFloat()), &pdf, BSDF_ALL, &sampledType);
-		f = bsdf.IntegratePdf(f, pdf, -r.direction);
+		f = f * clamp(dot(wi, bsdf.sys.m_normal), 0.0f, 1.0f) / pdf;
 		c = c * f;
 		if((sampledType & BSDF_SPECULAR) != BSDF_SPECULAR)
 			break;
@@ -85,8 +85,14 @@ __global__ void debugPixe2l(unsigned int width, unsigned int height, int2 p)
 	trace(r, g_RNGData());
 }
 
+static bool init = false;
 void k_PrimTracer::DoRender(RGBCOL* a_Buf)
 {
+	if(!init)
+	{
+		init = true;
+		cudaThreadSetLimit(cudaLimitStackSize, 2048);
+	}
 	m_sRngs.m_uOffset++;
 	k_INITIALIZE(m_pScene->getKernelSceneData());
 	k_STARTPASS(m_pScene, m_pCamera, m_sRngs);

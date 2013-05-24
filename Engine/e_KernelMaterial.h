@@ -375,14 +375,15 @@ public:
 	e_String Name;
 	unsigned int NodeLightIndex;
 	e_Sampler<float3> NormalMap;
+	e_Sampler<float3> HeightMap;
 public:
 	e_KernelMaterial()
-		: NormalMap(make_float3(0))
+		: NormalMap(make_float3(0)), HeightMap(make_float3(0))
 	{
 		memset(Name, 0, sizeof(Name));
 	}
 	e_KernelMaterial(const char* name)
-		: NormalMap(make_float3(0))
+		: NormalMap(make_float3(0)), HeightMap(make_float3(0))
 	{
 		memcpy(Name, name, strlen(name));
 		NodeLightIndex = -1;
@@ -408,6 +409,7 @@ public:
 	template<typename L> void LoadTextures(L callback)
 	{
 		NormalMap.LoadTextures(callback);
+		HeightMap.LoadTextures(callback);
 		CALL_FUNC(return, LoadTextures<L>(callback))
 	}
 
@@ -420,11 +422,35 @@ public:
 	{
 		if(NormalMap.HasTexture())
 		{
-			*normal = NormalMap.Sample(uv);
+			*normal = NormalMap.Sample(uv) * 2.0f - make_float3(1);
+			return true;
+		}
+		else if(HeightMap.HasTexture())
+		{
+			float m[16];
+			HeightMap.m_pTex->Gather<4>(uv, m);
+			//float2 d = make_float2(m[2] + 2*m[5] + m[8] -m[0] - 2*m[3] - m[6], m[6] + 2*m[7] + m[8] -m[0] - 2*m[1] - m[2]);
+			/*float2 lu = dxdy(m, 0, 1, 2, 4, 5, 6, 8, 9, 10),
+				   ru = dxdy(m, 1, 2, 3, 5, 6, 7, 9, 10, 11),
+				   ld = dxdy(m, 4, 5, 6, 8, 9, 10, 12, 13, 14),
+				   rd = dxdy(m, 5, 6, 7, 9, 10, 11, 13, 14, 15);
+			float2 d = bilerp(make_float2(frac(uv.x), frac(uv.y)), lu, ru, ld, rd);
+			*normal = normalize(make_float3(d, 1.0f));*/
+			*normal = nor(m, 4, 1, 5, 6, 9); 
 			return true;
 		}
 		else return false;
 	}
 #undef CALL_TYPE
 #undef CALL_FUNC
+private:
+	CUDA_FUNC_IN float2 dxdy(float* D, int tl, int t, int tr, int l, int ME, int r, int bl, int b, int br) const
+	{
+		return make_float2(D[tr] + 2.0f * D[r] + D[br] - D[tl] - 2.0f * D[l] - D[bl], D[bl] + 2.0f * D[b] + D[br] - D[tl] - 2.0f * D[t] - D[tr]);
+	}
+	CUDA_FUNC_IN float3 nor(float* D, int l, int t, int m, int r, int b) const
+	{
+		//return normalize(cross(make_float3(0, -1, D[t] - D[m]), make_float3(-1, 0, D[l] - D[m])) + cross(make_float3(0, 1, D[b] - D[m]), make_float3(1, 0, D[r] - D[m])));
+		return normalize(make_float3(D[m]-D[l], D[m]-D[t], 1));
+	}
 };

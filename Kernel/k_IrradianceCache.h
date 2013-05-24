@@ -32,6 +32,7 @@ class k_IrradianceCache : public k_RandTracerBase
 
 	const unsigned int m_uEntryNum;
 	const unsigned int m_uGridLength;
+	float rScale;
 public:
 	k_IrradianceCache()
 		: k_RandTracerBase(), m_uEntryNum(1000000), m_uGridLength(200 * 200 * 200)
@@ -46,6 +47,10 @@ public:
 	}
 	virtual void Resize(unsigned int _w, unsigned int _h);
 	virtual void Debug(int2 pixel);
+	virtual void CreateSliders(SliderCreateCallback a_Callback)
+	{
+		a_Callback(0.1f, 2.0f, false, &rScale, "Radius scale = %g");
+	}
 protected:
 	virtual void DoRender(RGBCOL* a_Buf);
 	virtual void StartNewTrace(RGBCOL* a_Buf);

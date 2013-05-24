@@ -80,9 +80,9 @@ public:
 	Renderer(bool stdTracers = true)
 	{
 		if(stdTracers)
-			//setTracers(new k_PrimTracer(), new k_sPpmTracer());
+			setTracers(new k_PrimTracer(), new k_sPpmTracer());
 			//setTracers(new k_PrimTracer(), new k_PathTracer());
-			setTracers(new k_PrimTracer(), new k_IrradianceCache());
+			//setTracers(new k_PrimTracer(), new k_IrradianceCache());
 		else setTracers(0, 0);
 		oldMove0 = oldMove1 = false;
 		m_uState = 1;

@@ -13,25 +13,25 @@ struct k_pPpmPhoton
 {
 	float3 Pos;
 	float3 L;
-	uchar2 Wi;
-	uchar2 Nor;
+	float3 Wi;
+	float3 Nor;
 	unsigned int next;
 	CUDA_FUNC_IN k_pPpmPhoton(){}
 	CUDA_FUNC_IN k_pPpmPhoton(float3 p, float3 l, float3 wi, float3 n, unsigned int ne)
 	{
 		Pos = p;
-		Nor = NormalizedFloat3ToUchar2(n);
+		Nor = n;
 		L = (l);
-		Wi = NormalizedFloat3ToUchar2(wi);
+		Wi = wi;
 		next = ne;
 	}
 	CUDA_FUNC_IN float3 getNormal()
 	{
-		return Uchar2ToNormalizedFloat3(Nor);
+		return (Nor);
 	}
 	CUDA_FUNC_IN float3 getWi()
 	{
-		return Uchar2ToNormalizedFloat3(Wi);
+		return (Wi);
 	}
 	CUDA_FUNC_IN float3 getL()
 	{

@@ -4,31 +4,6 @@
 #include "e_Brdf.h"
 #include "e_KernelMaterial.h"
 
-struct e_TriangleData;
-class e_Node;
-struct TraceResult
-{
-	float m_fDist;
-	float2 m_fUV;
-	const e_TriangleData* m_pTri;
-	const e_Node* m_pNode;
-	CUDA_FUNC_IN bool hasHit() const
-	{
-		return m_pTri != 0;
-	}
-	CUDA_FUNC_IN void Init()
-	{
-		m_fDist = FLT_MAX;
-		m_fUV = make_float2(0,0);
-		m_pNode = 0;
-		m_pTri = 0;
-	}
-	CUDA_FUNC_IN operator bool() const
-	{
-		return hasHit();
-	}
-};
-
 #define EXT_TRI
 
 #define TOFLOAT3(a,b,c) ((make_float3(a,b,c) / make_float3(127)) - make_float3(1))
@@ -125,7 +100,7 @@ public:
 
 		float3 nor;
 		if(a_Mats[getMatIndex(off)].SampleNormalMap(uv, &nor))
-			sys.m_normal = normalize(sys.localToworld(nor*2.0f-make_float3(1)));
+			sys.RecalculateFromNormal(normalize(sys.localToworld(nor)));
 
 		e_KernelBSDF bsdf(sys, ng);
 		a_Mats[getMatIndex(off)].GetBSDF(uv, &bsdf);
@@ -139,7 +114,7 @@ public:
 
 		float3 nor;
 		if(a_Mats[getMatIndex(off)].SampleNormalMap(uv, &nor))
-			sys.m_normal = normalize(sys.localToworld(nor*2.0f-make_float3(1)));
+			sys.RecalculateFromNormal(normalize(sys.localToworld(nor)));
 
 		return a_Mats[getMatIndex(off)].GetBSSRDF(uv, bssrdf);	
 	}

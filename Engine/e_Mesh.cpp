@@ -127,6 +127,18 @@ void e_Mesh::Free(e_Stream<e_TriIntersectorData>& a_Stream0, e_Stream<e_Triangle
 	a_Stream4.dealloc(m_sMatInfo);
 }
 
+e_Sampler<float3> load(const char* p, float3& c)
+{
+	if(p && strlen(p))
+	{
+		char* c = new char[strlen(p) + 1];
+		ZeroMemory(c, strlen(p) + 1);
+		memcpy(c, p, strlen(p));
+		return e_Sampler<float3>(c, 1);
+	}
+	else return e_Sampler<float3>(c);
+}
+
 void e_Mesh::CompileObjToBinary(const char* a_InputFile, OutputStream& a_Out)
 {
 	FW::Mesh<FW::VertexPNT>* MB = new FW::Mesh<FW::VertexPNT>(*FW::importMesh(FW::String(a_InputFile)));
@@ -156,7 +168,7 @@ void e_Mesh::CompileObjToBinary(const char* a_InputFile, OutputStream& a_Out)
 		float f = 0.0f;
 		if(M.IlluminationModel == 2)
 		{
-			mat.SetData(e_KernelMaterial_Matte(e_Sampler<float3>(!M.diffuse), e_Sampler<float>(f)));
+			mat.SetData(e_KernelMaterial_Matte(load(M.textures[0].getID().getPtr(), !M.diffuse), e_Sampler<float>(f)));//3 is bump
 		}
 		else if(M.IlluminationModel == 5)
 		{
@@ -176,6 +188,15 @@ void e_Mesh::CompileObjToBinary(const char* a_InputFile, OutputStream& a_Out)
 			m_sLights[lc].L = M.emission;
 			strcpy(m_sLights[lc].MatName, M.Name.getPtr());
 			mat.NodeLightIndex = lc++;
+		}
+		if(M.textures[3].getID().getLength()&&0)
+		{
+			char* c = new char[M.textures[3].getID().getLength()+1];
+			ZeroMemory(c, M.textures[3].getID().getLength()+1);
+			memcpy(c, M.textures[3].getID().getPtr(), M.textures[3].getID().getLength());
+			OutputDebugString(c);
+			OutputDebugString(M.textures[3].getID().getPtr());
+			mat.HeightMap = e_Sampler<float3>(c, 1);
 		}
 		/*
 #ifdef EXT_TRI
@@ -224,6 +245,12 @@ void e_Mesh::CompileObjToBinary(const char* a_InputFile, OutputStream& a_Out)
 	a_Out.Write(&matData[0], sizeof(e_KernelMaterial) * matData.size());
 	TmpOutStream to(&a_Out);
 	ConstructBVH2(MB, to);
+
+	delete [] v_Normals;
+	delete [] v_Tangents;
+	delete [] v_BiTangents;
+	delete [] triData;
+	delete MB;
 }
 
 static float4x4 g_mTransMat = float4x4::Identity();//float4x4::RotateX(-PI/2);

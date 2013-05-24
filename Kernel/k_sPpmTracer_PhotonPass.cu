@@ -64,9 +64,7 @@ template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, float3 Le, CudaRNG
 			while(true)
 			{
 				float3 w = -r.direction;
-				TraceResult r3;
-				r3.Init();
-				k_TraceRay<true>(r.direction, x, &r3);//that can't be false
+				TraceResult r3 = k_TraceRay(Ray(x, r.direction));
 				float3 sigma_s = bssrdf.sigp_s, sigma_t = bssrdf.sigp_s + bssrdf.sig_a;
 				float d = -logf(rng.randomFloat()) / (fsumf(sigma_t) / 3.0f);
 				bool cancel = d >= (r3.m_fDist);

@@ -287,6 +287,31 @@ CUDA_FUNC_IN unsigned int LightIndex(TraceResult& r2, e_KernelDynamicScene& scen
 	return j;
 }
 
+Onb TraceResult::lerpOnb()
+{
+	return m_pTri->lerpOnb(m_fUV, m_pNode->getWorldMatrix(), 0);
+}
+
+unsigned int TraceResult::getMatIndex()
+{
+	return m_pTri->getMatIndex(m_pNode->m_uMaterialOffset);
+}
+
+float2 TraceResult::lerpUV()
+{
+	return m_pTri->lerpUV(m_fUV);
+}
+
+e_KernelBSDF TraceResult::GetBSDF(const e_KernelMaterial* a_Mats)
+{
+	return m_pTri->GetBSDF(m_fUV, m_pNode->getWorldMatrix(), a_Mats, m_pNode->m_uMaterialOffset);
+}
+
+bool TraceResult::GetBSSRDF(const e_KernelMaterial* a_Mats, e_KernelBSSRDF* bssrdf)
+{
+	return m_pTri->GetBSSRDF(m_fUV, m_pNode->getWorldMatrix(), a_Mats, m_pNode->m_uMaterialOffset, bssrdf);
+}
+
 //do not!!! use a method here, the compiler will fuck up the textures.
 #define k_INITIALIZE(a_Data) \
 	{ \
