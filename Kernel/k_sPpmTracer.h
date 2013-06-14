@@ -195,6 +195,7 @@ private:
 
 	float m_uNewPhotonsPerRun;
 	int m_uModus;
+	bool m_bLongRunning;
 public:
 	k_sPpmTracer();
 	virtual ~k_sPpmTracer()

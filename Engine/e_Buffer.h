@@ -275,6 +275,10 @@ public:
 	{
 		return m_uLength;
 	}
+	const H& operator*() const
+	{
+		return m_pStream->host[m_uIndex];
+	}
 	template<typename U> U* operator()(unsigned int i = 0)
 	{
 		U* a = (U*)(m_pStream->host + m_uIndex);

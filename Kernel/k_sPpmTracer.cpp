@@ -6,6 +6,7 @@
 k_sPpmTracer::k_sPpmTracer()
 	: k_RandTracerBase(), m_uGridLength(LNG*LNG*LNG)
 {
+	m_bLongRunning = false;
 #ifdef DEBUG
 	m_uNewPhotonsPerRun = 0.1f;
 #else

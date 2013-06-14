@@ -76,6 +76,7 @@ public:
 	k_Tracer* m_pTracer_0;
 	k_Tracer* m_pTracer_1;
 	bool oldMove0, oldMove1;
+	cTimer m_sTimer;
 public:
 	Renderer(bool stdTracers = true)
 	{
@@ -121,6 +122,7 @@ public:
 	}
 	void Render(FW::GLContext* gl, e_DynamicScene* S, e_Camera* C, FW::Image* I, bool a_DrawSceneBvh, bool a_DrawObjectBvhs, e_StreamReference(e_Node) N)
 	{
+		m_sTimer.StartTimer();
 		bool& b = m_uState == 1 ? oldMove0 : oldMove1;
 		bool moved = C->Update() || b;
 		b = false;
@@ -148,26 +150,29 @@ public:
 			}
 		}
 
-		if(!ShowGui())
-			return;
-
-		float4x4 vp = C->getViewProjection();
-		if(N)
-			plotBox(S->getBox(N), vp, gl, make_float3(0,0,1));
-		if(a_DrawSceneBvh)
+		if(ShowGui())
 		{
-			//plot(S->getSceneBVH()->m_pNodes->getHost(0), S->getSceneBVH()->m_pNodes->getHost(0), 0, vp, gl);
-		}
-		//for(int i = 0; i < g_pScene->getNodeCount(); i++)
-		//	plotBox(g_pScene->getNodes()[i].getWorldBox());
-		if(a_DrawObjectBvhs)
-		{
-			for(int i = 0; i < S->getNodeCount(); i++)
+			float4x4 vp = C->getViewProjection();
+			if(N)
+				plotBox(S->getBox(N), vp, gl, make_float3(0,0,1));
+			if(a_DrawSceneBvh)
 			{
-				unsigned int j = S->getMesh(S->getNodes()(i))->getKernelData().m_uBVHNodeOffset / 4;
-				plot(0, S->m_pBVHStream->operator()(j), 0, S->getNodes()[i].getWorldMatrix(), vp, gl);
+				if(S->getSceneBVH()->getData().m_sStartNode != -1)
+					plot(S->getSceneBVH()->m_pNodes->operator()(0), S->getSceneBVH()->m_pNodes->operator()(), 0, vp, gl);
+				else plotBox(S->getBox(S->getNodes()), vp, gl, make_float3(1,0,0));
+			}
+			//for(int i = 0; i < g_pScene->getNodeCount(); i++)
+			//	plotBox(g_pScene->getNodes()[i].getWorldBox());
+			if(a_DrawObjectBvhs)
+			{
+				for(int i = 0; i < S->getNodeCount(); i++)
+				{
+					unsigned int j = S->getMesh(S->getNodes()(i))->getKernelData().m_uBVHNodeOffset / 4;
+					plot(0, S->m_pBVHStream->operator()(j), 0, S->getNodes()[i].getWorldMatrix(), vp, gl);
+				}
 			}
 		}
+		m_sTimer.EndTimer();
 	}
 	void Render(e_DynamicScene* S, e_Camera* C, FW::Image* I)
 	{

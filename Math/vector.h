@@ -803,16 +803,6 @@ struct Onb
 			m_tangent = make_float3(0.0f, a.z * invLen, -a.y * invLen);
 		}
 		m_binormal = cross(m_tangent, a);
-	}/*
-	CUDA_FUNC_IN Onb( const float3& normal, const float3& tangent, const float3& binormal )
-	{
-		m_normal =  normal;
-		m_binormal = binormal;
-		m_tangent = tangent;
-	}*/
-	CUDA_FUNC_IN void Redirect(const float3& dir)
-	{
-		m_normal = dot(m_normal, dir) < 0.0f ? m_normal : (-1.0f * m_normal);
 	}
 	CUDA_FUNC_IN float3 localToworld( const float3& p ) const
 	{

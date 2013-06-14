@@ -84,7 +84,7 @@ e_AnimatedMesh::e_AnimatedMesh(InputStream& a_In, e_Stream<e_TriIntersectorData>
 	: e_Mesh(a_In, a_Stream0, a_Stream1, a_Stream2, a_Stream3, a_Stream4)
 {
 	BASEHOST = a_Stream5->operator()();
-	BASEDEVICE = a_Stream5->operator()();
+	BASEDEVICE = a_Stream5->UsedElements().getDevice();
 	unsigned int numVertices;
 	a_In >> numVertices;
 	unsigned int BLOCKSIZE;
@@ -92,7 +92,8 @@ e_AnimatedMesh::e_AnimatedMesh(InputStream& a_In, e_Stream<e_TriIntersectorData>
 	unsigned int OFF = 0;
 	m_pOffset = a_Stream5->malloc(BLOCKSIZE);
 	char* DATA = m_pOffset();
-#define APPEND(s) { a_In.Read(DATA + OFF, s); OFF += s; /*while(OFF % 16) OFF++;*/ }
+#define APPEND(s) { a_In.Read(DATA + OFF, s); OFF += s; while(OFF % 16) OFF++; }
+#define APPEND2(s) { a_In.Read(DATA + OFF, s); OFF += s; }
 	a_In >> k_Data.m_uVertexCount;
 	m_pVertices = (e_AnimatedVertex*)(DATA + OFF);
 	APPEND(k_Data.m_uVertexCount * sizeof(e_AnimatedVertex))
@@ -106,7 +107,7 @@ e_AnimatedMesh::e_AnimatedMesh(InputStream& a_In, e_Stream<e_TriIntersectorData>
 	APPEND(k_Data.m_uBVHLevelCount * sizeof(uint2))
 	m_pLevelEntries = (e_BVHLevelEntry*)(DATA + OFF);
 	for(unsigned int l = 0; l < k_Data.m_uBVHLevelCount; l++)
-		APPEND(m_pLevels[l].y * sizeof(e_BVHLevelEntry));
+		APPEND2(m_pLevels[l].y * sizeof(e_BVHLevelEntry));
 	a_In >> k_Data.m_uAnimCount;
 	a_In >> k_Data.m_uJointCount;
 	k_Data.m_uAnimHeaderOffset = OFF;
@@ -132,7 +133,7 @@ void e_AnimatedMesh::CompileToBinary(char* a_InputFile, c_StringArray& a_Anims, 
 	e_AnimatedVertex* v_Data;
 	float3* v_Pos;
 	std::vector<e_TriangleData> triData;
-	//std::vector<e_Material> matData;
+	std::vector<e_KernelMaterial> matData;
 	FW::Mesh<FW::VertexP> M2;
 	unsigned int off = 0;
 	unsigned int vCount;
@@ -140,10 +141,12 @@ void e_AnimatedMesh::CompileToBinary(char* a_InputFile, c_StringArray& a_Anims, 
 	e_MeshPartLight m_sLights[MAX_AREALIGHT_NUM];
 	unsigned int lc = 0;
 	for(int s = 0; s < M.meshes.size(); s++)
-	{/*
-		e_Material mat;
-		float f = 0.7;
-		matData.push_back(mat);*/
+	{
+		e_KernelMaterial mat;
+		
+		mat.SetData(e_KernelMaterial_Matte(e_Sampler<float3>("hellknight.tga", 1), e_Sampler<float>(0.0f)));
+		//mat.NormalMap = e_Sampler<float3>("n_hellknight.tga", 1);
+		matData.push_back(mat);
 
 		int s2 = M2.addSubmesh();
 		Mesh* sm = M.meshes[s];
@@ -170,13 +173,15 @@ void e_AnimatedMesh::CompileToBinary(char* a_InputFile, c_StringArray& a_Anims, 
 		off += sm->verts.size();
 	}
 	M2.compact();
+
 	a_Out << box;
 	a_Out.Write(m_sLights, sizeof(m_sLights));
 	a_Out << lc;
+
 	a_Out << (unsigned int)triData.size();
-	a_Out.Write(&triData[0], sizeof(e_TriangleData) * triData.size());throw 1;
-	//a_Out << (unsigned int)matData.size();
-	//a_Out.Write(&matData[0], sizeof(e_KernelMaterial) * matData.size());
+	a_Out.Write(&triData[0], sizeof(e_TriangleData) * triData.size());
+	a_Out << (unsigned int)matData.size();
+	a_Out.Write(&matData[0], sizeof(e_KernelMaterial) * matData.size());
 	float4* v_BVH;
 	ConstructBVH(M2, TmpOutStream(&a_Out), &v_BVH);
 

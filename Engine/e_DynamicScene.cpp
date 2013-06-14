@@ -8,9 +8,11 @@
 
 e_SceneInitData e_SceneInitData::CreateFor_S_SanMiguel(unsigned int a_SceneNodes, unsigned int a_Lights)
 {
-	return CreateForSpecificMesh(2487716 + 100, 2701833 + 100, 2586998 + 100, 12905498 + 100, 1024, a_Lights, a_SceneNodes);
+	e_SceneInitData r = CreateForSpecificMesh(2487716 + 100, 2701833 + 100, 2586998 + 100, 12905498 + 100, 1024, a_Lights, a_SceneNodes);
 	//return CreateForSpecificMesh(10000, 10000, 10000, 15000, 255, a_Lights);
 	//return CreateForSpecificMesh(7880512, 9359209, 2341126, 28077626, 255, a_Lights);
+	r.m_uSizeAnimStream = 16 * 1024 * 1024;
+	return r;
 }
 
 bool hasEnding (std::string const &fullString, std::string const &ending)
@@ -44,7 +46,8 @@ e_DynamicScene::e_DynamicScene(e_SceneInitData a_Data)
 	m_pLightStream = new e_Stream<e_KernelLight>(a_Data.m_uNumLights);
 	m_pVolumes = new e_Stream<e_VolumeRegion>(128);
 	m_pBVH = new e_SceneBVH(a_Data.m_uNumNodes);
-	//cudaMalloc(&m_pDeviceTmpFloats, sizeof(e_TmpVertex) * a_MaxTriangles * 3);
+	if(a_Data.m_uSizeAnimStream > 1024)
+		cudaMalloc(&m_pDeviceTmpFloats, sizeof(e_TmpVertex) * (1 << 16));
 	m_pTerrain = new e_Terrain(1, make_float2(0,0), make_float2(0,0));
 	unsigned int a = this->getCudaBufferSize();
 	//if(a > 900 * 1024 * 1024)
@@ -95,11 +98,6 @@ void e_DynamicScene::UpdateMaterial(e_StreamReference(e_KernelMaterial) m)
 	m.Invalidate();
 }
 
-/// <summary>Creates all directories down to the specified path</summary>
-/// <param name="directory">Directory that will be created recursively</param>
-/// <remarks>
-///   The provided directory must not be terminated with a path separator.
-/// </remarks>
 void createDirectoryRecursively(const std::string &directory)
 {
   static const std::string separators("\\/");
@@ -135,31 +133,71 @@ void createDirectoryRecursively(const std::string &directory)
  
   }
 }
+
+__int64 FileSize(const char* name)
+{
+    HANDLE hFile = CreateFile(name, GENERIC_READ, 
+        FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 
+        FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hFile==INVALID_HANDLE_VALUE)
+        return -1; // error condition, could call GetLastError to find out more
+
+    LARGE_INTEGER size;
+    if (!GetFileSizeEx(hFile, &size))
+    {
+        CloseHandle(hFile);
+        return -1; // error condition, could call GetLastError to find out more
+    }
+
+    CloseHandle(hFile);
+    return size.QuadPart;
+}
+
 FW::String compileFile(FW::String& f)
 {
 	FW::String a = FW::String("Compiled/").append(f.substring(sizeof("Scenes"))), b;
 	createDirectoryRecursively(a.getDirName().getPtr());
+
+	if(a.endsWith(".obj"))
+		b = a.substring(0, a.lastIndexOf('.')).append(".xmsh");
+	else if(a.endsWith(".nif"))
+		b = a.substring(0, a.lastIndexOf('.')).append(".xmsh");
+	else if(a.endsWith(".md5mesh"))
+		b = a.substring(0, a.lastIndexOf('.')).append(".xanim");
+	__int64 fs = FileSize(b.getPtr());
+	if(fs && fs != -1)
+		return b;
+
 	if(a.endsWith(".obj"))
 	{
-		b = a.substring(0, a.lastIndexOf('.')).append(".xmsh");
-		if(fileExists(b.getPtr()))
-			return b;
 		OutputStream a_Out(b.getPtr());
 		e_Mesh::CompileObjToBinary(f.getPtr(), a_Out);
 		a_Out.Close();
 	}
 	else if(a.endsWith(".nif"))
 	{
-		b = a.substring(0, a.lastIndexOf('.')).append(".xmsh");
-		if(fileExists(b.getPtr()))
-			return b;
 		OutputStream a_Out(b.getPtr());
 		e_Mesh::CompileNifToBinary(f.getPtr(), a_Out);
 		a_Out.Close();
 	}
 	else if(a.endsWith(".md5mesh"))
 	{
-		
+		OutputStream a_Out(b.getPtr());
+		c_StringArray A;
+		char dir[255];
+		ZeroMemory(dir, sizeof(dir));
+		_splitpath(f.getPtr(), 0, dir, 0, 0);
+		WIN32_FIND_DATA dat;
+		HANDLE hFind = FindFirstFile(FW::String(dir).append("\\*.md5anim").getPtr(), &dat);
+		while(hFind != INVALID_HANDLE_VALUE)
+		{
+			FW::String* q = new FW::String(FW::String(dir).append(dat.cFileName));
+			A((char*)q->getPtr());
+			if(!FindNextFile(hFind, &dat))
+				break;
+		}
+		e_AnimatedMesh::CompileToBinary((char*)f.getPtr(), A, a_Out);
+		a_Out.Close();
 	}
 	return b;
 }
@@ -192,7 +230,9 @@ e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_MeshFile2)
 		m_pMeshBuffer->Invalidate(M);
 	}
 	e_StreamReference(e_Node) N = m_pNodeStream->malloc(1);
-	new(N.operator->()) e_Node(M.getIndex(), M.operator->(), strA.c_str());
+	e_StreamReference(e_KernelMaterial) m2 = m_pMaterialBuffer->malloc(M->m_sMatInfo);
+	m2.Invalidate();
+	new(N.operator->()) e_Node(M.getIndex(), M.operator->(), strA.c_str(), m2);
 	unsigned int li[MAX_AREALIGHT_NUM];
 	for(unsigned int i = 0; i < M->m_uUsedLights; i++)
 	{

@@ -123,16 +123,6 @@ public:
 	{
 		return m_pVolumes->UsedElements();
 	}
-	void InstanciateMaterials(e_StreamReference(e_Node) N)
-	{
-		e_BufferReference<e_Mesh, e_KernelMesh> m = getMesh(N);
-		if(N->usesInstanciatedMaterials(m.operator->()))
-			return;
-		e_StreamReference(e_KernelMaterial) mats = m_pMaterialBuffer->malloc(m->m_sMatInfo);
-		for(int i = 0; i < mats.getLength(); i++)
-			mats(i) = m->m_sMatInfo(i);
-		mats.Invalidate();
-	}
 	AABB getAABB(e_StreamReference(e_Node) Node, const char* name, unsigned int* a_Mi = 0)
 	{
 		return CreateShape<128>(Node, name, a_Mi).getBox();

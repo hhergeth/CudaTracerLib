@@ -22,9 +22,10 @@ template<typename HASH> CUDA_ONLY_FUNC float3 k_PhotonMap<HASH>::L_Surface(float
 	float3 low = fminf(p - sys.m_tangent + sys.m_binormal, p + sys.m_tangent - sys.m_binormal), high = fmaxf(p - sys.m_tangent + sys.m_binormal, p + sys.m_tangent - sys.m_binormal);
 	const float r2 = a_r * a_r, r3 = 1.0f / (r2 * a_NumPhotonEmitted), r4 = 1.0f / r2;
 	float3 L = make_float3(0), Lr = make_float3(0), Lt = make_float3(0);
-	//uint3 lo = m_sHash.Transform(p - make_float3(a_r)), hi = m_sHash.Transform(p + make_float3(a_r));
-	uint3 lo = m_sHash.Transform(low), hi = m_sHash.Transform(high);
-	const bool glossy = bsdf->NumComponents(BxDFType(BSDF_ALL_TRANSMISSION | BSDF_ALL_REFLECTION | BSDF_GLOSSY));
+	uint3 lo = m_sHash.Transform(p - make_float3(a_r)), hi = m_sHash.Transform(p + make_float3(a_r));
+	//uint3 lo = m_sHash.Transform(low), hi = m_sHash.Transform(high);
+	//const bool glossy = bsdf->NumComponents(BxDFType(BSDF_ALL_TRANSMISSION | BSDF_ALL_REFLECTION | BSDF_GLOSSY));
+	const bool glossy = false;
 	for(int a = lo.x; a <= hi.x; a++)
 		for(int b = lo.y; b <= hi.y; b++)
 			for(int c = lo.z; c <= hi.z; c++)
@@ -75,7 +76,7 @@ template<typename HASH> template<bool VOL> CUDA_ONLY_FUNC float3 k_PhotonMap<HAS
 				for(unsigned int cc = lo.z; cc <= hi.z; cc++)
 				{
 					unsigned int i0 = m_sHash.Hash(make_uint3(ac,bc,cc)), i = m_pDeviceHashGrid[i0];
-					while(i != -1 && i < m_uMaxPhotonCount)
+					while(i != -1)
 					{
 						k_pPpmPhoton e = m_pDevicePhotons[i];
 						float3 wi = e.getWi(), l = e.getL(), P = e.Pos;
@@ -100,8 +101,6 @@ template<typename HASH> template<bool VOL> CUDA_ONLY_FUNC float3 k_PhotonMap<HAS
 
 template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, RGBCOL* a_Target, k_sPpmPixel* a_Pixels, float a_PassIndex, float a_rSurface, float a_rVolume)
 {
-	if(off.x)
-		a_PassIndex++;
 	int x = blockIdx.x * blockDim.x + threadIdx.x, y = blockIdx.y * blockDim.y + threadIdx.y;
 	CudaRNG rng = g_RNGData();
 	x += off.x; y += off.y;
@@ -160,32 +159,17 @@ template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, RGBCOL* 
 				if(bsdf.NumComponents(BxDFType(BSDF_REFLECTION | BSDF_TRANSMISSION | BSDF_DIFFUSE)))
 					L += s.fs * g_Map.L(a_rSurface, rng, &bsdf, bsdf.sys.m_normal, p, -s.r.direction);
 				if(s.d < 5 && stackPos < stackN - 1)
-				{/*
-					if(bsdf.NumComponents(BxDFType(BSDF_REFLECTION | BSDF_TRANSMISSION | BSDF_GLOSSY)))
-					{
-						float3 wi;
-						float pdf;
-						const int N = clamp(2u, 0u, stackN - stackPos);
-						for(int i = 0; i < N; i++)
-						{
-							float3 f = bsdf.Sample_f(-s.r.direction, &wi, BSDFSample(rng), &pdf, BxDFType(BSDF_REFLECTION | BSDF_TRANSMISSION | BSDF_GLOSSY));
-							if(pdf && fsumf(f) != 0)
-								stack[stackPos++] = stackEntry(Ray(p, wi), bsdf.IntegratePdf(f, pdf, wi) * s.fs / float(N), s.d + 1);
-						}
-					}
-					else*/
-					{
-						float3 r_wi;
-						float r_pdf;
-						float3 r_f = bsdf.Sample_f(-s.r.direction, &r_wi, BSDFSample(rng), &r_pdf, BxDFType(BSDF_REFLECTION | BSDF_SPECULAR | BSDF_GLOSSY));
-						if(r_pdf && fsumf(r_f) != 0)
-							stack[stackPos++] = stackEntry(Ray(p, r_wi), bsdf.IntegratePdf(r_f, r_pdf, r_wi) * s.fs, s.d + 1);
-						float3 t_wi;
-						float t_pdf;
-						float3 t_f = bsdf.Sample_f(-s.r.direction, &t_wi, BSDFSample(rng), &t_pdf, BxDFType(BSDF_TRANSMISSION | BSDF_SPECULAR | BSDF_GLOSSY));
-						if(t_pdf && fsumf(t_f) != 0)
-							stack[stackPos++] = stackEntry(Ray(p, t_wi), bsdf.IntegratePdf(t_f, t_pdf, t_wi) * s.fs, s.d + 1);
-					}
+				{
+					float3 r_wi;
+					float r_pdf;
+					float3 r_f = bsdf.Sample_f(-s.r.direction, &r_wi, BSDFSample(rng), &r_pdf, BxDFType(BSDF_REFLECTION | BSDF_SPECULAR | BSDF_GLOSSY));
+					if(r_pdf && fsumf(r_f) != 0)
+						stack[stackPos++] = stackEntry(Ray(p, r_wi), bsdf.IntegratePdf(r_f, r_pdf, r_wi) * s.fs, s.d + 1);
+					float3 t_wi;
+					float t_pdf;
+					float3 t_f = bsdf.Sample_f(-s.r.direction, &t_wi, BSDFSample(rng), &t_pdf, BxDFType(BSDF_TRANSMISSION | BSDF_SPECULAR | BSDF_GLOSSY));
+					if(t_pdf && fsumf(t_f) != 0)
+						stack[stackPos++] = stackEntry(Ray(p, t_wi), bsdf.IntegratePdf(t_f, t_pdf, t_wi) * s.fs, s.d + 1);
 				}
 			}
 			else if(g_SceneData.m_sVolume.HasVolumes())
@@ -197,69 +181,33 @@ template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, RGBCOL* 
 		}
 		a_Pixels[y * w + x].m_vPixelColor += L;
 		RGBCOL c = Float3ToCOLORREF(a_Pixels[y * w + x].m_vPixelColor / a_PassIndex);
-		unsigned int i2 = y * w + x;
-		a_Target[i2] = c;
+		a_Target[y * w + x] = c;
 	}
 	g_RNGData(rng);
 }
 
-/*
-__global__ void k_EyePass(int2 off, int w, int h, RGBCOL* a_Target, k_sPpmPixel* a_Pixels, float a_PassIndex, float a_rSurface, float a_rVolume)
-{
-	int x = blockIdx.x * blockDim.x + threadIdx.x, y = blockIdx.y * blockDim.y + threadIdx.y;
-	CudaRNG rng = g_RNGData();
-	curand_init(1234, y * w + x, a_PassIndex, (curandState*)&rng);
-	x += off.x; y += off.y;
-	if(x < w && y < h)
-	{
-		Ray r = g_CameraData.GenRay(x, y, w, h, rng.randomFloat(), rng.randomFloat());
-
-		float3 L = make_float3(0), throughput = make_float3(1);
-		TraceResult r2;
-		r2.Init(); int d = 0;
-		while(k_TraceRay<true>(r.direction, r.origin, &r2) && d++ < 10)
-		{
-			float3 p = r(r2.m_fDist);
-			e_KernelBSDF bsdf = r2.m_pTri->GetBSDF(r2.m_fUV, r2.m_pNode->getWorldMatrix(), g_SceneData.m_sMatData.Data, r2.m_pNode->m_uMaterialOffset);
-			L += throughput * r2.m_pTri->Le(r2.m_fUV, bsdf.ng, -r.direction, g_SceneData.m_sMatData.Data, r2.m_pNode->m_uMaterialOffset);
-			if(bsdf.NumComponents(BxDFType(BSDF_REFLECTION | BSDF_TRANSMISSION | BSDF_DIFFUSE)))
-			{
-				L += throughput * g_Map.L(a_rSurface, rng, &bsdf, bsdf.sys.m_normal, p, -r.direction);
-				break;
-			}
-			else
-			{
-				float3 wi;
-				float pdf;
-				BxDFType sampledType;
-				float3 f = bsdf.Sample_f(-r.direction, &wi, BSDFSample(rng), &pdf, BxDFType(BSDF_REFLECTION | BSDF_TRANSMISSION | BSDF_SPECULAR | BSDF_GLOSSY), &sampledType);
-				if(pdf > 0 && fsumf(f) != 0)
-				{
-					throughput = throughput * f * AbsDot(wi, bsdf.sys.m_normal) / pdf;
-					r = Ray(p, wi);
-				}
-				else break;
-			}
-			r2.Init();
-		}
-
-		a_Pixels[y * w + x].m_vPixelColor += L;
-		RGBCOL c = Float3ToCOLORREF(a_Pixels[y * w + x].m_vPixelColor / a_PassIndex);
-		unsigned int i2 = y * w + x;
-		a_Target[i2] = c;
-	}
-	g_RNGData(rng);
-}
-*/
 void k_sPpmTracer::doEyePass(RGBCOL* a_Buf)
 {
 	cudaMemcpyToSymbol(g_Map, &m_sMaps, sizeof(k_PhotonMapCollection));
 	k_INITIALIZE(m_pScene->getKernelSceneData());
 	k_STARTPASS(m_pScene, m_pCamera, m_sRngs);
-	const unsigned int p = 16;
-	if(m_bDirect)
-		k_EyePass<true><<<dim3( w / p + 1, h / p + 1, 1), dim3(p, p, 1)>>>(make_int2(0,0), w, h, a_Buf, m_pDevicePixels, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3));
-	else k_EyePass<false><<<dim3( w / p + 1, h / p + 1, 1), dim3(p, p, 1)>>>(make_int2(0,0), w, h, a_Buf, m_pDevicePixels, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3));
+	if(m_pScene->getVolumes().getLength() || m_bLongRunning)
+	{
+		unsigned int p = 16, q = 8, pq = p * q;
+		int nx = w / pq + 1, ny = h / pq + 1;
+		for(int i = 0; i < nx; i++)
+			for(int j = 0; j < ny; j++)
+				if(m_bDirect)
+					k_EyePass<true><<<dim3( q, q, 1), dim3(p, p, 1)>>>(make_int2(pq * i, pq * j), w, h, a_Buf, m_pDevicePixels, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3));
+				else k_EyePass<false><<<dim3( q, q, 1), dim3(p, p, 1)>>>(make_int2(pq * i, pq * j), w, h, a_Buf, m_pDevicePixels, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3));
+	}
+	else
+	{
+		const unsigned int p = 16;
+		if(m_bDirect)
+			k_EyePass<true><<<dim3( w / p + 1, h / p + 1, 1), dim3(p, p, 1)>>>(make_int2(0,0), w, h, a_Buf, m_pDevicePixels, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3));
+		else k_EyePass<false><<<dim3( w / p + 1, h / p + 1, 1), dim3(p, p, 1)>>>(make_int2(0,0), w, h, a_Buf, m_pDevicePixels, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3));
+	}
 }
 
 void k_sPpmTracer::Debug(int2 pixel)

@@ -8,11 +8,12 @@
 
 #define TOFLOAT3(a,b,c) ((make_float3(a,b,c) / make_float3(127)) - make_float3(1))
 #define TOUCHAR3(v) make_uchar3(unsigned char((v.x + 1) * 127.0f), unsigned char((v.y + 1) * 127.0f), unsigned char((v.z + 1) * 127.0f))
+#define TOUINT3(v) ((unsigned char((v.x + 1) * 127.0f) << 16) | (unsigned char((v.y + 1) * 127.0f) << 8) | (unsigned char((v.z + 1) * 127.0f)))
 
 #ifdef EXT_TRI
 struct e_TriangleData
 {
-private:
+public:
 	union
 	{
 		struct
@@ -47,10 +48,10 @@ public:
 	}
 	CUDA_FUNC_IN Onb lerpOnb(const float2& bCoords, const float4x4& localToWorld, float3* ng = 0) const 
 	{
+		//float3 na = NOR[0], nb = NOR[1], nc = NOR[2];
 		uint4 q = m_sDeviceData.Row0;
 		uint3 p = m_sDeviceData.Row1;
 		float3 na = TOFLOAT3(q.x & 255, (q.x >> 8) & 255, (q.x >> 16) & 255), nb = TOFLOAT3(q.x >> 24, q.y & 255, (q.y >> 8) & 255), nc = TOFLOAT3((q.y >> 16) & 255, q.y >> 24, q.z & 255);
-		//float3 na = NOR[0], nb = NOR[1], nc = NOR[2];
 		float3 ta = TOFLOAT3((q.z >> 8) & 255, (q.z >> 16) & 255, q.z >> 24), tb = TOFLOAT3(q.w & 255, (q.w >> 8) & 255, (q.w >> 16) & 255), tc = TOFLOAT3(q.w >> 24, p.x & 255, (p.x >> 8) & 255);
 		float3 ba = TOFLOAT3((p.x >> 16) & 255, p.x >> 24, p.y & 255), bb = TOFLOAT3((p.y >> 8) & 255, (p.y >> 16) & 255, p.y >> 24), bc = TOFLOAT3(p.z & 255, (p.z >> 8) & 255, (p.z >> 16) & 255);
 		Onb sys;
@@ -60,7 +61,7 @@ public:
 		sys.m_binormal = (u * ba + v * bb + w * bc);
 
 		//TODO : Find out why this is necessary
-		sys = Onb(sys.m_normal);
+		//sys = Onb(sys.m_normal);
 
 		sys = sys * localToWorld;
 		if(ng)

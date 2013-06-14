@@ -1,74 +1,4 @@
 #pragma once
-/*
-inline float3 getVec(const obj_vector* q)
-{
-	return make_float3((float)q->e[0], (float)q->e[1], (float)q->e[2]);
-}
-
-inline void ComputeTangentSpace(objLoader* L, float3* a_Normals, float3* a_Tangents, float3* a_BiTangents)
-{
-	unsigned int vertexCount = L->vertexCount;
-	float3 *tan1 = new float3[vertexCount * 2];
-    float3 *tan2 = tan1 + vertexCount;
-    ZeroMemory(tan1, vertexCount * sizeof(float3) * 2);
-	for (long a = 0; a < L->faceCount; a++)
-    {
-		long i1 = L->faceList[a]->vertex_index[0], tv1 = L->faceList[a]->texture_index[0];
-        long i2 = L->faceList[a]->vertex_index[1], tv2 = L->faceList[a]->texture_index[1];
-        long i3 = L->faceList[a]->vertex_index[2], tv3 = L->faceList[a]->texture_index[2];
-        
-		const obj_vector* v1 = L->vertexList[i1];
-        const obj_vector* v2 = L->vertexList[i2];
-        const obj_vector* v3 = L->vertexList[i3];
-        
-		const obj_vector* w1 = L->textureList[tv1];
-        const obj_vector* w2 = L->textureList[tv2];
-        const obj_vector* w3 = L->textureList[tv3];
-
-		const float3 p0 = getVec(v1), p1 = getVec(v2), p2 = getVec(v3), e0 = p1 - p0, e1 = p2 - p0, n = normalize(cross(e0, e1));
-		a_Normals[i1] += n;
-		a_Normals[i2] += n;
-		a_Normals[i3] += n;
-        
-		float x1 = (float)v2->e[0] - (float)v1->e[0];
-        float x2 = (float)v3->e[0] - (float)v1->e[0];
-        float y1 = (float)v2->e[1] - (float)v1->e[1];
-        float y2 = (float)v3->e[1] - (float)v1->e[1];
-        float z1 = (float)v2->e[2] - (float)v1->e[2];
-        float z2 = (float)v3->e[2] - (float)v1->e[2];
-        
-        float s1 = (float)w2->e[0] - (float)w1->e[0];
-        float s2 = (float)w3->e[0] - (float)w1->e[0];
-        float t1 = (float)w2->e[1] - (float)w1->e[1];
-        float t2 = (float)w3->e[1] - (float)w1->e[1];
-        
-        float r = 1.0F / (s1 * t2 - s2 * t1);
-		float3 sdir = make_float3((t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r, (t2 * z1 - t1 * z2) * r);
-        float3 tdir = make_float3((s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r, (s1 * z2 - s2 * z1) * r);
-        
-        tan1[i1] += sdir;
-        tan1[i2] += sdir;
-        tan1[i3] += sdir;
-        
-        tan2[i1] += tdir;
-        tan2[i2] += tdir;
-        tan2[i3] += tdir;
-    }
-	for (long a = 0; a < vertexCount; a++)
-    {
-        const float3 n = a_Normals[a] = normalize(a_Normals[a]);
-        const float3 t = tan1[a];
-        
-        // Gram-Schmidt orthogonalize
-		a_Tangents[a] = normalize(t - n * dot(n, t));
-        
-        // Calculate handedness
-        float h = (dot(cross(n, t), tan2[a]) < 0.0F) ? -1.0F : 1.0F;
-		a_BiTangents[a] = normalize(cross(a_Tangents[a], n) * h);
-    }
-    delete[] tan1;
-}
-*/
 
 #ifdef TS_DEC_FRAMEWORK
 inline float3 getVec(const FW::VertexPNT& v)
@@ -125,6 +55,19 @@ inline void ComputeTangentSpace(FW::Mesh<FW::VertexPNT>* a_Mesh, float3* a_Norma
 			tan2[i3] += tdir;
 		}
 	}
+
+	if(a_Mesh->numVertices() < (1 << 16))
+		for(int a = 0; a < a_Mesh->numVertices(); a++)
+			for(int i = a + 1; i < a_Mesh->numVertices(); i++)
+				if(a_Mesh->getVertexPtr(a)->p == a_Mesh->getVertexPtr(i)->p)
+				{
+					tan1[a] += tan1[i];
+					tan1[i] = tan1[a];
+					tan2[a] += tan2[i];
+					tan2[i] = tan2[a];
+					break;
+				}
+
 	for (int submesh = 0; submesh < a_Mesh->numSubmeshes(); submesh++)
 	{
 		const FW::Array<FW::Vec3i>& indices = a_Mesh->indices(submesh);
@@ -250,26 +193,6 @@ inline void ComputeTangentSpace(MD5Model* a_Mesh, e_AnimatedVertex** a_Vertices,
 			}
 		}
 		off += vertices.size();
-	}
-
-	off = 0;
-	for(int i = 0; i < a_Mesh->meshes.size(); i++)
-	{
-		for(int v = 0; v < a_Mesh->meshes[i]->verts.size(); v++)
-		{
-			e_AnimatedVertex& av = a_Vertices[0][off + v];
-			Vertex& V = a_Mesh->meshes[i]->verts[v];
-			float3 n = av.m_fNormal, t = av.m_fTangent, b = av.m_fBitangent;
-			av.m_fNormal = av.m_fTangent = av.m_fBitangent = make_float3(0);
-			int a = MIN(g_uMaxWeights, V.weightCount);
-			for ( int k=0; k < a; k++ )
-			{
-				Weight &w = a_Mesh->meshes[i]->weights[V.weightIndex + k];
-				Joint &joint = a_Mesh->joints[w.joint];
-				av.m_fNormal += joint.quat.toMatrix() * n * w.w;
-			}
-		}
-		off += a_Mesh->meshes[i]->verts.size();
 	}
 }
 #endif

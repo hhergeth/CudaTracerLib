@@ -1,7 +1,7 @@
 #include "k_PrimTracer.h"
 #include "k_TraceHelper.h"
 
-__device__ float3 trace(Ray& r, CudaRNG& rng)
+CUDA_ONLY_FUNC float3 trace(Ray& r, CudaRNG& rng)
 {
 	TraceResult r2;
 	r2.Init();
@@ -14,8 +14,9 @@ __device__ float3 trace(Ray& r, CudaRNG& rng)
 		float3 wi;
 		float pdf;
 		e_KernelBSDF bsdf = r2.GetBSDF(g_SceneData.m_sMatData.Data);
+		return make_float3(AbsDot(-r.direction, bsdf.sys.m_normal));
 		BxDFType sampledType;
-		float3 f = bsdf.Sample_f(-r.direction, &wi, BSDFSample(0.64563f, 0.173f, rng.randomFloat()), &pdf, BSDF_ALL, &sampledType);
+		float3 f = bsdf.Sample_f(-r.direction, &wi, BSDFSample(rng.randomFloat(), rng.randomFloat(), rng.randomFloat()), &pdf, BSDF_ALL, &sampledType);
 		f = f * clamp(dot(wi, bsdf.sys.m_normal), 0.0f, 1.0f) / pdf;
 		c = c * f;
 		if((sampledType & BSDF_SPECULAR) != BSDF_SPECULAR)
@@ -54,6 +55,7 @@ __global__ void primaryKernel(long long width, long long height, RGBCOL* a_Data)
                 break;
 		}
 		unsigned int x = rayidx % width, y = rayidx / width;
+		
 		float3 c = make_float3(0);
 		float N = 1;
 		for(float f = 0; f < N; f++)
@@ -62,12 +64,10 @@ __global__ void primaryKernel(long long width, long long height, RGBCOL* a_Data)
 			c += trace(r, rng);
 		}
 		c /= N;
-		/*
-		Ray r = g_CameraData.GenRay(x, y, width, height, rng.randomFloat(), rng.randomFloat());
-		TraceResult r2;
-		r2.Init();
-		k_TraceRay<true>(r.direction, r.origin, &r2);
-		float3 c = make_float3(r2.m_fDist/length(g_SceneData.m_sBox.Size())*2.0f);*/
+		
+		//Ray r = g_CameraData.GenRay(x, y, width, height, rng.randomFloat(), rng.randomFloat());
+		//TraceResult r2 = k_TraceRay(r);
+		//float3 c = make_float3(r2.m_fDist/length(g_SceneData.m_sBox.Size())*2.0f);
 
 		unsigned int cl2 = toABGR(c);
 		((unsigned int*)a_Data)[y * width + x] = cl2;

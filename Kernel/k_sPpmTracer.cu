@@ -60,7 +60,7 @@ void k_sPpmTracer::DoRender(RGBCOL* a_Buf)
 			m_sMaps.StartNewPass();
 		}
 	}
-	else
+	else if(m_uModus == 2)
 	{
 		m_uPassesDone = 1;
 		cudaMemset(m_pDevicePixels, 0, sizeof(k_sPpmPixel) * w * h);
@@ -89,6 +89,7 @@ void k_sPpmTracer::initNewPass(RGBCOL* a_Buf)
 			if(m->m_sMatInfo(j)->GetBSSRDF(make_float2(0, 0), &b))
 			{
 				volBox.Enlarge(n->getWorldBox(m.operator->()));
+				m_bLongRunning |= 1;
 			}
 		}
 	}

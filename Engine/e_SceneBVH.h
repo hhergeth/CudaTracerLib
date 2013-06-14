@@ -21,6 +21,9 @@ public:
 	e_Stream<float4x4>* m_pInvTransforms;
 	int startNode;
 	AABB m_sBox;
+
+	e_StreamReference(float4x4) tr0, tr1;
+	e_StreamReference(e_BVHNodeData) nds;
 public:
 	e_SceneBVH(unsigned int a_NodeCount)
 	{
@@ -29,6 +32,9 @@ public:
 		m_pInvTransforms = new e_Stream<float4x4>(a_NodeCount);
 		startNode = -1;
 		m_sBox = AABB::Identity();
+		tr0 = m_pTransforms->malloc(m_pTransforms->getLength());
+		tr1 = m_pInvTransforms->malloc(m_pInvTransforms->getLength());
+		nds = m_pNodes->malloc(m_pNodes->getLength());
 	}
 	~e_SceneBVH()
 	{
