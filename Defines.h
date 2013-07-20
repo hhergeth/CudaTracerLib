@@ -40,3 +40,9 @@
 #else
   #error "Please provide a definition for MY_ALIGN macro for your host compiler!"
 #endif
+
+#define TYPE_FUNC(name) \
+	static CUDA_FUNC_IN unsigned int TYPE() \
+	{ \
+		return name##_TYPE; \
+	}

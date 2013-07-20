@@ -1,5 +1,6 @@
 #include "k_PrimTracer.h"
 #include "k_TraceHelper.h"
+#include "k_IntegrateHelper.h"
 
 CUDA_ONLY_FUNC float3 trace(Ray& r, CudaRNG& rng)
 {
@@ -7,17 +8,19 @@ CUDA_ONLY_FUNC float3 trace(Ray& r, CudaRNG& rng)
 	r2.Init();
 	float3 c = make_float3(1);
 	unsigned int depth = 0;
+	e_KernelBSDF bsdf;
 	while(k_TraceRay<true>(r.direction, r.origin, &r2) && depth++ < 5)
 	{
 		if(g_SceneData.m_sVolume.HasVolumes())
 			c = c * exp(-g_SceneData.m_sVolume.tau(r, 0, r2.m_fDist));
 		float3 wi;
 		float pdf;
-		e_KernelBSDF bsdf = r2.GetBSDF(g_SceneData.m_sMatData.Data);
-		return make_float3(AbsDot(-r.direction, bsdf.sys.m_normal));
+		r2.GetBSDF(g_SceneData.m_sMatData.Data, &bsdf);
+		//*((float3*)&bsdf.sys.m_tangent) = cross(bsdf.sys.m_binormal, bsdf.sys.m_normal);
+		//return make_float3(dot(-r.direction, bsdf.sys.m_normal));
 		BxDFType sampledType;
-		float3 f = bsdf.Sample_f(-r.direction, &wi, BSDFSample(rng.randomFloat(), rng.randomFloat(), rng.randomFloat()), &pdf, BSDF_ALL, &sampledType);
-		f = f * clamp(dot(wi, bsdf.sys.m_normal), 0.0f, 1.0f) / pdf;
+		float3 f = bsdf.Sample_f(-r.direction, &wi, BSDFSample(rng), &pdf, BSDF_ALL, &sampledType);
+		f = f * AbsDot(wi, bsdf.sys.m_normal) / pdf;
 		c = c * f;
 		if((sampledType & BSDF_SPECULAR) != BSDF_SPECULAR)
 			break;
@@ -25,7 +28,13 @@ CUDA_ONLY_FUNC float3 trace(Ray& r, CudaRNG& rng)
 		r.direction = wi;
 		r2.Init();
 	}
-	c = c * r2.hasHit();
+	if(r2.hasHit())
+	{
+		return c;// * UniformSampleAllLights(r(r2.m_fDist), bsdf.sys.m_normal, -r.direction, &bsdf, rng, 1);
+	}
+	else if(g_SceneData.m_sEnvMap.CanSample())
+		c = c * g_SceneData.m_sEnvMap.Sample(r);
+	else c = make_float3(0);
 	return c;
 }
 
@@ -60,7 +69,7 @@ __global__ void primaryKernel(long long width, long long height, RGBCOL* a_Data)
 		float N = 1;
 		for(float f = 0; f < N; f++)
 		{
-			Ray r = g_CameraData.GenRay(x, y, width, height, rng.randomFloat(), rng.randomFloat());
+			Ray r = g_CameraData.GenRay<false>(x, y, width, height, rng.randomFloat(), rng.randomFloat());
 			c += trace(r, rng);
 		}
 		c /= N;
@@ -109,4 +118,9 @@ void k_PrimTracer::Debug(int2 pixel)
 	k_INITIALIZE(d2);
 	k_STARTPASS(m_pScene, m_pCamera, m_sRngs);
 	debugPixe2l<<<1,1>>>(w,h,pixel);
+}
+
+void k_PrimTracer::CreateSliders(SliderCreateCallback a_Callback)
+{
+
 }

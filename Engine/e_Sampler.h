@@ -12,6 +12,11 @@ public:
 	T m_sValue;
 	e_KernelTexture* m_pTex;
 public:
+	CUDA_DEVICE e_Sampler()
+	{
+
+	}
+
 	e_Sampler(const T& v)
 	{
 		m_uType = 0;
@@ -26,7 +31,7 @@ public:
 		memset(m_sPath, 0, sizeof(m_sPath));
 	}
 
-	e_Sampler(char* path, bool THIS_IS_REALLY_THE_RIGHT_CONSTRUCTOR_NO_FLOAT_0_SHIT)
+	e_Sampler(const char* path, bool THIS_IS_REALLY_THE_RIGHT_CONSTRUCTOR_NO_FLOAT_0_SHIT)
 	{
 		m_uType = 1;
 		memset(m_sPath, 0, sizeof(m_sPath));

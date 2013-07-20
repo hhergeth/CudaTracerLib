@@ -56,9 +56,10 @@ struct e_PointLight : public e_LightBase
 {
 	float3 lightPos;
     float3 Intensity;
+	float radius;
 
-	e_PointLight(float3 p, float3 L)
-		: e_LightBase(true), lightPos(p), Intensity(L)
+	e_PointLight(float3 p, float3 L, float r = 0)
+		: e_LightBase(true), lightPos(p), Intensity(L), radius(r)
 	{
 
 	}
@@ -74,8 +75,21 @@ struct e_PointLight : public e_LightBase
 	}
 
 	CUDA_FUNC_IN float3 Sample_L(const e_KernelDynamicScene& scene, const LightSample &ls, float u1, float u2, Ray *ray, float3 *Ns, float *pdf) const
-	{
-		*ray = Ray(lightPos, UniformSampleSphere(ls.uPos[0], ls.uPos[1]));
+	{		
+		float3 p,d;
+		if(radius != 0)
+		{
+			float3 n = UniformSampleSphere(u1, u2) * radius;
+			p = lightPos + n;
+			//d = SampleCosineHemisphere(n, u1, u2);
+			d = UniformSampleSphere(ls.uPos[0], ls.uPos[1]);
+		}
+		else
+		{
+			p = lightPos;
+			d = UniformSampleSphere(ls.uPos[0], ls.uPos[1]);
+		}	
+		*ray = Ray(p, d);
 		*Ns = ray->direction;
 		*pdf = UniformSpherePdf();
 		return Intensity;
@@ -100,10 +114,10 @@ struct e_PointLight : public e_LightBase
 
 	AABB getBox(float eps) const
 	{
-		return AABB(lightPos - make_float3(eps), lightPos + make_float3(eps));
+		return AABB(lightPos - make_float3(MAX(eps, radius)), lightPos + make_float3(MAX(eps, radius)));
 	}
-public:
-	static const unsigned int TYPE;
+	
+	TYPE_FUNC(e_PointLight)
 };
 
 #define e_DiffuseLight_TYPE 2
@@ -163,8 +177,8 @@ struct e_DiffuseLight : public e_LightBase
 	{
 		return shapeSet.getBox();
 	}
-public:
-	static const unsigned int TYPE;
+	
+	TYPE_FUNC(e_DiffuseLight)
 };
 
 #define e_DistantLight_TYPE 3
@@ -226,8 +240,8 @@ struct e_DistantLight : public e_LightBase
 	{
 		return AABB(make_float3(0), make_float3(0));
 	}
-public:
-	static const unsigned int TYPE;
+	
+	TYPE_FUNC(e_DistantLight)
 };
 
 #define e_SpotLight_TYPE 4
@@ -297,8 +311,123 @@ private:
 		float delta = (costheta - cosTotalWidth) / (cosFalloffStart - cosTotalWidth);
 		return delta*delta*delta*delta;
 	}
-public:
-	static const unsigned int TYPE;
+	
+	TYPE_FUNC(e_SpotLight)
+};
+
+#define e_InfiniteLight_TYPE 5
+struct e_InfiniteLight : public e_LightBase
+{
+	//e_BufferReference<Distribution2D<4096, 4096>, Distribution2D<4096, 4096>> distribution;
+	e_KernelMIPMap radianceMap;
+	Distribution2D<4096, 4096>* pDist;
+
+	e_InfiniteLight(const float3& power, e_BufferReference<Distribution2D<4096, 4096>, Distribution2D<4096, 4096>>& d, e_BufferReference<e_MIPMap, e_KernelMIPMap>& mip)
+		: e_LightBase(false), pDist(0)
+	{
+		radianceMap = mip->getKernelData();
+		void* pD = radianceMap.m_pDeviceData, *pH = malloc(mip->getBufferSize());
+		cudaMemcpy(pH, pD, mip->getBufferSize(), cudaMemcpyDeviceToHost);
+		radianceMap.m_pDeviceData = pH;
+		unsigned int width = radianceMap.m_uWidth, height = radianceMap.m_uHeight;
+		float filter = 1.0f / (float)MAX(width, height);
+		float *img = new float[width*height];//I HATE new
+		for (int v = 0; v < height; ++v)
+		{
+			float vp = (float)v / (float)height;
+			float sinTheta = sinf(PI * float(v+.5f)/float(height));
+			for (int u = 0; u < width; ++u)
+			{
+				float up = (float)u / (float)width;
+				img[u+v*width] = y(radianceMap.Sample<float3>(make_float2(up, vp), filter));
+				img[u+v*width] *= sinTheta;
+			}
+		}
+		pDist = d.getDevice();
+		Distribution2D<4096, 4096>* t = d.operator()();
+		t->Initialize(img, width, height);
+		delete [] img;
+		d.Invalidate();
+		free(pH);
+		radianceMap.m_pDeviceData = pD;
+	}
+
+	CUDA_FUNC_IN float3 Power(const e_KernelDynamicScene& scene) const
+	{
+		float r = length(scene.m_sBox.Size()) / 2.0f;
+		return PI * r * r * radianceMap.Sample<float3>(make_float2(0.5f, 0.5f), 0.5f);
+	}
+
+	CUDA_FUNC_IN float Pdf(const e_KernelDynamicScene& scene, const float3 &p, const float3 &wi) const
+	{
+		float theta = SphericalTheta(wi), phi = SphericalPhi(wi);
+		float sintheta = sinf(theta);
+		if (sintheta == 0.f)
+			return 0.f;
+		float p2 = pDist->Pdf(phi * INV_TWOPI, theta * INV_PI) / (2.f * PI * PI * sintheta);
+		return p2;
+	}
+
+	CUDA_FUNC_IN float3 Sample_L(const e_KernelDynamicScene& scene, const LightSample &ls, float u1, float u2, Ray *ray, float3 *Ns, float *pdf) const
+	{
+		float uv[2], mapPdf;
+		pDist->SampleContinuous(ls.uPos[0], ls.uPos[1], uv, &mapPdf);
+		if (mapPdf == 0.f)
+			return make_float3(0.f);
+		float theta = uv[1] * PI, phi = uv[0] * 2.f * PI;
+		float costheta = cosf(theta), sintheta = sinf(theta);
+		float sinphi = sinf(phi), cosphi = cosf(phi);
+		float3 d = -make_float3(sintheta * cosphi, sintheta * sinphi, costheta);
+		*Ns = d;
+		float3 worldCenter = scene.m_sBox.Center();
+		float worldRadius = length(scene.m_sBox.Size()) / 2.0f;
+		Onb sys(d);
+		float d1, d2;
+		ConcentricSampleDisk(u1, u2, &d1, &d2);
+		float3 Pdisk = worldCenter + worldRadius * (d1 * sys.m_tangent + d2 * sys.m_binormal);
+		*ray = Ray(Pdisk + worldRadius * -d, d);
+		float directionPdf = mapPdf / (2.f * PI * PI * sintheta);
+		float areaPdf = 1.f / (PI * worldRadius * worldRadius);
+		*pdf = directionPdf * areaPdf;
+		if (sintheta == 0.f)
+			*pdf = 0.f;
+		return radianceMap.Sample<float3>(make_float2(uv[0], uv[1]), 0);
+	}
+
+	CUDA_FUNC_IN float3 Sample_L(const e_KernelDynamicScene& scene, const float3& p, const LightSample& ls, float* pdf, e_VisibilitySegment* seg) const
+	{
+		float uv[2], mapPdf;
+		pDist->SampleContinuous(ls.uPos[0], ls.uPos[1], uv, &mapPdf);
+		if (mapPdf == 0.f)
+			return make_float3(0.f);
+		float theta = uv[1] * PI, phi = uv[0] * 2.f * PI;
+		float costheta = cosf(theta), sintheta = sinf(theta);
+		float sinphi = sinf(phi), cosphi = cosf(phi);
+		float3 wi = make_float3(sintheta * cosphi, sintheta * sinphi, costheta);
+		*pdf = mapPdf / (2.f * PI * PI * sintheta);
+		if (sintheta == 0.f)
+			*pdf = 0.f;
+		seg->SetRay(p, 0, wi);
+		return radianceMap.Sample<float3>(make_float2(uv[0], uv[1]), 0);
+	}
+	
+	CUDA_FUNC_IN float3 L(const float3 &p, const float3 &n, const float3 &w) const
+	{
+		return make_float3(0);
+	}
+
+	CUDA_FUNC_IN float3 Le(const e_KernelDynamicScene& scene, const Ray& r) const
+	{
+		float s = SphericalPhi(r.direction) * INV_TWOPI, t = SphericalTheta(r.direction) * INV_PI;
+		return radianceMap.Sample<float3>(make_float2(s, t), 0);
+	}
+	
+	AABB getBox(float eps) const
+	{
+		return AABB(-make_float3(1.0f / eps), make_float3(1.0f / eps));
+	}
+
+	TYPE_FUNC(e_InfiniteLight)
 };
 
 struct e_KernelLight
@@ -317,12 +446,13 @@ private:
 		CALL_TYPE(e_DiffuseLight, f, r) \
 		CALL_TYPE(e_DistantLight, f, r) \
 		CALL_TYPE(e_SpotLight, f, r) \
+		CALL_TYPE(e_InfiniteLight, f, r) \
 	}
 public:
 	template<typename T> void Set(T& val)
 	{
 		*(T*)Data = val;
-		type = T::TYPE;
+		type = T::TYPE();
 	}
 
 	CUDA_FUNC_IN float3 Power(const e_KernelDynamicScene& scene) const

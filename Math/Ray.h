@@ -32,6 +32,7 @@ struct TraceResult
 	CUDA_FUNC_IN unsigned int getMatIndex();
 	CUDA_FUNC_IN float2 lerpUV();
 	CUDA_FUNC_IN e_KernelBSDF GetBSDF(const e_KernelMaterial* a_Mats);
+	CUDA_FUNC_IN void GetBSDF(const e_KernelMaterial* a_Mats, e_KernelBSDF* bsdf);
 	CUDA_FUNC_IN bool GetBSSRDF(const e_KernelMaterial* a_Mats, e_KernelBSSRDF* bssrdf);
 	//CUDA_FUNC_IN DifferentialGeometry lerpDG(const Ray& r);
 	//CUDA_FUNC_IN DifferentialGeometry lerpDG(const RayDifferential& r);

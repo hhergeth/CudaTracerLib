@@ -137,19 +137,6 @@ public:
 		glPopAttrib();
 		
 		float4x4 vpq = C->getViewProjection();
-		if(m_uState == 1)
-		{
-			AABB box = S->getKernelSceneData().m_sBox;
-			float eps = Distance(box.maxV, box.minV) / 100.0f;
-			for(int i = 0; i < S->getLightCount(); i++)
-				plotBox(S->getLights()(i)->getBox(eps), vpq, gl, make_float3(1,0,0));
-			for(int i = 0; i < S->getVolumes().getLength(); i++)
-			{
-				AABB box = S->getVolumes()(i)->WorldBound();
-				plotBox(box, vpq, gl, make_float3(1,1,0));
-			}
-		}
-
 		if(ShowGui())
 		{
 			float4x4 vp = C->getViewProjection();
@@ -160,6 +147,16 @@ public:
 				if(S->getSceneBVH()->getData().m_sStartNode != -1)
 					plot(S->getSceneBVH()->m_pNodes->operator()(0), S->getSceneBVH()->m_pNodes->operator()(), 0, vp, gl);
 				else plotBox(S->getBox(S->getNodes()), vp, gl, make_float3(1,0,0));
+
+				AABB box = S->getKernelSceneData().m_sBox;
+				float eps = Distance(box.maxV, box.minV) / 100.0f;
+				for(int i = 0; i < S->getLightCount(); i++)
+					plotBox(S->getLights()(i)->getBox(eps), vpq, gl, make_float3(1,0,0));
+				for(int i = 0; i < S->getVolumes().getLength(); i++)
+				{
+					AABB box = S->getVolumes()(i)->WorldBound();
+					plotBox(box, vpq, gl, make_float3(1,1,0));
+				}
 			}
 			//for(int i = 0; i < g_pScene->getNodeCount(); i++)
 			//	plotBox(g_pScene->getNodes()[i].getWorldBox());

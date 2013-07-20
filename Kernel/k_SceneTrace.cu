@@ -64,13 +64,13 @@ __global__ void k_GuessPass(int w, int h)
 	CudaRNG localState = g_RNGData();
 	if(x < w && y < h)
 	{
-		Ray r = g_CameraData.GenRay(x, y, w, h, localState.randomFloat(), localState.randomFloat());
+		Ray r = g_CameraData.GenRay<false>(x, y, w, h, localState.randomFloat(), localState.randomFloat());
 		TraceResult r2;
 		r2.Init();
 		int d = -1;
 		while(k_TraceRay<true>(r.direction, r.origin, &r2) && ++d < 10)
 		{
-			e_KernelBSDF bsdf = r2.m_pTri->GetBSDF(r2.m_fUV, r2.m_pNode->getWorldMatrix(), g_SceneData.m_sMatData.Data, r2.m_pNode->m_uMaterialOffset);
+			e_KernelBSDF bsdf = r2.GetBSDF(g_SceneData.m_sMatData.Data);
 			float3 inc;
 			float pdf;
 			float3 col = bsdf.Sample_f(-1.0f * r.direction, &inc, BSDFSample(localState), &pdf);

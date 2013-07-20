@@ -142,12 +142,12 @@ public:
 			return make_float3(0.0f);
 		return make_float3(length(ray(t0) - ray(t1))) * (sig_a + sig_s);
 	}
+
+	TYPE_FUNC(e_HomogeneousVolumeDensity)
 public:
 	float3 sig_a, sig_s, le;
 	float g;
 	float4x4 WorldToVolume;
-public:
-	static const unsigned int TYPE;
 };
 
 template<typename Density> struct e_DensityContainer : public e_BaseVolumeRegion
@@ -281,8 +281,8 @@ struct e_SphereVolumeDensity : public e_DensityContainerNumeric<e_SphereDensity>
 	{
 
 	}
-public:
-	static const unsigned int TYPE;
+
+	TYPE_FUNC(e_SphereVolumeDensity)
 };
 
 struct e_VolumeRegion
@@ -309,7 +309,7 @@ public:
 	template<typename T> void Set(T& val)
 	{
 		*(T*)Data = val;
-		type = T::TYPE;
+		type = T::TYPE();
 	}
 
 	CUDA_FUNC_IN AABB WorldBound()

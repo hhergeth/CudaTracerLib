@@ -8,24 +8,6 @@
 #include "e_Volumes.h"
 #include "e_Light.h"
 
-const unsigned int e_KernelMaterial_Glass::TYPE = e_KernelMaterial_Glass_TYPE;
-const unsigned int e_KernelMaterial_Matte::TYPE = e_KernelMaterial_Matte_TYPE;
-const unsigned int e_KernelMaterial_Mirror::TYPE = e_KernelMaterial_Mirror_TYPE;
-const unsigned int e_KernelMaterial_Metal::TYPE = e_KernelMaterial_Metal_TYPE;
-const unsigned int e_KernelMaterial_ShinyMetal::TYPE = e_KernelMaterial_ShinyMetal_TYPE;
-const unsigned int e_KernelMaterial_Plastic::TYPE = e_KernelMaterial_Plastic_TYPE;
-const unsigned int e_KernelMaterial_Substrate::TYPE = e_KernelMaterial_Substrate_TYPE;
-const unsigned int e_KernelMaterial_Subsurface::TYPE = e_KernelMaterial_Subsurface_TYPE;
-const unsigned int e_KernelMaterial_KdSubsurface::TYPE = e_KernelMaterial_KdSubsurface_TYPE;
-
-const unsigned int e_HomogeneousVolumeDensity::TYPE = e_HomogeneousVolumeDensity_TYPE;
-const unsigned int e_SphereVolumeDensity::TYPE = e_SphereVolumeDensity_TYPE;
-
-const unsigned int e_PointLight::TYPE = e_PointLight_TYPE;
-const unsigned int e_DiffuseLight::TYPE = e_DiffuseLight_TYPE;
-const unsigned int e_DistantLight::TYPE = e_DistantLight_TYPE;
-const unsigned int e_SpotLight::TYPE = e_SpotLight_TYPE;
-
 #include "niflib.h"
 #include "obj\NiObject.h"
 #include "obj\NiTriShape.h"
@@ -47,6 +29,8 @@ using namespace Niflib;
 
 e_Mesh::e_Mesh(InputStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<int>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4)
 {
+	int abc = sizeof(e_TriangleData), abc2 = sizeof(m_sLights);
+
 	a_In >> m_sLocalBox;
 	a_In.Read(m_sLights, sizeof(m_sLights));
 	a_In >> m_uUsedLights;
@@ -189,7 +173,7 @@ void e_Mesh::CompileObjToBinary(const char* a_InputFile, OutputStream& a_Out)
 			strcpy(m_sLights[lc].MatName, M.Name.getPtr());
 			mat.NodeLightIndex = lc++;
 		}
-		if(M.textures[3].getID().getLength()&&0)
+		if(M.textures[3].getID().getLength())
 		{
 			char* c = new char[M.textures[3].getID().getLength()+1];
 			ZeroMemory(c, M.textures[3].getID().getLength()+1);
@@ -197,6 +181,7 @@ void e_Mesh::CompileObjToBinary(const char* a_InputFile, OutputStream& a_Out)
 			OutputDebugString(c);
 			OutputDebugString(M.textures[3].getID().getPtr());
 			mat.HeightMap = e_Sampler<float3>(c, 1);
+			mat.HeightScale = 0.5f;
 		}
 		/*
 #ifdef EXT_TRI

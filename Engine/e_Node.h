@@ -58,7 +58,7 @@ public:
 	unsigned int getNextFreeLightIndex()
 	{
 		for(int i = 0; i < sizeof(m_uLightIndices) / sizeof(unsigned int); i++)
-			if(m_uLightIndices[i] != -1)
+			if(m_uLightIndices[i] == -1)
 				return i;
 		return -1;
 	}

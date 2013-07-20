@@ -10,11 +10,11 @@
     <Filter Include="Kernel">
       <UniqueIdentifier>{96e57313-1bcc-4332-a0c5-62f8867ed2c1}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Math">
-      <UniqueIdentifier>{bcc32243-a9df-44b0-a940-7d3f174d5601}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Engine\SceneBuilder">
       <UniqueIdentifier>{829f18e1-23ee-4558-9061-92630861811a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Kernel\Math">
+      <UniqueIdentifier>{bcc32243-a9df-44b0-a940-7d3f174d5601}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -115,22 +115,22 @@
       <Filter>Kernel</Filter>
     </ClInclude>
     <ClInclude Include="Math\AABB.h">
-      <Filter>Math</Filter>
+      <Filter>Kernel\Math</Filter>
     </ClInclude>
     <ClInclude Include="Math\cutil_math.h">
-      <Filter>Math</Filter>
+      <Filter>Kernel\Math</Filter>
     </ClInclude>
     <ClInclude Include="Math\half.h">
-      <Filter>Math</Filter>
+      <Filter>Kernel\Math</Filter>
     </ClInclude>
     <ClInclude Include="Math\Int24.h">
-      <Filter>Math</Filter>
+      <Filter>Kernel\Math</Filter>
     </ClInclude>
     <ClInclude Include="Math\Ray.h">
-      <Filter>Math</Filter>
+      <Filter>Kernel\Math</Filter>
     </ClInclude>
     <ClInclude Include="Math\vector.h">
-      <Filter>Math</Filter>
+      <Filter>Kernel\Math</Filter>
     </ClInclude>
     <ClInclude Include="Defines.h" />
     <ClInclude Include="Renderer.h" />
@@ -139,7 +139,7 @@
       <Filter>Engine</Filter>
     </ClInclude>
     <ClInclude Include="Math\Montecarlo.h">
-      <Filter>Math</Filter>
+      <Filter>Kernel\Math</Filter>
     </ClInclude>
     <ClInclude Include="StdAfx.h" />
     <ClInclude Include="Engine\e_KernelMaterial.h">
@@ -184,10 +184,16 @@
     <ClInclude Include="Kernel\k_TraceAlgorithms.h">
       <Filter>Kernel</Filter>
     </ClInclude>
-    <ClInclude Include="Kernel\k_IrradianceCache.h">
-      <Filter>Kernel</Filter>
-    </ClInclude>
     <ClInclude Include="Engine\e_Grid.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_EnvironmentMap.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_Image.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_Filter.h">
       <Filter>Engine</Filter>
     </ClInclude>
   </ItemGroup>
@@ -251,6 +257,9 @@
     <ClCompile Include="Base\SpectrumConverter.cpp">
       <Filter>Base</Filter>
     </ClCompile>
+    <ClCompile Include="Engine\e_Image.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="Kernel\k_PathTracer.cu">
@@ -262,9 +271,6 @@
     <CudaCompile Include="Kernel\k_SceneTrace.cu">
       <Filter>Kernel</Filter>
     </CudaCompile>
-    <CudaCompile Include="Kernel\k_sPpmTracer.cu">
-      <Filter>Kernel</Filter>
-    </CudaCompile>
     <CudaCompile Include="Kernel\k_sPpmTracer_PhotonPass.cu">
       <Filter>Kernel</Filter>
     </CudaCompile>
@@ -274,8 +280,8 @@
     <CudaCompile Include="Engine\e_AnimatedMesh.cu">
       <Filter>Engine</Filter>
     </CudaCompile>
-    <CudaCompile Include="Kernel\k_IrradianceCache.cu">
-      <Filter>Kernel</Filter>
+    <CudaCompile Include="Engine\e_Image.cu">
+      <Filter>Engine</Filter>
     </CudaCompile>
   </ItemGroup>
 </Project>

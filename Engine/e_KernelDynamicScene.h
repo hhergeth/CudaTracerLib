@@ -9,6 +9,7 @@
 #include "Engine/e_KernelMaterial.h"
 #include "e_Volumes.h"
 #include "e_KernelDynamicScene.h"
+#include "e_EnvironmentMap.h"
 
 struct e_KernelLight;
 
@@ -27,5 +28,6 @@ struct e_KernelDynamicScene
 	e_KernelSceneBVH m_sSceneBVH;
 	e_KernelTerrainData m_sTerrain;
 	e_KernelAggregateVolume m_sVolume;
+	e_EnvironmentMap m_sEnvMap;
 	AABB m_sBox;
 };

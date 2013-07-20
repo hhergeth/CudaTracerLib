@@ -22,14 +22,17 @@ struct e_CameraData
 		a /= a.w;
 		return Ray(p, normalize(view.TransformNormal(!a)));
 	}
-	CUDA_ONLY_FUNC Ray GenRay(int2 pos, int2 size, float u, float v) const
+	template<bool AA> CUDA_ONLY_FUNC Ray GenRay(int2 pos, int2 size, float u, float v) const
 	{
-		return GenRay(pos.x, pos.y, size.x, size.y, u, v);
+		return GenRay<AA>(pos.x, pos.y, size.x, size.y, u, v);
 	}
-	CUDA_ONLY_FUNC Ray GenRay(float x, float y, float w, float h, float u, float v) const
+	template<bool AA> CUDA_ONLY_FUNC Ray GenRay(float x, float y, float w, float h, float u, float v) const
 	{
-		x += 2.0f * u - 1.0f;
-		y += 2.0f * v - 1.0f;
+		if(AA)
+		{
+			x += 2.0f * u - 1.0f;
+			y += 2.0f * v - 1.0f;
+		}
 		float4 a = make_float4(2.0f * ((float)x / (float)w) - 1.0f, -(2.0f * ((float)y / (float)h) - 1.0f), 0, 1.0f);
 		a = proj * a;
 		a /= a.w;

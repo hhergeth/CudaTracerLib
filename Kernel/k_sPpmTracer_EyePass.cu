@@ -2,28 +2,23 @@
 #include "k_TraceHelper.h"
 #include "k_IntegrateHelper.h"
 
-void k_PhotonMapCollection::StartNewRendering(const AABB& sbox, const AABB& vbox, float a_R)
-{
-	m_sVolumeMap.StartNewRendering(vbox, a_R);
-	m_sSurfaceMap.StartNewRendering(sbox, a_R);
-}
-
-template<typename HASH> void k_PhotonMap<HASH>::StartNewRendering(const AABB& box, float a_InitRadius)
-{
-	m_sHash = HASH(box, a_InitRadius, m_uGridLength);
-	cudaMemset(m_pDeviceHashGrid, -1, sizeof(unsigned int) * m_uGridLength);
-}
+CUDA_DEVICE k_PhotonMapCollection g_Map;
 
 template<typename HASH> CUDA_ONLY_FUNC float3 k_PhotonMap<HASH>::L_Surface(float a_r, float a_NumPhotonEmitted, CudaRNG& rng, const e_KernelBSDF* bsdf, const float3& n, const float3& p, const float3& wo) const
 {
 	Onb sys = bsdf->sys;
 	sys.m_tangent *= a_r;
 	sys.m_binormal *= a_r;
-	float3 low = fminf(p - sys.m_tangent + sys.m_binormal, p + sys.m_tangent - sys.m_binormal), high = fmaxf(p - sys.m_tangent + sys.m_binormal, p + sys.m_tangent - sys.m_binormal);
+	sys.m_normal *= a_r;
+	float3 a = -1.0f * sys.m_tangent - sys.m_binormal, b = sys.m_tangent - sys.m_binormal, c = -1.0f * sys.m_tangent + sys.m_binormal, d = sys.m_tangent + sys.m_binormal;
+	float3 low = fminf(fminf(a, b), fminf(c, d)) + p, high = fmaxf(fmaxf(a, b), fmaxf(c, d)) + p;
+	//float3 a = p - sys.m_tangent, b = p + sys
+	//float3 f0 = p - sys.m_tangent + sys.m_binormal, f1 = p + sys.m_tangent - sys.m_binormal;
+	//float3 low = fminf(f0, f1 + sys.m_normal), high = fmaxf(f0, f1 + sys.m_normal);
 	const float r2 = a_r * a_r, r3 = 1.0f / (r2 * a_NumPhotonEmitted), r4 = 1.0f / r2;
 	float3 L = make_float3(0), Lr = make_float3(0), Lt = make_float3(0);
-	uint3 lo = m_sHash.Transform(p - make_float3(a_r)), hi = m_sHash.Transform(p + make_float3(a_r));
-	//uint3 lo = m_sHash.Transform(low), hi = m_sHash.Transform(high);
+	//uint3 lo = m_sHash.Transform(p - make_float3(a_r)), hi = m_sHash.Transform(p + make_float3(a_r));
+	uint3 lo = m_sHash.Transform(low), hi = m_sHash.Transform(high);
 	//const bool glossy = bsdf->NumComponents(BxDFType(BSDF_ALL_TRANSMISSION | BSDF_ALL_REFLECTION | BSDF_GLOSSY));
 	const bool glossy = false;
 	for(int a = lo.x; a <= hi.x; a++)
@@ -36,7 +31,7 @@ template<typename HASH> CUDA_ONLY_FUNC float3 k_PhotonMap<HASH>::L_Surface(float
 					k_pPpmPhoton e = m_pDevicePhotons[i];
 					float3 nor = e.getNormal(), wi = e.getWi(), l = e.getL(), P = e.Pos;
 					float dist2 = dot(P - p, P - p);
-					if(dist2 < r2 && dot(nor, n) > 0.95f)
+					if(dist2 < r2 && dot(nor, bsdf->ng) > 0.95f)
 					{
 						float s = 1.0f - dist2 * r4, k = 3.0f * INV_PI * s * s * r3;
 						if(glossy)
@@ -54,8 +49,6 @@ template<typename HASH> CUDA_ONLY_FUNC float3 k_PhotonMap<HASH>::L_Surface(float
 	return L;
 }
 
-CUDA_DEVICE k_PhotonMapCollection g_Map;
-
 template<typename HASH> template<bool VOL> CUDA_ONLY_FUNC float3 k_PhotonMap<HASH>::L_Volume(float a_r, float a_NumPhotonEmitted, CudaRNG& rng, const Ray& r, float tmin, float tmax, const float3& sigt) const
 {
 	float Vs = 1.0f / ((4.0f / 3.0f) * PI * a_r * a_r * a_r * a_NumPhotonEmitted), r2 = a_r * a_r;
@@ -63,9 +56,9 @@ template<typename HASH> template<bool VOL> CUDA_ONLY_FUNC float3 k_PhotonMap<HAS
 	float a,b;
 	if(!m_sHash.getAABB().Intersect(r, &a, &b))
 		return L_n;//that would be dumb
-	a = clamp(a, tmin , tmax );
-	b = clamp(b, tmin , tmax );
-	float d = 2.0f * a_r;
+	a = clamp(a, tmin, tmax);
+	b = clamp(b, tmin, tmax);
+	float d = 8.0f * a_r;
 	while(b > a)
 	{
 		float3 L = make_float3(0);
@@ -104,9 +97,10 @@ template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, RGBCOL* 
 	int x = blockIdx.x * blockDim.x + threadIdx.x, y = blockIdx.y * blockDim.y + threadIdx.y;
 	CudaRNG rng = g_RNGData();
 	x += off.x; y += off.y;
+	e_KernelBSDF bsdf;
 	if(x < w && y < h)
 	{
-		Ray ro = g_CameraData.GenRay(x, y, w, h, rng.randomFloat(), rng.randomFloat());
+		Ray ro = g_CameraData.GenRay<false>(x, y, w, h, rng.randomFloat(), rng.randomFloat());
 
 		struct stackEntry
 		{
@@ -133,7 +127,7 @@ template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, RGBCOL* 
 			r2.Init();
 			if(k_TraceRay<true>(s.r.direction, s.r.origin, &r2))
 			{
-				e_KernelBSDF bsdf = r2.m_pTri->GetBSDF(r2.m_fUV, r2.m_pNode->getWorldMatrix(), g_SceneData.m_sMatData.Data, r2.m_pNode->m_uMaterialOffset);
+				r2.GetBSDF(g_SceneData.m_sMatData.Data, &bsdf);
 
 				if(g_SceneData.m_sVolume.HasVolumes())
 				{
@@ -146,7 +140,7 @@ template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, RGBCOL* 
 				float3 p = s.r(r2.m_fDist);
 				if(DIRECT)
 					L += s.fs * UniformSampleAllLights(p, bsdf.sys.m_normal, -s.r.direction, &bsdf, rng, 4);
-				L += s.fs * Le(s.r(r2.m_fDist), bsdf.sys.m_normal, -s.r.direction, r2, g_SceneData);
+				L += s.fs * Le(p, bsdf.sys.m_normal, -s.r.direction, r2, g_SceneData);
 				e_KernelBSSRDF bssrdf;
 				if(r2.m_pTri->GetBSSRDF(r2.m_fUV, r2.m_pNode->getWorldMatrix(), g_SceneData.m_sMatData.Data, r2.m_pNode->m_uMaterialOffset, &bssrdf))
 				{
@@ -158,17 +152,18 @@ template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, RGBCOL* 
 				}
 				if(bsdf.NumComponents(BxDFType(BSDF_REFLECTION | BSDF_TRANSMISSION | BSDF_DIFFUSE)))
 					L += s.fs * g_Map.L(a_rSurface, rng, &bsdf, bsdf.sys.m_normal, p, -s.r.direction);
+					//L += s.fs * UniformSampleAllLights(p, bsdf.sys.m_normal, -s.r.direction, &bsdf, rng, 16);
 				if(s.d < 5 && stackPos < stackN - 1)
 				{
 					float3 r_wi;
 					float r_pdf;
 					float3 r_f = bsdf.Sample_f(-s.r.direction, &r_wi, BSDFSample(rng), &r_pdf, BxDFType(BSDF_REFLECTION | BSDF_SPECULAR | BSDF_GLOSSY));
-					if(r_pdf && fsumf(r_f) != 0)
+					if(r_pdf && !ISBLACK(r_f))
 						stack[stackPos++] = stackEntry(Ray(p, r_wi), bsdf.IntegratePdf(r_f, r_pdf, r_wi) * s.fs, s.d + 1);
 					float3 t_wi;
 					float t_pdf;
 					float3 t_f = bsdf.Sample_f(-s.r.direction, &t_wi, BSDFSample(rng), &t_pdf, BxDFType(BSDF_TRANSMISSION | BSDF_SPECULAR | BSDF_GLOSSY));
-					if(t_pdf && fsumf(t_f) != 0)
+					if(t_pdf && !ISBLACK(t_f))
 						stack[stackPos++] = stackEntry(Ray(p, t_wi), bsdf.IntegratePdf(t_f, t_pdf, t_wi) * s.fs, s.d + 1);
 				}
 			}
@@ -177,7 +172,11 @@ template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, RGBCOL* 
 				float tmin, tmax;
 				g_SceneData.m_sVolume.IntersectP(s.r, 0, r2.m_fDist, &tmin, &tmax);
 				L += s.fs * g_Map.L<true>(a_rVolume, rng, s.r, tmin, tmax, make_float3(0));
+				if(g_SceneData.m_sEnvMap.CanSample() && !s.d)
+					L += s.fs * g_SceneData.m_sEnvMap.Sample(s.r);
 			}
+			else if(g_SceneData.m_sEnvMap.CanSample() && s.d == 0)
+					L += s.fs * g_SceneData.m_sEnvMap.Sample(s.r);
 		}
 		a_Pixels[y * w + x].m_vPixelColor += L;
 		RGBCOL c = Float3ToCOLORREF(a_Pixels[y * w + x].m_vPixelColor / a_PassIndex);

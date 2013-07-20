@@ -430,7 +430,7 @@ template<int N> struct Distribution1D
     }
     CUDA_FUNC_IN float SampleContinuous(float u, float *pdf, int *off = NULL) const
 	{
-        float *ptr = STL_upper_bound(cdf, cdf+count+1, u);
+        const float *ptr = STL_upper_bound(cdf, cdf+count+1, u);
         int offset = MAX(0, int(ptr-cdf-1));
         if (off)
 			*off = offset;
@@ -456,11 +456,65 @@ template<int N> struct Distribution1D
         if (pdf) *pdf = func[offset] / (funcInt * count);
         return offset;
     }
-private:
+public:
     float func[N];
 	float cdf[N];
     float funcInt;
     int count;
+};
+
+template<int NU, int NV> struct Distribution2D
+{
+	Distribution2D()
+	{
+
+	}
+
+    Distribution2D(const float *data, unsigned int nu, unsigned int nv)
+	{
+		this->nu = nu;
+		this->nv = nv;
+		for (int v = 0; v < nv; ++v)
+			pConditionalV[v] = Distribution1D<NU>(&data[v*nu], nu);
+		float marginalFunc[NV];
+		for (int v = 0; v < nv; ++v)
+			marginalFunc[v] = pConditionalV[v].funcInt;
+		pMarginal = Distribution1D<NV>(&marginalFunc[0], nv);
+	}
+
+	void Initialize(const float *data, unsigned int nu, unsigned int nv)
+	{
+		this->nu = nu;
+		this->nv = nv;
+		for (int v = 0; v < nv; ++v)
+			pConditionalV[v] = Distribution1D<NU>(&data[v*nu], nu);
+		float marginalFunc[NV];
+		for (int v = 0; v < nv; ++v)
+			marginalFunc[v] = pConditionalV[v].funcInt;
+		pMarginal = Distribution1D<NV>(&marginalFunc[0], nv);
+	}
+
+	CUDA_FUNC_IN void SampleContinuous(float u0, float u1, float uv[2], float *pdf)
+	{
+		float pdfs[2];
+        int v;
+        uv[1] = pMarginal.SampleContinuous(u1, &pdfs[1], &v);
+        uv[0] = pConditionalV[v].SampleContinuous(u0, &pdfs[0]);
+        *pdf = pdfs[0] * pdfs[1];
+	}
+
+	CUDA_FUNC_IN float Pdf(float u, float v) const
+	{
+		int iu = clamp(Float2Int(u * pConditionalV[0].count), 0, pConditionalV[0].count-1);
+        int iv = clamp(Float2Int(v * pMarginal.count), 0, pMarginal.count-1);
+        if (pConditionalV[iv].funcInt * pMarginal.funcInt == 0.f)
+			return 0.f;
+        return (pConditionalV[iv].func[iu] * pMarginal.func[iv]) / (pConditionalV[iv].funcInt * pMarginal.funcInt);
+	}
+private:
+	Distribution1D<NU> pConditionalV[NV];
+	Distribution1D<NV> pMarginal;
+	unsigned int nu, nv;
 };
 
 CUDA_FUNC_IN float RdIntegral(float alphap, float A)

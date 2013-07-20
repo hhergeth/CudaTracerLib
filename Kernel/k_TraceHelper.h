@@ -131,7 +131,7 @@ template<bool USE_ALPHA> inline __device__ bool k_TraceRayNode(const float3& dir
 				float Oz = v00.w - origx*v00.x - origy*v00.y - origz*v00.z;
 				float invDz = 1.0f / (dirx*v00.x + diry*v00.y + dirz*v00.z);
 				float t = Oz * invDz;
-				if (t > 0.0001f && t < a_Result->m_fDist)
+				if (t > 0.1f && t < a_Result->m_fDist)
 				{
 					float Ox = v11.w + origx*v11.x + origy*v11.y + origz*v11.z;
 					float Dx = dirx*v11.x + diry*v11.y + dirz*v11.z;
@@ -302,9 +302,16 @@ float2 TraceResult::lerpUV()
 	return m_pTri->lerpUV(m_fUV);
 }
 
+void TraceResult::GetBSDF(const e_KernelMaterial* a_Mats, e_KernelBSDF* bsdf)
+{
+	m_pTri->GetBSDF(m_fUV, m_pNode->getWorldMatrix(), a_Mats, m_pNode->m_uMaterialOffset, bsdf);
+}
+
 e_KernelBSDF TraceResult::GetBSDF(const e_KernelMaterial* a_Mats)
 {
-	return m_pTri->GetBSDF(m_fUV, m_pNode->getWorldMatrix(), a_Mats, m_pNode->m_uMaterialOffset);
+	e_KernelBSDF bs;
+	GetBSDF(a_Mats, &bs);
+	return bs;
 }
 
 bool TraceResult::GetBSSRDF(const e_KernelMaterial* a_Mats, e_KernelBSSRDF* bssrdf)

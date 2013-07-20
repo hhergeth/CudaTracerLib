@@ -223,6 +223,8 @@ struct e_KernelBrdf_Lambertain
 	{
 		return R;
 	}
+
+	TYPE_FUNC(e_KernelBrdf_Lambertain)
 public:
 	BxDFType type;
 	float3 R;
@@ -263,6 +265,8 @@ struct e_KernelBrdf_SpecularReflection
 	STD_rho
 
 	STD_rho2
+
+	TYPE_FUNC(e_KernelBrdf_SpecularReflection)
 public:
 	BxDFType type;
 	float3 R;
@@ -326,6 +330,8 @@ struct e_KernelBrdf_SpecularTransmission
 	STD_rho
 
 	STD_rho2
+
+	TYPE_FUNC(e_KernelBrdf_SpecularTransmission)
 public:
 	BxDFType type;
 	float3 T;
@@ -387,6 +393,8 @@ struct e_KernelBrdf_OrenNayar
 	STD_rho
 
 	STD_rho2
+
+	TYPE_FUNC(e_KernelBrdf_OrenNayar)
 public:
 	BxDFType type;
 	float3 R;
@@ -642,9 +650,26 @@ public:
 };
 
 #define e_KernelBrdf_Blinn_TYPE 5
+struct e_KernelBrdf_Blinn : public e_KernelBrdf_Microfacet<e_KernelBrdf_BlinnDistribution>
+{
+	CUDA_FUNC_IN e_KernelBrdf_Blinn(const float3& r, const e_KernelFresnel& f, const e_KernelBrdf_BlinnDistribution& d)
+		: e_KernelBrdf_Microfacet<e_KernelBrdf_BlinnDistribution>(r, f, d)
+	{
+	}
+
+	TYPE_FUNC(e_KernelBrdf_Blinn)
+};
+
 #define e_KernelBrdf_Anisotropic_TYPE 6
-typedef e_KernelBrdf_Microfacet<e_KernelBrdf_BlinnDistribution> e_KernelBrdf_Blinn;
-typedef e_KernelBrdf_Microfacet<e_KernelBrdf_AnisotropicDistribution> e_KernelBrdf_Anisotropic;
+struct e_KernelBrdf_Anisotropic : public e_KernelBrdf_Microfacet<e_KernelBrdf_AnisotropicDistribution>
+{
+	CUDA_FUNC_IN e_KernelBrdf_Anisotropic(const float3& r, const e_KernelFresnel& f, const e_KernelBrdf_AnisotropicDistribution& d)
+		: e_KernelBrdf_Microfacet<e_KernelBrdf_AnisotropicDistribution>(r, f, d)
+	{
+	}
+
+	TYPE_FUNC(e_KernelBrdf_Blinn)
+};
 
 #define e_KernelBrdf_FresnelBlend_TYPE 7
 struct e_KernelBrdf_FresnelBlend
@@ -680,6 +705,8 @@ struct e_KernelBrdf_FresnelBlend
 	STD_rho
 
 	STD_rho2
+
+	TYPE_FUNC(e_KernelBrdf_FresnelBlend)
 public:
 	BxDFType type;
 	float3 Rd;
@@ -692,14 +719,8 @@ private:
     }
 };
 
-#define e_KernelBrdf_BRDFToBTDF_TYPE 8
-struct e_KernelBrdf_BRDFToBTDF;
-#define e_KernelBrdf_ScaledBxDF_TYPE 9
-struct e_KernelBrdf_ScaledBxDF;
-
 template<int BUFFER_SIZE> struct e_KernelBXDF
 {
-	friend class e_BSDFBuilder;
 #define CALL_TYPE(t,f,r) \
 	case t##_TYPE : \
 		r ((t*)Data)->f; \
@@ -729,11 +750,10 @@ public:
 		m_uType = a_Type;
 	}
 
-	template<typename T> static CUDA_FUNC_IN e_KernelBXDF<BUFFER_SIZE> Create(const T& val, unsigned int token)
+	template<typename T> CUDA_FUNC_IN void SetData(T& val)
 	{
-		e_KernelBXDF<BUFFER_SIZE> r(token);
-		*(T*)r.Data = val;
-		return r;
+		m_uType = T::TYPE();
+		*(T*)Data = val;
 	}
 
 	CUDA_FUNC_IN BxDFType getType() const
@@ -775,106 +795,23 @@ public:
 #undef CALL_FUNC
 };
 
-#define CREATE_e_KernelBXDF(S, T, V) \
-	e_KernelBXDF<S>::Create<T>(V, T##_TYPE)
-
-#define CREATE_e_KernelBXDFL(T, V) \
-	e_KernelBXDF<BXDF_LARGE>::Create<T>(V, T##_TYPE)
-
-struct e_KernelBrdf_BRDFToBTDF
-{
-	CUDA_FUNC_IN e_KernelBrdf_BRDFToBTDF(const e_KernelBXDF<BXDF_SMALL>& b)
-	{
-		type = BxDFType(b.getType() ^ (BSDF_REFLECTION | BSDF_TRANSMISSION));
-		brdf = b;
-	}
-
-	CUDA_FUNC_IN float3 f(const float3& wo, const float3& wi) const
-	{
-		 return brdf.f(wo, otherHemisphere(wi));
-	}
-
-	CUDA_FUNC_IN float3 Sample_f(const float3& wo, float3* wi, float u1, float u2, float* pdf) const
-	{
-		float3 f = brdf.Sample_f(wo, wi, u1, u2, pdf);
-		*wi = otherHemisphere(*wi);
-		return f;
-	}
-
-	CUDA_FUNC_IN float Pdf(const float3& wi, const float3& wo) const
-	{
-		 return brdf.Pdf(wo, otherHemisphere(wi));
-	}
-
-	CUDA_FUNC_IN float3 rho(const float3 &wo, int nSamples, const float *samples) const
-	{
-		return brdf.rho(otherHemisphere(wo), nSamples, samples);
-	}
-
-	CUDA_FUNC_IN float3 rho(int nSamples, const float *samples1, const float *samples2) const
-	{
-		return brdf.rho(nSamples, samples1, samples2);
-	}
-public:
-	BxDFType type;
-	e_KernelBXDF<BXDF_SMALL> brdf;
-private:
-	CUDA_FUNC_IN float3 otherHemisphere(const float3 &w) const
-	{
-        return make_float3(w.x, w.y, -w.z);
-    }
-};
-
-struct e_KernelBrdf_ScaledBxDF
-{
-	CUDA_FUNC_IN e_KernelBrdf_ScaledBxDF(const e_KernelBXDF<BXDF_SMALL>& b, const float3& _s)
-	{
-		type = b.getType();
-		brdf = b;
-		s = _s;
-	}
-
-	CUDA_FUNC_IN float3 f(const float3& wo, const float3& wi) const
-	{
-		 return s * brdf.f(wo, wi);
-	}
-
-	CUDA_FUNC_IN float3 Sample_f(const float3& wo, float3* wi, float u1, float u2, float* pdf) const
-	{
-		float3 f = brdf.Sample_f(wo, wi, u1, u2, pdf);
-		return s * f;
-	}
-
-	STD_Pdf
-
-	CUDA_FUNC_IN float3 rho(const float3 &wo, int nSamples, const float *samples) const
-	{
-		return s * brdf.rho(wo, nSamples, samples);
-	}
-
-	CUDA_FUNC_IN float3 rho(int nSamples, const float *samples1, const float *samples2) const
-	{
-		return s * brdf.rho(nSamples, samples1, samples2);
-	}
-public:
-	BxDFType type;
-	e_KernelBXDF<BXDF_SMALL> brdf;
-	float3 s;
-};
-
 #ifndef FAST_BRDF
 #define BXDF_NUM_Brdf 4
 struct e_KernelBSDF
 {
-	friend class e_BSDFBuilder;
 private:
 	e_KernelBXDF<BXDF_LARGE> m_sBXDF[BXDF_NUM_Brdf];
 	unsigned int m_uNumUsed;
 public:
-	const float3 ng;
-	const Onb sys;
-	const float Eta;
+	float3 ng;
+	Onb sys;
+	float Eta;
 public:
+	CUDA_FUNC_IN e_KernelBSDF()
+		: Eta(1)
+	{
+	}
+
 	CUDA_FUNC_IN e_KernelBSDF(const Onb& _sys, const float3& _ng)
 		: sys(_sys), ng(_ng), Eta(1)
 	{
@@ -1017,9 +954,9 @@ public:
 		return r;
 	}
 
-	CUDA_FUNC_IN void Add(e_KernelBXDF<BXDF_LARGE>& b)
+	template<typename T> CUDA_FUNC_IN void Add(T& val)
 	{
-		m_sBXDF[m_uNumUsed++] = b;
+		m_sBXDF[m_uNumUsed++].SetData(val);
 	}
 
 	CUDA_FUNC_IN float3 WorldToLocal(const float3& v) const

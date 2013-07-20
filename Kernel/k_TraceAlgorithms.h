@@ -15,14 +15,15 @@ template<bool DIRECT> CUDA_ONLY_FUNC float3 PathTrace(float3& a_Dir, float3& a_O
 		r.Init();
 		if(!k_TraceRay<true>(r0.direction, r0.origin, &r))
 		{
-			//cl = cf * make_float3(0.7f);
+			if(g_SceneData.m_sEnvMap.CanSample())
+				cl += cf * g_SceneData.m_sEnvMap.Sample(r0);
 			break;
 		}
 		if(distTravalled && depth == 1)
 			*distTravalled = r.m_fDist;
 		float3 wi;
 		float pdf;
-		e_KernelBSDF bsdf = r.m_pTri->GetBSDF(r.m_fUV, r.m_pNode->getWorldMatrix(), g_SceneData.m_sMatData.Data, r.m_pNode->m_uMaterialOffset);
+		e_KernelBSDF bsdf = r.GetBSDF(g_SceneData.m_sMatData.Data);
 		if(!DIRECT || (depth == 1 || specularBounce))
 			cl += cf * Le(r0(r.m_fDist), bsdf.ng, -r0.direction, r, g_SceneData);
 		if(DIRECT)

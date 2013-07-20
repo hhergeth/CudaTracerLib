@@ -108,7 +108,11 @@ template<typename HASH> struct k_PhotonMap
 		m_uMaxPhotonCount = N;
 	}
 
-	void StartNewRendering(const AABB& box, float a_InitRadius);
+	void StartNewRendering(const AABB& box, float a_InitRadius)
+	{
+		m_sHash = HASH(box, a_InitRadius, m_uGridLength);
+		cudaMemset(m_pDeviceHashGrid, -1, sizeof(unsigned int) * m_uGridLength);
+	}
 
 #ifdef __CUDACC__
 	CUDA_ONLY_FUNC k_StoreResult StorePhoton(const float3& p, const float3& l, const float3& wi, const float3& n, unsigned int* a_PhotonCounter) const
@@ -157,9 +161,14 @@ struct k_PhotonMapCollection
 	void StartNewPass();
 
 	bool PassFinished();
-#ifdef __CUDACC__
 
-	void StartNewRendering(const AABB& sbox, const AABB& vbox, float a_R);
+	void StartNewRendering(const AABB& sbox, const AABB& vbox, float a_R)
+	{
+		m_sVolumeMap.StartNewRendering(vbox, a_R);
+		m_sSurfaceMap.StartNewRendering(sbox, a_R);
+	}
+
+#ifdef __CUDACC__
 
 	template<bool SURFACE> CUDA_ONLY_FUNC k_StoreResult StorePhoton(const float3& p, const float3& l, const float3& wi, const float3& n)
 	{

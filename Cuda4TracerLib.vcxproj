@@ -23,9 +23,12 @@
     <ClInclude Include="Engine\e_Buffer.h" />
     <ClInclude Include="Engine\e_Camera.h" />
     <ClInclude Include="Engine\e_DynamicScene.h" />
+    <ClInclude Include="Engine\e_EnvironmentMap.h" />
     <ClInclude Include="Engine\e_ErrorHandler.h" />
+    <ClInclude Include="Engine\e_Filter.h" />
     <ClInclude Include="Engine\e_FPCamera.h" />
     <ClInclude Include="Engine\e_Grid.h" />
+    <ClInclude Include="Engine\e_Image.h" />
     <ClInclude Include="Engine\e_KernelMaterial.h" />
     <ClInclude Include="Engine\e_Light.h" />
     <ClInclude Include="Engine\e_Mesh.h" />
@@ -54,7 +57,6 @@
     <ClInclude Include="Engine\SceneBuilder\SplitBVHBuilder.hpp" />
     <ClInclude Include="Engine\SceneBuilder\Util.hpp" />
     <ClInclude Include="Kernel\k_IntegrateHelper.h" />
-    <ClInclude Include="Kernel\k_IrradianceCache.h" />
     <ClInclude Include="Kernel\k_PathTracer.h" />
     <ClInclude Include="Kernel\k_PrimTracer.h" />
     <ClInclude Include="Kernel\k_sPpmTracer.h" />
@@ -77,6 +79,7 @@
     <ClCompile Include="Engine\e_AnimatedMesh.cpp" />
     <ClCompile Include="Engine\e_DynamicScene.cpp" />
     <ClCompile Include="Engine\e_FPCamera.cpp" />
+    <ClCompile Include="Engine\e_Image.cpp" />
     <ClCompile Include="Engine\e_Mesh.cpp" />
     <ClCompile Include="Engine\e_PointBVH.cpp" />
     <ClCompile Include="Engine\e_SceneBVH.cpp" />
@@ -100,11 +103,10 @@
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="Engine\e_AnimatedMesh.cu" />
-    <CudaCompile Include="Kernel\k_IrradianceCache.cu" />
+    <CudaCompile Include="Engine\e_Image.cu" />
     <CudaCompile Include="Kernel\k_PathTracer.cu" />
     <CudaCompile Include="Kernel\k_PrimTracer.cu" />
     <CudaCompile Include="Kernel\k_SceneTrace.cu" />
-    <CudaCompile Include="Kernel\k_sPpmTracer.cu" />
     <CudaCompile Include="Kernel\k_sPpmTracer_EyePass.cu" />
     <CudaCompile Include="Kernel\k_sPpmTracer_PhotonPass.cu" />
   </ItemGroup>

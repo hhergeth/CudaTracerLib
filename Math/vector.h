@@ -591,7 +591,7 @@ CUDA_FUNC_IN Quaternion slerp(const Quaternion &q1, const Quaternion &q2, float 
 	return result;
 }
 
-__device__ inline unsigned int toABGR(float4 v)
+__device__ inline unsigned int toABGR(const float4& v)
 {
     return
         (unsigned int)(fminf(fmaxf(v.x, 0.0f), 1.0f) * 255.0f) |
@@ -600,7 +600,7 @@ __device__ inline unsigned int toABGR(float4 v)
         ((unsigned int)(fminf(fmaxf(v.w, 0.0f), 1.0f) * 255.0f) << 24);
 }
 
-__device__ inline unsigned int toABGR(float3 v)
+__device__ inline unsigned int toABGR(const float3& v)
 {
     return
         (unsigned int)(fminf(fmaxf(v.x, 0.0f), 1.0f) * 255.0f) |
@@ -614,32 +614,32 @@ CUDA_FUNC_IN float clamp01(float a)
 	return clamp(a,0.0f,1.0f);
 }
 
-CUDA_FUNC_IN float2 clamp01(float2& a)
+CUDA_FUNC_IN float2 clamp01(const float2& a)
 {
 	return make_float2(clamp(a.x, 0.0f, 1.0f), clamp(a.y, 0.0f, 1.0f));
 }
 
-CUDA_FUNC_IN float3 clamp01(float3& a)
+CUDA_FUNC_IN float3 clamp01(const float3& a)
 {
 	return make_float3(clamp(a.x, 0.0f, 1.0f), clamp(a.y, 0.0f, 1.0f), clamp(a.z, 0.0f, 1.0f));
 }
 
-CUDA_FUNC_IN float4 clamp01(float4& a)
+CUDA_FUNC_IN float4 clamp01(const float4& a)
 {
 	return make_float4(clamp(a.x, 0.0f, 1.0f), clamp(a.y, 0.0f, 1.0f), clamp(a.z, 0.0f, 1.0f), clamp(a.w, 0.0f, 1.0f));
 }
 
-CUDA_FUNC_IN float2 exp(float2& a)
+CUDA_FUNC_IN float2 exp(const float2& a)
 {
 	return make_float2(exp(a.x), exp(a.y));
 }
 
-CUDA_FUNC_IN float3 exp(float3& a)
+CUDA_FUNC_IN float3 exp(const float3& a)
 {
 	return make_float3(exp(a.x), exp(a.y), exp(a.z));
 }
 
-CUDA_FUNC_IN float4 exp(float4& a)
+CUDA_FUNC_IN float4 exp(const float4& a)
 {
 	return make_float4(exp(a.x), exp(a.y), exp(a.z), exp(a.w));
 }
@@ -648,7 +648,7 @@ typedef uchar4 RGBCOL;
 #define toInt(x) (int((float)pow(clamp01(x),1.0f/1.2f)*255.0f+0.5f))
 //#define toInt(x) (unsigned char(x * 255.0f))
 
-CUDA_FUNC_IN RGBCOL Float4ToCOLORREF(float4& c)
+CUDA_FUNC_IN RGBCOL Float4ToCOLORREF(const float4& c)
 {
 	return make_uchar4(toInt(c.x), toInt(c.y), toInt(c.z), toInt(c.w));
 }
@@ -658,7 +658,7 @@ CUDA_FUNC_IN float4 COLORREFToFloat4(RGBCOL c)
 	return make_float4((float)c.x / 255.0f, (float)c.y / 255.0f, (float)c.z / 255.0f, (float)c.w / 255.0f);
 }
 
-CUDA_FUNC_IN RGBCOL Float3ToCOLORREF(float3& c)
+CUDA_FUNC_IN RGBCOL Float3ToCOLORREF(const float3& c)
 {
 	return make_uchar4(toInt(c.x), toInt(c.y), toInt(c.z), 255);
 }
@@ -878,16 +878,16 @@ CUDA_FUNC_IN float3 Uchar3ToNormalizedFloat3(uchar3 v)
 
 CUDA_FUNC_IN uchar2 NormalizedFloat3ToUchar2(const float3& v)
 {
-	float theta = (acos(v.z)*(256.0f/PI));
-	float phi = (atan2(v.y,v.x)*(256.0f/(2.0f*PI)));
-	phi = phi < 0 ? (phi + 256) : phi;
+	float theta = (acos(v.z)*(255.0f/PI));
+	float phi = (atan2(v.y,v.x)*(255.0f/(2.0f*PI)));
+	phi = phi < 0 ? (phi + 255) : phi;
 	return make_uchar2((unsigned char)theta, (unsigned char)phi);
 }
 
 CUDA_FUNC_IN float3 Uchar2ToNormalizedFloat3(const uchar2 v)
 {
-	float theta = float(v.x)*(1.0f/256.0f)*PI;
-	float phi = float(v.y)*(1.0f/256.0f)*PI*2.0f;
+	float theta = float(v.x)*(1.0f/255.0f)*PI;
+	float phi = float(v.y)*(1.0f/255.0f)*PI*2.0f;
 #ifdef __CUDACC__
 	float sinphi, cosphi, costheta, sintheta;
 	sincos(phi, &sinphi, &cosphi);
@@ -896,6 +896,11 @@ CUDA_FUNC_IN float3 Uchar2ToNormalizedFloat3(const uchar2 v)
 	float sinphi = sin(phi), costheta = cos(theta), sintheta = sin(theta), cosphi = cos(phi);
 #endif
 	return make_float3(sintheta*cosphi, sintheta * sinphi, costheta);
+}
+
+CUDA_FUNC_IN float3 Uchar2ToNormalizedFloat3(unsigned int lowBits)
+{
+	return Uchar2ToNormalizedFloat3(make_uchar2(lowBits & 0xff, (lowBits >> 8) & 255));
 }
 
 CUDA_FUNC_IN float y(float3& v)

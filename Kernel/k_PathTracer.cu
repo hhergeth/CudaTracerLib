@@ -31,7 +31,7 @@ __global__ void pathKernel(unsigned int width, unsigned int height, RGBCOL* a_Da
 		}
 
 		unsigned int x = rayidx % width, y = rayidx / width;
-		Ray r = g_CameraData.GenRay(x, y, width, height,  rng.randomFloat(), rng.randomFloat());
+		Ray r = g_CameraData.GenRay<true>(x, y, width, height,  rng.randomFloat(), rng.randomFloat());
 		
 		float3 col = PathTrace<true>(r.direction, r.origin, rng);
 		
@@ -46,7 +46,7 @@ __global__ void pathKernel(unsigned int width, unsigned int height, RGBCOL* a_Da
 __global__ void debugPixel(unsigned int width, unsigned int height, int2 p)
 {
 	CudaRNG rng = g_RNGData();
-	Ray r = g_CameraData.GenRay(p.x, p.y, width, height,  rng.randomFloat(), rng.randomFloat());
+	Ray r = g_CameraData.GenRay<false>(p.x, p.y, width, height,  rng.randomFloat(), rng.randomFloat());
 		
 	PathTrace<true>(r.direction, r.origin, rng);
 }

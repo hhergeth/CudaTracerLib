@@ -22,6 +22,7 @@ template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, float3 Le, CudaRNG
 	r2.Init();
 	int depth = -1;
 	bool inMesh = false;
+	e_KernelBSDF bsdf;
 	while(++depth < 12 && k_TraceRay<true>(r.direction, r.origin, &r2))
 	{
 		if(V.HasVolumes())
@@ -91,16 +92,16 @@ template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, float3 Le, CudaRNG
 		}
 		else
 		{
-			e_KernelBSDF bsdf = r2.m_pTri->GetBSDF(r2.m_fUV, r2.m_pNode->getWorldMatrix(), g_SceneData.m_sMatData.Data, r2.m_pNode->m_uMaterialOffset);
+			r2.GetBSDF(g_SceneData.m_sMatData.Data, &bsdf);
 			float3 wo = -r.direction;
 			if((DIRECT && depth > 0) || !DIRECT)
 				if(bsdf.NumComponents(BxDFType(BSDF_REFLECTION | BSDF_TRANSMISSION | BSDF_DIFFUSE )))
-					if(g_Map.StorePhoton<true>(x, Le, wo, bsdf.sys.m_normal) == k_StoreResult::Full)
+					if(g_Map.StorePhoton<true>(x, Le, wo, bsdf.ng) == k_StoreResult::Full)
 						return false;
 			float pdf;
 			BxDFType sampledType;
 			float3 f = bsdf.Sample_f(wo, &wi, BSDFSample(rng), &pdf, BSDF_ALL, &sampledType);
-			if(pdf == 0 || fsumf(f) == 0)
+			if(pdf == 0 || ISBLACK(f))
 				break;
 			inMesh = dot(r.direction, bsdf.ng) < 0;
 			ac = Le * f * AbsDot(wi, bsdf.sys.m_normal) / pdf;

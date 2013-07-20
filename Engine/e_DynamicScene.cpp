@@ -6,6 +6,19 @@
 #include <string>
 #include "e_Terrain.h"
 
+struct textureLoader
+{
+	e_DynamicScene* S;
+	textureLoader(e_DynamicScene* A)
+	{
+		S = A;
+	}
+	e_BufferReference<e_Texture, e_KernelTexture> operator()(char* file)
+	{
+		return S->LoadTexture(file);
+	};
+};
+
 e_SceneInitData e_SceneInitData::CreateFor_S_SanMiguel(unsigned int a_SceneNodes, unsigned int a_Lights)
 {
 	e_SceneInitData r = CreateForSpecificMesh(2487716 + 100, 2701833 + 100, 2586998 + 100, 12905498 + 100, 1024, a_Lights, a_SceneNodes);
@@ -31,6 +44,7 @@ inline bool fileExists(const TCHAR * file)
 }
 
 e_DynamicScene::e_DynamicScene(e_SceneInitData a_Data)
+	: m_sEnvMap(e_EnvironmentMap::Identity())
 {
 	int nodeC = 1 << 16, tCount = 1 << 16;
 	m_uModified = 1;
@@ -43,7 +57,9 @@ e_DynamicScene::e_DynamicScene(e_SceneInitData a_Data)
 	m_pMeshBuffer = new e_CachedBuffer<e_Mesh, e_KernelMesh>(a_Data.m_uNumNodes, sizeof(e_AnimatedMesh));
 	m_pNodeStream = new e_Stream<e_Node>(a_Data.m_uNumNodes);
 	m_pTextureBuffer = new e_CachedBuffer<e_Texture, e_KernelTexture>(a_Data.m_uNumTextures);
+	m_pMIPMapBuffer = new e_CachedBuffer<e_MIPMap, e_KernelMIPMap>(a_Data.m_uNumTextures);
 	m_pLightStream = new e_Stream<e_KernelLight>(a_Data.m_uNumLights);
+	m_pDist2DStream = new e_Stream<Distribution2D<4096, 4096>>(2);
 	m_pVolumes = new e_Stream<e_VolumeRegion>(128);
 	m_pBVH = new e_SceneBVH(a_Data.m_uNumNodes);
 	if(a_Data.m_uSizeAnimStream > 1024)
@@ -81,20 +97,8 @@ e_DynamicScene::~e_DynamicScene()
 
 void e_DynamicScene::UpdateMaterial(e_StreamReference(e_KernelMaterial) m)
 {
-	struct functor
-	{
-		e_DynamicScene* S;
-		functor(e_DynamicScene* A)
-		{
-			S = A;
-		}
-		e_BufferReference<e_Texture, e_KernelTexture> operator()(char* file)
-		{
-			return S->LoadTexture(file);
-		};
-	};
 	for(int i = 0; i < m.getLength(); i++)
-		m(i)->LoadTextures(functor(this));
+		m(i)->LoadTextures(textureLoader(this));
 	m.Invalidate();
 }
 
@@ -234,6 +238,7 @@ e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_MeshFile2)
 	m2.Invalidate();
 	new(N.operator->()) e_Node(M.getIndex(), M.operator->(), strA.c_str(), m2);
 	unsigned int li[MAX_AREALIGHT_NUM];
+	ZeroMemory(li, sizeof(li));
 	for(unsigned int i = 0; i < M->m_uUsedLights; i++)
 	{
 		ShapeSet<MAX_SHAPE_LENGTH> s = CreateShape<MAX_SHAPE_LENGTH>(N, M->m_sLights[i].MatName);
@@ -249,14 +254,14 @@ FW::String compileFile2(FW::String& f)
 	FW::String a = FW::String("Compiled/").append(f.substring(sizeof("Scenes/Skyrim"))), b;
 	createDirectoryRecursively(a.getDirName().getPtr());
 	b = a.substring(0, a.lastIndexOf('.')).append(".xtex");
-	if(fileExists(b.getPtr()))
+	if(fileExists(b.getPtr()) && FileSize(b.getPtr()) > 0)
 		return b;
 	OutputStream a_Out(b.getPtr());
 	e_Texture::CompileToBinary(f.getPtr(), a_Out);
 	a_Out.Close();
 	return b;
 }
-e_BufferReference<e_Texture, e_KernelTexture> e_DynamicScene::LoadTexture(char* file)
+e_BufferReference<e_Texture, e_KernelTexture> e_DynamicScene::LoadTexture(const char* file)
 {
 	char* a_File = (char*)malloc(1024);
 	ZeroMemory(a_File, 1024);
@@ -278,10 +283,52 @@ e_BufferReference<e_Texture, e_KernelTexture> e_DynamicScene::LoadTexture(char* 
 	{
 		FW::String A = compileFile2(FW::String(a_File));
 		InputStream I(A.getPtr());
-		new(T(0)) e_Texture(I);
+		new(T) e_Texture(I);
 		I.Close();
-		T(0)->CreateKernelTexture();
-		m_pTextureBuffer->Invalidate(T);
+		T->CreateKernelTexture();
+		T.Invalidate();
+	}
+	return T;
+}
+
+FW::String compileFile3(FW::String& f)
+{
+	FW::String a = FW::String("Compiled/").append(f.substring(sizeof("Scenes/Skyrim"))), b;
+	createDirectoryRecursively(a.getDirName().getPtr());
+	b = a.substring(0, a.lastIndexOf('.')).append(".xmip");
+	if(fileExists(b.getPtr()) && FileSize(b.getPtr()) > 0)
+		return b;
+	OutputStream a_Out(b.getPtr());
+	e_MIPMap::CompileToBinary(f.getPtr(), a_Out);
+	a_Out.Close();
+	return b;
+}
+e_BufferReference<e_MIPMap, e_KernelMIPMap> e_DynamicScene::LoadMIPMap(const char* file)
+{
+	char* a_File = (char*)malloc(1024);
+	ZeroMemory(a_File, 1024);
+	if(!fileExists(file))
+	{
+		strcpy(a_File, "Scenes/Textures/");
+		strcat(a_File, file);
+	}
+	else
+	{
+		memcpy(a_File, file, strlen(file));
+	}
+	int a = strlen(a_File);
+	if(a_File[a-1] == '\n')
+		a_File[a-1] = 0;
+	bool load;
+	e_BufferReference<e_MIPMap, e_KernelMIPMap> T = m_pMIPMapBuffer->LoadCached(a_File, &load);
+	if(load)
+	{
+		FW::String A = compileFile3(FW::String(a_File));
+		InputStream I(A.getPtr());
+		new(T) e_MIPMap(I);
+		I.Close();
+		T->CreateKernelTexture();
+		T.Invalidate();
 	}
 	return T;
 }
@@ -300,6 +347,8 @@ void e_DynamicScene::UpdateInvalidated()
 	m_pAnimStream->UpdateInvalidated();
 	m_pLightStream->UpdateInvalidated();
 	m_pVolumes->UpdateInvalidated();
+	m_pMIPMapBuffer->UpdateInvalidated();
+	m_pDist2DStream->UpdateInvalidated();
 	if(m_uModified)
 	{
 		m_uModified = 0;
@@ -335,6 +384,7 @@ e_KernelDynamicScene e_DynamicScene::getKernelSceneData()
 	r.m_sVolume = e_KernelAggregateVolume(m_pVolumes);
 	r.m_sSceneBVH = m_pBVH->getData();
 	r.m_sTerrain = m_pTerrain->getKernelData();
+	r.m_sEnvMap = m_sEnvMap;
 	r.m_sBox = m_pBVH->m_sBox;
 	return r;
 }
@@ -353,4 +403,141 @@ unsigned int e_DynamicScene::getCudaBufferSize()
 		i += m_pTextureBuffer[0](i)->getBufferSize();
 	i += m_pTerrain->getBufferSize();
 	return i;
+}
+
+AABB e_DynamicScene::getBox(e_StreamReference(e_Node) n)
+{
+	return n->getWorldBox(getMesh(n));
+}
+
+e_StreamReference(e_KernelLight) e_DynamicScene::createLight(e_StreamReference(e_Node) Node, const char* materialName, float3& L)
+{
+	unsigned int mi;
+	ShapeSet<MAX_SHAPE_LENGTH> s = CreateShape<MAX_SHAPE_LENGTH>(Node, materialName, &mi);
+	unsigned int* a = &m_pMaterialBuffer->operator()(Node->m_uMaterialOffset + mi)->NodeLightIndex;
+	if(*a != -1)
+	{
+		e_StreamReference(e_KernelLight) c = m_pLightStream->operator()(Node->m_uLightIndices[*a]);
+		c->Set(e_DiffuseLight(L, s));
+		c.Invalidate();
+		return c;
+	}
+	else
+	{
+		unsigned int b = Node->getNextFreeLightIndex();
+		if(b == -1)
+			throw 1;
+		*a = b;
+		e_StreamReference(e_KernelLight) c = m_pLightStream->malloc(1);
+		Node->m_uLightIndices[b] = c.getIndex();
+		c->Set(e_DiffuseLight(L, s));
+		return c;
+	}
+}
+
+void e_DynamicScene::removeLight(e_StreamReference(e_Node) Node, unsigned int mi)
+{
+	unsigned int a = m_pMaterialBuffer->operator()(Node->m_uMaterialOffset + mi)->NodeLightIndex;
+	if(a == -1)
+		return;
+	unsigned int* b = Node->m_uLightIndices + a;
+	m_pLightStream->dealloc(m_pLightStream->operator()(*b));
+	*b = -1;
+}
+
+void e_DynamicScene::removeAllLights(e_StreamReference(e_Node) Node)
+{
+	e_BufferReference<e_Mesh, e_KernelMesh> m = getMesh(Node);
+	for(int i = 0; i < m->m_sMatInfo.getLength(); i++)
+		m_pMaterialBuffer->operator()(Node->m_uMaterialOffset + i)->NodeLightIndex = -1;
+	int i = 0;
+	while(i < MAX_AREALIGHT_NUM && Node->m_uLightIndices[i] != -1)
+	{
+		m_pLightStream->dealloc(m_pLightStream->operator()(Node->m_uLightIndices[i]));
+		Node->m_uLightIndices[i++] = -1;
+	}
+}
+
+void e_DynamicScene::recalculateAreaLights(e_StreamReference(e_Node) Node)
+{
+	int i = 0; 
+	unsigned int* a = Node->m_uLightIndices;
+	while(a[i] != -1)
+	{
+		e_StreamReference(e_KernelLight) l = m_pLightStream->operator()(a[i]);
+		float4x4 mat = Node->getWorldMatrix();
+		l->As<e_DiffuseLight>()->shapeSet.Recalculate(mat);
+		m_pLightStream->Invalidate(Node->m_uLightIndices[i]);
+		i++;
+	}
+}
+
+void e_DynamicScene::printStatus(char* dest)
+{
+	sprintf(dest, "Triangle intersectors : %d/%d\nBVH nodes : %d/%d\nBVH indices : %d/%d\nMaterials : %d/%d\nTextures : %d/%d\nMeshes : %d/%d\nNodes : %d/%d\nLights : %d/%d\n"
+		, m_pTriIntStream->UsedElements(), m_pTriIntStream->getLength(), m_pBVHStream->UsedElements(), m_pBVHStream->getLength(), m_pBVHIndicesStream->UsedElements(), m_pBVHIndicesStream->getLength()
+		, m_pMaterialBuffer->UsedElements(), m_pMaterialBuffer->getLength(), m_pTextureBuffer->UsedElements(), m_pTextureBuffer->getLength(), m_pMeshBuffer->UsedElements(), m_pMeshBuffer->getLength()
+		, m_pNodeStream->UsedElements(), m_pNodeStream->getLength(), m_pLightStream->UsedElements(), m_pLightStream->getLength());
+}
+
+e_Terrain* e_DynamicScene::getTerrain()
+{
+	return m_pTerrain;
+}
+
+e_StreamReference(e_VolumeRegion) e_DynamicScene::AddVolume(e_VolumeRegion& r)
+{
+	e_StreamReference(e_VolumeRegion) r2 = m_pVolumes->malloc(1);
+	*r2.operator->() = r;
+	return r2;
+}
+
+e_StreamReference(e_VolumeRegion) e_DynamicScene::getVolumes()
+{
+	return m_pVolumes->UsedElements();
+}
+
+AABB e_DynamicScene::getAABB(e_StreamReference(e_Node) Node, const char* name, unsigned int* a_Mi)
+{
+	return CreateShape<128>(Node, name, a_Mi).getBox();
+}
+
+e_BufferReference<e_Mesh, e_KernelMesh> e_DynamicScene::getMesh(e_StreamReference(e_Node) n)
+{
+	return m_pMeshBuffer->operator()(n->m_uMeshIndex);
+}
+
+e_StreamReference(e_KernelMaterial) e_DynamicScene::getMats(e_StreamReference(e_Node) n)
+{
+	e_StreamReference(e_KernelMaterial) r = m_pMaterialBuffer->operator()(n->m_uMaterialOffset, getMesh(n)->m_sMatInfo.getLength());
+	r.Invalidate();
+	return r;
+}
+
+e_StreamReference(e_KernelMaterial) e_DynamicScene::getMat(e_StreamReference(e_Node) n, const char* name)
+{
+	e_StreamReference(e_KernelMaterial) m = getMats(n);
+	for(int i = 0; i < m.getLength(); i++)
+	{
+		const char* a = m(i)->Name;
+		if(!strcmp(a, name))
+		{
+			m(i).Invalidate();
+			return m(i);
+		}
+	}
+	throw 1;
+}
+
+e_StreamReference(e_KernelLight) e_DynamicScene::setEnvironementMap(const float3& power, const char* file)
+{
+	e_BufferReference<e_MIPMap, e_KernelMIPMap> m = LoadMIPMap(file);
+	e_BufferReference<Distribution2D<4096, 4096>, Distribution2D<4096, 4096>> d = getDistribution2D();
+	int s = sizeof(e_InfiniteLight);
+	
+	e_InfiniteLight l = e_InfiniteLight(power, d, m);
+	e_StreamReference(e_KernelLight) r = createLight(l);
+	m_sEnvMap = e_EnvironmentMap((char*)file);
+	m_sEnvMap.LoadTextures(textureLoader(this));
+	return r;
 }

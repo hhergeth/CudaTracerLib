@@ -6,7 +6,7 @@ CUDA_ONLY_FUNC bool Occluded(const e_VisibilitySegment& seg)
 {
 	TraceResult r2;
 	r2.Init();
-	return k_TraceRay<true>(seg.r.direction, seg.r.origin, &r2) && seg.IsValidHit(r2.m_fDist * 1.05f);
+	return k_TraceRay<true>(seg.r.direction, seg.r.origin, &r2) &&  seg.IsValidHit(r2.m_fDist * 1.05f);//seg.tmax > r2.m_fDist && abs(r2.m_fDist - seg.tmax) > 0.1f;
 }
 
 CUDA_ONLY_FUNC float3 Transmittance(const Ray& r, float tmin, float tmax)
@@ -48,7 +48,7 @@ CUDA_ONLY_FUNC float3 EstimateDirect(const float3& p, const float3& n, const flo
 			}
 		}
 	}
-	/*
+	
 	if(!light->IsDeltaLight())
 	{
 		BxDFType sampledType;
@@ -76,7 +76,7 @@ CUDA_ONLY_FUNC float3 EstimateDirect(const float3& p, const float3& n, const flo
 				Ld += Li * f * AbsDot(wi, n) * weight / bsdfPdf;
 			}
 		}
-	}*/
+	}
 
 	return Ld;
 }

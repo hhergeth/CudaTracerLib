@@ -28,7 +28,7 @@ class k_IrradianceCache : public k_RandTracerBase
 {
 	k_IrrEntry* m_pEntries;
 	unsigned int* m_pGrid;
-	k_HashGrid_Irreg m_sGrid;
+	k_HashGrid_Reg m_sGrid;
 
 	const unsigned int m_uEntryNum;
 	const unsigned int m_uGridLength;
