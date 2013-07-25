@@ -430,10 +430,12 @@ struct e_InfiniteLight : public e_LightBase
 	TYPE_FUNC(e_InfiniteLight)
 };
 
+#define LGT_SIZE RND_16(DMAX5(sizeof(e_PointLight), sizeof(e_DiffuseLight), sizeof(e_DistantLight), sizeof(e_SpotLight), sizeof(e_InfiniteLight)))
+
 struct e_KernelLight
 {
 private:
-	unsigned char Data[sizeof(ShapeSet<MAX_SHAPE_LENGTH>) * 4];
+	unsigned char Data[LGT_SIZE];
 	unsigned int type;
 #define CALL_TYPE(t,f,r) \
 	case t##_TYPE : \
@@ -449,9 +451,9 @@ private:
 		CALL_TYPE(e_InfiniteLight, f, r) \
 	}
 public:
-	template<typename T> void Set(T& val)
+	template<typename T> void SetData(const T& val)
 	{
-		*(T*)Data = val;
+		memcpy(Data, &val, sizeof(T));
 		type = T::TYPE();
 	}
 

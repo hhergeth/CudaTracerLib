@@ -172,6 +172,24 @@ public:
 		}
 		m_sInvalidated.clear();
 	}
+	template<typename CBT> void UpdateInvalidatedCB(CBT& f)
+	{
+		for(unsigned int i = 0; i < m_sInvalidated.size(); i++)
+		{
+			for(unsigned int j = 0; j < m_sInvalidated[i].second; j++)
+			{
+				unsigned int k = j + m_sInvalidated[i].first;
+				f(operator()(k));//do that BEFORE, so the user has a chance to modify the data which will be copied...
+				deviceMapped[k] = operator()(k)->getKernelData();
+			}
+		}
+		for(unsigned int i = 0; i < m_sInvalidated.size(); i++)
+		{
+			int q = sizeof(D), f = m_sInvalidated[i].first, n = q * m_sInvalidated[i].second;
+			cudaMemcpy(device + f, deviceMapped + f, n, cudaMemcpyHostToDevice);
+		}
+		m_sInvalidated.clear();
+	}
 	unsigned int getLength()
 	{
 		return m_uLength;
@@ -489,6 +507,17 @@ public:
 		for(unsigned int i = 0; i < m_sInvalidated.size(); i++)
 		{
 			int q = sizeof(T), f = m_sInvalidated[i].first, n = q * m_sInvalidated[i].second;
+			cudaMemcpy(device + f, host + f, n, cudaMemcpyHostToDevice);
+		}
+		m_sInvalidated.clear();
+	}
+	template<typename CBT> void UpdateInvalidatedCB(CBT& cbf)
+	{
+		for(unsigned int i = 0; i < m_sInvalidated.size(); i++)
+		{
+			int q = sizeof(T), f = m_sInvalidated[i].first, n = q * m_sInvalidated[i].second;
+			for(int j = 0; j < m_sInvalidated[i].second; j++)
+				cbf(operator()(f + j));
 			cudaMemcpy(device + f, host + f, n, cudaMemcpyHostToDevice);
 		}
 		m_sInvalidated.clear();

@@ -61,7 +61,7 @@ CUDA_FUNC_IN bool WrapCoordinates(const float2& a_UV, const float2& dim, e_Image
 	}
 }
 
-class e_KernelTexture
+class e_KernelFileTexture
 {
 public:
 	void* m_pDeviceData;
@@ -136,7 +136,7 @@ private:
 	}
 };
 
-class e_Texture
+class e_FileTexture
 {
 private:
 	void* m_pDeviceData;
@@ -144,12 +144,12 @@ private:
 	unsigned int m_uHeight;
 	unsigned int m_uBpp;
 	e_KernelTexture_DataType m_uType;
-	e_KernelTexture m_sKernelData;
+	e_KernelFileTexture m_sKernelData;
 	e_ImageWrap m_uWrapMode;
 public:
-	e_Texture() {m_pDeviceData = 0; m_uWidth = m_uHeight = m_uBpp = -1; m_uWrapMode = TEXTURE_REPEAT;}
-	e_Texture(float4& col);
-	e_Texture(InputStream& a_In);
+	e_FileTexture() {m_pDeviceData = 0; m_uWidth = m_uHeight = m_uBpp = -1; m_uWrapMode = TEXTURE_REPEAT;}
+	e_FileTexture(float4& col);
+	e_FileTexture(InputStream& a_In);
 	void Free()
 	{
 		cudaFree(m_pDeviceData);
@@ -161,8 +161,8 @@ public:
 		CompileToBinary(in, o);
 		o.Close();
 	}
-	e_KernelTexture CreateKernelTexture();
-	e_KernelTexture getKernelData()
+	e_KernelFileTexture CreateKernelTexture();
+	e_KernelFileTexture getKernelData()
 	{
 		return m_sKernelData;
 	}

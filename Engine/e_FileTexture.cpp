@@ -1,5 +1,5 @@
 #include "StdAfx.h"
-#include "e_Texture.h"
+#include "e_FileTexture.h"
 #include "e_ErrorHandler.h"
 #include <FreeImage.h>
 
@@ -120,7 +120,7 @@ bool parseImage(const char* a_InputFile, imgData* data)
 	}
 }
 
-e_Texture::e_Texture(InputStream& a_In)
+e_FileTexture::e_FileTexture(InputStream& a_In)
 {
 	a_In >> m_uWidth;
 	a_In >> m_uHeight;
@@ -135,7 +135,7 @@ e_Texture::e_Texture(InputStream& a_In)
 			BAD_HOST_DEVICE_COPY(m_pDeviceData, q)
 }
 
-e_Texture::e_Texture(float4& col)
+e_FileTexture::e_FileTexture(float4& col)
 {
 	m_uWrapMode = TEXTURE_REPEAT;
 	m_uWidth = m_uHeight = 1;
@@ -147,7 +147,7 @@ e_Texture::e_Texture(float4& col)
 	m_uType = e_KernelTexture_DataType::vtGeneric;
 }
 
-void e_Texture::CompileToBinary(const char* a_InputFile, OutputStream& a_Out)
+void e_FileTexture::CompileToBinary(const char* a_InputFile, OutputStream& a_Out)
 {
 	imgData data;
 	if(!parseImage(a_InputFile, &data))
@@ -164,9 +164,9 @@ void e_Texture::CompileToBinary(const char* a_InputFile, OutputStream& a_Out)
 	}
 }
 
-e_KernelTexture e_Texture::CreateKernelTexture()
+e_KernelFileTexture e_FileTexture::CreateKernelTexture()
 {
-	e_KernelTexture r;
+	e_KernelFileTexture r;
 	r.m_fDim = make_float2(m_uWidth - 1, m_uHeight - 1);
 	r.m_pDeviceData = m_pDeviceData;
 	r.m_uWidth = m_uWidth;

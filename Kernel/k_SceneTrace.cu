@@ -40,7 +40,8 @@ void k_TracerRNGBuffer::createGenerators(unsigned int a_Spacing, unsigned int a_
 	genRNG2<<< m_uNumGenerators / 1024 + 1, 1024 >>> (m_pGenerators, a_Spacing, a_Offset, m_uNumGenerators);
 	cudaThreadSynchronize();
 }
-
+/*
+//SHOULD NOT WORK
 CUDA_FUNC_IN unsigned int FloatToUInt(float f2)
 {
 	unsigned int f = *(unsigned int*)&f2;
@@ -55,6 +56,19 @@ CUDA_FUNC_IN float UIntToFloat(float f2)
 	unsigned int i = f ^ mask;
 	return *(float*)&i;
 }
+*/
+CUDA_FUNC_IN unsigned int FloatToUInt(float f)
+{
+	unsigned int mask = -unsigned int(*(unsigned int*)&f >> 31) | 0x80000000;
+	return (*(unsigned int*)&f) ^ mask;
+}
+
+CUDA_FUNC_IN float UIntToFloat(unsigned int f)
+{
+	unsigned int mask = ((f >> 31) - 1) | 0x80000000, q = f ^ mask;
+	return *(float*)&q;
+}
+
 
 CUDA_DEVICE uint3 g_EyeHitBoxMin;
 CUDA_DEVICE uint3 g_EyeHitBoxMax;
@@ -64,17 +78,18 @@ __global__ void k_GuessPass(int w, int h)
 	CudaRNG localState = g_RNGData();
 	if(x < w && y < h)
 	{
-		Ray r = g_CameraData.GenRay<false>(x, y, w, h, localState.randomFloat(), localState.randomFloat());
+		CameraSample s = nextSample(x, y, localState);
+		Ray r = g_CameraData.GenRay(s, w, h);
 		TraceResult r2;
 		r2.Init();
 		int d = -1;
 		while(k_TraceRay<true>(r.direction, r.origin, &r2) && ++d < 10)
 		{
-			e_KernelBSDF bsdf = r2.GetBSDF(g_SceneData.m_sMatData.Data);
+			float3 p = r(r2.m_fDist);
+			e_KernelBSDF bsdf = r2.GetBSDF(p, g_SceneData.m_sMatData.Data);
 			float3 inc;
 			float pdf;
 			float3 col = bsdf.Sample_f(-1.0f * r.direction, &inc, BSDFSample(localState), &pdf);
-			float3 p = r(r2.m_fDist);
 			r = Ray(r(r2.m_fDist), inc);
 			uint3 pu = make_uint3(FloatToUInt(p.x), FloatToUInt(p.y), FloatToUInt(p.z));
 			atomicMin(&g_EyeHitBoxMin.x, pu.x);
@@ -105,4 +120,14 @@ AABB k_RandTracerBase::GetEyeHitPointBox()
 	m_sEyeBox.minV = make_float3(UIntToFloat(m_sEyeBox.minV.x), UIntToFloat(m_sEyeBox.minV.y), UIntToFloat(m_sEyeBox.minV.z));
 	m_sEyeBox.maxV = make_float3(UIntToFloat(m_sEyeBox.maxV.x), UIntToFloat(m_sEyeBox.maxV.y), UIntToFloat(m_sEyeBox.maxV.z));
 	return m_sEyeBox;
+}
+
+void k_TracerBase::StartNewTrace(e_Image* I)
+{
+	//I->StartNewRendering();
+}
+
+float k_TracerBase::getValuePerSecond(float val, float invScale)
+{
+	return val / (m_fTimeSpentRendering * invScale);
 }

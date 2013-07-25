@@ -13,7 +13,6 @@ k_sPpmTracer::k_sPpmTracer()
 	m_uNewPhotonsPerRun = 5;
 #endif
 	m_uModus = 1;
-	m_pDevicePixels = 0;
 	m_fInitialRadiusScale = 1;
 	m_sMaps = k_PhotonMapCollection((int)(1000000.0f * m_uNewPhotonsPerRun), m_uGridLength);
 }
@@ -118,7 +117,7 @@ void print(k_PhotonMapCollection& m_sMaps)
 		OutputDebugString(s.getPtr());
 }
 
-void k_sPpmTracer::DoRender(RGBCOL* a_Buf)
+void k_sPpmTracer::DoRender(e_Image* I)
 {
 	if(m_uModus == 1)
 	{
@@ -134,20 +133,21 @@ void k_sPpmTracer::DoRender(RGBCOL* a_Buf)
 
 			m_sRngs.m_uOffset++;
 			m_uPhotonsEmitted += m_sMaps.m_uPhotonNumEmitted;
-			doEyePass(a_Buf);
+			doEyePass(I);
+			I->UpdateDisplay();
 			m_sMaps.StartNewPass();
 		}
 	}
 	else if(m_uModus == 2)
 	{
 		m_uPassesDone = 1;
-		cudaMemset(m_pDevicePixels, 0, sizeof(k_sPpmPixel) * w * h);
-		cudaMemset(a_Buf, 0, sizeof(RGBCOL) * w * h);
-		doEyePass(a_Buf);
+		I->StartNewRendering();
+		doEyePass(I);
+		I->UpdateDisplay();
 	}
 }
 
-void k_sPpmTracer::initNewPass(RGBCOL* a_Buf)
+void k_sPpmTracer::initNewPass(e_Image* I)
 {
 	m_uPassesDone = 0;
 	m_uPhotonsEmitted = 0;
@@ -166,7 +166,7 @@ void k_sPpmTracer::initNewPass(RGBCOL* a_Buf)
 		{
 			e_StreamReference(e_KernelMaterial) mat = m_pScene->m_pMaterialBuffer->operator()(s + j, 1);
 			e_KernelBSSRDF b;
-			if(mat->GetBSSRDF(make_float2(0, 0), &b))
+			if(mat->GetBSSRDF(MapParameters(make_float3(1), make_float2(0, 0), Onb()), &b))
 			{
 				volBox.Enlarge(n->getWorldBox(m));
 				m_bLongRunning |= 1;
@@ -175,23 +175,22 @@ void k_sPpmTracer::initNewPass(RGBCOL* a_Buf)
 	}
 	m_sMaps.StartNewRendering(m_sEyeBox, volBox, r);
 	m_sMaps.StartNewPass();
-	cudaMemset(m_pDevicePixels, 0, sizeof(k_sPpmPixel) * w * h);
-	cudaMemset(a_Buf, 0, sizeof(RGBCOL) * w * h);
+	I->StartNewRendering();
 }
 
 static bool GGG = false;
 static float GGGf0;
 static float GGGf1;
-void k_sPpmTracer::StartNewTrace(RGBCOL* a_Buf)
+void k_sPpmTracer::StartNewTrace(e_Image* I)
 {
 	m_bDirect = !m_pScene->getVolumes().getLength();m_bDirect=0;
 	if(m_uModus == 1)
 	{
-		initNewPass(a_Buf);
+		initNewPass(I);
 	}
 	else if(!GGG || GGGf0 != m_fInitialRadiusScale || GGGf1 != m_uNewPhotonsPerRun)
 	{
-		initNewPass(a_Buf);
+		initNewPass(I);
 		GGGf1 = m_uNewPhotonsPerRun;
 		GGGf0 = m_fInitialRadiusScale;
 		GGG = true;

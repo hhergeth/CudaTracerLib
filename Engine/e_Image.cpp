@@ -27,11 +27,30 @@ e_Image::e_Image(e_KernelFilter &filt, const float crop[4], int xRes, int yRes, 
 	hostPixels = new Pixel[xPixelCount * yPixelCount];
 }
 
-e_Image::~e_Image()
+e_Image::e_Image(e_KernelFilter &filt, int xRes, int yRes, RGBCOL* cudaBuffer)
+	: xResolution(xRes), yResolution(yRes)
 {
-    delete hostPixels;
-	cudaFree(cudaPixels);
-    delete[] filterTable;
+	float crop[4] = {0, 1, 0, 1};
+	filter = filt;
+    memcpy(cropWindow, crop, 4 * sizeof(float));
+	xPixelStart = Ceil2Int(xResolution * cropWindow[0]);
+    xPixelCount = MAX(1, Ceil2Int(xResolution * cropWindow[1]) - xPixelStart);
+    yPixelStart = Ceil2Int(yResolution * cropWindow[2]);
+    yPixelCount = MAX(1, Ceil2Int(yResolution * cropWindow[3]) - yPixelStart);
+	float *ftp = filterTable;
+	float w = filter.As<e_KernelFilterBase>()->xWidth, h = filter.As<e_KernelFilterBase>()->yWidth;
+    for (int y = 0; y < FILTER_TABLE_SIZE; ++y)
+	{
+        float fy = ((float)y + .5f) * h / FILTER_TABLE_SIZE;
+        for (int x = 0; x < FILTER_TABLE_SIZE; ++x)
+		{
+            float fx = ((float)x + .5f) * w / FILTER_TABLE_SIZE;
+            *ftp++ = filter.Evaluate(fx, fy);
+        }
+    }
+	target = cudaBuffer;
+	cudaMalloc(&cudaPixels, sizeof(Pixel) * xPixelCount * yPixelCount);
+	hostPixels = new Pixel[xPixelCount * yPixelCount];
 }
 
 void e_Image::WriteDisplayImage(const char* fileName)
@@ -42,7 +61,7 @@ void e_Image::WriteDisplayImage(const char* fileName)
 	FreeImage_Unload(bitmap);
 }
 
-void e_Image::WriteImage(float splatScale, const char* fileName)
+void e_Image::WriteImage(const char* fileName, float splatScale)
 {
 	cudaMemcpy(hostPixels, cudaPixels, xResolution * yResolution * sizeof(Pixel), cudaMemcpyDeviceToHost);
 	FIBITMAP* bitmap = FreeImage_Allocate(xResolution, yResolution, 96);

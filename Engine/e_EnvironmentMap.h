@@ -1,35 +1,43 @@
 #pragma once
 
 #include "..\Math\vector.h"
-#include "e_Sampler.h"
+#include "e_KernelTexture.h"
 
 struct e_EnvironmentMap
 {
-private:
-	e_Sampler<float3> Map;
+public:
+	e_KernelTexture<float3> Map;
 	bool isSet;
 public:
+
+#ifdef __CUDACC__
 	CUDA_DEVICE e_EnvironmentMap()
 	{
 	}
+#else
+	CUDA_HOST e_EnvironmentMap()
+	{
+		isSet = false;
+	}
+#endif
 
 	static e_EnvironmentMap Identity()
 	{
 		e_EnvironmentMap m;
 		m.isSet = false;
-		m.Map = e_Sampler<float3>(make_float3(0));
+		m.Map = e_KernelTexture<float3>();
 		return m;
 	}
 
 	e_EnvironmentMap(float3& f)
-		: Map(f)
 	{
+		Map.SetData(e_KernelConstantTexture<float3>(f));
 		isSet = true;
 	}
 
 	e_EnvironmentMap(const char* path)
-		: Map(path, true)
 	{
+		Map.SetData(e_KernelImageTexture<float3>(CreateTextureMapping2D(e_KernelUVMapping2D()), path));
 		isSet = true;
 	}
 
@@ -48,6 +56,7 @@ public:
 		float3 n = normalize(r.direction);
 		//float2 t = make_float2(asinf(n.x) * INV_PI + 0.5f, asinf(n.y) * INV_PI + 0.5f);
 		float2 t = make_float2(0.5f + atan2(n.z, n.x) * 0.5f * INV_PI, 0.5f - asin(n.y) * INV_PI);
-		return Map.Sample(t);
+		MapParameters mp(make_float3(0), t, Onb());
+		return Map.Evaluate(mp);
 	}
 };

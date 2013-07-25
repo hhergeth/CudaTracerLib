@@ -302,21 +302,21 @@ float2 TraceResult::lerpUV()
 	return m_pTri->lerpUV(m_fUV);
 }
 
-void TraceResult::GetBSDF(const e_KernelMaterial* a_Mats, e_KernelBSDF* bsdf)
+void TraceResult::GetBSDF(const float3& p, const e_KernelMaterial* a_Mats, e_KernelBSDF* bsdf)
 {
-	m_pTri->GetBSDF(m_fUV, m_pNode->getWorldMatrix(), a_Mats, m_pNode->m_uMaterialOffset, bsdf);
+	m_pTri->GetBSDF(p, m_fUV, m_pNode->getWorldMatrix(), a_Mats, m_pNode->m_uMaterialOffset, bsdf);
 }
 
-e_KernelBSDF TraceResult::GetBSDF(const e_KernelMaterial* a_Mats)
+e_KernelBSDF TraceResult::GetBSDF(const float3& p, const e_KernelMaterial* a_Mats)
 {
 	e_KernelBSDF bs;
-	GetBSDF(a_Mats, &bs);
+	GetBSDF(p, a_Mats, &bs);
 	return bs;
 }
 
-bool TraceResult::GetBSSRDF(const e_KernelMaterial* a_Mats, e_KernelBSSRDF* bssrdf)
+bool TraceResult::GetBSSRDF(const float3& p, const e_KernelMaterial* a_Mats, e_KernelBSSRDF* bssrdf)
 {
-	return m_pTri->GetBSSRDF(m_fUV, m_pNode->getWorldMatrix(), a_Mats, m_pNode->m_uMaterialOffset, bssrdf);
+	return m_pTri->GetBSSRDF(p, m_fUV, m_pNode->getWorldMatrix(), a_Mats, m_pNode->m_uMaterialOffset, bssrdf);
 }
 
 //do not!!! use a method here, the compiler will fuck up the textures.

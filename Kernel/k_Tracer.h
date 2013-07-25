@@ -4,6 +4,7 @@
 #include "..\Engine\e_Camera.h"
 #include <vector>
 #include "..\Base\FrameworkInterop.h"
+#include "..\Engine\e_Image.h"
 
 typedef void (*SliderCreateCallback)(float, float, bool, float*, FW::String);
 
@@ -16,7 +17,7 @@ public:
 	}
 	virtual void InitializeScene(e_DynamicScene* a_Scene, e_Camera* a_Camera) = 0;
 	virtual void Resize(unsigned int x, unsigned int y) = 0;
-	virtual void DoPass(RGBCOL* a_Buf, bool a_NewTrace) = 0;
+	virtual void DoPass(e_Image* I, bool a_NewTrace) = 0;
 	virtual unsigned int getRaysTracedCount() = 0;
 	virtual unsigned int getTimePassed() = 0;
 	virtual unsigned int getPassesDone(){return 1;}
@@ -63,18 +64,18 @@ public:
 		m_pScene = a_Scene;
 		m_pCamera = a_Camera;
 	}
-	virtual void DoPass(RGBCOL* a_Buf, bool a_NewTrace)
+	virtual void DoPass(e_Image* I, bool a_NewTrace)
 	{
 		if(a_NewTrace)
 		{
 			m_fTimeSpentRendering = 0;
 			m_uPassesDone = 0;
-			StartNewTrace(a_Buf);
+			StartNewTrace(I);
 		}
 		//m_uPassesDone++;
 		m_pScene->UpdateInvalidated();
 		cudaEventRecord(start, 0);
-		DoRender(a_Buf);
+		DoRender(I);
 		cudaEventRecord(stop, 0);
 		cudaEventSynchronize(stop);
 		float elapsedTime;
@@ -99,15 +100,9 @@ public:
 		return m_uPassesDone;
 	}
 protected:
-	virtual void DoRender(RGBCOL* a_Buf) = 0;
-	virtual void StartNewTrace(RGBCOL* a_Buf)
-	{
-
-	}
-	float getValuePerSecond(float val, float invScale)
-	{
-		return val / (m_fTimeSpentRendering * invScale);
-	}
+	virtual void DoRender(e_Image* I) = 0;
+	virtual void StartNewTrace(e_Image* I);
+	float getValuePerSecond(float val, float invScale);
 };
 
 class k_RandTracerBase : public k_TracerBase
@@ -122,3 +117,14 @@ public:
 	}
 	AABB GetEyeHitPointBox();
 };
+
+CUDA_FUNC_IN CameraSample nextSample(int x, int y, CudaRNG& rng, bool DoAntialiasing = false, bool DoDOF = false)
+{
+	CameraSample s;
+	s.imageX = x + (DoAntialiasing ? (rng.randomFloat() - 0.5f) : 0.0f);
+	s.imageY = y + (DoAntialiasing ? (rng.randomFloat() - 0.5f) : 0.0f);
+	s.lensU = DoDOF ? rng.randomFloat() : 0;
+	s.lensV = DoDOF ? rng.randomFloat() : 0;
+	s.time = 0;
+	return s;
+}

@@ -12,6 +12,11 @@ struct e_KernelFilterBase
 	{
 
 	}
+
+	CUDA_FUNC_IN e_KernelFilterBase()
+		: xWidth(0), yWidth(0), invXWidth(0), invYWidth(0)
+	{
+	}
 };
 
 #define e_KernelBoxFilter_TYPE 1
@@ -21,6 +26,11 @@ struct e_KernelBoxFilter : public e_KernelFilterBase
 		: e_KernelFilterBase(xw, yw)
 	{
 
+	}
+
+	e_KernelBoxFilter& operator=(const e_KernelBoxFilter& element)
+	{
+		return e_KernelBoxFilter(element.xWidth, element.yWidth);
 	}
 
 	CUDA_FUNC_IN float Evaluate(float x, float y) const
@@ -41,6 +51,11 @@ struct e_KernelGaussianFilter : public e_KernelFilterBase
 		: e_KernelFilterBase(xw, yw), alpha(a), expX(expf(-alpha * xWidth * xWidth)),  expY(expf(-alpha * yWidth * yWidth))
 	{
 
+	}
+
+	e_KernelGaussianFilter& operator=(const e_KernelGaussianFilter& element)
+	{
+		return e_KernelGaussianFilter(element.xWidth, element.yWidth, element.alpha);
 	}
 
 	CUDA_FUNC_IN float Gaussian(float d, float expv) const {
@@ -64,6 +79,11 @@ struct e_KernelMitchellFilter : public e_KernelFilterBase
 		: e_KernelFilterBase(xw, yw), B(b), C(c)
 	{
 
+	}
+
+	e_KernelMitchellFilter& operator=(const e_KernelMitchellFilter& element)
+	{
+		return e_KernelMitchellFilter(element.B, element.C, element.xWidth, element.yWidth);
 	}
 
 	CUDA_FUNC_IN float Mitchell1D(float x) const {
@@ -96,6 +116,11 @@ struct e_KernelLanczosSincFilter : public e_KernelFilterBase
 
 	}
 
+	e_KernelLanczosSincFilter& operator=(const e_KernelLanczosSincFilter& element)
+	{
+		return e_KernelLanczosSincFilter(element.xWidth, element.yWidth, element.tau);
+	}
+
 	CUDA_FUNC_IN float Sinc1D(float x) const {
         x = fabsf(x);
         if (x < 1e-5) return 1.f;
@@ -123,6 +148,11 @@ struct e_KernelTriangleFilter : public e_KernelFilterBase
 
 	}
 
+	e_KernelTriangleFilter& operator=(const e_KernelTriangleFilter& element)
+	{
+		return e_KernelTriangleFilter(element.xWidth, element.yWidth);
+	}
+
 	CUDA_FUNC_IN float Evaluate(float x, float y) const
 	{
 		return MAX(0.f, xWidth - fabsf(x)) * MAX(0.f, yWidth - fabsf(y));
@@ -131,10 +161,12 @@ struct e_KernelTriangleFilter : public e_KernelFilterBase
 	TYPE_FUNC(e_KernelTriangleFilter)
 };
 
+#define FLT_SIZE RND_16(DMAX5(sizeof(e_KernelBoxFilter), sizeof(e_KernelGaussianFilter), sizeof(e_KernelMitchellFilter), sizeof(e_KernelLanczosSincFilter), sizeof(e_KernelTriangleFilter)))
+
 struct e_KernelFilter
 {
 private:
-	unsigned char Data[64];
+	unsigned char Data[FLT_SIZE];
 	unsigned int type;
 #define CALL_TYPE(t,f,r) \
 	case t##_TYPE : \
@@ -160,14 +192,14 @@ public:
 		CALL_FUNC(return, Evaluate(x, y))
 	}
 
-	template<typename T> T* As()
+	template<typename T> CUDA_FUNC_IN T* As()
 	{
 		return (T*)Data;
 	}
 
-	template<typename T> void Set(T& val)
+	template<typename T> void SetData(const T& val)
 	{
-		*(T*)Data = val;
+		memcpy(Data, &val, sizeof(T));
 		type = T::TYPE();
 	}
 };

@@ -11,45 +11,29 @@ struct e_CameraData
 	float apperture;
 	float4x4 m_mViewProj;
 	CUDA_FUNC e_CameraData(){}
-	CUDA_ONLY_FUNC Ray GenRay(int2 pos, int2 size) const
+
+	CUDA_ONLY_FUNC Ray GenRay(CameraSample& sample, int2 size) const
 	{
-		return GenRay(pos.x, pos.y, size.x, size.y);
+		return GenRay(sample, size.x, size.y);
 	}
-	CUDA_ONLY_FUNC Ray GenRay(float x, float y, float w, float h) const
+
+	CUDA_ONLY_FUNC Ray GenRay(CameraSample& sample, float w, float h) const
 	{
-		float4 a = make_float4(2.0f * ((float)x / (float)w) - 1.0f, -(2.0f * ((float)y / (float)h) - 1.0f), 0, 1.0f);
+		float4 a = make_float4(2.0f * (sample.imageX / (float)w) - 1.0f, -(2.0f * (sample.imageY / (float)h) - 1.0f), 0, 1.0f);
+		a = proj * a;
+		a /= a.w;
+		float3 b = normalize(!a);
+		float3 tar = b * dist, p0 = make_float3(sample.lensU,sample.lensV,0) * apperture, d = tar - p0;
+		return Ray(view * p0, normalize(view.TransformNormal(d)));
+	}
+
+	CUDA_FUNC_IN Ray GenRay(int2 _p, int2 size) const
+	{
+		float4 a = make_float4(2.0f * ((float)_p.x / (float)size.x) - 1.0f, -(2.0f * ((float)_p.y / (float)size.y) - 1.0f), 0, 1.0f);
 		a = proj * a;
 		a /= a.w;
 		return Ray(p, normalize(view.TransformNormal(!a)));
 	}
-	template<bool AA> CUDA_ONLY_FUNC Ray GenRay(int2 pos, int2 size, float u, float v) const
-	{
-		return GenRay<AA>(pos.x, pos.y, size.x, size.y, u, v);
-	}
-	template<bool AA> CUDA_ONLY_FUNC Ray GenRay(float x, float y, float w, float h, float u, float v) const
-	{
-		if(AA)
-		{
-			x += 2.0f * u - 1.0f;
-			y += 2.0f * v - 1.0f;
-		}
-		float4 a = make_float4(2.0f * ((float)x / (float)w) - 1.0f, -(2.0f * ((float)y / (float)h) - 1.0f), 0, 1.0f);
-		a = proj * a;
-		a /= a.w;
-		float3 b = normalize(!a);
-		float3 tar = b * dist, p0 = make_float3(u,v,0) * apperture, d = tar - p0;
-		return Ray(view * p0, normalize(view.TransformNormal(d)));
-	}/*
-	CUDA_ONLY_FUNC RayDifferential GenRayDiff(float x, float y, float w, float h, float u, float v) const
-	{
-		float4 a = make_float4(2.0f * ((float)x / (float)w) - 1.0f, -(2.0f * ((float)y / (float)h) - 1.0f), 0, 1.0f);
-		a = proj * a;
-		a /= a.w;
-		float3 b = normalize(!a);
-		float3 tar = b * dist, p0 = make_float3(u,v,0) * apperture, d = tar - p0;
-		float3 o = view * p0, d2 = normalize(view.TransformNormal(d));
-		return RayDifferential(o, d2, o, o, 1, 1);
-	}*/
 };
 
 class e_Camera

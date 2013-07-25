@@ -92,7 +92,7 @@ template<typename HASH> template<bool VOL> CUDA_ONLY_FUNC float3 k_PhotonMap<HAS
 	return L_n;
 }
 
-template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, RGBCOL* a_Target, k_sPpmPixel* a_Pixels, float a_PassIndex, float a_rSurface, float a_rVolume)
+template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, e_Image I, float a_PassIndex, float a_rSurface, float a_rVolume)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x, y = blockIdx.y * blockDim.y + threadIdx.y;
 	CudaRNG rng = g_RNGData();
@@ -100,7 +100,8 @@ template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, RGBCOL* 
 	e_KernelBSDF bsdf;
 	if(x < w && y < h)
 	{
-		Ray ro = g_CameraData.GenRay<false>(x, y, w, h, rng.randomFloat(), rng.randomFloat());
+		CameraSample s = nextSample(x, y, rng);
+		Ray ro = g_CameraData.GenRay(s, w, h);
 
 		struct stackEntry
 		{
@@ -127,7 +128,8 @@ template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, RGBCOL* 
 			r2.Init();
 			if(k_TraceRay<true>(s.r.direction, s.r.origin, &r2))
 			{
-				r2.GetBSDF(g_SceneData.m_sMatData.Data, &bsdf);
+				float3 p = s.r(r2.m_fDist);
+				r2.GetBSDF(p, g_SceneData.m_sMatData.Data, &bsdf);
 
 				if(g_SceneData.m_sVolume.HasVolumes())
 				{
@@ -137,12 +139,11 @@ template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, RGBCOL* 
 					s.fs = s.fs * exp(-g_SceneData.m_sVolume.tau(s.r, tmin, tmax));
 				}
 
-				float3 p = s.r(r2.m_fDist);
 				if(DIRECT)
 					L += s.fs * UniformSampleAllLights(p, bsdf.sys.m_normal, -s.r.direction, &bsdf, rng, 4);
 				L += s.fs * Le(p, bsdf.sys.m_normal, -s.r.direction, r2, g_SceneData);
 				e_KernelBSSRDF bssrdf;
-				if(r2.m_pTri->GetBSSRDF(r2.m_fUV, r2.m_pNode->getWorldMatrix(), g_SceneData.m_sMatData.Data, r2.m_pNode->m_uMaterialOffset, &bssrdf))
+				if(r2.m_pTri->GetBSSRDF(p, r2.m_fUV, r2.m_pNode->getWorldMatrix(), g_SceneData.m_sMatData.Data, r2.m_pNode->m_uMaterialOffset, &bssrdf))
 				{
 					float3 dir = refract(s.r.direction, bsdf.sys.m_normal, 1.0f / bssrdf.e);
 					TraceResult r3;
@@ -178,14 +179,12 @@ template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, RGBCOL* 
 			else if(g_SceneData.m_sEnvMap.CanSample() && s.d == 0)
 					L += s.fs * g_SceneData.m_sEnvMap.Sample(s.r);
 		}
-		a_Pixels[y * w + x].m_vPixelColor += L;
-		RGBCOL c = Float3ToCOLORREF(a_Pixels[y * w + x].m_vPixelColor / a_PassIndex);
-		a_Target[y * w + x] = c;
+		I.AddSample(s, L);
 	}
 	g_RNGData(rng);
 }
 
-void k_sPpmTracer::doEyePass(RGBCOL* a_Buf)
+void k_sPpmTracer::doEyePass(e_Image* I)
 {
 	cudaMemcpyToSymbol(g_Map, &m_sMaps, sizeof(k_PhotonMapCollection));
 	k_INITIALIZE(m_pScene->getKernelSceneData());
@@ -197,15 +196,15 @@ void k_sPpmTracer::doEyePass(RGBCOL* a_Buf)
 		for(int i = 0; i < nx; i++)
 			for(int j = 0; j < ny; j++)
 				if(m_bDirect)
-					k_EyePass<true><<<dim3( q, q, 1), dim3(p, p, 1)>>>(make_int2(pq * i, pq * j), w, h, a_Buf, m_pDevicePixels, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3));
-				else k_EyePass<false><<<dim3( q, q, 1), dim3(p, p, 1)>>>(make_int2(pq * i, pq * j), w, h, a_Buf, m_pDevicePixels, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3));
+					k_EyePass<true><<<dim3( q, q, 1), dim3(p, p, 1)>>>(make_int2(pq * i, pq * j), w, h, *I, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3));
+				else k_EyePass<false><<<dim3( q, q, 1), dim3(p, p, 1)>>>(make_int2(pq * i, pq * j), w, h, *I, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3));
 	}
 	else
 	{
 		const unsigned int p = 16;
 		if(m_bDirect)
-			k_EyePass<true><<<dim3( w / p + 1, h / p + 1, 1), dim3(p, p, 1)>>>(make_int2(0,0), w, h, a_Buf, m_pDevicePixels, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3));
-		else k_EyePass<false><<<dim3( w / p + 1, h / p + 1, 1), dim3(p, p, 1)>>>(make_int2(0,0), w, h, a_Buf, m_pDevicePixels, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3));
+			k_EyePass<true><<<dim3( w / p + 1, h / p + 1, 1), dim3(p, p, 1)>>>(make_int2(0,0), w, h, *I, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3));
+		else k_EyePass<false><<<dim3( w / p + 1, h / p + 1, 1), dim3(p, p, 1)>>>(make_int2(0,0), w, h, *I, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3));
 	}
 }
 
@@ -215,5 +214,5 @@ void k_sPpmTracer::Debug(int2 pixel)
 	k_INITIALIZE(m_pScene->getKernelSceneData());
 	k_STARTPASS(m_pScene, m_pCamera, m_sRngs);
 	const unsigned int p = 16;
-	k_EyePass<true><<<1, 1>>>(pixel, w, h, (RGBCOL*)m_pDevicePixels, m_pDevicePixels, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3));
+	k_EyePass<true><<<1, 1>>>(pixel, w, h, e_Image(e_KernelFilter(), 0, 0, 0), m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3));
 }

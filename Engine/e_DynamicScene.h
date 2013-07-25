@@ -25,7 +25,7 @@ public:
 	e_Stream<e_BVHNodeData>* m_pBVHStream;
 	e_Stream<int>* m_pBVHIndicesStream;
 	e_Stream<e_KernelMaterial>* m_pMaterialBuffer;
-	e_CachedBuffer<e_Texture, e_KernelTexture>* m_pTextureBuffer;
+	e_CachedBuffer<e_FileTexture, e_KernelFileTexture>* m_pTextureBuffer;
 	e_CachedBuffer<e_MIPMap, e_KernelMIPMap>* m_pMIPMapBuffer;
 	e_CachedBuffer<e_Mesh, e_KernelMesh>* m_pMeshBuffer;
 	e_Stream<e_Node>* m_pNodeStream;
@@ -43,7 +43,7 @@ public:
 	void Free();
 	e_StreamReference(e_Node) CreateNode(const char* a_MeshFile);
 	///Do not use this! Just invalidate and update the material
-	e_BufferReference<e_Texture, e_KernelTexture> LoadTexture(const char* file);
+	e_BufferReference<e_FileTexture, e_KernelFileTexture> LoadTexture(const char* file);
 	//use this
 	e_BufferReference<e_MIPMap, e_KernelMIPMap> LoadMIPMap(const char* file);
 	void SetNodeTransform(const float4x4& mat, e_StreamReference(e_Node) n)
@@ -69,7 +69,7 @@ public:
 	void AnimateMesh(e_StreamReference(e_Node) n, float t, unsigned int anim);
 	void UpdateInvalidated();
 	e_KernelDynamicScene getKernelSceneData();
-	void UpdateMaterial(e_StreamReference(e_KernelMaterial) m);
+	//void UpdateMaterial(e_StreamReference(e_KernelMaterial) m);
 	e_StreamReference(e_Node) getNodes()
 	{
 		return m_pNodeStream->UsedElements();
@@ -167,7 +167,7 @@ public:
 	template<typename T> e_StreamReference(e_KernelLight) createLight(T& val)
 	{
 		e_StreamReference(e_KernelLight) r = m_pLightStream->malloc(1);
-		r()->Set(val);
+		r()->SetData(val);
 		return r();
 	}
 	AABB getBox(e_StreamReference(e_Node) n);

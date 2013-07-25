@@ -58,7 +58,7 @@ template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, float3 Le, CudaRNG
 		float3 x = r(r2.m_fDist);
 		e_KernelBSSRDF bssrdf;
 		float3 ac, wi;
-		if(r2.m_pTri->GetBSSRDF(r2.m_fUV, r2.m_pNode->getWorldMatrix(), g_SceneData.m_sMatData.Data, r2.m_pNode->m_uMaterialOffset, &bssrdf))
+		if(r2.m_pTri->GetBSSRDF(x,r2.m_fUV, r2.m_pNode->getWorldMatrix(), g_SceneData.m_sMatData.Data, r2.m_pNode->m_uMaterialOffset, &bssrdf))
 		{
 			inMesh = false;
 			ac = Le;
@@ -92,7 +92,7 @@ template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, float3 Le, CudaRNG
 		}
 		else
 		{
-			r2.GetBSDF(g_SceneData.m_sMatData.Data, &bsdf);
+			r2.GetBSDF(x,g_SceneData.m_sMatData.Data, &bsdf);
 			float3 wo = -r.direction;
 			if((DIRECT && depth > 0) || !DIRECT)
 				if(bsdf.NumComponents(BxDFType(BSDF_REFLECTION | BSDF_TRANSMISSION | BSDF_DIFFUSE )))

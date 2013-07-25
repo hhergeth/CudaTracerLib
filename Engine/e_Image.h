@@ -2,12 +2,6 @@
 
 #include "e_Filter.h"
 
-struct CameraSample
-{
-    float imageX, imageY;
-    float lensU, lensV;
-    float time;
-};
 
 #define FILTER_TABLE_SIZE 16
 
@@ -16,10 +10,15 @@ class e_Image
 public:
     // ImageFilm Public Methods
     e_Image(e_KernelFilter &filt, const float crop[4], int xRes, int yRes, RGBCOL* cudaBuffer);
-    ~e_Image();
+	e_Image(e_KernelFilter &filt, int xRes, int yRes, RGBCOL* cudaBuffer);
+    void Free()
+	{
+	    delete hostPixels;
+		cudaFree(cudaPixels);
+	}
 #ifdef __CUDACC__
     CUDA_ONLY_FUNC void AddSample(const CameraSample &sample, const float3 &L)
-	{
+	{/*
 		float dimageX = sample.imageX - 0.5f;
 		float dimageY = sample.imageY - 0.5f;
 		int x0 = Ceil2Int (dimageX - filter.As<e_KernelFilterBase>()->xWidth);
@@ -52,7 +51,11 @@ public:
                 atomicAdd(&pixel->rgb.z, filterWt * L.z);
                 atomicAdd(&pixel->weightSum, filterWt);
 			}
-		}
+		}*/
+		int x = (int)sample.imageX, y = (int)sample.imageY;
+		Pixel* pixel = cudaPixels + ((y - yPixelStart) * xPixelCount + (x - xPixelStart));
+		pixel->rgb += L;
+		pixel->weightSum += 1;
 	}
     CUDA_ONLY_FUNC void Splat(const CameraSample &sample, const float3 &L)
 	{
@@ -72,6 +75,7 @@ public:
 		unsigned int off = (y - yPixelStart) * xPixelCount + (x - xPixelStart);
 		Pixel* pixel = cudaPixels + off;
 		pixel->rgb = L;
+		pixel->weightSum = 1;
 		pixel->splatRgb = make_float3(0);
 		target[off] = Float3ToCOLORREF(L);
 	}
@@ -92,8 +96,8 @@ public:
 		*yend   = yPixelStart + yPixelCount;
 	}
     void WriteDisplayImage(const char* fileName);
-	void WriteImage(float splatScale, const char* fileName);
-    void UpdateDisplay(int x0, int y0, int x1, int y1, float splatScale);
+	void WriteImage(const char* fileName, float splatScale = 1.0f);
+    void UpdateDisplay(float splatScale = 1.0f);
 	void StartNewRendering();
 	struct Pixel {
         Pixel() {

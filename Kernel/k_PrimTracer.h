@@ -11,5 +11,5 @@ public:
 	virtual void Debug(int2 pixel);
 	virtual void CreateSliders(SliderCreateCallback a_Callback);
 protected:
-	virtual void DoRender(RGBCOL* a_Buf);
+	virtual void DoRender(e_Image* I);
 };

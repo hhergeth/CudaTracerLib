@@ -285,6 +285,8 @@ struct e_SphereVolumeDensity : public e_DensityContainerNumeric<e_SphereDensity>
 	TYPE_FUNC(e_SphereVolumeDensity)
 };
 
+#define VOL_SIZE RND_16(DMAX2(sizeof(e_HomogeneousVolumeDensity), sizeof(e_SphereVolumeDensity)))
+
 struct e_VolumeRegion
 {
 #define CALL_TYPE(t,f,r) \
@@ -298,7 +300,7 @@ struct e_VolumeRegion
 		CALL_TYPE(e_SphereVolumeDensity, f, r) \
 	}
 private:
-	unsigned char Data[256];
+	unsigned char Data[VOL_SIZE];
 	unsigned int type;
 public:
 	CUDA_FUNC_IN e_VolumeRegion()
@@ -306,9 +308,9 @@ public:
 		type = 0;
 	}
 
-	template<typename T> void Set(T& val)
+	template<typename T> void SetData(const T& val)
 	{
-		*(T*)Data = val;
+		memcpy(Data, &val, sizeof(T));
 		type = T::TYPE();
 	}
 

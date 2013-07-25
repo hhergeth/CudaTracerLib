@@ -144,7 +144,7 @@ void e_AnimatedMesh::CompileToBinary(char* a_InputFile, c_StringArray& a_Anims, 
 	{
 		e_KernelMaterial mat;
 		
-		mat.SetData(e_KernelMaterial_Matte(e_Sampler<float3>("hellknight.tga", 1), e_Sampler<float>(0.0f)));
+		mat.SetData(e_KernelMaterial_Matte(CreateTexture("hellknight.tga", float3()), CreateTexture(0, 0.0f)));
 		//mat.NormalMap = e_Sampler<float3>("n_hellknight.tga", 1);
 		matData.push_back(mat);
 

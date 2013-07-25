@@ -111,18 +111,6 @@ void e_Mesh::Free(e_Stream<e_TriIntersectorData>& a_Stream0, e_Stream<e_Triangle
 	a_Stream4.dealloc(m_sMatInfo);
 }
 
-e_Sampler<float3> load(const char* p, float3& c)
-{
-	if(p && strlen(p))
-	{
-		char* c = new char[strlen(p) + 1];
-		ZeroMemory(c, strlen(p) + 1);
-		memcpy(c, p, strlen(p));
-		return e_Sampler<float3>(c, 1);
-	}
-	else return e_Sampler<float3>(c);
-}
-
 void e_Mesh::CompileObjToBinary(const char* a_InputFile, OutputStream& a_Out)
 {
 	FW::Mesh<FW::VertexPNT>* MB = new FW::Mesh<FW::VertexPNT>(*FW::importMesh(FW::String(a_InputFile)));
@@ -152,19 +140,20 @@ void e_Mesh::CompileObjToBinary(const char* a_InputFile, OutputStream& a_Out)
 		float f = 0.0f;
 		if(M.IlluminationModel == 2)
 		{
-			mat.SetData(e_KernelMaterial_Matte(load(M.textures[0].getID().getPtr(), !M.diffuse), e_Sampler<float>(f)));//3 is bump
+			e_KernelMaterial_Matte mt(CreateTexture(M.textures[0].getID().getPtr(), !M.diffuse), CreateTexture(0,f));
+			mat.SetData(mt);//3 is bump
 		}
 		else if(M.IlluminationModel == 5)
 		{
-			mat.SetData(e_KernelMaterial_Mirror(e_Sampler<float3>(M.specular)));
+			mat.SetData(e_KernelMaterial_Mirror(CreateTexture<float3>(0, M.specular)));
 		}
 		else if(M.IlluminationModel == 7)
 		{
-			mat.SetData(e_KernelMaterial_Glass(e_Sampler<float3>(M.specular), e_Sampler<float3>(M.Tf), e_Sampler<float>(M.IndexOfRefraction)));
+			mat.SetData(e_KernelMaterial_Glass(CreateTexture<float3>(0, M.specular), CreateTexture<float3>(0, M.Tf), CreateTexture(0,M.IndexOfRefraction)));
 		}
 		else if(M.IlluminationModel == 9)
 		{
-			mat.SetData(e_KernelMaterial_Glass(e_Sampler<float3>(make_float3(0)), e_Sampler<float3>(M.Tf), e_Sampler<float>(M.IndexOfRefraction)));
+			mat.SetData(e_KernelMaterial_Glass(CreateTexture(0, make_float3(0)), CreateTexture<float3>(0, M.Tf), CreateTexture(0,M.IndexOfRefraction)));
 		}
 		if(length(M.emission) != 0)
 		{
@@ -180,7 +169,7 @@ void e_Mesh::CompileObjToBinary(const char* a_InputFile, OutputStream& a_Out)
 			memcpy(c, M.textures[3].getID().getPtr(), M.textures[3].getID().getLength());
 			OutputDebugString(c);
 			OutputDebugString(M.textures[3].getID().getPtr());
-			mat.HeightMap = e_Sampler<float3>(c, 1);
+			mat.SetHeightMap(CreateTexture(c, 0.0f));
 			mat.HeightScale = 0.5f;
 		}
 		/*

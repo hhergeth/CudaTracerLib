@@ -13,7 +13,7 @@
     <Filter Include="Engine\SceneBuilder">
       <UniqueIdentifier>{829f18e1-23ee-4558-9061-92630861811a}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Kernel\Math">
+    <Filter Include="Math">
       <UniqueIdentifier>{bcc32243-a9df-44b0-a940-7d3f174d5601}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -72,9 +72,6 @@
     <ClInclude Include="Engine\e_TerrainHeader.h">
       <Filter>Engine</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\e_Texture.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
     <ClInclude Include="Engine\SceneBuilder\BVH.hpp">
       <Filter>Engine\SceneBuilder</Filter>
     </ClInclude>
@@ -115,22 +112,22 @@
       <Filter>Kernel</Filter>
     </ClInclude>
     <ClInclude Include="Math\AABB.h">
-      <Filter>Kernel\Math</Filter>
+      <Filter>Math</Filter>
     </ClInclude>
     <ClInclude Include="Math\cutil_math.h">
-      <Filter>Kernel\Math</Filter>
+      <Filter>Math</Filter>
     </ClInclude>
     <ClInclude Include="Math\half.h">
-      <Filter>Kernel\Math</Filter>
+      <Filter>Math</Filter>
     </ClInclude>
     <ClInclude Include="Math\Int24.h">
-      <Filter>Kernel\Math</Filter>
+      <Filter>Math</Filter>
     </ClInclude>
     <ClInclude Include="Math\Ray.h">
-      <Filter>Kernel\Math</Filter>
+      <Filter>Math</Filter>
     </ClInclude>
     <ClInclude Include="Math\vector.h">
-      <Filter>Kernel\Math</Filter>
+      <Filter>Math</Filter>
     </ClInclude>
     <ClInclude Include="Defines.h" />
     <ClInclude Include="Renderer.h" />
@@ -139,13 +136,10 @@
       <Filter>Engine</Filter>
     </ClInclude>
     <ClInclude Include="Math\Montecarlo.h">
-      <Filter>Kernel\Math</Filter>
+      <Filter>Math</Filter>
     </ClInclude>
     <ClInclude Include="StdAfx.h" />
     <ClInclude Include="Engine\e_KernelMaterial.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_Sampler.h">
       <Filter>Engine</Filter>
     </ClInclude>
     <ClInclude Include="Kernel\k_TraceHelper.h">
@@ -196,6 +190,18 @@
     <ClInclude Include="Engine\e_Filter.h">
       <Filter>Engine</Filter>
     </ClInclude>
+    <ClInclude Include="Engine\e_KernelMapping.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_FileTexture.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_KernelTexture.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_KernelDynamicScene.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\e_AnimatedMesh.cpp">
@@ -217,9 +223,6 @@
       <Filter>Engine</Filter>
     </ClCompile>
     <ClCompile Include="Engine\e_Terrain.cpp">
-      <Filter>Engine</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\e_Texture.cpp">
       <Filter>Engine</Filter>
     </ClCompile>
     <ClCompile Include="Engine\SceneBuilder\BVH.cpp">
@@ -258,6 +261,9 @@
       <Filter>Base</Filter>
     </ClCompile>
     <ClCompile Include="Engine\e_Image.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\e_FileTexture.cpp">
       <Filter>Engine</Filter>
     </ClCompile>
   </ItemGroup>

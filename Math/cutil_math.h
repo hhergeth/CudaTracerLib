@@ -46,6 +46,18 @@ template<typename T> CUDA_FUNC_IN T MAX(T q0, T q1, T q2, T q3)
 	return MAX(MAX(q0, q1, q2), q3);
 }
 
+#define DMAX2(A, B) ((A) > (B) ? (A) : (B))
+#define DMAX3(A, B, C) DMAX2(DMAX2(A, B), C)
+#define DMAX4(A, B, C, D) DMAX2(DMAX3(A, B, C), D)
+#define DMAX5(A, B, C, D, E) DMAX2(DMAX4(A, B, C, D), E)
+#define DMAX6(A, B, C, D, E, F) DMAX2(DMAX5(A, B, C, D, E), F)
+#define DMAX7(A, B, C, D, E, F, G) DMAX2(DMAX6(A, B, C, D, E, F), G)
+#define DMAX8(A, B, C, D, E, F, G, H) DMAX2(DMAX7(A, B, C, D, E, F, G), H)
+#define DMAX9(A, B, C, D, E, F, G, H, I) DMAX2(DMAX8(A, B, C, D, E, F, G, H), I)
+
+#define RND_UP(VAL, MOD) (VAL + (((VAL) % (MOD)) != 0 ? ((MOD) - ((VAL) % (MOD))) : (0)))
+#define RND_16(VAL) RND_UP(VAL, 16)
+
 #ifndef __popc
  CUDA_FUNC_IN int __popc(unsigned int u)
  {
@@ -1018,5 +1030,12 @@ CUDA_FUNC_IN float3 YxyToXYZ(float3& c)
 	r.z = c.x * (1.0f - c.y - c.z) / c.z;
 	return r;
 }
+
+struct CameraSample
+{
+    float imageX, imageY;
+    float lensU, lensV;
+    float time;
+};
 
 #endif

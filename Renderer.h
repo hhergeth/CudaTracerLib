@@ -7,7 +7,6 @@
 #include "Kernel\k_PrimTracer.h"
 #include "Kernel\k_PathTracer.h"
 #include "Kernel\k_sPpmTracer.h"
-#include "Kernel\k_IrradianceCache.h"
 
 inline void line(float3 a, float3 b, float4x4& vp, FW::GLContext* O, float3 col)
 {
@@ -37,7 +36,7 @@ void plotBox(AABB& box, float4x4& vp, FW::GLContext* O, float3 col)
 	B(4,5,6,7)
 	B(0,4,5,1)
 	B(2,6,7,3)
-
+#undef A
 #undef B
 }
 
@@ -81,9 +80,8 @@ public:
 	Renderer(bool stdTracers = true)
 	{
 		if(stdTracers)
-			setTracers(new k_PrimTracer(), new k_sPpmTracer());
-			//setTracers(new k_PrimTracer(), new k_PathTracer());
-			//setTracers(new k_PrimTracer(), new k_IrradianceCache());
+			//setTracers(new k_PrimTracer(), new k_sPpmTracer());
+			setTracers(new k_PrimTracer(), new k_PathTracer());
 		else setTracers(0, 0);
 		oldMove0 = oldMove1 = false;
 		m_uState = 1;
@@ -120,19 +118,19 @@ public:
 		m_uState = m_uState == 1 ? 2 : 1;
 		oldMove0 = oldMove1 = true;
 	}
-	void Render(FW::GLContext* gl, e_DynamicScene* S, e_Camera* C, FW::Image* I, bool a_DrawSceneBvh, bool a_DrawObjectBvhs, e_StreamReference(e_Node) N)
+	void Render(FW::GLContext* gl, e_DynamicScene* S, e_Camera* C, e_Image* I, FW::Image* I2, bool a_DrawSceneBvh, bool a_DrawObjectBvhs, e_StreamReference(e_Node) N)
 	{
 		m_sTimer.StartTimer();
 		bool& b = m_uState == 1 ? oldMove0 : oldMove1;
 		bool moved = C->Update() || b;
 		b = false;
-		getCurrent()->DoPass((RGBCOL*)I->getBuffer().getMutableCudaPtr(), moved);
+		getCurrent()->DoPass(I, moved);
 
 		FW_ASSERT(gl);
 		FW::Mat4f oldXform = gl->setVGXform(FW::Mat4f());
 		glPushAttrib(GL_ENABLE_BIT);
 		glDisable(GL_DEPTH_TEST);
-		gl->drawImage(*I, FW::Vec2f(0.0f), 0.5f, false);
+		gl->drawImage(*I2, FW::Vec2f(0.0f), 0.5f, false);
 		gl->setVGXform(oldXform);
 		glPopAttrib();
 		
@@ -171,14 +169,14 @@ public:
 		}
 		m_sTimer.EndTimer();
 	}
-	void Render(e_DynamicScene* S, e_Camera* C, FW::Image* I)
+	void Render(e_DynamicScene* S, e_Camera* C, e_Image* I)
 	{
 		bool& b = m_uState == 1 ? oldMove0 : oldMove1;
 		bool moved = C->Update() || b;
 		b = false;
 		//k_Tracer* c = !i ? m_pTracer_0 : m_pTracer_1;
 		k_Tracer* c = getCurrent();
-		c->DoPass((RGBCOL*)I->getBuffer().getMutableCudaPtr(), moved);
+		c->DoPass(I, moved);
 	}
 	k_Tracer* getCurrent()
 	{

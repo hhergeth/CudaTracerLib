@@ -64,11 +64,6 @@ enum k_StoreResult
 	Full = 3,
 };
 
-struct k_sPpmPixel
-{
-	float3 m_vPixelColor;
-};
-
 template<typename HASH> struct k_PhotonMap
 {
 	k_pPpmPhoton* m_pDevicePhotons;
@@ -193,7 +188,6 @@ class k_sPpmTracer : public k_RandTracerBase
 {
 private:
 	k_PhotonMapCollection m_sMaps;
-	k_sPpmPixel* m_pDevicePixels;
 	bool m_bDirect;
 
 	float m_fInitialRadius;
@@ -209,26 +203,22 @@ public:
 	k_sPpmTracer();
 	virtual ~k_sPpmTracer()
 	{
-		cudaFree(m_pDevicePixels);
 		m_sMaps.Free();
 	}
 	virtual void Resize(unsigned int _w, unsigned int _h)
 	{
 		k_TracerBase::Resize(_w, _h);
-		if(m_pDevicePixels)
-			cudaFree(m_pDevicePixels);
-		cudaMalloc(&m_pDevicePixels, w * h * sizeof(k_sPpmPixel));
 	}
 	virtual void Debug(int2 pixel);
 	virtual void PrintStatus(std::vector<FW::String>& a_Buf);
 	virtual void CreateSliders(SliderCreateCallback a_Callback);
 protected:
-	virtual void DoRender(RGBCOL* a_Buf);
-	virtual void StartNewTrace(RGBCOL* a_Buf);
+	virtual void DoRender(e_Image* I);
+	virtual void StartNewTrace(e_Image* I);
 private:
-	void initNewPass(RGBCOL* a_Buf);
+	void initNewPass(e_Image* I);
 	void doPhotonPass();
-	void doEyePass(RGBCOL* a_Buf);
+	void doEyePass(e_Image* I);
 	void updateBuffer()
 	{
 		unsigned int N = unsigned int(m_uNewPhotonsPerRun * 1000000.0f);

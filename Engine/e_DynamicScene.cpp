@@ -13,15 +13,28 @@ struct textureLoader
 	{
 		S = A;
 	}
-	e_BufferReference<e_Texture, e_KernelTexture> operator()(char* file)
+	e_BufferReference<e_FileTexture, e_KernelFileTexture> operator()(char* file)
 	{
 		return S->LoadTexture(file);
 	};
 };
 
+struct matUpdater
+{
+	e_DynamicScene* S;
+	matUpdater(e_DynamicScene* A)
+	{
+		S = A;
+	}
+	void operator()(e_StreamReference(e_KernelMaterial) m)
+	{
+		m->LoadTextures(textureLoader(S));
+	}
+};
+
 e_SceneInitData e_SceneInitData::CreateFor_S_SanMiguel(unsigned int a_SceneNodes, unsigned int a_Lights)
 {
-	e_SceneInitData r = CreateForSpecificMesh(2487716 + 100, 2701833 + 100, 2586998 + 100, 12905498 + 100, 1024, a_Lights, a_SceneNodes);
+	e_SceneInitData r = CreateForSpecificMesh(2487716 + 100, 2701833 + 100, 2586998 + 100, 12905498 + 100, 128, a_Lights, a_SceneNodes);
 	//return CreateForSpecificMesh(10000, 10000, 10000, 15000, 255, a_Lights);
 	//return CreateForSpecificMesh(7880512, 9359209, 2341126, 28077626, 255, a_Lights);
 	r.m_uSizeAnimStream = 16 * 1024 * 1024;
@@ -56,7 +69,7 @@ e_DynamicScene::e_DynamicScene(e_SceneInitData a_Data)
 	m_pMaterialBuffer = new e_Stream<e_KernelMaterial>(a_Data.m_uNumMaterials);
 	m_pMeshBuffer = new e_CachedBuffer<e_Mesh, e_KernelMesh>(a_Data.m_uNumNodes, sizeof(e_AnimatedMesh));
 	m_pNodeStream = new e_Stream<e_Node>(a_Data.m_uNumNodes);
-	m_pTextureBuffer = new e_CachedBuffer<e_Texture, e_KernelTexture>(a_Data.m_uNumTextures);
+	m_pTextureBuffer = new e_CachedBuffer<e_FileTexture, e_KernelFileTexture>(a_Data.m_uNumTextures);
 	m_pMIPMapBuffer = new e_CachedBuffer<e_MIPMap, e_KernelMIPMap>(a_Data.m_uNumTextures);
 	m_pLightStream = new e_Stream<e_KernelLight>(a_Data.m_uNumLights);
 	m_pDist2DStream = new e_Stream<Distribution2D<4096, 4096>>(2);
@@ -94,13 +107,13 @@ e_DynamicScene::~e_DynamicScene()
 {
 	Free();
 }
-
+/*
 void e_DynamicScene::UpdateMaterial(e_StreamReference(e_KernelMaterial) m)
 {
 	for(int i = 0; i < m.getLength(); i++)
 		m(i)->LoadTextures(textureLoader(this));
 	m.Invalidate();
-}
+}*/
 
 void createDirectoryRecursively(const std::string &directory)
 {
@@ -223,8 +236,7 @@ e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_MeshFile2)
 			new(M(0)) e_AnimatedMesh(I, m_pTriIntStream, m_pTriDataStream, m_pBVHStream, m_pBVHIndicesStream, m_pMaterialBuffer, m_pAnimStream);
 		I.Close();
 		m_pMeshBuffer->Invalidate(M);
-		e_StreamReference(e_KernelMaterial) mats = M(0)->m_sMatInfo;
-		UpdateMaterial(mats);
+		M->m_sMatInfo.Invalidate();
 	}
 	else if(hasEnding(strA, std::string(".md5mesh")))
 	{
@@ -257,11 +269,11 @@ FW::String compileFile2(FW::String& f)
 	if(fileExists(b.getPtr()) && FileSize(b.getPtr()) > 0)
 		return b;
 	OutputStream a_Out(b.getPtr());
-	e_Texture::CompileToBinary(f.getPtr(), a_Out);
+	e_FileTexture::CompileToBinary(f.getPtr(), a_Out);
 	a_Out.Close();
 	return b;
 }
-e_BufferReference<e_Texture, e_KernelTexture> e_DynamicScene::LoadTexture(const char* file)
+e_BufferReference<e_FileTexture, e_KernelFileTexture> e_DynamicScene::LoadTexture(const char* file)
 {
 	char* a_File = (char*)malloc(1024);
 	ZeroMemory(a_File, 1024);
@@ -278,12 +290,12 @@ e_BufferReference<e_Texture, e_KernelTexture> e_DynamicScene::LoadTexture(const 
 	if(a_File[a-1] == '\n')
 		a_File[a-1] = 0;
 	bool load;
-	e_BufferReference<e_Texture, e_KernelTexture> T = m_pTextureBuffer->LoadCached(a_File, &load);
+	e_BufferReference<e_FileTexture, e_KernelFileTexture> T = m_pTextureBuffer->LoadCached(a_File, &load);
 	if(load)
 	{
 		FW::String A = compileFile2(FW::String(a_File));
 		InputStream I(A.getPtr());
-		new(T) e_Texture(I);
+		new(T) e_FileTexture(I);
 		I.Close();
 		T->CreateKernelTexture();
 		T.Invalidate();
@@ -341,7 +353,7 @@ void e_DynamicScene::UpdateInvalidated()
 	m_pTriDataStream->UpdateInvalidated();
 	m_pBVHStream->UpdateInvalidated();
 	m_pBVHIndicesStream->UpdateInvalidated();
-	m_pMaterialBuffer->UpdateInvalidated();
+	m_pMaterialBuffer->UpdateInvalidatedCB(matUpdater(this));
 	m_pTextureBuffer->UpdateInvalidated();
 	m_pMeshBuffer->UpdateInvalidated();
 	m_pAnimStream->UpdateInvalidated();
@@ -418,7 +430,7 @@ e_StreamReference(e_KernelLight) e_DynamicScene::createLight(e_StreamReference(e
 	if(*a != -1)
 	{
 		e_StreamReference(e_KernelLight) c = m_pLightStream->operator()(Node->m_uLightIndices[*a]);
-		c->Set(e_DiffuseLight(L, s));
+		c->SetData(e_DiffuseLight(L, s));
 		c.Invalidate();
 		return c;
 	}
@@ -430,7 +442,7 @@ e_StreamReference(e_KernelLight) e_DynamicScene::createLight(e_StreamReference(e
 		*a = b;
 		e_StreamReference(e_KernelLight) c = m_pLightStream->malloc(1);
 		Node->m_uLightIndices[b] = c.getIndex();
-		c->Set(e_DiffuseLight(L, s));
+		c->SetData(e_DiffuseLight(L, s));
 		return c;
 	}
 }
@@ -531,13 +543,13 @@ e_StreamReference(e_KernelMaterial) e_DynamicScene::getMat(e_StreamReference(e_N
 
 e_StreamReference(e_KernelLight) e_DynamicScene::setEnvironementMap(const float3& power, const char* file)
 {
-	e_BufferReference<e_MIPMap, e_KernelMIPMap> m = LoadMIPMap(file);
-	e_BufferReference<Distribution2D<4096, 4096>, Distribution2D<4096, 4096>> d = getDistribution2D();
-	int s = sizeof(e_InfiniteLight);
+	//e_BufferReference<e_MIPMap, e_KernelMIPMap> m = LoadMIPMap(file);
+	//e_BufferReference<Distribution2D<4096, 4096>, Distribution2D<4096, 4096>> d = getDistribution2D();
+	//int s = sizeof(e_InfiniteLight);
 	
-	e_InfiniteLight l = e_InfiniteLight(power, d, m);
-	e_StreamReference(e_KernelLight) r = createLight(l);
+	//e_InfiniteLight l = e_InfiniteLight(power, d, m);
+	//e_StreamReference(e_KernelLight) r = createLight(l);
 	m_sEnvMap = e_EnvironmentMap((char*)file);
 	m_sEnvMap.LoadTextures(textureLoader(this));
-	return r;
+	return e_StreamReference(e_KernelLight)(m_pLightStream, 0, 0);
 }

@@ -82,30 +82,32 @@ public:
 		float u = bCoords.y, v = 1.0f - u - bCoords.x;
 		return a + u * (b - a) + v * (c - a);
 	}
-	CUDA_FUNC_IN void GetBSDF(const float2& baryCoords, const float4x4& localToWorld, const e_KernelMaterial* a_Mats, const unsigned int off, e_KernelBSDF* bsdf) const 
+	CUDA_FUNC_IN void GetBSDF(const float3& p, const float2& baryCoords, const float4x4& localToWorld, const e_KernelMaterial* a_Mats, const unsigned int off, e_KernelBSDF* bsdf) const 
 	{
 		float3 ng;
 		Onb sys = lerpOnb(baryCoords, localToWorld, &ng);
 		float2 uv = lerpUV(baryCoords);
+		MapParameters mp(p, uv, sys);
 
 		float3 nor;
-		if(a_Mats[getMatIndex(off)].SampleNormalMap(uv, &nor))
+		if(a_Mats[getMatIndex(off)].SampleNormalMap(mp, &nor))
 			sys.RecalculateFromNormal(normalize(sys.localToworld(nor)));
 
 		*bsdf = e_KernelBSDF(sys, ng);
-		a_Mats[getMatIndex(off)].GetBSDF(uv, bsdf);
+		a_Mats[getMatIndex(off)].GetBSDF(mp, bsdf);
 	}
-	CUDA_FUNC_IN bool GetBSSRDF(const float2& baryCoords, const float4x4& localToWorld, const e_KernelMaterial* a_Mats, const unsigned int off, e_KernelBSSRDF* bssrdf) const 
+	CUDA_FUNC_IN bool GetBSSRDF(const float3& p, const float2& baryCoords, const float4x4& localToWorld, const e_KernelMaterial* a_Mats, const unsigned int off, e_KernelBSSRDF* bssrdf) const 
 	{
 		float3 ng;
 		Onb sys = lerpOnb(baryCoords, localToWorld, &ng);
 		float2 uv = lerpUV(baryCoords);
+		MapParameters mp(p, uv, sys);
 
 		float3 nor;
-		if(a_Mats[getMatIndex(off)].SampleNormalMap(uv, &nor))
+		if(a_Mats[getMatIndex(off)].SampleNormalMap(mp, &nor))
 			sys.RecalculateFromNormal(normalize(sys.localToworld(nor)));
 
-		return a_Mats[getMatIndex(off)].GetBSSRDF(uv, bssrdf);	
+		return a_Mats[getMatIndex(off)].GetBSSRDF(mp, bssrdf);	
 	}
 };
 #else

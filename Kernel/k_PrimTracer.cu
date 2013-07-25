@@ -4,6 +4,7 @@
 
 CUDA_ONLY_FUNC float3 trace(Ray& r, CudaRNG& rng)
 {
+	MapParameters pm(float3(), make_float2(0.5f + atan2(r.direction.z, r.direction.x) * 0.5f * INV_PI, 0.5f - asin(r.direction.y) * INV_PI), Onb());
 	TraceResult r2;
 	r2.Init();
 	float3 c = make_float3(1);
@@ -14,9 +15,9 @@ CUDA_ONLY_FUNC float3 trace(Ray& r, CudaRNG& rng)
 		if(g_SceneData.m_sVolume.HasVolumes())
 			c = c * exp(-g_SceneData.m_sVolume.tau(r, 0, r2.m_fDist));
 		float3 wi;
-		float pdf;
-		r2.GetBSDF(g_SceneData.m_sMatData.Data, &bsdf);
-		//*((float3*)&bsdf.sys.m_tangent) = cross(bsdf.sys.m_binormal, bsdf.sys.m_normal);
+		float pdf;/*
+		r2.GetBSDF(r(r2.m_fDist), g_SceneData.m_sMatData.Data, &bsdf);
+		//((float3*)&bsdf.sys.m_tangent) = cross(bsdf.sys.m_binormal, bsdf.sys.m_normal);
 		//return make_float3(dot(-r.direction, bsdf.sys.m_normal));
 		BxDFType sampledType;
 		float3 f = bsdf.Sample_f(-r.direction, &wi, BSDFSample(rng), &pdf, BSDF_ALL, &sampledType);
@@ -26,7 +27,7 @@ CUDA_ONLY_FUNC float3 trace(Ray& r, CudaRNG& rng)
 			break;
 		r.origin = r(r2.m_fDist);
 		r.direction = wi;
-		r2.Init();
+		r2.Init();*/
 	}
 	if(r2.hasHit())
 	{
@@ -34,11 +35,12 @@ CUDA_ONLY_FUNC float3 trace(Ray& r, CudaRNG& rng)
 	}
 	else if(g_SceneData.m_sEnvMap.CanSample())
 		c = c * g_SceneData.m_sEnvMap.Sample(r);
+		//c = g_SceneData.m_sEnvMap.Map.Evaluate(pm);
 	else c = make_float3(0);
 	return c;
 }
 
-__global__ void primaryKernel(long long width, long long height, RGBCOL* a_Data)
+__global__ void primaryKernel(long long width, long long height, e_Image I)
 {
 	CudaRNG rng = g_RNGData();
 	int rayidx;
@@ -66,20 +68,18 @@ __global__ void primaryKernel(long long width, long long height, RGBCOL* a_Data)
 		unsigned int x = rayidx % width, y = rayidx / width;
 		
 		float3 c = make_float3(0);
-		float N = 1;
-		for(float f = 0; f < N; f++)
+		float N2 = 1;
+		for(float f = 0; f < N2; f++)
 		{
-			Ray r = g_CameraData.GenRay<false>(x, y, width, height, rng.randomFloat(), rng.randomFloat());
+			CameraSample s = nextSample(x, y, rng);
+			Ray r = g_CameraData.GenRay(s, width, height);
 			c += trace(r, rng);
 		}
-		c /= N;
+		I.SetSampleDirect(nextSample(x, y, rng), c / N2);
 		
 		//Ray r = g_CameraData.GenRay(x, y, width, height, rng.randomFloat(), rng.randomFloat());
 		//TraceResult r2 = k_TraceRay(r);
 		//float3 c = make_float3(r2.m_fDist/length(g_SceneData.m_sBox.Size())*2.0f);
-
-		unsigned int cl2 = toABGR(c);
-		((unsigned int*)a_Data)[y * width + x] = cl2;
 	}
 	while(true);
 	g_RNGData(rng);
@@ -87,7 +87,7 @@ __global__ void primaryKernel(long long width, long long height, RGBCOL* a_Data)
 
 __global__ void debugPixe2l(unsigned int width, unsigned int height, int2 p)
 {
-	Ray r = g_CameraData.GenRay(p.x, p.y, width, height);
+	Ray r = g_CameraData.GenRay(p, make_int2(width, height));
 	//dir = make_float3(-0.98181188f, 0.18984018f, -0.0024534566f);
 	//ori = make_float3(68790.375f, -12297.199f, 57510.383f);
 	//ori += make_float3(g_SceneData.m_sTerrain.m_sMin.x, 0, g_SceneData.m_sTerrain.m_sMin.z);
@@ -95,7 +95,7 @@ __global__ void debugPixe2l(unsigned int width, unsigned int height, int2 p)
 }
 
 static bool init = false;
-void k_PrimTracer::DoRender(RGBCOL* a_Buf)
+void k_PrimTracer::DoRender(e_Image* I)
 {
 	if(!init)
 	{
@@ -105,10 +105,11 @@ void k_PrimTracer::DoRender(RGBCOL* a_Buf)
 	m_sRngs.m_uOffset++;
 	k_INITIALIZE(m_pScene->getKernelSceneData());
 	k_STARTPASS(m_pScene, m_pCamera, m_sRngs);
-	primaryKernel<<< 180, dim3(32, MaxBlockHeight, 1)>>>(w, h, a_Buf);
+	primaryKernel<<< 180, dim3(32, MaxBlockHeight, 1)>>>(w, h, *I);
 	cudaError_t r = cudaThreadSynchronize();
 	m_uRaysTraced = w * h;
 	m_uPassesDone = 1;
+	I->UpdateDisplay();
 }
 
 void k_PrimTracer::Debug(int2 pixel)
@@ -122,5 +123,5 @@ void k_PrimTracer::Debug(int2 pixel)
 
 void k_PrimTracer::CreateSliders(SliderCreateCallback a_Callback)
 {
-
+	
 }

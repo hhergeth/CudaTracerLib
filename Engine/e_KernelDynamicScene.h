@@ -20,7 +20,7 @@ struct e_KernelDynamicScene
 	e_KernelBuffer<e_BVHNodeData> m_sBVHNodeData;
 	e_KernelBuffer<int> m_sBVHIndexData;
 	e_KernelBuffer<e_KernelMaterial> m_sMatData;
-	e_KernelBuffer<e_KernelTexture> m_sTexData;
+	e_KernelBuffer<e_KernelFileTexture> m_sTexData;
 	e_KernelBuffer<e_KernelMesh> m_sMeshData;
 	e_KernelBuffer<e_Node> m_sNodeData;
 	e_KernelBuffer<e_KernelLight> m_sLightData;
