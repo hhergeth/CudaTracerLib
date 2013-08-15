@@ -29,6 +29,7 @@ CUDA_ALIGN(16) __constant__ e_KernelDynamicScene g_SceneData;
 CUDA_ALIGN(16) __device__ unsigned int g_NextRayCounter;
 CUDA_ALIGN(16) __constant__ e_CameraData g_CameraData;
 CUDA_ALIGN(16) __constant__ k_TracerRNGBuffer g_RNGData;
+CUDA_ALIGN(16) __constant__ e_Image g_Image;
 
 template<bool USE_ALPHA> inline __device__ bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResult* a_Result, const e_Node* N)
 {
@@ -146,6 +147,12 @@ template<bool USE_ALPHA> inline __device__ bool k_TraceRayNode(const float3& dir
 							unsigned int ti = tex1Dfetch(t_triIndices, triAddr + mesh.m_uBVHIndicesOffset);
 							e_TriangleData* tri = g_SceneData.m_sTriData.Data + ti + mesh.m_uTriangleOffset;
 							int q = 1;
+							if(USE_ALPHA)
+							{
+								e_KernelMaterial* mat = g_SceneData.m_sMatData.Data + tri->getMatIndex(N->m_uMaterialOffset);
+								float a = mat->SampleAlphaMap(MapParameters(make_float3(0), tri->lerpUV(make_float2(u,v)), Onb()));
+								q = a >= mat->m_fAlphaThreshold;
+							}
 							if(q)
 							{
 								a_Result->m_pNode = N;
@@ -258,33 +265,12 @@ template<bool USE_ALPHA> inline __device__ bool k_TraceRay(const float3& dir, co
 }
 #endif
 
-CUDA_ONLY_FUNC TraceResult k_TraceRay(const Ray& r)
+template<bool USE_ALPHA> CUDA_ONLY_FUNC TraceResult k_TraceRay(const Ray& r)
 {
 	TraceResult r2;
 	r2.Init();
-	k_TraceRay<false>(r.direction, r.origin, &r2);
+	k_TraceRay<USE_ALPHA>(r.direction, r.origin, &r2);
 	return r2;
-}
-
-CUDA_FUNC_IN float3 Le(const float3& p, const float3& n, const float3& w, TraceResult& r2, e_KernelDynamicScene& scene) 
-{
-	unsigned int i = scene.m_sMatData[r2.m_pTri->getMatIndex(r2.m_pNode->m_uMaterialOffset)].NodeLightIndex;
-	if(i == -1)
-		return make_float3(0);
-	unsigned int j = r2.m_pNode->m_uLightIndices[i];
-	if(j == -1)
-		return make_float3(0);
-	e_KernelLight& l = scene.m_sLightData[j];
-	return dot(w, n) > 0 ? l.L(p, n, w) : make_float3(0);
-}
-
-CUDA_FUNC_IN unsigned int LightIndex(TraceResult& r2, e_KernelDynamicScene& scene)
-{
-	unsigned int i = scene.m_sMatData[r2.m_pTri->getMatIndex(r2.m_pNode->m_uMaterialOffset)].NodeLightIndex;
-	if(i == -1)
-		return -1;
-	unsigned int j = r2.m_pNode->m_uLightIndices[i];
-	return j;
 }
 
 Onb TraceResult::lerpOnb()
@@ -302,21 +288,38 @@ float2 TraceResult::lerpUV()
 	return m_pTri->lerpUV(m_fUV);
 }
 
-void TraceResult::GetBSDF(const float3& p, const e_KernelMaterial* a_Mats, e_KernelBSDF* bsdf)
+void TraceResult::GetBSDF(const float3& p, e_KernelBSDF* bsdf)
 {
-	m_pTri->GetBSDF(p, m_fUV, m_pNode->getWorldMatrix(), a_Mats, m_pNode->m_uMaterialOffset, bsdf);
+	m_pTri->GetBSDF(p, m_fUV, m_pNode->getWorldMatrix(), g_SceneData.m_sMatData.Data, m_pNode->m_uMaterialOffset, bsdf);
 }
 
-e_KernelBSDF TraceResult::GetBSDF(const float3& p, const e_KernelMaterial* a_Mats)
+e_KernelBSDF TraceResult::GetBSDF(const float3& p)
 {
 	e_KernelBSDF bs;
-	GetBSDF(p, a_Mats, &bs);
+	GetBSDF(p, &bs);
 	return bs;
 }
 
-bool TraceResult::GetBSSRDF(const float3& p, const e_KernelMaterial* a_Mats, e_KernelBSSRDF* bssrdf)
+bool TraceResult::GetBSSRDF(const float3& p, e_KernelBSSRDF* bssrdf)
 {
-	return m_pTri->GetBSSRDF(p, m_fUV, m_pNode->getWorldMatrix(), a_Mats, m_pNode->m_uMaterialOffset, bssrdf);
+	return m_pTri->GetBSSRDF(p, m_fUV, m_pNode->getWorldMatrix(), g_SceneData.m_sMatData.Data, m_pNode->m_uMaterialOffset, bssrdf);
+}
+
+float3 TraceResult::Le(const float3& p, const float3& n, const float3& w) 
+{
+	unsigned int i = LightIndex();
+	if(i == -1)
+		return make_float3(0);
+	else return g_SceneData.m_sLightData[i].L(p, n, w);
+}
+
+unsigned int TraceResult::LightIndex()
+{
+	unsigned int i = g_SceneData.m_sMatData[m_pTri->getMatIndex(m_pNode->m_uMaterialOffset)].NodeLightIndex;
+	if(i == -1)
+		return -1;
+	unsigned int j = m_pNode->m_uLightIndices[i];
+	return j;
 }
 
 //do not!!! use a method here, the compiler will fuck up the textures.
@@ -337,10 +340,21 @@ bool TraceResult::GetBSSRDF(const float3& p, const e_KernelMaterial* a_Mats, e_K
 	{ \
 		unsigned int b = 0; \
 		cudaMemcpyToSymbol(g_NextRayCounter, &b, sizeof(unsigned int)); \
-		e_CameraData d; \
-		a_Camera->getData(d); \
+		e_CameraData d = a_Camera->getData(); \
 		e_KernelDynamicScene d2 = a_Scene->getKernelSceneData(); \
 		cudaMemcpyToSymbol(g_SceneData, &d2, sizeof(e_KernelDynamicScene)); \
 		cudaMemcpyToSymbol(g_CameraData, &d, sizeof(d)); \
 		cudaMemcpyToSymbol(g_RNGData, &a_RngBuf, sizeof(k_TracerRNGBuffer)); \
+	}
+
+#define k_STARTPASSI(a_Scene, a_Camera, a_RngBuf, a_Image) \
+	{ \
+		unsigned int b = 0; \
+		cudaMemcpyToSymbol(g_NextRayCounter, &b, sizeof(unsigned int)); \
+		e_CameraData d = a_Camera->getData(); \
+		e_KernelDynamicScene d2 = a_Scene->getKernelSceneData(); \
+		cudaMemcpyToSymbol(g_SceneData, &d2, sizeof(e_KernelDynamicScene)); \
+		cudaMemcpyToSymbol(g_CameraData, &d, sizeof(d)); \
+		cudaMemcpyToSymbol(g_RNGData, &a_RngBuf, sizeof(k_TracerRNGBuffer)); \
+		cudaMemcpyToSymbol(g_Image, &a_Image, sizeof(e_Image)); \
 	}

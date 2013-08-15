@@ -9,11 +9,13 @@
 #include "Engine/e_KernelMaterial.h"
 #include "e_Volumes.h"
 #include "e_KernelDynamicScene.h"
+#include "e_MeshCompiler.h"
 
 class e_Terrain;
 
 #include "e_SceneInitData.h"
 #include "e_AnimatedMesh.h"
+#include "e_Camera.h"
 
 class e_DynamicScene
 {
@@ -37,8 +39,12 @@ public:
 	e_TmpVertex* m_pDeviceTmpFloats;
 	e_Terrain* m_pTerrain;
 	e_EnvironmentMap m_sEnvMap;
+	const char* m_pTexturePath;
+	const char* m_pCompilePath;
+	e_MeshCompilerManager m_sCmpManager;
+	e_Camera* m_pCamera;
 public:
-	e_DynamicScene(e_SceneInitData a_Data);
+	e_DynamicScene(e_Camera* C, e_SceneInitData a_Data, const char* texPath, const char* cmpPath);
 	~e_DynamicScene();
 	void Free();
 	e_StreamReference(e_Node) CreateNode(const char* a_MeshFile);
@@ -108,6 +114,14 @@ public:
 	}
 	void setTerrain(e_Terrain* T);
 	void printStatus(char* dest);
+	void setCamera(e_Camera* C)
+	{
+		m_pCamera = C;
+	}
+	e_Camera* getCamera()
+	{
+		return m_pCamera;
+	}
 	e_Terrain* getTerrain();
 	e_StreamReference(e_VolumeRegion) AddVolume(e_VolumeRegion& r);
 	e_StreamReference(e_VolumeRegion) getVolumes();

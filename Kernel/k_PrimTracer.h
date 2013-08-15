@@ -5,7 +5,9 @@
 class k_PrimTracer : public k_RandTracerBase
 {
 public:
+	bool m_bDirect;
 	k_PrimTracer()
+		: m_bDirect(false)
 	{
 	}
 	virtual void Debug(int2 pixel);

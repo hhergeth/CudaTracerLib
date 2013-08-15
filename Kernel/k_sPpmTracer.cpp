@@ -151,7 +151,7 @@ void k_sPpmTracer::initNewPass(e_Image* I)
 {
 	m_uPassesDone = 0;
 	m_uPhotonsEmitted = 0;
-	AABB m_sEyeBox = GetEyeHitPointBox();
+	AABB m_sEyeBox = m_pCamera->m_sLastFrustum;
 	float r = fsumf(m_sEyeBox.maxV - m_sEyeBox.minV) / w * m_fInitialRadiusScale;
 	m_sEyeBox.minV -= make_float3(r);
 	m_sEyeBox.maxV += make_float3(r);

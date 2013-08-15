@@ -152,9 +152,9 @@ CUDA_FUNC_IN float Lanczos(float x, float tau)
 
 struct MapParameters
 {
-	const float3& P;
-	const Onb& sys;
-	const float2& uv;
+	const float3 P;
+	const Onb sys;
+	const float2 uv;
 	CUDA_FUNC_IN MapParameters(const float3& p, const float2& u, const Onb& s)
 		: sys(s), uv(u), P(p)
 	{

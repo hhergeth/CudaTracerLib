@@ -719,7 +719,7 @@ private:
     }
 };
 
-template<int BUFFER_SIZE> struct e_KernelBXDF
+template<int BUFFER_SIZE> struct CUDA_ALIGN(16) e_KernelBXDF
 {
 #define CALL_TYPE(t,f,r) \
 	case t##_TYPE : \
@@ -737,7 +737,7 @@ template<int BUFFER_SIZE> struct e_KernelBXDF
 		CALL_TYPE(e_KernelBrdf_FresnelBlend, f, r) \
 	}
 private:
-	unsigned char Data[BUFFER_SIZE];
+	CUDA_ALIGN(16) unsigned char Data[BUFFER_SIZE];
 	int		m_uType;
 public:
 	CUDA_FUNC_IN e_KernelBXDF()

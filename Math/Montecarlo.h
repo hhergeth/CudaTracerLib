@@ -103,7 +103,7 @@ CUDA_FUNC_IN void UniformSampleTriangle(float u1, float u2, float *u, float *v)
 */
 #endif // NDEBUG
 
-template<typename T> CUDA_FUNC_IN void swap(T* a, T* b)
+template<typename T> CUDA_FUNC_IN void swapk(T* a, T* b)
 {
 	T q = *a;
 	*a = *b;
@@ -124,7 +124,7 @@ CUDA_FUNC_IN bool Quadratic(float A, float B, float C, float *t0, float *t1)
     *t0 = q / A;
     *t1 = C / q;
     if (*t0 > *t1)
-		swap(t0, t1);
+		swapk(t0, t1);
     return true;
 }
 
@@ -273,7 +273,7 @@ template <typename T> CUDA_ONLY_FUNC void Shuffle(T *samp, unsigned int count, u
 	{
         unsigned int other = i + (rng.randomUint() % (count - i));
         for (unsigned int j = 0; j < dims; ++j)
-            swap(samp[dims*i + j], samp[dims*other + j]);
+            swapk(samp[dims*i + j], samp[dims*other + j]);
     }
 }
 
@@ -381,7 +381,7 @@ template<typename T> CUDA_FUNC_IN void STL_Sort(T* a_Array, unsigned int a_Lengt
 	for (int i = 0; i < a_Length -1; ++i)
 		for (int j = 0; j < a_Length - i - 1; ++j)
 			if (cmp(a_Array[j], a_Array[j + 1]) > 0) 
-				swap(a_Array[j], a_Array[j + 1]);
+				swapk(a_Array[j], a_Array[j + 1]);
 }
 
 
@@ -391,7 +391,7 @@ template<typename T> CUDA_FUNC_IN void STL_Sort(T* a_Array, unsigned int a_Lengt
 	for (int i = 0; i < a_Length -1; ++i)
 		for (int j = 0; j < a_Length - i - 1; ++j)
 			if (a_Array[j] > a_Array[j + 1]) 
-				swap(a_Array[j], a_Array[j + 1]);
+				swapk(a_Array[j], a_Array[j + 1]);
 }
 
 template<typename T> CUDA_FUNC_IN const T* STL_upper_bound(const T* first, const T* last, const T& value)

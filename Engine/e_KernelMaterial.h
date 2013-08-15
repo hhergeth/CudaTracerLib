@@ -354,7 +354,7 @@ public:
 					   sizeof(e_KernelMaterial_Metal), sizeof(e_KernelMaterial_ShinyMetal), sizeof(e_KernelMaterial_Plastic), \
 					   sizeof(e_KernelMaterial_Substrate), sizeof(e_KernelMaterial_KdSubsurface), sizeof(e_KernelMaterial_Subsurface)))
 
-struct e_KernelMaterial
+struct CUDA_ALIGN(16) e_KernelMaterial
 {
 	template<typename T> struct mpHlp
 	{
@@ -366,7 +366,7 @@ struct e_KernelMaterial
 		}
 	};
 public:
-	unsigned char Data[MAT_SIZE];
+	CUDA_ALIGN(16) unsigned char Data[MAT_SIZE];
 	unsigned int type;
 #define CALL_TYPE(t,f,r) \
 	case t##_TYPE : \
@@ -386,17 +386,21 @@ public:
 		CALL_TYPE(e_KernelMaterial_Subsurface, f, r) \
 	}
 	mpHlp<float3> NormalMap;
-	mpHlp<float> HeightMap;
+	mpHlp<float3> HeightMap;
+	mpHlp<float4> AlphaMap;
 public:
 	e_String Name;
 	unsigned int NodeLightIndex;
 	float HeightScale;
+	float m_fAlphaThreshold;
 public:
 	e_KernelMaterial()
 	{
 		type = 0;
 		HeightScale = 1.0f;
 		memset(Name, 0, sizeof(Name));
+		NodeLightIndex = -1;
+		m_fAlphaThreshold = 1.0f;
 	}
 	e_KernelMaterial(const char* name)
 	{
@@ -405,6 +409,7 @@ public:
 		HeightScale = 1.0f;
 		memcpy(Name, name, strlen(name));
 		NodeLightIndex = -1;
+		m_fAlphaThreshold = 1.0f;
 	}
 	template<typename T> void SetData(const T& val)
 	{
@@ -429,6 +434,8 @@ public:
 			NormalMap.tex.LoadTextures(callback);
 		if(HeightMap.used)
 			HeightMap.tex.LoadTextures(callback);
+		if(AlphaMap.used)
+			AlphaMap.tex.LoadTextures(callback);
 		CALL_FUNC(return, LoadTextures<L>(callback))
 	}
 	template<typename T> T* As()
@@ -451,7 +458,7 @@ public:
 				{
 					MapParameters mp = uv;
 					*(float2*)&mp.uv = mp.uv + make_float2(i - 1, j - 1) * d;
-					m[i * 4 + j] = HeightMap.tex.Evaluate(mp);
+					m[i * 4 + j] = HeightMap.tex.Evaluate(mp).x;
 				}
 			//float2 d = make_float2(m[2] + 2*m[5] + m[8] -m[0] - 2*m[3] - m[6], m[6] + 2*m[7] + m[8] -m[0] - 2*m[1] - m[2]);
 			/*float2 lu = dxdy(m, 0, 1, 2, 4, 5, 6, 8, 9, 10),
@@ -465,6 +472,14 @@ public:
 		}
 		else return false;
 	}
+	CUDA_FUNC_IN float SampleAlphaMap(const MapParameters& uv) const
+	{
+		if(AlphaMap.used)
+		{
+			return AlphaMap.tex.Evaluate(uv).w;
+		}
+		else return 1.0f;
+	}
 	void SetNormalMap(const e_KernelTexture<float3>& tex)
 	{
 		if(HeightMap.used)
@@ -472,12 +487,31 @@ public:
 		NormalMap.used = true;
 		NormalMap.tex = tex;
 	}
-	void SetHeightMap(const e_KernelTexture<float>& tex)
+	void SetNormalMap(const char* path)
+	{
+		SetNormalMap(CreateTexture(path, make_float3(0)));
+	}
+	void SetHeightMap(const e_KernelTexture<float3>& tex)
 	{
 		if(NormalMap.used)
 			throw 1;
 		HeightMap.used = true;
 		HeightMap.tex = tex;
+	}
+	void SetHeightMap(const char* path)
+	{
+		SetHeightMap(CreateTexture(path, make_float3(0)));
+	}
+	void SetAlphaMap(const e_KernelTexture<float4>& tex)
+	{
+		if(AlphaMap.used)
+			throw 1;
+		AlphaMap.used = true;
+		AlphaMap.tex = tex;
+	}
+	void SetAlphaMap(const char* path)
+	{
+		SetAlphaMap(CreateTexture(path, make_float4(0)));
 	}
 #undef CALL_TYPE
 #undef CALL_FUNC

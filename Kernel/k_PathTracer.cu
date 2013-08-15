@@ -4,7 +4,7 @@
 #include <time.h>
 #include "k_TraceAlgorithms.h"
 
-__global__ void pathKernel(unsigned int width, unsigned int height, e_Image I, unsigned int a_PassIndex)
+__global__ void pathKernel(unsigned int width, unsigned int height, unsigned int a_PassIndex)
 {
 	CudaRNG rng = g_RNGData();
 	int rayidx;
@@ -34,9 +34,9 @@ __global__ void pathKernel(unsigned int width, unsigned int height, e_Image I, u
 		CameraSample s = nextSample(x, y, rng, true);
 		Ray r = g_CameraData.GenRay(s, width, height);
 		
-		float3 col = PathTrace<true>(r.direction, r.origin, rng);
+		float3 col = PathTrace<false>(r.direction, r.origin, rng);
 
-		I.AddSample(s, col);
+		g_Image.AddSample(s, col);
 	}
 	while(true);
 	g_RNGData(rng);
@@ -54,8 +54,8 @@ __global__ void debugPixel(unsigned int width, unsigned int height, int2 p)
 void k_PathTracer::DoRender(e_Image* I)
 {
 	k_INITIALIZE(m_pScene->getKernelSceneData());
-	k_STARTPASS(m_pScene, m_pCamera, m_sRngs);
-	pathKernel<<< 180, dim3(32, MaxBlockHeight, 1)>>>(w, h, *I, m_uPassesDone);
+	k_STARTPASSI(m_pScene, m_pCamera, m_sRngs, *I);
+	pathKernel<<< 180, dim3(32, MaxBlockHeight, 1)>>>(w, h, m_uPassesDone);
 	m_uPassesDone++;
 
 	if(m_uPassesDone % 5 == 0)

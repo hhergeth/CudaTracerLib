@@ -260,13 +260,12 @@ void CudaBVH::createCompact(const BVH& bvh, int nodeOffsetSizeDiv)
         dst[0] = Vec4i(floatToBits(cbox[0]->min().x), floatToBits(cbox[0]->max().x), floatToBits(cbox[0]->min().y), floatToBits(cbox[0]->max().y));
         dst[1] = Vec4i(floatToBits(cbox[1]->min().x), floatToBits(cbox[1]->max().x), floatToBits(cbox[1]->min().y), floatToBits(cbox[1]->max().y));
         dst[2] = Vec4i(floatToBits(cbox[0]->min().z), floatToBits(cbox[0]->max().z), floatToBits(cbox[1]->min().z), floatToBits(cbox[1]->max().z));
-        dst[3] = Vec4i(~1, 0, 0, 0);
 		LeafNode* leaf = (LeafNode*)bvh.getRoot();
+		int l = leaf->m_hi - leaf->m_lo;
+        dst[3] = Vec4i(~0, ~(l * 3), 0, 0);
 		for (int j = leaf->m_lo; j < leaf->m_hi; j++)
             {
                 woopifyTri(bvh, j);
-                if (m_woop[0].x == 0.0f)
-                    m_woop[0].x = 0.0f;
                 triWoopData.add((Vec4i*)m_woop, 3);
                 triIndexData.add(bvh.getTriIndices()[j]);
                 triIndexData.add(0);

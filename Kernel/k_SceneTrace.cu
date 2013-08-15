@@ -40,7 +40,7 @@ void k_TracerRNGBuffer::createGenerators(unsigned int a_Spacing, unsigned int a_
 	genRNG2<<< m_uNumGenerators / 1024 + 1, 1024 >>> (m_pGenerators, a_Spacing, a_Offset, m_uNumGenerators);
 	cudaThreadSynchronize();
 }
-/*
+
 //SHOULD NOT WORK
 CUDA_FUNC_IN unsigned int FloatToUInt(float f2)
 {
@@ -56,7 +56,8 @@ CUDA_FUNC_IN float UIntToFloat(float f2)
 	unsigned int i = f ^ mask;
 	return *(float*)&i;
 }
-*/
+
+/*
 CUDA_FUNC_IN unsigned int FloatToUInt(float f)
 {
 	unsigned int mask = -unsigned int(*(unsigned int*)&f >> 31) | 0x80000000;
@@ -68,7 +69,7 @@ CUDA_FUNC_IN float UIntToFloat(unsigned int f)
 	unsigned int mask = ((f >> 31) - 1) | 0x80000000, q = f ^ mask;
 	return *(float*)&q;
 }
-
+*/
 
 CUDA_DEVICE uint3 g_EyeHitBoxMin;
 CUDA_DEVICE uint3 g_EyeHitBoxMax;
@@ -86,7 +87,7 @@ __global__ void k_GuessPass(int w, int h)
 		while(k_TraceRay<true>(r.direction, r.origin, &r2) && ++d < 10)
 		{
 			float3 p = r(r2.m_fDist);
-			e_KernelBSDF bsdf = r2.GetBSDF(p, g_SceneData.m_sMatData.Data);
+			e_KernelBSDF bsdf = r2.GetBSDF(p);
 			float3 inc;
 			float pdf;
 			float3 col = bsdf.Sample_f(-1.0f * r.direction, &inc, BSDFSample(localState), &pdf);
@@ -120,6 +121,12 @@ AABB k_RandTracerBase::GetEyeHitPointBox()
 	m_sEyeBox.minV = make_float3(UIntToFloat(m_sEyeBox.minV.x), UIntToFloat(m_sEyeBox.minV.y), UIntToFloat(m_sEyeBox.minV.z));
 	m_sEyeBox.maxV = make_float3(UIntToFloat(m_sEyeBox.maxV.x), UIntToFloat(m_sEyeBox.maxV.y), UIntToFloat(m_sEyeBox.maxV.z));
 	return m_sEyeBox;
+}
+
+k_RandTracerBase::k_RandTracerBase()
+		: k_TracerBase(), m_sRngs(1 << 13)
+{
+
 }
 
 void k_TracerBase::StartNewTrace(e_Image* I)

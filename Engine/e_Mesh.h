@@ -142,10 +142,14 @@ struct e_MeshPartLight
 	float3 L;
 };
 
+#define MESH_STATIC_TOKEN 1
+#define MESH_ANIMAT_TOKEN 2
+
 class e_Mesh
 {
 public:
 	AABB m_sLocalBox;
+	int m_uType;
 public:
 	e_StreamReference(e_TriangleData) m_sTriInfo;
 	e_StreamReference(e_KernelMaterial) m_sMatInfo;
@@ -159,7 +163,6 @@ public:
 	e_Mesh(InputStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<int>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4);
 	void Free(e_Stream<e_TriIntersectorData>& a_Stream0, e_Stream<e_TriangleData>& a_Stream1, e_Stream<e_BVHNodeData>& a_Stream2, e_Stream<int>& a_Stream3, e_Stream<e_KernelMaterial>& a_Stream4);
 	static void CompileObjToBinary(const char* a_InputFile, OutputStream& a_Out);
-	static void CompileNifToBinary(const char* a_InputFile, OutputStream& a_Out);
 	static e_SceneInitData ParseBinary(const char* a_InputFile);
 	e_KernelMesh getKernelData()
 	{

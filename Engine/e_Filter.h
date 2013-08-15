@@ -163,10 +163,10 @@ struct e_KernelTriangleFilter : public e_KernelFilterBase
 
 #define FLT_SIZE RND_16(DMAX5(sizeof(e_KernelBoxFilter), sizeof(e_KernelGaussianFilter), sizeof(e_KernelMitchellFilter), sizeof(e_KernelLanczosSincFilter), sizeof(e_KernelTriangleFilter)))
 
-struct e_KernelFilter
+struct CUDA_ALIGN(16) e_KernelFilter
 {
 private:
-	unsigned char Data[FLT_SIZE];
+	CUDA_ALIGN(16) unsigned char Data[FLT_SIZE];
 	unsigned int type;
 #define CALL_TYPE(t,f,r) \
 	case t##_TYPE : \
@@ -182,9 +182,9 @@ private:
 		CALL_TYPE(e_KernelTriangleFilter, f, r) \
 	}
 public:
-	e_KernelFilter()
+	CUDA_FUNC_IN e_KernelFilter()
 	{
-		type = 0;	
+		//type = 0;	
 	}
 
 	CUDA_FUNC_IN float Evaluate(float x, float y) const

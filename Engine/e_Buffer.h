@@ -268,39 +268,48 @@ public:
 	{
 		m_pStream->Invalidate(*this);
 	}
-	H* operator->() const
-	{
-		return m_pStream->host + m_uIndex;
-	}
-	e_BufferReference<H, D>& operator= (const H &r)
-	{
-		m_pStream->host[m_uIndex] = r;
-		return *this;
-	}
 	e_BufferReference<H, D> operator()(unsigned int i = 0)
 	{
 		return e_BufferReference<H, D>(m_pStream, m_uIndex + i, 1);
-	}
-	operator H*() const
-	{
-		return m_pStream->host + m_uIndex;
-	}
-	D* getDevice()
-	{
-		return m_pStream->device + m_uIndex;
 	}
 	operator bool() const
 	{
 		return m_uLength;
 	}
+	e_BufferReference<H, D>& operator= (const H &r)
+	{
+		*atH(m_uIndex) = r;
+		return *this;
+	}
+	H* operator->() const
+	{
+		return atH(m_uIndex);
+	}
 	const H& operator*() const
 	{
-		return m_pStream->host[m_uIndex];
+		return *atH(m_uIndex);
+	}
+	operator H*() const
+	{
+		return atH(m_uIndex);
+	}
+	D* getDevice()
+	{
+		return atD(m_uIndex);
 	}
 	template<typename U> U* operator()(unsigned int i = 0)
 	{
-		U* a = (U*)(m_pStream->host + m_uIndex);
-		return a + i;
+		U* base = (U*)atH(m_uIndex);
+		return base + i;
+	}
+private:
+	H* atH(unsigned int i) const 
+	{
+		return (H*)((char*)m_pStream->host + m_pStream->m_uHostBlockSize * i);
+	}
+	D* atD(unsigned int i) const
+	{
+		return m_pStream->device + i;
 	}
 };
 

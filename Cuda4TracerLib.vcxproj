@@ -14,7 +14,6 @@
     <ClInclude Include="Base\CudaRandom.h" />
     <ClInclude Include="Base\FileStream.h" />
     <ClInclude Include="Base\FrameworkInterop.h" />
-    <ClInclude Include="Base\SpectrumConverter.h" />
     <ClInclude Include="Base\TangentSpace.h" />
     <ClInclude Include="Base\Timer.h" />
     <ClInclude Include="Defines.h" />
@@ -35,6 +34,7 @@
     <ClInclude Include="Engine\e_KernelTexture.h" />
     <ClInclude Include="Engine\e_Light.h" />
     <ClInclude Include="Engine\e_Mesh.h" />
+    <ClInclude Include="Engine\e_MeshCompiler.h" />
     <ClInclude Include="Engine\e_Node.h" />
     <ClInclude Include="Engine\e_PointBVH.h" />
     <ClInclude Include="Engine\e_SceneBVH.h" />
@@ -73,16 +73,15 @@
     <ClInclude Include="Math\Ray.h" />
     <ClInclude Include="Math\vector.h" />
     <ClInclude Include="Renderer.h" />
-    <ClInclude Include="SkyrimImporter.h" />
     <ClInclude Include="StdAfx.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Base\SpectrumConverter.cpp" />
     <ClCompile Include="Engine\e_AnimatedMesh.cpp" />
     <ClCompile Include="Engine\e_DynamicScene.cpp" />
     <ClCompile Include="Engine\e_FPCamera.cpp" />
     <ClCompile Include="Engine\e_Image.cpp" />
     <ClCompile Include="Engine\e_Mesh.cpp" />
+    <ClCompile Include="Engine\e_MeshCompiler.cpp" />
     <ClCompile Include="Engine\e_PointBVH.cpp" />
     <ClCompile Include="Engine\e_SceneBVH.cpp" />
     <ClCompile Include="Engine\e_Terrain.cpp" />
@@ -97,7 +96,6 @@
     <ClCompile Include="Engine\SceneBuilder\SplitBVHBuilder.cpp" />
     <ClCompile Include="Engine\SceneBuilder\Util.cpp" />
     <ClCompile Include="Kernel\k_sPpmTracer.cpp" />
-    <ClCompile Include="SkyrimImporter.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
@@ -141,14 +139,14 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(ProjectDir);C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs\niflib-0.8.3-src\include;C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs;C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs\gpu-ray-traversal\src\framework;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs;C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs\gpu-ray-traversal\src\framework;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs;C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs\gpu-ray-traversal\build\$(Platform)_$(Configuration)\framework;$(LibraryPath)</LibraryPath>
     <IntDir>Build\$(Platform)\$(Configuration)\</IntDir>
     <OutDir>Build\$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(ProjectDir);C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs\niflib-0.8.3-src\include;C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs;C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs\gpu-ray-traversal\src\framework;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs;C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs\gpu-ray-traversal\src\framework;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs;C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs\gpu-ray-traversal\build\$(Platform)_$(Configuration)\framework;$(LibraryPath)</LibraryPath>
     <IntDir>Build\$(Platform)\$(Configuration)\</IntDir>
     <OutDir>Build\$(Platform)\$(Configuration)\</OutDir>
@@ -165,7 +163,7 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>opengl32.lib;cudart.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;Shlwapi.lib;framework.lib;niflib_dll_$(Configuration).lib;zlibstat.lib;C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs\$(Platform)\FreeImage.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;cudart.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;Shlwapi.lib;framework.lib;zlibstat.lib;C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs\$(Platform)\FreeImage.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>LIBC.lib</IgnoreSpecificDefaultLibraries>
     </Link>
     <PostBuildEvent>
@@ -197,7 +195,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>opengl32.lib;cudart.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;Shlwapi.lib;framework.lib;niflib_dll_$(Configuration).lib;zlibstat.lib;C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs\$(Platform)\FreeImage.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;cudart.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;Shlwapi.lib;framework.lib;zlibstat.lib;C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs\$(Platform)\FreeImage.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>LIBC.lib</IgnoreSpecificDefaultLibraries>
     </Link>
     <PostBuildEvent>

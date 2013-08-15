@@ -1,10 +1,10 @@
 #include "StdAfx.h"
-#include "..\Base\FrameworkInterop.h"
 #include "e_DynamicScene.h"
 #include <iostream>
 #include <algorithm>
 #include <string>
 #include "e_Terrain.h"
+#include "..\Base\FrameworkInterop.h"
 
 struct textureLoader
 {
@@ -34,7 +34,7 @@ struct matUpdater
 
 e_SceneInitData e_SceneInitData::CreateFor_S_SanMiguel(unsigned int a_SceneNodes, unsigned int a_Lights)
 {
-	e_SceneInitData r = CreateForSpecificMesh(2487716 + 100, 2701833 + 100, 2586998 + 100, 12905498 + 100, 128, a_Lights, a_SceneNodes);
+	e_SceneInitData r = CreateForSpecificMesh(1500000, 1500000, 1500000, 1500000, 4096 * 5, a_Lights, a_SceneNodes);
 	//return CreateForSpecificMesh(10000, 10000, 10000, 15000, 255, a_Lights);
 	//return CreateForSpecificMesh(7880512, 9359209, 2341126, 28077626, 255, a_Lights);
 	r.m_uSizeAnimStream = 16 * 1024 * 1024;
@@ -56,29 +56,39 @@ inline bool fileExists(const TCHAR * file)
    return FindFirstFile(file, &FindFileData) != INVALID_HANDLE_VALUE;
 }
 
-e_DynamicScene::e_DynamicScene(e_SceneInitData a_Data)
-	: m_sEnvMap(e_EnvironmentMap::Identity())
+template<typename T> e_Stream<T>* LL(int i)
 {
+	e_Stream<T>* r = new e_Stream<T>(i);
+	//FW::String s = FW::sprintf("%d [MB]\n", r->getSizeInBytes() / (1024 * 1024));
+	//OutputDebugString(s.getPtr());
+	return r;
+}
+
+e_DynamicScene::e_DynamicScene(e_Camera* C, e_SceneInitData a_Data, const char* texPath, const char* cmpPath)
+	: m_sEnvMap(e_EnvironmentMap::Identity()), m_pCamera(C)
+{
+	m_pCompilePath = cmpPath;
+	m_pTexturePath = texPath;
 	int nodeC = 1 << 16, tCount = 1 << 16;
 	m_uModified = 1;
-	m_pAnimStream = new e_Stream<char>(a_Data.m_uSizeAnimStream);
-	m_pTriDataStream = new e_Stream<e_TriangleData>(a_Data.m_uNumTriangles);
-	m_pTriIntStream = new e_Stream<e_TriIntersectorData>(a_Data.m_uNumInt);
-	m_pBVHStream = new e_Stream<e_BVHNodeData>(a_Data.m_uNumBvhNodes);
-	m_pBVHIndicesStream = new e_Stream<int>(a_Data.m_uNumBvhIndices);
-	m_pMaterialBuffer = new e_Stream<e_KernelMaterial>(a_Data.m_uNumMaterials);
+	m_pAnimStream = LL<char>(a_Data.m_uSizeAnimStream);
+	m_pTriDataStream = LL<e_TriangleData>(a_Data.m_uNumTriangles);
+	m_pTriIntStream = LL<e_TriIntersectorData>(a_Data.m_uNumInt);
+	m_pBVHStream = LL<e_BVHNodeData>(a_Data.m_uNumBvhNodes);
+	m_pBVHIndicesStream = LL<int>(a_Data.m_uNumBvhIndices);
+	m_pMaterialBuffer = LL<e_KernelMaterial>(a_Data.m_uNumMaterials);
 	m_pMeshBuffer = new e_CachedBuffer<e_Mesh, e_KernelMesh>(a_Data.m_uNumNodes, sizeof(e_AnimatedMesh));
-	m_pNodeStream = new e_Stream<e_Node>(a_Data.m_uNumNodes);
+	m_pNodeStream = LL<e_Node>(a_Data.m_uNumNodes);
 	m_pTextureBuffer = new e_CachedBuffer<e_FileTexture, e_KernelFileTexture>(a_Data.m_uNumTextures);
 	m_pMIPMapBuffer = new e_CachedBuffer<e_MIPMap, e_KernelMIPMap>(a_Data.m_uNumTextures);
-	m_pLightStream = new e_Stream<e_KernelLight>(a_Data.m_uNumLights);
-	m_pDist2DStream = new e_Stream<Distribution2D<4096, 4096>>(2);
-	m_pVolumes = new e_Stream<e_VolumeRegion>(128);
+	m_pLightStream = LL<e_KernelLight>(a_Data.m_uNumLights);
+	m_pDist2DStream = LL<Distribution2D<4096, 4096>>(0);
+	m_pVolumes = LL<e_VolumeRegion>(128);
 	m_pBVH = new e_SceneBVH(a_Data.m_uNumNodes);
 	if(a_Data.m_uSizeAnimStream > 1024)
 		cudaMalloc(&m_pDeviceTmpFloats, sizeof(e_TmpVertex) * (1 << 16));
 	m_pTerrain = new e_Terrain(1, make_float2(0,0), make_float2(0,0));
-	unsigned int a = this->getCudaBufferSize();
+	unsigned int a = this->getCudaBufferSize() / (1024 * 1024);
 	//if(a > 900 * 1024 * 1024)
 	//	throw 1;
 }
@@ -107,13 +117,6 @@ e_DynamicScene::~e_DynamicScene()
 {
 	Free();
 }
-/*
-void e_DynamicScene::UpdateMaterial(e_StreamReference(e_KernelMaterial) m)
-{
-	for(int i = 0; i < m.getLength(); i++)
-		m(i)->LoadTextures(textureLoader(this));
-	m.Invalidate();
-}*/
 
 void createDirectoryRecursively(const std::string &directory)
 {
@@ -170,75 +173,34 @@ __int64 FileSize(const char* name)
     return size.QuadPart;
 }
 
-FW::String compileFile(FW::String& f)
-{
-	FW::String a = FW::String("Compiled/").append(f.substring(sizeof("Scenes"))), b;
-	createDirectoryRecursively(a.getDirName().getPtr());
-
-	if(a.endsWith(".obj"))
-		b = a.substring(0, a.lastIndexOf('.')).append(".xmsh");
-	else if(a.endsWith(".nif"))
-		b = a.substring(0, a.lastIndexOf('.')).append(".xmsh");
-	else if(a.endsWith(".md5mesh"))
-		b = a.substring(0, a.lastIndexOf('.')).append(".xanim");
-	__int64 fs = FileSize(b.getPtr());
-	if(fs && fs != -1)
-		return b;
-
-	if(a.endsWith(".obj"))
-	{
-		OutputStream a_Out(b.getPtr());
-		e_Mesh::CompileObjToBinary(f.getPtr(), a_Out);
-		a_Out.Close();
-	}
-	else if(a.endsWith(".nif"))
-	{
-		OutputStream a_Out(b.getPtr());
-		e_Mesh::CompileNifToBinary(f.getPtr(), a_Out);
-		a_Out.Close();
-	}
-	else if(a.endsWith(".md5mesh"))
-	{
-		OutputStream a_Out(b.getPtr());
-		c_StringArray A;
-		char dir[255];
-		ZeroMemory(dir, sizeof(dir));
-		_splitpath(f.getPtr(), 0, dir, 0, 0);
-		WIN32_FIND_DATA dat;
-		HANDLE hFind = FindFirstFile(FW::String(dir).append("\\*.md5anim").getPtr(), &dat);
-		while(hFind != INVALID_HANDLE_VALUE)
-		{
-			FW::String* q = new FW::String(FW::String(dir).append(dat.cFileName));
-			A((char*)q->getPtr());
-			if(!FindNextFile(hFind, &dat))
-				break;
-		}
-		e_AnimatedMesh::CompileToBinary((char*)f.getPtr(), A, a_Out);
-		a_Out.Close();
-	}
-	return b;
-}
-
 e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_MeshFile2)
 {
 	m_uModified = 1;
-	std::string strA(a_MeshFile2);
-	std::transform(strA.begin(), strA.end(), strA.begin(), ::tolower);
+	FW::String strA = FW::String(a_MeshFile2).toLower();
 	bool load;
-	e_BufferReference<e_Mesh, e_KernelMesh> M = m_pMeshBuffer->LoadCached(strA.c_str(), &load);
+	e_BufferReference<e_Mesh, e_KernelMesh> M = m_pMeshBuffer->LoadCached(strA.getPtr(), &load);
 	if(load)
 	{
-		FW::String str = compileFile(FW::String(strA.c_str()));
-		InputStream I(str.getPtr());
-		if(str.endsWith(".xmsh"))
+		FW::String t0 = FW::String(m_pCompilePath) + strA.getFileName(), cmpPath = t0.substring(0, t0.lastIndexOf('.')) + FW::String(".xmsh");
+		createDirectoryRecursively(cmpPath.getDirName().getPtr());
+		if(FileSize(cmpPath.getPtr()) <= 4)
+		{
+			OutputStream a_Out(cmpPath.getPtr());
+			e_MeshCompileType t;
+			m_sCmpManager.Compile(a_MeshFile2, a_Out, &t);
+			a_Out.Close();
+		}
+		InputStream I(cmpPath.getPtr());
+		unsigned int t;
+		I >> t;
+		if(t == (unsigned int)e_MeshCompileType::Static)
 			new(M(0)) e_Mesh(I, m_pTriIntStream, m_pTriDataStream, m_pBVHStream, m_pBVHIndicesStream, m_pMaterialBuffer);
-		else if(str.endsWith(".xanim"))
-			new(M(0)) e_AnimatedMesh(I, m_pTriIntStream, m_pTriDataStream, m_pBVHStream, m_pBVHIndicesStream, m_pMaterialBuffer, m_pAnimStream);
+		else new(M(0)) e_AnimatedMesh(I, m_pTriIntStream, m_pTriDataStream, m_pBVHStream, m_pBVHIndicesStream, m_pMaterialBuffer, m_pAnimStream);
 		I.Close();
 		m_pMeshBuffer->Invalidate(M);
 		M->m_sMatInfo.Invalidate();
 	}
-	else if(hasEnding(strA, std::string(".md5mesh")))
+	else if(M->m_uType == MESH_ANIMAT_TOKEN)
 	{
 		e_BufferReference<e_Mesh, e_KernelMesh> oldM = M;
 		M = m_pMeshBuffer->malloc(1);
@@ -248,7 +210,7 @@ e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_MeshFile2)
 	e_StreamReference(e_Node) N = m_pNodeStream->malloc(1);
 	e_StreamReference(e_KernelMaterial) m2 = m_pMaterialBuffer->malloc(M->m_sMatInfo);
 	m2.Invalidate();
-	new(N.operator->()) e_Node(M.getIndex(), M.operator->(), strA.c_str(), m2);
+	new(N.operator->()) e_Node(M.getIndex(), M.operator->(), strA.getPtr(), m2);
 	unsigned int li[MAX_AREALIGHT_NUM];
 	ZeroMemory(li, sizeof(li));
 	for(unsigned int i = 0; i < M->m_uUsedLights; i++)
@@ -261,82 +223,52 @@ e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_MeshFile2)
 	return N;
 }
 
-FW::String compileFile2(FW::String& f)
-{
-	FW::String a = FW::String("Compiled/").append(f.substring(sizeof("Scenes/Skyrim"))), b;
-	createDirectoryRecursively(a.getDirName().getPtr());
-	b = a.substring(0, a.lastIndexOf('.')).append(".xtex");
-	if(fileExists(b.getPtr()) && FileSize(b.getPtr()) > 0)
-		return b;
-	OutputStream a_Out(b.getPtr());
-	e_FileTexture::CompileToBinary(f.getPtr(), a_Out);
-	a_Out.Close();
-	return b;
-}
 e_BufferReference<e_FileTexture, e_KernelFileTexture> e_DynamicScene::LoadTexture(const char* file)
 {
-	char* a_File = (char*)malloc(1024);
-	ZeroMemory(a_File, 1024);
-	if(!fileExists(file))
-	{
-		strcpy(a_File, "Scenes/Textures/");
-		strcat(a_File, file);
-	}
-	else
-	{
-		memcpy(a_File, file, strlen(file));
-	}
-	int a = strlen(a_File);
-	if(a_File[a-1] == '\n')
-		a_File[a-1] = 0;
+	FW::String a = fileExists(file) ? FW::String(file) : FW::String(m_pTexturePath) + FW::String(file);
+	if(a.getChar(a.getLength() - 1) == '\n')
+		a = a.substring(0, a.getLength() - 1);
 	bool load;
-	e_BufferReference<e_FileTexture, e_KernelFileTexture> T = m_pTextureBuffer->LoadCached(a_File, &load);
+	e_BufferReference<e_FileTexture, e_KernelFileTexture> T = m_pTextureBuffer->LoadCached(a.getPtr(), &load);
 	if(load)
 	{
-		FW::String A = compileFile2(FW::String(a_File));
-		InputStream I(A.getPtr());
+		FW::String a2 = FW::String(m_pCompilePath) + "Images\\" + a.getFileName(), b = a2.substring(0, a2.lastIndexOf('.')) + ".xtex";
+		createDirectoryRecursively(b.getDirName().getPtr());
+		if(FileSize(b.getPtr()) <= 0)
+		{
+			OutputStream a_Out(b.getPtr());
+			e_FileTexture::CompileToBinary(a.getPtr(), a_Out);
+			a_Out.Close();
+		}
+		InputStream I(b.getPtr());
 		new(T) e_FileTexture(I);
 		I.Close();
 		T->CreateKernelTexture();
 		T.Invalidate();
 	}
+	if(!T->getKernelData().m_pDeviceData)
+		throw 1;
 	return T;
 }
 
-FW::String compileFile3(FW::String& f)
-{
-	FW::String a = FW::String("Compiled/").append(f.substring(sizeof("Scenes/Skyrim"))), b;
-	createDirectoryRecursively(a.getDirName().getPtr());
-	b = a.substring(0, a.lastIndexOf('.')).append(".xmip");
-	if(fileExists(b.getPtr()) && FileSize(b.getPtr()) > 0)
-		return b;
-	OutputStream a_Out(b.getPtr());
-	e_MIPMap::CompileToBinary(f.getPtr(), a_Out);
-	a_Out.Close();
-	return b;
-}
 e_BufferReference<e_MIPMap, e_KernelMIPMap> e_DynamicScene::LoadMIPMap(const char* file)
 {
-	char* a_File = (char*)malloc(1024);
-	ZeroMemory(a_File, 1024);
-	if(!fileExists(file))
-	{
-		strcpy(a_File, "Scenes/Textures/");
-		strcat(a_File, file);
-	}
-	else
-	{
-		memcpy(a_File, file, strlen(file));
-	}
-	int a = strlen(a_File);
-	if(a_File[a-1] == '\n')
-		a_File[a-1] = 0;
+	FW::String a = fileExists(file) ? FW::String(file) : FW::String(m_pTexturePath) + FW::String(file);
+	if(a.getChar(a.getLength()) == '\n')
+		a = a.substring(0, a.getLength() - 1);
 	bool load;
-	e_BufferReference<e_MIPMap, e_KernelMIPMap> T = m_pMIPMapBuffer->LoadCached(a_File, &load);
+	e_BufferReference<e_MIPMap, e_KernelMIPMap> T = m_pMIPMapBuffer->LoadCached(a.getPtr(), &load);
 	if(load)
 	{
-		FW::String A = compileFile3(FW::String(a_File));
-		InputStream I(A.getPtr());
+		FW::String a2 = FW::String(m_pCompilePath) + "Images\\" + a.getFileName(), b = a2.substring(0, a2.lastIndexOf('.')) + ".xmip";
+		createDirectoryRecursively(b.getDirName().getPtr());
+		if(FileSize(b.getPtr()) <= 0)
+		{
+			OutputStream a_Out(b.getPtr());
+			e_MIPMap::CompileToBinary(a.getPtr(), a_Out);
+			a_Out.Close();
+		}
+		InputStream I(b.getPtr());
 		new(T) e_MIPMap(I);
 		I.Close();
 		T->CreateKernelTexture();
@@ -397,6 +329,7 @@ e_KernelDynamicScene e_DynamicScene::getKernelSceneData()
 	r.m_sSceneBVH = m_pBVH->getData();
 	r.m_sTerrain = m_pTerrain->getKernelData();
 	r.m_sEnvMap = m_sEnvMap;
+	r.m_sLightSelector = e_ImportantLightSelector(this, m_pCamera);
 	r.m_sBox = m_pBVH->m_sBox;
 	return r;
 }
@@ -409,8 +342,21 @@ void e_DynamicScene::setTerrain(e_Terrain* T)
 
 unsigned int e_DynamicScene::getCudaBufferSize()
 {
-	unsigned int i = m_pTriDataStream->getSizeInBytes() + m_pTriIntStream->getSizeInBytes() + m_pBVHStream->getSizeInBytes() + m_pBVHIndicesStream->getSizeInBytes() + m_pMaterialBuffer->getSizeInBytes() +
-						m_pTextureBuffer->getSizeInBytes() + m_pMeshBuffer->getSizeInBytes() + m_pNodeStream->getSizeInBytes() + m_pAnimStream->getSizeInBytes() + m_pBVH->getSizeInBytes();
+	unsigned int i = m_pAnimStream->getSizeInBytes() +
+					m_pTriDataStream->getSizeInBytes() + 
+					m_pTriIntStream->getSizeInBytes() + 
+					m_pBVHStream->getSizeInBytes() + 
+					m_pBVHIndicesStream->getSizeInBytes() + 
+					m_pMaterialBuffer->getSizeInBytes() +
+					m_pTextureBuffer->getSizeInBytes() + 
+					m_pMeshBuffer->getSizeInBytes() +
+					m_pNodeStream->getSizeInBytes() + 
+					m_pAnimStream->getSizeInBytes() + 
+					m_pBVH->getSizeInBytes() +
+					m_pMIPMapBuffer->getSizeInBytes() +
+					m_pLightStream->getSizeInBytes() +
+					m_pDist2DStream->getSizeInBytes() +
+					m_pVolumes->getSizeInBytes();
 	for(unsigned int i = 0; i < m_pTextureBuffer->NumUsedElements(); i++)
 		i += m_pTextureBuffer[0](i)->getBufferSize();
 	i += m_pTerrain->getBufferSize();
@@ -552,4 +498,74 @@ e_StreamReference(e_KernelLight) e_DynamicScene::setEnvironementMap(const float3
 	m_sEnvMap = e_EnvironmentMap((char*)file);
 	m_sEnvMap.LoadTextures(textureLoader(this));
 	return e_StreamReference(e_KernelLight)(m_pLightStream, 0, 0);
+}
+
+bool canUse(float3& p, float3& cp, float3& cd, float f)
+{
+	float d = Distance(p, cp);
+	float e = dot(normalize(p - cp), cd);
+	e = (e + 1) / 2.0f;
+	e = clamp(e, 0.5f, 1.0f);
+	return d < f * e;
+}
+e_ImportantLightSelector::e_ImportantLightSelector(e_DynamicScene* S, e_Camera* C)
+{
+	ZeroMemory(m_sIndices, sizeof(m_sIndices));
+	m_uCount = 0;
+	unsigned int N = sizeof(m_sIndices) / sizeof(unsigned int), M = S->m_pLightStream->NumUsedElements();
+	if(M < 5)
+	{
+		m_uCount = M;
+		for(int i = 0; i < M; i++)
+			m_sIndices[i] = i;
+	}
+	else
+	{
+		float sceneScale = length(C->m_sLastFrustum.Size());
+		float3 dir = C->getDir(), pos = C->getPos();
+		for(int i = 0; i < S->m_pLightStream->NumUsedElements(); i++)
+		{
+			e_StreamReference(e_KernelLight) l = S->m_pLightStream->operator()(i);
+			bool use = true;
+			e_DiffuseLight* L2 = (e_DiffuseLight*)l->Data;
+			e_SpotLight* L3 = (e_SpotLight*)l->Data;
+			switch(l->type)
+			{
+			case e_PointLight_TYPE:
+				use = canUse(l->As<e_PointLight>()->lightPos, pos, dir, sceneScale);
+				break;
+			case e_DiffuseLight_TYPE:
+				//use = Use(L2->shapeSet.getBox(), cd.p, proj);
+				break;
+			case e_SpotLight_TYPE:
+				//use = Use(L3->lightPos, vp);
+				break;
+			}
+			if(use)
+				m_sIndices[m_uCount++] = i;
+			if(m_uCount == N)
+				break;//not great
+		}
+	}
+}
+
+bool e_ImportantLightSelector::Use(AABB& box, float3& p, float4x4& proj)
+{
+	Ray r(p, normalize(box.Center() - p));
+	float a,b;
+	box.Intersect(r, &a, &b);
+	float4 q = proj * make_float4(0,0,a,1);
+	q /= q.w;
+	return abs(q.z) < 0.5f;
+}
+
+bool e_ImportantLightSelector::Use(float3& p, float4x4& vp)
+{
+	float4 q = vp * make_float4(p, 1);
+	q = q / q.w;
+	float2 pi = make_float2(q.x, q.y) / 2.0f + make_float2(0.5f);
+#define ISB(f,a,b) (f >= a && f <= b)
+#define ISB2(f,a,b) (ISB(f.x, a, b) && ISB(f.y, a, b))
+	return (ISB2(pi,0,1));
+#undef ISB
 }

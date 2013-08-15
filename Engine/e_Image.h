@@ -9,6 +9,7 @@ class e_Image
 {
 public:
     // ImageFilm Public Methods
+	CUDA_FUNC_IN e_Image(){}
     e_Image(e_KernelFilter &filt, const float crop[4], int xRes, int yRes, RGBCOL* cudaBuffer);
 	e_Image(e_KernelFilter &filt, int xRes, int yRes, RGBCOL* cudaBuffer);
     void Free()
@@ -118,5 +119,5 @@ private:
 	Pixel *hostPixels;
 	RGBCOL* target;
 	float filterTable[FILTER_TABLE_SIZE * FILTER_TABLE_SIZE];
-	const int xResolution, yResolution;
+	int xResolution, yResolution;
 };

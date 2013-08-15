@@ -123,8 +123,8 @@ struct e_PointLight : public e_LightBase
 #define e_DiffuseLight_TYPE 2
 struct e_DiffuseLight : public e_LightBase
 {
-	float3 Lemit;
-    ShapeSet<MAX_SHAPE_LENGTH> shapeSet;
+	CUDA_ALIGN(16) float3 Lemit;
+    CUDA_ALIGN(16) ShapeSet<MAX_SHAPE_LENGTH> shapeSet;
 
 	e_DiffuseLight(float3 L, ShapeSet<MAX_SHAPE_LENGTH>& s)
 		: e_LightBase(false), shapeSet(s), Lemit(L)
@@ -300,6 +300,8 @@ struct e_SpotLight : public e_LightBase
 	{
 		return AABB(lightPos - make_float3(eps), lightPos + make_float3(eps));
 	}
+	
+	TYPE_FUNC(e_SpotLight)
 private:
 	CUDA_FUNC_IN float Falloff(const float3 &w) const
 	{
@@ -311,8 +313,6 @@ private:
 		float delta = (costheta - cosTotalWidth) / (cosFalloffStart - cosTotalWidth);
 		return delta*delta*delta*delta;
 	}
-	
-	TYPE_FUNC(e_SpotLight)
 };
 
 #define e_InfiniteLight_TYPE 5
@@ -432,10 +432,10 @@ struct e_InfiniteLight : public e_LightBase
 
 #define LGT_SIZE RND_16(DMAX5(sizeof(e_PointLight), sizeof(e_DiffuseLight), sizeof(e_DistantLight), sizeof(e_SpotLight), sizeof(e_InfiniteLight)))
 
-struct e_KernelLight
+CUDA_ALIGN(16) struct e_KernelLight
 {
-private:
-	unsigned char Data[LGT_SIZE];
+public:
+	CUDA_ALIGN(16) unsigned char Data[LGT_SIZE];
 	unsigned int type;
 #define CALL_TYPE(t,f,r) \
 	case t##_TYPE : \

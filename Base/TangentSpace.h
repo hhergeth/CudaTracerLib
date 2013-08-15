@@ -7,6 +7,14 @@ inline float3 getVec(const FW::VertexPNT& v)
 }
 inline void ComputeTangentSpace(FW::Mesh<FW::VertexPNT>* a_Mesh, float3* a_Normals, float3* a_Tangents, float3* a_BiTangents)
 {
+	bool f = true;
+	for(int i = 0; i < MIN(12, a_Mesh->numVertices()); i++)
+		if(length(a_Mesh->vertex(i).t) != 0)
+		{
+			f = false;
+			break;
+		}
+
 	unsigned int vertexCount = a_Mesh->numVertices();
 	float3 *tan1 = new float3[vertexCount * 2];
     float3 *tan2 = tan1 + vertexCount;
@@ -41,6 +49,13 @@ inline void ComputeTangentSpace(FW::Mesh<FW::VertexPNT>* a_Mesh, float3* a_Norma
 			float s2 = w3.x - w1.x;
 			float t1 = w2.y - w1.y;
 			float t2 = w3.y - w1.y;
+			if(f)
+			{
+				s1 = x1 - x2 + 0.1f;
+				s2 = x1 + x2 + 0.1f;
+				t1 = y1 - y2 + 0.1f;
+				t2 = z1 + z2 + 0.1f;
+			}
         
 			float r = 1.0F / (s1 * t2 - s2 * t1);
 			float3 sdir = make_float3((t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r,	(t2 * z1 - t1 * z2) * r);

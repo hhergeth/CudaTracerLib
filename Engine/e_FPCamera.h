@@ -37,8 +37,9 @@ public:
 	{
 		aspect = (float)w / (float)h;
 	}
-	virtual void getData(e_CameraData& c) const
+	virtual e_CameraData getData() const
 	{
+		e_CameraData c;
 		c.p = m_vPos;
 		float4x4 p = getProj(), v = float4x4::Translate(-1.0f * m_vPos) * m_mView;
 		c.proj = p.Inverse();
@@ -46,8 +47,9 @@ public:
 		c.m_mViewProj = v * p;
 		c.dist = m_fDist;
 		c.apperture = apperture;
+		return c;
 	}
-	virtual float4x4 getViewProjection() const
+	virtual float4x4 getGLViewProjection() const
 	{
 		return (float4x4::Translate(-1.0f * m_vPos) * (m_mView * float4x4(1,0,0,0,0,-1,0,0,0,0,1,0,0,0,0,1))) * getProj();
 	}
@@ -79,19 +81,7 @@ public:
 	}
 	float4x4 getProj() const
 	{
-		return float4x4::Perspective(fovy, aspect, 1, 1000);
-	}
-	float3 getPos() const
-	{
-		e_CameraData q;
-		getData(q);
-		return q.p;
-	}
-	float3 getDir() const
-	{
-		e_CameraData q;
-		getData(q);
-		return q.view.Inverse().Forward();
+		return float4x4::Perspective(fovy, aspect, m_fNearFarDepths.x, m_fNearFarDepths.y);
 	}
 };
 

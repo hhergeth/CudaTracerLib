@@ -1,6 +1,7 @@
 #pragma once
 
 #include "..\Math\vector.h"
+#include "..\Math\AABB.h"
 
 struct e_CameraData
 {
@@ -43,13 +44,24 @@ protected:
 	float aspect;
 	float apperture;
 public:
-	e_Camera()
+	AABB m_sLastFrustum;
+	float2 m_fNearFarDepths;
+public:
+	e_Camera(float2 depths = make_float2(1, 1000))
+		: m_fNearFarDepths(depths)
 	{
 	}
 	virtual bool Update() = 0;
-	virtual void getData(e_CameraData& c) const  = 0;
-	virtual float4x4 getViewProjection() const = 0;
-	//virtual void getOpenGLData(float* view, float* proj) = 0;
+	virtual e_CameraData getData() const  = 0;
+	virtual float4x4 getGLViewProjection() const = 0;
+	float3 getPos()
+	{
+		return getData().p;
+	}
+	float3 getDir()
+	{
+		return getData().view.Forward();
+	}
 	virtual void Set(float3& pos, float3& tar) = 0;
 	virtual void Set(float3& pos, float3& tar, float3& up) = 0;
 	virtual void setFocalDepth(float f)

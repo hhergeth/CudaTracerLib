@@ -20,7 +20,7 @@ CUDA_FUNC_IN float3 COL(e_Image::Pixel* P, unsigned int i, float splatScale)
 	if(weightSum != 0)
 		rgb = fmaxf(make_float3(0), rgb / P[i].weightSum);
 	rgb += splatScale * P[i].splatRgb;
-	return rgb;
+	return fmaxf(rgb, make_float3(0.01f));
 }
 
 ///Reinhard Tone Mapping Operator
@@ -60,6 +60,7 @@ CUDA_GLOBAL void rtm_Scale(e_Image::Pixel* P, RGBCOL* T, unsigned int w, unsigne
 	if(x < w && y < h)
 	{
 		unsigned int i = y * w + x;
+		T[i] = Float3ToCOLORREF(COL(P, i, splatScale)); return;
 		float3 yxy = XYZToYxy(RGBToXYZ(COL(P, i, splatScale)));
 		float L = alpha / lumAvg * yxy.x;
 		float L_d = (L * (1.0f + L / lumWhite2)) / (1.0f + L);
@@ -82,6 +83,6 @@ void e_Image::UpdateDisplay(float splatScale)
 	float maxLum = UIntToFloat(mLum);
 	float L_w = exp(Lum_avg / float(xResolution * yResolution));
 	//float middleGrey = 1.03f - 2.0f / (2.0f + log10(L_w + 1.0f));
-	float alpha = 0.35;
-	rtm_Scale<<<dim3(xResolution / 32 + 1, yResolution / 32 + 1), dim3(32, 32)>>>(cudaPixels, target, xResolution, yResolution, splatScale, L_w, alpha, maxLum * maxLum);
+	float alpha = 0.35, lumWhite2 = MAX(maxLum * maxLum, 0.1f);
+	rtm_Scale<<<dim3(xResolution / 32 + 1, yResolution / 32 + 1), dim3(32, 32)>>>(cudaPixels, target, xResolution, yResolution, splatScale, L_w, alpha, lumWhite2);
 }

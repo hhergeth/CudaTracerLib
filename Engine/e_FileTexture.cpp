@@ -51,7 +51,8 @@ bool parseImage(const char* a_InputFile, imgData* data)
 	if((fif != FIF_UNKNOWN) && FreeImage_FIFSupportsReading(fif))
 	{
 		FIBITMAP *dib = FreeImage_Load(fif, a_InputFile, 0);
-		
+		if(!dib)
+			return false;
 		unsigned int w = FreeImage_GetWidth(dib);
 		unsigned int h = FreeImage_GetHeight(dib);
 		unsigned int scan_width = FreeImage_GetPitch(dib);

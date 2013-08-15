@@ -7,8 +7,6 @@
 
 typedef char e_String[256];
 
-#define STD_TEX_SIZE 2048
-
 template <typename T, int SIZE> struct e_KernelTextureGE;
 
 #define e_KernelBiLerpTexture_TYPE 1
@@ -38,37 +36,6 @@ private:
 	T v00, v01, v10, v11;
 };
 
-#define e_KernelCheckerboardTexture_TYPE 2
-template <typename T, int USIZE, int VSIZE> struct e_KernelCheckerboardTexture
-{
-	e_KernelCheckerboardTexture(const e_KernelTextureMapping2D& m, const e_KernelTextureGE<T, USIZE>& tex1, const e_KernelTextureGE<T, VSIZE>& tex2)
-		: mapping(m), texA(tex1), texB(tex2)
-	{
-		skipSize = sizeof(e_KernelTextureGE<T, USIZE>);
-	}
-	CUDA_FUNC_IN T Evaluate(const MapParameters & dg) const
-	{
-		e_KernelTextureGE<T, VSIZE>* B = (e_KernelTextureGE<T, VSIZE>*)(((unsigned int)&texA) + skipSize);
-		float2 uv = make_float2(0);
-		mapping.Map(dg, &uv.x, &uv.y);
-		if ((Floor2Int(uv.x) + Floor2Int(uv.y)) % 2 == 0)
-            return texA.Evaluate(dg);
-        return B->Evaluate(dg);
-	}
-	template<typename L> void LoadTextures(L callback)
-	{
-		e_KernelTextureGE<T, VSIZE>* B = (e_KernelTextureGE<T, VSIZE>*)(((unsigned int)&texA) + skipSize);
-		texA.LoadTextures(callback);
-		B->LoadTextures(callback);
-	}
-	TYPE_FUNC(e_KernelCheckerboardTexture)
-private:
-	unsigned int skipSize;
-	e_KernelTextureMapping2D mapping;
-	e_KernelTextureGE<T, USIZE> texA;
-	e_KernelTextureGE<T, VSIZE> texB;
-};
-
 #define e_KernelConstantTexture_TYPE 3
 template <typename T> struct e_KernelConstantTexture
 {
@@ -88,48 +55,6 @@ template <typename T> struct e_KernelConstantTexture
 	TYPE_FUNC(e_KernelConstantTexture)
 private:
 	T val;
-};
-
-#define e_KernelDotsTexture_TYPE 4
-template <typename T, int USIZE, int VSIZE> struct e_KernelDotsTexture
-{
-	e_KernelDotsTexture(const e_KernelTextureMapping2D& m, const e_KernelTextureGE<T, USIZE>& _insideDot, const e_KernelTextureGE<T, VSIZE>& _outsideDot)
-		: mapping(m), insideDot(_insideDot), outsideDot(_outsideDot)
-	{
-		skipSize = sizeof(e_KernelTextureGE<T, USIZE>);
-	}
-	CUDA_FUNC_IN T Evaluate(const MapParameters & dg) const
-	{
-		e_KernelTextureGE<T, VSIZE>* B = (e_KernelTextureGE<T, VSIZE>*)(((unsigned int)&insideDot) + skipSize);
-		float2 uv = make_float2(0);
-		mapping.Map(dg, &uv.x, &uv.y);
-		int sCell = Floor2Int(uv.x + .5f), tCell = Floor2Int(uv.y + .5f);
-		if (Noise(sCell+.5f, tCell+.5f) > 0)
-		{
-			float radius = .35f;
-            float maxShift = 0.5f - radius;
-            float sCenter = sCell + maxShift *
-                Noise(sCell + 1.5f, tCell + 2.8f);
-            float tCenter = tCell + maxShift *
-                Noise(sCell + 4.5f, tCell + 9.8f);
-			float ds = uv.x - sCenter, dt = uv.y - tCenter;
-            if (ds*ds + dt*dt < radius*radius)
-                return insideDot.Evaluate(dg);
-		}
-		else return B->Evaluate(dg);
-	}
-	template<typename L> void LoadTextures(L callback)
-	{
-		e_KernelTextureGE<T, VSIZE>* B = (e_KernelTextureGE<T, VSIZE>*)(((unsigned int)&insideDot) + skipSize);
-		insideDot.LoadTextures(callback);
-		B->LoadTextures(callback);
-	}
-	TYPE_FUNC(e_KernelDotsTexture)
-private:
-	unsigned int skipSize;
-	e_KernelTextureMapping2D mapping;
-	e_KernelTextureGE<T, USIZE> insideDot;
-	e_KernelTextureGE<T, VSIZE> outsideDot;
 };
 
 #define e_KernelFbmTexture_TYPE 5
@@ -169,17 +94,22 @@ template <typename T> struct e_KernelImageTexture
 	{
 		float2 uv = make_float2(0);
 		mapping.Map(dg, &uv.x, &uv.y);
-		return tex.Sample<T>(uv);
+		//e_KernelFileTexture* tex = (e_KernelFileTexture*)((unsigned long long)low | (unsigned long long)high << 32);
+		return tex->Sample<T>(uv);
 	}
 	template<typename L> void LoadTextures(L callback)
 	{
-		tex = callback(file)->getKernelData();
+		tex = callback(file).getDevice();
+		//unsigned long long tex = (unsigned long long)callback(file).getDevice();
+		//low = tex & 0xffffffff;
+		//high = tex >> 32;
 	}
 	TYPE_FUNC(e_KernelImageTexture)
 public:
+	e_KernelFileTexture* tex;
+	//unsigned int low, high;
 	e_KernelTextureMapping2D mapping;
 	e_String file;
-	e_KernelFileTexture tex;
 };
 
 #define e_KernelMarbleTexture_TYPE 7
@@ -230,65 +160,6 @@ private:
 	e_KernelTextureMapping3D mapping;
 };
 
-#define e_KernelMixTexture_TYPE 8
-template <typename T, int USIZE, int VSIZE, int WSIZE> struct e_KernelMixTexture
-{
-	e_KernelMixTexture(const e_KernelTextureGE<T, USIZE>& tex1, const e_KernelTextureGE<T, VSIZE>& tex2, const e_KernelTextureGE<float, WSIZE>& _amount)
-		: texA(tex1), texB(tex2), amount(_amount)
-	{
-		skip1 = sizeof(e_KernelTextureGE<float, WSIZE>);
-		skip2 = sizeof(e_KernelTextureGE<T, USIZE>);
-	}
-	CUDA_FUNC_IN T Evaluate(const MapParameters & dg) const
-	{
-		e_KernelTextureGE<T, USIZE>* A = (e_KernelTextureGE<T, USIZE>*)(((unsigned int)&amount) + skip1);
-		e_KernelTextureGE<T, VSIZE>* B = (e_KernelTextureGE<T, VSIZE>*)(((unsigned int)&amount) + skip1 + skip2);
-		T t1 = A->Evaluate(dg), t2 = B->Evaluate(dg);
-        float amt = amount.Evaluate(dg);
-        return (1.f - amt) * t1 + amt * t2;
-	}
-	template<typename L> void LoadTextures(L callback)
-	{
-		e_KernelTextureGE<T, USIZE>* A = (e_KernelTextureGE<T, USIZE>*)(((unsigned int)&amount) + skip1);
-		e_KernelTextureGE<T, VSIZE>* B = (e_KernelTextureGE<T, VSIZE>*)(((unsigned int)&amount) + skip1 + skip2);
-		A->LoadTextures(callback);
-		B->LoadTextures(callback);
-		amount.LoadTextures(callback);
-	}
-	TYPE_FUNC(e_KernelMixTexture)
-private:
-	unsigned int skip1, skip2;
-	e_KernelTextureGE<float, WSIZE> amount;
-	e_KernelTextureGE<T, USIZE> texA;
-	e_KernelTextureGE<T, VSIZE> texB;
-};
-/*
-#define e_KernelScaleTexture_TYPE 9
-template <typename T1, typename T2, int USIZE, int VSIZE> struct e_KernelScaleTexture
-{
-	e_KernelScaleTexture(const e_KernelTextureGE<T1, USIZE>& tex1, const e_KernelTextureGE<T2, VSIZE>& tex2)
-		: texA(tex1), texB(tex2)
-	{
-		skipSize = sizeof(e_KernelTextureGE<T1, USIZE>);
-	}
-	CUDA_FUNC_IN T2 Evaluate(const MapParameters & dg) const
-	{
-		e_KernelTextureGE<T, VSIZE>* B = (e_KernelTextureGE<T, VSIZE>*)(((unsigned int)&texA) + skipSize);
-		return texA.Evaluate(dg) * B->Evaluate(dg);
-	}
-	template<typename L> void LoadTextures(L callback)
-	{
-		e_KernelTextureGE<T, VSIZE>* B = (e_KernelTextureGE<T, VSIZE>*)(((unsigned int)&texA) + skipSize);
-		texA.LoadTextures(callback);
-		B->LoadTextures(callback);
-	}
-	TYPE_FUNC(e_KernelScaleTexture)
-private:
-	unsigned int skipSize;
-	e_KernelTextureGE<T1, USIZE> texA;
-	e_KernelTextureGE<T2, VSIZE> texB;
-};
-*/
 #define e_KernelUVTexture_TYPE 10
 struct e_KernelUVTexture
 {
@@ -366,14 +237,8 @@ private:
 	case e_KernelBiLerpTexture_TYPE : \
 		r ((e_KernelBiLerpTexture<AB>*)Data)->f; \
 		break; \
-	case e_KernelCheckerboardTexture_TYPE : \
-		r ((e_KernelCheckerboardTexture<AB, STD_TEX_SIZE, STD_TEX_SIZE>*)Data)->f; \
-		break; \
 	case e_KernelConstantTexture_TYPE : \
 		r ((e_KernelConstantTexture<AB>*)Data)->f; \
-		break; \
-	case e_KernelDotsTexture_TYPE : \
-		r ((e_KernelDotsTexture<AB, STD_TEX_SIZE, STD_TEX_SIZE>*)Data)->f; \
 		break; \
 	case e_KernelFbmTexture_TYPE : \
 		r ((e_KernelFbmTexture<AB>*)Data)->f; \
@@ -383,9 +248,6 @@ private:
 		break; \
 	case e_KernelMarbleTexture_TYPE : \
 		r ((e_KernelMarbleTexture*)Data)->f; \
-		break; \
-	case e_KernelMixTexture_TYPE : \
-		r ((e_KernelMixTexture<AB, STD_TEX_SIZE, STD_TEX_SIZE, STD_TEX_SIZE>*)Data)->f; \
 		break; \
 	case e_KernelUVTexture_TYPE : \
 		r ((e_KernelUVTexture*)Data)->f; \
@@ -404,23 +266,14 @@ private:
 	case e_KernelBiLerpTexture_TYPE : \
 		r ((e_KernelBiLerpTexture<AB>*)Data)->f; \
 		break; \
-	case e_KernelCheckerboardTexture_TYPE : \
-		r ((e_KernelCheckerboardTexture<AB, STD_TEX_SIZE, STD_TEX_SIZE>*)Data)->f; \
-		break; \
 	case e_KernelConstantTexture_TYPE : \
 		r ((e_KernelConstantTexture<AB>*)Data)->f; \
-		break; \
-	case e_KernelDotsTexture_TYPE : \
-		r ((e_KernelDotsTexture<AB, STD_TEX_SIZE, STD_TEX_SIZE>*)Data)->f; \
 		break; \
 	case e_KernelFbmTexture_TYPE : \
 		r ((e_KernelFbmTexture<AB>*)Data)->f; \
 		break; \
 	case e_KernelImageTexture_TYPE : \
 		r ((e_KernelImageTexture<AB>*)Data)->f; \
-		break; \
-	case e_KernelMixTexture_TYPE : \
-		r ((e_KernelMixTexture<AB, STD_TEX_SIZE, STD_TEX_SIZE, STD_TEX_SIZE>*)Data)->f; \
 		break; \
 	case e_KernelWindyTexture_TYPE : \
 		r ((e_KernelWindyTexture<AB>*)Data)->f; \
@@ -430,10 +283,10 @@ private:
 		break; \
 	}
 
-template <typename T, int SIZE> struct e_KernelTextureGE
+template <typename T, int SIZE> struct CUDA_ALIGN(16) e_KernelTextureGE
 {
 public:
-	unsigned char Data[SIZE];
+	CUDA_ALIGN(16) unsigned char Data[SIZE];
 	unsigned int type;
 public:
 #ifdef __CUDACC__
@@ -465,10 +318,10 @@ public:
 	}
 };
 
-template <int SIZE> struct e_KernelTextureGE<float3, SIZE>
+template <int SIZE> struct CUDA_ALIGN(16) e_KernelTextureGE<float3, SIZE>
 {
 public:
-	unsigned char Data[SIZE];
+	CUDA_ALIGN(16) unsigned char Data[SIZE];
 	unsigned int type;
 public:
 #ifdef __CUDACC__
@@ -504,14 +357,18 @@ public:
 #undef CALL_FUNC
 #undef CALL_FUNCO
 
+#define LType float4x4
+#define STD_TEX_SIZE (RND_16(DMAX8(sizeof(e_KernelBiLerpTexture<LType>), sizeof(e_KernelConstantTexture<LType>), sizeof(e_KernelFbmTexture<LType>), sizeof(e_KernelImageTexture<LType>), \
+								  sizeof(e_KernelMarbleTexture), sizeof(e_KernelUVTexture), sizeof(e_KernelWindyTexture<LType>), sizeof(e_KernelWrinkledTexture<LType>))) + 12)
+
 template <typename T> struct e_KernelTexture : public e_KernelTextureGE<T, STD_TEX_SIZE>
 {
 
 };
 
-template<typename T> static inline e_KernelTexture<T> CreateTexture(const T& val)
+template<typename V, template<typename> class U> static inline e_KernelTexture<V> CreateTexture(const U<V>& val)
 {
-	e_KernelTexture<T> r;
+	e_KernelTexture<V> r;
 	r.SetData(val);
 	return r;
 }

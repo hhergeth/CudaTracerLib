@@ -66,8 +66,8 @@ CUDA_ONLY_FUNC float3 EstimateDirect(const float3& p, const float3& n, const flo
 			float3 Li = make_float3(0.0f);
 			TraceResult r2;
 			r2.Init();
-			if(k_TraceRay<true>(wi, p, &r2) && LightIndex(r2, g_SceneData) == li)
-				Li = Le(p, n, -wi, r2, g_SceneData);
+			if(k_TraceRay<true>(wi, p, &r2) && r2.LightIndex() == li)
+				Li = r2.Le(p, n, -wi);
 				//Li = light->L(p, n, wi);
 			else Li = light->Le(g_SceneData, Ray(p, wi));
 			if(!ISBLACK(Li))
@@ -83,12 +83,12 @@ CUDA_ONLY_FUNC float3 EstimateDirect(const float3& p, const float3& n, const flo
 
 CUDA_ONLY_FUNC float3 UniformSampleOneLight(const float3& p, const float3& n, const float3& wo, const e_KernelBSDF* bsdf, CudaRNG& rng)
 {
-	int nLights = g_SceneData.m_sLightData.UsedCount;
+	int nLights = g_SceneData.m_sLightSelector.m_uCount;
     if (nLights == 0)
 		return make_float3(0.0f);
     int lightNum = Floor2Int(rng.randomFloat() * nLights);
     lightNum = MIN(lightNum, nLights-1);
-    e_KernelLight *light = g_SceneData.m_sLightData.Data + lightNum;
+	e_KernelLight *light = g_SceneData.m_sLightData.Data + g_SceneData.m_sLightSelector.m_sIndices[lightNum];
 	LightSample lightSample(rng);
     BSDFSample bsdfSample(rng);
 	return float(nLights) * EstimateDirect(p, n, wo, bsdf, rng, light, lightNum, lightSample, bsdfSample, BxDFType(BSDF_ALL & ~BSDF_SPECULAR));
@@ -97,9 +97,9 @@ CUDA_ONLY_FUNC float3 UniformSampleOneLight(const float3& p, const float3& n, co
 CUDA_ONLY_FUNC float3 UniformSampleAllLights(const float3& p, const float3& n, const float3& wo, const e_KernelBSDF* bsdf, CudaRNG& rng, int nSamples)
 {
 	float3 L = make_float3(0);
-	for(int i = 0; i < g_SceneData.m_sLightData.UsedCount; i++)
+	for(int i = 0; i < g_SceneData.m_sLightSelector.m_uCount; i++)
 	{
-		e_KernelLight* light = g_SceneData.m_sLightData.Data + i;
+		e_KernelLight* light = g_SceneData.m_sLightData.Data + g_SceneData.m_sLightSelector.m_sIndices[i];
 		float3 Ld = make_float3(0);
 		for(int j = 0; j < nSamples; j++)
 		{

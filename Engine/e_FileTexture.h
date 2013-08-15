@@ -61,12 +61,12 @@ CUDA_FUNC_IN bool WrapCoordinates(const float2& a_UV, const float2& dim, e_Image
 	}
 }
 
-class e_KernelFileTexture
+class CUDA_ALIGN(16) e_KernelFileTexture
 {
 public:
-	void* m_pDeviceData;
-	float2 m_fDim;
-	int2 m_uDim;
+	CUDA_ALIGN(16) void* m_pDeviceData;
+	CUDA_ALIGN(16) float2 m_fDim;
+	CUDA_ALIGN(16) int2 m_uDim;
 	unsigned int m_uWidth;
 	e_KernelTexture_DataType m_uType;
 	e_ImageWrap m_uWrapMode;
@@ -79,7 +79,14 @@ public:
 	{
 		if(m_uType == e_KernelTexture_DataType::vtGeneric)
 			return *at<float4>(a_UV);
-		else return make_float4(Sample<float3>(a_UV), 1);
+		else
+		{
+			float2 q = make_float2(frac(a_UV.x), frac(1.0f-a_UV.y)) * m_fDim;
+			int2 v = make_int2(q.x, q.y);
+			float4 a = ld(v), b = ld(v + make_int2(1, 0)), c = ld(v + make_int2(0, 1)), d = ld(v + make_int2(1, 1));
+			float4 e = lerp(a, b, frac(q.x)), f = lerp(c, d, frac(q.x));
+			return lerp(e, f, frac(q.y));
+		}
 	}
 	template<int W> CUDA_FUNC_IN void Gather(const float2& a_UV, float* data) const
 	{
@@ -102,14 +109,7 @@ public:
 	{
 		if(m_uType == e_KernelTexture_DataType::vtGeneric)
 			return *at<float3>(a_UV);
-		else
-		{
-			float2 q = make_float2(frac(a_UV.x), frac(1.0f-a_UV.y)) * m_fDim;
-			int2 v = make_int2(q.x, q.y);
-			float3 a = ld(v), b = ld(v + make_int2(1, 0)), c = ld(v + make_int2(0, 1)), d = ld(v + make_int2(1, 1));
-			float3 e = lerp(a, b, frac(q.x)), f = lerp(c, d, frac(q.x));
-			return lerp(e, f, frac(q.y));
-		}
+		else return make_float3(Sample<float4>(a_UV));
 	}
 private:
 	template<typename T> CUDA_FUNC_IN T* ld(const int2& p2, int xo = 0, int yo = 0) const
@@ -124,14 +124,14 @@ private:
 		unsigned int x = (unsigned int)a_Coords.x, y = (unsigned int)a_Coords.y;
 		return (T*)m_pDeviceData + y * m_uWidth + x;
 	}
-	CUDA_FUNC_IN float3 ld(const int2& uva) const
+	CUDA_FUNC_IN float4 ld(const int2& uva) const
 	{
 		int2 uv = clamp(uva, make_int2(0, 0), m_uDim);
-		float3 r;
+		float4 r;
 		if(m_uType == e_KernelTexture_DataType::vtRGBCOL)
-			r = COLORREFToFloat3(((RGBCOL*)m_pDeviceData)[uv.y * m_uWidth + uv.x]);
+			r = COLORREFToFloat4(((RGBCOL*)m_pDeviceData)[uv.y * m_uWidth + uv.x]);
 		else if(m_uType == e_KernelTexture_DataType::vtRGBE)
-			r = RGBEToFloat3(((RGBE*)m_pDeviceData)[uv.y * m_uWidth + uv.x]);
+			r = make_float4(RGBEToFloat3(((RGBE*)m_pDeviceData)[uv.y * m_uWidth + uv.x]), 1);
 		return r;
 	}
 };

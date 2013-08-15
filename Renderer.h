@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Base\Timer.h"
 #include "Base\FrameworkInterop.h"
 #include "Engine\e_FPCamera.h"
 #include "Engine\e_DynamicScene.h"
@@ -76,9 +77,11 @@ public:
 	k_Tracer* m_pTracer_1;
 	bool oldMove0, oldMove1;
 	cTimer m_sTimer;
+	AABB* m_pEyeBox;
 public:
 	Renderer(bool stdTracers = true)
 	{
+		m_pEyeBox = 0;
 		if(stdTracers)
 			//setTracers(new k_PrimTracer(), new k_sPpmTracer());
 			setTracers(new k_PrimTracer(), new k_PathTracer());
@@ -90,6 +93,10 @@ public:
 	{
 		delete m_pTracer_0;
 		delete m_pTracer_1;
+	}
+	void setPPm()
+	{
+		setTracer(new k_sPpmTracer(), 1);
 	}
 	void setTracer(k_Tracer* t, int i)
 	{
@@ -134,28 +141,43 @@ public:
 		gl->setVGXform(oldXform);
 		glPopAttrib();
 		
-		float4x4 vpq = C->getViewProjection();
+		float4x4 vpq = C->getGLViewProjection();
 		if(ShowGui())
 		{
-			float4x4 vp = C->getViewProjection();
 			if(N)
-				plotBox(S->getBox(N), vp, gl, make_float3(0,0,1));
+				plotBox(S->getBox(N), vpq, gl, make_float3(0,0,1));
 			if(a_DrawSceneBvh)
 			{
 				if(S->getSceneBVH()->getData().m_sStartNode != -1)
-					plot(S->getSceneBVH()->m_pNodes->operator()(0), S->getSceneBVH()->m_pNodes->operator()(), 0, vp, gl);
-				else plotBox(S->getBox(S->getNodes()), vp, gl, make_float3(1,0,0));
-
-				AABB box = S->getKernelSceneData().m_sBox;
-				float eps = Distance(box.maxV, box.minV) / 100.0f;
-				for(int i = 0; i < S->getLightCount(); i++)
-					plotBox(S->getLights()(i)->getBox(eps), vpq, gl, make_float3(1,0,0));
+					plot(S->getSceneBVH()->m_pNodes->operator()(0), S->getSceneBVH()->m_pNodes->operator()(), 0, vpq, gl);
+				else plotBox(S->getBox(S->getNodes()), vpq, gl, make_float3(1,0,0));				
 				for(int i = 0; i < S->getVolumes().getLength(); i++)
 				{
 					AABB box = S->getVolumes()(i)->WorldBound();
 					plotBox(box, vpq, gl, make_float3(1,1,0));
 				}
 			}
+			e_ImportantLightSelector sel = S->getKernelSceneData().m_sLightSelector;
+			AABB box = S->getKernelSceneData().m_sBox;
+			float eps = Distance(box.maxV, box.minV) / 100.0f;
+			for(int i = 0; i < S->getLightCount(); i++)
+			{
+				AABB box = S->getLights()(i)->getBox(eps);
+				plotBox(box, vpq, gl, make_float3(1,0,0));
+				float4 p0 = vpq * make_float4(box.Center(), 1);
+				p0 /= p0.w;
+				float2 p = make_float2(p0.x / p0.w, 1.0f - p0.y / p0.w) * make_float2(I2->getSize());
+				unsigned int col = (RGB(0,0,255)) | 0xff000000;
+				for(int j = 0; j < sel.m_uCount; j++)
+					if(sel.m_sIndices[j] == i)
+					{
+						col = (RGB(0,255,0)) | 0xff000000;
+						break;
+					}
+				gl->drawString(FW::String("Light ").appendf("%d", i), FW::Vec4f(p0.x,p0.y,p0.z,p0.w), FW::Vec2f(0), col);//FW::Vec2i(p.x,p.y)
+			}
+			if(m_pEyeBox)
+				plotBox(*m_pEyeBox, vpq, gl, make_float3(0,0,1));
 			//for(int i = 0; i < g_pScene->getNodeCount(); i++)
 			//	plotBox(g_pScene->getNodes()[i].getWorldBox());
 			if(a_DrawObjectBvhs)
@@ -163,7 +185,7 @@ public:
 				for(int i = 0; i < S->getNodeCount(); i++)
 				{
 					unsigned int j = S->getMesh(S->getNodes()(i))->getKernelData().m_uBVHNodeOffset / 4;
-					plot(0, S->m_pBVHStream->operator()(j), 0, S->getNodes()[i].getWorldMatrix(), vp, gl);
+					plot(0, S->m_pBVHStream->operator()(j), 0, S->getNodes()[i].getWorldMatrix(), vpq, gl);
 				}
 			}
 		}
@@ -223,8 +245,7 @@ public:
 	}
 	bool HandleDown(e_StreamReference(e_Node) N, e_DynamicScene* S, e_Camera* C, int2 p, int2 s)
 	{
-		e_CameraData c;
-		C->getData(c);
+		e_CameraData c = C->getData();
 		float4x4 m = N->getWorldMatrix(), m2 = N->getInvWorldMatrix();
 		Ray r = c.GenRay(p, s);
 		float3 o = m.Translation(), d = o;
@@ -243,8 +264,7 @@ public:
 	}
 	void HandleMove(e_StreamReference(e_Node) N, e_DynamicScene* S, e_Camera* C, int2 p, int2 s)
 	{
-		e_CameraData c;
-		C->getData(c);
+		e_CameraData c = C->getData();
 		Ray r = c.GenRay(p, s);
 		float4x4 m = N->getWorldMatrix();
 		float v_Dist = inter(m_uActiveComponent == 4 ? m.Forward() : m_uActiveComponent == 5 ? m.Right() : m.Up(), r, m.Translation());
@@ -260,7 +280,7 @@ public:
 	}
 	void DrawPlanes(const e_StreamReference(e_Node) N, const e_Camera* C, FW::GLContext* O)
 	{
-		float4x4 m = N->getWorldMatrix(), vp = C->getViewProjection();
+		float4x4 m = N->getWorldMatrix(), vp = C->getGLViewProjection();
 		float3 r = normalize(m.Right()), u = normalize(m.Up()), f = normalize(m.Forward());
 		float3 o = m.Translation(), x = o + r * m_fPlaneLength, y = o + u * m_fPlaneLength, z = o + f * m_fPlaneLength;
 		float3 xy = o + (r + u) * m_fPlaneLength, yz = o + (u + f) * m_fPlaneLength, zx = o + (f + r) * m_fPlaneLength;

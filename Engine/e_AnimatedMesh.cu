@@ -35,7 +35,7 @@ __global__ void g_ComputeVertices(e_TmpVertex* a_Dest, e_AnimatedVertex* a_Sourc
 		a_Dest[N].m_fPos = lerp(v0, v1, a_Lerp);
 
 		float3 n0 = mat0.TransformNormal(v.m_fNormal), n1 = mat1.TransformNormal(v.m_fNormal);
-		a_Dest[N].m_fNormal = normalize(lerp(n0, n1, a_Lerp));
+		a_Dest[N].m_fNormal = -normalize(lerp(n0, n1, a_Lerp));
 
 		float3 t0 = mat0.TransformNormal(v.m_fTangent), t1 = mat1.TransformNormal(v.m_fTangent);
 		a_Dest[N].m_fTangent = normalize(lerp(t0, t1, a_Lerp));
@@ -57,6 +57,7 @@ __global__ void g_ComputeTriangles(e_TmpVertex* a_Tmp, uint3* a_TriData, e_Trian
 	if(N < a_TCount)
 	{
 		uint3 t = a_TriData[N];
+		float3 n = normalize(cross(a_Tmp[t.y].m_fPos - a_Tmp[t.x].m_fPos, a_Tmp[t.z].m_fPos - a_Tmp[t.x].m_fPos));
 		a_TriData2[N].m_sDeviceData.Row0.x = cnv(a_Tmp[t.x].m_fNormal) | cnv(a_Tmp[t.y].m_fNormal, 16);
 		a_TriData2[N].m_sDeviceData.Row0.y = cnv(a_Tmp[t.z].m_fNormal) | cnv(a_Tmp[t.x].m_fTangent, 16);
 		a_TriData2[N].m_sDeviceData.Row0.z = cnv(a_Tmp[t.y].m_fTangent) | cnv(a_Tmp[t.z].m_fTangent, 16);

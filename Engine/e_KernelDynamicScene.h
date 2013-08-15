@@ -13,6 +13,19 @@
 
 struct e_KernelLight;
 
+class e_DynamicScene;
+class e_Camera;
+struct e_ImportantLightSelector
+{
+	unsigned int m_sIndices[32];
+	unsigned int m_uCount;
+	CUDA_FUNC_IN e_ImportantLightSelector(){}
+	e_ImportantLightSelector(e_DynamicScene* S, e_Camera* C);
+private:
+	bool Use(AABB& box, float3& p, float4x4& proj);
+	bool Use(float3& p, float4x4& vp);
+};
+
 struct e_KernelDynamicScene
 {
 	e_KernelBuffer<e_TriangleData> m_sTriData;
@@ -29,5 +42,6 @@ struct e_KernelDynamicScene
 	e_KernelTerrainData m_sTerrain;
 	e_KernelAggregateVolume m_sVolume;
 	e_EnvironmentMap m_sEnvMap;
+	e_ImportantLightSelector m_sLightSelector;
 	AABB m_sBox;
 };

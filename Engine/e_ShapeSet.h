@@ -4,15 +4,15 @@
 #include "..\Math\Montecarlo.h"
 #include "..\Engine\e_Mesh.h"
 
-template<int N> struct ShapeSet
+template<int N> struct CUDA_ALIGN(16) ShapeSet
 {
-	struct triData
+	CUDA_ALIGN(16) struct triData
 	{
 		CUDA_ALIGN(16) e_TriIntersectorData dat;
 		CUDA_ALIGN(16) float3 p[3];
 		CUDA_ALIGN(16) float3 n;
-		float area;
-		const e_TriIntersectorData* datRef;
+		CUDA_ALIGN(16) float area;
+		CUDA_ALIGN(16) const e_TriIntersectorData* datRef;
 		
 		triData(){}
 		triData(const e_TriIntersectorData* a_Int, float4x4& mat)
@@ -131,8 +131,8 @@ public:
 		areaDistribution = Distribution1D<N>(areas, count);
 	}
 private:
-    triData tris[N];
+    CUDA_ALIGN(16) triData tris[N];
     float sumArea;
-    Distribution1D<N> areaDistribution;
+    CUDA_ALIGN(16) Distribution1D<N> areaDistribution;
 	int count;
 };

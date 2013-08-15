@@ -83,6 +83,7 @@ void constructLayout(std::vector<std::vector<e_BVHLevelEntry>>& a_Out, e_BVHNode
 e_AnimatedMesh::e_AnimatedMesh(InputStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<int>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4, e_Stream<char>* a_Stream5)
 	: e_Mesh(a_In, a_Stream0, a_Stream1, a_Stream2, a_Stream3, a_Stream4)
 {
+	m_uType = MESH_ANIMAT_TOKEN;
 	BASEHOST = a_Stream5->operator()();
 	BASEDEVICE = a_Stream5->UsedElements().getDevice();
 	unsigned int numVertices;
@@ -121,7 +122,7 @@ e_AnimatedMesh::e_AnimatedMesh(InputStream& a_In, e_Stream<e_TriIntersectorData>
 	a_Stream5->Invalidate(m_pOffset);
 }
 
-void e_AnimatedMesh::CompileToBinary(char* a_InputFile, c_StringArray& a_Anims, OutputStream& a_Out)
+void e_AnimatedMesh::CompileToBinary(const char* a_InputFile, c_StringArray& a_Anims, OutputStream& a_Out)
 {
 	MD5Model M;
 	M.loadMesh(a_InputFile);
@@ -143,7 +144,7 @@ void e_AnimatedMesh::CompileToBinary(char* a_InputFile, c_StringArray& a_Anims, 
 	for(int s = 0; s < M.meshes.size(); s++)
 	{
 		e_KernelMaterial mat;
-		
+		mat.NodeLightIndex = -1;
 		mat.SetData(e_KernelMaterial_Matte(CreateTexture("hellknight.tga", float3()), CreateTexture(0, 0.0f)));
 		//mat.NormalMap = e_Sampler<float3>("n_hellknight.tga", 1);
 		matData.push_back(mat);

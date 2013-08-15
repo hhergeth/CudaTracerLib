@@ -65,7 +65,7 @@ template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, float3 Le, CudaRNG
 			while(true)
 			{
 				float3 w = -r.direction;
-				TraceResult r3 = k_TraceRay(Ray(x, r.direction));
+				TraceResult r3 = k_TraceRay<false>(Ray(x, r.direction));
 				float3 sigma_s = bssrdf.sigp_s, sigma_t = bssrdf.sigp_s + bssrdf.sig_a;
 				float d = -logf(rng.randomFloat()) / (fsumf(sigma_t) / 3.0f);
 				bool cancel = d >= (r3.m_fDist);
@@ -92,7 +92,7 @@ template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, float3 Le, CudaRNG
 		}
 		else
 		{
-			r2.GetBSDF(x,g_SceneData.m_sMatData.Data, &bsdf);
+			r2.GetBSDF(x, &bsdf);
 			float3 wo = -r.direction;
 			if((DIRECT && depth > 0) || !DIRECT)
 				if(bsdf.NumComponents(BxDFType(BSDF_REFLECTION | BSDF_TRANSMISSION | BSDF_DIFFUSE )))
@@ -120,19 +120,20 @@ template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, float3 Le, CudaRNG
 	return true;
 }
 
-template<bool DIRECT> __global__ void k_PhotonPass(unsigned int spp, float angle, float angle2)
+template<bool DIRECT> __global__ void k_PhotonPass(unsigned int spp)
 { 
 	const unsigned int a_MaxDepth = 10;
 	CudaRNG rng = g_RNGData();
 	for(int _photonNum = 0; _photonNum < spp; _photonNum++)
 	{
-		int li = (int)float(g_SceneData.m_sLightData.UsedCount) * rng.randomFloat();
-		float lightPdf = 1.0f / (float)g_SceneData.m_sLightData.UsedCount;
+		int li = (int)float(g_SceneData.m_sLightSelector.m_uCount) * rng.randomFloat();
+		int li2 = g_SceneData.m_sLightSelector.m_sIndices[li];
+		float lightPdf = 1.0f / (float)g_SceneData.m_sLightSelector.m_uCount;
 	label001:
 		Ray photonRay;
 		float3 Nl;
 		float pdf;
-		float3 Le = g_SceneData.m_sLightData[li].Sample_L(g_SceneData, LightSample(rng), rng.randomFloat(), rng.randomFloat(), &photonRay, &Nl, &pdf); 
+		float3 Le = g_SceneData.m_sLightData[li2].Sample_L(g_SceneData, LightSample(rng), rng.randomFloat(), rng.randomFloat(), &photonRay, &Nl, &pdf); 
 		if(pdf == 0 || ISBLACK(Le))
 			continue;
 		float3 alpha = (AbsDot(Nl, photonRay.direction) * Le) / (pdf * lightPdf);
@@ -150,8 +151,8 @@ void k_sPpmTracer::doPhotonPass()
 	k_STARTPASS(m_pScene, m_pCamera, m_sRngs);
 	const unsigned long long p0 = 6 * 32, spp = 3, n = 180, PhotonsPerPass = p0 * n * spp;
 	if(m_bDirect)
-		k_PhotonPass<true><<< n, p0 >>>(spp,20,5);
-	else k_PhotonPass<false><<< n, p0 >>>(spp,20,5);
+		k_PhotonPass<true><<< n, p0 >>>(spp);
+	else k_PhotonPass<false><<< n, p0 >>>(spp);
 	cudaThreadSynchronize();
 	cudaMemcpyFromSymbol(&m_sMaps, g_Map, sizeof(k_PhotonMapCollection));
 }

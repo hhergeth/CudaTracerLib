@@ -110,11 +110,7 @@ class k_RandTracerBase : public k_TracerBase
 protected:
 	k_TracerRNGBuffer m_sRngs;
 public:
-	k_RandTracerBase()
-		: k_TracerBase(), m_sRngs(1 << 16)
-	{
-
-	}
+	k_RandTracerBase();
 	AABB GetEyeHitPointBox();
 };
 

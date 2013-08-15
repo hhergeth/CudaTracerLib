@@ -55,9 +55,16 @@ e_Image::e_Image(e_KernelFilter &filt, int xRes, int yRes, RGBCOL* cudaBuffer)
 
 void e_Image::WriteDisplayImage(const char* fileName)
 {
-	FIBITMAP* bitmap = FreeImage_Allocate(xResolution, yResolution, 32);
+	FIBITMAP* bitmap = FreeImage_Allocate(xResolution, yResolution, 32, 0x000000ff, 0x0000ff00, 0x00ff0000);
 	cudaMemcpy(FreeImage_GetBits(bitmap), target, sizeof(RGBCOL) * xResolution * yResolution, cudaMemcpyDeviceToHost);
-	FreeImage_Save(FIF_JPEG, bitmap, fileName);
+	RGBCOL* A = (RGBCOL*)FreeImage_GetBits(bitmap);
+	for(int i = 0; i < xResolution * yResolution; i++)
+	{
+		unsigned char c = A[i].x;
+		A[i].x = A[i].z;
+		A[i].z = c;
+	}
+	bool b = FreeImage_Save(FIF_BMP, bitmap, fileName, BMP_DEFAULT);
 	FreeImage_Unload(bitmap);
 }
 
