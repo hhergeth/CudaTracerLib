@@ -3,85 +3,40 @@
 #include "..\Math\vector.h"
 #include "..\Math\AABB.h"
 #include "e_Buffer.h"
-
-CUDA_FUNC_IN float PhaseHG(const float3 &w, const float3 &wp, float g)
-{
-    float costheta = dot(w, wp);
-    return 1.f / (4.f * PI) * (1.f - g*g) / powf(1.f + g*g - 2.f * g * costheta, 1.5f);
-}
+#include "e_PhaseFunction.h"
 
 struct e_BaseVolumeRegion
 {
 public:
 	AABB Box;
+	e_PhaseFunction Func;
 	CUDA_FUNC_IN bool inside(const float3& p) const
 	{
 		return Box.Contains(p);
 	}
 };
 
-/*
-struct qq_REG : public e_BaseVolumeRegion
-{
-public:
-    CUDA_FUNC_IN bool IntersectP(const Ray &ray, float *t0, float *t1)
-	{
-
-	}
-
-    CUDA_FUNC_IN float3 sigma_a(const float3& p, const float3& w, float time) const
-	{
-
-	}
-
-    CUDA_FUNC_IN float3 sigma_s(const float3& p, const float3& w, float time) const
-	{
-
-	}
-
-    CUDA_FUNC_IN float3 Lve(const float3& p, const float3& w, float time) const
-	{
-
-	}
-
-    CUDA_FUNC_IN float p(const float3& p, const float3& w, const float3& wp, float time) const
-	{
-
-	}
-
-    CUDA_FUNC_IN float3 sigma_t(const float3 &p, const float3 &wo, float time) const
-	{
-
-	}
-
-    CUDA_FUNC_IN float3 tau(const Ray &ray, float step = 1.f, float offset = 0.5) const
-	{
-
-	}
-};
-*/
-
 #define e_HomogeneousVolumeDensity_TYPE 1
 struct e_HomogeneousVolumeDensity : public e_BaseVolumeRegion
 {
 public:
-	e_HomogeneousVolumeDensity(const float sa, const float ss, float gg, const float emit, const AABB box)
+	e_HomogeneousVolumeDensity(const float sa, const float ss, const e_PhaseFunction& func, const float emit, const AABB box)
 	{
 		e_BaseVolumeRegion::Box = box;
+		e_BaseVolumeRegion::Func = func;
         WorldToVolume = float4x4::NewIdentity();
         sig_a = make_float3(sa);
         sig_s = make_float3(ss);
-        g = gg;
         le = make_float3(emit);
 	}
 
-	e_HomogeneousVolumeDensity(const float3 sa, const float3 ss, float gg, const float emit, const AABB box, const float4x4 v2w)
+	e_HomogeneousVolumeDensity(const float3 sa, const float3 ss, const e_PhaseFunction& func, const float emit, const AABB box, const float4x4 v2w)
 	{
 		e_BaseVolumeRegion::Box = box;
+		e_BaseVolumeRegion::Func = func;
         WorldToVolume = v2w.Inverse();
         sig_a = sa;
         sig_s = ss;
-        g = gg;
         le = make_float3(emit);
 	}
 
@@ -112,24 +67,6 @@ public:
 		return inside(p) ? le : make_float3(0.0f);
 	}
 
-    CUDA_FUNC_IN float p(const float3& p, const float3& wi, const float3& wo) const
-	{/*
-		*wo = make_float3(0);
-		if(inside(p))
-		{
-			float sqrTerm = (1 - g * g) / (1 - g + 2 * g * rng.randomFloat());
-			float cosTheta = (1 + g * g - sqrTerm * sqrTerm) / (2 * g);
-			float sinTheta = sqrtf(1.0f-cosTheta*cosTheta);
-			float r = rng.randomFloat();
-			float sinPhi = sinf(2*PI*r), cosPhi = cosf(2*PI*r);
-			float3 r2 = make_float3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
-			*wo = Onb(-1.0f * wi).localToworld(r2);
-			return 1;
-		}
-		else return 0;*/
-		return inside(p) ? PhaseHG(wi, wo, g) : 0;
-	}
-
     CUDA_FUNC_IN float3 sigma_t(const float3 &p, const float3 &wo) const
 	{
 		return inside(p) ? (sig_s + sig_a) : make_float3(0.0f);
@@ -152,14 +89,14 @@ public:
 
 template<typename Density> struct e_DensityContainer : public e_BaseVolumeRegion
 {
-	e_DensityContainer(const float3& sa, const float3& ss, float gg, const float3& emit, const AABB& box, const float4x4& v2w, const Density& d)
+	e_DensityContainer(const float3& sa, const float3& ss, const e_PhaseFunction& func, const float3& emit, const AABB& box, const float4x4& v2w, const Density& d)
 		: m_sDensity(d)
 	{
+		e_BaseVolumeRegion::Func = func;
 		e_BaseVolumeRegion::Box = box;
         WorldToVolume = float4x4::NewIdentity();
         sig_a = sa;
         sig_s = ss;
-        g = gg;
         le = emit;
 	}
 
@@ -190,11 +127,6 @@ template<typename Density> struct e_DensityContainer : public e_BaseVolumeRegion
 		return m_sDensity.f(WorldToVolume * p) * le;
 	}
 
-    CUDA_FUNC_IN float p(const float3& p, const float3& w, const float3& wp) const
-	{
-		return PhaseHG(w, wp, g);
-	}
-
     CUDA_FUNC_IN float3 sigma_t(const float3 &p, const float3 &wo) const
 	{
 		return m_sDensity.f(WorldToVolume * p) * (sig_a + sig_s);
@@ -202,14 +134,13 @@ template<typename Density> struct e_DensityContainer : public e_BaseVolumeRegion
 protected:
 	Density m_sDensity;
 	float3 sig_a, sig_s, le;
-    float g;
 	float4x4 WorldToVolume;
 };
 
 template<typename Density> struct e_DensityContainerAnalytic : public e_DensityContainer<Density>
 {
-	e_DensityContainerAnalytic(const float3& sa, const float3& ss, float gg, const float3& emit, const AABB& box, const float4x4& v2w, const Density& d)
-		: e_DensityContainer<Density>(sa, ss, gg, emit, box, v2w, d)
+	e_DensityContainerAnalytic(const float3& sa, const float3& ss, const e_PhaseFunction& func, const float3& emit, const AABB& box, const float4x4& v2w, const Density& d)
+		: e_DensityContainer<Density>(sa, ss, func, emit, box, v2w, d)
 	{
 
 	}
@@ -223,8 +154,8 @@ template<typename Density> struct e_DensityContainerAnalytic : public e_DensityC
 
 template<typename Density> struct e_DensityContainerNumeric : public e_DensityContainer<Density>
 {
-	e_DensityContainerNumeric(const float3& sa, const float3& ss, float gg, const float3& emit, const AABB& box, const float4x4& v2w, const Density& d)
-		: e_DensityContainer<Density>(sa, ss, gg, emit, box, v2w, d)
+	e_DensityContainerNumeric(const float3& sa, const float3& ss, const e_PhaseFunction& func, const float3& emit, const AABB& box, const float4x4& v2w, const Density& d)
+		: e_DensityContainer<Density>(sa, ss, func, emit, box, v2w, d)
 	{
 
 	}
@@ -270,14 +201,14 @@ struct e_SphereDensity
 #define e_SphereVolumeDensity_TYPE 2
 struct e_SphereVolumeDensity : public e_DensityContainerNumeric<e_SphereDensity>
 {
-	e_SphereVolumeDensity(float3 center, float r, const float3& sa, const float3& ss, float gg, const float3& emit)
-		: e_DensityContainerNumeric<e_SphereDensity>(sa, ss, gg, emit, AABB(center - make_float3(r), center + make_float3(r)), float4x4::Identity(), e_SphereDensity(center, r))
+	e_SphereVolumeDensity(float3 center, float r, const float3& sa, const float3& ss, const e_PhaseFunction& func, const float3& emit)
+		: e_DensityContainerNumeric<e_SphereDensity>(sa, ss, func, emit, AABB(center - make_float3(r), center + make_float3(r)), float4x4::Identity(), e_SphereDensity(center, r))
 	{
 
 	}
 
-	e_SphereVolumeDensity(float3 center, float r, float sa, float ss, float gg, float emit)
-		: e_DensityContainerNumeric<e_SphereDensity>(make_float3(sa), make_float3(ss), gg, make_float3(emit), AABB(center - make_float3(r), center + make_float3(r)), float4x4::Identity(), e_SphereDensity(center, r))
+	e_SphereVolumeDensity(float3 center, float r, float sa, float ss, const e_PhaseFunction& func, float emit)
+		: e_DensityContainerNumeric<e_SphereDensity>(make_float3(sa), make_float3(ss), func, make_float3(emit), AABB(center - make_float3(r), center + make_float3(r)), float4x4::Identity(), e_SphereDensity(center, r))
 	{
 
 	}
@@ -287,7 +218,7 @@ struct e_SphereVolumeDensity : public e_DensityContainerNumeric<e_SphereDensity>
 
 #define VOL_SIZE RND_16(DMAX2(sizeof(e_HomogeneousVolumeDensity), sizeof(e_SphereVolumeDensity)))
 
-struct e_VolumeRegion
+struct CUDA_ALIGN(16) e_VolumeRegion
 {
 #define CALL_TYPE(t,f,r) \
 	case t##_TYPE : \
@@ -300,7 +231,7 @@ struct e_VolumeRegion
 		CALL_TYPE(e_SphereVolumeDensity, f, r) \
 	}
 private:
-	unsigned char Data[VOL_SIZE];
+	CUDA_ALIGN(16) unsigned char Data[VOL_SIZE];
 	unsigned int type;
 public:
 	CUDA_FUNC_IN e_VolumeRegion()
@@ -312,6 +243,11 @@ public:
 	{
 		memcpy(Data, &val, sizeof(T));
 		type = T::TYPE();
+	}
+
+	CUDA_FUNC_IN e_BaseVolumeRegion* BaseRegion()
+	{
+		return (e_BaseVolumeRegion*)Data;
 	}
 
 	CUDA_FUNC_IN AABB WorldBound()
@@ -337,11 +273,6 @@ public:
     CUDA_FUNC_IN float3 Lve(const float3& p, const float3& w) const
 	{
 		CALL_FUNC(return, Lve(p, w))
-	}
-
-    CUDA_FUNC_IN float p(const float3& _p, const float3& wi, const float3& wo) const
-	{
-		CALL_FUNC(return, p(_p, wi, wo))
 	}
 
     CUDA_FUNC_IN float3 sigma_t(const float3 &p, const float3 &wo) const
@@ -420,22 +351,6 @@ public:
 		return s;
 	}
 
-	//Calculates the phase function at a given point
-    CUDA_FUNC_IN float p(const float3& p, const float3& w, const float3& wo) const
-	{
-		float ph = 0, sumWt = 0;
-		for(int i = 0; i < m_uVolumeCount; i++)
-		{
-			float wt = y(m_pVolumes[i].sigma_s(p, w));
-			if(wt != 0)
-			{
-				sumWt += wt;
-				ph += wt * m_pVolumes[i].p(p, w, wo);
-			}
-		}
-		return sumWt != 0 ? ph / sumWt : 0.0f;
-	}
-
 	//Combined sigmas
     CUDA_FUNC_IN float3 sigma_t(const float3 &p, const float3 &wo) const
 	{
@@ -452,6 +367,33 @@ public:
 		for(int i = 0; i < m_uVolumeCount; i++)
 			s += m_pVolumes[i].tau(ray, minT, maxT, step, offset);
 		return s;
+	}
+
+	CUDA_FUNC_IN float Sample(const float3& p, const float3& wo, CudaRNG& rng, float3* wi)
+	{
+		PhaseFunctionSamplingRecord r2(wo);
+		r2.wi = wo;
+		for(int i = 0; i < m_uVolumeCount; i++)
+			if(m_pVolumes[i].WorldBound().Contains(p))
+			{
+				float pdf;
+				float pf = m_pVolumes[i].BaseRegion()->Func.Sample(r2, pdf, rng);
+				*wi = r2.wo;
+				return pdf * pf;
+			}
+		
+		return 0.0f;
+	}
+
+	CUDA_FUNC_IN float p(const float3& p, const float3& wo, const float3& wi, CudaRNG& rng)
+	{
+		PhaseFunctionSamplingRecord r2(wo, wi);
+		r2.wi = wo;
+		r2.wo = wi;
+		for(int i = 0; i < m_uVolumeCount; i++)
+			if(m_pVolumes[i].WorldBound().Contains(p))
+				return m_pVolumes[i].BaseRegion()->Func.Evaluate(r2);
+		return 0.0f;
 	}
 
 	CUDA_FUNC_IN bool HasVolumes()

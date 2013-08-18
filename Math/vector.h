@@ -23,6 +23,7 @@ void*mymalloc(int s);
 #define PI     3.14159265358979f
 #define INV_PI (1.0f / PI)
 #define INV_TWOPI (1.0f / (2.0f * PI))
+#define INV_FOURPI (1.0f / (4.0f * PI))
 //#define PI_2 (2.0f * PI)
 
 // The maximum possible value for a 32-bit floating point variable
@@ -884,17 +885,21 @@ CUDA_FUNC_IN uchar2 NormalizedFloat3ToUchar2(const float3& v)
 	return make_uchar2((unsigned char)theta, (unsigned char)phi);
 }
 
+#ifndef __CUDACC__
+CUDA_FUNC_IN void sincos(float f, float* a, float* b)
+{
+	*a = sin(f);
+	*b = cos(f);
+}
+#endif
+
 CUDA_FUNC_IN float3 Uchar2ToNormalizedFloat3(const uchar2 v)
 {
 	float theta = float(v.x)*(1.0f/255.0f)*PI;
 	float phi = float(v.y)*(1.0f/255.0f)*PI*2.0f;
-#ifdef __CUDACC__
 	float sinphi, cosphi, costheta, sintheta;
 	sincos(phi, &sinphi, &cosphi);
 	sincos(theta, &sintheta, &costheta);
-#else
-	float sinphi = sin(phi), costheta = cos(theta), sintheta = sin(theta), cosphi = cos(phi);
-#endif
 	return make_float3(sintheta*cosphi, sintheta * sinphi, costheta);
 }
 

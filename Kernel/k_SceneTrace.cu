@@ -122,19 +122,3 @@ AABB k_RandTracerBase::GetEyeHitPointBox()
 	m_sEyeBox.maxV = make_float3(UIntToFloat(m_sEyeBox.maxV.x), UIntToFloat(m_sEyeBox.maxV.y), UIntToFloat(m_sEyeBox.maxV.z));
 	return m_sEyeBox;
 }
-
-k_RandTracerBase::k_RandTracerBase()
-		: k_TracerBase(), m_sRngs(1 << 13)
-{
-
-}
-
-void k_TracerBase::StartNewTrace(e_Image* I)
-{
-	//I->StartNewRendering();
-}
-
-float k_TracerBase::getValuePerSecond(float val, float invScale)
-{
-	return val / (m_fTimeSpentRendering * invScale);
-}

@@ -46,3 +46,28 @@
 	{ \
 		return name##_TYPE; \
 	}
+
+#ifdef __CUDACC__
+ CUDA_FUNC_IN int getGlobalIdx_2D_2D()
+{
+	int blockId = blockIdx.x + blockIdx.y * gridDim.x; 
+	int threadId = blockId * (blockDim.x * blockDim.y) + (threadIdx.y * blockDim.x) + threadIdx.x;
+	return threadId;
+}
+
+CUDA_FUNC_IN int getGlobalIdx_3D_3D()
+{
+	int blockId = blockIdx.x 
+			 + blockIdx.y * gridDim.x 
+			 + gridDim.x * gridDim.y * blockIdx.z; 
+	int threadId = blockId * (blockDim.x * blockDim.y * blockDim.z)
+			  + (threadIdx.z * (blockDim.x * blockDim.y))
+			  + (threadIdx.y * blockDim.x)
+			  + threadIdx.x;
+	return threadId;
+}
+
+#define threadId getGlobalIdx_2D_2D()
+#else
+#define threadId 0
+#endif

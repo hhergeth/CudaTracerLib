@@ -973,9 +973,15 @@ public:
 struct e_KernelBSDF
 {
 public:
-	const float3 ng;
-	const Onb sys;
-	const float Eta;
+	float3 ng;
+	Onb sys;
+	float Eta;
+
+	CUDA_FUNC_IN e_KernelBSDF()
+		: Eta(1)
+	{
+	}
+
 	CUDA_FUNC_IN e_KernelBSDF(const Onb& _sys, const float3& _ng)
 		: sys(_sys), ng(_ng), Eta(1)
 	{
@@ -986,8 +992,18 @@ public:
 		return dot(woW, wiW) > 0.0f ? AbsDot(wiW, ng) * INV_PI : 0.f;
 	}
 
+	CUDA_FUNC_IN float3 f(const float3& wo, const float3& wi, BxDFType flags = BSDF_ALL) const
+	{
+		return make_float3(0.75f) * INV_PI;
+	}
+
 	CUDA_FUNC_IN float3 Sample_f(const float3& woW, float3* wiW, const BSDFSample& sample, float* pdf, BxDFType flags = BSDF_ALL, BxDFType *sampledType = NULL) const
 	{
+		if((flags & BSDF_DIFFUSE) != BSDF_DIFFUSE)
+		{
+			*pdf = 0;
+			return make_float3(0);
+		}
 		*wiW = SampleCosineHemisphere(ng, sample.uDir[0], sample.uDir[1]);
 		*pdf = AbsDot(*wiW, ng) * INV_PI;
 		if(sampledType)
@@ -1005,11 +1021,6 @@ public:
 		return make_float3(0.75f);
 	}
 
-	CUDA_FUNC_IN float3 IntegratePdf(float3& f, float pdf, float3& wi)
-	{
-		return f * AbsDot(wi, sys.m_normal) / pdf;
-	}
-
 	CUDA_FUNC_IN unsigned int NumComponents() const
 	{
 		return 1;
@@ -1020,8 +1031,9 @@ public:
 		return (flags & BSDF_DIFFUSE) == BSDF_DIFFUSE;
 	}
 
-	CUDA_FUNC_IN void Add(e_KernelBXDF<BXDF_LARGE>& b)
+	template<typename T> CUDA_FUNC_IN void Add(T& val)
 	{
+		
 	}
 
 	CUDA_FUNC_IN float3 WorldToLocal(const float3& v) const
@@ -1032,6 +1044,11 @@ public:
 	CUDA_FUNC_IN float3 LocalToWorld(const float3& v) const
 	{
 		return sys.localToworld(v);
+	}
+
+	CUDA_FUNC_IN float3 IntegratePdf(float3& f, float pdf, float3& wi)
+	{
+		return f * AbsDot(wi, sys.m_normal) / pdf;
 	}
 };
 #endif

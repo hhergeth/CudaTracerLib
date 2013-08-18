@@ -426,6 +426,8 @@ public:
 	{
 #ifndef FAST_BRDF
 		CALL_FUNC(return, GetBSSRDF(uv, res))
+#else
+		return false;
 #endif
 	}
 	template<typename L> void LoadTextures(L callback)

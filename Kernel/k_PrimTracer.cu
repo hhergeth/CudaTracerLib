@@ -159,7 +159,6 @@ void k_PrimTracer::DoRender(e_Image* I)
 		init = true;
 		cudaThreadSetLimit(cudaLimitStackSize, 2048);
 	}
-	m_sRngs.m_uOffset++;
 	k_INITIALIZE(m_pScene->getKernelSceneData());
 	k_STARTPASSI(m_pScene, m_pCamera, m_sRngs, *I);
 	uint3 ma = make_uint3(FloatToUInt(-FLT_MAX)), mi = make_uint3(FloatToUInt(FLT_MAX));

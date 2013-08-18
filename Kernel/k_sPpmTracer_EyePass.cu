@@ -31,7 +31,7 @@ template<typename HASH> CUDA_ONLY_FUNC float3 k_PhotonMap<HASH>::L_Surface(float
 					k_pPpmPhoton e = m_pDevicePhotons[i];
 					float3 nor = e.getNormal(), wi = e.getWi(), l = e.getL(), P = e.Pos;
 					float dist2 = dot(P - p, P - p);
-					if(dist2 < r2 && dot(nor, bsdf->sys.m_normal) > 0.95f)
+					if(dist2 < r2 && dot(nor, n) > 0.95f)
 					{
 						float s = 1.0f - dist2 * r4, k = 3.0f * INV_PI * s * s * r3;
 						if(glossy)
@@ -77,7 +77,7 @@ template<typename HASH> template<bool VOL> CUDA_ONLY_FUNC float3 k_PhotonMap<HAS
 						{
 							float p;
 							if(VOL)
-								p = g_SceneData.m_sVolume.p(x, -wi, r.direction);
+								p = g_SceneData.m_sVolume.p(x, -1.0f * r.direction, r.direction, rng);
 							else p = 1.f / (4.f * PI);
 							L += p * l * Vs;
 						}

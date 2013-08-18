@@ -157,26 +157,15 @@ public:
 	CUDA_FUNC_IN k_TracerRNG operator()()
 	{
 		k_TracerRNG r;
-		unsigned int i = getIndex() % m_uNumGenerators;
+		unsigned int i = threadId % m_uNumGenerators;
 		r.state = m_pGenerators[i];
 		return r;
 	}
 	CUDA_FUNC_IN void operator()(k_TracerRNG& val)
 	{
-		unsigned int i = getIndex();
+		unsigned int i = threadId;
 		if(i < m_uNumGenerators)
 			m_pGenerators[i] = val.state;
-	}
-	CUDA_FUNC_IN unsigned int getIndex()
-	{
-#ifdef __CUDACC__
-		//int x = blockIdx.x * blockDim.x + threadIdx.x, y = blockIdx.y * blockDim.y + threadIdx.y, z = blockIdx.z * blockDim.z + threadIdx.z;
-		//int dimz = blockDim.z * gridDim.z, dimy = blockDim.y * gridDim.y, dimx = blockDim.x * gridDim.x;
-		//return dimx * dimy * z + dimx * y + x;
-		int x = blockIdx.x * blockDim.x + threadIdx.x, y = blockIdx.y * blockDim.y + threadIdx.y;
-		return blockDim.x * gridDim.x * y + x + m_uOffset;
-#endif
-		return 0;
 	}
 private:
 	void createGenerators(unsigned int a_Spacing, unsigned int a_Offset);

@@ -202,4 +202,6 @@ public:
 		memcpy(Data, &val, sizeof(T));
 		type = T::TYPE();
 	}
+#undef CALL_FUNC
+#undef CALL_TYPE
 };

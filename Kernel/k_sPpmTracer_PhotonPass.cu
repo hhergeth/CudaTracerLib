@@ -1,18 +1,8 @@
 #include "k_sPpmTracer.h"
 #include "k_TraceHelper.h"
+#include "..\Math\Montecarlo.h"
 
 CUDA_DEVICE k_PhotonMapCollection g_Map;
-
-CUDA_FUNC_IN float3 smapleHG(float g, CudaRNG& rng, float3& wi)
-{
-	float sqrTerm = (1 - g * g) / (1 - g + 2 * g * rng.randomFloat());
-	float cosTheta = g < EPSILON ? 1.0f - 2.0f * rng.randomFloat() : (1 + g * g - sqrTerm * sqrTerm) / (2 * g);
-	float sinTheta = sqrtf(1.0f-cosTheta*cosTheta);
-	float r = rng.randomFloat();
-	float sinPhi = sinf(2*PI*r), cosPhi = cosf(2*PI*r);
-	float3 r2 = make_float3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
-	return Onb(-1.0f * wi).localToworld(r2);
-}
 
 template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, float3 Le, CudaRNG& rng)
 {
@@ -43,11 +33,12 @@ template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, float3 Le, CudaRNG
 				float A = fsumf(sigma_s / sigma_t) / 3.0f;
 				if(rng.randomFloat() <= A)
 				{
+					float3 wi;
+					float pf = V.Sample(x, -r.direction, rng, &wi);
 					Le /= A;
-					float3 wo = smapleHG(((e_HomogeneousVolumeDensity*)V.m_pVolumes)->g, rng, w);
-					Le *= V.p(x, w, wo);
+					Le *= pf;
 					r.origin = r(minT + d);
-					r.direction = wo;
+					r.direction = wi;
 					r2.Init();
 					if(!k_TraceRay<true>(r.direction, r.origin, &r2))
 						return true;
@@ -82,7 +73,7 @@ template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, float3 Le, CudaRNG
 				if(rng.randomFloat() <= A)
 				{
 					ac /= A;
-					float3 wo = smapleHG(0, rng, w);
+					float3 wo = Warp::squareToUniformSphere(rng.randomFloat2());
 					ac *= 1.f / (4.f * PI);
 					r.origin = x + r.direction * d;
 					r.direction = wo;

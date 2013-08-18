@@ -201,6 +201,9 @@
     <ClInclude Include="Kernel\k_sPpmTracer.h">
       <Filter>Kernel</Filter>
     </ClInclude>
+    <ClInclude Include="Engine\e_PhaseFunction.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\e_AnimatedMesh.cpp">
@@ -262,6 +265,9 @@
       <Filter>Engine</Filter>
     </ClCompile>
     <ClCompile Include="Kernel\k_sPpmTracer.cpp">
+      <Filter>Kernel</Filter>
+    </ClCompile>
+    <ClCompile Include="Kernel\k_Tracer.cpp">
       <Filter>Kernel</Filter>
     </ClCompile>
   </ItemGroup>
