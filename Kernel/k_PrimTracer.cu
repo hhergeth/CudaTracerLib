@@ -160,7 +160,7 @@ void k_PrimTracer::DoRender(e_Image* I)
 		cudaThreadSetLimit(cudaLimitStackSize, 2048);
 	}
 	k_INITIALIZE(m_pScene->getKernelSceneData());
-	k_STARTPASSI(m_pScene, m_pCamera, m_sRngs, *I);
+	k_STARTPASSI(m_pScene, m_pCamera, g_sRngs, *I);
 	uint3 ma = make_uint3(FloatToUInt(-FLT_MAX)), mi = make_uint3(FloatToUInt(FLT_MAX));
 	cudaMemcpyToSymbol(g_EyeHitBoxMin, &mi, 12);
 	cudaMemcpyToSymbol(g_EyeHitBoxMax, &ma, 12);
@@ -184,7 +184,7 @@ void k_PrimTracer::Debug(int2 pixel)
 	m_pScene->UpdateInvalidated();
 	e_KernelDynamicScene d2 = m_pScene->getKernelSceneData();
 	k_INITIALIZE(d2);
-	k_STARTPASS(m_pScene, m_pCamera, m_sRngs);
+	k_STARTPASS(m_pScene, m_pCamera, g_sRngs);
 	debugPixe2l<false><<<1,1>>>(w,h,pixel);
 }
 

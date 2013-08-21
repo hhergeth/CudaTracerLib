@@ -1,11 +1,16 @@
 #include <StdAfx.h>
 #include "k_Tracer.h"
 
-//no idea why but fewer rngs will introduce fireflies....
-k_RandTracerBase::k_RandTracerBase()
-		: k_TracerBase(), m_sRngs(1 << 13)
-{
+k_TracerRNGBuffer k_Tracer::g_sRngs;
+static bool initrng = false;
 
+void k_Tracer::InitRngs(unsigned int N)
+{
+	if(!initrng)
+	{
+		initrng = 1;
+		g_sRngs = k_TracerRNGBuffer(N);
+	}
 }
 
 void k_TracerBase::StartNewTrace(e_Image* I)

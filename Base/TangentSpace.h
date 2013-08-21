@@ -29,14 +29,14 @@ inline void ComputeTangentSpace(FW::Mesh<FW::VertexPNT>* a_Mesh, float3* a_Norma
 			long i3 = indices[i].z;
 			const FW::VertexPNT& v1q = a_Mesh[0][i1], &v2q = a_Mesh[0][i2], &v3q = a_Mesh[0][i3];
 
-			const float3 v1 = getVec(v1q), v2 = getVec(v2q), v3 = getVec(v3q), e0 = v3 - v1, e1 = v2 - v1, n = normalize(v1q.n + v2q.n + v3q.n);
+			const float3 v1 = getVec(v1q), v2 = getVec(v2q), v3 = getVec(v3q), e0 = v3 - v1, e1 = v2 - v1;//, n = normalize(v1q.n + v2q.n + v3q.n);
 			const float2 w1 = v1q.t, w2 = v2q.t, w3 = v3q.t;
 			const float3 n2 = normalize(cross(e1, e0));
 			//if(fsumf(n2 - n) > 1e-3)
 			//	throw 1;
-			a_Normals[i1] += n;
-			a_Normals[i2] += n;
-			a_Normals[i3] += n;
+			a_Normals[i1] += n2;
+			a_Normals[i2] += n2;
+			a_Normals[i3] += n2;
         
 			float x1 = v2.x - v1.x;
 			float x2 = v3.x - v1.x;

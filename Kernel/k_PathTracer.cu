@@ -54,7 +54,7 @@ __global__ void debugPixel(unsigned int width, unsigned int height, int2 p)
 void k_PathTracer::DoRender(e_Image* I)
 {
 	k_INITIALIZE(m_pScene->getKernelSceneData());
-	k_STARTPASSI(m_pScene, m_pCamera, m_sRngs, *I);
+	k_STARTPASSI(m_pScene, m_pCamera, g_sRngs, *I);
 	pathKernel<<< 180, dim3(32, MaxBlockHeight, 1)>>>(w, h, m_uPassesDone);
 	m_uPassesDone++;
 
@@ -76,6 +76,6 @@ void k_PathTracer::Debug(int2 pixel)
 {
 	m_pScene->UpdateInvalidated();
 	k_INITIALIZE(m_pScene->getKernelSceneData());
-	k_STARTPASS(m_pScene, m_pCamera, m_sRngs);
+	k_STARTPASS(m_pScene, m_pCamera, g_sRngs);
 	debugPixel<<<1,1>>>(w,h,pixel);
 }

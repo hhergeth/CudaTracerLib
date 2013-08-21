@@ -108,7 +108,7 @@
     <CudaCompile Include="Engine\e_Image.cu" />
     <CudaCompile Include="Kernel\k_PathTracer.cu" />
     <CudaCompile Include="Kernel\k_PrimTracer.cu" />
-    <CudaCompile Include="Kernel\k_SceneTrace.cu" />
+    <CudaCompile Include="Kernel\k_Tracer.cu" />
     <CudaCompile Include="Kernel\k_sPpmTracer_EyePass.cu" />
     <CudaCompile Include="Kernel\k_sPpmTracer_PhotonPass.cu" />
   </ItemGroup>

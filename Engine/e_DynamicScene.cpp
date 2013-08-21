@@ -36,9 +36,11 @@ e_SceneInitData e_SceneInitData::CreateFor_S_SanMiguel(unsigned int a_SceneNodes
 {
 	int i = 4;
 	e_SceneInitData r = CreateForSpecificMesh(1000000*i, 1000000*i, 1000000*i, 1000000*i, 4096 * 5, a_Lights, a_SceneNodes);
+	//e_SceneInitData r = CreateForSpecificMesh(7880512, 9359209, 2341126, 28077626, 4096 * 5, a_Lights, a_SceneNodes);//san miguel
+	//e_SceneInitData r = CreateForSpecificMesh(1,1,1,1,1,1,1);
 	//return CreateForSpecificMesh(10000, 10000, 10000, 15000, 255, a_Lights);
-	//return CreateForSpecificMesh(7880512, 9359209, 2341126, 28077626, 255, a_Lights);
-	r.m_uSizeAnimStream = 16 * 1024 * 1024;
+	//r.m_uSizeAnimStream = 16 * 1024 * 1024;
+	r.m_uSizeAnimStream = 1;
 	return r;
 }
 

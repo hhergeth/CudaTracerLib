@@ -275,9 +275,6 @@
     <CudaCompile Include="Kernel\k_PrimTracer.cu">
       <Filter>Kernel</Filter>
     </CudaCompile>
-    <CudaCompile Include="Kernel\k_SceneTrace.cu">
-      <Filter>Kernel</Filter>
-    </CudaCompile>
     <CudaCompile Include="Engine\e_AnimatedMesh.cu">
       <Filter>Engine</Filter>
     </CudaCompile>
@@ -291,6 +288,9 @@
       <Filter>Kernel</Filter>
     </CudaCompile>
     <CudaCompile Include="Kernel\k_sPpmTracer_PhotonPass.cu">
+      <Filter>Kernel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Kernel\k_Tracer.cu">
       <Filter>Kernel</Filter>
     </CudaCompile>
   </ItemGroup>

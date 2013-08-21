@@ -11,6 +11,15 @@ typedef void (*SliderCreateCallback)(float, float, bool, float*, FW::String);
 class k_Tracer
 {
 public:
+	static k_TracerRNGBuffer g_sRngs;
+	static AABB GetEyeHitPointBox(e_DynamicScene* s, e_Camera* c);
+	static TraceResult TraceSingleRay(Ray r, e_DynamicScene* s, e_Camera* c);
+	static void InitRngs(unsigned int N = 1 << 16);
+public:
+	k_Tracer()
+	{
+		InitRngs();
+	}
 	virtual ~k_Tracer()
 	{
 
@@ -30,8 +39,6 @@ public:
 
 	}
 };
-
-TraceResult TraceSingleRay(Ray r, e_DynamicScene* s, e_Camera* c);
 
 class k_TracerBase : public k_Tracer
 {
@@ -103,15 +110,6 @@ protected:
 	virtual void DoRender(e_Image* I) = 0;
 	virtual void StartNewTrace(e_Image* I);
 	float getValuePerSecond(float val, float invScale);
-};
-
-class k_RandTracerBase : public k_TracerBase
-{
-protected:
-	k_TracerRNGBuffer m_sRngs;
-public:
-	k_RandTracerBase();
-	AABB GetEyeHitPointBox();
 };
 
 CUDA_FUNC_IN CameraSample nextSample(int x, int y, CudaRNG& rng, bool DoAntialiasing = false, bool DoDOF = false)

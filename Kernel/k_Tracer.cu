@@ -8,7 +8,7 @@ __global__ void trace(Ray r)
 	k_TraceRay<true>(r.direction, r.origin, &g_Res);
 }
 
-TraceResult TraceSingleRay(Ray r, e_DynamicScene* s, e_Camera* c)
+TraceResult k_Tracer::TraceSingleRay(Ray r, e_DynamicScene* s, e_Camera* c)
 {
 	k_TracerRNGBuffer tmp;
 	s->UpdateInvalidated();
@@ -105,13 +105,13 @@ __global__ void k_GuessPass(int w, int h)
 	g_RNGData(localState);
 }
 
-AABB k_RandTracerBase::GetEyeHitPointBox()
+AABB k_Tracer::GetEyeHitPointBox(e_DynamicScene* m_pScene, e_Camera* m_pCamera)
 {
 	uint3 ma = make_uint3(FloatToUInt(-FLT_MAX)), mi = make_uint3(FloatToUInt(FLT_MAX));
 	cudaMemcpyToSymbol(g_EyeHitBoxMin, &mi, 12);
 	cudaMemcpyToSymbol(g_EyeHitBoxMax, &ma, 12);
 	k_INITIALIZE(m_pScene->getKernelSceneData());
-	k_STARTPASS(m_pScene, m_pCamera, m_sRngs);
+	k_STARTPASS(m_pScene, m_pCamera, g_sRngs);
 	int qw = 128, qh = 128, p0 = 16;
 	k_GuessPass<<<dim3( qw/p0, qh/p0, 1), dim3(p0, p0, 1)>>>(qw, qh);
 	cudaThreadSynchronize();

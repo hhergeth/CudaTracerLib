@@ -3,11 +3,11 @@
 #include "k_Tracer.h"
 #include "..\Base\CudaRandom.h"
 
-class k_PathTracer : public k_RandTracerBase
+class k_PathTracer : public k_TracerBase
 {
 public:
 	k_PathTracer()
-		: k_RandTracerBase()
+		: k_TracerBase()
 	{
 		
 	}

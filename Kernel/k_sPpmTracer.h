@@ -9,6 +9,28 @@
 
 #define ALPHA (2.0f / 3.0f)
 
+struct k_AdaptiveEntry
+{
+	float r, rd;
+	float psi, psi2;
+	float I, I2;
+	float pl;
+};
+
+struct k_AdaptiveStruct
+{
+	k_AdaptiveEntry* E;
+	float r_min;
+	float r_max;
+	CUDA_FUNC_IN k_AdaptiveStruct(){}
+	k_AdaptiveStruct(float rmin, float rmax, k_AdaptiveEntry* e)
+	{
+		E = e;
+		r_min = rmin;
+		r_max = rmax;
+	}
+};
+
 struct k_pPpmPhoton
 {
 	float3 Pos;
@@ -126,7 +148,7 @@ template<typename HASH> struct k_PhotonMap
 		return k_StoreResult::Full;
 	}
 
-	CUDA_ONLY_FUNC float3 L_Surface(float a_r, float a_NumPhotonEmitted, CudaRNG& rng, const e_KernelBSDF* bsdf, const float3& n, const float3& p, const float3& wo) const;
+	CUDA_ONLY_FUNC float3 L_Surface(float a_r, float a_NumPhotonEmitted, CudaRNG& rng, const e_KernelBSDF* bsdf, const float3& n, const float3& p, const float3& wo, k_AdaptiveStruct& A) const;
 
 	template<bool VOL> CUDA_ONLY_FUNC float3 L_Volume(float a_r, float a_NumPhotonEmitted, CudaRNG& rng, const Ray& r, float tmin, float tmax, const float3& sigt) const;
 #endif
@@ -172,9 +194,9 @@ struct k_PhotonMapCollection
 		else return m_sVolumeMap.StorePhoton(p, l, wi, n, &m_uPhotonNumStored);
 	}
 
-	CUDA_ONLY_FUNC float3 L(float a_r, CudaRNG& rng, const e_KernelBSDF* bsdf, const float3& n, const float3& p, const float3& wo) const
+	CUDA_ONLY_FUNC float3 L(float a_r, CudaRNG& rng, const e_KernelBSDF* bsdf, const float3& n, const float3& p, const float3& wo, k_AdaptiveStruct& A) const
 	{
-		return m_sSurfaceMap.L_Surface(a_r, m_uPhotonNumEmitted, rng, bsdf, n, p, wo);
+		return m_sSurfaceMap.L_Surface(a_r, m_uPhotonNumEmitted, rng, bsdf, n, p, wo, A);
 	}
 
 	template<bool VOL> CUDA_ONLY_FUNC float3 L(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const float3& sigt) const
@@ -184,7 +206,7 @@ struct k_PhotonMapCollection
 #endif
 };
 
-class k_sPpmTracer : public k_RandTracerBase
+class k_sPpmTracer : public k_TracerBase
 {
 private:
 	k_PhotonMapCollection m_sMaps;
@@ -199,16 +221,16 @@ private:
 	float m_uNewPhotonsPerRun;
 	int m_uModus;
 	bool m_bLongRunning;
+
+	k_AdaptiveEntry* m_pEntries;
+	float r_min, r_max;
 public:
 	k_sPpmTracer();
 	virtual ~k_sPpmTracer()
 	{
 		m_sMaps.Free();
 	}
-	virtual void Resize(unsigned int _w, unsigned int _h)
-	{
-		k_TracerBase::Resize(_w, _h);
-	}
+	virtual void Resize(unsigned int _w, unsigned int _h);
 	virtual void Debug(int2 pixel);
 	virtual void PrintStatus(std::vector<FW::String>& a_Buf);
 	virtual void CreateSliders(SliderCreateCallback a_Callback);
@@ -219,6 +241,7 @@ private:
 	void initNewPass(e_Image* I);
 	void doPhotonPass();
 	void doEyePass(e_Image* I);
+	void doStartPass(float r, float rd);
 	void updateBuffer()
 	{
 		unsigned int N = unsigned int(m_uNewPhotonsPerRun * 1000000.0f);

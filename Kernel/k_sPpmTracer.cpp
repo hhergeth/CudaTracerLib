@@ -4,7 +4,7 @@
 #define LNG 200
 
 k_sPpmTracer::k_sPpmTracer()
-	: k_RandTracerBase(), m_uGridLength(LNG*LNG*LNG)
+	: k_TracerBase(), m_uGridLength(LNG*LNG*LNG), m_pEntries(0)
 {
 	m_bLongRunning = false;
 #ifdef DEBUG
@@ -77,6 +77,14 @@ void k_sPpmTracer::CreateSliders(SliderCreateCallback a_Callback)
 	a_Callback(0.1f, 100.0f, true, &m_uNewPhotonsPerRun, "Number of photons per pass = %g [M]");
 }
 
+void k_sPpmTracer::Resize(unsigned int _w, unsigned int _h)
+{
+	k_TracerBase::Resize(_w, _h);
+	if(m_pEntries)
+		cudaFree(m_pEntries);
+	cudaMalloc(&m_pEntries, sizeof(k_AdaptiveEntry) * _w * _h);
+}
+
 void print(k_PhotonMapCollection& m_sMaps)
 {
 		k_pPpmPhoton* photons = new k_pPpmPhoton[m_sMaps.m_uPhotonBufferLength];
@@ -131,7 +139,6 @@ void k_sPpmTracer::DoRender(e_Image* I)
 			
 			//print(m_sMaps);
 
-			m_sRngs.m_uOffset++;
 			m_uPhotonsEmitted += m_sMaps.m_uPhotonNumEmitted;
 			doEyePass(I);
 			I->UpdateDisplay();
@@ -176,6 +183,11 @@ void k_sPpmTracer::initNewPass(e_Image* I)
 	m_sMaps.StartNewRendering(m_sEyeBox, volBox, r);
 	m_sMaps.StartNewPass();
 	I->StartNewRendering();
+
+	float r_scene = length(m_pScene->getKernelSceneData().m_sBox.Size()) / 2.0f;
+	r_min = 10e-6f * r_scene;
+	r_max = 10e-1f * r_scene;
+	doStartPass(r_max, r_max);
 }
 
 static bool GGG = false;
