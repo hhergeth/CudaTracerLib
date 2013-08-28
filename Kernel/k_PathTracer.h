@@ -3,21 +3,15 @@
 #include "k_Tracer.h"
 #include "..\Base\CudaRandom.h"
 
-class k_PathTracer : public k_TracerBase
+class k_PathTracer : public k_ProgressiveTracer
 {
 public:
-	k_PathTracer()
-		: k_TracerBase()
+	bool m_Direct;
+	k_PathTracer(bool direct = false)
+		: m_Direct(direct)
 	{
-		
 	}
-	virtual ~k_PathTracer()
-	{
-		
-	}
-	virtual void Resize(unsigned int _w, unsigned int _h);
 	virtual void Debug(int2 pixel);
 protected:
 	virtual void DoRender(e_Image* I);
-	virtual void StartNewTrace(e_Image* I);
 };

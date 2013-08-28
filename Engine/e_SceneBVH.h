@@ -43,13 +43,13 @@ public:
 		delete m_pInvTransforms;
 	}
 	void Build(e_StreamReference(e_Node), e_BufferReference<e_Mesh, e_KernelMesh> a_Meshes);
-	e_KernelSceneBVH getData()
+	e_KernelSceneBVH getData(bool devicePointer = true)
 	{
 		e_KernelSceneBVH q;
-		q.m_pNodes = m_pNodes->getKernelData().Data;
+		q.m_pNodes = m_pNodes->getKernelData(devicePointer).Data;
 		q.m_sStartNode = startNode;
-		q.m_pNodeTransforms = m_pTransforms->getKernelData().Data;
-		q.m_pInvNodeTransforms = m_pInvTransforms->getKernelData().Data;
+		q.m_pNodeTransforms = m_pTransforms->getKernelData(devicePointer).Data;
+		q.m_pInvNodeTransforms = m_pInvTransforms->getKernelData(devicePointer).Data;
 		return q;
 	}
 	unsigned int getSizeInBytes()

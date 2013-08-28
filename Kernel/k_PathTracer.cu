@@ -4,7 +4,9 @@
 #include <time.h>
 #include "k_TraceAlgorithms.h"
 
-__global__ void pathKernel(unsigned int width, unsigned int height, unsigned int a_PassIndex)
+CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_NextRayCounter;
+
+template<bool DIRECT> __global__ void pathKernel(unsigned int width, unsigned int height, unsigned int a_PassIndex)
 {
 	CudaRNG rng = g_RNGData();
 	int rayidx;
@@ -34,42 +36,38 @@ __global__ void pathKernel(unsigned int width, unsigned int height, unsigned int
 		CameraSample s = nextSample(x, y, rng, true);
 		Ray r = g_CameraData.GenRay(s, width, height);
 		
-		float3 col = PathTrace<false>(r.direction, r.origin, rng);
-
+		float3 col = PathTrace<DIRECT>(r.direction, r.origin, rng);
+		
 		g_Image.AddSample(s, col);
 	}
 	while(true);
 	g_RNGData(rng);
 }
 
-__global__ void debugPixel(unsigned int width, unsigned int height, int2 p)
+template<bool DIRECT> __global__ void debugPixel(unsigned int width, unsigned int height, int2 p)
 {
 	CudaRNG rng = g_RNGData();
 	CameraSample s = nextSample(p.x, p.y, rng);
 	Ray r = g_CameraData.GenRay(s, width, height);
 		
-	PathTrace<true>(r.direction, r.origin, rng);
+	PathTrace<DIRECT>(r.direction, r.origin, rng);
 }
 
 void k_PathTracer::DoRender(e_Image* I)
 {
+	k_ProgressiveTracer::DoRender(I);
+	unsigned int zero = 0;
+	cudaMemcpyToSymbol(g_NextRayCounter, &zero, sizeof(unsigned int));
 	k_INITIALIZE(m_pScene->getKernelSceneData());
 	k_STARTPASSI(m_pScene, m_pCamera, g_sRngs, *I);
-	pathKernel<<< 180, dim3(32, MaxBlockHeight, 1)>>>(w, h, m_uPassesDone);
+	if(m_Direct)
+		pathKernel<true><<< 180, dim3(32, MaxBlockHeight, 1)>>>(w, h, m_uPassesDone);
+	else pathKernel<false><<< 180, dim3(32, MaxBlockHeight, 1)>>>(w, h, m_uPassesDone);
 	m_uPassesDone++;
-
+	k_ENDPASSI(I)
+	k_TracerBase_update_TracedRays
 	if(m_uPassesDone % 5 == 0)
 		I->UpdateDisplay();
-}
-
-void k_PathTracer::StartNewTrace(e_Image* I)
-{
-	I->StartNewRendering();
-}
-
-void k_PathTracer::Resize(unsigned int _w, unsigned int _h)
-{
-	k_TracerBase::Resize(_w, _h);
 }
 
 void k_PathTracer::Debug(int2 pixel)
@@ -77,5 +75,5 @@ void k_PathTracer::Debug(int2 pixel)
 	m_pScene->UpdateInvalidated();
 	k_INITIALIZE(m_pScene->getKernelSceneData());
 	k_STARTPASS(m_pScene, m_pCamera, g_sRngs);
-	debugPixel<<<1,1>>>(w,h,pixel);
+	debugPixel<true><<<1,1>>>(w,h,pixel);
 }

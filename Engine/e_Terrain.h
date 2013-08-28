@@ -267,11 +267,11 @@ public:
 		m_pStream->UpdateInvalidated();
 		m_pCacheStream->UpdateInvalidated();
 	}
-	e_KernelTerrainData getKernelData()
+	e_KernelTerrainData getKernelData(bool devicePointer = true)
 	{
 		e_KernelTerrainData q;
-		q.m_pNodes = m_pStream->getKernelData().Data;
-		q.m_pCacheData = m_pCacheStream->getKernelData().Data;
+		q.m_pNodes = m_pStream->getKernelData(devicePointer).Data;
+		q.m_pCacheData = m_pCacheStream->getKernelData(devicePointer).Data;
 		q.m_sMax = make_float3(m_sMax.x, m_sSpan.y, m_sMax.y);
 		q.m_sMin = make_float3(m_sMin.x, m_sSpan.x, m_sMin.y);
 		q.m_uDepth = m_uDepth;

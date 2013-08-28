@@ -212,10 +212,10 @@ public:
 	{
 		return m_uLength * sizeof(D);
 	}
-	e_KernelBuffer<D> getKernelData()
+	e_KernelBuffer<D> getKernelData(bool devicePointer = true)
 	{
 		e_KernelBuffer<D> r;
-		r.Data = device;
+		r.Data = devicePointer ? device : deviceMapped;
 		r.Length = m_uLength;
 		r.UsedCount = m_uPos;
 		return r;
@@ -231,6 +231,10 @@ public:
 		unsigned long long t0 = ((unsigned long long)val - (unsigned long long)host) / sizeof(H), t1 = ((unsigned long long)val - (unsigned long long)device) / sizeof(D);
 		unsigned int i = t0 < m_uLength ? t0 : t1;
 		return e_BufferReference<H, D>(this, i, 1);
+	}
+	D* getDeviceMapped(int i)
+	{
+		return deviceMapped + i;
 	}
 };
 
@@ -284,6 +288,10 @@ public:
 	H* operator->() const
 	{
 		return atH(m_uIndex);
+	}
+	D* getDeviceMapped() const
+	{
+		return m_pStream->getDeviceMapped(m_uIndex);
 	}
 	const H& operator*() const
 	{
@@ -553,10 +561,10 @@ public:
 	{
 		return m_uLength * sizeof(T);
 	}
-	e_KernelBuffer<T> getKernelData()
+	e_KernelBuffer<T> getKernelData(bool devicePointer = true)
 	{
 		e_KernelBuffer<T> r;
-		r.Data = device;
+		r.Data = devicePointer ? device : host;
 		r.Length = m_uLength;
 		r.UsedCount = m_uPos;
 		return r;

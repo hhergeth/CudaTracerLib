@@ -6,8 +6,6 @@
 #include "e_ShapeSet.h"
 #include "e_KernelDynamicScene.h"
 
-#define MAX_SHAPE_LENGTH 32
-
 struct e_VisibilitySegment
 {
 	Ray r;
@@ -124,9 +122,9 @@ struct e_PointLight : public e_LightBase
 struct e_DiffuseLight : public e_LightBase
 {
 	CUDA_ALIGN(16) float3 Lemit;
-    CUDA_ALIGN(16) ShapeSet<MAX_SHAPE_LENGTH> shapeSet;
+    CUDA_ALIGN(16) ShapeSet shapeSet;
 
-	e_DiffuseLight(float3 L, ShapeSet<MAX_SHAPE_LENGTH>& s)
+	e_DiffuseLight(float3 L, ShapeSet& s)
 		: e_LightBase(false), shapeSet(s), Lemit(L)
 	{
 

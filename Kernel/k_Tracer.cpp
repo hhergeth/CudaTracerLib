@@ -1,5 +1,6 @@
 #include <StdAfx.h>
 #include "k_Tracer.h"
+#include "k_TraceHelper.h"
 
 k_TracerRNGBuffer k_Tracer::g_sRngs;
 static bool initrng = false;
@@ -13,12 +14,28 @@ void k_Tracer::InitRngs(unsigned int N)
 	}
 }
 
-void k_TracerBase::StartNewTrace(e_Image* I)
-{
-	//I->StartNewRendering();
-}
-
 float k_TracerBase::getValuePerSecond(float val, float invScale)
 {
 	return val / (m_fTimeSpentRendering * invScale);
+}
+
+float k_TracerBase::getTimeSpentRendering()
+{
+	return m_fTimeSpentRendering;
+}
+
+TraceResult k_Tracer::TraceSingleRay(Ray r, e_DynamicScene* s, e_Camera* c)
+{
+	k_TracerRNGBuffer tmp;
+	s->UpdateInvalidated();
+	k_INITIALIZE(s->getKernelSceneData());
+	k_STARTPASS(s, c, tmp)
+	return k_TraceRay<true>(r);
+}
+
+void k_TracerRNGBuffer::createGenerators(unsigned int a_Spacing, unsigned int a_Offset)
+{
+	for(int i = 0; i < m_uNumGenerators; i++)
+		((CudaRNG*)m_pHostGenerators + i)->Initialize(i, a_Spacing, a_Offset);
+	cudaMemcpy(m_pDeviceGenerators, m_pHostGenerators, sizeof(curandState) * m_uNumGenerators, cudaMemcpyHostToDevice);
 }

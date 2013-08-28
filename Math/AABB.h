@@ -130,48 +130,6 @@ struct AABB
 		return b;
 	}
 
-#ifdef __CUDA_ARCH__
-	CUDA_ONLY_FUNC bool Intersect_FMA(const float3& I, const float3& OI, float* min = 0, float* max = 0) const
-	{
-		float tx1 = minV.x * I.x - OI.x;
-		float tx2 = maxV.x * I.x - OI.x;
-		float ty1 = minV.y * I.y - OI.y;
-		float ty2 = maxV.y * I.y - OI.y;
-		float tz1 = minV.z * I.z - OI.z;
-		float tz2 = maxV.z * I.z - OI.z;
-		float mi = spanBeginKepler(tx1, tx2, ty1, ty2, tz1, tz2, 0);
-		float ma = spanEndKepler  (tx1, tx2, ty1, ty2, tz1, tz2, FLT_MAX);
-		bool b = ma > mi && ma > 0;
-		if(min && b)
-			*min = mi;
-		if(max && b)
-			*max = ma;
-		return b;
-	}
-
-	CUDA_ONLY_FUNC bool Intersect(const float3& m_Dir, const float3& m_Ori, float* min = 0, float* max = 0) const
-	{
-		float tx1 = (minV.x - m_Ori.x) / m_Dir.x;
-		float tx2 = (maxV.x - m_Ori.x) / m_Dir.x;
-		float ty1 = (minV.y - m_Ori.y) / m_Dir.y;
-		float ty2 = (maxV.y - m_Ori.y) / m_Dir.y;
-		float tz1 = (minV.z - m_Ori.z) / m_Dir.z;
-		float tz2 = (maxV.z - m_Ori.z) / m_Dir.z;
-		float mi = spanBeginKepler(tx1, tx2, ty1, ty2, tz1, tz2, 0);
-		float ma = spanEndKepler  (tx1, tx2, ty1, ty2, tz1, tz2, FLT_MAX);
-		bool b = ma > mi && ma > 0;
-		if(min && b)
-			*min = mi;
-		if(max && b)
-			*max = ma;
-		return b;
-	}
-
-	CUDA_ONLY_FUNC bool Intersect(const Ray& r, float* min = 0, float* max = 0) const
-	{
-		return Intersect(r.direction, r.origin, min, max);
-	}
-#else
 	CUDA_FUNC_IN bool Intersect_FMA(const float3& I, const float3& OI, float* min = 0, float* max = 0) const
 	{
 		float tx1 = minV.x * I.x - OI.x;
@@ -180,8 +138,8 @@ struct AABB
 		float ty2 = maxV.y * I.y - OI.y;
 		float tz1 = minV.z * I.z - OI.z;
 		float tz2 = maxV.z * I.z - OI.z;
-		float mi = fminf(fminf(fminf(fminf(fminf(tx1,tx2), ty1), ty2), tz1), tz2);
-		float ma = fmaxf(fmaxf(fmaxf(fmaxf(fmaxf(tx1,tx2), ty1), ty2), tz1), tz2);
+		float mi = spanBeginKepler(tx1, tx2, ty1, ty2, tz1, tz2, 0);
+		float ma = spanEndKepler  (tx1, tx2, ty1, ty2, tz1, tz2, FLT_MAX);
 		bool b = ma > mi && ma > 0;
 		if(min && b)
 			*min = mi;
@@ -198,8 +156,8 @@ struct AABB
 		float ty2 = (maxV.y - m_Ori.y) / m_Dir.y;
 		float tz1 = (minV.z - m_Ori.z) / m_Dir.z;
 		float tz2 = (maxV.z - m_Ori.z) / m_Dir.z;
-		float mi = fminf(fminf(fminf(fminf(fminf(tx1,tx2), ty1), ty2), tz1), tz2);
-		float ma = fmaxf(fmaxf(fmaxf(fmaxf(fmaxf(tx1,tx2), ty1), ty2), tz1), tz2);
+		float mi = spanBeginKepler(tx1, tx2, ty1, ty2, tz1, tz2, 0);
+		float ma = spanEndKepler  (tx1, tx2, ty1, ty2, tz1, tz2, FLT_MAX);
 		bool b = ma > mi && ma > 0;
 		if(min && b)
 			*min = mi;
@@ -212,5 +170,4 @@ struct AABB
 	{
 		return Intersect(r.direction, r.origin, min, max);
 	}
-#endif
 };

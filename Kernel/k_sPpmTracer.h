@@ -206,7 +206,7 @@ struct k_PhotonMapCollection
 #endif
 };
 
-class k_sPpmTracer : public k_TracerBase
+class k_sPpmTracer : public k_ProgressiveTracer
 {
 private:
 	k_PhotonMapCollection m_sMaps;

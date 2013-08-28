@@ -2,14 +2,14 @@
 
 #include "k_TraceHelper.h"
 
-CUDA_ONLY_FUNC bool Occluded(const e_VisibilitySegment& seg)
+CUDA_FUNC_IN bool Occluded(const e_VisibilitySegment& seg)
 {
 	TraceResult r2;
 	r2.Init();
 	return k_TraceRay<true>(seg.r.direction, seg.r.origin, &r2) &&  seg.IsValidHit(r2.m_fDist * 1.05f);//seg.tmax > r2.m_fDist && abs(r2.m_fDist - seg.tmax) > 0.1f;
 }
 
-CUDA_ONLY_FUNC float3 Transmittance(const Ray& r, float tmin, float tmax)
+CUDA_FUNC_IN float3 Transmittance(const Ray& r, float tmin, float tmax)
 {
 	if(g_SceneData.m_sVolume.HasVolumes())
 	{
@@ -20,15 +20,14 @@ CUDA_ONLY_FUNC float3 Transmittance(const Ray& r, float tmin, float tmax)
 	return make_float3(1);
 }
 
-CUDA_ONLY_FUNC float3 Transmittance(const e_VisibilitySegment& seg)
+CUDA_FUNC_IN float3 Transmittance(const e_VisibilitySegment& seg)
 {
 	return Transmittance(seg.r, seg.tmin, seg.tmax);
 }
 
-CUDA_ONLY_FUNC float3 EstimateDirect(const float3& p, const float3& n, const float3& wo, const e_KernelBSDF* bsdf, CudaRNG& rng, const e_KernelLight* light, unsigned int li, const LightSample& lightSample, const BSDFSample& bsdfSample, BxDFType flags)
+CUDA_FUNC_IN float3 EstimateDirect(const float3& p, const float3& n, const float3& wo, const e_KernelBSDF* bsdf, CudaRNG& rng, const e_KernelLight* light, unsigned int li, const LightSample& lightSample, const BSDFSample& bsdfSample, BxDFType flags)
 {
 	float3 Ld = make_float3(0);
-	float3 wi;
 	float lightPdf, bsdfPdf;
 	e_VisibilitySegment seg;
 	float3 Li = light->Sample_L(g_SceneData, p, lightSample, &lightPdf, &seg);
@@ -49,6 +48,7 @@ CUDA_ONLY_FUNC float3 EstimateDirect(const float3& p, const float3& n, const flo
 		}
 	}
 	
+	float3 wi;
 	if(!light->IsDeltaLight())
 	{
 		BxDFType sampledType;
@@ -68,7 +68,6 @@ CUDA_ONLY_FUNC float3 EstimateDirect(const float3& p, const float3& n, const flo
 			r2.Init();
 			if(k_TraceRay<true>(wi, p, &r2) && r2.LightIndex() == li)
 				Li = r2.Le(p, n, -wi);
-				//Li = light->L(p, n, wi);
 			else Li = light->Le(g_SceneData, Ray(p, wi));
 			if(!ISBLACK(Li))
 			{
@@ -81,20 +80,7 @@ CUDA_ONLY_FUNC float3 EstimateDirect(const float3& p, const float3& n, const flo
 	return Ld;
 }
 
-CUDA_ONLY_FUNC float3 UniformSampleOneLight(const float3& p, const float3& n, const float3& wo, const e_KernelBSDF* bsdf, CudaRNG& rng)
-{
-	int nLights = g_SceneData.m_sLightSelector.m_uCount;
-    if (nLights == 0)
-		return make_float3(0.0f);
-    int lightNum = Floor2Int(rng.randomFloat() * nLights);
-    lightNum = MIN(lightNum, nLights-1);
-	e_KernelLight *light = g_SceneData.m_sLightData.Data + g_SceneData.m_sLightSelector.m_sIndices[lightNum];
-	LightSample lightSample(rng);
-    BSDFSample bsdfSample(rng);
-	return float(nLights) * EstimateDirect(p, n, wo, bsdf, rng, light, lightNum, lightSample, bsdfSample, BxDFType(BSDF_ALL & ~BSDF_SPECULAR));
-}
-
-CUDA_ONLY_FUNC float3 UniformSampleAllLights(const float3& p, const float3& n, const float3& wo, const e_KernelBSDF* bsdf, CudaRNG& rng, int nSamples)
+CUDA_FUNC_IN float3 UniformSampleAllLights(const float3& p, const float3& n, const float3& wo, const e_KernelBSDF* bsdf, CudaRNG& rng, int nSamples)
 {
 	float3 L = make_float3(0);
 	for(int i = 0; i < g_SceneData.m_sLightSelector.m_uCount; i++)
@@ -110,4 +96,17 @@ CUDA_ONLY_FUNC float3 UniformSampleAllLights(const float3& p, const float3& n, c
 		L += Ld / float(nSamples);
 	}
 	return L;
+}
+
+CUDA_FUNC_IN float3 UniformSampleOneLight(const float3& p, const float3& n, const float3& wo, const e_KernelBSDF* bsdf, CudaRNG& rng)
+{
+	int nLights = g_SceneData.m_sLightSelector.m_uCount;
+    if (nLights == 0)
+		return make_float3(0.0f);
+    int lightNum = Floor2Int(rng.randomFloat() * nLights);
+    lightNum = MIN(lightNum, nLights-1);
+	e_KernelLight *light = g_SceneData.m_sLightData.Data + g_SceneData.m_sLightSelector.m_sIndices[lightNum];
+	LightSample lightSample(rng);
+    BSDFSample bsdfSample(rng);
+	return float(nLights) * EstimateDirect(p, n, wo, bsdf, rng, light, lightNum, lightSample, bsdfSample, BxDFType(BSDF_ALL & ~BSDF_SPECULAR));
 }

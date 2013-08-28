@@ -94,20 +94,21 @@ template <typename T> struct e_KernelImageTexture
 	{
 		float2 uv = make_float2(0);
 		mapping.Map(dg, &uv.x, &uv.y);
-		//e_KernelFileTexture* tex = (e_KernelFileTexture*)((unsigned long long)low | (unsigned long long)high << 32);
-		return tex->Sample<T>(uv);
+#ifdef __CUDACC__
+		return deviceTex->Sample<T>(uv);
+#else
+		return hostTex->Sample<T>(uv);
+#endif
 	}
 	template<typename L> void LoadTextures(L callback)
 	{
-		tex = callback(file).getDevice();
-		//unsigned long long tex = (unsigned long long)callback(file).getDevice();
-		//low = tex & 0xffffffff;
-		//high = tex >> 32;
+		deviceTex = callback(file).getDevice();
+		hostTex = callback(file).getDeviceMapped();
 	}
 	TYPE_FUNC(e_KernelImageTexture)
 public:
-	e_KernelFileTexture* tex;
-	//unsigned int low, high;
+	e_KernelFileTexture* deviceTex;
+	e_KernelFileTexture* hostTex;
 	e_KernelTextureMapping2D mapping;
 	e_String file;
 };

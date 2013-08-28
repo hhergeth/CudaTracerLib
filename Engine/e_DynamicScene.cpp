@@ -85,7 +85,7 @@ e_DynamicScene::e_DynamicScene(e_Camera* C, e_SceneInitData a_Data, const char* 
 	m_pTextureBuffer = new e_CachedBuffer<e_FileTexture, e_KernelFileTexture>(a_Data.m_uNumTextures);
 	m_pMIPMapBuffer = new e_CachedBuffer<e_MIPMap, e_KernelMIPMap>(a_Data.m_uNumTextures);
 	m_pLightStream = LL<e_KernelLight>(a_Data.m_uNumLights);
-	m_pDist2DStream = LL<Distribution2D<4096, 4096>>(0);
+	m_pDist2DStream = LL<Distribution2D<4096, 4096>>(1);
 	m_pVolumes = LL<e_VolumeRegion>(128);
 	m_pBVH = new e_SceneBVH(a_Data.m_uNumNodes);
 	if(a_Data.m_uSizeAnimStream > 1024)
@@ -218,7 +218,7 @@ e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_MeshFile2)
 	ZeroMemory(li, sizeof(li));
 	for(unsigned int i = 0; i < M->m_uUsedLights; i++)
 	{
-		ShapeSet<MAX_SHAPE_LENGTH> s = CreateShape<MAX_SHAPE_LENGTH>(N, M->m_sLights[i].MatName);
+		ShapeSet s = CreateShape(N, M->m_sLights[i].MatName);
 		li[i] = createLight(e_DiffuseLight(M->m_sLights[i].L, s)).getIndex();
 	}
 	N->setLightData(li, M->m_uUsedLights);
@@ -315,22 +315,22 @@ void e_DynamicScene::AnimateMesh(e_StreamReference(e_Node) a_Node, float t, unsi
 	m.Invalidate();
 }
 
-e_KernelDynamicScene e_DynamicScene::getKernelSceneData()
+e_KernelDynamicScene e_DynamicScene::getKernelSceneData(bool devicePointer)
 {
 	e_KernelDynamicScene r;
-	r.m_sAnimData = m_pAnimStream->getKernelData();
-	r.m_sBVHIndexData = m_pBVHIndicesStream->getKernelData();
-	r.m_sBVHIntData = m_pTriIntStream->getKernelData();
-	r.m_sBVHNodeData = m_pBVHStream->getKernelData();
-	r.m_sLightData = m_pLightStream->getKernelData();
-	r.m_sMatData = m_pMaterialBuffer->getKernelData();
-	r.m_sMeshData = m_pMeshBuffer->getKernelData();
-	r.m_sNodeData = m_pNodeStream->getKernelData();
-	r.m_sTexData = m_pTextureBuffer->getKernelData();
-	r.m_sTriData = m_pTriDataStream->getKernelData();
-	r.m_sVolume = e_KernelAggregateVolume(m_pVolumes);
-	r.m_sSceneBVH = m_pBVH->getData();
-	r.m_sTerrain = m_pTerrain->getKernelData();
+	r.m_sAnimData = m_pAnimStream->getKernelData(devicePointer);
+	r.m_sBVHIndexData = m_pBVHIndicesStream->getKernelData(devicePointer);
+	r.m_sBVHIntData = m_pTriIntStream->getKernelData(devicePointer);
+	r.m_sBVHNodeData = m_pBVHStream->getKernelData(devicePointer);
+	r.m_sLightData = m_pLightStream->getKernelData(devicePointer);
+	r.m_sMatData = m_pMaterialBuffer->getKernelData(devicePointer);
+	r.m_sMeshData = m_pMeshBuffer->getKernelData(devicePointer);
+	r.m_sNodeData = m_pNodeStream->getKernelData(devicePointer);
+	r.m_sTexData = m_pTextureBuffer->getKernelData(devicePointer);
+	r.m_sTriData = m_pTriDataStream->getKernelData(devicePointer);
+	r.m_sVolume = e_KernelAggregateVolume(m_pVolumes, devicePointer);
+	r.m_sSceneBVH = m_pBVH->getData(devicePointer);
+	r.m_sTerrain = m_pTerrain->getKernelData(devicePointer);
 	r.m_sEnvMap = m_sEnvMap;
 	r.m_sLightSelector = e_ImportantLightSelector(this, m_pCamera);
 	r.m_sBox = m_pBVH->m_sBox;
@@ -374,7 +374,7 @@ AABB e_DynamicScene::getBox(e_StreamReference(e_Node) n)
 e_StreamReference(e_KernelLight) e_DynamicScene::createLight(e_StreamReference(e_Node) Node, const char* materialName, float3& L)
 {
 	unsigned int mi;
-	ShapeSet<MAX_SHAPE_LENGTH> s = CreateShape<MAX_SHAPE_LENGTH>(Node, materialName, &mi);
+	ShapeSet s = CreateShape(Node, materialName, &mi);
 	unsigned int* a = &m_pMaterialBuffer->operator()(Node->m_uMaterialOffset + mi)->NodeLightIndex;
 	if(*a != -1)
 	{
@@ -394,6 +394,56 @@ e_StreamReference(e_KernelLight) e_DynamicScene::createLight(e_StreamReference(e
 		c->SetData(e_DiffuseLight(L, s));
 		return c;
 	}
+}
+
+ShapeSet e_DynamicScene::CreateShape(e_StreamReference(e_Node) Node, const char* name, unsigned int* a_Mi)
+{
+	e_TriIntersectorData* n[MAX_SHAPE_LENGTH];
+	unsigned int n2[MAX_SHAPE_LENGTH];
+	e_BufferReference<e_Mesh, e_KernelMesh> m = getMesh(Node);
+	unsigned int c = 0, mi = -1;
+		
+	for(int j = 0; j < m->m_sMatInfo.getLength(); j++)
+		if(strstr(m->m_sMatInfo(j)->Name, name))
+		{
+			mi = j;
+			break;
+		}
+	if(mi == -1)
+		throw 1;
+	if(a_Mi)
+		*a_Mi = mi;
+
+	int i = 0, e = m->m_sIntInfo.getLength() * 4;
+	while(i < e)
+	{
+		e_TriIntersectorData* sec = (e_TriIntersectorData*)(m->m_sIntInfo.operator()<float4>(i));
+		int* ind = (int*)m->m_sIndicesInfo(i);
+		if(*ind == -1)
+		{
+			i++;
+			continue;
+		}
+		if(*ind < -1 || *ind >= m->m_sTriInfo.getLength())
+			break;
+		e_TriangleData* d = m->m_sTriInfo(*ind);
+		if(d->getMatIndex(0) == mi)//do not use Node->m_uMaterialOffset, cause mi is local...
+		{
+			int k = 0;
+			for(; k < c; k++)
+				if(n2[k] == *ind)
+					break;
+			if(k == c)
+			{
+				n[c] = sec;
+				n2[c++] = *ind;
+			}
+		}
+		i += 3;
+	}
+
+	ShapeSet r = ShapeSet(n, c, Node->getWorldMatrix());
+	return r;
 }
 
 void e_DynamicScene::removeLight(e_StreamReference(e_Node) Node, unsigned int mi)
@@ -460,7 +510,7 @@ e_StreamReference(e_VolumeRegion) e_DynamicScene::getVolumes()
 
 AABB e_DynamicScene::getAABB(e_StreamReference(e_Node) Node, const char* name, unsigned int* a_Mi)
 {
-	return CreateShape<128>(Node, name, a_Mi).getBox();
+	return CreateShape(Node, name, a_Mi).getBox();
 }
 
 e_BufferReference<e_Mesh, e_KernelMesh> e_DynamicScene::getMesh(e_StreamReference(e_Node) n)
@@ -492,15 +542,16 @@ e_StreamReference(e_KernelMaterial) e_DynamicScene::getMat(e_StreamReference(e_N
 
 e_StreamReference(e_KernelLight) e_DynamicScene::setEnvironementMap(const float3& power, const char* file)
 {
-	//e_BufferReference<e_MIPMap, e_KernelMIPMap> m = LoadMIPMap(file);
-	//e_BufferReference<Distribution2D<4096, 4096>, Distribution2D<4096, 4096>> d = getDistribution2D();
-	//int s = sizeof(e_InfiniteLight);
+	e_BufferReference<e_MIPMap, e_KernelMIPMap> m = LoadMIPMap(file);
+	e_BufferReference<Distribution2D<4096, 4096>, Distribution2D<4096, 4096>> d = getDistribution2D();
+	int s = sizeof(e_InfiniteLight);
 	
-	//e_InfiniteLight l = e_InfiniteLight(power, d, m);
-	//e_StreamReference(e_KernelLight) r = createLight(l);
+	e_InfiniteLight l = e_InfiniteLight(power, d, m);
+	e_StreamReference(e_KernelLight) r = createLight(l);
 	m_sEnvMap = e_EnvironmentMap((char*)file);
 	m_sEnvMap.LoadTextures(textureLoader(this));
-	return e_StreamReference(e_KernelLight)(m_pLightStream, 0, 0);
+	//return e_StreamReference(e_KernelLight)(m_pLightStream, 0, 0);
+	return r;
 }
 
 bool canUse(float3& p, float3& cp, float3& cd, float f)

@@ -4,7 +4,9 @@
 #include "..\Math\Montecarlo.h"
 #include "..\Engine\e_Mesh.h"
 
-template<int N> struct CUDA_ALIGN(16) ShapeSet
+#define MAX_SHAPE_LENGTH 32
+
+struct CUDA_ALIGN(16) ShapeSet
 {
 	CUDA_ALIGN(16) struct triData
 	{
@@ -35,31 +37,16 @@ template<int N> struct CUDA_ALIGN(16) ShapeSet
 		{
 			return n;
 		}
-		AABB box() const
-		{
-			AABB b = AABB::Identity();
-			for(int i = 0; i < 3; i++)
-				b.Enlarge(p[i]);
-			return b;
-		}
-		void Recalculate(float4x4& mat)
-		{
-			dat = *datRef;
-			datRef->getData(p[0], p[1], p[2]);
-			for(int i = 0; i < 3; i++)
-				p[i] = mat * p[i];
-			n = -cross(p[2] - p[0], p[1] - p[0]);
-			area = 0.5f * length(n);
-			n *= 1.0f / area;
-		}
+		AABB box() const;
+		void Recalculate(float4x4& mat);
 	};
 public:
     ShapeSet(e_TriIntersectorData** indices, unsigned int indexCount, float4x4& mat)
 	{
-		if(indexCount > N)
+		if(indexCount > MAX_SHAPE_LENGTH)
 			throw 1;
 		count = indexCount;
-		float areas[N];
+		float areas[MAX_SHAPE_LENGTH];
 		sumArea = 0;
 		for(int i = 0; i < count; i++)
 		{
@@ -67,7 +54,7 @@ public:
 			areas[i] = tris[i].area;
 			sumArea += tris[i].area;
 		}
-		areaDistribution = Distribution1D<N>(areas, count);
+		areaDistribution = Distribution1D<MAX_SHAPE_LENGTH>(areas, count);
 	}
     CUDA_FUNC_IN float Area() const { return sumArea; }
     CUDA_FUNC_IN float3 Sample(const LightSample &ls, float3 *Ns, const e_TriIntersectorData* a_Int) const
@@ -100,8 +87,8 @@ public:
 			r.Init();
 			if(tris[i].dat.Intersect(Ray(p, wi), &r))
 			{
-				float pdf2 = r.m_fDist * length(wi) / (AbsDot(tris[i].nor(), -1.0f * wi) * tris[i].area);
-				if (pdf2 == pdf2) 
+				float pdf2 = DistanceSquared(p, p + wi * r.m_fDist) / (AbsDot(tris[i].nor(), -1.0f * wi) * tris[i].area);//we trust in the compiler
+				if (pdf2 == pdf2)//NAN check
 					pdf += tris[i].area * pdf2;
 			}
 		}
@@ -120,7 +107,7 @@ public:
 	}
 	void Recalculate(float4x4& mat)
 	{
-		float areas[N];
+		float areas[MAX_SHAPE_LENGTH];
 		sumArea = 0;
 		for(int i = 0; i < count; i++)
 		{
@@ -128,11 +115,11 @@ public:
 			areas[i] = tris[i].area;
 			sumArea += tris[i].area;
 		}
-		areaDistribution = Distribution1D<N>(areas, count);
+		areaDistribution = Distribution1D<MAX_SHAPE_LENGTH>(areas, count);
 	}
 private:
-    CUDA_ALIGN(16) triData tris[N];
+    CUDA_ALIGN(16) triData tris[MAX_SHAPE_LENGTH];
     float sumArea;
-    CUDA_ALIGN(16) Distribution1D<N> areaDistribution;
+    CUDA_ALIGN(16) Distribution1D<MAX_SHAPE_LENGTH> areaDistribution;
 	int count;
 };

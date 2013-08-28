@@ -96,6 +96,7 @@ void e_Image::WriteImage(const char* fileName, float splatScale)
 
 void e_Image::StartNewRendering()
 {
+	usedHostPixels = false;
 	ZeroMemory(hostPixels, sizeof(Pixel) * xResolution * yResolution);
 	cudaMemset(cudaPixels, 0, sizeof(Pixel) * xResolution * yResolution);
 	cudaMemset(target, 0, sizeof(RGBCOL) * xResolution * yResolution);

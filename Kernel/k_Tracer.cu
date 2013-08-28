@@ -1,46 +1,6 @@
 #include "k_Tracer.h"
 #include "k_TraceHelper.h"
 
-__device__ TraceResult g_Res;
-
-__global__ void trace(Ray r)
-{
-	k_TraceRay<true>(r.direction, r.origin, &g_Res);
-}
-
-TraceResult k_Tracer::TraceSingleRay(Ray r, e_DynamicScene* s, e_Camera* c)
-{
-	k_TracerRNGBuffer tmp;
-	s->UpdateInvalidated();
-	k_INITIALIZE(s->getKernelSceneData());
-	k_STARTPASS(s, c, tmp)
-	TraceResult r2;
-	r2.Init();
-	cudaMemcpyToSymbol(g_Res, &r2, sizeof(TraceResult));
-	trace<<<1,1>>>(r);
-	cudaThreadSynchronize();
-	TraceResult q;
-	cudaMemcpyFromSymbol(&q, g_Res, sizeof(q));
-	return q;
-}
-
-
-__global__ void genRNG2(curandState* states, unsigned int a_Spacing, unsigned int a_Offset, unsigned int a_Num)
-{
-	unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-	if(i < a_Num)
-	{
-		k_TracerRNG* r = (k_TracerRNG*)(states + i);
-		r->Initialize(i, a_Spacing, a_Offset);
-	}
-}
-
-void k_TracerRNGBuffer::createGenerators(unsigned int a_Spacing, unsigned int a_Offset)
-{
-	genRNG2<<< m_uNumGenerators / 1024 + 1, 1024 >>> (m_pGenerators, a_Spacing, a_Offset, m_uNumGenerators);
-	cudaThreadSynchronize();
-}
-
 //SHOULD NOT WORK
 CUDA_FUNC_IN unsigned int FloatToUInt(float f2)
 {

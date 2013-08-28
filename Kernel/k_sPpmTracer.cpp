@@ -4,7 +4,7 @@
 #define LNG 200
 
 k_sPpmTracer::k_sPpmTracer()
-	: k_TracerBase(), m_uGridLength(LNG*LNG*LNG), m_pEntries(0)
+	: k_ProgressiveTracer(), m_uGridLength(LNG*LNG*LNG), m_pEntries(0)
 {
 	m_bLongRunning = false;
 #ifdef DEBUG
@@ -127,6 +127,7 @@ void print(k_PhotonMapCollection& m_sMaps)
 
 void k_sPpmTracer::DoRender(e_Image* I)
 {
+	//k_ProgressiveTracer::DoRender(I);
 	if(m_uModus == 1)
 	{
 		updateBuffer();
@@ -156,10 +157,10 @@ void k_sPpmTracer::DoRender(e_Image* I)
 
 void k_sPpmTracer::initNewPass(e_Image* I)
 {
-	m_uPassesDone = 0;
+	k_ProgressiveTracer::StartNewTrace(I);
 	m_uPhotonsEmitted = 0;
 	AABB m_sEyeBox = m_pCamera->m_sLastFrustum;
-	float r = fsumf(m_sEyeBox.maxV - m_sEyeBox.minV) / w * m_fInitialRadiusScale;
+	float r = fsumf(m_sEyeBox.maxV - m_sEyeBox.minV) / float(w) * m_fInitialRadiusScale;
 	m_sEyeBox.minV -= make_float3(r);
 	m_sEyeBox.maxV += make_float3(r);
 	m_fInitialRadius = r;
@@ -182,12 +183,12 @@ void k_sPpmTracer::initNewPass(e_Image* I)
 	}
 	m_sMaps.StartNewRendering(m_sEyeBox, volBox, r);
 	m_sMaps.StartNewPass();
-	I->StartNewRendering();
 
-	float r_scene = length(m_pScene->getKernelSceneData().m_sBox.Size()) / 2.0f;
-	r_min = 10e-6f * r_scene;
-	r_max = 10e-1f * r_scene;
-	doStartPass(r_max, r_max);
+	float r_scene = length(m_pScene->getKernelSceneData().m_sBox.Size()) / 2;
+	r_min = 10e-7f * r_scene;
+	r_max = 10e-3f * r_scene;
+	float r1 = r_max / 10;
+	doStartPass(r1, r1);
 }
 
 static bool GGG = false;

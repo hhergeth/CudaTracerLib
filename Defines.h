@@ -27,7 +27,7 @@
 #define CUDA_VIRTUAL virtual
 #endif
 
-#ifdef __CUDA_ARCH__ 
+#ifdef __CUDA_ARCH__  
 #define ISCUDA
 #endif
 
@@ -68,6 +68,9 @@ CUDA_FUNC_IN int getGlobalIdx_3D_3D()
 }
 
 #define threadId getGlobalIdx_2D_2D()
+#define threadId_Unsafe threadId
 #else
 #define threadId 0
+#include <Windows.h>
+#define threadId_Unsafe GetCurrentThreadId()
 #endif

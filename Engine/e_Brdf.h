@@ -493,7 +493,7 @@ struct e_KernelBrdf_BlinnDistribution
 		return blinn_pdf;
 	}
 
-	CUDA_FUNC_IN float3 Sample_f(const float3& wo, float3* wi, float u1, float u2, float* pdf) const
+	CUDA_FUNC_IN void Sample_f(const float3& wo, float3* wi, float u1, float u2, float* pdf) const
 	{
 		float costheta = powf(u1, 1.f / (exponent+1));
 		float sintheta = sqrtf(MAX(0.f, 1.f - costheta*costheta));
@@ -549,7 +549,7 @@ struct e_KernelBrdf_AnisotropicDistribution
 		return anisotropic_pdf;
 	}
 
-	CUDA_FUNC_IN float3 Sample_f(const float3& wo, float3* wi, float u1, float u2, float* pdf) const
+	CUDA_FUNC_IN void Sample_f(const float3& wo, float3* wi, float u1, float u2, float* pdf) const
 	{
 		float phi, costheta;
 		if (u1 < .25f)
@@ -641,7 +641,7 @@ public:
 		else return AS(e_KernelBrdf_AnisotropicDistribution)->Pdf(wi, wo);
 	}
 
-	CUDA_FUNC_IN float3 Sample_f(const float3& wo, float3* wi, float u1, float u2, float* pdf) const
+	CUDA_FUNC_IN void Sample_f(const float3& wo, float3* wi, float u1, float u2, float* pdf) const
 	{
 		if(type)
 			return AS(e_KernelBrdf_BlinnDistribution)->Sample_f(wo, wi, u1, u2, pdf);

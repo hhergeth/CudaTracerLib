@@ -299,10 +299,10 @@ public:
 	{
 
 	}
-	e_KernelAggregateVolume(e_Stream<e_VolumeRegion>* D)
+	e_KernelAggregateVolume(e_Stream<e_VolumeRegion>* D, bool devicePointer = true)
 	{
 		m_uVolumeCount = D->UsedElements().getLength();
-		m_pVolumes = D->getKernelData().Data;
+		m_pVolumes = D->getKernelData(devicePointer).Data;
 		box = AABB::Identity();
 		for(int i = 0; i < m_uVolumeCount; i++)
 			box.Enlarge(D->operator()(i)->WorldBound());

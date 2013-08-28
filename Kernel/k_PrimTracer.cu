@@ -2,6 +2,7 @@
 #include "k_TraceHelper.h"
 //#include "k_IntegrateHelper.h"
 
+CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_NextRayCounter;
 CUDA_DEVICE uint3 g_EyeHitBoxMin;
 CUDA_DEVICE uint3 g_EyeHitBoxMax;
 
@@ -151,14 +152,11 @@ template<bool DIRECT> __global__ void debugPixe2l(unsigned int width, unsigned i
 	trace<DIRECT>(r, g_RNGData(), 0);
 }
 
-static bool init = false;
 void k_PrimTracer::DoRender(e_Image* I)
 {
-	if(!init)
-	{
-		init = true;
-		cudaThreadSetLimit(cudaLimitStackSize, 2048);
-	}
+	k_OnePassTracer::DoRender(I);
+	unsigned int zero = 0;
+	cudaMemcpyToSymbol(g_NextRayCounter, &zero, sizeof(unsigned int));
 	k_INITIALIZE(m_pScene->getKernelSceneData());
 	k_STARTPASSI(m_pScene, m_pCamera, g_sRngs, *I);
 	uint3 ma = make_uint3(FloatToUInt(-FLT_MAX)), mi = make_uint3(FloatToUInt(FLT_MAX));
@@ -168,8 +166,8 @@ void k_PrimTracer::DoRender(e_Image* I)
 		primaryKernel<true><<< 180, dim3(32, MaxBlockHeight, 1)>>>(w, h);
 	else primaryKernel<false><<< 180, dim3(32, MaxBlockHeight, 1)>>>(w, h);
 	cudaError_t r = cudaThreadSynchronize();
-	m_uRaysTraced = w * h;
-	m_uPassesDone = 1;
+	k_ENDPASSI(I)
+	k_TracerBase_update_TracedRays
 	I->UpdateDisplay();
 	AABB m_sEyeBox;
 	cudaMemcpyFromSymbol(&m_sEyeBox.minV, g_EyeHitBoxMin, 12);

@@ -74,7 +74,7 @@ public:
 	}
 	void AnimateMesh(e_StreamReference(e_Node) n, float t, unsigned int anim);
 	void UpdateInvalidated();
-	e_KernelDynamicScene getKernelSceneData();
+	e_KernelDynamicScene getKernelSceneData(bool devicePointer = true);
 	//void UpdateMaterial(e_StreamReference(e_KernelMaterial) m);
 	e_StreamReference(e_Node) getNodes()
 	{
@@ -129,55 +129,7 @@ public:
 	e_BufferReference<e_Mesh, e_KernelMesh> getMesh(e_StreamReference(e_Node) n);
 	e_StreamReference(e_KernelMaterial) getMats(e_StreamReference(e_Node) n);
 	e_StreamReference(e_KernelMaterial) getMat(e_StreamReference(e_Node) n, const char* name);
-	template<int N> ShapeSet<N> CreateShape(e_StreamReference(e_Node) Node, const char* name, unsigned int* a_Mi = 0)
-	{
-		e_TriIntersectorData* n[N];
-		unsigned int n2[N];
-		e_BufferReference<e_Mesh, e_KernelMesh> m = getMesh(Node);
-		unsigned int c = 0, mi = -1;
-		
-		for(int j = 0; j < m->m_sMatInfo.getLength(); j++)
-			if(strstr(m->m_sMatInfo(j)->Name, name))
-			{
-				mi = j;
-				break;
-			}
-		if(mi == -1)
-			throw 1;
-		if(a_Mi)
-			*a_Mi = mi;
-
-		int i = 0, e = m->m_sIntInfo.getLength() * 4;
-		while(i < e)
-		{
-			e_TriIntersectorData* sec = (e_TriIntersectorData*)(m->m_sIntInfo.operator()<float4>(i));
-			int* ind = (int*)m->m_sIndicesInfo(i);
-			if(*ind == -1)
-			{
-				i++;
-				continue;
-			}
-			if(*ind < -1 || *ind >= m->m_sTriInfo.getLength())
-				break;
-			e_TriangleData* d = m->m_sTriInfo(*ind);
-			if(d->getMatIndex(0) == mi)//do not use Node->m_uMaterialOffset, cause mi is local...
-			{
-				int k = 0;
-				for(; k < c; k++)
-					if(n2[k] == *ind)
-						break;
-				if(k == c)
-				{
-					n[c] = sec;
-					n2[c++] = *ind;
-				}
-			}
-			i += 3;
-		}
-
-		ShapeSet<N> r = ShapeSet<N>(n, c, Node->getWorldMatrix());
-		return r;
-	}
+	ShapeSet CreateShape(e_StreamReference(e_Node) Node, const char* name, unsigned int* a_Mi = 0);
 	template<typename T> e_StreamReference(e_KernelLight) createLight(T& val)
 	{
 		e_StreamReference(e_KernelLight) r = m_pLightStream->malloc(1);

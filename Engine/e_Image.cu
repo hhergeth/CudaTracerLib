@@ -71,6 +71,10 @@ CUDA_GLOBAL void rtm_Scale(e_Image::Pixel* P, RGBCOL* T, unsigned int w, unsigne
 
 void e_Image::UpdateDisplay(float splatScale)
 {
+	if(usedHostPixels)
+	{
+		cudaMemcpy(cudaPixels, hostPixels, sizeof(Pixel) * xResolution * yResolution, cudaMemcpyHostToDevice);
+	}
 	CUDA_ALIGN(16) float Lum_avg = 0;
 	unsigned int val = FloatToUInt(0);
 	cudaError_t r = cudaMemcpyToSymbol(g_LogLum, &Lum_avg, sizeof(Lum_avg));

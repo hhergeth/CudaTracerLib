@@ -3,8 +3,6 @@
 #include "e_ErrorHandler.h"
 #include <FreeImage.h>
 
-static char g_CopyData[4096 * 4096 * 16];
-
 /*
 	cudaResourceDesc            resDescr;
     memset(&resDescr,0,sizeof(cudaResourceDesc));
@@ -114,6 +112,7 @@ bool parseImage(const char* a_InputFile, imgData* data)
 		data->h = h;
 		data->w = w;
 		data->data = ori;
+		return true;
 	}
 	else
 	{
@@ -131,8 +130,9 @@ e_FileTexture::e_FileTexture(InputStream& a_In)
 	unsigned int q = m_uWidth * m_uHeight * m_uBpp;
 	if(cudaMalloc(&m_pDeviceData, q))
 		BAD_CUDA_ALLOC(q)
-	a_In.Read(g_CopyData, q);
-	if(cudaMemcpy(m_pDeviceData, g_CopyData, q, cudaMemcpyHostToDevice))
+	m_pHostData = malloc(q);
+	a_In.Read(m_pHostData, q);
+	if(cudaMemcpy(m_pDeviceData, m_pHostData, q, cudaMemcpyHostToDevice))
 			BAD_HOST_DEVICE_COPY(m_pDeviceData, q)
 }
 
@@ -142,8 +142,9 @@ e_FileTexture::e_FileTexture(float4& col)
 	m_uWidth = m_uHeight = 1;
 	m_uBpp = 4;
 	cudaMalloc(&m_pDeviceData, sizeof(RGBCOL));
-	*(RGBCOL*)g_CopyData = Float4ToCOLORREF(col);
-	if(cudaMemcpy(m_pDeviceData, g_CopyData, sizeof(RGBCOL), cudaMemcpyHostToDevice))
+	m_pHostData = new float4();
+	*(RGBCOL*)m_pHostData = Float4ToCOLORREF(col);
+	if(cudaMemcpy(m_pDeviceData, m_pHostData, sizeof(RGBCOL), cudaMemcpyHostToDevice))
 		BAD_HOST_DEVICE_COPY(m_pDeviceData, sizeof(RGBCOL))
 	m_uType = e_KernelTexture_DataType::vtGeneric;
 }
@@ -170,6 +171,7 @@ e_KernelFileTexture e_FileTexture::CreateKernelTexture()
 	e_KernelFileTexture r;
 	r.m_fDim = make_float2(m_uWidth - 1, m_uHeight - 1);
 	r.m_pDeviceData = m_pDeviceData;
+	r.m_pHostData = m_pHostData;
 	r.m_uWidth = m_uWidth;
 	r.m_uType = m_uType;
 	r.m_uDim = make_int2(m_uWidth-1, m_uHeight-1);
@@ -189,8 +191,9 @@ e_MIPMap::e_MIPMap(InputStream& a_In)
 	a_In >> m_uSize;
 	if(cudaMalloc(&m_pDeviceData, m_uSize))
 		BAD_CUDA_ALLOC(m_uSize)
-	a_In.Read(g_CopyData, m_uSize);
-	if(cudaMemcpy(m_pDeviceData, g_CopyData, m_uSize, cudaMemcpyHostToDevice))
+	m_pHostData = malloc(m_uSize);
+	a_In.Read(m_pHostData, m_uSize);
+	if(cudaMemcpy(m_pDeviceData, m_pHostData, m_uSize, cudaMemcpyHostToDevice))
 			BAD_HOST_DEVICE_COPY(m_pDeviceData, m_uSize)
 	a_In.Read(m_sOffsets, sizeof(m_sOffsets));
 }
@@ -203,8 +206,9 @@ e_MIPMap::e_MIPMap(float4& col)
 	m_uWidth = m_uHeight = 1;
 	m_uBpp = 4;
 	cudaMalloc(&m_pDeviceData, sizeof(RGBCOL));
-	*(RGBCOL*)g_CopyData = Float4ToCOLORREF(col);
-	if(cudaMemcpy(m_pDeviceData, g_CopyData, sizeof(RGBCOL), cudaMemcpyHostToDevice))
+	m_pHostData = new float4();
+	*(RGBCOL*)m_pHostData = Float4ToCOLORREF(col);
+	if(cudaMemcpy(m_pDeviceData, m_pHostData, sizeof(RGBCOL), cudaMemcpyHostToDevice))
 		BAD_HOST_DEVICE_COPY(m_pDeviceData, sizeof(RGBCOL))
 	m_uType = e_KernelTexture_DataType::vtRGBCOL;
 }
@@ -282,6 +286,7 @@ e_KernelMIPMap e_MIPMap::CreateKernelTexture()
 {
 	e_KernelMIPMap r;
 	r.m_pDeviceData = m_pDeviceData;
+	r.m_pHostData = m_pHostData;
 	r.m_uType = m_uType;
 	r.m_uWrapMode = m_uWrapMode;
 	r.m_uWidth = m_uWidth;

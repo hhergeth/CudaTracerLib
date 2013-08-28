@@ -4,13 +4,16 @@
 
 //TODO : EXP scene doenst work with pppm
 #define USE_EXP_SCENE
+#define COUNT_RAYS
 
+#ifdef __CUDACC__ 
 texture<float4, 1> t_nodesA;
 texture<float4, 1> t_tris;
 texture<int,  1>   t_triIndices;
 texture<float4, 1> t_SceneNodes;
 texture<float4, 1> t_NodeTransforms;
 texture<float4, 1> t_NodeInvTransforms;
+#endif
 
 template<typename T> CUDA_ONLY_FUNC void swapDevice(T& a, T& b)
 {
@@ -25,13 +28,26 @@ enum
     EntrypointSentinel  = 0x76543210,   // Bottom-most stack entry, indicating the end of traversal.
 };
 
-CUDA_ALIGN(16) __constant__ e_KernelDynamicScene g_SceneData;
-CUDA_ALIGN(16) __device__ unsigned int g_NextRayCounter;
-CUDA_ALIGN(16) __constant__ e_CameraData g_CameraData;
-CUDA_ALIGN(16) __constant__ k_TracerRNGBuffer g_RNGData;
-CUDA_ALIGN(16) __constant__ e_Image g_Image;
+namespace {
+CUDA_ALIGN(16) CUDA_CONST e_KernelDynamicScene g_SceneData;
+#ifdef __CUDACC__
+CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_RayTracedCounter;
+#else
+CUDA_ALIGN(16) CUDA_DEVICE volatile LONG g_RayTracedCounter;
+#endif
+CUDA_ALIGN(16) CUDA_CONST e_CameraData g_CameraData;
+CUDA_ALIGN(16) CUDA_CONST k_TracerRNGBuffer g_RNGData;
+CUDA_ALIGN(16) CUDA_CONST e_Image g_Image;
+}
+template<bool USE_ALPHA> inline 
+	
+#ifdef ISCUDA
+	__device__
+#else
+	__host__
+#endif
 
-template<bool USE_ALPHA> inline __device__ bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResult* a_Result, const e_Node* N)
+	bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResult* a_Result, const e_Node* N)
 {
 	unsigned int mIndex = N->m_uMeshIndex;
 	e_KernelMesh mesh = g_SceneData.m_sMeshData[mIndex];
@@ -61,11 +77,19 @@ template<bool USE_ALPHA> inline __device__ bool k_TraceRayNode(const float3& dir
 	{
 		while (unsigned int(nodeAddr) < unsigned int(EntrypointSentinel))
 		{
+#ifdef ISCUDA
 			const float4 n0xy = tex1Dfetch(t_nodesA, mesh.m_uBVHNodeOffset + nodeAddr + 0); // (c0.lo.x, c0.hi.x, c0.lo.y, c0.hi.y)
 			const float4 n1xy = tex1Dfetch(t_nodesA, mesh.m_uBVHNodeOffset + nodeAddr + 1); // (c1.lo.x, c1.hi.x, c1.lo.y, c1.hi.y)
 			const float4 nz   = tex1Dfetch(t_nodesA, mesh.m_uBVHNodeOffset + nodeAddr + 2); // (c0.lo.z, c0.hi.z, c1.lo.z, c1.hi.z)
 				  float4 tmp  = tex1Dfetch(t_nodesA, mesh.m_uBVHNodeOffset + nodeAddr + 3); // child_index0, child_index1
-				  int2  cnodes= *(int2*)&tmp;
+#else
+			float4* dat = (float4*)g_SceneData.m_sBVHNodeData.Data;
+			const float4 n0xy = dat[mesh.m_uBVHNodeOffset + nodeAddr + 0];
+			const float4 n1xy = dat[mesh.m_uBVHNodeOffset + nodeAddr + 1];
+			const float4 nz   = dat[mesh.m_uBVHNodeOffset + nodeAddr + 2];
+				  float4 tmp  = dat[mesh.m_uBVHNodeOffset + nodeAddr + 3];
+#endif
+			int2  cnodes= *(int2*)&tmp;
 			const float c0lox = n0xy.x * idirx - oodx;
 			const float c0hix = n0xy.y * idirx - oodx;
 			const float c0loy = n0xy.z * idiry - oody;
@@ -96,7 +120,7 @@ template<bool USE_ALPHA> inline __device__ bool k_TraceRayNode(const float3& dir
 				if (traverseChild0 && traverseChild1)
 				{
 					if (swp)
-						swapDevice(nodeAddr, cnodes.y);
+						swapk(&nodeAddr, &cnodes.y);
 					stackPtr += 4;
 					*(int*)stackPtr = cnodes.y;
 				}
@@ -110,6 +134,7 @@ template<bool USE_ALPHA> inline __device__ bool k_TraceRayNode(const float3& dir
 			}
 
 			unsigned int mask;
+#ifdef ISCUDA
 			asm("{\n"
 				"   .reg .pred p;               \n"
 				"setp.ge.s32        p, %1, 0;   \n"
@@ -117,6 +142,9 @@ template<bool USE_ALPHA> inline __device__ bool k_TraceRayNode(const float3& dir
 				"}"
 				: "=r"(mask)
 				: "r"(leafAddr));
+#else
+			mask = leafAddr >= 0;
+#endif
 			if(!mask)
 				break;
 		}
@@ -124,9 +152,16 @@ template<bool USE_ALPHA> inline __device__ bool k_TraceRayNode(const float3& dir
 		{
 			for (int triAddr = ~leafAddr;; triAddr += 3)
 			{
+#ifdef ISCUDA
 				const float4 v00 = tex1Dfetch(t_tris, mesh.m_uBVHTriangleOffset + triAddr + 0);
 				const float4 v11 = tex1Dfetch(t_tris, mesh.m_uBVHTriangleOffset + triAddr + 1);
 				const float4 v22 = tex1Dfetch(t_tris, mesh.m_uBVHTriangleOffset + triAddr + 2);
+#else
+				float4* dat = (float4*)g_SceneData.m_sBVHIntData.Data;
+				const float4 v00 = dat[mesh.m_uBVHTriangleOffset + triAddr + 0];
+				const float4 v11 = dat[mesh.m_uBVHTriangleOffset + triAddr + 1];
+				const float4 v22 = dat[mesh.m_uBVHTriangleOffset + triAddr + 2];
+#endif
 				if (__float_as_int(v00.x) == 0x80000000)
 					break;
 				float Oz = v00.w - origx*v00.x - origy*v00.y - origz*v00.z;
@@ -144,7 +179,11 @@ template<bool USE_ALPHA> inline __device__ bool k_TraceRayNode(const float3& dir
 						float v = Oy + t*Dy;
 						if (v >= 0.0f && u + v <= 1.0f)
 						{
+#ifdef ISCUDA
 							unsigned int ti = tex1Dfetch(t_triIndices, triAddr + mesh.m_uBVHIndicesOffset);
+#else
+							unsigned int ti = g_SceneData.m_sBVHIndexData.Data[triAddr + mesh.m_uBVHIndicesOffset];
+#endif
 							e_TriangleData* tri = g_SceneData.m_sTriData.Data + ti + mesh.m_uTriangleOffset;
 							int q = 1;
 							if(USE_ALPHA)
@@ -180,8 +219,21 @@ template<bool USE_ALPHA> inline __device__ bool k_TraceRayNode(const float3& dir
 //a_Result->m_fDist = length(modl2.TransformNormal(d*a_Result->m_fDist));
 
 #ifdef USE_EXP_SCENE
-template<bool USE_ALPHA> inline __device__ bool k_TraceRay(const float3& dir, const float3& ori, TraceResult* a_Result)
+template<bool USE_ALPHA> inline
+#ifdef ISCUDA
+	__device__
+#else
+	__host__
+#endif
+	bool k_TraceRay(const float3& dir, const float3& ori, TraceResult* a_Result)
 {
+#ifdef COUNT_RAYS
+	#ifdef ISCUDA
+		atomicInc(&g_RayTracedCounter, -1);
+	#else
+		InterlockedIncrement(&g_RayTracedCounter);
+	#endif
+#endif
 	if(!g_SceneData.m_sNodeData.UsedCount)
 		return false;
 	int traversalStackOuter[64];
@@ -198,10 +250,17 @@ template<bool USE_ALPHA> inline __device__ bool k_TraceRay(const float3& dir, co
 		int nodeAddrOuter = traversalStackOuter[--at];
 		while (nodeAddrOuter >= 0)
 		{
+#ifdef ISCUDA
 			const float4 n0xy = tex1Dfetch(t_SceneNodes, nodeAddrOuter * 4 + 0); // (c0.lo.x, c0.hi.x, c0.lo.y, c0.hi.y)
 			const float4 n1xy = tex1Dfetch(t_SceneNodes, nodeAddrOuter * 4 + 1); // (c1.lo.x, c1.hi.x, c1.lo.y, c1.hi.y)
 			const float4 nz   = tex1Dfetch(t_SceneNodes, nodeAddrOuter * 4 + 2); // (c0.lo.z, c0.hi.z, c1.lo.z, c1.hi.z)
 				  float4 tmp  = tex1Dfetch(t_SceneNodes, nodeAddrOuter * 4 + 3); // child_index0, child_index1
+#else
+			const float4 n0xy = g_SceneData.m_sSceneBVH.m_pNodes[nodeAddrOuter].a;
+			const float4 n1xy = g_SceneData.m_sSceneBVH.m_pNodes[nodeAddrOuter].b;
+			const float4 nz   = g_SceneData.m_sSceneBVH.m_pNodes[nodeAddrOuter].c;
+				  float4 tmp  = g_SceneData.m_sSceneBVH.m_pNodes[nodeAddrOuter].d;
+#endif
 			int2  cnodesOuter = *(int2*)&tmp;
 			const float c0lox = n0xy.x * I.x - O.x;
 			const float c0hix = n0xy.y * I.x - O.x;
@@ -235,7 +294,7 @@ template<bool USE_ALPHA> inline __device__ bool k_TraceRay(const float3& dir, co
 				if (traverseChild0Outer && traverseChild1Outer)
 				{
 					if (swpOuter)
-						swapDevice(nodeAddrOuter, cnodesOuter.y);
+						swapk(&nodeAddrOuter, &cnodesOuter.y);
 					traversalStackOuter[at++] = cnodesOuter.y;
 				}
 			}
@@ -258,14 +317,14 @@ template<bool USE_ALPHA> inline __device__ bool k_TraceRay(const float3& dir, co
 	return a_Result->hasHit();
 }
 #else
-template<bool USE_ALPHA> inline __device__ bool k_TraceRay(const float3& dir, const float3& ori, TraceResult* a_Result)
+template<bool USE_ALPHA> inline CUDA_FUNC_IN bool k_TraceRay(const float3& dir, const float3& ori, TraceResult* a_Result)
 {
 	e_Node* N = g_SceneData.m_sNodeData.Data;
 	return k_TraceRayNode<USE_ALPHA>(dir, ori, a_Result, N);
 }
 #endif
 
-template<bool USE_ALPHA> CUDA_ONLY_FUNC TraceResult k_TraceRay(const Ray& r)
+template<bool USE_ALPHA> CUDA_FUNC_IN TraceResult k_TraceRay(const Ray& r)
 {
 	TraceResult r2;
 	r2.Init();
@@ -322,6 +381,7 @@ unsigned int TraceResult::LightIndex()
 	return j;
 }
 
+#ifdef __CUDACC__
 //do not!!! use a method here, the compiler will fuck up the textures.
 #define k_INITIALIZE(a_Data) \
 	{ \
@@ -339,22 +399,63 @@ unsigned int TraceResult::LightIndex()
 #define k_STARTPASS(a_Scene, a_Camera, a_RngBuf) \
 	{ \
 		unsigned int b = 0; \
-		cudaMemcpyToSymbol(g_NextRayCounter, &b, sizeof(unsigned int)); \
+		cudaMemcpyToSymbol(g_RayTracedCounter, &b, sizeof(unsigned int)); \
 		e_CameraData d = a_Camera->getData(); \
 		e_KernelDynamicScene d2 = a_Scene->getKernelSceneData(); \
 		cudaMemcpyToSymbol(g_SceneData, &d2, sizeof(e_KernelDynamicScene)); \
 		cudaMemcpyToSymbol(g_CameraData, &d, sizeof(d)); \
 		cudaMemcpyToSymbol(g_RNGData, &a_RngBuf, sizeof(k_TracerRNGBuffer)); \
+		g_SceneData = d2; \
+		g_CameraData = d; \
+		g_RNGData = a_RngBuf; \
 	}
 
 #define k_STARTPASSI(a_Scene, a_Camera, a_RngBuf, a_Image) \
 	{ \
 		unsigned int b = 0; \
-		cudaMemcpyToSymbol(g_NextRayCounter, &b, sizeof(unsigned int)); \
+		cudaMemcpyToSymbol(g_RayTracedCounter, &b, sizeof(unsigned int)); \
 		e_CameraData d = a_Camera->getData(); \
 		e_KernelDynamicScene d2 = a_Scene->getKernelSceneData(); \
 		cudaMemcpyToSymbol(g_SceneData, &d2, sizeof(e_KernelDynamicScene)); \
 		cudaMemcpyToSymbol(g_CameraData, &d, sizeof(d)); \
 		cudaMemcpyToSymbol(g_RNGData, &a_RngBuf, sizeof(k_TracerRNGBuffer)); \
 		cudaMemcpyToSymbol(g_Image, &a_Image, sizeof(e_Image)); \
+		g_SceneData = d2; \
+		g_CameraData = d; \
+		g_RNGData = a_RngBuf; \
 	}
+
+#define k_ENDPASSI(a_Image) \
+	{ \
+		cudaMemcpyFromSymbol(a_Image, g_Image, sizeof(e_Image)); \
+	}
+#else
+//do not!!! use a method here, the compiler will fuck up the textures.
+#define k_INITIALIZE(a_Data) 
+
+#define k_STARTPASS(a_Scene, a_Camera, a_RngBuf) \
+	{ \
+		e_CameraData d = a_Camera->getData(); \
+		e_KernelDynamicScene d2 = a_Scene->getKernelSceneData(false); \
+		g_SceneData = d2; \
+		g_CameraData = d; \
+		g_RNGData = a_RngBuf; \
+		g_RayTracedCounter = 0; \
+	}
+
+#define k_STARTPASSI(a_Scene, a_Camera, a_RngBuf, a_Image) \
+	{ \
+		e_CameraData d = a_Camera->getData(); \
+		e_KernelDynamicScene d2 = a_Scene->getKernelSceneData(false); \
+		g_SceneData = d2; \
+		g_CameraData = d; \
+		g_RNGData = a_RngBuf; \
+		g_RayTracedCounter = 0; \
+		g_Image = a_Image; \
+	}
+
+#define k_ENDPASSI(a_Image) \
+	{ \
+		*a_Image = g_Image; \
+	}
+#endif

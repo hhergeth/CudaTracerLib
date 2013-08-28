@@ -2,7 +2,7 @@
 
 #include "k_Tracer.h"
 
-class k_PrimTracer : public k_TracerBase
+class k_PrimTracer : public k_OnePassTracer
 {
 public:
 	bool m_bDirect;

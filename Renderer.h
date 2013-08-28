@@ -6,6 +6,7 @@
 #include "Engine\e_DynamicScene.h"
 #include "Kernel\k_Tracer.h"
 #include "Kernel\k_PrimTracer.h"
+#include "Kernel\k_CpuTracer.h"
 #include "Kernel\k_PathTracer.h"
 #include "Kernel\k_sPpmTracer.h"
 
@@ -84,7 +85,7 @@ public:
 		m_pEyeBox = 0;
 		if(stdTracers)
 			//setTracers(new k_PrimTracer(), new k_sPpmTracer());
-			setTracers(new k_PrimTracer(), new k_PathTracer());
+			setTracers(new k_PrimTracer(), new k_PathTracer(TRUE));
 		else setTracers(0, 0);
 		oldMove0 = oldMove1 = false;
 		m_uState = 1;

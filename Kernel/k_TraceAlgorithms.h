@@ -1,8 +1,9 @@
 #pragma once
 
 #include "k_TraceHelper.h"
+#include "k_IntegrateHelper.h"
 
-template<bool DIRECT> CUDA_ONLY_FUNC float3 PathTrace(float3& a_Dir, float3& a_Ori, CudaRNG& rnd, float* distTravalled = 0)
+template<bool DIRECT> CUDA_FUNC_IN float3 PathTrace(float3& a_Dir, float3& a_Ori, CudaRNG& rnd, float* distTravalled = 0)
 {
 	Ray r0 = Ray(a_Ori, a_Dir);
 	TraceResult r;
