@@ -1,7 +1,7 @@
 #pragma once
 
 #include "e_Filter.h"
-
+#include "e_Samples.h"
 
 #define FILTER_TABLE_SIZE 16
 

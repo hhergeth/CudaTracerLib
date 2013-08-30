@@ -1,7 +1,7 @@
 #pragma once
 
 #include "e_FileTexture.h"
-#include "..\Math\vector.h"
+#include <MathTypes.h>
 #include "e_Brdf.h"
 #include "e_KernelTexture.h"
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "e_Buffer.h"
-#include "..\Math\vector.h"
+#include <MathTypes.h>
 #include "e_Node.h"
 
 struct e_KernelSceneBVH

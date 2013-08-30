@@ -2,6 +2,7 @@
 #define _S10E5_H_
 
 #include "..\Defines.h"
+#include "cutil_math.h"
 
 class s10e5
 {
@@ -473,5 +474,74 @@ inline s10e5 s10e5::Indet () { s10e5 h; h._h = 0x7e00; return h; }
 
 inline unsigned short s10e5::bits () const { return _h; }
 inline void s10e5::setBits (unsigned short bits) { _h = bits; }
+
+#include "half.h"
+typedef s10e5 half;
+
+struct half2
+{
+	half x, y;
+	CUDA_FUNC_IN half2() {}
+	CUDA_FUNC_IN half2(float2& v)
+	{
+		x = half(v.x);
+		y = half(v.y);
+	}
+	CUDA_FUNC_IN half2(float _x, float _y)
+	{
+		x = half(_x);
+		y = half(_y);
+	}
+	CUDA_FUNC_IN float2 ToFloat2()
+	{
+		return make_float2(x.ToFloat(), y.ToFloat());
+	}
+};
+
+struct half3
+{
+	half x, y, z;
+	half3() {}
+	CUDA_FUNC_IN half3(float3& v)
+	{
+		x = half(v.x);
+		y = half(v.y);
+		z = half(v.z);
+	}
+	CUDA_FUNC_IN half3(float _x, float _y, float _z)
+	{
+		x = half(_x);
+		y = half(_y);
+		z = half(_z);
+	}
+	CUDA_FUNC_IN float3 ToFloat3()
+	{
+		return make_float3(x.ToFloat(), y.ToFloat(), z.ToFloat());
+	}
+};
+
+struct half4
+{
+	half x, y, z, w;
+	half4() {}
+	CUDA_FUNC_IN half4(float4& v)
+	{
+		x = half(v.x);
+		y = half(v.y);
+		z = half(v.z);
+		w = half(v.w);
+	}
+	CUDA_FUNC_IN half4(float _x, float _y, float _z, float _w)
+	{
+		x = half(_x);
+		y = half(_y);
+		z = half(_z);
+		w = half(_w);
+	}
+	CUDA_FUNC_IN float4 ToFloat4()
+	{
+		return make_float4(x.ToFloat(), y.ToFloat(), z.ToFloat(), w.ToFloat());
+	}
+};
 
 #endif

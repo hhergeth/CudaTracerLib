@@ -7,11 +7,11 @@ float3 pixelFunc(CameraSample& s, int w, int h, CudaRNG& rng)
 {
 	Ray r = g_CameraData.GenRay(s, w, h);
 
-	return PathTrace<true>(r.direction, r.origin, rng);
+	return PathTrace(r.direction, r.origin, rng);
 
-	TraceResult r2 = k_TraceRay<false>(r);
+	TraceResult r2 = k_TraceRay(r);
 	if(r2.hasHit())
-		return make_float3(-dot(r2.lerpOnb().m_normal, r.direction));
+		return make_float3(-dot(r2.lerpFrame().n, r.direction));
 	else return make_float3(0,1,0);
 	//return make_float3(r2.m_fDist / sc);
 }
@@ -55,13 +55,12 @@ void k_CpuTracer::DoRender(e_Image* I)
 	k_ProgressiveTracer::DoRender(I);
 	IMG = I;
 	k_INITIALIZE(m_pScene->getKernelSceneData());
-	k_STARTPASSI(m_pScene, m_pCamera, g_sRngs, *I);
+	k_STARTPASS(m_pScene, m_pCamera, g_sRngs);
 	ReleaseSemaphore(m_sem, TCOUNT, 0);
 	HANDLE hand[TCOUNT];
 	for(int i = 0; i < TCOUNT; i++)
 		hand[i] = data[i].sem;
 	WaitForMultipleObjects(TCOUNT, hand, true, INFINITE);
-	//k_ENDPASSI(I)
 	I->UpdateDisplay();
 	k_TracerBase_update_TracedRays
 }

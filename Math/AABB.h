@@ -1,6 +1,7 @@
 #pragma once
-#include "float.h"
-#include "Vector.h"
+#include "cutil_math.h"
+#include "float4x4.h"
+#include "Ray.h"
 
 struct AABB
 {

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "..\Math\vector.h"
-#include "..\Math\AABB.h"
+#include <MathTypes.h>
+#include "e_Samples.h"
 
 struct e_CameraData
 {

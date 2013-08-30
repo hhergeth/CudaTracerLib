@@ -1,6 +1,6 @@
 #include "StdAfx.h"
 #include "e_AnimatedMesh.h"
-
+#include <MathTypes.h>
 #include "SceneBuilder/MD5Parser.h"
 #include "..\Base\FrameworkInterop.h"
 #include "SceneBuilder/Importer.h"
@@ -13,13 +13,13 @@ float4x4 mul(float4x4& a, float4x4& b)
 	return a * b;
 }
 
-struct c_Frame
+struct c_bFrame
 {
 	float4x4* data;
 	unsigned int L;
 
-	c_Frame(){}
-	c_Frame(Frame* F, float4x4* a_InverseTransforms)
+	c_bFrame(){}
+	c_bFrame(bFrame* F, float4x4* a_InverseTransforms)
 	{
 		L = F->joints.size();
 		data = new float4x4[F->joints.size()];
@@ -41,28 +41,28 @@ struct c_Frame
 
 struct c_Animation
 {
-	unsigned int m_uNumFrames;
+	unsigned int m_uNumbFrames;
 	unsigned int m_uNumBones;
-	unsigned int m_uFrameRate;
-	c_Frame* data;
+	unsigned int m_ubFrameRate;
+	c_bFrame* data;
 
 	c_Animation(Anim* A, MD5Model* M)
 	{
-		m_uNumFrames = A->numFrames;
+		m_uNumbFrames = A->numbFrames;
 		m_uNumBones = A->baseJoints.size();
-		m_uFrameRate = A->frameRate;
+		m_ubFrameRate = A->bFrameRate;
 
 		float4x4* inverseJoints = new float4x4[m_uNumBones];
 		for(int i = 0; i < m_uNumBones; i++)
 			inverseJoints[i] = mul(M->joints[i].quat.toMatrix(), float4x4::Translate(*(float3*)&M->joints[i].pos)).Inverse();
-		data = new c_Frame[m_uNumFrames];
-		for(int i = 0; i < m_uNumFrames; i++)
-			data[i] = c_Frame(&A->frames[i], inverseJoints);
+		data = new c_bFrame[m_uNumbFrames];
+		for(int i = 0; i < m_uNumbFrames; i++)
+			data[i] = c_bFrame(&A->bFrames[i], inverseJoints);
 	}
 
 	void serialize(OutputStream& a_Out)
 	{
-		for(int i = 0; i < m_uNumFrames; i++)
+		for(int i = 0; i < m_uNumbFrames; i++)
 			data[i].serialize(a_Out);
 	}
 };
@@ -196,7 +196,7 @@ void e_AnimatedMesh::CompileToBinary(const char* a_InputFile, c_StringArray& a_A
 	for(int i = 0; i < V.size(); i++)
 		BLOCKSIZE += V[i].size() * sizeof(e_BVHLevelEntry);
 	for(int a = 0; a < M.anims.size(); a++)
-		BLOCKSIZE += M.anims[a]->numFrames * (M.numJoints * sizeof(float4x4));
+		BLOCKSIZE += M.anims[a]->numbFrames * (M.numJoints * sizeof(float4x4));
 	a_Out << BLOCKSIZE;
 	unsigned int endTo = BLOCKSIZE + a_Out.numBytesWrote;
 
@@ -221,10 +221,10 @@ void e_AnimatedMesh::CompileToBinary(const char* a_InputFile, c_StringArray& a_A
 	unsigned int OFF4 = 0;
 	for(int a = 0; a < M.anims.size(); a++)
 	{
-		a_Out << M.anims[a]->numFrames;
-		a_Out << M.anims[a]->frameRate;
+		a_Out << M.anims[a]->numbFrames;
+		a_Out << M.anims[a]->bFrameRate;
 		a_Out << OFF4;
-		OFF4 += M.anims[a]->numFrames * M.joints.size();
+		OFF4 += M.anims[a]->numbFrames * M.joints.size();
 	}
 	for(int a = 0; a < M.anims.size(); a++)
 	{

@@ -44,7 +44,7 @@ __global__ void k_GuessPass(int w, int h)
 		TraceResult r2;
 		r2.Init();
 		int d = -1;
-		while(k_TraceRay<true>(r.direction, r.origin, &r2) && ++d < 10)
+		while(k_TraceRay(r.direction, r.origin, &r2) && ++d < 10)
 		{
 			float3 p = r(r2.m_fDist);
 			e_KernelBSDF bsdf = r2.GetBSDF(p);
@@ -81,4 +81,23 @@ AABB k_Tracer::GetEyeHitPointBox(e_DynamicScene* m_pScene, e_Camera* m_pCamera)
 	m_sEyeBox.minV = make_float3(UIntToFloat(m_sEyeBox.minV.x), UIntToFloat(m_sEyeBox.minV.y), UIntToFloat(m_sEyeBox.minV.z));
 	m_sEyeBox.maxV = make_float3(UIntToFloat(m_sEyeBox.maxV.x), UIntToFloat(m_sEyeBox.maxV.y), UIntToFloat(m_sEyeBox.maxV.z));
 	return m_sEyeBox;
+}
+
+CUDA_DEVICE TraceResult res;
+CUDA_GLOBAL void traceKernel(Ray r)
+{
+	res.Init();
+	res = k_TraceRay(r);
+}
+
+TraceResult k_Tracer::TraceSingleRay(Ray r, e_DynamicScene* s, e_Camera* c)
+{
+	k_TracerRNGBuffer tmp;
+	s->UpdateInvalidated();
+	k_INITIALIZE(s->getKernelSceneData());
+	k_STARTPASS(s, c, tmp);
+	traceKernel<<<1,1>>>(r);
+	TraceResult r2;
+	cudaMemcpyFromSymbol(&r2, res, sizeof(r2));
+	return r2;
 }

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "..\Math\vector.h"
+#include <MathTypes.h>
 #include "e_KernelTexture.h"
 
 struct e_EnvironmentMap
@@ -56,7 +56,7 @@ public:
 		float3 n = normalize(r.direction);
 		//float2 t = make_float2(asinf(n.x) * INV_PI + 0.5f, asinf(n.y) * INV_PI + 0.5f);
 		float2 t = make_float2(0.5f + atan2(n.z, n.x) * 0.5f * INV_PI, 0.5f - asin(n.y) * INV_PI);
-		MapParameters mp(make_float3(0), t, Onb());
+		MapParameters mp(make_float3(0), t, Frame());
 		return Map.Evaluate(mp);
 	}
 };

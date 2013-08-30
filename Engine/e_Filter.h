@@ -1,6 +1,6 @@
 #pragma once
 
-#include "..\Math\vector.h"
+#include <MathTypes.h>
 
 struct e_KernelFilterBase
 {

@@ -1,7 +1,6 @@
 #pragma once
 
-#include "..\Defines.h"
-#include "..\Math\vector.h"
+#include <MathTypes.h>
 #include <vector>
 #include "e_ErrorHandler.h"
 #include "..\Base\FileStream.h"

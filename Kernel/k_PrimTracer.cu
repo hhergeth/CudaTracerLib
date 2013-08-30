@@ -1,10 +1,9 @@
 #include "k_PrimTracer.h"
 #include "k_TraceHelper.h"
-//#include "k_IntegrateHelper.h"
 
-CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_NextRayCounter;
-CUDA_DEVICE uint3 g_EyeHitBoxMin;
-CUDA_DEVICE uint3 g_EyeHitBoxMax;
+CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_NextRayCounter2;
+CUDA_DEVICE uint3 g_EyeHitBoxMin2;
+CUDA_DEVICE uint3 g_EyeHitBoxMax2;
 
 CUDA_FUNC_IN unsigned int FloatToUInt(float f2)
 {
@@ -35,15 +34,16 @@ CUDA_ONLY_FUNC void max3(uint3* tar, uint3& val)
 	atomicMax(&tar->z, val.z);
 }
 
-template<bool DIRECT> CUDA_ONLY_FUNC float3 trace(Ray& r, CudaRNG& rng, float3* pout)
+CUDA_ONLY_FUNC float3 trace(Ray& r, CudaRNG& rng, float3* pout)
 {
+	const bool DIRECT = false;
 	TraceResult r2;
 	r2.Init();
 	float3 c = make_float3(1), L = make_float3(0);
 	unsigned int depth = 0;
 	e_KernelBSDF bsdf;
 	bool specBounce = false;
-	while(k_TraceRay<true>(r.direction, r.origin, &r2) && depth++ < 5)
+	while(k_TraceRay(r.direction, r.origin, &r2) && depth++ < 5)
 	{
 		if(pout && depth == 1)
 			*pout = r(r2.m_fDist);
@@ -53,14 +53,14 @@ template<bool DIRECT> CUDA_ONLY_FUNC float3 trace(Ray& r, CudaRNG& rng, float3* 
 		float pdf;
 		r2.GetBSDF(r(r2.m_fDist), &bsdf);
 		if(depth == 1 || specBounce || !DIRECT)
-			L += r2.Le(r(r2.m_fDist), bsdf.sys.m_normal, -r.direction);
+			L += r2.Le(r(r2.m_fDist), bsdf.sys.n, -r.direction);
 		//if(DIRECT)
-		//	L += c * UniformSampleAllLights(r(r2.m_fDist), bsdf.sys.m_normal, -r.direction, &bsdf, rng, 1);
-		//((float3*)&bsdf.sys.m_tangent) = cross(bsdf.sys.m_binormal, bsdf.sys.m_normal);
-		//return make_float3(dot(-r.direction, bsdf.sys.m_normal));
+		//	L += c * UniformSampleAllLights(r(r2.m_fDist), bsdf.sys.n, -r.direction, &bsdf, rng, 1);
+		//((float3*)&bsdf.sys.t) = cross(bsdf.sys.s, bsdf.sys.n);
+		//return make_float3(dot(-r.direction, bsdf.sys.n));
 		BxDFType sampledType;
 		float3 f = bsdf.Sample_f(-r.direction, &wi, BSDFSample(rng), &pdf, BSDF_ALL, &sampledType);
-		f = f * AbsDot(wi, bsdf.sys.m_normal) / pdf;
+		f = f * AbsDot(wi, bsdf.sys.n) / pdf;
 		c = c * f;
 		if((sampledType & BSDF_DIFFUSE) == BSDF_DIFFUSE)
 		{
@@ -81,7 +81,7 @@ template<bool DIRECT> CUDA_ONLY_FUNC float3 trace(Ray& r, CudaRNG& rng, float3* 
 
 CUDA_SHARED uint3 s_EyeHitBoxMin;
 CUDA_SHARED uint3 s_EyeHitBoxMax;
-template<bool DIRECT> __global__ void primaryKernel(long long width, long long height)
+__global__ void primaryKernel(long long width, long long height, e_Image g_Image)
 {
 	if(!threadIdx.x && !threadIdx.y)
 	{
@@ -105,7 +105,7 @@ template<bool DIRECT> __global__ void primaryKernel(long long width, long long h
         if(terminated)
         {			
             if (idxTerminated == 0)
-				rayBase = atomicAdd(&g_NextRayCounter, numTerminated);
+				rayBase = atomicAdd(&g_NextRayCounter2, numTerminated);
 
             rayidx = rayBase + idxTerminated;
 			if (rayidx >= N)
@@ -120,7 +120,7 @@ template<bool DIRECT> __global__ void primaryKernel(long long width, long long h
 			CameraSample s = nextSample(x, y, rng);
 			Ray r = g_CameraData.GenRay(s, width, height);
 			float3 p = make_float3(0);
-			c += trace<DIRECT>(r, rng, &p);
+			c += trace(r, rng, &p);
 			if(fsumf(p))
 			{
 				uint3 pu = make_uint3(FloatToUInt(p.x), FloatToUInt(p.y), FloatToUInt(p.z));
@@ -138,40 +138,37 @@ template<bool DIRECT> __global__ void primaryKernel(long long width, long long h
 	g_RNGData(rng);
 	if(!threadIdx.x && !threadIdx.y)
 	{
-		min3(&g_EyeHitBoxMin, s_EyeHitBoxMin);
-		max3(&g_EyeHitBoxMax, s_EyeHitBoxMax);
+		min3(&g_EyeHitBoxMin2, s_EyeHitBoxMin);
+		max3(&g_EyeHitBoxMax2, s_EyeHitBoxMax);
 	}
 }
 
-template<bool DIRECT> __global__ void debugPixe2l(unsigned int width, unsigned int height, int2 p)
+__global__ void debugPixe2l(unsigned int width, unsigned int height, int2 p)
 {
 	Ray r = g_CameraData.GenRay(p, make_int2(width, height));
 	//dir = make_float3(-0.98181188f, 0.18984018f, -0.0024534566f);
 	//ori = make_float3(68790.375f, -12297.199f, 57510.383f);
 	//ori += make_float3(g_SceneData.m_sTerrain.m_sMin.x, 0, g_SceneData.m_sTerrain.m_sMin.z);
-	trace<DIRECT>(r, g_RNGData(), 0);
+	trace(r, g_RNGData(), 0);
 }
 
 void k_PrimTracer::DoRender(e_Image* I)
 {
 	k_OnePassTracer::DoRender(I);
 	unsigned int zero = 0;
-	cudaMemcpyToSymbol(g_NextRayCounter, &zero, sizeof(unsigned int));
+	cudaMemcpyToSymbol(g_NextRayCounter2, &zero, sizeof(unsigned int));
 	k_INITIALIZE(m_pScene->getKernelSceneData());
-	k_STARTPASSI(m_pScene, m_pCamera, g_sRngs, *I);
+	k_STARTPASS(m_pScene, m_pCamera, g_sRngs);
 	uint3 ma = make_uint3(FloatToUInt(-FLT_MAX)), mi = make_uint3(FloatToUInt(FLT_MAX));
-	cudaMemcpyToSymbol(g_EyeHitBoxMin, &mi, 12);
-	cudaMemcpyToSymbol(g_EyeHitBoxMax, &ma, 12);
-	if(m_bDirect)
-		primaryKernel<true><<< 180, dim3(32, MaxBlockHeight, 1)>>>(w, h);
-	else primaryKernel<false><<< 180, dim3(32, MaxBlockHeight, 1)>>>(w, h);
+	cudaMemcpyToSymbol(g_EyeHitBoxMin2, &mi, 12);
+	cudaMemcpyToSymbol(g_EyeHitBoxMax2, &ma, 12);
+	primaryKernel<<< 180, dim3(32, MaxBlockHeight, 1)>>>(w, h, *I);
 	cudaError_t r = cudaThreadSynchronize();
-	k_ENDPASSI(I)
 	k_TracerBase_update_TracedRays
 	I->UpdateDisplay();
 	AABB m_sEyeBox;
-	cudaMemcpyFromSymbol(&m_sEyeBox.minV, g_EyeHitBoxMin, 12);
-	cudaMemcpyFromSymbol(&m_sEyeBox.maxV, g_EyeHitBoxMax, 12);
+	cudaMemcpyFromSymbol(&m_sEyeBox.minV, g_EyeHitBoxMin2, 12);
+	cudaMemcpyFromSymbol(&m_sEyeBox.maxV, g_EyeHitBoxMax2, 12);
 	m_sEyeBox.minV = make_float3(UIntToFloat(m_sEyeBox.minV.x), UIntToFloat(m_sEyeBox.minV.y), UIntToFloat(m_sEyeBox.minV.z));
 	m_sEyeBox.maxV = make_float3(UIntToFloat(m_sEyeBox.maxV.x), UIntToFloat(m_sEyeBox.maxV.y), UIntToFloat(m_sEyeBox.maxV.z));
 	m_pCamera->m_sLastFrustum = m_sEyeBox;
@@ -183,7 +180,7 @@ void k_PrimTracer::Debug(int2 pixel)
 	e_KernelDynamicScene d2 = m_pScene->getKernelSceneData();
 	k_INITIALIZE(d2);
 	k_STARTPASS(m_pScene, m_pCamera, g_sRngs);
-	debugPixe2l<false><<<1,1>>>(w,h,pixel);
+	debugPixe2l<<<1,1>>>(w,h,pixel);
 }
 
 void k_PrimTracer::CreateSliders(SliderCreateCallback a_Callback)

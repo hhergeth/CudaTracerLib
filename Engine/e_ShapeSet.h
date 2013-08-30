@@ -1,8 +1,9 @@
 #pragma once
 
-#include "..\Math\vector.h"
-#include "..\Math\Montecarlo.h"
+#include <MathTypes.h>
 #include "..\Engine\e_Mesh.h"
+#include "..\Math\Sampling.h"
+#include "e_Samples.h"
 
 #define MAX_SHAPE_LENGTH 32
 
@@ -15,6 +16,13 @@ struct CUDA_ALIGN(16) ShapeSet
 		CUDA_ALIGN(16) float3 n;
 		CUDA_ALIGN(16) float area;
 		CUDA_ALIGN(16) const e_TriIntersectorData* datRef;
+
+		CUDA_FUNC_IN void UniformSampleTriangle(float u1, float u2, float *u, float *v) const
+		{
+			float su1 = sqrtf(u1);
+			*u = 1.f - su1;
+			*v = u2 * su1;
+		}
 		
 		triData(){}
 		triData(const e_TriIntersectorData* a_Int, float4x4& mat)

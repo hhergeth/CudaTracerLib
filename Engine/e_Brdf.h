@@ -2,7 +2,7 @@
 
 //#define FAST_BRDF
 
-#include "..\Math\vector.h"
+#include <MathTypes.h>
 
 #define BXDF_SMALL 60
 #define BXDF_LARGE 80
@@ -804,7 +804,7 @@ private:
 	unsigned int m_uNumUsed;
 public:
 	float3 ng;
-	Onb sys;
+	Frame sys;
 	float Eta;
 public:
 	CUDA_FUNC_IN e_KernelBSDF()
@@ -812,7 +812,7 @@ public:
 	{
 	}
 
-	CUDA_FUNC_IN e_KernelBSDF(const Onb& _sys, const float3& _ng)
+	CUDA_FUNC_IN e_KernelBSDF(const Frame& _sys, const float3& _ng)
 		: sys(_sys), ng(_ng), Eta(1)
 	{
 		m_uNumUsed = 0;
@@ -937,7 +937,7 @@ public:
 
 	CUDA_FUNC_IN float3 IntegratePdf(float3& f, float pdf, float3& wi)
 	{
-		return f * AbsDot(wi, sys.m_normal) / pdf;
+		return f * AbsDot(wi, sys.n) / pdf;
 	}
 
 	CUDA_FUNC_IN unsigned int NumComponents() const
@@ -961,12 +961,12 @@ public:
 
 	CUDA_FUNC_IN float3 WorldToLocal(const float3& v) const
 	{
-		return sys.worldTolocal(v);
+		return sys.toLocal(v);
 	}
 
 	CUDA_FUNC_IN float3 LocalToWorld(const float3& v) const
 	{
-		return sys.localToworld(v);
+		return sys.toWorld(v);
 	}
 };
 #else
@@ -974,7 +974,7 @@ struct e_KernelBSDF
 {
 public:
 	float3 ng;
-	Onb sys;
+	Frame sys;
 	float Eta;
 
 	CUDA_FUNC_IN e_KernelBSDF()
@@ -982,7 +982,7 @@ public:
 	{
 	}
 
-	CUDA_FUNC_IN e_KernelBSDF(const Onb& _sys, const float3& _ng)
+	CUDA_FUNC_IN e_KernelBSDF(const Frame& _sys, const float3& _ng)
 		: sys(_sys), ng(_ng), Eta(1)
 	{
 	}
@@ -1043,12 +1043,12 @@ public:
 
 	CUDA_FUNC_IN float3 LocalToWorld(const float3& v) const
 	{
-		return sys.localToworld(v);
+		return sys.toWorld(v);
 	}
 
 	CUDA_FUNC_IN float3 IntegratePdf(float3& f, float pdf, float3& wi)
 	{
-		return f * AbsDot(wi, sys.m_normal) / pdf;
+		return f * AbsDot(wi, sys.n) / pdf;
 	}
 };
 #endif

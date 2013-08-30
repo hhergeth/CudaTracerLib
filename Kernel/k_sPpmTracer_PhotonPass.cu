@@ -1,6 +1,5 @@
 #include "k_sPpmTracer.h"
 #include "k_TraceHelper.h"
-#include "..\Math\Montecarlo.h"
 
 CUDA_DEVICE k_PhotonMapCollection g_Map;
 
@@ -13,7 +12,7 @@ template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, float3 Le, CudaRNG
 	int depth = -1;
 	bool inMesh = false;
 	e_KernelBSDF bsdf;
-	while(++depth < 12 && k_TraceRay<true>(r.direction, r.origin, &r2))
+	while(++depth < 12 && k_TraceRay(r.direction, r.origin, &r2))
 	{
 		if(V.HasVolumes())
 		{
@@ -40,7 +39,7 @@ template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, float3 Le, CudaRNG
 					r.origin = r(minT + d);
 					r.direction = wi;
 					r2.Init();
-					if(!k_TraceRay<true>(r.direction, r.origin, &r2))
+					if(!k_TraceRay(r.direction, r.origin, &r2))
 						return true;
 				}
 				else break;//Absorption
@@ -56,7 +55,7 @@ template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, float3 Le, CudaRNG
 			while(true)
 			{
 				float3 w = -r.direction;
-				TraceResult r3 = k_TraceRay<false>(Ray(x, r.direction));
+				TraceResult r3 = k_TraceRay(Ray(x, r.direction));
 				float3 sigma_s = bssrdf.sigp_s, sigma_t = bssrdf.sigp_s + bssrdf.sig_a;
 				float d = -logf(rng.randomFloat()) / (fsumf(sigma_t) / 3.0f);
 				bool cancel = d >= (r3.m_fDist);
@@ -66,7 +65,7 @@ template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, float3 Le, CudaRNG
 				if(cancel)
 				{
 					x = x + r.direction * r3.m_fDist;
-					wi = refract(r.direction, r3.m_pTri->lerpOnb(r3.m_fUV, r3.m_pNode->getWorldMatrix()).m_normal, bssrdf.e);
+					wi = refract(r.direction, r3.m_pTri->lerpFrame(r3.m_fUV, r3.m_pNode->getWorldMatrix()).n, bssrdf.e);
 					break;
 				}
 				float A = fsumf(sigma_s / sigma_t) / 3.0f;
@@ -95,7 +94,7 @@ template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, float3 Le, CudaRNG
 			if(pdf == 0 || ISBLACK(f))
 				break;
 			inMesh = dot(r.direction, bsdf.ng) < 0;
-			ac = Le * f * AbsDot(wi, bsdf.sys.m_normal) / pdf;
+			ac = Le * f * AbsDot(wi, bsdf.sys.n) / pdf;
 		}
 		//if(depth > 3)
 		{

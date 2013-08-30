@@ -1,6 +1,6 @@
 #pragma once
 
-#include "..\Math\vector.h"
+#include <MathTypes.h>
 #include "e_Mesh.h"
 
 class e_Node

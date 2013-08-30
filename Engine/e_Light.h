@@ -1,8 +1,7 @@
 #pragma once
 
 #include "..\Base\CudaRandom.h"
-#include "..\Math\vector.h"
-#include "..\Math\AABB.h"
+#include <MathTypes.h>
 #include "e_ShapeSet.h"
 #include "e_KernelDynamicScene.h"
 
@@ -184,7 +183,7 @@ struct e_DistantLight : public e_LightBase
 {
 	float3 lightDir;
     float3 _L;
-	Onb sys;
+	Frame sys;
 
 	e_DistantLight(float3 l, float3 d)
 		: e_LightBase(true), lightDir(d), _L(l), sys(d)
@@ -210,7 +209,7 @@ struct e_DistantLight : public e_LightBase
 		float worldRadius = Distance(scene.m_sBox.maxV, scene.m_sBox.minV) / 2.0f;
 		float d1, d2;
 		ConcentricSampleDisk(ls.uPos[0], ls.uPos[1], &d1, &d2);
-		float3 Pdisk = worldCenter + worldRadius * (d1 * sys.m_binormal + d2 * sys.m_tangent);
+		float3 Pdisk = worldCenter + worldRadius * (d1 * sys.s + d2 * sys.t);
 		*ray = Ray(Pdisk + worldRadius * lightDir, -1.0f * lightDir);
 		*Ns = -1.0f * lightDir;
 		*pdf = 1.f / (PI * worldRadius * worldRadius);
@@ -248,14 +247,14 @@ struct e_SpotLight : public e_LightBase
     float3 lightPos;
     float3 Intensity;
     float cosTotalWidth, cosFalloffStart;
-	Onb sys;
+	Frame sys;
 
 	e_SpotLight(float3 p, float3 t, float3 L, float width, float fall)
 		: e_LightBase(true), lightPos(p), Intensity(L)
 	{
 		cosTotalWidth = cosf(Radians(width));
 		cosFalloffStart = cosf(Radians(fall));
-		sys = Onb(t - p);
+		sys = Frame(t - p);
 	}
 
 	CUDA_FUNC_IN float3 Power(const e_KernelDynamicScene& scene) const
@@ -271,7 +270,7 @@ struct e_SpotLight : public e_LightBase
 	CUDA_FUNC_IN float3 Sample_L(const e_KernelDynamicScene& scene, const LightSample &ls, float u1, float u2, Ray *ray, float3 *Ns, float *pdf) const
 	{
 		float3 v = UniformSampleCone(ls.uPos[0], ls.uPos[1], cosTotalWidth);
-		*ray = Ray(lightPos, sys.localToworld(v));
+		*ray = Ray(lightPos, sys.toWorld(v));
 		*Ns = ray->direction;
 		*pdf = UniformConePdf(cosTotalWidth);
 		return Intensity * Falloff(v);
@@ -281,7 +280,7 @@ struct e_SpotLight : public e_LightBase
 	{
 		seg->SetSegment(p, 0, lightPos, 0);
 		*pdf = 1.0f;
-		return Intensity * Falloff(sys.worldTolocal(-seg->r.direction)) / DistanceSquared(lightPos, p);
+		return Intensity * Falloff(sys.toLocal(-seg->r.direction)) / DistanceSquared(lightPos, p);
 	}
 	
 	CUDA_FUNC_IN float3 L(const float3 &p, const float3 &n, const float3 &w) const
@@ -379,10 +378,10 @@ struct e_InfiniteLight : public e_LightBase
 		*Ns = d;
 		float3 worldCenter = scene.m_sBox.Center();
 		float worldRadius = length(scene.m_sBox.Size()) / 2.0f;
-		Onb sys(d);
+		Frame sys(d);
 		float d1, d2;
 		ConcentricSampleDisk(u1, u2, &d1, &d2);
-		float3 Pdisk = worldCenter + worldRadius * (d1 * sys.m_tangent + d2 * sys.m_binormal);
+		float3 Pdisk = worldCenter + worldRadius * (d1 * sys.t + d2 * sys.s);
 		*ray = Ray(Pdisk + worldRadius * -d, d);
 		float directionPdf = mapPdf / (2.f * PI * PI * sintheta);
 		float areaPdf = 1.f / (PI * worldRadius * worldRadius);

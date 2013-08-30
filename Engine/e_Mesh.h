@@ -1,6 +1,6 @@
 #pragma once
 
-#include "..\Math\vector.h"
+#include <MathTypes.h>
 #include "e_TriangleData.h"
 #include "e_KernelMaterial.h"
 #include "e_Buffer.h"

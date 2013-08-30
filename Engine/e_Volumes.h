@@ -1,6 +1,5 @@
 #pragma once
 
-#include "..\Math\vector.h"
 #include "..\Math\AABB.h"
 #include "e_Buffer.h"
 #include "e_PhaseFunction.h"

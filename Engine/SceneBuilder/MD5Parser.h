@@ -4,7 +4,7 @@
 #include <stdexcept>
 #include <vector>
 #include <fstream>
-#include "..\..\Math\vector.h"
+#include <MathTypes.h>
 
 enum TOKEN { TOKEN_KEYWORD,
                TOKEN_INT,
@@ -52,7 +52,7 @@ enum TOKEN { TOKEN_KEYWORD,
     std::vector<Weight> weights;
   };
   
-  class Frame {
+  class bFrame {
   public:
     std::vector<float> animatedComponents;
     std::vector<Joint> joints;
@@ -72,10 +72,10 @@ enum TOKEN { TOKEN_KEYWORD,
   class Anim {
   public:
     Anim(); 
-    int numFrames;
-    int frameRate;
+    int numbFrames;
+    int bFrameRate;
     int numAnimatedComponents;
-    std::vector<Frame> frames;
+    std::vector<bFrame> bFrames;
     std::vector<Joint> baseJoints;
     std::vector<JointInfo> jointInfo;
   };
@@ -105,15 +105,15 @@ public:
   void  readCommandLineEl(std::ifstream &fin);
   void  readNumMeshesEl(std::ifstream &fin);
   void  readNumJointsEl(std::ifstream &fin);
-  void  readNumFramesEl(std::ifstream &fin, Anim &anim);
-  void  readFrameRateEl(std::ifstream &fin, Anim &anim);
+  void  readNumbFramesEl(std::ifstream &fin, Anim &anim);
+  void  readbFrameRateEl(std::ifstream &fin, Anim &anim);
   void  readNumAnimatedComponentsEl(std::ifstream &fin, Anim &anim);
   void  readJointsEl(std::ifstream &fin);
   void  readMeshEl(std::ifstream &fin);
   void  readHierarchyEl(std::ifstream &fin, Anim &anim);
   void  readBoundsEl(std::ifstream &fin, Anim &anim);
-  void  readBaseframeEl(std::ifstream &fin, Anim &anim);
-  void  readFrameEl(std::ifstream &fin, Anim &anim);
+  void  readBasebFrameEl(std::ifstream &fin, Anim &anim);
+  void  readbFrameEl(std::ifstream &fin, Anim &anim);
   int   readInt(std::ifstream &fin);
   float readFloat(std::ifstream &fin);
   void  readVec(std::ifstream &fin, float *v, int n);

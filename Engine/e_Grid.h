@@ -1,6 +1,5 @@
 #pragma once
 
-#include "..\Math\vector.h"
 #include "..\Math\AABB.h"
 
 struct k_HashGrid_Irreg

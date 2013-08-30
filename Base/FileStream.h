@@ -1,9 +1,9 @@
 #pragma once
 
+#include <Windows.h>
 #include <iostream>
 #include <fstream>
-#include "..\Math\vector.h"
-#include "..\Math\AABB.h"
+#include <MathTypes.h>
 
 class IInStream
 {

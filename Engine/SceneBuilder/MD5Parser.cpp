@@ -127,10 +127,10 @@ int MD5Model::loadAnim(const char *filename) {
   anims.push_back(anim);
 
 
-	for ( int i=0; i < anim->numFrames; i++ )
+	for ( int i=0; i < anim->numbFrames; i++ )
 	{
-		// allocate storage for joints for this frame
-		anim->frames[i].joints.resize(numJoints);
+		// allocate storage for joints for this bFrame
+		anim->bFrames[i].joints.resize(numJoints);
 
 		for ( int j=0; j < numJoints; j++ )
 		{
@@ -143,14 +143,14 @@ int MD5Model::loadAnim(const char *filename) {
 			for ( int k=0; k < 3; k++ )
 				if ( anim->jointInfo[j].flags & (1 << k)  )
 				{
-					pos[k] = anim->frames[i].animatedComponents[anim->jointInfo[j].startIndex + n];
+					pos[k] = anim->bFrames[i].animatedComponents[anim->jointInfo[j].startIndex + n];
 					n++;
 				}
 
 			for ( int k=0; k < 3; k++ )
 				if ( anim->jointInfo[j].flags & (8 << k)  )
 				{
-					orient[k] = anim->frames[i].animatedComponents[anim->jointInfo[j].startIndex + n];
+					orient[k] = anim->bFrames[i].animatedComponents[anim->jointInfo[j].startIndex + n];
 					n++;
 				}
 
@@ -164,13 +164,13 @@ int MD5Model::loadAnim(const char *filename) {
 				oriented.normalize();
 			}
 
-			Joint &frameJoint = anim->frames[i].joints[j];
-			frameJoint.name   = anim->jointInfo[j].name;
-			frameJoint.parent = anim->jointInfo[j].parentIndex;
-			frameJoint.pos[0] = pos2.x;
-			frameJoint.pos[1] = pos2.y;
-			frameJoint.pos[2] = pos2.z;
-			frameJoint.quat = oriented;
+			Joint &bFrameJoint = anim->bFrames[i].joints[j];
+			bFrameJoint.name   = anim->jointInfo[j].name;
+			bFrameJoint.parent = anim->jointInfo[j].parentIndex;
+			bFrameJoint.pos[0] = pos2.x;
+			bFrameJoint.pos[1] = pos2.y;
+			bFrameJoint.pos[2] = pos2.z;
+			bFrameJoint.quat = oriented;
 		}
 	}
 
@@ -232,20 +232,20 @@ void MD5Model::readAnimElements(std::ifstream &fin, Anim &anim) {
       if ( n != numMeshes )
         throw Exception("MD5Model::readAnimElements(): anim file does not match mesh");
     }
-    else if ( str == "numFrames" )
-      readNumFramesEl(fin, anim);
-    else if ( str == "frameRate" )
-      readFrameRateEl(fin, anim);
+    else if ( str == "numbFrames" )
+      readNumbFramesEl(fin, anim);
+    else if ( str == "bFrameRate" )
+      readbFrameRateEl(fin, anim);
     else if ( str == "numAnimatedComponents" )
       readNumAnimatedComponentsEl(fin, anim);
     else if ( str == "hierarchy" )
       readHierarchyEl(fin, anim);
     else if ( str == "bounds" )
       readBoundsEl(fin, anim);
-    else if ( str == "baseframe" )
-      readBaseframeEl(fin, anim);
-    else if ( str == "frame" )
-      readFrameEl(fin, anim);
+    else if ( str == "basebFrame" )
+      readBasebFrameEl(fin, anim);
+    else if ( str == "bFrame" )
+      readbFrameEl(fin, anim);
     else {
       // invalid element
       throw Exception( std::string("MD5Model::readAnimElements(): unknown element type '") + str + "'");
@@ -293,34 +293,34 @@ void MD5Model::readNumMeshesEl(std::ifstream &fin) {
 }
 
 
-void MD5Model::readNumFramesEl(std::ifstream &fin, Anim &anim) {
-  // if number of frames has already been set, can't set it again
-  if ( anim.numFrames != 0 )
-    throw Exception("MD5Model::readNumFramesEl(): numFrames has already been set");
+void MD5Model::readNumbFramesEl(std::ifstream &fin, Anim &anim) {
+  // if number of bFrames has already been set, can't set it again
+  if ( anim.numbFrames != 0 )
+    throw Exception("MD5Model::readNumbFramesEl(): numbFrames has already been set");
 
   // read in next token, should be an integer
   int n = readInt(fin);
 
   if ( n <= 0 )
-    throw Exception("MD5Model::readNumFramesEl(): numFrames must be greater than 0");
+    throw Exception("MD5Model::readNumbFramesEl(): numbFrames must be greater than 0");
 
-  anim.numFrames =  n;
-  anim.frames.resize(n);
+  anim.numbFrames =  n;
+  anim.bFrames.resize(n);
 }
 
 
-void MD5Model::readFrameRateEl(std::ifstream &fin, Anim &anim) {
-  // if framerate has already been set, can't set it again
-  if ( anim.frameRate != 0 )
-    throw Exception("MD5Model::readFrameRateEl(): frameRate has already been set");
+void MD5Model::readbFrameRateEl(std::ifstream &fin, Anim &anim) {
+  // if bFramerate has already been set, can't set it again
+  if ( anim.bFrameRate != 0 )
+    throw Exception("MD5Model::readbFrameRateEl(): bFrameRate has already been set");
 
   // read in next token, should be an integer
   int n = readInt(fin);
 
   if ( n <= 0 )
-    throw Exception("MD5Model::readFrameRateEl(): frameRate must be a positive integer");
+    throw Exception("MD5Model::readbFrameRateEl(): bFrameRate must be a positive integer");
 
-  anim.frameRate =  n;
+  anim.bFrameRate =  n;
 }
 
 
@@ -549,20 +549,20 @@ void MD5Model::readBoundsEl(std::ifstream &fin, Anim &anim) {
   if ( t != TOKEN_LBRACE )
     throw Exception("MD5Model::readBoundsEl(): expected { to follow 'bounds'");
 
-  if ( anim.numFrames != int(anim.frames.size()) )
-    throw Exception("MD5Model::readBoundsEl(): frames must be allocated before setting bounds");
+  if ( anim.numbFrames != int(anim.bFrames.size()) )
+    throw Exception("MD5Model::readBoundsEl(): bFrames must be allocated before setting bounds");
 
-  // read in bound for each frame
-  for ( int i=0; i < anim.numFrames; i++ ) {
-    readVec(fin, anim.frames[i].min, 3);
-    readVec(fin, anim.frames[i].max, 3);
+  // read in bound for each bFrame
+  for ( int i=0; i < anim.numbFrames; i++ ) {
+    readVec(fin, anim.bFrames[i].min, 3);
+    readVec(fin, anim.bFrames[i].max, 3);
   }
 
   // next token must be a closing brace }
   t = getNextToken(fin);
 
   if ( TOKEN_LPAREN == t )
-    throw Exception("MD5Model::readBoundsEl(): number of bounds exceeds number of frames");
+    throw Exception("MD5Model::readBoundsEl(): number of bounds exceeds number of bFrames");
 
   // expect a closing brace } to end block
   if ( t != TOKEN_RBRACE )
@@ -570,12 +570,12 @@ void MD5Model::readBoundsEl(std::ifstream &fin, Anim &anim) {
 }
 
 
-void MD5Model::readBaseframeEl(std::ifstream &fin, Anim &anim) {
+void MD5Model::readBasebFrameEl(std::ifstream &fin, Anim &anim) {
   TOKEN t = getNextToken(fin);
 
   // expect an opening brace { to begin block
   if ( t != TOKEN_LBRACE )
-    throw Exception("MD5Model::readBaseframeEl(): expected { to follow 'baseframe'");
+    throw Exception("MD5Model::readBasebFrameEl(): expected { to follow 'basebFrame'");
 
   anim.baseJoints.resize(numJoints);
 
@@ -592,49 +592,49 @@ void MD5Model::readBaseframeEl(std::ifstream &fin, Anim &anim) {
   }
 
   if ( i < numJoints - 1 )
-    throw Exception("MD5Model::readBaseframeEl(): not enough joints");
+    throw Exception("MD5Model::readBasebFrameEl(): not enough joints");
 
   // next token must be a closing brace }
   t = getNextToken(fin);
 
   if ( TOKEN_LPAREN == t )
-    throw Exception("MD5Model::readBaseframeEl(): too many joints");
+    throw Exception("MD5Model::readBasebFrameEl(): too many joints");
 
   // expect a closing brace } to end block
   if ( t != TOKEN_RBRACE )
-    throw Exception("MD5Model::readBaseframeEl(): expected }");
+    throw Exception("MD5Model::readBasebFrameEl(): expected }");
 }
 
 
-void MD5Model::readFrameEl(std::ifstream &fin, Anim &anim) {
-  // numAnimatedComponents has to have been set before frame element
+void MD5Model::readbFrameEl(std::ifstream &fin, Anim &anim) {
+  // numAnimatedComponents has to have been set before bFrame element
   if ( 0 > anim.numAnimatedComponents )
-    throw Exception("MD5Model::readFrameEl(): numAnimatedComponents must be set before 'frame' block");
+    throw Exception("MD5Model::readbFrameEl(): numAnimatedComponents must be set before 'bFrame' block");
 
-  // read frame index
-  int frameIndex = readInt(fin);
+  // read bFrame index
+  int bFrameIndex = readInt(fin);
 
-  if ( frameIndex < 0 || frameIndex >= anim.numFrames )
-    throw Exception("MD5Model::readFrameEl(): invalid frame index");
+  if ( bFrameIndex < 0 || bFrameIndex >= anim.numbFrames )
+    throw Exception("MD5Model::readbFrameEl(): invalid bFrame index");
 
-  // get reference to frame and set number of animated components
-  Frame &frame = anim.frames[frameIndex];
-  frame.animatedComponents.resize(anim.numAnimatedComponents);
+  // get reference to bFrame and set number of animated components
+  bFrame &bFrame = anim.bFrames[bFrameIndex];
+  bFrame.animatedComponents.resize(anim.numAnimatedComponents);
 
   TOKEN t = getNextToken(fin);
 
   // expect an opening brace { to begin block
   if ( t != TOKEN_LBRACE )
-    throw Exception("MD5Model::readFrameEl(): expected { to follow frame index");
+    throw Exception("MD5Model::readbFrameEl(): expected { to follow bFrame index");
 
   for ( int i=0; i < anim.numAnimatedComponents; i++ )
-    frame.animatedComponents[i] = readFloat(fin);
+    bFrame.animatedComponents[i] = readFloat(fin);
 
   t = getNextToken(fin);
 
   // expect a closing brace } to end block
   if ( t != TOKEN_RBRACE )
-    throw Exception("MD5Model::readFrameEl(): expected }");
+    throw Exception("MD5Model::readbFrameEl(): expected }");
 }
 
 
@@ -853,8 +853,8 @@ TOKEN MD5Model::getNextToken(std::ifstream &fin, std::string *tokStr) {
 
 
 Anim::Anim():
-     numFrames(0),
-     frameRate(0),
+     numbFrames(0),
+     bFrameRate(0),
      numAnimatedComponents(0) {
 
 }

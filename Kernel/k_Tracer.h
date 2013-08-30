@@ -102,11 +102,6 @@ protected:
 	virtual void DoRender(e_Image* I) = 0;
 	virtual void StartNewTrace(e_Image* I) = 0;
 	float getValuePerSecond(float val, float invScale);
-#ifdef __CUDACC__
-#define k_TracerBase_update_TracedRays { cudaMemcpyFromSymbol(&m_uNumRaysTraced, g_RayTracedCounter, sizeof(unsigned int)); }
-#else
-#define k_TracerBase_update_TracedRays { m_uNumRaysTraced = g_RayTracedCounter; }
-#endif
 };
 
 class k_OnePassTracer : public k_TracerBase

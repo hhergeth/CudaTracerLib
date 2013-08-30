@@ -14,11 +14,14 @@
     <ClInclude Include="Base\CudaRandom.h" />
     <ClInclude Include="Base\FileStream.h" />
     <ClInclude Include="Base\FrameworkInterop.h" />
+    <ClInclude Include="Base\STL.h" />
     <ClInclude Include="Base\TangentSpace.h" />
     <ClInclude Include="Base\Timer.h" />
     <ClInclude Include="Defines.h" />
     <ClInclude Include="Engine\e_AnimatedMesh.h" />
     <ClInclude Include="Engine\e_Brdf.h" />
+    <ClInclude Include="Engine\e_BSDF.h" />
+    <ClInclude Include="Engine\e_BSDF_Complex.h" />
     <ClInclude Include="Engine\e_Buffer.h" />
     <ClInclude Include="Engine\e_Camera.h" />
     <ClInclude Include="Engine\e_DynamicScene.h" />
@@ -33,6 +36,8 @@
     <ClInclude Include="Engine\e_KernelMaterial.h" />
     <ClInclude Include="Engine\e_KernelTexture.h" />
     <ClInclude Include="Engine\e_Light.h" />
+    <ClInclude Include="Engine\e_BSDF_Simple.h" />
+    <ClInclude Include="Engine\e_Material.h" />
     <ClInclude Include="Engine\e_Mesh.h" />
     <ClInclude Include="Engine\e_MeshCompiler.h" />
     <ClInclude Include="Engine\e_Node.h" />
@@ -46,6 +51,7 @@
     <ClInclude Include="Engine\e_FileTexture.h" />
     <ClInclude Include="Engine\e_TriangleData.h" />
     <ClInclude Include="Engine\e_Volumes.h" />
+    <ClInclude Include="Engine\e_Samples.h" />
     <ClInclude Include="Engine\SceneBuilder\BVH.hpp" />
     <ClInclude Include="Engine\SceneBuilder\BVHNode.hpp" />
     <ClInclude Include="Engine\SceneBuilder\CudaBVH.hpp" />
@@ -67,13 +73,20 @@
     <ClInclude Include="Kernel\k_TraceAlgorithms.h" />
     <ClInclude Include="Kernel\k_TraceHelper.h" />
     <ClInclude Include="Kernel\k_Tracer.h" />
+    <ClInclude Include="MathTypes.h" />
     <ClInclude Include="Math\AABB.h" />
     <ClInclude Include="Math\cutil_math.h" />
+    <ClInclude Include="Math\float4x4.h" />
+    <ClInclude Include="Math\Frame.h" />
     <ClInclude Include="Math\half.h" />
     <ClInclude Include="Math\Int24.h" />
     <ClInclude Include="Math\Montecarlo.h" />
+    <ClInclude Include="Math\Quaternion.h" />
     <ClInclude Include="Math\Ray.h" />
+    <ClInclude Include="Math\Sampling.h" />
+    <ClInclude Include="Math\Spectrum.h" />
     <ClInclude Include="Math\vector.h" />
+    <ClInclude Include="Math\Warp.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="StdAfx.h" />
   </ItemGroup>
@@ -108,9 +121,15 @@
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="Engine\e_AnimatedMesh.cu" />
+    <CudaCompile Include="Engine\e_BSDF.cu" />
+    <CudaCompile Include="Engine\e_BSDF_Complex.cu" />
     <CudaCompile Include="Engine\e_Image.cu" />
+    <CudaCompile Include="Engine\e_BSDF_Simple.cu" />
+    <CudaCompile Include="Engine\e_Material.cu" />
     <CudaCompile Include="Kernel\k_PathTracer.cu" />
     <CudaCompile Include="Kernel\k_PrimTracer.cu" />
+    <CudaCompile Include="Kernel\k_TraceAlgorithms.cu" />
+    <CudaCompile Include="Kernel\k_TraceHelper.cu" />
     <CudaCompile Include="Kernel\k_Tracer.cu" />
     <CudaCompile Include="Kernel\k_sPpmTracer_EyePass.cu" />
     <CudaCompile Include="Kernel\k_sPpmTracer_PhotonPass.cu" />
@@ -134,7 +153,7 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 4.2.props" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 5.0.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -184,6 +203,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <TargetMachinePlatform>32</TargetMachinePlatform>
       <KeepDir>Build\$(Platform)\$(Configuration)\PTX_DIR</KeepDir>
       <CodeGeneration>compute_30,sm_30</CodeGeneration>
+      <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -221,10 +241,11 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <CodeGeneration>compute_30,sm_30</CodeGeneration>
       <FastMath>false</FastMath>
       <Optimization>O3</Optimization>
+      <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
     </CudaCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 4.2.targets" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 5.0.targets" />
   </ImportGroup>
 </Project>

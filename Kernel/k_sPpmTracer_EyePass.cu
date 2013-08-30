@@ -1,8 +1,8 @@
 #include "k_sPpmTracer.h"
 #include "k_TraceHelper.h"
-#include "k_IntegrateHelper.h"
+#include "k_TraceAlgorithms.h"
 
-CUDA_DEVICE k_PhotonMapCollection g_Map;
+CUDA_DEVICE k_PhotonMapCollection g_Map2;
 
 CUDA_FUNC_IN float k(float t)
 {
@@ -23,11 +23,11 @@ CUDA_FUNC_IN float k_tr(float r, const float3& t)
 
 template<typename HASH> CUDA_ONLY_FUNC float3 k_PhotonMap<HASH>::L_Surface(float a_r, float a_NumPhotonEmitted, CudaRNG& rng, const e_KernelBSDF* bsdf, const float3& n, const float3& p, const float3& wo, k_AdaptiveStruct& A) const
 {
-	Onb sys = bsdf->sys;
-	sys.m_tangent *= a_r;
-	sys.m_binormal *= a_r;
-	sys.m_normal *= a_r;
-	float3 a = -1.0f * sys.m_tangent - sys.m_binormal, b = sys.m_tangent - sys.m_binormal, c = -1.0f * sys.m_tangent + sys.m_binormal, d = sys.m_tangent + sys.m_binormal;
+	Frame sys = bsdf->sys;
+	sys.t *= a_r;
+	sys.s *= a_r;
+	sys.n *= a_r;
+	float3 a = -1.0f * sys.t - sys.s, b = sys.t - sys.s, c = -1.0f * sys.t + sys.s, d = sys.t + sys.s;
 	float3 low = fminf(fminf(a, b), fminf(c, d)) + p, high = fmaxf(fmaxf(a, b), fmaxf(c, d)) + p;
 	const float r2 = a_r * a_r, r3 = 1.0f / (r2 * a_NumPhotonEmitted), r4 = 1.0f / r2;
 	float3 L = make_float3(0), Lr = make_float3(0), Lt = make_float3(0);
@@ -100,7 +100,7 @@ template<typename HASH> template<bool VOL> CUDA_ONLY_FUNC float3 k_PhotonMap<HAS
 	return L_n;
 }
 
-template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, float a_PassIndex, float a_rSurfaceUNUSED, float a_rVolume, k_AdaptiveStruct A, float NumAllPhotons)
+template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, float a_PassIndex, float a_rSurfaceUNUSED, float a_rVolume, k_AdaptiveStruct A, float NumAllPhotons, e_Image g_Image)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x, y = blockIdx.y * blockDim.y + threadIdx.y;
 	CudaRNG rng = g_RNGData();
@@ -134,7 +134,7 @@ template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, float a_
 			stackEntry s = stack[--stackPos];
 			TraceResult r2;
 			r2.Init();
-			if(k_TraceRay<true>(s.r.direction, s.r.origin, &r2))
+			if(k_TraceRay(s.r.direction, s.r.origin, &r2))
 			{
 				float3 p = s.r(r2.m_fDist);
 				r2.GetBSDF(p, &bsdf);
@@ -143,48 +143,48 @@ template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, float a_
 				{
 					float tmin, tmax;
 					g_SceneData.m_sVolume.IntersectP(s.r, 0, r2.m_fDist, &tmin, &tmax);
-					L += s.fs * g_Map.L<true>(a_rVolume, rng, s.r, tmin, tmax, make_float3(0));
+					L += s.fs * g_Map2.L<true>(a_rVolume, rng, s.r, tmin, tmax, make_float3(0));
 					s.fs = s.fs * exp(-g_SceneData.m_sVolume.tau(s.r, tmin, tmax));
 				}
 				
 				if(DIRECT)
-					L += s.fs * UniformSampleAllLights(p, bsdf.sys.m_normal, -s.r.direction, &bsdf, rng, 4);
-				L += s.fs * r2.Le(p, bsdf.sys.m_normal, -s.r.direction);
+					L += s.fs * UniformSampleAllLights(p, bsdf.sys.n, -s.r.direction, &bsdf, rng, 4);
+				L += s.fs * r2.Le(p, bsdf.sys.n, -s.r.direction);
 				e_KernelBSSRDF bssrdf;
 				if(r2.m_pTri->GetBSSRDF(p, r2.m_fUV, r2.m_pNode->getWorldMatrix(), g_SceneData.m_sMatData.Data, r2.m_pNode->m_uMaterialOffset, &bssrdf))
 				{
-					float3 dir = refract(s.r.direction, bsdf.sys.m_normal, 1.0f / bssrdf.e);
+					float3 dir = refract(s.r.direction, bsdf.sys.n, 1.0f / bssrdf.e);
 					TraceResult r3;
 					r3.Init();
-					k_TraceRay<true>(dir, p, &r3);
-					L += s.fs * g_Map.L<false>(a_rVolume, rng, Ray(p, dir), 0, r3.m_fDist, bssrdf.sigp_s + bssrdf.sig_a);
+					k_TraceRay(dir, p, &r3);
+					L += s.fs * g_Map2.L<false>(a_rVolume, rng, Ray(p, dir), 0, r3.m_fDist, bssrdf.sigp_s + bssrdf.sig_a);
 				}
 				if(bsdf.NumComponents(BxDFType(BSDF_REFLECTION | BSDF_TRANSMISSION | BSDF_DIFFUSE)))
-					L += s.fs * g_Map.L(a_rSurfaceUNUSED, rng, &bsdf, bsdf.sys.m_normal, p, -s.r.direction, A);
-					//L += s.fs * UniformSampleAllLights(p, bsdf.sys.m_normal, -s.r.direction, &bsdf, rng, 16);
+					L += s.fs * g_Map2.L(a_rSurfaceUNUSED, rng, &bsdf, bsdf.sys.n, p, -s.r.direction, A);
+					//L += s.fs * UniformSampleAllLights(p, bsdf.sys.n, -s.r.direction, &bsdf, rng, 16);
 				/*{
 					k_AdaptiveEntry ent = A.E[y * w + x];
 					float r2 = ent.r * ent.r, maxr = MAX(ent.r, ent.rd), rd2 = ent.rd * ent.rd, rd = ent.rd;
-					Onb sys = bsdf.sys;
-					sys.m_tangent *= maxr;
-					sys.m_binormal *= maxr;
-					sys.m_normal *= maxr;
-					float3 ud = bsdf.sys.m_tangent * rd, vd = bsdf.sys.m_binormal * rd;
-					float3 a = -1.0f * sys.m_tangent - sys.m_binormal, b = sys.m_tangent - sys.m_binormal, c = -1.0f * sys.m_tangent + sys.m_binormal, d = sys.m_tangent + sys.m_binormal;
+					Frame sys = bsdf.sys;
+					sys.t *= maxr;
+					sys.s *= maxr;
+					sys.n *= maxr;
+					float3 ud = bsdf.sys.t * rd, vd = bsdf.sys.s * rd;
+					float3 a = -1.0f * sys.t - sys.s, b = sys.t - sys.s, c = -1.0f * sys.t + sys.s, d = sys.t + sys.s;
 					float3 low = fminf(fminf(a, b), fminf(c, d)) + p, high = fmaxf(fmaxf(a, b), fmaxf(c, d)) + p;
-					uint3 lo = g_Map.m_sSurfaceMap.m_sHash.Transform(low), hi = g_Map.m_sSurfaceMap.m_sHash.Transform(high);
+					uint3 lo = g_Map2.m_sSurfaceMap.m_sHash.Transform(low), hi = g_Map2.m_sSurfaceMap.m_sHash.Transform(high);
 					float3 Lp = make_float3(0);
 					for(int a = lo.x; a <= hi.x; a++)
 						for(int b = lo.y; b <= hi.y; b++)
 							for(int c = lo.z; c <= hi.z; c++)
 							{
-								unsigned int i0 = g_Map.m_sSurfaceMap.m_sHash.Hash(make_uint3(a,b,c)), i = g_Map.m_sSurfaceMap.m_pDeviceHashGrid[i0], q = 0;
+								unsigned int i0 = g_Map2.m_sSurfaceMap.m_sHash.Hash(make_uint3(a,b,c)), i = g_Map2.m_sSurfaceMap.m_pDeviceHashGrid[i0], q = 0;
 								while(i != -1)
 								{
-									k_pPpmPhoton e = g_Map.m_pPhotons[i];
+									k_pPpmPhoton e = g_Map2.m_pPhotons[i];
 									float3 nor = e.getNormal(), wi = e.getWi(), l = e.getL(), P = e.Pos;
 									float dist2 = dot(P - p, P - p);
-									if(dot(nor, bsdf.sys.m_normal) > 0.95f)
+									if(dot(nor, bsdf.sys.n) > 0.95f)
 									{
 										float3 gamma = bsdf.f(-s.r.direction, wi);
 										float psi = ::y(gamma * l);
@@ -218,7 +218,7 @@ template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, float a_
 					}
 					float k_2 = 10.0f * PI / 168.0f, k_22 = k_2 * k_2;
 					float VAR_Phi = sqrtf(ent.psi / NumAllPhotons * ent.psi / NumAllPhotons - ent.psi2 / NumAllPhotons);
-					float ta = (2.0f * VAR_Phi) / (PI * float(g_Map.m_uPhotonNumEmitted) * ent.pl / NumAllPhotons * k_22 * ent.I2 / NumAllPhotons);
+					float ta = (2.0f * VAR_Phi) / (PI * float(g_Map2.m_uPhotonNumEmitted) * ent.pl / NumAllPhotons * k_22 * ent.I2 / NumAllPhotons);
 					if(VAR_Lapl && VAR_Phi) {
 						ent.r = powf(ta, 1.0f / 6.0f) * powf(a_PassIndex, -1.0f / 6.0f);
 						ent.r = clamp(ent.r, A.r_min, A.r_max);	
@@ -226,7 +226,7 @@ template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, float a_
 					A.E[y * w + x] = ent;
 					Lp = ent.r != A.r_max ? make_float3(1,0,0) : make_float3(0);
 
-					L += s.fs * Lp / float(g_Map.m_uPhotonNumEmitted);
+					L += s.fs * Lp / float(g_Map2.m_uPhotonNumEmitted);
 				}*/
 				if(s.d < 5 && stackPos < stackN - 1)
 				{
@@ -246,7 +246,7 @@ template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, float a_
 			{
 				float tmin, tmax;
 				g_SceneData.m_sVolume.IntersectP(s.r, 0, r2.m_fDist, &tmin, &tmax);
-				L += s.fs * g_Map.L<true>(a_rVolume, rng, s.r, tmin, tmax, make_float3(0));
+				L += s.fs * g_Map2.L<true>(a_rVolume, rng, s.r, tmin, tmax, make_float3(0));
 				if(g_SceneData.m_sEnvMap.CanSample() && !s.d)
 					L += s.fs * g_SceneData.m_sEnvMap.Sample(s.r);
 			}
@@ -262,9 +262,9 @@ template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, float a_
 void k_sPpmTracer::doEyePass(e_Image* I)
 {
 	k_AdaptiveStruct A(TN(r_min), TN(r_max), m_pEntries);
-	cudaMemcpyToSymbol(g_Map, &m_sMaps, sizeof(k_PhotonMapCollection));
+	cudaMemcpyToSymbol(g_Map2, &m_sMaps, sizeof(k_PhotonMapCollection));
 	k_INITIALIZE(m_pScene->getKernelSceneData());
-	k_STARTPASSI(m_pScene, m_pCamera, g_sRngs, *I);
+	k_STARTPASS(m_pScene, m_pCamera, g_sRngs);
 	if(m_pScene->getVolumes().getLength() || m_bLongRunning)
 	{
 		unsigned int p = 16, q = 8, pq = p * q;
@@ -272,27 +272,26 @@ void k_sPpmTracer::doEyePass(e_Image* I)
 		for(int i = 0; i < nx; i++)
 			for(int j = 0; j < ny; j++)
 				if(m_bDirect)
-					k_EyePass<true><<<dim3( q, q, 1), dim3(p, p, 1)>>>(make_int2(pq * i, pq * j), w, h, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3), A, m_uPhotonsEmitted);
-				else k_EyePass<false><<<dim3( q, q, 1), dim3(p, p, 1)>>>(make_int2(pq * i, pq * j), w, h, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3), A, m_uPhotonsEmitted);
+					k_EyePass<true><<<dim3( q, q, 1), dim3(p, p, 1)>>>(make_int2(pq * i, pq * j), w, h, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3), A, m_uPhotonsEmitted, *I);
+				else k_EyePass<false><<<dim3( q, q, 1), dim3(p, p, 1)>>>(make_int2(pq * i, pq * j), w, h, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3), A, m_uPhotonsEmitted, *I);
 	}
 	else
 	{
 		const unsigned int p = 16;
 		if(m_bDirect)
-			k_EyePass<true><<<dim3( w / p + 1, h / p + 1, 1), dim3(p, p, 1)>>>(make_int2(0,0), w, h, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3), A, m_uPhotonsEmitted);
-		else k_EyePass<false><<<dim3( w / p + 1, h / p + 1, 1), dim3(p, p, 1)>>>(make_int2(0,0), w, h, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3), A, m_uPhotonsEmitted);
+			k_EyePass<true><<<dim3( w / p + 1, h / p + 1, 1), dim3(p, p, 1)>>>(make_int2(0,0), w, h, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3), A, m_uPhotonsEmitted, *I);
+		else k_EyePass<false><<<dim3( w / p + 1, h / p + 1, 1), dim3(p, p, 1)>>>(make_int2(0,0), w, h, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3), A, m_uPhotonsEmitted, *I);
 	}
-	k_ENDPASSI(I)
 }
 
 void k_sPpmTracer::Debug(int2 pixel)
 {
 	k_AdaptiveStruct A(TN(r_min), TN(r_max), m_pEntries);
-	cudaMemcpyToSymbol(g_Map, &m_sMaps, sizeof(k_PhotonMapCollection));
+	cudaMemcpyToSymbol(g_Map2, &m_sMaps, sizeof(k_PhotonMapCollection));
 	k_INITIALIZE(m_pScene->getKernelSceneData());
 	k_STARTPASS(m_pScene, m_pCamera, g_sRngs);
 	const unsigned int p = 16;
-	k_EyePass<true><<<1, 1>>>(pixel, w, h, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3), A, m_uPhotonsEmitted);
+	k_EyePass<true><<<1, 1>>>(pixel, w, h, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3), A, m_uPhotonsEmitted, e_Image());
 }
 
 __global__ void k_StartPass(int w, int h, float r, float rd, k_AdaptiveEntry* E)

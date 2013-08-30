@@ -1,6 +1,6 @@
 #pragma once
 
-#include "..\Math\vector.h"
+#include <MathTypes.h>
 
 CUDA_FUNC_IN unsigned int pow2(unsigned int n)
 {

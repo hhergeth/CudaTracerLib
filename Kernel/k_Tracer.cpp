@@ -24,15 +24,6 @@ float k_TracerBase::getTimeSpentRendering()
 	return m_fTimeSpentRendering;
 }
 
-TraceResult k_Tracer::TraceSingleRay(Ray r, e_DynamicScene* s, e_Camera* c)
-{
-	k_TracerRNGBuffer tmp;
-	s->UpdateInvalidated();
-	k_INITIALIZE(s->getKernelSceneData());
-	k_STARTPASS(s, c, tmp)
-	return k_TraceRay<true>(r);
-}
-
 void k_TracerRNGBuffer::createGenerators(unsigned int a_Spacing, unsigned int a_Offset)
 {
 	for(int i = 0; i < m_uNumGenerators; i++)

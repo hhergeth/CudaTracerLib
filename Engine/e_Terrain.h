@@ -1,4 +1,6 @@
-#include "..\Math\vector.h"
+#pragma once
+#include <MathTypes.h>
+#include "..\Math\half.h"
 #include <limits.h>
 #include "e_TerrainHeader.h"
 #include <vector>

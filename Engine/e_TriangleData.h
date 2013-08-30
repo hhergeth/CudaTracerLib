@@ -1,10 +1,48 @@
 #pragma once
 
-#include "..\Math\vector.h"
+#include <MathTypes.h>
+#include "..\Math\half.h"
 #include "e_Brdf.h"
 #include "e_KernelMaterial.h"
 
 #define EXT_TRI
+
+struct e_TriangleData;
+class e_Node;
+struct e_KernelBSDF;
+struct e_KernelMaterial;
+struct e_KernelBSSRDF;
+struct TraceResult
+{
+	float m_fDist;
+	float2 m_fUV;
+	const e_TriangleData* m_pTri;
+	const e_Node* m_pNode;
+	CUDA_FUNC_IN bool hasHit() const
+	{
+		return m_pTri != 0;
+	}
+	CUDA_FUNC_IN void Init()
+	{
+		m_fDist = FLT_MAX;
+		m_fUV = make_float2(0,0);
+		m_pNode = 0;
+		m_pTri = 0;
+	}
+	CUDA_FUNC_IN operator bool() const
+	{
+		return hasHit();
+	}
+
+	CUDA_FUNC_IN Frame lerpFrame();
+	CUDA_FUNC_IN unsigned int getMatIndex();
+	CUDA_FUNC_IN float2 lerpUV();
+	CUDA_FUNC_IN e_KernelBSDF GetBSDF(const float3& p);
+	CUDA_FUNC_IN void GetBSDF(const float3& p, e_KernelBSDF* bsdf);
+	CUDA_FUNC_IN bool GetBSSRDF(const float3& p, e_KernelBSSRDF* bssrdf);
+	CUDA_FUNC_IN float3 Le(const float3& p, const float3& n, const float3& w);
+	CUDA_FUNC_IN unsigned int LightIndex();
+};
 
 #ifdef EXT_TRI
 struct e_TriangleData
@@ -39,20 +77,20 @@ public:
 			//NOR[i] = N[i];
 		}
 	}
-	CUDA_FUNC_IN Onb lerpOnb(const float2& bCoords, const float4x4& localToWorld, float3* ng = 0) const 
+	CUDA_FUNC_IN Frame lerpFrame(const float2& bCoords, const float4x4& localToWorld, float3* ng = 0) const 
 	{
 		//float3 na = NOR[0], nb = NOR[1], nc = NOR[2];
 		uint4 q = m_sDeviceData.Row0;
 		float3 na = Uchar2ToNormalizedFloat3(q.x), nb = Uchar2ToNormalizedFloat3(q.x >> 16), nc = Uchar2ToNormalizedFloat3(q.y);
 		float3 ta = Uchar2ToNormalizedFloat3(q.y >> 16), tb = Uchar2ToNormalizedFloat3(q.z), tc = Uchar2ToNormalizedFloat3(q.z >> 16);
-		Onb sys;
+		Frame sys;
 		float w = 1.0f - bCoords.x - bCoords.y, u = bCoords.x, v = bCoords.y;
-		sys.m_normal = (u * na + v * nb + w * nc);
-		sys.m_tangent = (u * ta + v * tb + w * tc);
+		sys.n = (u * na + v * nb + w * nc);
+		sys.t = (u * ta + v * tb + w * tc);
 
 		sys = sys * localToWorld;
-		sys.m_binormal = normalize(cross(sys.m_tangent, sys.m_normal));
-		sys.m_tangent = normalize(cross(sys.m_binormal, sys.m_normal));
+		sys.s = normalize(cross(sys.t, sys.n));
+		sys.t = normalize(cross(sys.s, sys.n));
 		if(ng)
 			*ng = normalize(localToWorld.TransformNormal((na + nb + nc) / 3.0f));
 		return sys;
@@ -85,13 +123,13 @@ public:
 	CUDA_FUNC_IN void GetBSDF(const float3& p, const float2& baryCoords, const float4x4& localToWorld, const e_KernelMaterial* a_Mats, const unsigned int off, e_KernelBSDF* bsdf) const 
 	{
 		float3 ng;
-		Onb sys = lerpOnb(baryCoords, localToWorld, &ng);
+		Frame sys = lerpFrame(baryCoords, localToWorld, &ng);
 		float2 uv = lerpUV(baryCoords);
 		MapParameters mp(p, uv, sys);
 
 		float3 nor;
 		if(a_Mats[getMatIndex(off)].SampleNormalMap(mp, &nor))
-			sys.RecalculateFromNormal(normalize(sys.localToworld(nor)));
+			sys.RecalculateFromNormal(normalize(sys.toWorld(nor)));
 
 		*bsdf = e_KernelBSDF(sys, ng);
 		a_Mats[getMatIndex(off)].GetBSDF(mp, bsdf);
@@ -99,13 +137,13 @@ public:
 	CUDA_FUNC_IN bool GetBSSRDF(const float3& p, const float2& baryCoords, const float4x4& localToWorld, const e_KernelMaterial* a_Mats, const unsigned int off, e_KernelBSSRDF* bssrdf) const 
 	{
 		float3 ng;
-		Onb sys = lerpOnb(baryCoords, localToWorld, &ng);
+		Frame sys = lerpFrame(baryCoords, localToWorld, &ng);
 		float2 uv = lerpUV(baryCoords);
 		MapParameters mp(p, uv, sys);
 
 		float3 nor;
 		if(a_Mats[getMatIndex(off)].SampleNormalMap(mp, &nor))
-			sys.RecalculateFromNormal(normalize(sys.localToworld(nor)));
+			sys.RecalculateFromNormal(normalize(sys.toWorld(nor)));
 
 		return a_Mats[getMatIndex(off)].GetBSSRDF(mp, bssrdf);	
 	}
@@ -134,11 +172,11 @@ struct e_TriangleData
 		m_sHostData.Normal = TOUCHAR3(d);
 		m_sHostData.MatIndex = matIndex;
 	}
-	CUDA_FUNC_IN Onb lerpOnb(float2& bCoords)
+	CUDA_FUNC_IN Frame lerpFrame(float2& bCoords)
 	{
 		unsigned int q = m_sDeviceData.Row0;
-		Onb sys;
-		sys.m_normal = TOFLOAT3(q & 255, (q >> 8) & 255, (q >> 16) & 255);
+		Frame sys;
+		sys.n = TOFLOAT3(q & 255, (q >> 8) & 255, (q >> 16) & 255);
 		return sys;
 	}
 	CUDA_FUNC_IN unsigned int getMatIndex()

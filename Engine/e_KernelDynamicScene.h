@@ -1,6 +1,6 @@
 #pragma once
 
-#include "..\Math\vector.h"
+#include <MathTypes.h>
 #include "e_Buffer.h"
 #include "e_Node.h"
 #include "e_SceneBVH.h"

@@ -257,8 +257,8 @@ e_BufferReference<e_FileTexture, e_KernelFileTexture> e_DynamicScene::LoadTextur
 e_BufferReference<e_MIPMap, e_KernelMIPMap> e_DynamicScene::LoadMIPMap(const char* file)
 {
 	FW::String a = fileExists(file) ? FW::String(file) : FW::String(m_pTexturePath) + FW::String(file);
-	if(a.getChar(a.getLength()) == '\n')
-		a = a.substring(0, a.getLength() - 1);
+	if(a.getChar(a.getLength() - 1) == '\n')
+		a = a.substring(0, a.getLength() - 2);
 	bool load;
 	e_BufferReference<e_MIPMap, e_KernelMIPMap> T = m_pMIPMapBuffer->LoadCached(a.getPtr(), &load);
 	if(load)

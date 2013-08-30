@@ -207,6 +207,43 @@
     <ClInclude Include="Kernel\k_CPUTracer.h">
       <Filter>Kernel</Filter>
     </ClInclude>
+    <ClInclude Include="Math\Frame.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="MathTypes.h" />
+    <ClInclude Include="Math\float4x4.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\Quaternion.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\Spectrum.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\Warp.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\Sampling.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Base\STL.h">
+      <Filter>Base</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_Samples.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_BSDF_Simple.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_BSDF_Complex.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_BSDF.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_Material.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\e_AnimatedMesh.cpp">
@@ -304,6 +341,24 @@
     </CudaCompile>
     <CudaCompile Include="mitBSDGTest.cu">
       <Filter>Kernel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Kernel\k_TraceHelper.cu">
+      <Filter>Kernel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Kernel\k_TraceAlgorithms.cu">
+      <Filter>Kernel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\e_BSDF_Simple.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\e_BSDF_Complex.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\e_BSDF.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\e_Material.cu">
+      <Filter>Engine</Filter>
     </CudaCompile>
   </ItemGroup>
 </Project>

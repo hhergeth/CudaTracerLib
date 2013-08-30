@@ -2,6 +2,45 @@
 #define CUTIL_MATH_H
 
 #include "cuda_runtime.h"
+#include "..\Defines.h"
+
+#define ISBLACK(v) (fsumf(v) == 0.0f)
+#define BADFLOAT(x) ((*(uint*)&x & 0x7f000000) == 0x7f000000)
+#define PI     3.14159265358979f
+#define INV_PI (1.0f / PI)
+#define INV_TWOPI (1.0f / (2.0f * PI))
+#define INV_FOURPI (1.0f / (4.0f * PI))
+#define SQRT_TWO      1.41421356237309504880f
+#define INV_SQRT_TWO  0.70710678118654752440f
+#define ONE_MINUS_EPS ONE_MINUS_EPS_FLT
+#define RCPOVERFLOW   2.93873587705571876e-39f
+#define DeltaEpsilon 1e-3f
+
+// The maximum possible value for a 32-bit floating point variable
+#ifndef  FLT_MAX
+#define  FLT_MAX   ((float)3.40282347e+38) 
+#endif
+
+#ifndef isnan
+#define isnan(x) (x != x)
+#endif
+
+// When ray tracing, the epsilon that t > EPSILON in order to avoid self intersections
+#define EPSILON       2e-5
+
+template<typename T> CUDA_FUNC_IN void swapk(T* a, T* b)
+{
+	T q = *a;
+	*a = *b;
+	*b = q;
+}
+
+template<typename T> CUDA_FUNC_IN void swapk(T& a, T& b)
+{
+	T q = a;
+	a = b;
+	b = q;
+}
 
 template<typename T> CUDA_FUNC_IN T MIN(T q0, T q1)
 {
@@ -130,6 +169,7 @@ CUDA_FUNC_IN float fmax_fmax (float a, float b, float c) { return __int_as_float
 CUDA_FUNC_IN float spanBeginKepler(float a0, float a1, float b0, float b1, float c0, float c1, float d) {	return fmax_fmax( fminf(a0,a1), fminf(b0,b1), fmin_fmax(c0, c1, d)); }
 CUDA_FUNC_IN float spanEndKepler(float a0, float a1, float b0, float b1, float c0, float c1, float d) {	return fmin_fmin( fmaxf(a0,a1), fmaxf(b0,b1), fmax_fmin(c0, c1, d)); }
 
+
 CUDA_FUNC_IN float signf(const float f)
 {
 	return f > 0 ? 1.0f : (f < 0 ? -1.0f : 0.0f);
@@ -208,6 +248,77 @@ CUDA_FUNC_IN float3 fabsf(float3& v)
 CUDA_FUNC_IN float4 fabsf(float4& v)
 {
 	return make_float4(fabsf(v.x), fabsf(v.y), fabsf(v.z), fabsf(v.w));
+}
+
+CUDA_FUNC_IN float2 exp(const float2& a)
+{
+	return make_float2(exp(a.x), exp(a.y));
+}
+
+CUDA_FUNC_IN float3 exp(const float3& a)
+{
+	return make_float3(exp(a.x), exp(a.y), exp(a.z));
+}
+
+CUDA_FUNC_IN float4 exp(const float4& a)
+{
+	return make_float4(exp(a.x), exp(a.y), exp(a.z), exp(a.w));
+}
+
+CUDA_FUNC_IN float frac(float f)
+{
+	return f - floorf(f);
+}
+
+#ifndef __CUDACC__
+CUDA_FUNC_IN void sincos(float f, float* a, float* b)
+{
+	*a = sin(f);
+	*b = cos(f);
+}
+#endif
+
+template<typename T> CUDA_FUNC_IN T bilerp(const float2& uv, const T& lt, const T& rt, const T& ld, const T& rd)
+{
+	T a = lt + (rt - lt) * uv.x, b = ld + (rd - ld) * uv.x;
+	return a + (b - a) * uv.y;
+}
+
+CUDA_FUNC_IN uchar3 NormalizedFloat3ToUchar3(float3& v)
+{
+#define CNV(x) x * 127.0f + 127.0f
+	return make_uchar3(CNV(v.x), CNV(v.y), CNV(v.z));
+#undef CNV
+}
+
+CUDA_FUNC_IN float3 Uchar3ToNormalizedFloat3(uchar3 v)
+{
+#define CNV(x) (float(x) - 127.0f) / 127.0f
+	return make_float3(CNV(v.x), CNV(v.y), CNV(v.z));
+#undef CNV
+}
+
+CUDA_FUNC_IN uchar2 NormalizedFloat3ToUchar2(const float3& v)
+{
+	float theta = (acos(v.z)*(255.0f/PI));
+	float phi = (atan2(v.y,v.x)*(255.0f/(2.0f*PI)));
+	phi = phi < 0 ? (phi + 255) : phi;
+	return make_uchar2((unsigned char)theta, (unsigned char)phi);
+}
+
+CUDA_FUNC_IN float3 Uchar2ToNormalizedFloat3(const uchar2 v)
+{
+	float theta = float(v.x)*(1.0f/255.0f)*PI;
+	float phi = float(v.y)*(1.0f/255.0f)*PI*2.0f;
+	float sinphi, cosphi, costheta, sintheta;
+	sincos(phi, &sinphi, &cosphi);
+	sincos(theta, &sintheta, &costheta);
+	return make_float3(sintheta*cosphi, sintheta * sinphi, costheta);
+}
+
+CUDA_FUNC_IN float3 Uchar2ToNormalizedFloat3(unsigned int lowBits)
+{
+	return Uchar2ToNormalizedFloat3(make_uchar2(lowBits & 0xff, (lowBits >> 8) & 255));
 }
 
 // float functions
@@ -991,70 +1102,116 @@ CUDA_FUNC_IN float Distance(const float3& a, const float3& b)
 	return sqrtf(DistanceSquared(a, b));
 }
 
-typedef uchar4 RGBE;
-
-CUDA_FUNC_IN RGBE Float3ToRGBE(float3& c)
+CUDA_FUNC_IN float AbsDot(const float3& a, const float3& b)
 {
-	float v = fmaxf(c);
-	if(v < 1e-32)
-		return make_uchar4(0,0,0,0);
-	else
-	{
-		int e;
-		v = frexp(v, &e) * 256.0f / v;
-		return make_uchar4((unsigned char)(c.x * v), (unsigned char)(c.y * v), (unsigned char)(c.z * v), e + 128);
+	return abs(dot(a, b));
+}
+
+CUDA_FUNC_IN int Mod(int a, int b) {
+    int n = int(a/b);
+    a -= n*b;
+    if (a < 0) a += b;
+    return a;
+}
+
+CUDA_FUNC_IN float Radians(float deg) {
+    return ((float)PI/180.f) * deg;
+}
+
+CUDA_FUNC_IN float Degrees(float rad) {
+    return (180.f/(float)PI) * rad;
+}
+
+CUDA_FUNC_IN float Log2(float x) {
+    float invLog2 = 1.f / logf(2.f);
+    return logf(x) * invLog2;
+}
+
+CUDA_FUNC_IN int Floor2Int(float val) {
+    return (int)floorf(val);
+}
+
+CUDA_FUNC_IN int Log2Int(float v)
+{
+    return Floor2Int(Log2(v));
+}
+
+CUDA_FUNC_IN bool IsPowerOf2(int v) {
+    return (v & (v - 1)) == 0;
+}
+
+CUDA_FUNC_IN unsigned int RoundUpPow2(unsigned int v) {
+    v--;
+    v |= v >> 1;    v |= v >> 2;
+    v |= v >> 4;    v |= v >> 8;
+    v |= v >> 16;
+    return v+1;
+}
+
+CUDA_FUNC_IN int Round2Int(float val) {
+    return Floor2Int(val + 0.5f);
+}
+
+CUDA_FUNC_IN int Float2Int(float val) {
+    return (int)val;
+}
+
+CUDA_FUNC_IN int Ceil2Int(float val) {
+    return (int)ceilf(val);
+}
+
+CUDA_FUNC_IN float clamp01(float a)
+{
+	return clamp(a,0.0f,1.0f);
+}
+
+CUDA_FUNC_IN float2 clamp01(const float2& a)
+{
+	return make_float2(clamp(a.x, 0.0f, 1.0f), clamp(a.y, 0.0f, 1.0f));
+}
+
+CUDA_FUNC_IN float3 clamp01(const float3& a)
+{
+	return make_float3(clamp(a.x, 0.0f, 1.0f), clamp(a.y, 0.0f, 1.0f), clamp(a.z, 0.0f, 1.0f));
+}
+
+CUDA_FUNC_IN float4 clamp01(const float4& a)
+{
+	return make_float4(clamp(a.x, 0.0f, 1.0f), clamp(a.y, 0.0f, 1.0f), clamp(a.z, 0.0f, 1.0f), clamp(a.w, 0.0f, 1.0f));
+}
+
+CUDA_FUNC_IN float2 sqrtf(const float2& v)
+{
+	return make_float2(sqrtf(v.x), sqrtf(v.y));
+}
+
+CUDA_FUNC_IN float3 sqrtf(const float3& v)
+{
+	return make_float3(sqrtf(v.x), sqrtf(v.y), sqrtf(v.z));
+}
+
+CUDA_FUNC_IN float4 sqrtf(const float4& v)
+{
+	return make_float4(sqrtf(v.x), sqrtf(v.y), sqrtf(v.z), sqrtf(v.w));
+}
+
+class math
+{
+public:
+	/// Arcsine variant that gracefully handles arguments > 1 that are due to roundoff errors
+	CUDA_FUNC_IN static float safe_asin(float value) {
+		return asinf(MIN(1.0f, MAX(-1.0f, value)));
 	}
-}
 
-CUDA_FUNC_IN float3 RGBEToFloat3(RGBE a)
-{
-	float f = ldexp(1.0f, a.w - (int)(128+8));
-	return make_float3((float)a.x * f, (float)a.y * f, (float)a.z * f);
-}
+	/// Arccosine variant that gracefully handles arguments > 1 that are due to roundoff errors
+	CUDA_FUNC_IN static float safe_acos(float value) {
+		return acosf(MIN(1.0f, MAX(-1.0f, value)));
+	}
 
-CUDA_FUNC_IN float Luminance(float3& c)
-{
-	return 0.299f * c.x + 0.587f * c.y + 0.114f * c.z;
-}
-
-CUDA_FUNC_IN float3 RGBToXYZ(float3& c)
-{
-	float3 r;
-	r.x = dot(make_float3(0.5767309,  0.1855540,  0.1881852), c);
-	r.y = dot(make_float3(0.2973769,  0.6273491,  0.0752741), c);
-	r.z = dot(make_float3(0.0270343,  0.0706872,  0.9911085), c);
-	return r;
-}
-
-CUDA_FUNC_IN float3 XYZToRGB(float3& c)
-{
-	float3 r;
-	r.x = dot(make_float3(2.0413690, -0.5649464, -0.3446944), c);
-	r.y = dot(make_float3(-0.9692660,  1.8760108,  0.0415560), c);
-	r.z = dot(make_float3(0.0134474, -0.1183897,  1.0154096), c);
-	return r;
-}
-
-CUDA_FUNC_IN float3 XYZToYxy(float3& c)
-{
-	float s = c.x + c.y + c.z;
-	return make_float3(c.y, c.x / s, c.y / s);
-}
-
-CUDA_FUNC_IN float3 YxyToXYZ(float3& c)
-{
-	float3 r;
-	r.x = c.x * c.y / c.z;
-	r.y = c.x;
-	r.z = c.x * (1.0f - c.y - c.z) / c.z;
-	return r;
-}
-
-struct CameraSample
-{
-    float imageX, imageY;
-    float lensU, lensV;
-    float time;
+	/// Square root variant that gracefully handles arguments < 0 that are due to roundoff errors
+	CUDA_FUNC_IN static float safe_sqrt(float value) {
+		return sqrtf(MAX(0.0f, value));
+	}
 };
 
 #endif
