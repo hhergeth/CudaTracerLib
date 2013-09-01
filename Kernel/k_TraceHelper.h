@@ -75,39 +75,22 @@ CUDA_FUNC_IN TraceResult k_TraceRay(const Ray& r)
 	return r2;
 }
 
-Frame TraceResult::lerpFrame()
+Frame TraceResult::lerpFrame() const
 {
 	return m_pTri->lerpFrame(m_fUV, m_pNode->getWorldMatrix(), 0);
 }
 
-unsigned int TraceResult::getMatIndex()
+unsigned int TraceResult::getMatIndex() const
 {
 	return m_pTri->getMatIndex(m_pNode->m_uMaterialOffset);
 }
 
-float2 TraceResult::lerpUV()
+float2 TraceResult::lerpUV() const
 {
 	return m_pTri->lerpUV(m_fUV);
 }
 
-void TraceResult::GetBSDF(const float3& p, e_KernelBSDF* bsdf)
-{
-	m_pTri->GetBSDF(p, m_fUV, m_pNode->getWorldMatrix(), g_SceneData.m_sMatData.Data, m_pNode->m_uMaterialOffset, bsdf);
-}
-
-e_KernelBSDF TraceResult::GetBSDF(const float3& p)
-{
-	e_KernelBSDF bs;
-	GetBSDF(p, &bs);
-	return bs;
-}
-
-bool TraceResult::GetBSSRDF(const float3& p, e_KernelBSSRDF* bssrdf)
-{
-	return m_pTri->GetBSSRDF(p, m_fUV, m_pNode->getWorldMatrix(), g_SceneData.m_sMatData.Data, m_pNode->m_uMaterialOffset, bssrdf);
-}
-
-float3 TraceResult::Le(const float3& p, const float3& n, const float3& w) 
+float3 TraceResult::Le(const float3& p, const float3& n, const float3& w) const 
 {
 	unsigned int i = LightIndex();
 	if(i == -1)
@@ -115,13 +98,26 @@ float3 TraceResult::Le(const float3& p, const float3& n, const float3& w)
 	else return g_SceneData.m_sLightData[i].L(p, n, w);
 }
 
-unsigned int TraceResult::LightIndex()
+unsigned int TraceResult::LightIndex() const
 {
 	unsigned int i = g_SceneData.m_sMatData[m_pTri->getMatIndex(m_pNode->m_uMaterialOffset)].NodeLightIndex;
 	if(i == -1)
 		return -1;
 	unsigned int j = m_pNode->m_uLightIndices[i];
 	return j;
+}
+
+const e_KernelMaterial& TraceResult::getMat() const
+{
+	return g_SceneData.m_sMatData[m_pTri->getMatIndex(m_pNode->m_uMaterialOffset)];
+}
+
+void TraceResult::getBsdfSample(const Ray& r, CudaRNG _rng, BSDFSamplingRecord* bRec) const
+{
+	*bRec = BSDFSamplingRecord(MapParameters(r(m_fDist), lerpUV(), lerpFrame()), r, _rng);
+	float3 nor;
+	if(getMat().SampleNormalMap(bRec->map, &nor))
+		bRec->map.sys.RecalculateFromNormal(normalize(bRec->map.sys.toWorld(nor)));
 }
 
 void k_INITIALIZE(e_KernelDynamicScene& a_Data);

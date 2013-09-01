@@ -6,7 +6,7 @@
 #include "e_SceneBVH.h"
 #include "e_Light.h"
 #include "e_TerrainHeader.h"
-#include "Engine/e_KernelMaterial.h"
+#include "e_Material.h"
 #include "e_Volumes.h"
 #include "e_KernelDynamicScene.h"
 #include "e_EnvironmentMap.h"

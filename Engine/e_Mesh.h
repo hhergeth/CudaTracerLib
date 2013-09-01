@@ -2,7 +2,7 @@
 
 #include <MathTypes.h>
 #include "e_TriangleData.h"
-#include "e_KernelMaterial.h"
+#include "e_Material.h"
 #include "e_Buffer.h"
 
 #define MAX_AREALIGHT_NUM 32

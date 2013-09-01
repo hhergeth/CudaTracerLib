@@ -21,42 +21,6 @@ CUDA_FUNC_IN float k_tr(float r, const float3& t)
 	return k_tr(r, length(t));
 }
 
-template<typename HASH> CUDA_ONLY_FUNC float3 k_PhotonMap<HASH>::L_Surface(float a_r, float a_NumPhotonEmitted, CudaRNG& rng, const e_KernelBSDF* bsdf, const float3& n, const float3& p, const float3& wo, k_AdaptiveStruct& A) const
-{
-	Frame sys = bsdf->sys;
-	sys.t *= a_r;
-	sys.s *= a_r;
-	sys.n *= a_r;
-	float3 a = -1.0f * sys.t - sys.s, b = sys.t - sys.s, c = -1.0f * sys.t + sys.s, d = sys.t + sys.s;
-	float3 low = fminf(fminf(a, b), fminf(c, d)) + p, high = fmaxf(fmaxf(a, b), fmaxf(c, d)) + p;
-	const float r2 = a_r * a_r, r3 = 1.0f / (r2 * a_NumPhotonEmitted), r4 = 1.0f / r2;
-	float3 L = make_float3(0), Lr = make_float3(0), Lt = make_float3(0);
-	uint3 lo = m_sHash.Transform(low), hi = m_sHash.Transform(high);
-	const bool glossy = false;
-	for(int a = lo.x; a <= hi.x; a++)
-		for(int b = lo.y; b <= hi.y; b++)
-			for(int c = lo.z; c <= hi.z; c++)
-			{
-				unsigned int i0 = m_sHash.Hash(make_uint3(a,b,c)), i = m_pDeviceHashGrid[i0], q = 0;
-				while(i != -1 && q++ < 1000)
-				{
-					k_pPpmPhoton e = m_pDevicePhotons[i];
-					float3 nor = e.getNormal(), wi = e.getWi(), l = e.getL(), P = e.Pos;
-					float dist2 = dot(P - p, P - p);
-					if(dist2 < r2 && dot(nor, n) > 0.95f)
-					{
-						float s = 1.0f - dist2 * r4, k = 3.0f * INV_PI * s * s * r3;
-						*(dot(n, wi) > 0.0f ? &Lr : &Lt) += k * l;
-					}
-					i = e.next;
-				}
-			}
-	float buf[6 * 6 * 2];
-	L += Lr * bsdf->rho(wo, rng, (unsigned char*)&buf, BSDF_ALL_REFLECTION)   * INV_PI +
-		 Lt * bsdf->rho(wo, rng, (unsigned char*)&buf, BSDF_ALL_TRANSMISSION) * INV_PI;
-	return L;
-}
-
 template<typename HASH> template<bool VOL> CUDA_ONLY_FUNC float3 k_PhotonMap<HASH>::L_Volume(float a_r, float a_NumPhotonEmitted, CudaRNG& rng, const Ray& r, float tmin, float tmax, const float3& sigt) const
 {
 	float Vs = 1.0f / ((4.0f / 3.0f) * PI * a_r * a_r * a_r * a_NumPhotonEmitted), r2 = a_r * a_r;
@@ -105,7 +69,7 @@ template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, float a_
 	int x = blockIdx.x * blockDim.x + threadIdx.x, y = blockIdx.y * blockDim.y + threadIdx.y;
 	CudaRNG rng = g_RNGData();
 	x += off.x; y += off.y;
-	e_KernelBSDF bsdf;
+	BSDFSamplingRecord bRec;
 	if(x < w && y < h)
 	{
 		CameraSample s = nextSample(x, y, rng);
@@ -137,7 +101,7 @@ template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, float a_
 			if(k_TraceRay(s.r.direction, s.r.origin, &r2))
 			{
 				float3 p = s.r(r2.m_fDist);
-				r2.GetBSDF(p, &bsdf);
+				r2.getBsdfSample(s.r, rng, &bRec);
 				
 				if(g_SceneData.m_sVolume.HasVolumes())
 				{
@@ -147,20 +111,19 @@ template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, float a_
 					s.fs = s.fs * exp(-g_SceneData.m_sVolume.tau(s.r, tmin, tmax));
 				}
 				
-				if(DIRECT)
-					L += s.fs * UniformSampleAllLights(p, bsdf.sys.n, -s.r.direction, &bsdf, rng, 4);
-				L += s.fs * r2.Le(p, bsdf.sys.n, -s.r.direction);
-				e_KernelBSSRDF bssrdf;
-				if(r2.m_pTri->GetBSSRDF(p, r2.m_fUV, r2.m_pNode->getWorldMatrix(), g_SceneData.m_sMatData.Data, r2.m_pNode->m_uMaterialOffset, &bssrdf))
+				//if(DIRECT)
+				//	L += s.fs * UniformSampleAllLights(p, bsdf.sys.n, -s.r.direction, &bsdf, rng, 4);
+				L += s.fs * r2.Le(p, bRec.map.sys.n, -s.r.direction);
+				e_KernelBSSRDF* bssrdf;
+				if(r2.getMat().GetBSSRDF(bRec.map, &bssrdf))
 				{
-					float3 dir = refract(s.r.direction, bsdf.sys.n, 1.0f / bssrdf.e);
+					float3 dir = refract(s.r.direction, bRec.map.sys.n, 1.0f / bssrdf->e);
 					TraceResult r3;
 					r3.Init();
 					k_TraceRay(dir, p, &r3);
-					L += s.fs * g_Map2.L<false>(a_rVolume, rng, Ray(p, dir), 0, r3.m_fDist, bssrdf.sigp_s + bssrdf.sig_a);
+					L += s.fs * g_Map2.L<false>(a_rVolume, rng, Ray(p, dir), 0, r3.m_fDist, bssrdf->sigp_s + bssrdf->sig_a);
 				}
-				if(bsdf.NumComponents(BxDFType(BSDF_REFLECTION | BSDF_TRANSMISSION | BSDF_DIFFUSE)))
-					L += s.fs * g_Map2.L(a_rSurfaceUNUSED, rng, &bsdf, bsdf.sys.n, p, -s.r.direction, A);
+				if(r2.getMat().bsdf.hasComponent(EDiffuse))
 					//L += s.fs * UniformSampleAllLights(p, bsdf.sys.n, -s.r.direction, &bsdf, rng, 16);
 				/*{
 					k_AdaptiveEntry ent = A.E[y * w + x];
@@ -228,18 +191,51 @@ template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, float a_
 
 					L += s.fs * Lp / float(g_Map2.m_uPhotonNumEmitted);
 				}*/
-				if(s.d < 5 && stackPos < stackN - 1)
 				{
-					float3 r_wi;
-					float r_pdf;
-					float3 r_f = bsdf.Sample_f(-s.r.direction, &r_wi, BSDFSample(rng), &r_pdf, BxDFType(BSDF_REFLECTION | BSDF_SPECULAR | BSDF_GLOSSY));
-					if(r_pdf && !ISBLACK(r_f))
-						stack[stackPos++] = stackEntry(Ray(p, r_wi), bsdf.IntegratePdf(r_f, r_pdf, r_wi) * s.fs, s.d + 1);
-					float3 t_wi;
-					float t_pdf;
-					float3 t_f = bsdf.Sample_f(-s.r.direction, &t_wi, BSDFSample(rng), &t_pdf, BxDFType(BSDF_TRANSMISSION | BSDF_SPECULAR | BSDF_GLOSSY));
-					if(t_pdf && !ISBLACK(t_f))
-						stack[stackPos++] = stackEntry(Ray(p, t_wi), bsdf.IntegratePdf(t_f, t_pdf, t_wi) * s.fs, s.d + 1);
+					Frame sys = bRec.map.sys;
+					sys.t *= a_rSurfaceUNUSED;
+					sys.s *= a_rSurfaceUNUSED;
+					sys.n *= a_rSurfaceUNUSED;
+					float3 a = -1.0f * sys.t - sys.s, b = sys.t - sys.s, c = -1.0f * sys.t + sys.s, d = sys.t + sys.s;
+					float3 low = fminf(fminf(a, b), fminf(c, d)) + p, high = fmaxf(fmaxf(a, b), fmaxf(c, d)) + p;
+					float3 Lp = make_float3(0);
+					uint3 lo = g_Map2.m_sSurfaceMap.m_sHash.Transform(low), hi = g_Map2.m_sSurfaceMap.m_sHash.Transform(high);
+					const bool glossy = false;
+					for(int a = lo.x; a <= hi.x; a++)
+						for(int b = lo.y; b <= hi.y; b++)
+							for(int c = lo.z; c <= hi.z; c++)
+							{
+								unsigned int i0 = g_Map2.m_sSurfaceMap.m_sHash.Hash(make_uint3(a,b,c)), i = g_Map2.m_sSurfaceMap.m_pDeviceHashGrid[i0], q = 0;
+								while(i != -1)
+								{
+									k_pPpmPhoton e = g_Map2.m_sSurfaceMap.m_pDevicePhotons[i];
+									float3 nor = e.getNormal(), wi = e.getWi(), l = e.getL(), P = e.Pos;
+									float dist2 = dot(P - p, P - p);
+									if(dist2 < a_rSurfaceUNUSED * a_rSurfaceUNUSED && dot(nor, bRec.map.sys.n) > 0.95f)
+									{
+										bRec.wo = wi;
+										float3 gamma = r2.getMat().bsdf.f(bRec);
+										Lp += k_tr(a_rSurfaceUNUSED, sqrtf(dist2)) * gamma * l;
+									}
+									i = e.next;
+								}
+							}
+					L += s.fs * Lp / float(g_Map2.m_uPhotonNumEmitted);
+				}
+				if(s.d < 5 && stackPos < stackN - 1)
+				{/*
+					bRec.typeMask = EDeltaReflection;
+					float3 r_f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
+					if(!ISBLACK(r_f))
+						stack[stackPos++] = stackEntry(Ray(p, bRec.wo), r_f * s.fs, s.d + 1);
+					bRec.typeMask = EDeltaTransmission;
+					float3 t_f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
+					if(!ISBLACK(t_f))
+						stack[stackPos++] = stackEntry(Ray(p, bRec.wo), t_f * s.fs, s.d + 1);*/
+					bRec.typeMask = EDelta | EGlossy;
+					float3 t_f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
+					if(!ISBLACK(t_f))
+						stack[stackPos++] = stackEntry(Ray(p, bRec.wo), t_f * s.fs, s.d + 1);
 				}
 			}
 			else if(g_SceneData.m_sVolume.HasVolumes())

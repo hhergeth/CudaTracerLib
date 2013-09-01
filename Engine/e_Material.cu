@@ -1,6 +1,6 @@
 #include "e_Material.h"
 
-e_KernelMaterial::e_KernelMaterial(char* name)
+e_KernelMaterial::e_KernelMaterial(const char* name)
 {
 	memset(Name, 0, sizeof(Name));
 	if(name)
@@ -11,6 +11,7 @@ e_KernelMaterial::e_KernelMaterial(char* name)
 	diffuse d2;
 	d2.m_reflectance = CreateTexture(0, make_float3(0.5f));
 	bsdf.SetData(d2);
+	usedBssrdf = false;
 }
 
 CUDA_FUNC_IN float3 nor(float* D, int l, int t, int m, int r, int b, float HeightScale)
@@ -52,8 +53,8 @@ float e_KernelMaterial::SampleAlphaMap(const MapParameters& uv) const
 	else return 1.0f;
 }
 
-bool e_KernelMaterial::GetBSSRDF(const MapParameters& uv, const e_KernelBSSRDF* res) const
+bool e_KernelMaterial::GetBSSRDF(const MapParameters& uv, const e_KernelBSSRDF** res) const
 {
-	res = &bssrdf;
+	*res = &bssrdf;
 	return usedBssrdf;
 }

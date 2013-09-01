@@ -145,7 +145,9 @@ void e_AnimatedMesh::CompileToBinary(const char* a_InputFile, c_StringArray& a_A
 	{
 		e_KernelMaterial mat;
 		mat.NodeLightIndex = -1;
-		mat.SetData(e_KernelMaterial_Matte(CreateTexture("hellknight.tga", float3()), CreateTexture(0, 0.0f)));
+		diffuse ma;
+		ma.m_reflectance = CreateTexture("hellknight.tga", float3());
+		mat.bsdf.SetData(ma);
 		//mat.NormalMap = e_Sampler<float3>("n_hellknight.tga", 1);
 		matData.push_back(mat);
 

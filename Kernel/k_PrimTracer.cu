@@ -41,35 +41,30 @@ CUDA_ONLY_FUNC float3 trace(Ray& r, CudaRNG& rng, float3* pout)
 	r2.Init();
 	float3 c = make_float3(1), L = make_float3(0);
 	unsigned int depth = 0;
-	e_KernelBSDF bsdf;
 	bool specBounce = false;
+	BSDFSamplingRecord bRec;
 	while(k_TraceRay(r.direction, r.origin, &r2) && depth++ < 5)
 	{
 		if(pout && depth == 1)
 			*pout = r(r2.m_fDist);
 		if(g_SceneData.m_sVolume.HasVolumes())
 			c = c * exp(-g_SceneData.m_sVolume.tau(r, 0, r2.m_fDist));
-		float3 wi;
-		float pdf;
-		r2.GetBSDF(r(r2.m_fDist), &bsdf);
+		r2.getBsdfSample(r, rng, &bRec);
 		if(depth == 1 || specBounce || !DIRECT)
-			L += r2.Le(r(r2.m_fDist), bsdf.sys.n, -r.direction);
+			L += r2.Le(r(r2.m_fDist), bRec.map.sys.n, -r.direction);
 		//if(DIRECT)
 		//	L += c * UniformSampleAllLights(r(r2.m_fDist), bsdf.sys.n, -r.direction, &bsdf, rng, 1);
-		//((float3*)&bsdf.sys.t) = cross(bsdf.sys.s, bsdf.sys.n);
-		//return make_float3(dot(-r.direction, bsdf.sys.n));
-		BxDFType sampledType;
-		float3 f = bsdf.Sample_f(-r.direction, &wi, BSDFSample(rng), &pdf, BSDF_ALL, &sampledType);
-		f = f * AbsDot(wi, bsdf.sys.n) / pdf;
+		float pdf;
+		float3 f = r2.getMat().bsdf.sample(bRec, pdf, rng.randomFloat2());
 		c = c * f;
-		if((sampledType & BSDF_DIFFUSE) == BSDF_DIFFUSE)
+		if((bRec.sampledType & EDiffuse) == EDiffuseReflection)
 		{
 			L += c;
 			break;
 		}
-		specBounce = (sampledType & BSDF_SPECULAR) != 0;
+		specBounce = (bRec.sampledType & EDelta) != 0;
 		r.origin = r(r2.m_fDist);
-		r.direction = wi;
+		r.direction = bRec.wo;
 		r2.Init();
 	}
 	if(!r2.hasHit() && g_SceneData.m_sEnvMap.CanSample())

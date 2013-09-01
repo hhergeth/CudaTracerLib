@@ -6,7 +6,7 @@
 #include "e_SceneBVH.h"
 #include "e_Light.h"
 #include "e_TerrainHeader.h"
-#include "Engine/e_KernelMaterial.h"
+#include "e_Material.h"
 #include "e_Volumes.h"
 #include "e_KernelDynamicScene.h"
 #include "e_MeshCompiler.h"
@@ -69,7 +69,7 @@ public:
 	}
 	template<typename MAT> void setMat(e_StreamReference(e_Node) N, unsigned int mi, MAT& m)
 	{
-		m_pMaterialBuffer->operator()(N->m_uMaterialOffset + mi)->SetData(m);
+		m_pMaterialBuffer->operator()(N->m_uMaterialOffset + mi)->bsdf.SetData(m);
 		m_pMaterialBuffer->operator()(N->m_uMaterialOffset + mi).Invalidate();
 	}
 	void AnimateMesh(e_StreamReference(e_Node) n, float t, unsigned int anim);

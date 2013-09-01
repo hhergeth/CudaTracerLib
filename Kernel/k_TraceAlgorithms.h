@@ -25,10 +25,10 @@ CUDA_FUNC_IN float3 Transmittance(const e_VisibilitySegment& seg)
 	return Transmittance(seg.r, seg.tmin, seg.tmax);
 }
 
-CUDA_HOST CUDA_DEVICE float3 EstimateDirect(const float3& p, const float3& n, const float3& wo, const e_KernelBSDF* bsdf, CudaRNG& rng, const e_KernelLight* light, unsigned int li, const LightSample& lightSample, const BSDFSample& bsdfSample, BxDFType flags);
+CUDA_HOST CUDA_DEVICE float3 EstimateDirect(BSDFSamplingRecord& bRec, const e_KernelMaterial& mat, const e_KernelLight* light, unsigned int li, const LightSample& lightSample, EBSDFType flags);
 
-CUDA_HOST CUDA_DEVICE float3 UniformSampleAllLights(const float3& p, const float3& n, const float3& wo, const e_KernelBSDF* bsdf, CudaRNG& rng, int nSamples);
+CUDA_HOST CUDA_DEVICE float3 UniformSampleAllLights(BSDFSamplingRecord& bRec, const e_KernelMaterial& mat, int nSamples);
 
-CUDA_HOST CUDA_DEVICE float3 UniformSampleOneLight(const float3& p, const float3& n, const float3& wo, const e_KernelBSDF* bsdf, CudaRNG& rng);
+CUDA_HOST CUDA_DEVICE float3 UniformSampleOneLight(BSDFSamplingRecord& bRec, const e_KernelMaterial& mat);
 
 CUDA_HOST CUDA_DEVICE float3 PathTrace(float3& a_Dir, float3& a_Ori, CudaRNG& rnd, float* distTravalled = 0);

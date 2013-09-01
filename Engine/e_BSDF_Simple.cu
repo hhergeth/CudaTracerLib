@@ -498,7 +498,7 @@ float3 roughdielectric::sample(BSDFSamplingRecord &bRec, float &pdf, const float
 	float F = MonteCarlo::fresnelDielectricExt(dot(bRec.wi, m), cosThetaT, m_eta);
 
 	if (hasReflection && hasTransmission) {
-		if (bRec.rng.randomFloat() > F) {
+		if (bRec.rng->randomFloat() > F) {
 			sampleReflection = false;
 			pdf *= 1-F;
 		} else {
@@ -1167,7 +1167,7 @@ float3 hk::sample(BSDFSamplingRecord &bRec, float &_pdf, const float2 &_sample) 
 
 		/* Sample According to the phase function lobes */
 		PhaseFunctionSamplingRecord pRec(bRec.wi, bRec.wo);
-		m_phase.Sample(pRec, _pdf, bRec.rng);
+		m_phase.Sample(pRec, _pdf, *bRec.rng);
 
 		/* Store the sampled direction */
 		bRec.wo = pRec.wo;

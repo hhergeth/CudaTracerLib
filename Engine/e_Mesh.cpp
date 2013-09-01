@@ -124,20 +124,35 @@ void e_Mesh::CompileObjToBinary(const char* a_InputFile, OutputStream& a_Out)
 		float f = 0.0f;
 		if(M.IlluminationModel == 2)
 		{
-			e_KernelMaterial_Matte mt(CreateTexture(M.textures[0].getID().getPtr(), !M.diffuse), CreateTexture(0,f));
-			mat.SetData(mt);//3 is bump
+			diffuse d;
+			d.m_reflectance = CreateTexture(M.textures[0].getID().getPtr(), !M.diffuse);
+			mat.bsdf.SetData(d);
 		}
 		else if(M.IlluminationModel == 5)
 		{
-			mat.SetData(e_KernelMaterial_Mirror(CreateTexture<float3>(0, M.specular)));
+			dielectric d;
+			d.m_invEta = d.m_eta = FLT_MAX;
+			d.m_specularReflectance = CreateTexture<float3>(0, M.specular);
+			d.m_specularTransmittance = CreateTexture<float3>(0, make_float3(0));
+			mat.bsdf.SetData(d);
 		}
 		else if(M.IlluminationModel == 7)
 		{
-			mat.SetData(e_KernelMaterial_Glass(CreateTexture<float3>(0, M.specular), CreateTexture<float3>(0, M.Tf), CreateTexture(0,M.IndexOfRefraction)));
+			dielectric d;
+			d.m_eta = M.IndexOfRefraction;
+			d.m_invEta = 1.0f / M.IndexOfRefraction;
+			d.m_specularReflectance = CreateTexture<float3>(0, M.specular);
+			d.m_specularTransmittance = CreateTexture<float3>(0, M.Tf);
+			mat.bsdf.SetData(d);
 		}
 		else if(M.IlluminationModel == 9)
 		{
-			mat.SetData(e_KernelMaterial_Glass(CreateTexture(0, make_float3(0)), CreateTexture<float3>(0, M.Tf), CreateTexture(0,M.IndexOfRefraction)));
+			dielectric d;
+			d.m_eta = M.IndexOfRefraction;
+			d.m_invEta = 1.0f / M.IndexOfRefraction;
+			d.m_specularReflectance = CreateTexture<float3>(0, make_float3(0));
+			d.m_specularTransmittance = CreateTexture<float3>(0, M.Tf);
+			mat.bsdf.SetData(d);
 		}
 		if(length(M.emission) != 0)
 		{

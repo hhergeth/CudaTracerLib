@@ -2,8 +2,7 @@
 
 #include <MathTypes.h>
 #include "..\Math\half.h"
-#include "e_Brdf.h"
-#include "e_KernelMaterial.h"
+#include "e_Material.h"
 
 #define EXT_TRI
 
@@ -34,14 +33,13 @@ struct TraceResult
 		return hasHit();
 	}
 
-	CUDA_FUNC_IN Frame lerpFrame();
-	CUDA_FUNC_IN unsigned int getMatIndex();
-	CUDA_FUNC_IN float2 lerpUV();
-	CUDA_FUNC_IN e_KernelBSDF GetBSDF(const float3& p);
-	CUDA_FUNC_IN void GetBSDF(const float3& p, e_KernelBSDF* bsdf);
-	CUDA_FUNC_IN bool GetBSSRDF(const float3& p, e_KernelBSSRDF* bssrdf);
-	CUDA_FUNC_IN float3 Le(const float3& p, const float3& n, const float3& w);
-	CUDA_FUNC_IN unsigned int LightIndex();
+	CUDA_FUNC_IN Frame lerpFrame() const;
+	CUDA_FUNC_IN unsigned int getMatIndex() const;
+	CUDA_FUNC_IN float2 lerpUV() const;
+	CUDA_FUNC_IN float3 Le(const float3& p, const float3& n, const float3& w) const;
+	CUDA_FUNC_IN unsigned int LightIndex() const;
+	CUDA_FUNC_IN const e_KernelMaterial& getMat() const;
+	CUDA_FUNC_IN void getBsdfSample(const Ray& r, CudaRNG _rng, BSDFSamplingRecord* bRec) const;
 };
 
 #ifdef EXT_TRI
@@ -119,33 +117,6 @@ public:
 		float2 c = dat.ToFloat2();
 		float u = bCoords.y, v = 1.0f - u - bCoords.x;
 		return a + u * (b - a) + v * (c - a);
-	}
-	CUDA_FUNC_IN void GetBSDF(const float3& p, const float2& baryCoords, const float4x4& localToWorld, const e_KernelMaterial* a_Mats, const unsigned int off, e_KernelBSDF* bsdf) const 
-	{
-		float3 ng;
-		Frame sys = lerpFrame(baryCoords, localToWorld, &ng);
-		float2 uv = lerpUV(baryCoords);
-		MapParameters mp(p, uv, sys);
-
-		float3 nor;
-		if(a_Mats[getMatIndex(off)].SampleNormalMap(mp, &nor))
-			sys.RecalculateFromNormal(normalize(sys.toWorld(nor)));
-
-		*bsdf = e_KernelBSDF(sys, ng);
-		a_Mats[getMatIndex(off)].GetBSDF(mp, bsdf);
-	}
-	CUDA_FUNC_IN bool GetBSSRDF(const float3& p, const float2& baryCoords, const float4x4& localToWorld, const e_KernelMaterial* a_Mats, const unsigned int off, e_KernelBSSRDF* bssrdf) const 
-	{
-		float3 ng;
-		Frame sys = lerpFrame(baryCoords, localToWorld, &ng);
-		float2 uv = lerpUV(baryCoords);
-		MapParameters mp(p, uv, sys);
-
-		float3 nor;
-		if(a_Mats[getMatIndex(off)].SampleNormalMap(mp, &nor))
-			sys.RecalculateFromNormal(normalize(sys.toWorld(nor)));
-
-		return a_Mats[getMatIndex(off)].GetBSSRDF(mp, bssrdf);	
 	}
 };
 #else

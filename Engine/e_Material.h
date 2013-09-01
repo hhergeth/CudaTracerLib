@@ -42,10 +42,10 @@ public:
 	float HeightScale;
 	float m_fAlphaThreshold;
 public:
-	e_KernelMaterial(char* name = 0);
+	e_KernelMaterial(const char* name = 0);
 	CUDA_DEVICE CUDA_HOST bool SampleNormalMap(const MapParameters& uv, float3* normal) const;
 	CUDA_DEVICE CUDA_HOST float SampleAlphaMap(const MapParameters& uv) const;
-	CUDA_DEVICE CUDA_HOST bool GetBSSRDF(const MapParameters& uv, const e_KernelBSSRDF* res) const;
+	CUDA_DEVICE CUDA_HOST bool GetBSSRDF(const MapParameters& uv, const e_KernelBSSRDF** res) const;
 	template<typename L> void LoadTextures(L callback)
 	{
 		if(NormalMap.used)
@@ -88,5 +88,11 @@ public:
 	void SetAlphaMap(const char* path)
 	{
 		SetAlphaMap(CreateTexture(path, make_float4(0)));
+	}
+	void setBssrdf(const float3& sig_a, const float3& sigp_s, float e)
+	{
+		bssrdf.e = e;
+		bssrdf.sig_a = sig_a;
+		bssrdf.sigp_s = sigp_s;
 	}
 };

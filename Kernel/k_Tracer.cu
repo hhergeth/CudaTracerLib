@@ -30,7 +30,7 @@ CUDA_FUNC_IN float UIntToFloat(unsigned int f)
 	return *(float*)&q;
 }
 */
-
+/*
 CUDA_DEVICE uint3 g_EyeHitBoxMin;
 CUDA_DEVICE uint3 g_EyeHitBoxMax;
 __global__ void k_GuessPass(int w, int h)
@@ -64,9 +64,9 @@ __global__ void k_GuessPass(int w, int h)
 	}
 	g_RNGData(localState);
 }
-
+*/
 AABB k_Tracer::GetEyeHitPointBox(e_DynamicScene* m_pScene, e_Camera* m_pCamera)
-{
+{/*
 	uint3 ma = make_uint3(FloatToUInt(-FLT_MAX)), mi = make_uint3(FloatToUInt(FLT_MAX));
 	cudaMemcpyToSymbol(g_EyeHitBoxMin, &mi, 12);
 	cudaMemcpyToSymbol(g_EyeHitBoxMax, &ma, 12);
@@ -80,7 +80,9 @@ AABB k_Tracer::GetEyeHitPointBox(e_DynamicScene* m_pScene, e_Camera* m_pCamera)
 	cudaMemcpyFromSymbol(&m_sEyeBox.maxV, g_EyeHitBoxMax, 12);
 	m_sEyeBox.minV = make_float3(UIntToFloat(m_sEyeBox.minV.x), UIntToFloat(m_sEyeBox.minV.y), UIntToFloat(m_sEyeBox.minV.z));
 	m_sEyeBox.maxV = make_float3(UIntToFloat(m_sEyeBox.maxV.x), UIntToFloat(m_sEyeBox.maxV.y), UIntToFloat(m_sEyeBox.maxV.z));
-	return m_sEyeBox;
+	return m_sEyeBox;*/
+	throw 1;
+	return AABB();
 }
 
 CUDA_DEVICE TraceResult res;

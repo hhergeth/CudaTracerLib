@@ -148,8 +148,6 @@ template<typename HASH> struct k_PhotonMap
 		return k_StoreResult::Full;
 	}
 
-	CUDA_ONLY_FUNC float3 L_Surface(float a_r, float a_NumPhotonEmitted, CudaRNG& rng, const e_KernelBSDF* bsdf, const float3& n, const float3& p, const float3& wo, k_AdaptiveStruct& A) const;
-
 	template<bool VOL> CUDA_ONLY_FUNC float3 L_Volume(float a_r, float a_NumPhotonEmitted, CudaRNG& rng, const Ray& r, float tmin, float tmax, const float3& sigt) const;
 #endif
 };
@@ -192,11 +190,6 @@ struct k_PhotonMapCollection
 		if(SURFACE)
 			return m_sSurfaceMap.StorePhoton(p, l, wi, n, &m_uPhotonNumStored);
 		else return m_sVolumeMap.StorePhoton(p, l, wi, n, &m_uPhotonNumStored);
-	}
-
-	CUDA_ONLY_FUNC float3 L(float a_r, CudaRNG& rng, const e_KernelBSDF* bsdf, const float3& n, const float3& p, const float3& wo, k_AdaptiveStruct& A) const
-	{
-		return m_sSurfaceMap.L_Surface(a_r, m_uPhotonNumEmitted, rng, bsdf, n, p, wo, A);
 	}
 
 	template<bool VOL> CUDA_ONLY_FUNC float3 L(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const float3& sigt) const

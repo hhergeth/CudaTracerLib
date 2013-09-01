@@ -19,7 +19,6 @@
     <ClInclude Include="Base\Timer.h" />
     <ClInclude Include="Defines.h" />
     <ClInclude Include="Engine\e_AnimatedMesh.h" />
-    <ClInclude Include="Engine\e_Brdf.h" />
     <ClInclude Include="Engine\e_BSDF.h" />
     <ClInclude Include="Engine\e_BSDF_Complex.h" />
     <ClInclude Include="Engine\e_Buffer.h" />
@@ -33,7 +32,6 @@
     <ClInclude Include="Engine\e_Image.h" />
     <ClInclude Include="Engine\e_KernelDynamicScene.h" />
     <ClInclude Include="Engine\e_KernelMapping.h" />
-    <ClInclude Include="Engine\e_KernelMaterial.h" />
     <ClInclude Include="Engine\e_KernelTexture.h" />
     <ClInclude Include="Engine\e_Light.h" />
     <ClInclude Include="Engine\e_BSDF_Simple.h" />
@@ -85,6 +83,7 @@
     <ClInclude Include="Math\Ray.h" />
     <ClInclude Include="Math\Sampling.h" />
     <ClInclude Include="Math\Spectrum.h" />
+    <ClInclude Include="Math\Spectrum2.h" />
     <ClInclude Include="Math\vector.h" />
     <ClInclude Include="Math\Warp.h" />
     <ClInclude Include="Renderer.h" />
@@ -133,7 +132,7 @@
     <CudaCompile Include="Kernel\k_Tracer.cu" />
     <CudaCompile Include="Kernel\k_sPpmTracer_EyePass.cu" />
     <CudaCompile Include="Kernel\k_sPpmTracer_PhotonPass.cu" />
-    <CudaCompile Include="mitBSDGTest.cu" />
+    <CudaCompile Include="Math\Spectrum.cu" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{B2C397D2-90E0-4E10-8C94-9F085B9D92A3}</ProjectGuid>

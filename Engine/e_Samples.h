@@ -110,7 +110,7 @@ enum EBSDFType {
 	/// Supports interactions on the back-facing side
 	EBackSide             = 0x10000,
 	/// Uses extra random numbers from the supplied sampler instance
-	EUsesSampler          = 0x20000
+	EUsesSampler          = 0x20000,
 };
 
 /// Convenient combinations of flags from \ref EBSDFType
@@ -137,7 +137,7 @@ enum ETypeCombinations {
 
 struct BSDFSamplingRecord
 {
-	CudaRNG& rng;
+	CudaRNG* rng;
 	MapParameters map;
 	/// Normalized incident direction in local coordinates
 	float3 wi;
@@ -150,11 +150,11 @@ struct BSDFSamplingRecord
 	int component;
 	unsigned int sampledType;
 	int sampledComponent;
-	CUDA_FUNC_IN BSDFSamplingRecord():rng(CudaRNG()){}
-	CUDA_FUNC_IN BSDFSamplingRecord(const MapParameters& mp, const Ray& r, CudaRNG _rng, ETransportMode _mode = ERadiance)
+	CUDA_FUNC_IN BSDFSamplingRecord():rng(0){}
+	CUDA_FUNC_IN BSDFSamplingRecord(const MapParameters& mp, const Ray& r, CudaRNG& _rng, ETransportMode _mode = ERadiance)
 		: map(mp), wi(-1.0 * r.direction), mode(_mode), eta(1.0f),
 		  typeMask(ETypeCombinations::EAll), component(-1), sampledType(0), sampledComponent(-1),
-		  rng(_rng)
+		  rng(&_rng)
 	{
 
 	}

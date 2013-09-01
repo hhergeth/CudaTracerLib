@@ -5,7 +5,7 @@
 #include "Engine/e_Samples.h"
 #include "Engine\e_PhaseFunction.h"
 
-class MicrofacetDistribution
+struct MicrofacetDistribution
 {
 	enum EType {
 		/// Beckmann distribution derived from Gaussian random surfaces
@@ -18,7 +18,6 @@ class MicrofacetDistribution
 		EAshikhminShirley = 3
 	};
 	EType m_type;
-public:
 	CUDA_FUNC_IN float transformRoughness(float value) const {
 		value = MAX(value, (float) 1e-3f);
 		if (m_type == EPhong || m_type == EAshikhminShirley)
@@ -101,23 +100,45 @@ struct BSDFALL
 		CALL_TYPE(hk, f, r) \
 	}
 private:
-	CUDA_ALIGN(16) unsigned char Data[255];
+#define SZ DMAX2(DMAX5(sizeof(diffuse), sizeof(roughdiffuse), sizeof(dielectric), sizeof(thindielectric), sizeof(roughdielectric)), \
+		   DMAX6(sizeof(conductor), sizeof(roughconductor), sizeof(plastic), sizeof(phong), sizeof(ward), sizeof(hk)))
+	CUDA_ALIGN(16) unsigned char Data[SZ];
+#undef SZ
 	unsigned int m_uType;
 public:
-	CUDA_FUNC_IN float3 sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &sample) const
+	CUDA_FUNC_IN float3 sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &_sample) const
 	{
-		CALL_FUNC(return, sample(bRec, pdf, sample));
-		return make_float3(0);
+		bRec.wi = bRec.map.sys.toLocal(bRec.wi);
+		float3 r;
+		CALL_FUNC(r = , sample(bRec, pdf, _sample));
+		bRec.wo = bRec.map.sys.toWorld(bRec.wo);
+		bRec.wi = bRec.map.sys.toWorld(bRec.wi);
+		return r;
 	}
-	CUDA_FUNC_IN float3 f(const BSDFSamplingRecord &bRec, EMeasure measure) const
+	CUDA_FUNC_IN float3 sample(BSDFSamplingRecord &bRec, const float2 &_sample) const
 	{
-		CALL_FUNC(return, f(bRec, measure));
-		return make_float3(0);
+		float p;
+		return sample(bRec, p, _sample);
 	}
-	CUDA_FUNC_IN float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
+	CUDA_FUNC_IN float3 f(BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
 	{
-		CALL_FUNC(return, pdf(bRec, measure));
-		return 0.0f;
+		bRec.wi = bRec.map.sys.toLocal(bRec.wi);
+		bRec.wo = bRec.map.sys.toLocal(bRec.wo);
+		float3 r;
+		CALL_FUNC(r = , f(bRec, measure));
+		bRec.wo = bRec.map.sys.toWorld(bRec.wo);
+		bRec.wi = bRec.map.sys.toWorld(bRec.wi);
+		return r;
+	}
+	CUDA_FUNC_IN float pdf(BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
+	{
+		bRec.wi = bRec.map.sys.toLocal(bRec.wi);
+		bRec.wo = bRec.map.sys.toLocal(bRec.wo);
+		float p;
+		CALL_FUNC(p = , pdf(bRec, measure));
+		bRec.wo = bRec.map.sys.toWorld(bRec.wo);
+		bRec.wi = bRec.map.sys.toWorld(bRec.wi);
+		return p;
 	}
 	template<typename T> void LoadTextures(T callback) const
 	{

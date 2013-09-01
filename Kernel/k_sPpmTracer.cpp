@@ -173,8 +173,8 @@ void k_sPpmTracer::initNewPass(e_Image* I)
 		for(int j = 0; j < l; j++)
 		{
 			e_StreamReference(e_KernelMaterial) mat = m_pScene->m_pMaterialBuffer->operator()(s + j, 1);
-			e_KernelBSSRDF b;
-			if(mat->GetBSSRDF(MapParameters(make_float3(1), make_float2(0, 0), Frame()), &b))
+			const e_KernelBSSRDF* bssrdf;
+			if(mat->GetBSSRDF(MapParameters(make_float3(1), make_float2(0, 0), Frame()), &bssrdf))
 			{
 				volBox.Enlarge(n->getWorldBox(m));
 				m_bLongRunning |= 1;

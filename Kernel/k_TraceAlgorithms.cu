@@ -1,24 +1,27 @@
 #include "k_TraceAlgorithms.h"
 
-float3 EstimateDirect(const float3& p, const float3& n, const float3& wo, const e_KernelBSDF* bsdf, CudaRNG& rng, const e_KernelLight* light, unsigned int li, const LightSample& lightSample, const BSDFSample& bsdfSample, BxDFType flags)
+float3 EstimateDirect(BSDFSamplingRecord& bRec, const e_KernelMaterial& mat, const e_KernelLight* light, unsigned int li, const LightSample& lightSample, EBSDFType flags)
 {
 	float3 Ld = make_float3(0);
 	float lightPdf, bsdfPdf;
 	e_VisibilitySegment seg;
-	float3 Li = light->Sample_L(g_SceneData, p, lightSample, &lightPdf, &seg);
+	float3 Li = light->Sample_L(g_SceneData, bRec.map.P, lightSample, &lightPdf, &seg);
 	if(lightPdf > 0.0f && !ISBLACK(Li))
 	{
-		float3 f = bsdf->f(wo, seg.r.direction, flags);
+		bRec.wo = seg.r.direction;
+		float3 f = mat.bsdf.f(bRec);
 		if(!ISBLACK(f) && !Occluded(seg))
 		{
 			Li = Li * Transmittance(seg);
 			if(light->IsDeltaLight())
-				Ld += f * Li * (AbsDot(seg.r.direction, n) / lightPdf);
+				Ld += f * Li * (AbsDot(seg.r.direction, bRec.map.sys.n) / lightPdf);
 			else
 			{
-				bsdfPdf = bsdf->Pdf(wo, seg.r.direction, flags);
+				bRec.typeMask = flags;
+				bsdfPdf = mat.bsdf.pdf(bRec);
 				float weight = PowerHeuristic(1, lightPdf, 1, bsdfPdf);
-				Ld += f * Li * (AbsDot(seg.r.direction, n) * weight / lightPdf);
+				Ld += f / bsdfPdf * Li * (AbsDot(seg.r.direction, bRec.map.sys.n) * weight / lightPdf);
+				bRec.typeMask = EAll;
 			}
 		}
 	}
@@ -26,14 +29,13 @@ float3 EstimateDirect(const float3& p, const float3& n, const float3& wo, const 
 	float3 wi;
 	if(!light->IsDeltaLight())
 	{
-		BxDFType sampledType;
-        float3 f = bsdf->Sample_f(wo, &wi, bsdfSample, &bsdfPdf, flags, &sampledType);
+		float3 f = mat.bsdf.sample(bRec, bRec.rng->randomFloat2());
 		if(!ISBLACK(f) && bsdfPdf > 0.0f)
 		{
 			float weight = 1.0f;
-			if (!(sampledType & BSDF_SPECULAR))
+			if (!(bRec.sampledType & EDelta))
 			{
-                lightPdf = light->Pdf(g_SceneData, p, wi);
+                lightPdf = light->Pdf(g_SceneData, bRec.map.P, wi);
                 if (lightPdf == 0.0f)
                     return Ld;
                 weight = PowerHeuristic(1, bsdfPdf, 1, lightPdf);
@@ -41,13 +43,14 @@ float3 EstimateDirect(const float3& p, const float3& n, const float3& wo, const 
 			float3 Li = make_float3(0.0f);
 			TraceResult r2;
 			r2.Init();
-			if(k_TraceRay(wi, p, &r2) && r2.LightIndex() == li)
-				Li = r2.Le(p, n, -wi);
-			else Li = light->Le(g_SceneData, Ray(p, wi));
+			if(k_TraceRay(wi, bRec.map.P, &r2) && r2.LightIndex() == li)
+				Li = r2.Le(bRec.map.P, bRec.map.sys.n, -wi);
+			else Li = light->Le(g_SceneData, Ray(bRec.map.P, wi));
 			if(!ISBLACK(Li))
 			{
-				Li = Li * Transmittance(Ray(p, wi), 0, r2.m_fDist);
-				Ld += Li * f * AbsDot(wi, n) * weight / bsdfPdf;
+				Li = Li * Transmittance(Ray(bRec.map.P, wi), 0, r2.m_fDist);
+				//not shure about the / bsdfPdf
+				Ld += Li * f / bsdfPdf * AbsDot(wi, bRec.map.sys.n) * weight / bsdfPdf;
 			}
 		}
 	}
@@ -55,7 +58,7 @@ float3 EstimateDirect(const float3& p, const float3& n, const float3& wo, const 
 	return Ld;
 }
 
-float3 UniformSampleAllLights(const float3& p, const float3& n, const float3& wo, const e_KernelBSDF* bsdf, CudaRNG& rng, int nSamples)
+float3 UniformSampleAllLights(BSDFSamplingRecord& bRec, const e_KernelMaterial& mat, int nSamples)
 {
 	float3 L = make_float3(0);
 	for(int i = 0; i < g_SceneData.m_sLightSelector.m_uCount; i++)
@@ -64,26 +67,24 @@ float3 UniformSampleAllLights(const float3& p, const float3& n, const float3& wo
 		float3 Ld = make_float3(0);
 		for(int j = 0; j < nSamples; j++)
 		{
-			LightSample lightSample(rng);
-			BSDFSample bsdfSample(rng);
-			Ld += EstimateDirect(p, n, wo, bsdf, rng, light, i, lightSample, bsdfSample, BxDFType(BSDF_ALL & ~BSDF_SPECULAR));
+			LightSample lightSample(*bRec.rng);
+			Ld += EstimateDirect(bRec, mat, light, i, lightSample, EBSDFType(EAll & ~EDelta));
 		}
 		L += Ld / float(nSamples);
 	}
 	return L;
 }
 
-float3 UniformSampleOneLight(const float3& p, const float3& n, const float3& wo, const e_KernelBSDF* bsdf, CudaRNG& rng)
+float3 UniformSampleOneLight(BSDFSamplingRecord& bRec, const e_KernelMaterial& mat)
 {
 	int nLights = g_SceneData.m_sLightSelector.m_uCount;
     if (nLights == 0)
 		return make_float3(0.0f);
-    int lightNum = Floor2Int(rng.randomFloat() * nLights);
+	int lightNum = Floor2Int(bRec.rng->randomFloat() * nLights);
     lightNum = MIN(lightNum, nLights-1);
 	e_KernelLight *light = g_SceneData.m_sLightData.Data + g_SceneData.m_sLightSelector.m_sIndices[lightNum];
-	LightSample lightSample(rng);
-    BSDFSample bsdfSample(rng);
-	return float(nLights) * EstimateDirect(p, n, wo, bsdf, rng, light, lightNum, lightSample, bsdfSample, BxDFType(BSDF_ALL & ~BSDF_SPECULAR));
+	LightSample lightSample(*bRec.rng);
+	return float(nLights) * EstimateDirect(bRec, mat, light, lightNum, lightSample, EBSDFType(EAll & ~EDelta));
 }
 
 float3 PathTrace(float3& a_Dir, float3& a_Ori, CudaRNG& rnd, float* distTravalled)
@@ -95,6 +96,7 @@ float3 PathTrace(float3& a_Dir, float3& a_Ori, CudaRNG& rnd, float* distTravalle
 	float3 cf = make_float3(1,1,1);  // accumulated reflectance
 	int depth = 0;
 	bool specularBounce = false;
+	BSDFSamplingRecord bRec;
 	while (depth++ < 7)
 	{
 		r.Init();
@@ -106,25 +108,22 @@ float3 PathTrace(float3& a_Dir, float3& a_Ori, CudaRNG& rnd, float* distTravalle
 		}
 		if(distTravalled && depth == 1)
 			*distTravalled = r.m_fDist;
-		float3 wi;
-		float pdf;
-		e_KernelBSDF bsdf = r.GetBSDF(r0(r.m_fDist));
+		r.getBsdfSample(r0, rnd, &bRec);
 		if(!DIRECT || (depth == 1 || specularBounce))
-			cl += cf * r.Le(r0(r.m_fDist), bsdf.ng, -r0.direction);
+			cl += cf * r.Le(r0(r.m_fDist), bRec.map.sys.n, -r0.direction);
 		if(DIRECT)
-			cl += cf * UniformSampleAllLights(r0(r.m_fDist), bsdf.sys.n, -r0.direction, &bsdf, rnd, 1);
-		BxDFType flags;
-		float3 f = bsdf.Sample_f(-r0.direction, &wi, BSDFSample(rnd), &pdf, BSDF_ALL, &flags);
-		specularBounce = (flags & BSDF_SPECULAR) != 0;
+			cl += cf * UniformSampleAllLights(bRec, r.getMat(), 1);
+		float3 f = r.getMat().bsdf.sample(bRec, rnd.randomFloat2());
+		specularBounce = (bRec.sampledType & EDelta) != 0;
 		float p = f.x>f.y && f.x>f.z ? f.x : f.y>f.z ? f.y : f.z; 
 		if (depth > 5)
 			if (rnd.randomFloat() < p)
 				f = f / p;
 			else break;
-		if(!pdf)
+		if(ISBLACK(f))
 			break;
-		cf = cf * f * AbsDot(wi, bsdf.sys.n) / pdf;
-		r0 = Ray(r0(r.m_fDist), wi);
+		cf = cf * f;
+		r0 = Ray(r0(r.m_fDist), bRec.wo);
 	}
 	return cl;
 }
