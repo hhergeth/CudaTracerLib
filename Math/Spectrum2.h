@@ -152,7 +152,7 @@ public:
 	/// Check for NaNs
 	CUDA_FUNC_IN bool isNaN() const {
 		for (int i=0; i<N; i++)
-			if (std::isnan(s[i]))
+			if (isnan(s[i]))
 				return true;
 		return false;
 	}
@@ -160,7 +160,7 @@ public:
 	/// Returns whether the spectrum only contains valid (non-NaN, nonnegative) samples
 	CUDA_FUNC_IN bool isValid() const {
 		for (int i=0; i<N; i++)
-			if (!std::isfinite(s[i]) || s[i] < 0.0f)
+			if (!isfinite(s[i]) || s[i] < 0.0f)
 				return false;
 		return true;
 	}
@@ -183,7 +183,7 @@ public:
 	CUDA_FUNC_IN TSpectrum sqrt() const {
 		TSpectrum value;
 		for (int i=0; i<N; i++)
-			value.s[i] = std::sqrt(s[i]);
+			value.s[i] = sqrtf(s[i]);
 		return value;
 	}
 
@@ -199,7 +199,7 @@ public:
 	CUDA_FUNC_IN TSpectrum exp() const {
 		TSpectrum value;
 		for (int i=0; i<N; i++)
-			value.s[i] = math::fastexp(s[i]);
+			value.s[i] = expf(s[i]);
 		return value;
 	}
 
@@ -207,14 +207,14 @@ public:
 	CUDA_FUNC_IN TSpectrum pow(Scalar f) const {
 		TSpectrum value;
 		for (int i=0; i<N; i++)
-			value.s[i] = std::pow(s[i], f);
+			value.s[i] = powf(s[i], f);
 		return value;
 	}
 
 	/// Clamp negative values
 	CUDA_FUNC_IN void clampNegative() {
 		for (int i=0; i<N; i++)
-			s[i] = std::max((Scalar) 0.0f, s[i]);
+			s[i] = MAX((Scalar) 0.0f, s[i]);
 	}
 
 	/// Return the highest-valued spectral sample
@@ -398,7 +398,7 @@ public:
 	{
 		float r,g,b;
 		toLinearRGB(r,g,b);
-#define toInt(x) (int((float)pow(clamp01(x),1.0f/1.2f)*255.0f+0.5f))
+#define toInt(x) (unsigned char((float)powf(clamp01(x),1.0f/1.2f)*255.0f+0.5f))
 		return make_uchar4(toInt(r), toInt(g), toInt(b), 255);
 #undef toInt
 	}
@@ -408,8 +408,6 @@ public:
 		float r = float(col.x) / 255.0f, g = float(col.y) / 255.0f, b = float(col.z) / 255.0f;
 		fromLinearRGB(r,g,b);
 	}
-
-	CUDA_HOST CUDA_DEVICE void fromContinuousSpectrum(const ContinuousSpectrum &smooth);
 };
 
 class SpectrumHelper
@@ -436,19 +434,9 @@ public:
 		Spectrum rgbIllum2SpecGreen;
 		Spectrum rgbIllum2SpecBlue;
 		float m_wavelengths[SPECTRUM_SAMPLES + 1];
-		staticData();
+		void init();
 	};
 	static void StaticInitialize();
 	static void StaticDeinitialize();
-	CUDA_FUNC_IN static staticData* getData()
-	{
-#ifdef ISCUDA
-		return device;
-#else
-		return &host;
-#endif
-	}
-private:
-	static staticData host;
-	static staticData* device;
+	CUDA_FUNC_IN static staticData* getData();
 };
