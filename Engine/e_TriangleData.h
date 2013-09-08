@@ -17,29 +17,18 @@ struct TraceResult
 	float2 m_fUV;
 	const e_TriangleData* m_pTri;
 	const e_Node* m_pNode;
-	CUDA_FUNC_IN bool hasHit() const
-	{
-		return m_pTri != 0;
-	}
-	CUDA_FUNC_IN void Init()
-	{
-		m_fDist = FLT_MAX;
-		m_fUV = make_float2(0,0);
-		m_pNode = 0;
-		m_pTri = 0;
-	}
-	CUDA_FUNC_IN operator bool() const
-	{
-		return hasHit();
-	}
-
-	CUDA_FUNC_IN Frame lerpFrame() const;
-	CUDA_FUNC_IN unsigned int getMatIndex() const;
-	CUDA_FUNC_IN float2 lerpUV() const;
-	CUDA_FUNC_IN float3 Le(const float3& p, const float3& n, const float3& w) const;
-	CUDA_FUNC_IN unsigned int LightIndex() const;
-	CUDA_FUNC_IN const e_KernelMaterial& getMat() const;
-	CUDA_FUNC_IN void getBsdfSample(const Ray& r, CudaRNG _rng, BSDFSamplingRecord* bRec) const;
+	unsigned int __internal__earlyExit;
+	CUDA_DEVICE CUDA_HOST bool hasHit() const;
+	CUDA_DEVICE CUDA_HOST void Init(bool first = false);
+	CUDA_DEVICE CUDA_HOST operator bool() const;
+	CUDA_DEVICE CUDA_HOST Frame lerpFrame() const;
+	CUDA_DEVICE CUDA_HOST unsigned int getMatIndex() const;
+	CUDA_DEVICE CUDA_HOST float2 lerpUV() const;
+	CUDA_DEVICE CUDA_HOST Spectrum Le(const float3& p, const float3& n, const float3& w) const;
+	CUDA_DEVICE CUDA_HOST unsigned int LightIndex() const;
+	CUDA_DEVICE CUDA_HOST const e_KernelMaterial& getMat() const;
+	CUDA_DEVICE CUDA_HOST void getBsdfSample(const Ray& r, CudaRNG _rng, BSDFSamplingRecord* bRec) const;
+	CUDA_DEVICE CUDA_HOST void getBsdfSample(const Ray& r, CudaRNG _rng, BSDFSamplingRecord* bRec, const float3& wo) const;
 };
 
 #ifdef EXT_TRI
@@ -75,49 +64,13 @@ public:
 			//NOR[i] = N[i];
 		}
 	}
-	CUDA_FUNC_IN Frame lerpFrame(const float2& bCoords, const float4x4& localToWorld, float3* ng = 0) const 
-	{
-		//float3 na = NOR[0], nb = NOR[1], nc = NOR[2];
-		uint4 q = m_sDeviceData.Row0;
-		float3 na = Uchar2ToNormalizedFloat3(q.x), nb = Uchar2ToNormalizedFloat3(q.x >> 16), nc = Uchar2ToNormalizedFloat3(q.y);
-		float3 ta = Uchar2ToNormalizedFloat3(q.y >> 16), tb = Uchar2ToNormalizedFloat3(q.z), tc = Uchar2ToNormalizedFloat3(q.z >> 16);
-		Frame sys;
-		float w = 1.0f - bCoords.x - bCoords.y, u = bCoords.x, v = bCoords.y;
-		sys.n = (u * na + v * nb + w * nc);
-		sys.t = (u * ta + v * tb + w * tc);
-
-		sys = sys * localToWorld;
-		sys.s = normalize(cross(sys.t, sys.n));
-		sys.t = normalize(cross(sys.s, sys.n));
-		if(ng)
-			*ng = normalize(localToWorld.TransformNormal((na + nb + nc) / 3.0f));
-		return sys;
-	}
+	CUDA_DEVICE CUDA_HOST Frame lerpFrame(const float2& bCoords, const float4x4& localToWorld, float3* ng = 0) const;
 	CUDA_FUNC_IN unsigned int getMatIndex(const unsigned int off) const 
 	{
 		unsigned int v = m_sDeviceData.Row0.w;
 		return unsigned int(v ) + off;
 	}
-	CUDA_FUNC_IN float2 lerpUV(const float2& bCoords) const 
-	{
-		union
-		{
-			ushort2 h;
-			unsigned int i;
-			CUDA_FUNC_IN float2 ToFloat2()
-			{
-				return make_float2(half(h.x).ToFloat(), half(h.y).ToFloat());
-			}
-		} dat;
-		dat.i = m_sDeviceData.Row1.x;
-		float2 a = dat.ToFloat2();
-		dat.i = m_sDeviceData.Row1.y;
-		float2 b = dat.ToFloat2();
-		dat.i = m_sDeviceData.Row1.z;
-		float2 c = dat.ToFloat2();
-		float u = bCoords.y, v = 1.0f - u - bCoords.x;
-		return a + u * (b - a) + v * (c - a);
-	}
+	CUDA_DEVICE CUDA_HOST float2 lerpUV(const float2& bCoords) const;
 };
 #else
 struct e_TriangleData

@@ -33,7 +33,7 @@ struct e_KernelTerrainData
 	CUDA_FUNC_IN float2 getsdxy()
 	{
 		float3 dim = m_sMax - m_sMin;
-		return make_float2(dim.x, dim.z) / make_float2(pow2(m_uDepth));
+		return make_float2(dim.x, dim.z) / make_float2(pow2((float)m_uDepth));
 	}
 	float2 getFlatScale()
 	{

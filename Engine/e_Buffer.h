@@ -31,9 +31,9 @@ protected:
 	std::vector<part> m_sInvalidated;
 	std::vector<part> m_sDeallocated;
 public:
-	e_Buffer(unsigned int a_NumElements, unsigned int a_ElementSize = -1)
+	e_Buffer(unsigned int a_NumElements, unsigned int a_ElementSize = 0xffffffff)
 	{
-		if(a_ElementSize == -1)
+		if(a_ElementSize == 0xffffffff)
 			a_ElementSize = sizeof(H);
 		m_uHostBlockSize = a_ElementSize;
 		m_uPos = 0;
@@ -340,7 +340,7 @@ private:
 	};
 	std::vector<entry> m_sEntries;
 public:
-	e_CachedBuffer(unsigned int a_Count, unsigned int a_ElementSize = -1)
+	e_CachedBuffer(unsigned int a_Count, unsigned int a_ElementSize = 0xffffffff)
 		: e_Buffer<H, D>(a_Count, a_ElementSize)
 	{
 		
@@ -393,7 +393,7 @@ protected:
 	std::vector<part> m_sInvalidated;
 	std::vector<part> m_sDeallocated;
 public:
-	e_Buffer(unsigned int N, unsigned int a_ElementSize = -1)
+	e_Buffer(unsigned int N, unsigned int a_ElementSize = 0xffffffff)
 	{
 		a_ElementSize = sizeof(T);
 		m_uHostBlockSize = a_ElementSize;
@@ -435,9 +435,9 @@ public:
 		a_Out << (unsigned int)m_sDeallocated.size();
 		a_Out.Write(host, m_uPos * m_uHostBlockSize);
 		if(m_sDeallocated.size())
-			a_Out.Write(&m_sDeallocated[0], m_sDeallocated.size() * sizeof(part));
+			a_Out.Write(&m_sDeallocated[0], (int)m_sDeallocated.size() * sizeof(part));
 	}
-	e_BufferReference<T, T> malloc(int a_Count)
+	e_BufferReference<T, T> malloc(unsigned int a_Count)
 	{
 		e_BufferReference<T, T> r;
 		for(unsigned int i = 0; i < m_sDeallocated.size(); i++)

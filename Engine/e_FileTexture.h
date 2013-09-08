@@ -39,6 +39,7 @@ CUDA_FUNC_IN bool WrapCoordinates(const float2& a_UV, const float2& dim, e_Image
 		*loc = a_UV * dim;
 		return true;
 	}
+	return false;
 }
 
 class CUDA_ALIGN(16) e_KernelFileTexture
@@ -80,9 +81,9 @@ public:
 				if(m_uType == e_KernelTexture_DataType::vtGeneric)
 					h = ld<float>(v, i, j);
 				else if(m_uType == e_KernelTexture_DataType::vtRGBCOL)
-					h = COLORREFToFloat3(ld<RGBCOL>(v, i, j)).x;
+					h = SpectrumConverter::COLORREFToFloat3(ld<RGBCOL>(v, i, j)).x;
 				else if(m_uType == e_KernelTexture_DataType::vtRGBE)
-					h = RGBEToFloat3(ld<RGBE>(v, i, j)).x;
+					h = SpectrumConverter::RGBEToFloat3(ld<RGBE>(v, i, j)).x;
 				data[(j + 1) * W + i + 1] = h;
 			}
 	}
@@ -91,6 +92,18 @@ public:
 		if(m_uType == e_KernelTexture_DataType::vtGeneric)
 			return at<float3>(a_UV);
 		else return make_float3(Sample<float4>(a_UV));
+	}
+	template<> CUDA_FUNC_IN Spectrum Sample(const float2& a_UV) const
+	{
+		if(m_uType == e_KernelTexture_DataType::vtGeneric)
+			return at<Spectrum>(a_UV);
+		else
+		{
+			Spectrum s;
+			float4 f = Sample<float4>(a_UV);
+			s.fromLinearRGB(f.x, f.y, f.z);
+			return s;
+		}
 	}
 private:
 	template<typename T> CUDA_FUNC_IN T get(int i) const
@@ -118,9 +131,9 @@ private:
 		int2 uv = clamp(uva, make_int2(0, 0), m_uDim);
 		float4 r;
 		if(m_uType == e_KernelTexture_DataType::vtRGBCOL)
-			r = COLORREFToFloat4(get<RGBCOL>(uv.y * m_uWidth + uv.x));
+			r = SpectrumConverter::COLORREFToFloat4(get<RGBCOL>(uv.y * m_uWidth + uv.x));
 		else if(m_uType == e_KernelTexture_DataType::vtRGBE)
-			r = make_float4(RGBEToFloat3(get<RGBE>(uv.y * m_uWidth + uv.x)), 1);
+			r = make_float4(SpectrumConverter::RGBEToFloat3(get<RGBE>(uv.y * m_uWidth + uv.x)), 1);
 		return r;
 	}
 };
@@ -137,7 +150,7 @@ private:
 	e_KernelFileTexture m_sKernelData;
 	e_ImageWrap m_uWrapMode;
 public:
-	e_FileTexture() {m_pDeviceData = m_pHostData = 0; m_uWidth = m_uHeight = m_uBpp = -1; m_uWrapMode = TEXTURE_REPEAT;}
+	e_FileTexture() {m_pDeviceData = m_pHostData = 0; m_uWidth = m_uHeight = m_uBpp = 0xffffffff; m_uWrapMode = TEXTURE_REPEAT;}
 	e_FileTexture(float4& col);
 	e_FileTexture(InputStream& a_In);
 	void Free()
@@ -231,13 +244,12 @@ struct e_KernelMIPMap
 				switch(t)
 				{
 				case vtRGBE:
-					return make_float4(RGBEToFloat3(((RGBE*)v)[o]));
+					return make_float4(SpectrumConverter::RGBEToFloat3(((RGBE*)v)[o]));
 				case vtRGBCOL:
-					return COLORREFToFloat4(((RGBCOL*)v)[o]);
+					return SpectrumConverter::COLORREFToFloat4(((RGBCOL*)v)[o]);
 				default:
 					return ((float4*)v)[o];
 				}
-				return make_float4(0);
 			}
 		};
 		return Sample<float4, fu>(a_UV, width, fu());
@@ -251,16 +263,39 @@ struct e_KernelMIPMap
 				switch(t)
 				{
 				case vtRGBE:
-					return RGBEToFloat3(((RGBE*)v)[o]);
+					return SpectrumConverter::RGBEToFloat3(((RGBE*)v)[o]);
 				case vtRGBCOL:
-					return COLORREFToFloat3(((RGBCOL*)v)[o]);
+					return SpectrumConverter::COLORREFToFloat3(((RGBCOL*)v)[o]);
 				default:
 					return ((float3*)v)[o];
 				}
-				return make_float3(0);
 			}
 		};
 		return Sample<float3, fu>(a_UV, width, fu());
+	}
+	template<> CUDA_FUNC_IN Spectrum Sample(const float2& a_UV, float width) const
+	{
+		struct fu
+		{
+			CUDA_FUNC_IN Spectrum operator()(const void* v, unsigned int o, e_KernelTexture_DataType t)
+			{
+				Spectrum s;
+				switch(t)
+				{
+				case vtRGBE:
+					s.fromRGBE(((RGBE*)v)[o]);
+					break;
+				case vtRGBCOL:
+					s.fromRGBCOL(((RGBCOL*)v)[o]);
+					break;
+				default:
+					s = ((Spectrum*)v)[o];
+					break;
+				}
+				return s;
+			}
+		};
+		return Sample<Spectrum, fu>(a_UV, width, fu());
 	}
 private:
 	template<typename T, typename F> CUDA_FUNC_IN T Texel(F func, unsigned int level, const float2& a_UV) const
@@ -319,7 +354,7 @@ class e_MIPMap
 	e_KernelMIPMap m_sKernelData;
 	unsigned int m_sOffsets[MAX_MIPS];
 public:
-	e_MIPMap() {m_pDeviceData = 0; m_uWidth = m_uHeight = m_uBpp = -1;}
+	e_MIPMap() {m_pDeviceData = 0; m_uWidth = m_uHeight = m_uBpp = 0xffffffff;}
 	e_MIPMap(float4& col);
 	e_MIPMap(InputStream& a_In);
 	void Free()

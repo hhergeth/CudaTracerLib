@@ -34,12 +34,12 @@ struct k_AdaptiveStruct
 struct k_pPpmPhoton
 {
 	float3 Pos;
-	float3 L;
+	Spectrum L;
 	float3 Wi;
 	float3 Nor;
 	unsigned int next;
 	CUDA_FUNC_IN k_pPpmPhoton(){}
-	CUDA_FUNC_IN k_pPpmPhoton(float3 p, float3 l, float3 wi, float3 n, unsigned int ne)
+	CUDA_FUNC_IN k_pPpmPhoton(const float3& p, const Spectrum& l, const float3& wi, const float3& n, unsigned int ne)
 	{
 		Pos = p;
 		Nor = n;
@@ -55,7 +55,7 @@ struct k_pPpmPhoton
 	{
 		return (Wi);
 	}
-	CUDA_FUNC_IN float3 getL()
+	CUDA_FUNC_IN Spectrum getL()
 	{
 		return (L);
 	}
@@ -132,7 +132,7 @@ template<typename HASH> struct k_PhotonMap
 	}
 
 #ifdef __CUDACC__
-	CUDA_ONLY_FUNC k_StoreResult StorePhoton(const float3& p, const float3& l, const float3& wi, const float3& n, unsigned int* a_PhotonCounter) const
+	CUDA_ONLY_FUNC k_StoreResult StorePhoton(const float3& p, const Spectrum& l, const float3& wi, const float3& n, unsigned int* a_PhotonCounter) const
 	{
 		if(!m_sHash.IsValidHash(p))
 			return k_StoreResult::NotValid;
@@ -148,7 +148,7 @@ template<typename HASH> struct k_PhotonMap
 		return k_StoreResult::Full;
 	}
 
-	template<bool VOL> CUDA_ONLY_FUNC float3 L_Volume(float a_r, float a_NumPhotonEmitted, CudaRNG& rng, const Ray& r, float tmin, float tmax, const float3& sigt) const;
+	template<bool VOL> CUDA_ONLY_FUNC Spectrum L_Volume(float a_r, float a_NumPhotonEmitted, CudaRNG& rng, const Ray& r, float tmin, float tmax, const Spectrum& sigt) const;
 #endif
 };
 
@@ -185,14 +185,14 @@ struct k_PhotonMapCollection
 
 #ifdef __CUDACC__
 
-	template<bool SURFACE> CUDA_ONLY_FUNC k_StoreResult StorePhoton(const float3& p, const float3& l, const float3& wi, const float3& n)
+	template<bool SURFACE> CUDA_ONLY_FUNC k_StoreResult StorePhoton(const float3& p, const Spectrum& l, const float3& wi, const float3& n)
 	{
 		if(SURFACE)
 			return m_sSurfaceMap.StorePhoton(p, l, wi, n, &m_uPhotonNumStored);
 		else return m_sVolumeMap.StorePhoton(p, l, wi, n, &m_uPhotonNumStored);
 	}
 
-	template<bool VOL> CUDA_ONLY_FUNC float3 L(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const float3& sigt) const
+	template<bool VOL> CUDA_ONLY_FUNC Spectrum L(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const Spectrum& sigt) const
 	{
 		return m_sVolumeMap.L_Volume<VOL>(a_r, m_uPhotonNumEmitted, rng, r, tmin, tmax, sigt);
 	}
@@ -244,7 +244,7 @@ private:
 	float getCurrentRadius(int exp)
 	{
 		float f = 1;
-		for(int k = 1; k < m_uPassesDone; k++)
+		for(unsigned int k = 1; k < m_uPassesDone; k++)
 			f *= (k + ALPHA) / k;
 		f = powf(m_fInitialRadius, float(exp)) * f * 1.0f / float(m_uPassesDone);
 		return powf(f, 1.0f / float(exp));

@@ -38,7 +38,7 @@ e_SceneInitData e_SceneInitData::CreateFor_S_SanMiguel(unsigned int a_SceneNodes
 	e_SceneInitData r = CreateForSpecificMesh(1000000*i, 1000000*i, 1000000*i, 1000000*i, 4096 * 5, a_Lights, a_SceneNodes);
 	//e_SceneInitData r = CreateForSpecificMesh(7880512, 9359209, 2341126, 28077626, 4096 * 5, a_Lights, a_SceneNodes);//san miguel
 	//e_SceneInitData r = CreateForSpecificMesh(1,1,1,1,1,1,1);
-	//return CreateForSpecificMesh(10000, 10000, 10000, 15000, 255, a_Lights);
+	return CreateForSpecificMesh(100000, 100000, 100000, 1500000, 255, a_Lights);
 	//r.m_uSizeAnimStream = 16 * 1024 * 1024;
 	r.m_uSizeAnimStream = 1;
 	return r;
@@ -371,7 +371,7 @@ AABB e_DynamicScene::getBox(e_StreamReference(e_Node) n)
 	return n->getWorldBox(getMesh(n));
 }
 
-e_StreamReference(e_KernelLight) e_DynamicScene::createLight(e_StreamReference(e_Node) Node, const char* materialName, float3& L)
+e_StreamReference(e_KernelLight) e_DynamicScene::createLight(e_StreamReference(e_Node) Node, const char* materialName, Spectrum& L)
 {
 	unsigned int mi;
 	ShapeSet s = CreateShape(Node, materialName, &mi);
@@ -540,18 +540,18 @@ e_StreamReference(e_KernelMaterial) e_DynamicScene::getMat(e_StreamReference(e_N
 	throw 1;
 }
 
-e_StreamReference(e_KernelLight) e_DynamicScene::setEnvironementMap(const float3& power, const char* file)
+e_StreamReference(e_KernelLight) e_DynamicScene::setEnvironementMap(const Spectrum& power, const char* file)
 {
-	e_BufferReference<e_MIPMap, e_KernelMIPMap> m = LoadMIPMap(file);
-	e_BufferReference<Distribution2D<4096, 4096>, Distribution2D<4096, 4096>> d = getDistribution2D();
-	int s = sizeof(e_InfiniteLight);
+	//e_BufferReference<e_MIPMap, e_KernelMIPMap> m = LoadMIPMap(file);
+	//e_BufferReference<Distribution2D<4096, 4096>, Distribution2D<4096, 4096>> d = getDistribution2D();
+	//int s = sizeof(e_InfiniteLight);
 	
-	e_InfiniteLight l = e_InfiniteLight(power, d, m);
-	e_StreamReference(e_KernelLight) r = createLight(l);
+	//e_InfiniteLight l = e_InfiniteLight(power, d, m);
+	//e_StreamReference(e_KernelLight) r = createLight(l);
 	m_sEnvMap = e_EnvironmentMap((char*)file);
 	m_sEnvMap.LoadTextures(textureLoader(this));
-	//return e_StreamReference(e_KernelLight)(m_pLightStream, 0, 0);
-	return r;
+	return e_StreamReference(e_KernelLight)(m_pLightStream, 0, 0);
+	//return r;
 }
 
 bool canUse(float3& p, float3& cp, float3& cd, float f)

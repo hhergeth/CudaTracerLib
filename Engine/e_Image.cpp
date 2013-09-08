@@ -79,13 +79,11 @@ void e_Image::WriteImage(const char* fileName, float splatScale)
         for (int x = 0; x < xResolution; ++x)
 		{
 			float weightSum = hostPixels[y * xResolution + x].weightSum;
-			float3 rgb = hostPixels[y * xResolution + x].rgb;
+			Spectrum rgb = hostPixels[y * xResolution + x].rgb;
 			if(weightSum != 0)
-				rgb = fmaxf(make_float3(0), rgb / hostPixels[y * xResolution + x].weightSum);
+				rgb = fmaxf(Spectrum(0.0f), rgb / hostPixels[y * xResolution + x].weightSum);
 			rgb += splatScale * hostPixels[y * xResolution + x].splatRgb;
-			pixel->red = rgb.x;
-			pixel->green = rgb.y;
-			pixel->blue = rgb.z;
+			rgb.toLinearRGB(pixel->red, pixel->green, pixel->blue);
 			pixel = (FIRGBAF*)((long long)pixel + 12);
 		}
 		bits += FreeImage_GetPitch(bitmap);

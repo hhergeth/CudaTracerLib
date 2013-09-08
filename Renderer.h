@@ -12,7 +12,7 @@
 
 inline void line(float3 a, float3 b, float4x4& vp, FW::GLContext* O, float3 col)
 {
-	RGBCOL q = Float3ToCOLORREF(col);
+	RGBCOL q = SpectrumConverter::Float3ToCOLORREF(col);
 	float4 q0 = vp * make_float4(a, 1), q1 = vp * make_float4(b, 1);
 
 	O->strokeLine(*(FW::Vec4f*)&q0, *(FW::Vec4f*)&q1, *(int*)&q);
@@ -26,7 +26,7 @@ inline void rect(float3 a, float3 b, float3 c, float3 d, float4x4& vp, FW::GLCon
 	line(d, a, vp, O, col);
 }
 
-void plotBox(AABB& box, float4x4& vp, FW::GLContext* O, float3 col)
+inline void plotBox(AABB& box, float4x4& vp, FW::GLContext* O, float3 col)
 {
 	float3 d = box.maxV - box.minV;
 #define A(x,y,z) make_float3(x,y,z) * d + box.minV
@@ -42,7 +42,7 @@ void plotBox(AABB& box, float4x4& vp, FW::GLContext* O, float3 col)
 #undef B
 }
 
-void plot(e_BVHNodeData* node, e_BVHNodeData* nodes, uint depth, float4x4& vp, FW::GLContext* O)
+inline void plot(e_BVHNodeData* node, e_BVHNodeData* nodes, uint depth, float4x4& vp, FW::GLContext* O)
 {
 	float f = 1.0f - (float)depth / 60.0f;
 	float3 col = make_float3(f,0,0);
@@ -56,7 +56,7 @@ void plot(e_BVHNodeData* node, e_BVHNodeData* nodes, uint depth, float4x4& vp, F
 		plot(nodes + c.y, nodes, depth + 1, vp, O);
 }
 
-void plot(int i, e_BVHNodeData* nodes, uint depth, float4x4& mat, float4x4& vp, FW::GLContext* O)
+inline void plot(int i, e_BVHNodeData* nodes, uint depth, float4x4& mat, float4x4& vp, FW::GLContext* O)
 {
 	float3 c = make_float3(0,1,0);
 	AABB l, r;
@@ -152,7 +152,7 @@ public:
 				if(S->getSceneBVH()->getData().m_sStartNode != -1)
 					plot(S->getSceneBVH()->m_pNodes->operator()(0), S->getSceneBVH()->m_pNodes->operator()(), 0, vpq, gl);
 				else plotBox(S->getBox(S->getNodes()), vpq, gl, make_float3(1,0,0));				
-				for(int i = 0; i < S->getVolumes().getLength(); i++)
+				for(unsigned int i = 0; i < S->getVolumes().getLength(); i++)
 				{
 					AABB box = S->getVolumes()(i)->WorldBound();
 					plotBox(box, vpq, gl, make_float3(1,1,0));
@@ -161,7 +161,7 @@ public:
 			e_ImportantLightSelector sel = S->getKernelSceneData().m_sLightSelector;
 			AABB box = S->getKernelSceneData().m_sBox;
 			float eps = Distance(box.maxV, box.minV) / 100.0f;
-			for(int i = 0; i < S->getLightCount(); i++)
+			for(unsigned int i = 0; i < S->getLightCount(); i++)
 			{
 				AABB box = S->getLights()(i)->getBox(eps);
 				plotBox(box, vpq, gl, make_float3(1,0,0));
@@ -169,7 +169,7 @@ public:
 				p0 /= p0.w;
 				float2 p = make_float2(p0.x / p0.w, 1.0f - p0.y / p0.w) * make_float2(I2->getSize());
 				unsigned int col = (RGB(0,0,255)) | 0xff000000;
-				for(int j = 0; j < sel.m_uCount; j++)
+				for(unsigned int j = 0; j < sel.m_uCount; j++)
 					if(sel.m_sIndices[j] == i)
 					{
 						col = (RGB(0,255,0)) | 0xff000000;
@@ -183,7 +183,7 @@ public:
 			//	plotBox(g_pScene->getNodes()[i].getWorldBox());
 			if(a_DrawObjectBvhs)
 			{
-				for(int i = 0; i < S->getNodeCount(); i++)
+				for(unsigned int i = 0; i < S->getNodeCount(); i++)
 				{
 					unsigned int j = S->getMesh(S->getNodes()(i))->getKernelData().m_uBVHNodeOffset / 4;
 					plot(0, S->m_pBVHStream->operator()(j), 0, S->getNodes()[i].getWorldMatrix(), vpq, gl);
@@ -261,7 +261,7 @@ public:
 				m_uActiveComponent = 4 + i;
 			}
 		}
-		return m_uActiveComponent;
+		return m_uActiveComponent != 0;
 	}
 	void HandleMove(e_StreamReference(e_Node) N, e_DynamicScene* S, e_Camera* C, int2 p, int2 s)
 	{

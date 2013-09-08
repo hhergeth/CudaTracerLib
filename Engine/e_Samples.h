@@ -139,6 +139,7 @@ struct BSDFSamplingRecord
 {
 	CudaRNG* rng;
 	MapParameters map;
+	float3 ng;
 	/// Normalized incident direction in local coordinates
 	float3 wi;
 	/// Normalized outgoing direction in local coordinates
@@ -151,11 +152,18 @@ struct BSDFSamplingRecord
 	unsigned int sampledType;
 	int sampledComponent;
 	CUDA_FUNC_IN BSDFSamplingRecord():rng(0){}
-	CUDA_FUNC_IN BSDFSamplingRecord(const MapParameters& mp, const Ray& r, CudaRNG& _rng, ETransportMode _mode = ERadiance)
-		: map(mp), wi(-1.0 * r.direction), mode(_mode), eta(1.0f),
-		  typeMask(ETypeCombinations::EAll), component(-1), sampledType(0), sampledComponent(-1),
-		  rng(&_rng)
+	CUDA_FUNC_IN void Clear(CudaRNG& _rng)
 	{
-
+		rng = &_rng;
+		typeMask = ETypeCombinations::EAll;
+		component = -1;
+		sampledType = 0;
+		sampledComponent = -1;
+		eta = 1.0f;
+		mode = ERadiance;
+	}
+	CUDA_FUNC_IN float3 getOutgoing()
+	{
+		return map.sys.toWorld(wo);
 	}
 };

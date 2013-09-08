@@ -1,7 +1,5 @@
 #pragma once
 
-//do not worry :') missing template class sizes at run time is okay, cause memory layout will be correct!
-
 #include "e_KernelMapping.h"
 #include "e_FileTexture.h"
 
@@ -121,28 +119,28 @@ struct e_KernelMarbleTexture
 	{
 
 	}
-	CUDA_FUNC_IN float3 Evaluate(const MapParameters & dg) const
+	CUDA_FUNC_IN Spectrum Evaluate(const MapParameters & dg) const
 	{
 		float3 P = mapping.Map(dg);
 		P *= scale;
         float marble = P.y + variation * FBm(P, scale * make_float3(1, 0, 0), scale * make_float3(0, 0, 1), omega, octaves);//BUG, need diffs...
         float t = .5f + .5f * sinf(marble);
         // Evaluate marble spline at _t_
-        float3 c[] = { make_float3(.58f, .58f, .6f), make_float3( .58f, .58f, .6f ), make_float3( .58f, .58f, .6f ),
-            make_float3( .5f, .5f, .5f ), make_float3( .6f, .59f, .58f ), make_float3( .58f, .58f, .6f ),
-            make_float3( .58f, .58f, .6f ), make_float3(.2f, .2f, .33f ), make_float3( .58f, .58f, .6f ), };
+        Spectrum c[] = { Spectrum(.58f, .58f, .6f),	 Spectrum( .58f, .58f, .6f ), Spectrum( .58f, .58f, .6f ),
+						 Spectrum( .5f, .5f, .5f ),	 Spectrum( .6f, .59f, .58f ), Spectrum( .58f, .58f, .6f ),
+						 Spectrum( .58f, .58f, .6f ), Spectrum(.2f, .2f, .33f ),	 Spectrum( .58f, .58f, .6f ), };
 #define NC  sizeof(c) / sizeof(c[0])
 #define NSEG (NC-3)
         int first = Floor2Int(t * NSEG);
         t = (t * NSEG - first);
-        float3 c0 = c[first];
-        float3 c1 = c[first+1];
-        float3 c2 = c[first+2];
-        float3 c3 = c[first+3];
+        Spectrum c0 = c[first];
+        Spectrum c1 = c[first+1];
+        Spectrum c2 = c[first+2];
+        Spectrum c3 = c[first+3];
         // Bezier spline evaluated with de Castilejau's algorithm
-        float3 s0 = (1.f - t) * c0 + t * c1;
-        float3 s1 = (1.f - t) * c1 + t * c2;
-        float3 s2 = (1.f - t) * c2 + t * c3;
+        Spectrum s0 = (1.f - t) * c0 + t * c1;
+        Spectrum s1 = (1.f - t) * c1 + t * c2;
+        Spectrum s2 = (1.f - t) * c2 + t * c3;
         s0 = (1.f - t) * s0 + t * s1;
         s1 = (1.f - t) * s1 + t * s2;
         // Extra scale of 1.5 to increase variation among colors
@@ -168,11 +166,11 @@ struct e_KernelUVTexture
 		: mapping(m)
 	{
 	}
-	CUDA_FUNC_IN float3 Evaluate(const MapParameters & dg) const
+	CUDA_FUNC_IN Spectrum Evaluate(const MapParameters & dg) const
 	{
 		float2 uv = make_float2(0);
 		mapping.Map(dg, &uv.x, &uv.y);
-		return make_float3(frac(uv.x), frac(uv.y), 0);
+		return Spectrum(frac(uv.x), frac(uv.y), 0);
 	}
 	template<typename L> void LoadTextures(L callback)
 	{
@@ -319,7 +317,7 @@ public:
 	}
 };
 
-template <int SIZE> struct CUDA_ALIGN(16) e_KernelTextureGE<float3, SIZE>
+template <int SIZE> struct CUDA_ALIGN(16) e_KernelTextureGE<Spectrum, SIZE>
 {
 public:
 	CUDA_ALIGN(16) unsigned char Data[SIZE];
@@ -344,13 +342,13 @@ public:
 	{
 		return (T*)Data;
 	}
-	CUDA_FUNC_IN float3 Evaluate(const MapParameters & dg) const
+	CUDA_FUNC_IN Spectrum Evaluate(const MapParameters & dg) const
 	{
-		CALL_FUNC(float3, return, Evaluate(dg))
+		CALL_FUNC(Spectrum, return, Evaluate(dg))
 	}
 	template<typename L> void LoadTextures(L callback)
 	{
-		CALL_FUNC(float3, , LoadTextures(callback))
+		CALL_FUNC(Spectrum, , LoadTextures(callback))
 	}
 };
 

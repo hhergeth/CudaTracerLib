@@ -27,3 +27,15 @@ template<typename T> CUDA_FUNC_IN const T* STL_upper_bound(const T* first, const
 	while(f++ <= last);
 	return first;
 }
+
+template<typename T> CUDA_FUNC_IN const T* STL_lower_bound(const T* first, const T* last, const T& value)
+{
+	const T* f = last;
+	do
+	{
+		if(*f < value)
+			return f;
+	}
+	while(f-- >= first);
+	return first;
+}

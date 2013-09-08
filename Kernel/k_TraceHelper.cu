@@ -17,7 +17,7 @@ texture<float4, 1> t_SceneNodes;
 texture<float4, 1> t_NodeTransforms;
 texture<float4, 1> t_NodeInvTransforms;
 
-bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResult* a_Result, const e_Node* N)
+bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResult* a_Result, const e_Node* N, int lastIndex)
 {
 	const bool USE_ALPHA = true;
 	unsigned int mIndex = N->m_uMeshIndex;
@@ -138,7 +138,7 @@ bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResult* a_Result,
 				float Oz = v00.w - origx*v00.x - origy*v00.y - origz*v00.z;
 				float invDz = 1.0f / (dirx*v00.x + diry*v00.y + dirz*v00.z);
 				float t = Oz * invDz;
-				if (t > 0.1f && t < a_Result->m_fDist)
+				if (t > 1e-3f && t < a_Result->m_fDist && triAddr != lastIndex)
 				{
 					float Ox = v11.w + origx*v11.x + origy*v11.y + origz*v11.z;
 					float Dx = dirx*v11.x + diry*v11.y + dirz*v11.z;
@@ -165,6 +165,7 @@ bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResult* a_Result,
 							}
 							if(q)
 							{
+								a_Result->__internal__earlyExit = triAddr;
 								a_Result->m_pNode = N;
 								a_Result->m_pTri = tri;
 								a_Result->m_fUV = make_float2(u, v);
@@ -188,8 +189,10 @@ bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResult* a_Result,
 
 bool k_TraceRay(const float3& dir, const float3& ori, TraceResult* a_Result)
 {
+	int lastIndex = a_Result->__internal__earlyExit;
+	const e_Node* lastNode = a_Result->m_pNode;
 #ifdef ISCUDA
-	atomicInc(&g_RayTracedCounterDevice, -1);
+	atomicInc(&g_RayTracedCounterDevice, 0xffffffff);
 #else
 	InterlockedIncrement(&g_RayTracedCounterHost);
 #endif
@@ -268,7 +271,7 @@ bool k_TraceRay(const float3& dir, const float3& ori, TraceResult* a_Result)
 			float3 scale = modl.Scale();
 			float scalef = length(d / scale);
 			a_Result->m_fDist /= scalef;
-			k_TraceRayNode(d, o, a_Result, N);
+			k_TraceRayNode(d, o, a_Result, N, lastNode == N ? lastIndex : -1);
 			//transform a_Result->m_fDist back to world
 			a_Result->m_fDist *= scalef;
 		}
@@ -276,7 +279,7 @@ bool k_TraceRay(const float3& dir, const float3& ori, TraceResult* a_Result)
 	return a_Result->hasHit();
 }
 
-void k_INITIALIZE(e_KernelDynamicScene& a_Data)
+void k_INITIALIZE(const e_KernelDynamicScene& a_Data)
 {
 	size_t offset;
 	cudaChannelFormatDesc cd0 = cudaCreateChannelDesc<float4>(), cd1 = cudaCreateChannelDesc<int>();
@@ -289,7 +292,7 @@ void k_INITIALIZE(e_KernelDynamicScene& a_Data)
 	r = cudaBindTexture(&offset, &t_NodeInvTransforms, a_Data.m_sSceneBVH.m_pInvNodeTransforms, &cd0, a_Data.m_sNodeData.UsedCount * sizeof(float4x4));
 }
 
-void k_STARTPASS(e_DynamicScene* a_Scene, e_Camera* a_Camera, k_TracerRNGBuffer& a_RngBuf)
+void k_STARTPASS(e_DynamicScene* a_Scene, e_Camera* a_Camera, const k_TracerRNGBuffer& a_RngBuf)
 {
 	unsigned int b = 0;
 	cudaMemcpyToSymbol(g_RayTracedCounterDevice, &b, sizeof(unsigned int));
@@ -298,12 +301,31 @@ void k_STARTPASS(e_DynamicScene* a_Scene, e_Camera* a_Camera, k_TracerRNGBuffer&
 	cudaMemcpyToSymbol(g_SceneDataDevice, &d2, sizeof(e_KernelDynamicScene));
 	cudaMemcpyToSymbol(g_CameraDataDevice, &d, sizeof(d));
 	cudaMemcpyToSymbol(g_RNGDataDevice, &a_RngBuf, sizeof(k_TracerRNGBuffer));
-	g_SceneData = d2;
-	g_CameraData = d;
-	g_RNGData = a_RngBuf;
 
 	g_SceneDataHost = a_Scene->getKernelSceneData(false);
 	g_CameraDataHost = d;
 	g_RNGDataHost = a_RngBuf;
 	g_RayTracedCounterHost = 0;
+}
+
+Spectrum TraceResult::Le(const float3& p, const float3& n, const float3& w) const 
+{
+	unsigned int i = LightIndex();
+	if(i == 0xffffffff)
+		return Spectrum(0.0f);
+	else return g_SceneData.m_sLightData[i].L(p, n, w);
+}
+
+unsigned int TraceResult::LightIndex() const
+{
+	unsigned int i = g_SceneData.m_sMatData[m_pTri->getMatIndex(m_pNode->m_uMaterialOffset)].NodeLightIndex;
+	if(i == 0xffffffff)
+		return 0xffffffff;
+	unsigned int j = m_pNode->m_uLightIndices[i];
+	return j;
+}
+
+const e_KernelMaterial& TraceResult::getMat() const
+{
+	return g_SceneData.m_sMatData[getMatIndex()];
 }

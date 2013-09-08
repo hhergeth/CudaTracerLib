@@ -2,19 +2,22 @@
 
 #include <MathTypes.h>
 #include "e_Buffer.h"
-#include "e_Node.h"
 #include "e_SceneBVH.h"
-#include "e_Light.h"
 #include "e_TerrainHeader.h"
-#include "e_Material.h"
 #include "e_Volumes.h"
-#include "e_KernelDynamicScene.h"
 #include "e_EnvironmentMap.h"
 
 struct e_KernelLight;
-
+class e_Node;
+struct e_KernelMesh;
+struct e_TriangleData;
+struct e_TriIntersectorData;
 class e_DynamicScene;
 class e_Camera;
+struct e_BVHNodeData;
+struct e_KernelMaterial;
+class e_KernelFileTexture;
+
 struct e_ImportantLightSelector
 {
 	unsigned int m_sIndices[32];

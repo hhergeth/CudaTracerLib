@@ -153,9 +153,6 @@
     <ClInclude Include="Engine\e_ShapeSet.h">
       <Filter>Engine</Filter>
     </ClInclude>
-    <ClInclude Include="Kernel\k_IntegrateHelper.h">
-      <Filter>Kernel</Filter>
-    </ClInclude>
     <ClInclude Include="Engine\e_Buffer.h">
       <Filter>Engine</Filter>
     </ClInclude>
@@ -211,9 +208,6 @@
     <ClInclude Include="Math\Quaternion.h">
       <Filter>Math</Filter>
     </ClInclude>
-    <ClInclude Include="Math\Spectrum.h">
-      <Filter>Math</Filter>
-    </ClInclude>
     <ClInclude Include="Math\Warp.h">
       <Filter>Math</Filter>
     </ClInclude>
@@ -238,7 +232,19 @@
     <ClInclude Include="Engine\e_BSDF_Simple.h">
       <Filter>Engine</Filter>
     </ClInclude>
-    <ClInclude Include="Math\Spectrum2.h">
+    <ClInclude Include="Math\Spectrum.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_RoughTransmittance.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\Spline.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_MicrofacetDistribution.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\Integrator.h">
       <Filter>Math</Filter>
     </ClInclude>
   </ItemGroup>
@@ -345,9 +351,6 @@
     <CudaCompile Include="Engine\e_BSDF_Complex.cu">
       <Filter>Engine</Filter>
     </CudaCompile>
-    <CudaCompile Include="Engine\e_BSDF.cu">
-      <Filter>Engine</Filter>
-    </CudaCompile>
     <CudaCompile Include="Engine\e_Material.cu">
       <Filter>Engine</Filter>
     </CudaCompile>
@@ -355,6 +358,36 @@
       <Filter>Engine</Filter>
     </CudaCompile>
     <CudaCompile Include="Math\Spectrum.cu">
+      <Filter>Math</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\e_aaaa.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\e_TriangleData.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\e_KernelMapping.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\e_Light.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\e_Volumes.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\e_PhaseFunction.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\e_RoughTransmittance.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Math\Spline.cu">
+      <Filter>Math</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\e_MicrofacetDistribution.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Math\Integrator.cu">
       <Filter>Math</Filter>
     </CudaCompile>
   </ItemGroup>

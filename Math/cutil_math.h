@@ -26,7 +26,7 @@
 #endif
 
 // When ray tracing, the epsilon that t > EPSILON in order to avoid self intersections
-#define EPSILON       2e-5
+#define EPSILON       2e-5f
 
 template<typename T> CUDA_FUNC_IN void swapk(T* a, T* b)
 {
@@ -515,11 +515,7 @@ inline __host__ __device__ float2 floor(const float2 v)
     return make_float2(floor(v.x), floor(v.y));
 }
 
-// reflect
-inline __host__ __device__ float2 reflect(float2 i, float2 n)
-{
-	return i - 2.0f * n * dot(n,i);
-}
+
 inline __host__ __device__ bool operator==(float2 &a, float2 &b)
 {
     return a.x == b.x && a.y == b.y;
@@ -683,11 +679,7 @@ inline __host__ __device__ float3 floor(const float3 v)
     return make_float3(floor(v.x), floor(v.y), floor(v.z));
 }
 
-// reflect
-inline __host__ __device__ float3 reflect(float3 i, float3 n)
-{
-	return i - 2.0f * n * dot(n,i);
-}
+
 inline __host__ __device__ bool operator==(float3 &a, float3 &b)
 {
 	return a.x == b.x && a.y == b.y && a.z == b.z;
@@ -700,13 +692,7 @@ inline __host__ __device__ unsigned int operator~(float3 &a)
 {
 	return a.x != 0 || a.y != 0 || a.z != 0;
 }
-inline __host__ __device__ float3 refract(const float3& i, const float3& n, const float refrIndex)
-{
-        float cosI = -dot( i, n );
-        float cosT2 = 1.0f - refrIndex * refrIndex * (1.0f - cosI * cosI);
-		float3 t = (refrIndex * i) + (refrIndex * cosI - sqrt( abs(cosT2) )) * n;
-        return t * cosT2;
-}
+
 
 // float4 functions
 ////////////////////////////////////////////////////////////////////////////////
@@ -1211,6 +1197,37 @@ public:
 	/// Square root variant that gracefully handles arguments < 0 that are due to roundoff errors
 	CUDA_FUNC_IN static float safe_sqrt(float value) {
 		return sqrtf(MAX(0.0f, value));
+	}
+
+	CUDA_FUNC_IN static float signum(float value)
+	{
+#ifdef ISCUDA
+		return copysign(1.0f, value);
+#else
+		return (float)_copysign(1.0f, value);
+#endif
+	}
+};
+
+class VectorMath
+{
+public:
+	static inline __host__ __device__ float3 refract(const float3& i, const float3& n, const float refrIndex)
+	{
+			float cosI = -dot( i, n );
+			float cosT2 = 1.0f - refrIndex * refrIndex * (1.0f - cosI * cosI);
+			float3 t = (refrIndex * i) + (refrIndex * cosI - sqrt( abs(cosT2) )) * n;
+			return t * cosT2;
+	}
+	// reflect
+	static inline __host__ __device__ float2 reflect(float2 i, float2 n)
+	{
+		return i - 2.0f * n * dot(n,i);
+	}
+	// reflect
+	static inline __host__ __device__ float3 reflect(float3 i, float3 n)
+	{
+		return i - 2.0f * n * dot(n,i);
 	}
 };
 

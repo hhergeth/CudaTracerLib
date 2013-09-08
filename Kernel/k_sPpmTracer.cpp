@@ -94,7 +94,7 @@ void print(k_PhotonMapCollection& m_sMaps)
 			
 		unsigned int usedCells = 0, maxCount = 0;
 		unsigned char* counts = new unsigned char[m_sMaps.m_sVolumeMap.m_uGridLength];
-		for(int i = 0; i < m_sMaps.m_sVolumeMap.m_uGridLength; i++)
+		for(unsigned int i = 0; i < m_sMaps.m_sVolumeMap.m_uGridLength; i++)
 		{
 			if(grid[i] != -1)
 			{
@@ -118,7 +118,7 @@ void print(k_PhotonMapCollection& m_sMaps)
 		float avgNum = float(m_sMaps.m_uPhotonBufferLength) / float(usedCells), f1 = float(usedCells) / float(m_sMaps.m_sVolumeMap.m_uGridLength);
 		float var = 0;
 		int avg = (int)avgNum;
-		for(int i = 0; i < m_sMaps.m_sVolumeMap.m_uGridLength; i++)
+		for(unsigned int i = 0; i < m_sMaps.m_sVolumeMap.m_uGridLength; i++)
 			if(counts[i])
 				var += (counts[i] - avg) * (counts[i] - avg) / float(usedCells);
 		FW::String s = FW::sprintf("max : %d, avg : %f, used cells : %f, var : %f", maxCount, avgNum, f1, sqrtf(var));
@@ -165,12 +165,12 @@ void k_sPpmTracer::initNewPass(e_Image* I)
 	m_sEyeBox.maxV += make_float3(r);
 	m_fInitialRadius = r;
 	AABB volBox = m_pScene->getKernelSceneData().m_sVolume.box;
-	for(int i = 0; i < m_pScene->getNodeCount(); i++)
+	for(unsigned int i = 0; i < m_pScene->getNodeCount(); i++)
 	{
 		e_StreamReference(e_Node) n = m_pScene->getNodes()(i);
 		e_BufferReference<e_Mesh, e_KernelMesh> m = m_pScene->getMesh(n);
 		unsigned int s = n->m_uMaterialOffset, l = m_pScene->getMesh(n)->m_sMatInfo.getLength();
-		for(int j = 0; j < l; j++)
+		for(unsigned int j = 0; j < l; j++)
 		{
 			e_StreamReference(e_KernelMaterial) mat = m_pScene->m_pMaterialBuffer->operator()(s + j, 1);
 			const e_KernelBSSRDF* bssrdf;

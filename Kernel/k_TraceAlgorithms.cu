@@ -1,16 +1,16 @@
 #include "k_TraceAlgorithms.h"
 
-float3 EstimateDirect(BSDFSamplingRecord& bRec, const e_KernelMaterial& mat, const e_KernelLight* light, unsigned int li, const LightSample& lightSample, EBSDFType flags)
+Spectrum EstimateDirect(BSDFSamplingRecord& bRec, const e_KernelMaterial& mat, const e_KernelLight* light, unsigned int li, const LightSample& lightSample, EBSDFType flags)
 {
-	float3 Ld = make_float3(0);
+	Spectrum Ld = make_float3(0.0f);
 	float lightPdf, bsdfPdf;
 	e_VisibilitySegment seg;
-	float3 Li = light->Sample_L(g_SceneData, bRec.map.P, lightSample, &lightPdf, &seg);
-	if(lightPdf > 0.0f && !ISBLACK(Li))
+	Spectrum Li = light->Sample_L(g_SceneData, bRec.map.P, lightSample, &lightPdf, &seg);
+	if(lightPdf > 0.0f && !Li.isZero())
 	{
-		bRec.wo = seg.r.direction;
-		float3 f = mat.bsdf.f(bRec);
-		if(!ISBLACK(f) && !Occluded(seg))
+		bRec.wo = bRec.map.sys.toLocal(seg.r.direction);
+		Spectrum f = mat.bsdf.f(bRec);
+		if(!f.isZero() && !Occluded(seg))
 		{
 			Li = Li * Transmittance(seg);
 			if(light->IsDeltaLight())
@@ -26,11 +26,11 @@ float3 EstimateDirect(BSDFSamplingRecord& bRec, const e_KernelMaterial& mat, con
 		}
 	}
 	
-	float3 wi;
 	if(!light->IsDeltaLight())
 	{
-		float3 f = mat.bsdf.sample(bRec, bRec.rng->randomFloat2());
-		if(!ISBLACK(f) && bsdfPdf > 0.0f)
+		Spectrum f = mat.bsdf.sample(bRec, bRec.rng->randomFloat2());
+		float3 wi = bRec.map.sys.toWorld(bRec.wo);
+		if(!f.isZero() && bsdfPdf > 0.0f)
 		{
 			float weight = 1.0f;
 			if (!(bRec.sampledType & EDelta))
@@ -40,13 +40,13 @@ float3 EstimateDirect(BSDFSamplingRecord& bRec, const e_KernelMaterial& mat, con
                     return Ld;
                 weight = PowerHeuristic(1, bsdfPdf, 1, lightPdf);
             }
-			float3 Li = make_float3(0.0f);
+			Spectrum Li = make_float3(0.0f);
 			TraceResult r2;
 			r2.Init();
 			if(k_TraceRay(wi, bRec.map.P, &r2) && r2.LightIndex() == li)
 				Li = r2.Le(bRec.map.P, bRec.map.sys.n, -wi);
 			else Li = light->Le(g_SceneData, Ray(bRec.map.P, wi));
-			if(!ISBLACK(Li))
+			if(!Li.isZero())
 			{
 				Li = Li * Transmittance(Ray(bRec.map.P, wi), 0, r2.m_fDist);
 				//not shure about the / bsdfPdf
@@ -58,13 +58,13 @@ float3 EstimateDirect(BSDFSamplingRecord& bRec, const e_KernelMaterial& mat, con
 	return Ld;
 }
 
-float3 UniformSampleAllLights(BSDFSamplingRecord& bRec, const e_KernelMaterial& mat, int nSamples)
+Spectrum UniformSampleAllLights(BSDFSamplingRecord& bRec, const e_KernelMaterial& mat, int nSamples)
 {
-	float3 L = make_float3(0);
+	Spectrum L = Spectrum(0.0f);
 	for(int i = 0; i < g_SceneData.m_sLightSelector.m_uCount; i++)
 	{
 		e_KernelLight* light = g_SceneData.m_sLightData.Data + g_SceneData.m_sLightSelector.m_sIndices[i];
-		float3 Ld = make_float3(0);
+		Spectrum Ld = Spectrum(0.0f);
 		for(int j = 0; j < nSamples; j++)
 		{
 			LightSample lightSample(*bRec.rng);
@@ -75,7 +75,7 @@ float3 UniformSampleAllLights(BSDFSamplingRecord& bRec, const e_KernelMaterial& 
 	return L;
 }
 
-float3 UniformSampleOneLight(BSDFSamplingRecord& bRec, const e_KernelMaterial& mat)
+Spectrum UniformSampleOneLight(BSDFSamplingRecord& bRec, const e_KernelMaterial& mat)
 {
 	int nLights = g_SceneData.m_sLightSelector.m_uCount;
     if (nLights == 0)
@@ -87,13 +87,14 @@ float3 UniformSampleOneLight(BSDFSamplingRecord& bRec, const e_KernelMaterial& m
 	return float(nLights) * EstimateDirect(bRec, mat, light, lightNum, lightSample, EBSDFType(EAll & ~EDelta));
 }
 
-float3 PathTrace(float3& a_Dir, float3& a_Ori, CudaRNG& rnd, float* distTravalled)
+Spectrum PathTrace(float3& a_Dir, float3& a_Ori, CudaRNG& rnd, float* distTravalled)
 {
-	const bool DIRECT = true;
+	const bool DIRECT = false;
 	Ray r0 = Ray(a_Ori, a_Dir);
 	TraceResult r;
-	float3 cl = make_float3(0,0,0);   // accumulated color
-	float3 cf = make_float3(1,1,1);  // accumulated reflectance
+	r.Init(true);
+	Spectrum cl = Spectrum(0.0f);   // accumulated color
+	Spectrum cf = Spectrum(1.0f);  // accumulated reflectance
 	int depth = 0;
 	bool specularBounce = false;
 	BSDFSamplingRecord bRec;
@@ -113,17 +114,17 @@ float3 PathTrace(float3& a_Dir, float3& a_Ori, CudaRNG& rnd, float* distTravalle
 			cl += cf * r.Le(r0(r.m_fDist), bRec.map.sys.n, -r0.direction);
 		if(DIRECT)
 			cl += cf * UniformSampleAllLights(bRec, r.getMat(), 1);
-		float3 f = r.getMat().bsdf.sample(bRec, rnd.randomFloat2());
+		Spectrum f = r.getMat().bsdf.sample(bRec, rnd.randomFloat2());
 		specularBounce = (bRec.sampledType & EDelta) != 0;
-		float p = f.x>f.y && f.x>f.z ? f.x : f.y>f.z ? f.y : f.z; 
+		float p = f.max(); 
 		if (depth > 5)
 			if (rnd.randomFloat() < p)
 				f = f / p;
 			else break;
-		if(ISBLACK(f))
+		if(f.isZero())
 			break;
 		cf = cf * f;
-		r0 = Ray(r0(r.m_fDist), bRec.wo);
+		r0 = Ray(r0(r.m_fDist), bRec.getOutgoing());
 	}
 	return cl;
 }

@@ -83,6 +83,11 @@ public:
 	{
 		return float4x4::Perspective(fovy, aspect, m_fNearFarDepths.x, m_fNearFarDepths.y);
 	}
+	void setFOV(float f)
+	{
+		fovy = f;
+	}
+	void resetZAxis();
 };
 
 class e_FixedCamera : public e_Camera

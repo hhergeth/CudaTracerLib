@@ -3,12 +3,12 @@
 
 CUDA_DEVICE k_PhotonMapCollection g_Map;
 
-template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, float3 Le, CudaRNG& rng)
+template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, Spectrum Le, CudaRNG& rng)
 {
 	r.direction = normalize(r.direction);
 	e_KernelAggregateVolume& V = g_SceneData.m_sVolume;
 	TraceResult r2;
-	r2.Init();
+	r2.Init(true);
 	int depth = -1;
 	bool inMesh = false;
 	BSDFSamplingRecord bRec;
@@ -20,8 +20,8 @@ template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, float3 Le, CudaRNG
 			while(V.IntersectP(r, 0, r2.m_fDist, &minT, &maxT))
 			{
 				float3 x = r(minT), w = -r.direction;
-				float3 sigma_s = V.sigma_s(x, w), sigma_t = V.sigma_t(x, w);
-				float d = -logf(rng.randomFloat()) / (fsumf(sigma_t) / 3.0f);
+				Spectrum sigma_s = V.sigma_s(x, w), sigma_t = V.sigma_t(x, w);
+				float d = -logf(rng.randomFloat()) / sigma_t.average();
 				bool cancel = d >= (maxT - minT) || d >= r2.m_fDist;
 				d = clamp(d, minT, maxT);
 				Le += V.Lve(x, w) * d;
@@ -29,7 +29,7 @@ template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, float3 Le, CudaRNG
 					return false;
 				if(cancel)
 					break;
-				float A = fsumf(sigma_s / sigma_t) / 3.0f;
+				float A = (sigma_s / sigma_t).average();
 				if(rng.randomFloat() <= A)
 				{
 					float3 wi;
@@ -48,7 +48,8 @@ template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, float3 Le, CudaRNG
 		float3 x = r(r2.m_fDist);
 		r2.getBsdfSample(r, rng, &bRec);
 		e_KernelBSSRDF* bssrdf;
-		float3 ac, wi;
+		float3 wi;
+		Spectrum ac;
 		if(r2.getMat().GetBSSRDF(bRec.map, &bssrdf))
 		{
 			inMesh = false;
@@ -57,8 +58,8 @@ template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, float3 Le, CudaRNG
 			{
 				float3 w = -r.direction;
 				TraceResult r3 = k_TraceRay(Ray(x, r.direction));
-				float3 sigma_s = bssrdf->sigp_s, sigma_t = bssrdf->sigp_s + bssrdf->sig_a;
-				float d = -logf(rng.randomFloat()) / (fsumf(sigma_t) / 3.0f);
+				Spectrum sigma_s = bssrdf->sigp_s, sigma_t = bssrdf->sigp_s + bssrdf->sig_a;
+				float d = -logf(rng.randomFloat()) / sigma_t.average();
 				bool cancel = d >= (r3.m_fDist);
 				d = clamp(d, 0.0f, r3.m_fDist);
 				if(g_Map.StorePhoton<false>(x + r.direction * (d * rng.randomFloat()), ac, w, make_float3(0,0,0)) == k_StoreResult::Full)
@@ -66,10 +67,10 @@ template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, float3 Le, CudaRNG
 				if(cancel)
 				{
 					x = x + r.direction * r3.m_fDist;
-					wi = refract(r.direction, r3.m_pTri->lerpFrame(r3.m_fUV, r3.m_pNode->getWorldMatrix()).n, bssrdf->e);
+					wi = VectorMath::refract(r.direction, r3.m_pTri->lerpFrame(r3.m_fUV, r3.m_pNode->getWorldMatrix()).n, bssrdf->e);
 					break;
 				}
-				float A = fsumf(sigma_s / sigma_t) / 3.0f;
+				float A = (sigma_s / sigma_t).average();
 				if(rng.randomFloat() <= A)
 				{
 					ac /= A;
@@ -88,21 +89,21 @@ template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, float3 Le, CudaRNG
 				if(r2.getMat().bsdf.hasComponent(EDiffuse))
 					if(g_Map.StorePhoton<true>(x, Le, wo, bRec.map.sys.n) == k_StoreResult::Full)
 						return false;
-			float3 f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
-			if(ISBLACK(f))
+			Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
+			if(bRec.sampledComponent == -1)
 				break;
 			inMesh = dot(r.direction, bRec.map.sys.n) < 0;
 			ac = Le * f;
 		}
 		//if(depth > 3)
 		{
-			float prob = MIN(1.0f, fmaxf(ac) / fmaxf(Le));
+			float prob = MIN(1.0f, ac.max() / Le.max());
 			if(rng.randomFloat() > prob)
 				break;
 			Le = ac / prob;
 		}
 		//else Le = ac;
-		r = Ray(x, normalize(bRec.wo));
+		r = Ray(x, (bRec.getOutgoing()));
 		r2.Init();
 	}
 	return true;
@@ -121,10 +122,10 @@ template<bool DIRECT> __global__ void k_PhotonPass(unsigned int spp)
 		Ray photonRay;
 		float3 Nl;
 		float pdf;
-		float3 Le = g_SceneData.m_sLightData[li2].Sample_L(g_SceneData, LightSample(rng), rng.randomFloat(), rng.randomFloat(), &photonRay, &Nl, &pdf); 
-		if(pdf == 0 || ISBLACK(Le))
+		Spectrum Le = g_SceneData.m_sLightData[li2].Sample_L(g_SceneData, LightSample(rng), rng.randomFloat(), rng.randomFloat(), &photonRay, &Nl, &pdf); 
+		if(pdf == 0 || Le.isZero())
 			continue;
-		float3 alpha = (AbsDot(Nl, photonRay.direction) * Le) / (pdf * lightPdf);
+		Spectrum alpha = (AbsDot(Nl, photonRay.direction) * Le) / (pdf * lightPdf);
 		if(TracePhoton<DIRECT>(photonRay, alpha, rng))
 			atomicInc(&g_Map.m_uPhotonNumEmitted, -1);
 		else break;

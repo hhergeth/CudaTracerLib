@@ -1,5 +1,6 @@
 #include "k_PrimTracer.h"
 #include "k_TraceHelper.h"
+#include "k_TraceAlgorithms.h"
 
 CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_NextRayCounter2;
 CUDA_DEVICE uint3 g_EyeHitBoxMin2;
@@ -34,12 +35,12 @@ CUDA_ONLY_FUNC void max3(uint3* tar, uint3& val)
 	atomicMax(&tar->z, val.z);
 }
 
-CUDA_ONLY_FUNC float3 trace(Ray& r, CudaRNG& rng, float3* pout)
+CUDA_ONLY_FUNC Spectrum trace(Ray& r, CudaRNG& rng, float3* pout)
 {
 	const bool DIRECT = false;
 	TraceResult r2;
-	r2.Init();
-	float3 c = make_float3(1), L = make_float3(0);
+	r2.Init(true);
+	Spectrum c = Spectrum(1.0f), L = Spectrum(0.0f);
 	unsigned int depth = 0;
 	bool specBounce = false;
 	BSDFSamplingRecord bRec;
@@ -48,14 +49,14 @@ CUDA_ONLY_FUNC float3 trace(Ray& r, CudaRNG& rng, float3* pout)
 		if(pout && depth == 1)
 			*pout = r(r2.m_fDist);
 		if(g_SceneData.m_sVolume.HasVolumes())
-			c = c * exp(-g_SceneData.m_sVolume.tau(r, 0, r2.m_fDist));
+			c = c * (-g_SceneData.m_sVolume.tau(r, 0, r2.m_fDist)).exp();
 		r2.getBsdfSample(r, rng, &bRec);
 		if(depth == 1 || specBounce || !DIRECT)
 			L += r2.Le(r(r2.m_fDist), bRec.map.sys.n, -r.direction);
-		//if(DIRECT)
-		//	L += c * UniformSampleAllLights(r(r2.m_fDist), bsdf.sys.n, -r.direction, &bsdf, rng, 1);
+		if(DIRECT)
+			L += c * UniformSampleAllLights(bRec, r2.getMat(), 1);
 		float pdf;
-		float3 f = r2.getMat().bsdf.sample(bRec, pdf, rng.randomFloat2());
+		Spectrum f = r2.getMat().bsdf.sample(bRec, pdf, rng.randomFloat2());
 		c = c * f;
 		if((bRec.sampledType & EDiffuse) == EDiffuseReflection)
 		{
@@ -64,13 +65,13 @@ CUDA_ONLY_FUNC float3 trace(Ray& r, CudaRNG& rng, float3* pout)
 		}
 		specBounce = (bRec.sampledType & EDelta) != 0;
 		r.origin = r(r2.m_fDist);
-		r.direction = bRec.wo;
+		r.direction = bRec.getOutgoing();
 		r2.Init();
 	}
 	if(!r2.hasHit() && g_SceneData.m_sEnvMap.CanSample())
 		L += c * g_SceneData.m_sEnvMap.Sample(r);
 	else if(!r2.hasHit()) 
-		L = make_float3(0);
+		L = Spectrum(0.0f);
 	return L;
 }
 
@@ -108,7 +109,7 @@ __global__ void primaryKernel(long long width, long long height, e_Image g_Image
 		}
 		unsigned int x = rayidx % width, y = rayidx / width;
 		
-		float3 c = make_float3(0);
+		Spectrum c = Spectrum(0.0f);
 		float N2 = 1;
 		for(float f = 0; f < N2; f++)
 		{
@@ -144,7 +145,8 @@ __global__ void debugPixe2l(unsigned int width, unsigned int height, int2 p)
 	//dir = make_float3(-0.98181188f, 0.18984018f, -0.0024534566f);
 	//ori = make_float3(68790.375f, -12297.199f, 57510.383f);
 	//ori += make_float3(g_SceneData.m_sTerrain.m_sMin.x, 0, g_SceneData.m_sTerrain.m_sMin.z);
-	trace(r, g_RNGData(), 0);
+	CudaRNG rng = g_RNGData();
+	trace(r, rng, 0);
 }
 
 void k_PrimTracer::DoRender(e_Image* I)

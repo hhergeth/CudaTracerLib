@@ -35,7 +35,7 @@ __global__ void pathKernel(unsigned int width, unsigned int height, unsigned int
 		CameraSample s = nextSample(x, y, rng, true);
 		Ray r = g_CameraData.GenRay(s, width, height);
 		
-		float3 col = PathTrace(r.direction, r.origin, rng);
+		Spectrum col = PathTrace(r.direction, r.origin, rng);
 		
 		g_Image.AddSample(s, col);
 	}

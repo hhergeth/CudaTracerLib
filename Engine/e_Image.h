@@ -17,87 +17,9 @@ public:
 	    delete hostPixels;
 		cudaFree(cudaPixels);
 	}
-    template<bool SPLAT> CUDA_FUNC_IN void AddSample(const CameraSample &sample, const float3 &L)
-	{
-		if(SPLAT)
-		{
-			float dimageX = sample.imageX - 0.5f;
-			float dimageY = sample.imageY - 0.5f;
-			int x0 = Ceil2Int (dimageX - filter.As<e_KernelFilterBase>()->xWidth);
-			int x1 = Floor2Int(dimageX + filter.As<e_KernelFilterBase>()->xWidth);
-			int y0 = Ceil2Int (dimageY - filter.As<e_KernelFilterBase>()->yWidth);
-			int y1 = Floor2Int(dimageY + filter.As<e_KernelFilterBase>()->yWidth);
-			x0 = MAX(x0, xPixelStart);
-			x1 = MIN(x1, xPixelStart + xPixelCount - 1);
-			y0 = MAX(y0, yPixelStart);
-			y1 = MIN(y1, yPixelStart + yPixelCount - 1);
-			if ((x1-x0) < 0 || (y1-y0) < 0)
-				return;
-			float invX = filter.As<e_KernelFilterBase>()->invXWidth, invY = filter.As<e_KernelFilterBase>()->invYWidth;
-			for (int y = y0; y <= y1; ++y)
-			{
-				for (int x = x0; x <= x1; ++x)
-				{
-					// Evaluate filter value at $(x,y)$ pixel
-					float fx = fabsf((x - dimageX) * invX * FILTER_TABLE_SIZE);
-					float fy = fabsf((y - dimageY) * invY * FILTER_TABLE_SIZE);
-					int ify = MIN(Floor2Int(fx), FILTER_TABLE_SIZE-1);
-					int ifx = MIN(Floor2Int(fy), FILTER_TABLE_SIZE-1);
-					int offset = ify * FILTER_TABLE_SIZE + ifx;
-					float filterWt = filterTable[offset];
-
-					// Update pixel values with filtered sample contribution
-					Pixel* pixel = getPixel((y - yPixelStart) * xPixelCount + (x - xPixelStart));
-#ifdef ISCUDA
-					atomicAdd(&pixel->rgb.x, filterWt * L.x);
-					atomicAdd(&pixel->rgb.y, filterWt * L.y);
-					atomicAdd(&pixel->rgb.z, filterWt * L.z);
-					atomicAdd(&pixel->weightSum, filterWt);
-#else
-					pixel->rgb += filterWt * L;
-					pixel->weightSum += filterWt;
-#endif
-				}
-			}
-		}
-		else
-		{
-			int x = (int)sample.imageX, y = (int)sample.imageY;
-			Pixel* pixel = getPixel((y - yPixelStart) * xPixelCount + (x - xPixelStart));
-			pixel->rgb += L;
-			pixel->weightSum += 1;
-		}
-	}
-	CUDA_FUNC_IN void AddSample(const CameraSample &sample, const float3 &L)
-	{
-		AddSample<false>(sample, L);
-	}
-    CUDA_FUNC_IN void Splat(const CameraSample &sample, const float3 &L)
-	{
-		int x = Floor2Int(sample.imageX), y = Floor2Int(sample.imageY);
-		if (x < xPixelStart || x - xPixelStart >= xPixelCount || y < yPixelStart || y - yPixelStart >= yPixelCount)
-			return;
-		Pixel* pixel = getPixel((y - yPixelStart) * xPixelCount + (x - xPixelStart));
-#ifdef ISCUDA
-		atomicAdd(&pixel->splatRgb.x, L.x);
-		atomicAdd(&pixel->splatRgb.y, L.y);
-		atomicAdd(&pixel->splatRgb.z, L.z);
-#else
-		pixel->splatRgb += L;
-#endif
-	}
-	CUDA_FUNC_IN void SetSampleDirect(const CameraSample &sample, const float3 &L)
-	{
-		int x = Floor2Int(sample.imageX), y = Floor2Int(sample.imageY);
-		if (x < xPixelStart || x - xPixelStart >= xPixelCount || y < yPixelStart || y - yPixelStart >= yPixelCount)
-			return;
-		unsigned int off = (y - yPixelStart) * xPixelCount + (x - xPixelStart);
-		Pixel* pixel = getPixel(off);
-		pixel->rgb = L;
-		pixel->weightSum = 1;
-		pixel->splatRgb = make_float3(0);
-		target[off] = Float3ToCOLORREF(L);
-	}
+    CUDA_DEVICE CUDA_HOST void AddSample(const CameraSample &sample, const Spectrum &L);
+    CUDA_DEVICE CUDA_HOST void Splat(const CameraSample &sample, const Spectrum &L);
+	CUDA_DEVICE CUDA_HOST void SetSampleDirect(const CameraSample &sample, const Spectrum &L);
     CUDA_FUNC_IN void GetSampleExtent(int *xstart, int *xend, int *ystart, int *yend)
 	{
 		*xstart = Floor2Int(xPixelStart + 0.5f - filter.As<e_KernelFilterBase>()->xWidth);
@@ -108,7 +30,7 @@ public:
 	}
     CUDA_FUNC_IN void GetPixelExtent(int *xstart, int *xend, int *ystart, int *yend)
 	{
-		    *xstart = xPixelStart;
+		*xstart = xPixelStart;
 		*xend   = xPixelStart + xPixelCount;
 		*ystart = yPixelStart;
 		*yend   = yPixelStart + yPixelCount;
@@ -122,9 +44,9 @@ public:
             rgb = splatRgb = make_float3(0);
             weightSum = 0.f;
         }
-        float3 rgb;
+        Spectrum rgb;
         float weightSum;
-        float3 splatRgb;
+        Spectrum splatRgb;
         RGBCOL pad;
     };
 private:

@@ -95,7 +95,7 @@ public:
 	}
 	virtual float getRaysPerSecond()
 	{
-		return getValuePerSecond(m_uNumRaysTraced, 1);
+		return getValuePerSecond((float)m_uNumRaysTraced, 1.0f);
 	}
 	virtual float getTimeSpentRendering();
 protected:

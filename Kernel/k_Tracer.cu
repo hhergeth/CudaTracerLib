@@ -50,7 +50,7 @@ __global__ void k_GuessPass(int w, int h)
 			e_KernelBSDF bsdf = r2.GetBSDF(p);
 			float3 inc;
 			float pdf;
-			float3 col = bsdf.Sample_f(-1.0f * r.direction, &inc, BSDFSample(localState), &pdf);
+			bsdf.Sample_f(-1.0f * r.direction, &inc, BSDFSample(localState), &pdf);
 			r = Ray(r(r2.m_fDist), inc);
 			uint3 pu = make_uint3(FloatToUInt(p.x), FloatToUInt(p.y), FloatToUInt(p.z));
 			atomicMin(&g_EyeHitBoxMin.x, pu.x);

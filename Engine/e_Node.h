@@ -24,15 +24,15 @@ public:
 		ZeroMemory(m_cFile, sizeof(m_cFile));
 		strcpy(m_cFile, file);
 		m_uMaterialOffset = mat.getIndex();
-		for(int i = 0; i< mesh->m_sMatInfo.getLength(); i++)
+		for(unsigned int i = 0; i< mesh->m_sMatInfo.getLength(); i++)
 			mat(i) = *mesh->m_sMatInfo(i);
 	}
 	void setLightData( unsigned int* li, unsigned int lic)
 	{
-		for(int i = 0; i < lic; i++)
+		for(unsigned int i = 0; i < lic; i++)
 			m_uLightIndices[i] = li[i];
-		for(int i = lic; i < sizeof(m_uLightIndices) / sizeof(unsigned int); i++)
-			m_uLightIndices[i] = -1;
+		for(unsigned int i = lic; i < sizeof(m_uLightIndices) / sizeof(unsigned int); i++)
+			m_uLightIndices[i] = 0xffffffff;
 	}
 	const char* getFilePath() const
 	{
@@ -58,8 +58,8 @@ public:
 	unsigned int getNextFreeLightIndex()
 	{
 		for(int i = 0; i < sizeof(m_uLightIndices) / sizeof(unsigned int); i++)
-			if(m_uLightIndices[i] == -1)
+			if(m_uLightIndices[i] == 0xffffffff)
 				return i;
-		return -1;
+		return 0xffffffff;
 	}
 };

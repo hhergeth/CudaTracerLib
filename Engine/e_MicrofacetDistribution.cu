@@ -1,4 +1,4 @@
-#include "e_BSDF.h"
+#include "e_MicrofacetDistribution.h"
 
 float MicrofacetDistribution::eval(const float3 &m, float alphaU, float alphaV) const
 {
@@ -252,7 +252,7 @@ float MicrofacetDistribution::G(const float3 &wi, const float3 &wo, const float3
 					wiDotM = dot(wi, m);
 
 		return MIN((float) 1,
-			std::min(abs(2 * nDotM * nDotWo / woDotM),
+			MIN(abs(2 * nDotM * nDotWo / woDotM),
 						abs(2 * nDotM * nDotWi / wiDotM)));
 	}
 }
@@ -298,4 +298,5 @@ float MicrofacetDistribution::smithG1(const float3 &v, const float3 &m, float al
 			}
 			break;
 	}
+	return 0;
 }

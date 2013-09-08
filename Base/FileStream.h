@@ -87,6 +87,11 @@ public:
 		Read(rhs);
 		return *this;
 	}
+	IInStream& operator>>(Spectrum& rhs)
+	{
+		Read(rhs);
+		return *this;
+	}
 	IInStream& operator>>(AABB& rhs)
 	{
 		Read(rhs);
@@ -256,6 +261,11 @@ public:
 		return *this;
 	}
 	OutputStream& operator<<(float4 rhs)
+	{
+		Write(rhs);
+		return *this;
+	}
+	OutputStream& operator<<(Spectrum rhs)
 	{
 		Write(rhs);
 		return *this;

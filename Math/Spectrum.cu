@@ -1,4 +1,4 @@
-#include "Spectrum2.h"
+#include "Spectrum.h"
 
 #if SPECTRUM_SAMPLES != 3
 float Spectrum::getLuminance() const
@@ -116,7 +116,6 @@ void Spectrum::toXYZ(float &x, float &y, float &z) const
 
 void Spectrum::fromXYZ(float x, float y, float z, Spectrum::EConversionIntent intent)
 {
-	/* Convert from XYZ tristimulus values to ITU-R Rec. BT.709 linear RGB */
 	float r =  3.240479f*x - 1.537150f*y - 0.498535f*z;
 	float g = -0.969256f*x + 1.875991f*y + 0.041556f*z;
 	float b =  0.055648f*x - 0.204043f*y + 1.057311f*z;
@@ -126,7 +125,6 @@ void Spectrum::fromXYZ(float x, float y, float z, Spectrum::EConversionIntent in
 #else
 void Spectrum::toXYZ(float &x, float &y, float &z) const
 {
-	/* Convert ITU-R Rec. BT.709 linear RGB to XYZ tristimulus values */
 	x = s[0] * 0.412453f + s[1] * 0.357580f + s[2] * 0.180423f;
 	y = s[0] * 0.212671f + s[1] * 0.715160f + s[2] * 0.072169f;
 	z = s[0] * 0.019334f + s[1] * 0.119193f + s[2] * 0.950227f;
@@ -134,10 +132,24 @@ void Spectrum::toXYZ(float &x, float &y, float &z) const
 
 void Spectrum::fromXYZ(float x, float y, float z, Spectrum::EConversionIntent intent)
 {
-	/* Convert from XYZ tristimulus values to ITU-R Rec. BT.709 linear RGB */
 	s[0] =  3.240479f * x + -1.537150f * y + -0.498535f * z;
 	s[1] = -0.969256f * x +  1.875991f * y +  0.041556f * z;
 	s[2] =  0.055648f * x + -0.204043f * y +  1.057311f * z;
+}
+
+float Spectrum::getLuminance() const
+{
+	return s[0] * 0.212671f + s[1] * 0.715160f + s[2] * 0.072169f;
+}
+
+void Spectrum::toLinearRGB(float &r, float &g, float &b) const
+{
+	r = s[0]; g = s[1]; b = s[2];
+}
+
+void Spectrum::fromLinearRGB(float r, float g, float b, Spectrum::EConversionIntent intent)
+{
+	s[0] = r; s[1] = g; s[2] = b;
 }
 #endif
 
@@ -245,6 +257,39 @@ void Spectrum::fromRGBE(RGBE rgbe, Spectrum::EConversionIntent intent)
 	}
 }
 
+RGBCOL Spectrum::toRGBCOL() const
+{
+	float r,g,b;
+	toLinearRGB(r,g,b);
+#define toInt(x) (unsigned char((float)powf(clamp01(x),1.0f/1.2f)*255.0f+0.5f))
+	return make_uchar4(toInt(r), toInt(g), toInt(b), 255);
+#undef toInt
+}
+
+void Spectrum::fromRGBCOL(RGBCOL col)
+{
+	float r = float(col.x) / 255.0f, g = float(col.y) / 255.0f, b = float(col.z) / 255.0f;
+	fromLinearRGB(r,g,b);
+}
+
+void Spectrum::toYxy(float &Y, float &x, float &y) const
+{
+	float a,b,c;
+	toXYZ(a,b,c);
+	float s = a + b + c;
+	Y = b;
+	x = a / s;
+	y = c / s;
+}
+
+void Spectrum::fromYxy(float Y, float x, float y, EConversionIntent intent)
+{
+	float a = Y * x / y;
+	float b = Y;
+	float c = Y * (1.0f - x - y) / y;
+	fromXYZ(a, b, c);
+}
+
 float AverageSpectrumSamples(const float *lambda, const float *vals,
         int n, float lambdaStart, float lambdaEnd) {
     // Handle cases with out-of-bounds range or single sample only
@@ -274,6 +319,19 @@ float AverageSpectrumSamples(const float *lambda, const float *vals,
 #undef INTERP
 #undef SEG_AVG
     return sum / (lambdaEnd - lambdaStart);
+}
+
+Spectrum Spectrum::FromSampled(const float *lambda, const float *v, int n)
+{
+    Spectrum r;
+    for (int i = 0; i < SPECTRUM_SAMPLES; ++i)
+	{
+        // Compute average value of given SPD over $i$th sample's range
+        float lambda0 = lerp(SPECTRUM_MIN_WAVELENGTH, SPECTRUM_MAX_WAVELENGTH, float(i) / float(SPECTRUM_SAMPLES));
+        float lambda1 = lerp(SPECTRUM_MIN_WAVELENGTH, SPECTRUM_MAX_WAVELENGTH, float(i+1) / float(SPECTRUM_SAMPLES));
+        r.s[i] = AverageSpectrumSamples(lambda, v, n, lambda0, lambda1);
+    }
+    return r;
 }
 
 static const int   nRGB2SpectSamples = 32;
@@ -948,7 +1006,7 @@ const float RGBIllum2SpectBlue[nRGB2SpectSamples] =  {
     1.5769743995852967e-01,   1.9069090525482305e-01 };
 
 SpectrumHelper::staticData host;
-__constant__ SpectrumHelper::staticData device;
+CUDA_DEVICE SpectrumHelper::staticData device;
 
 void SpectrumHelper::staticData::init()
 {
@@ -998,7 +1056,8 @@ void SpectrumHelper::staticData::init()
 void SpectrumHelper::StaticInitialize()
 {
 	host.init();
-	cudaMemcpyToSymbol(device, &host, sizeof(staticData));
+	cudaError r= cudaMemcpyToSymbol(device, &host, sizeof(staticData));
+	if(r)throw 1;
 }
 
 void SpectrumHelper::StaticDeinitialize()

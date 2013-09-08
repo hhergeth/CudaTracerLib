@@ -71,7 +71,7 @@ bool parseImage(const char* a_InputFile, imgData* data)
 						for (unsigned int x = 0; x < w; ++x)
 						{
 							//*tar++ = Float4ToCOLORREF(make_float4(pixel->red, pixel->green, pixel->blue, pixel->alpha));
-							*(RGBE*)tar++ = Float3ToRGBE(make_float3(pixel->red, pixel->green, pixel->blue));
+							*(RGBE*)tar++ = SpectrumConverter::Float3ToRGBE(make_float3(pixel->red, pixel->green, pixel->blue));
 							pixel = (FIRGBAF*)((long long)pixel + bpp / 8);
 						}
 						bits += pitch;
@@ -143,7 +143,7 @@ e_FileTexture::e_FileTexture(float4& col)
 	m_uBpp = 4;
 	cudaMalloc(&m_pDeviceData, sizeof(RGBCOL));
 	m_pHostData = new float4();
-	*(RGBCOL*)m_pHostData = Float4ToCOLORREF(col);
+	*(RGBCOL*)m_pHostData = SpectrumConverter::Float4ToCOLORREF(col);
 	if(cudaMemcpy(m_pDeviceData, m_pHostData, sizeof(RGBCOL), cudaMemcpyHostToDevice))
 		BAD_HOST_DEVICE_COPY(m_pDeviceData, sizeof(RGBCOL))
 	m_uType = e_KernelTexture_DataType::vtGeneric;
@@ -207,7 +207,7 @@ e_MIPMap::e_MIPMap(float4& col)
 	m_uBpp = 4;
 	cudaMalloc(&m_pDeviceData, sizeof(RGBCOL));
 	m_pHostData = new float4();
-	*(RGBCOL*)m_pHostData = Float4ToCOLORREF(col);
+	*(RGBCOL*)m_pHostData = SpectrumConverter::Float4ToCOLORREF(col);
 	if(cudaMemcpy(m_pDeviceData, m_pHostData, sizeof(RGBCOL), cudaMemcpyHostToDevice))
 		BAD_HOST_DEVICE_COPY(m_pDeviceData, sizeof(RGBCOL))
 	m_uType = e_KernelTexture_DataType::vtRGBCOL;
@@ -230,8 +230,8 @@ struct sampleHelper
 	float4 operator()(int x, int y)
 	{
 		if(data->type == vtRGBE)
-			return make_float4(RGBEToFloat3(((RGBE*)source)[y * w + x]));
-		else return COLORREFToFloat4(((RGBCOL*)source)[y * w + x]);
+			return make_float4(SpectrumConverter::RGBEToFloat3(((RGBE*)source)[y * w + x]));
+		else return SpectrumConverter::COLORREFToFloat4(((RGBCOL*)source)[y * w + x]);
 	}
 };
 
@@ -269,8 +269,8 @@ void e_MIPMap::CompileToBinary(const char* a_InputFile, OutputStream& a_Out)
 					void* tar = (RGBE*)H.dest + t * j + s;
 					float4 v = 0.25f * (H(2*s, 2*t) + H(2*s+1, 2*t) + H(2*s, 2*t+1) + H(2*s+1, 2*t+1));
 					if(data.type == vtRGBE)
-						*(RGBE*)tar = Float3ToRGBE(make_float3(v));
-					else *(RGBCOL*)tar = Float4ToCOLORREF(v);
+						*(RGBE*)tar = SpectrumConverter::Float3ToRGBE(make_float3(v));
+					else *(RGBCOL*)tar = SpectrumConverter::Float4ToCOLORREF(v);
 				}
 			m_sOffsets[i] = off;
 			off += j * k;

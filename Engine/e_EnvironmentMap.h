@@ -6,7 +6,7 @@
 struct e_EnvironmentMap
 {
 public:
-	e_KernelTexture<float3> Map;
+	e_KernelTexture<Spectrum> Map;
 	bool isSet;
 public:
 
@@ -25,19 +25,19 @@ public:
 	{
 		e_EnvironmentMap m;
 		m.isSet = false;
-		m.Map = e_KernelTexture<float3>();
+		m.Map = e_KernelTexture<Spectrum>();
 		return m;
 	}
 
-	e_EnvironmentMap(float3& f)
+	e_EnvironmentMap(Spectrum& f)
 	{
-		Map.SetData(e_KernelConstantTexture<float3>(f));
+		Map.SetData(e_KernelConstantTexture<Spectrum>(f));
 		isSet = true;
 	}
 
 	e_EnvironmentMap(const char* path)
 	{
-		Map.SetData(e_KernelImageTexture<float3>(CreateTextureMapping2D(e_KernelUVMapping2D()), path));
+		Map.SetData(e_KernelImageTexture<Spectrum>(CreateTextureMapping2D(e_KernelUVMapping2D()), path));
 		isSet = true;
 	}
 
@@ -51,7 +51,7 @@ public:
 		return isSet;
 	}
 
-	CUDA_FUNC_IN float3 Sample(Ray& r)
+	CUDA_FUNC_IN Spectrum Sample(Ray& r)
 	{
 		float3 n = normalize(r.direction);
 		//float2 t = make_float2(asinf(n.x) * INV_PI + 0.5f, asinf(n.y) * INV_PI + 0.5f);

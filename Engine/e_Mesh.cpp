@@ -125,15 +125,15 @@ void e_Mesh::CompileObjToBinary(const char* a_InputFile, OutputStream& a_Out)
 		if(M.IlluminationModel == 2)
 		{
 			diffuse d;
-			d.m_reflectance = CreateTexture(M.textures[0].getID().getPtr(), !M.diffuse);
+			d.m_reflectance = CreateTexture(M.textures[0].getID().getPtr(), Spectrum(M.diffuse));
 			mat.bsdf.SetData(d);
 		}
 		else if(M.IlluminationModel == 5)
 		{
 			dielectric d;
-			d.m_invEta = d.m_eta = FLT_MAX;
-			d.m_specularReflectance = CreateTexture<float3>(0, M.specular);
-			d.m_specularTransmittance = CreateTexture<float3>(0, make_float3(0));
+			d.m_invEta = d.m_eta = 1;
+			d.m_specularReflectance = CreateTexture(0, Spectrum(M.specular));
+			d.m_specularTransmittance = CreateTexture(0, Spectrum(0.0f));
 			mat.bsdf.SetData(d);
 		}
 		else if(M.IlluminationModel == 7)
@@ -141,8 +141,8 @@ void e_Mesh::CompileObjToBinary(const char* a_InputFile, OutputStream& a_Out)
 			dielectric d;
 			d.m_eta = M.IndexOfRefraction;
 			d.m_invEta = 1.0f / M.IndexOfRefraction;
-			d.m_specularReflectance = CreateTexture<float3>(0, M.specular);
-			d.m_specularTransmittance = CreateTexture<float3>(0, M.Tf);
+			d.m_specularReflectance = CreateTexture(0, Spectrum(M.specular));
+			d.m_specularTransmittance = CreateTexture(0, Spectrum(M.Tf));
 			mat.bsdf.SetData(d);
 		}
 		else if(M.IlluminationModel == 9)
@@ -150,8 +150,8 @@ void e_Mesh::CompileObjToBinary(const char* a_InputFile, OutputStream& a_Out)
 			dielectric d;
 			d.m_eta = M.IndexOfRefraction;
 			d.m_invEta = 1.0f / M.IndexOfRefraction;
-			d.m_specularReflectance = CreateTexture<float3>(0, make_float3(0));
-			d.m_specularTransmittance = CreateTexture<float3>(0, M.Tf);
+			d.m_specularReflectance = CreateTexture(0, Spectrum(0.0f));
+			d.m_specularTransmittance = CreateTexture(0, Spectrum(M.Tf));
 			mat.bsdf.SetData(d);
 		}
 		if(length(M.emission) != 0)

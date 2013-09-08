@@ -79,10 +79,10 @@ template<int NU, int NV> struct Distribution2D
 	{
 		this->nu = nu;
 		this->nv = nv;
-		for (int v = 0; v < nv; ++v)
+		for (unsigned int v = 0; v < nv; ++v)
 			pConditionalV[v] = Distribution1D<NU>(&data[v*nu], nu);
 		float marginalFunc[NV];
-		for (int v = 0; v < nv; ++v)
+		for (unsigned int v = 0; v < nv; ++v)
 			marginalFunc[v] = pConditionalV[v].funcInt;
 		pMarginal = Distribution1D<NV>(&marginalFunc[0], nv);
 	}
@@ -195,7 +195,7 @@ public:
 	}
 
 	CUDA_FUNC_IN static float fresnelDielectric(float cosThetaI, float cosThetaT, float eta) {
-		if ((eta == 1))
+		if (eta == 1)
 			return 0.0f;
 
 		float Rs = (cosThetaI - eta * cosThetaT)
@@ -208,15 +208,15 @@ public:
 	}
 
 	CUDA_FUNC_IN static float fresnelDielectricExt(float cosThetaI_, float &cosThetaT_, float eta) {
-		if ((eta == 1)) {
+		if (eta == 1) {
 			cosThetaT_ = -cosThetaI_;
 			return 0.0f;
 		}
 
 		/* Using Snell's law, calculate the squared sine of the
 		   angle between the normal and the transmitted ray */
-		float scale = (cosThetaI_ > 0) ? 1/eta : eta,
-			  cosThetaTSqr = 1 - (1-cosThetaI_*cosThetaI_) * (scale*scale);
+		float scale = (cosThetaI_ > 0) ? 1.0f/eta : eta,
+			  cosThetaTSqr = 1.0f - (1.0f-cosThetaI_*cosThetaI_) * (scale*scale);
 
 		/* Check for total internal reflection */
 		if (cosThetaTSqr <= 0.0f) {
@@ -255,18 +255,18 @@ public:
 		return 0.5f * (Rp2 + Rs2);
 	}
 
-	CUDA_FUNC_IN static float3 fresnelConductorApprox(float cosThetaI, const float3 &eta, const float3 &k) {
+	CUDA_FUNC_IN static Spectrum fresnelConductorApprox(float cosThetaI, const Spectrum &eta, const Spectrum &k) {
 		float cosThetaI2 = cosThetaI*cosThetaI;
 
-		float3 tmp = (eta*eta + k*k) * cosThetaI2;
+		Spectrum tmp = (eta*eta + k*k) * cosThetaI2;
 
-		float3 Rp2 = (tmp - (eta * (2 * cosThetaI)) + make_float3(1.0f))
-					 / (tmp + (eta * (2 * cosThetaI)) + make_float3(1.0f));
+		Spectrum Rp2 = (tmp - (eta * (2 * cosThetaI)) + Spectrum(1.0f))
+					 / (tmp + (eta * (2 * cosThetaI)) + Spectrum(1.0f));
 
-		float3 tmpF = eta*eta + k*k;
+		Spectrum tmpF = eta*eta + k*k;
 
-		float3 Rs2 = (tmpF - (eta * (2 * cosThetaI)) + make_float3(cosThetaI2)) /
-					   (tmpF + (eta * (2 * cosThetaI)) + make_float3(cosThetaI2));
+		Spectrum Rs2 = (tmpF - (eta * (2 * cosThetaI)) + Spectrum(cosThetaI2)) /
+					   (tmpF + (eta * (2 * cosThetaI)) + Spectrum(cosThetaI2));
 
 		return 0.5f * (Rp2 + Rs2);
 	}
@@ -295,26 +295,26 @@ public:
 		return 0.5f * (Rp2 + Rs2);
 	}
 
-	CUDA_FUNC_IN static float3 fresnelConductorExact(float cosThetaI, const float3 &eta, const float3 &k) {
+	CUDA_FUNC_IN static Spectrum fresnelConductorExact(float cosThetaI, const Spectrum &eta, const Spectrum &k) {
 		/* Modified from "Optics" by K.D. Moeller, University Science Books, 1988 */
 
 		float cosThetaI2 = cosThetaI*cosThetaI,
 			  sinThetaI2 = 1-cosThetaI2,
 			  sinThetaI4 = sinThetaI2*sinThetaI2;
 
-		float3 temp1 = eta*eta - k*k - make_float3(sinThetaI2),
-				 a2pb2 = sqrtf(temp1*temp1 + k*k*eta*eta*4),
-				 a     = sqrtf((a2pb2 + temp1) * 0.5f);
+		Spectrum temp1 = eta*eta - k*k - Spectrum(sinThetaI2),
+			a2pb2 = (temp1*temp1 + k*k*eta*eta*4).safe_sqrt(),
+			a     = ((a2pb2 + temp1) * 0.5f).safe_sqrt();
 
-		float3 term1 = a2pb2 + make_float3(cosThetaI2),
+		Spectrum term1 = a2pb2 + Spectrum(cosThetaI2),
 				 term2 = a*(2*cosThetaI);
 
-		float3 Rs2 = (term1 - term2) / (term1 + term2);
+		Spectrum Rs2 = (term1 - term2) / (term1 + term2);
 
-		float3 term3 = a2pb2*cosThetaI2 + make_float3(sinThetaI4),
+		Spectrum term3 = a2pb2*cosThetaI2 + Spectrum(sinThetaI4),
 				 term4 = term2*sinThetaI2;
 
-		float3 Rp2 = Rs2 * (term3 - term4) / (term3 + term4);
+		Spectrum Rp2 = Rs2 * (term3 - term4) / (term3 + term4);
 
 		return 0.5f * (Rp2 + Rs2);
 	}
@@ -325,29 +325,28 @@ public:
 
 	CUDA_FUNC_IN static float3 refract(const float3 &wi, const float3 &n, float eta, float cosThetaT) {
 		if (cosThetaT < 0)
-			eta = 1 / eta;
+			eta = 1.0f / eta;
 
 		return n * (dot(wi, n) * eta + cosThetaT) - wi * eta;
 	}
 
 	CUDA_FUNC_IN static float3 refract(const float3 &wi, const float3 &n, float eta) {
-		if ((eta == 1))
+		if (eta == 1)
 			return -1.0f * wi;
 
 		float cosThetaI = dot(wi, n);
 		if (cosThetaI > 0)
-			eta = 1 / eta;
+			eta = 1.0f / eta;
 
 		/* Using Snell's law, calculate the squared sine of the
 		   angle between the normal and the transmitted ray */
-		float cosThetaTSqr = 1 - (1-cosThetaI*cosThetaI) * (eta*eta);
+		float cosThetaTSqr = 1.0f - (1.0f-cosThetaI*cosThetaI) * (eta*eta);
 
 		/* Check for total internal reflection */
 		if (cosThetaTSqr <= 0.0f)
 			return make_float3(0.0f);
 
-		return n * (cosThetaI * eta - signf(cosThetaI)
-			* sqrtf(cosThetaTSqr)) - wi * eta;
+		return n * (cosThetaI * eta - math::signum(cosThetaI) * sqrtf(cosThetaTSqr)) - wi * eta;
 	}
 
 	CUDA_FUNC_IN static float3 refract(const float3 &wi, const float3 &n, float eta, float &cosThetaT, float &F) {

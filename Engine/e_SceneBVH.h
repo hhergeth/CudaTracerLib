@@ -2,7 +2,11 @@
 
 #include "e_Buffer.h"
 #include <MathTypes.h>
-#include "e_Node.h"
+
+class e_Node;
+struct e_BVHNodeData;
+class e_Mesh;
+struct e_KernelMesh;
 
 struct e_KernelSceneBVH
 {
@@ -25,33 +29,10 @@ public:
 	e_StreamReference(float4x4) tr0, tr1;
 	e_StreamReference(e_BVHNodeData) nds;
 public:
-	e_SceneBVH(unsigned int a_NodeCount)
-	{
-		m_pNodes = new e_Stream<e_BVHNodeData>(a_NodeCount * 2);//largest binary tree has the same amount of inner nodes
-		m_pTransforms = new e_Stream<float4x4>(a_NodeCount);
-		m_pInvTransforms = new e_Stream<float4x4>(a_NodeCount);
-		startNode = -1;
-		m_sBox = AABB::Identity();
-		tr0 = m_pTransforms->malloc(m_pTransforms->getLength());
-		tr1 = m_pInvTransforms->malloc(m_pInvTransforms->getLength());
-		nds = m_pNodes->malloc(m_pNodes->getLength());
-	}
-	~e_SceneBVH()
-	{
-		delete m_pNodes;
-		delete m_pTransforms;
-		delete m_pInvTransforms;
-	}
+	e_SceneBVH(unsigned int a_NodeCount);
+	~e_SceneBVH();
 	void Build(e_StreamReference(e_Node), e_BufferReference<e_Mesh, e_KernelMesh> a_Meshes);
-	e_KernelSceneBVH getData(bool devicePointer = true)
-	{
-		e_KernelSceneBVH q;
-		q.m_pNodes = m_pNodes->getKernelData(devicePointer).Data;
-		q.m_sStartNode = startNode;
-		q.m_pNodeTransforms = m_pTransforms->getKernelData(devicePointer).Data;
-		q.m_pInvNodeTransforms = m_pInvTransforms->getKernelData(devicePointer).Data;
-		return q;
-	}
+	e_KernelSceneBVH getData(bool devicePointer = true);
 	unsigned int getSizeInBytes()
 	{
 		return m_pNodes->getSizeInBytes();

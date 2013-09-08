@@ -3,7 +3,7 @@
 #include "k_TraceHelper.h"
 #include "k_TraceAlgorithms.h"
 
-float3 pixelFunc(CameraSample& s, int w, int h, CudaRNG& rng)
+Spectrum pixelFunc(CameraSample& s, int w, int h, CudaRNG& rng)
 {
 	Ray r = g_CameraData.GenRay(s, w, h);
 
@@ -11,8 +11,8 @@ float3 pixelFunc(CameraSample& s, int w, int h, CudaRNG& rng)
 
 	TraceResult r2 = k_TraceRay(r);
 	if(r2.hasHit())
-		return make_float3(-dot(r2.lerpFrame().n, r.direction));
-	else return make_float3(0,1,0);
+		return Spectrum(-dot(r2.lerpFrame().n, r.direction));
+	else return Spectrum(0,1,0);
 	//return make_float3(r2.m_fDist / sc);
 }
 
@@ -42,7 +42,7 @@ void k_CpuTracer::threadStart(void* arg)
 		{
 			int x = i % w, y = i / w;
 			CameraSample s = nextSample(x, y, rng);
-			float3 p = pixelFunc(s, w, h, rng);
+			Spectrum p = pixelFunc(s, w, h, rng);
 			dat->tracer->IMG->AddSample(s, pixelFunc(s, w, h, rng));
 		}
 		g_RNGData(rng);

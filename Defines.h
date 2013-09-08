@@ -74,3 +74,9 @@ CUDA_FUNC_IN int getGlobalIdx_3D_3D()
 #include <Windows.h>
 #define threadId_Unsafe GetCurrentThreadId()
 #endif
+
+#pragma warning(disable: 4482)
+#pragma warning(disable: 4244)
+#pragma warning(disable: 4800)
+#pragma warning(disable: 4996)
+#pragma warning(disable: 4305)

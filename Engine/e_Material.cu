@@ -9,7 +9,7 @@ e_KernelMaterial::e_KernelMaterial(const char* name)
 	NodeLightIndex = -1;
 	m_fAlphaThreshold = 1.0f;
 	diffuse d2;
-	d2.m_reflectance = CreateTexture(0, make_float3(0.5f));
+	d2.m_reflectance = CreateTexture(0, Spectrum(0.5f));
 	bsdf.SetData(d2);
 	usedBssrdf = false;
 }

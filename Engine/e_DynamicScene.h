@@ -59,7 +59,7 @@ public:
 		n.Invalidate();
 		recalculateAreaLights(n);
 	}
-	void TransformNode(float4x4& mat, e_StreamReference(e_Node) n)
+	void TransformNode(const float4x4& mat, e_StreamReference(e_Node) n)
 	{
 		SetNodeTransform(n->getWorldMatrix() * mat, n);
 	}
@@ -137,7 +137,7 @@ public:
 		return r();
 	}
 	AABB getBox(e_StreamReference(e_Node) n);
-	e_StreamReference(e_KernelLight) createLight(e_StreamReference(e_Node) Node, const char* materialName, float3& L);
+	e_StreamReference(e_KernelLight) createLight(e_StreamReference(e_Node) Node, const char* materialName, Spectrum& L);
 	void removeLight(e_StreamReference(e_Node) Node, unsigned int mi);
 	void removeAllLights(e_StreamReference(e_Node) Node);
 	void recalculateAreaLights(e_StreamReference(e_Node) Node);
@@ -146,5 +146,5 @@ public:
 		e_BufferReference<Distribution2D<4096, 4096>, Distribution2D<4096, 4096>> r = m_pDist2DStream->malloc(1);
 		return r;
 	}
-	e_StreamReference(e_KernelLight) setEnvironementMap(const float3& power, const char* file);
+	e_StreamReference(e_KernelLight) setEnvironementMap(const Spectrum& power, const char* file);
 };

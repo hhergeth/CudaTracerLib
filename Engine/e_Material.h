@@ -8,7 +8,7 @@ struct e_KernelBSSRDF
 	{
 	}
 
-	CUDA_FUNC_IN e_KernelBSSRDF(float _e, float3& sa, float3& sps)
+	CUDA_FUNC_IN e_KernelBSSRDF(float _e, const Spectrum& sa, const Spectrum& sps)
 	{
 		e = _e;
 		sig_a = sa;
@@ -16,7 +16,7 @@ struct e_KernelBSSRDF
 	}
 
     float e;
-    float3 sig_a, sigp_s;
+    Spectrum sig_a, sigp_s;
 };
 
 struct e_KernelMaterial
@@ -89,7 +89,7 @@ public:
 	{
 		SetAlphaMap(CreateTexture(path, make_float4(0)));
 	}
-	void setBssrdf(const float3& sig_a, const float3& sigp_s, float e)
+	void setBssrdf(const Spectrum& sig_a, const Spectrum& sigp_s, float e)
 	{
 		bssrdf.e = e;
 		bssrdf.sig_a = sig_a;

@@ -106,7 +106,7 @@ struct k_HashGrid_Reg
 	CUDA_FUNC_IN bool IsValidHash(const float3& p) const
 	{
 		uint3 q = Transform(p);
-		return q.x >= 0 && q.x <= m_fGridSize && q.y >= 0 && q.y <= m_fGridSize && q.z >= 0 && q.z <= m_fGridSize;
+		return q.x <= m_fGridSize && q.y <= m_fGridSize && q.z <= m_fGridSize;
 	}
 
 	CUDA_FUNC_IN unsigned int EncodePos(const float3& p, const uint3& i) const

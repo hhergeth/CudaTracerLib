@@ -1,5 +1,6 @@
 #include "StdAfx.h"
 #include "e_SceneBVH.h"
+#include "e_Node.h"
 #include <xmmintrin.h>
 
 #define AREA(x) (2.0f * (x.m128_f32[3] * x.m128_f32[2] + x.m128_f32[2] * x.m128_f32[1] + x.m128_f32[3] * x.m128_f32[1]))
@@ -147,4 +148,33 @@ void e_SceneBVH::Build(e_StreamReference(e_Node) a_Nodes, e_BufferReference<e_Me
 	m_pInvTransforms->UpdateInvalidated();
 	_mm_free(data);
 	m_sBox = TOBOX(bottom, top);
+}
+
+e_SceneBVH::e_SceneBVH(unsigned int a_NodeCount)
+{
+	m_pNodes = new e_Stream<e_BVHNodeData>(a_NodeCount * 2);//largest binary tree has the same amount of inner nodes
+	m_pTransforms = new e_Stream<float4x4>(a_NodeCount);
+	m_pInvTransforms = new e_Stream<float4x4>(a_NodeCount);
+	startNode = -1;
+	m_sBox = AABB::Identity();
+	tr0 = m_pTransforms->malloc(m_pTransforms->getLength());
+	tr1 = m_pInvTransforms->malloc(m_pInvTransforms->getLength());
+	nds = m_pNodes->malloc(m_pNodes->getLength());
+}
+
+e_SceneBVH::~e_SceneBVH()
+{
+	delete m_pNodes;
+	delete m_pTransforms;
+	delete m_pInvTransforms;
+}
+
+e_KernelSceneBVH e_SceneBVH::getData(bool devicePointer)
+{
+	e_KernelSceneBVH q;
+	q.m_pNodes = m_pNodes->getKernelData(devicePointer).Data;
+	q.m_sStartNode = startNode;
+	q.m_pNodeTransforms = m_pTransforms->getKernelData(devicePointer).Data;
+	q.m_pInvNodeTransforms = m_pInvTransforms->getKernelData(devicePointer).Data;
+	return q;
 }

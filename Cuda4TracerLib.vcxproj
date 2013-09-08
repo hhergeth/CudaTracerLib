@@ -38,9 +38,11 @@
     <ClInclude Include="Engine\e_Material.h" />
     <ClInclude Include="Engine\e_Mesh.h" />
     <ClInclude Include="Engine\e_MeshCompiler.h" />
+    <ClInclude Include="Engine\e_MicrofacetDistribution.h" />
     <ClInclude Include="Engine\e_Node.h" />
     <ClInclude Include="Engine\e_PhaseFunction.h" />
     <ClInclude Include="Engine\e_PointBVH.h" />
+    <ClInclude Include="Engine\e_RoughTransmittance.h" />
     <ClInclude Include="Engine\e_SceneBVH.h" />
     <ClInclude Include="Engine\e_SceneInitData.h" />
     <ClInclude Include="Engine\e_ShapeSet.h" />
@@ -64,7 +66,6 @@
     <ClInclude Include="Engine\SceneBuilder\SplitBVHBuilder.hpp" />
     <ClInclude Include="Engine\SceneBuilder\Util.hpp" />
     <ClInclude Include="Kernel\k_CPUTracer.h" />
-    <ClInclude Include="Kernel\k_IntegrateHelper.h" />
     <ClInclude Include="Kernel\k_PathTracer.h" />
     <ClInclude Include="Kernel\k_PrimTracer.h" />
     <ClInclude Include="Kernel\k_sPpmTracer.h" />
@@ -78,12 +79,13 @@
     <ClInclude Include="Math\Frame.h" />
     <ClInclude Include="Math\half.h" />
     <ClInclude Include="Math\Int24.h" />
+    <ClInclude Include="Math\Integrator.h" />
     <ClInclude Include="Math\Montecarlo.h" />
     <ClInclude Include="Math\Quaternion.h" />
     <ClInclude Include="Math\Ray.h" />
     <ClInclude Include="Math\Sampling.h" />
     <ClInclude Include="Math\Spectrum.h" />
-    <ClInclude Include="Math\Spectrum2.h" />
+    <ClInclude Include="Math\Spline.h" />
     <ClInclude Include="Math\vector.h" />
     <ClInclude Include="Math\Warp.h" />
     <ClInclude Include="Renderer.h" />
@@ -119,12 +121,19 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <CudaCompile Include="Engine\e_aaaa.cu" />
     <CudaCompile Include="Engine\e_AnimatedMesh.cu" />
-    <CudaCompile Include="Engine\e_BSDF.cu" />
     <CudaCompile Include="Engine\e_BSDF_Complex.cu" />
     <CudaCompile Include="Engine\e_Image.cu" />
     <CudaCompile Include="Engine\e_BSDF_Simple.cu" />
+    <CudaCompile Include="Engine\e_KernelMapping.cu" />
+    <CudaCompile Include="Engine\e_Light.cu" />
     <CudaCompile Include="Engine\e_Material.cu" />
+    <CudaCompile Include="Engine\e_MicrofacetDistribution.cu" />
+    <CudaCompile Include="Engine\e_PhaseFunction.cu" />
+    <CudaCompile Include="Engine\e_RoughTransmittance.cu" />
+    <CudaCompile Include="Engine\e_TriangleData.cu" />
+    <CudaCompile Include="Engine\e_Volumes.cu" />
     <CudaCompile Include="Kernel\k_PathTracer.cu" />
     <CudaCompile Include="Kernel\k_PrimTracer.cu" />
     <CudaCompile Include="Kernel\k_TraceAlgorithms.cu" />
@@ -132,7 +141,9 @@
     <CudaCompile Include="Kernel\k_Tracer.cu" />
     <CudaCompile Include="Kernel\k_sPpmTracer_EyePass.cu" />
     <CudaCompile Include="Kernel\k_sPpmTracer_PhotonPass.cu" />
+    <CudaCompile Include="Math\Integrator.cu" />
     <CudaCompile Include="Math\Spectrum.cu" />
+    <CudaCompile Include="Math\Spline.cu" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{B2C397D2-90E0-4E10-8C94-9F085B9D92A3}</ProjectGuid>

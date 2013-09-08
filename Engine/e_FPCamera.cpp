@@ -69,3 +69,10 @@ void e_FixedCamera::ChangeData(float px, float py, float pz, float rx, float ry,
 	m_mView = m_mView * rot;
 	m_vPos += m_mView.Inverse() * make_float3(px, py, pz);
 }
+
+void e_FPCamera::resetZAxis()
+{
+	float3 r = cross(make_float3(0,-1,0), !m_mView.Z);
+	float3 f = normalize(cross(!m_mView.Z, r));
+	m_mView.Y = make_float4(f, 0);
+}
