@@ -132,7 +132,8 @@ private:
 			if (r == 0.0 || r > 1.0)
 				r = 1.0;
 		}
-		float result = std::numeric_limits<float>::infinity();
+		//float result = std::numeric_limits<float>::infinity();
+		float result = FLT_MAX;
 
 		if (m_relError != 0 && acc != 0)
 			result = acc * MAX(m_relError,

@@ -19,7 +19,7 @@ Spectrum EstimateDirect(BSDFSamplingRecord& bRec, const e_KernelMaterial& mat, c
 			{
 				bRec.typeMask = flags;
 				bsdfPdf = mat.bsdf.pdf(bRec);
-				float weight = PowerHeuristic(1, lightPdf, 1, bsdfPdf);
+				float weight = MonteCarlo::PowerHeuristic(1, lightPdf, 1, bsdfPdf);
 				Ld += f / bsdfPdf * Li * (AbsDot(seg.r.direction, bRec.map.sys.n) * weight / lightPdf);
 				bRec.typeMask = EAll;
 			}
@@ -38,7 +38,7 @@ Spectrum EstimateDirect(BSDFSamplingRecord& bRec, const e_KernelMaterial& mat, c
                 lightPdf = light->Pdf(g_SceneData, bRec.map.P, wi);
                 if (lightPdf == 0.0f)
                     return Ld;
-                weight = PowerHeuristic(1, bsdfPdf, 1, lightPdf);
+                weight = MonteCarlo::PowerHeuristic(1, bsdfPdf, 1, lightPdf);
             }
 			Spectrum Li = make_float3(0.0f);
 			TraceResult r2;

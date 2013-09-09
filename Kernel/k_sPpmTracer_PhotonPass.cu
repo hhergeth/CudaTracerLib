@@ -47,7 +47,7 @@ template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, Spectrum Le, CudaR
 		}
 		float3 x = r(r2.m_fDist);
 		r2.getBsdfSample(r, rng, &bRec);
-		e_KernelBSSRDF* bssrdf;
+		const e_KernelBSSRDF* bssrdf;
 		float3 wi;
 		Spectrum ac;
 		if(r2.getMat().GetBSSRDF(bRec.map, &bssrdf))
@@ -111,14 +111,12 @@ template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, Spectrum Le, CudaR
 
 template<bool DIRECT> __global__ void k_PhotonPass(unsigned int spp)
 { 
-	const unsigned int a_MaxDepth = 10;
 	CudaRNG rng = g_RNGData();
 	for(int _photonNum = 0; _photonNum < spp; _photonNum++)
 	{
 		int li = (int)float(g_SceneData.m_sLightSelector.m_uCount) * rng.randomFloat();
 		int li2 = g_SceneData.m_sLightSelector.m_sIndices[li];
 		float lightPdf = 1.0f / (float)g_SceneData.m_sLightSelector.m_uCount;
-	label001:
 		Ray photonRay;
 		float3 Nl;
 		float pdf;
@@ -127,7 +125,7 @@ template<bool DIRECT> __global__ void k_PhotonPass(unsigned int spp)
 			continue;
 		Spectrum alpha = (AbsDot(Nl, photonRay.direction) * Le) / (pdf * lightPdf);
 		if(TracePhoton<DIRECT>(photonRay, alpha, rng))
-			atomicInc(&g_Map.m_uPhotonNumEmitted, -1);
+			atomicInc(&g_Map.m_uPhotonNumEmitted, 0xffffffff);
 		else break;
 	}
 	g_RNGData(rng);
@@ -138,7 +136,7 @@ void k_sPpmTracer::doPhotonPass()
 	cudaMemcpyToSymbol(g_Map, &m_sMaps, sizeof(k_PhotonMapCollection));
 	k_INITIALIZE(m_pScene->getKernelSceneData());
 	k_STARTPASS(m_pScene, m_pCamera, g_sRngs);
-	const unsigned long long p0 = 6 * 32, spp = 3, n = 180, PhotonsPerPass = p0 * n * spp;
+	const unsigned long long p0 = 6 * 32, spp = 3, n = 180;
 	if(m_bDirect)
 		k_PhotonPass<true><<< n, p0 >>>(spp);
 	else k_PhotonPass<false><<< n, p0 >>>(spp);

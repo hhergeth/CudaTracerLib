@@ -263,7 +263,7 @@ struct e_InfiniteLight : public e_LightBase
 
 	CUDA_FUNC_IN Spectrum Le(const e_KernelDynamicScene& scene, const Ray& r) const
 	{
-		float s = SphericalPhi(r.direction) * INV_TWOPI, t = SphericalTheta(r.direction) * INV_PI;
+		float s = MonteCarlo::SphericalPhi(r.direction) * INV_TWOPI, t = MonteCarlo::SphericalTheta(r.direction) * INV_PI;
 		return radianceMap.Sample<Spectrum>(make_float2(s, t), 0);
 	}
 	

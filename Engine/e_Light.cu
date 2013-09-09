@@ -5,26 +5,26 @@ Spectrum e_PointLight::Sample_L(const e_KernelDynamicScene& scene, const LightSa
 	float3 p,d;
 	if(radius != 0)
 	{
-		float3 n = UniformSampleSphere(u1, u2) * radius;
+		float3 n = MonteCarlo::UniformSampleSphere(u1, u2) * radius;
 		p = lightPos + n;
-		//d = SampleCosineHemisphere(n, u1, u2);
-		d = UniformSampleSphere(ls.uPos[0], ls.uPos[1]);
+		//d = MonteCarlo::SampleCosineHemisphere(n, u1, u2);
+		d = MonteCarlo::UniformSampleSphere(ls.uPos[0], ls.uPos[1]);
 	}
 	else
 	{
 		p = lightPos;
-		d = UniformSampleSphere(ls.uPos[0], ls.uPos[1]);
+		d = MonteCarlo::UniformSampleSphere(ls.uPos[0], ls.uPos[1]);
 	}	
 	*ray = Ray(p, d);
 	*Ns = ray->direction;
-	*pdf = UniformSpherePdf();
+	*pdf = MonteCarlo::UniformSpherePdf();
 	return Intensity;
 }
 
 Spectrum e_DiffuseLight::Sample_L(const e_KernelDynamicScene& scene, const LightSample &ls, float u1, float u2, Ray *ray, float3 *Ns, float *pdf) const
 {
 	float3 org = shapeSet.Sample(ls, Ns, scene.m_sBVHIntData.Data);
-	float3 dir = UniformSampleSphere(u1, u2);
+	float3 dir = MonteCarlo::UniformSampleSphere(u1, u2);
 	if (dot(dir, *Ns) < 0.)
 		dir *= -1.f;
 	*ray = Ray(org, dir);
@@ -47,7 +47,7 @@ Spectrum e_DistantLight::Sample_L(const e_KernelDynamicScene& scene, const Light
 	float3 worldCenter = scene.m_sBox.Center();
 	float worldRadius = Distance(scene.m_sBox.maxV, scene.m_sBox.minV) / 2.0f;
 	float d1, d2;
-	ConcentricSampleDisk(ls.uPos[0], ls.uPos[1], &d1, &d2);
+	MonteCarlo::ConcentricSampleDisk(ls.uPos[0], ls.uPos[1], &d1, &d2);
 	float3 Pdisk = worldCenter + worldRadius * (d1 * sys.s + d2 * sys.t);
 	*ray = Ray(Pdisk + worldRadius * lightDir, -1.0f * lightDir);
 	*Ns = -1.0f * lightDir;
@@ -64,10 +64,10 @@ Spectrum e_DistantLight::Power(const e_KernelDynamicScene& scene) const
 
 Spectrum e_SpotLight::Sample_L(const e_KernelDynamicScene& scene, const LightSample &ls, float u1, float u2, Ray *ray, float3 *Ns, float *pdf) const
 {
-	float3 v = UniformSampleCone(ls.uPos[0], ls.uPos[1], cosTotalWidth);
+	float3 v = MonteCarlo::UniformSampleCone(ls.uPos[0], ls.uPos[1], cosTotalWidth);
 	*ray = Ray(lightPos, sys.toWorld(v));
 	*Ns = ray->direction;
-	*pdf = UniformConePdf(cosTotalWidth);
+	*pdf = MonteCarlo::UniformConePdf(cosTotalWidth);
 	return Intensity * Falloff(v);
 }
 
@@ -127,7 +127,7 @@ Spectrum e_InfiniteLight::Power(const e_KernelDynamicScene& scene) const
 
 float e_InfiniteLight::Pdf(const e_KernelDynamicScene& scene, const float3 &p, const float3 &wi) const
 {
-	float theta = SphericalTheta(wi), phi = SphericalPhi(wi);
+	float theta = MonteCarlo::SphericalTheta(wi), phi = MonteCarlo::SphericalPhi(wi);
 	float sintheta = sinf(theta);
 	if (sintheta == 0.f)
 		return 0.f;
@@ -150,7 +150,7 @@ Spectrum e_InfiniteLight::Sample_L(const e_KernelDynamicScene& scene, const Ligh
 	float worldRadius = length(scene.m_sBox.Size()) / 2.0f;
 	Frame sys(d);
 	float d1, d2;
-	ConcentricSampleDisk(u1, u2, &d1, &d2);
+	MonteCarlo::ConcentricSampleDisk(u1, u2, &d1, &d2);
 	float3 Pdisk = worldCenter + worldRadius * (d1 * sys.t + d2 * sys.s);
 	*ray = Ray(Pdisk + worldRadius * -d, d);
 	float directionPdf = mapPdf / (2.f * PI * PI * sintheta);

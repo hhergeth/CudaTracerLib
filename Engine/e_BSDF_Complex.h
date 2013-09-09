@@ -77,13 +77,36 @@ private:
 		return make_float3(m_eta*wi.x, m_eta*wi.y, -signf(Frame::cosTheta(wi)) * cosThetaT);
 	}
 };
-/*
+
+#define roughcoating_TYPE 14
 struct roughcoating : public BSDF
 {
+	enum EDestination {
+		EInterior = 0,
+		EExterior = 1
+	};
+
 	BSDFFirst m_nested;
 	MicrofacetDistribution m_distribution;
-
-
+	e_KernelTexture<Spectrum> m_sigmaA;
+	e_KernelTexture<float> m_alpha;
+	e_KernelTexture<Spectrum> m_specularReflectance;
+	float m_specularSamplingWeight;
+	float m_eta, m_invEta;
+	float m_thickness;
+	roughcoating()
+		: BSDF(EGlossyReflection)
+	{
+	}
+	roughcoating(BSDFFirst& nested, MicrofacetDistribution::EType type, float eta, float thickness, e_KernelTexture<Spectrum>& sig, e_KernelTexture<float>& alpha)
+		: BSDF(EGlossyReflection | nested.getType()), m_nested(nested), m_eta(eta), m_invEta(1.0f / eta), m_thickness(thickness), m_sigmaA(sig), m_alpha(alpha)
+	{
+		m_distribution.m_type = type;
+		m_specularReflectance = CreateTexture(0, Spectrum(1.0f));
+		MapParameters mp(make_float3(0), make_float2(0), Frame(make_float3(0,1,0)));
+		float avgAbsorption = (m_sigmaA.Evaluate(mp)*(-2*m_thickness)).exp().average();
+		m_specularSamplingWeight = 1.0f / (avgAbsorption + 1.0f);
+	}
 	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
@@ -92,9 +115,44 @@ struct roughcoating : public BSDF
 		m_sigmaA.LoadTextures(callback);
 		m_specularReflectance.LoadTextures(callback);
 		m_nested.LoadTextures(callback);
+		m_alpha.LoadTextures(callback);
+	}
+	template<typename T> static roughcoating Create(const T& val, MicrofacetDistribution::EType type, float eta, float thickness, e_KernelTexture<Spectrum>& sig, e_KernelTexture<float>& alpha)
+	{
+		BSDFFirst nested;
+		nested.SetData(val);
+		return roughcoating(nested, type, eta, thickness, sig, alpha);
+	}
+	TYPE_FUNC(roughcoating)
+private:
+	/// Helper function: reflect \c wi with respect to a given surface normal
+	CUDA_FUNC_IN float3 reflect(const float3 &wi, const float3 &m) const {
+		return 2 * dot(wi, m) * m - wi;
+	}
+	/// Refraction in local coordinates
+	CUDA_FUNC_IN float3 refractTo(EDestination dest, const float3 &wi) const {
+		float cosThetaI = Frame::cosTheta(wi);
+		float invEta = (dest == EInterior) ? m_invEta : m_eta;
+
+		bool entering = cosThetaI > 0.0f;
+
+		/* Using Snell's law, calculate the squared sine of the
+		   angle between the normal and the transmitted ray */
+		float sinThetaTSqr = invEta*invEta * Frame::sinTheta2(wi);
+
+		if (sinThetaTSqr >= 1.0f) {
+			/* Total internal reflection */
+			return make_float3(0.0f);
+		} else {
+			float cosThetaT = sqrtf(1.0f - sinThetaTSqr);
+
+			/* Retain the directionality of the vector */
+			return make_float3(invEta*wi.x, invEta*wi.y,
+				entering ? cosThetaT : -cosThetaT);
+		}
 	}
 };
-
+/*
 struct mixturebsdf : public BSDF
 {
 private:

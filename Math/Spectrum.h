@@ -379,25 +379,11 @@ public:
 	}
 
 	/// Return the luminance in candelas.
-#if SPECTRUM_SAMPLES == 3
-	CUDA_FUNC_IN float getLuminance() const {
-		return s[0] * 0.212671f + s[1] * 0.715160f + s[2] * 0.072169f;
-	}
-
-	CUDA_FUNC_IN void toLinearRGB(float &r, float &g, float &b) const {
-		r = s[0]; g = s[1]; b = s[2];
-	}
-
-	CUDA_FUNC_IN void fromLinearRGB(float r, float g, float b, EConversionIntent intent = EReflectance) {
-		s[0] = r; s[1] = g; s[2] = b;
-	}
-#else
 	CUDA_HOST CUDA_DEVICE float getLuminance() const;
 
 	CUDA_HOST CUDA_DEVICE void toLinearRGB(float &r, float &g, float &b) const;
 
 	CUDA_HOST CUDA_DEVICE void fromLinearRGB(float r, float g, float b, EConversionIntent intent = EReflectance);
-#endif
 
 	CUDA_HOST CUDA_DEVICE void toXYZ(float &x, float &y, float &z) const;
 
@@ -422,6 +408,8 @@ public:
 	CUDA_HOST CUDA_DEVICE void toYxy(float &Y, float &x, float &y) const;
 
 	CUDA_HOST CUDA_DEVICE void fromYxy(float Y, float x, float y, EConversionIntent intent = EReflectance);
+
+	void fromContinuousSpectrum(const float* wls, const float* vals, unsigned int N);
 };
 
 class SpectrumHelper

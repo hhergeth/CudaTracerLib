@@ -134,6 +134,7 @@ struct BSDFALL
 		CALL_TYPE(ward, f, r) \
 		CALL_TYPE(hk, f, r) \
 		CALL_TYPE(coating, f, r) \
+		CALL_TYPE(roughcoating, f, r) \
 	}
 private:
 #define SZ DMAX3(DMAX5(sizeof(diffuse), sizeof(roughdiffuse), sizeof(dielectric), sizeof(thindielectric), sizeof(roughdielectric)), \

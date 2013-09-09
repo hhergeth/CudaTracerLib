@@ -78,8 +78,8 @@ private:
 	CUDA_FUNC_IN void sphere(const float3 &P, float *s, float *t) const
 	{
 		float3 vec = normalize((WorldToTexture * P));
-		float theta = SphericalTheta(vec);
-		float phi = SphericalPhi(vec);
+		float theta = MonteCarlo::SphericalTheta(vec);
+		float phi = MonteCarlo::SphericalPhi(vec);
 		*s = theta * INV_PI;
 		*t = phi * INV_TWOPI;
 	}

@@ -113,6 +113,191 @@ private:
 class MonteCarlo
 {
 public:
+	CUDA_FUNC_IN static bool Quadratic(float A, float B, float C, float *t0, float *t1)
+	{
+		// Find quadratic discriminant
+		float discrim = B * B - 4.f * A * C;
+		if (discrim <= 0.) return false;
+		float rootDiscrim = sqrtf(discrim);
+
+		// Compute quadratic _t_ values
+		float q;
+		if (B < 0) q = -.5f * (B - rootDiscrim);
+		else       q = -.5f * (B + rootDiscrim);
+		*t0 = q / A;
+		*t1 = C / q;
+		if (*t0 > *t1)
+			swapk(t0, t1);
+		return true;
+	}
+	CUDA_FUNC_IN static void RejectionSampleDisk(float *x, float *y, CudaRNG &rng)
+	{
+		float sx, sy;
+		do {
+			sx = 1.f - 2.f * rng.randomFloat();
+			sy = 1.f - 2.f * rng.randomFloat();
+		} while (sx*sx + sy*sy > 1.f);
+		*x = sx;
+		*y = sy;
+	}
+	CUDA_FUNC_IN static float3 UniformSampleHemisphere(float u1, float u2)
+	{
+		float z = u1;
+		float r = sqrtf(MAX(0.f, 1.f - z*z));
+		float phi = 2 * PI * u2;
+		float x = r * cosf(phi);
+		float y = r * sinf(phi);
+		return make_float3(x, y, z);
+	}
+	CUDA_FUNC_IN static float  UniformHemispherePdf()
+	{
+		return 1.0f / (2.0f * PI);
+	}
+	CUDA_FUNC_IN static float3 UniformSampleSphere(float u1, float u2)
+	{
+		float z = 1.f - 2.f * u1;
+		float r = sqrtf(MAX(0.f, 1.f - z*z));
+		float phi = 2.f * PI * u2;
+		float x = r * cosf(phi);
+		float y = r * sinf(phi);
+		return make_float3(x, y, z);
+	}
+	CUDA_FUNC_IN static float  UniformSpherePdf()
+	{
+		return 1.f / (4.f * PI);
+	}
+	CUDA_FUNC_IN static float3 UniformSampleCone(float u1, float u2, float costhetamax)
+	{
+		float costheta = (1.f - u1) + u1 * costhetamax;
+		float sintheta = sqrtf(1.f - costheta*costheta);
+		float phi = u2 * 2.f * PI;
+		return make_float3(cosf(phi) * sintheta, sinf(phi) * sintheta, costheta);
+	}
+	CUDA_FUNC_IN static float3 UniformSampleCone(float u1, float u2, float costhetamax, const float3 &x, const float3 &y, const float3 &z)
+	{
+		float costheta = lerp(costhetamax, 1.f, u1);
+		float sintheta = sqrtf(1.f - costheta*costheta);
+		float phi = u2 * 2.f * PI;
+		return cosf(phi) * sintheta * x + sinf(phi) * sintheta * y + costheta * z;
+	}
+	CUDA_FUNC_IN static float  UniformConePdf(float cosThetaMax)
+	{
+		return 1.f / (2.f * PI * (1.f - cosThetaMax));
+	}
+	CUDA_FUNC_IN static void UniformSampleDisk(float u1, float u2, float *x, float *y)
+	{
+		float r = sqrtf(u1);
+		float theta = 2.0f * PI * u2;
+		*x = r * cosf(theta);
+		*y = r * sinf(theta);
+	}
+	CUDA_FUNC_IN static void ConcentricSampleDisk(float u1, float u2, float *dx, float *dy)
+	{
+		float r, theta;
+		// Map uniform random numbers to $[-1,1]^2$
+		float sx = 2 * u1 - 1;
+		float sy = 2 * u2 - 1;
+
+		// Map square to $(r,\theta)$
+
+		// Handle degeneracy at the origin
+		if (sx == 0.0 && sy == 0.0) {
+			*dx = 0.0;
+			*dy = 0.0;
+			return;
+		}
+		if (sx >= -sy) {
+			if (sx > sy) {
+				// Handle first region of disk
+				r = sx;
+				if (sy > 0.0) theta = sy/r;
+				else          theta = 8.0f + sy/r;
+			}
+			else {
+				// Handle second region of disk
+				r = sy;
+				theta = 2.0f - sx/r;
+			}
+		}
+		else {
+			if (sx <= sy) {
+				// Handle third region of disk
+				r = -sx;
+				theta = 4.0f - sy/r;
+			}
+			else {
+				// Handle fourth region of disk
+				r = -sy;
+				theta = 6.0f + sx/r;
+			}
+		}
+		theta *= PI / 4.f;
+		*dx = r * cosf(theta);
+		*dy = r * sinf(theta);
+	}
+	CUDA_FUNC_IN static float3 CosineSampleHemisphere(float u1, float u2) {
+		float3 ret;
+		ConcentricSampleDisk(u1, u2, &ret.x, &ret.y);
+		ret.z = sqrtf(MAX(0.f, 1.f - ret.x*ret.x - ret.y*ret.y));
+		return ret;
+	}
+	CUDA_FUNC_IN static float CosineHemispherePdf(float costheta, float phi)
+	{
+		return costheta / PI;
+	}
+	CUDA_FUNC_IN static void StratifiedSample1D(float *samples, int nSamples, CudaRNG &rng, bool jitter = true)
+	{
+		float invTot = 1.f / nSamples;
+		for (int i = 0;  i < nSamples; ++i)
+		{
+			float delta = jitter ? rng.randomFloat() : 0.5f;
+			*samples++ = MIN((i + delta) * invTot, ONE_MINUS_EPS);
+		}
+	}
+	CUDA_FUNC_IN static void StratifiedSample2D(float *samples, int nx, int ny, CudaRNG &rng, bool jitter = true)
+	{
+		float dx = 1.f / nx, dy = 1.f / ny;
+		for (int y = 0; y < ny; ++y)
+			for (int x = 0; x < nx; ++x)
+			{
+				float jx = jitter ? rng.randomFloat() : 0.5f;
+				float jy = jitter ? rng.randomFloat() : 0.5f;
+				*samples++ = MIN((x + jx) * dx, ONE_MINUS_EPS);
+				*samples++ = MIN((y + jy) * dy, ONE_MINUS_EPS);
+			}
+	}
+	template <typename T> CUDA_ONLY_FUNC static void Shuffle(T *samp, unsigned int count, unsigned int dims, CudaRNG &rng)
+	{
+		for (unsigned int i = 0; i < count; ++i)
+		{
+			unsigned int other = i + (rng.randomUint() % (count - i));
+			for (unsigned int j = 0; j < dims; ++j)
+				swapk(samp[dims*i + j], samp[dims*other + j]);
+		}
+	}
+
+	CUDA_FUNC_IN static float SphericalTheta(const float3 &v)
+	{
+		return acosf(clamp(-1.f, 1.f, v.z));
+	}
+
+	CUDA_FUNC_IN static float SphericalPhi(const float3 &v)
+	{
+		float p = atan2f(v.y, v.x);
+		return (p < 0.f) ? p + 2.f * PI : p;
+	}
+
+	CUDA_FUNC_IN static float BalanceHeuristic(int nf, float fPdf, int ng, float gPdf)
+	{
+		return (nf * fPdf) / (nf * fPdf + ng * gPdf);
+	}
+
+	CUDA_FUNC_IN static float PowerHeuristic(int nf, float fPdf, int ng, float gPdf)
+	{
+		float f = nf * fPdf, g = ng * gPdf;
+		return (f*f) / (f*f + g*g);
+	}
+
 	CUDA_FUNC_IN static float3 SphericalDirection(float theta, float phi)
 	{
 		float sinTheta, cosTheta, sinPhi, cosPhi;
