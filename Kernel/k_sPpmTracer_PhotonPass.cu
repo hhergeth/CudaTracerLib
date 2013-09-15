@@ -10,7 +10,7 @@ template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, Spectrum Le, CudaR
 	TraceResult r2;
 	r2.Init(true);
 	int depth = -1;
-	bool inMesh = false;
+	//bool inMesh = false;
 	BSDFSamplingRecord bRec;
 	while(++depth < 12 && k_TraceRay(r.direction, r.origin, &r2))
 	{
@@ -48,11 +48,10 @@ template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, Spectrum Le, CudaR
 		float3 x = r(r2.m_fDist);
 		r2.getBsdfSample(r, rng, &bRec);
 		const e_KernelBSSRDF* bssrdf;
-		float3 wi;
 		Spectrum ac;
 		if(r2.getMat().GetBSSRDF(bRec.map, &bssrdf))
 		{
-			inMesh = false;
+			//inMesh = false;
 			ac = Le;
 			while(true)
 			{
@@ -67,7 +66,8 @@ template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, Spectrum Le, CudaR
 				if(cancel)
 				{
 					x = x + r.direction * r3.m_fDist;
-					wi = VectorMath::refract(r.direction, r3.m_pTri->lerpFrame(r3.m_fUV, r3.m_pNode->getWorldMatrix()).n, bssrdf->e);
+					float3 wi = VectorMath::refract(r.direction, -r3.lerpFrame().n, 1.0f/bssrdf->e);
+					bRec.wo = bRec.map.sys.toLocal(wi);//ugly
 					break;
 				}
 				float A = (sigma_s / sigma_t).average();
@@ -90,9 +90,9 @@ template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, Spectrum Le, CudaR
 					if(g_Map.StorePhoton<true>(x, Le, wo, bRec.map.sys.n) == k_StoreResult::Full)
 						return false;
 			Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
-			if(bRec.sampledComponent == -1)
+			if(!bRec.sampledType)
 				break;
-			inMesh = dot(r.direction, bRec.map.sys.n) < 0;
+			//inMesh = dot(r.direction, bRec.map.sys.n) < 0;
 			ac = Le * f;
 		}
 		//if(depth > 3)
@@ -109,7 +109,7 @@ template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, Spectrum Le, CudaR
 	return true;
 }
 
-template<bool DIRECT> __global__ void k_PhotonPass(unsigned int spp)
+template<bool DIRECT> __global__ void k_PhotonPass(unsigned int spp,int PASS)
 { 
 	CudaRNG rng = g_RNGData();
 	for(int _photonNum = 0; _photonNum < spp; _photonNum++)
@@ -138,8 +138,8 @@ void k_sPpmTracer::doPhotonPass()
 	k_STARTPASS(m_pScene, m_pCamera, g_sRngs);
 	const unsigned long long p0 = 6 * 32, spp = 3, n = 180;
 	if(m_bDirect)
-		k_PhotonPass<true><<< n, p0 >>>(spp);
-	else k_PhotonPass<false><<< n, p0 >>>(spp);
+		k_PhotonPass<true><<< n, p0 >>>(spp,m_uPhotonsEmitted+m_sMaps.m_uPhotonNumStored);
+	else k_PhotonPass<false><<< n, p0 >>>(spp,m_uPhotonsEmitted+m_sMaps.m_uPhotonNumStored);
 	cudaThreadSynchronize();
 	cudaMemcpyFromSymbol(&m_sMaps, g_Map, sizeof(k_PhotonMapCollection));
 }

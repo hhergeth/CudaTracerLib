@@ -29,7 +29,7 @@ void exportBVH(char* Input, char* Output)
 
     FW::BVH bvh(m_scene, FW::Platform(), m_buildParams);
     stats.print();
-	FW::CudaBVH* m_bvh = new FW::CudaBVH(bvh, BVHLayout::BVHLayout_Compact2);
+	FW::CudaBVH* m_bvh = new FW::CudaBVH(bvh, BVHLayout_Compact2);
 
     // Display status.
 

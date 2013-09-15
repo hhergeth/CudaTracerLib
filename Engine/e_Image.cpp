@@ -32,6 +32,9 @@ e_Image::e_Image(e_KernelFilter &filt, int xRes, int yRes, RGBCOL* cudaBuffer)
 {
 	float crop[4] = {0, 1, 0, 1};
 	filter = filt;
+	//filter.SetData(e_KernelGaussianFilter(4, 4, 0.55f));
+	//filter.SetData(e_KernelMitchellFilter(1.0f/3.0f,1.0f/3.0, 4, 4));
+	//filter.SetData(e_KernelLanczosSincFilter(4,4,5));
     memcpy(cropWindow, crop, 4 * sizeof(float));
 	xPixelStart = Ceil2Int(xResolution * cropWindow[0]);
     xPixelCount = MAX(1, Ceil2Int(xResolution * cropWindow[1]) - xPixelStart);

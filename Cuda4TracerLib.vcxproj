@@ -23,6 +23,7 @@
     <ClInclude Include="Engine\e_BSDF_Complex.h" />
     <ClInclude Include="Engine\e_Buffer.h" />
     <ClInclude Include="Engine\e_Camera.h" />
+    <ClInclude Include="Engine\e_CameraController.h" />
     <ClInclude Include="Engine\e_DynamicScene.h" />
     <ClInclude Include="Engine\e_EnvironmentMap.h" />
     <ClInclude Include="Engine\e_ErrorHandler.h" />
@@ -36,6 +37,7 @@
     <ClInclude Include="Engine\e_Light.h" />
     <ClInclude Include="Engine\e_BSDF_Simple.h" />
     <ClInclude Include="Engine\e_Material.h" />
+    <ClInclude Include="Engine\e_MaterialLib.h" />
     <ClInclude Include="Engine\e_Mesh.h" />
     <ClInclude Include="Engine\e_MeshCompiler.h" />
     <ClInclude Include="Engine\e_MicrofacetDistribution.h" />
@@ -45,10 +47,12 @@
     <ClInclude Include="Engine\e_RoughTransmittance.h" />
     <ClInclude Include="Engine\e_SceneBVH.h" />
     <ClInclude Include="Engine\e_SceneInitData.h" />
+    <ClInclude Include="Engine\e_Sensor.h" />
     <ClInclude Include="Engine\e_ShapeSet.h" />
     <ClInclude Include="Engine\e_Terrain.h" />
     <ClInclude Include="Engine\e_TerrainHeader.h" />
     <ClInclude Include="Engine\e_FileTexture.h" />
+    <ClInclude Include="Engine\e_TraceResult.h" />
     <ClInclude Include="Engine\e_TriangleData.h" />
     <ClInclude Include="Engine\e_Volumes.h" />
     <ClInclude Include="Engine\e_Samples.h" />
@@ -96,13 +100,16 @@
     <ClCompile Include="Engine\e_DynamicScene.cpp" />
     <ClCompile Include="Engine\e_FPCamera.cpp" />
     <ClCompile Include="Engine\e_Image.cpp" />
+    <ClCompile Include="Engine\e_MaterialLib.cpp" />
     <ClCompile Include="Engine\e_Mesh.cpp" />
     <ClCompile Include="Engine\e_MeshCompiler.cpp" />
     <ClCompile Include="Engine\e_PointBVH.cpp" />
     <ClCompile Include="Engine\e_SceneBVH.cpp" />
     <ClCompile Include="Engine\e_ShapeSet.cpp" />
     <ClCompile Include="Engine\e_Terrain.cpp" />
-    <ClCompile Include="Engine\e_FileTexture.cpp" />
+    <CudaCompile Include="Engine\e_FileTexture.cu">
+      <FileType>CppCode</FileType>
+    </CudaCompile>
     <ClCompile Include="Engine\SceneBuilder\BVH.cpp" />
     <ClCompile Include="Engine\SceneBuilder\BVHNode.cpp" />
     <ClCompile Include="Engine\SceneBuilder\CudaBVH.cpp" />
@@ -121,6 +128,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <CudaCompile Include="Base\CudaRandom.cu" />
     <CudaCompile Include="Engine\e_aaaa.cu" />
     <CudaCompile Include="Engine\e_AnimatedMesh.cu" />
     <CudaCompile Include="Engine\e_BSDF_Complex.cu" />
@@ -154,12 +162,14 @@
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v100</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v100</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -193,13 +203,13 @@
       <PreprocessorDefinitions>NOMINMAX;FW_DO_NOT_OVERRIDE_NEW_DELETE;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <MinimalRebuild>false</MinimalRebuild>
-      <MultiProcessorCompilation>false</MultiProcessorCompilation>
-      <ShowIncludes>true</ShowIncludes>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <ShowIncludes>false</ShowIncludes>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>opengl32.lib;cudart.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;Shlwapi.lib;framework.lib;zlibstat.lib;C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs\$(Platform)\FreeImage.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;cudart.lib;curand.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;Shlwapi.lib;framework.lib;zlibstat.lib;C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs\$(Platform)\FreeImage.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>LIBC.lib</IgnoreSpecificDefaultLibraries>
     </Link>
     <PostBuildEvent>
@@ -215,6 +225,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <CodeGeneration>compute_30,sm_30</CodeGeneration>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
     </CudaCompile>
+    <Lib />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -225,15 +236,15 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <PreprocessorDefinitions>NOMINMAX;FW_DO_NOT_OVERRIDE_NEW_DELETE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <MinimalRebuild>false</MinimalRebuild>
-      <MultiProcessorCompilation>false</MultiProcessorCompilation>
-      <ShowIncludes>true</ShowIncludes>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <ShowIncludes>false</ShowIncludes>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>opengl32.lib;cudart.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;Shlwapi.lib;framework.lib;zlibstat.lib;C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs\$(Platform)\FreeImage.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;cudart.lib;curand.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;Shlwapi.lib;framework.lib;zlibstat.lib;C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs\$(Platform)\FreeImage.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>LIBC.lib</IgnoreSpecificDefaultLibraries>
     </Link>
     <PostBuildEvent>
@@ -253,6 +264,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <Optimization>O3</Optimization>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
     </CudaCompile>
+    <Lib />
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

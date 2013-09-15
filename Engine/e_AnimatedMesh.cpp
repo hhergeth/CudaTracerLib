@@ -21,7 +21,7 @@ struct c_bFrame
 	c_bFrame(){}
 	c_bFrame(bFrame* F, float4x4* a_InverseTransforms)
 	{
-		L = F->joints.size();
+		L = (unsigned int)F->joints.size();
 		data = new float4x4[F->joints.size()];
 		for(int i = 0; i < F->joints.size(); i++)
 		{
@@ -48,21 +48,21 @@ struct c_Animation
 
 	c_Animation(Anim* A, MD5Model* M)
 	{
-		m_uNumbFrames = A->numbFrames;
-		m_uNumBones = A->baseJoints.size();
-		m_ubFrameRate = A->bFrameRate;
+		m_uNumbFrames = (unsigned int)A->numbFrames;
+		m_uNumBones = (unsigned int)A->baseJoints.size();
+		m_ubFrameRate = (unsigned int)A->bFrameRate;
 
 		float4x4* inverseJoints = new float4x4[m_uNumBones];
-		for(int i = 0; i < m_uNumBones; i++)
+		for(unsigned int i = 0; i < m_uNumBones; i++)
 			inverseJoints[i] = mul(M->joints[i].quat.toMatrix(), float4x4::Translate(*(float3*)&M->joints[i].pos)).Inverse();
 		data = new c_bFrame[m_uNumbFrames];
-		for(int i = 0; i < m_uNumbFrames; i++)
+		for(unsigned int i = 0; i < m_uNumbFrames; i++)
 			data[i] = c_bFrame(&A->bFrames[i], inverseJoints);
 	}
 
 	void serialize(OutputStream& a_Out)
 	{
-		for(int i = 0; i < m_uNumbFrames; i++)
+		for(unsigned int i = 0; i < m_uNumbFrames; i++)
 			data[i].serialize(a_Out);
 	}
 };
@@ -153,8 +153,8 @@ void e_AnimatedMesh::CompileToBinary(const char* a_InputFile, c_StringArray& a_A
 
 		int s2 = M2.addSubmesh();
 		Mesh* sm = M.meshes[s];
-		M2.addVertices((FW::VertexP*)(v_Pos + off), sm->verts.size());
-		int st = triData2.size();
+		M2.addVertices((FW::VertexP*)(v_Pos + off), (int)sm->verts.size());
+		size_t st = triData2.size();
 
 		for(int t = 0; t < sm->tris.size(); t++)
 		{
@@ -172,8 +172,8 @@ void e_AnimatedMesh::CompileToBinary(const char* a_InputFile, c_StringArray& a_A
 			uint3 q = *(uint3*)&sm->tris[t].v + make_uint3(off);
 			triData2.push_back(q);
 		}
-		M2.mutableIndices(s2).add((FW::Vec3i*)&triData2[st], sm->tris.size());
-		off += sm->verts.size();
+		M2.mutableIndices(s2).add((FW::Vec3i*)&triData2[st], (int)sm->tris.size());
+		off += (unsigned int)sm->verts.size();
 	}
 	M2.compact();
 
@@ -182,9 +182,9 @@ void e_AnimatedMesh::CompileToBinary(const char* a_InputFile, c_StringArray& a_A
 	a_Out << lc;
 
 	a_Out << (unsigned int)triData.size();
-	a_Out.Write(&triData[0], sizeof(e_TriangleData) * triData.size());
+	a_Out.Write(&triData[0], sizeof(e_TriangleData) * (unsigned int)triData.size());
 	a_Out << (unsigned int)matData.size();
-	a_Out.Write(&matData[0], sizeof(e_KernelMaterial) * matData.size());
+	a_Out.Write(&matData[0], sizeof(e_KernelMaterial) * (unsigned int)matData.size());
 	float4* v_BVH;
 	ConstructBVH(M2, TmpOutStream(&a_Out), &v_BVH);
 
@@ -192,20 +192,20 @@ void e_AnimatedMesh::CompileToBinary(const char* a_InputFile, c_StringArray& a_A
 	constructLayout(V, (e_BVHNodeData*)v_BVH, 0, -1);
 
 	a_Out << (unsigned int)vCount;
-	unsigned int BLOCKSIZE = 4 + vCount * sizeof(e_AnimatedVertex) + 4 + triData2.size() * sizeof(uint3)
+	size_t BLOCKSIZE = 4 + vCount * sizeof(e_AnimatedVertex) + 4 + triData2.size() * sizeof(uint3)
 		+ 4 + V.size() * 8
 		+ 8 + M.anims.size() * 12;
-	for(int i = 0; i < V.size(); i++)
-		BLOCKSIZE += V[i].size() * sizeof(e_BVHLevelEntry);
-	for(int a = 0; a < M.anims.size(); a++)
+	for(size_t i = 0; i < V.size(); i++)
+		BLOCKSIZE += (unsigned int)V[i].size() * sizeof(e_BVHLevelEntry);
+	for(size_t a = 0; a < M.anims.size(); a++)
 		BLOCKSIZE += M.anims[a]->numbFrames * (M.numJoints * sizeof(float4x4));
 	a_Out << BLOCKSIZE;
-	unsigned int endTo = BLOCKSIZE + a_Out.numBytesWrote;
+	unsigned int endTo = (unsigned int)BLOCKSIZE + a_Out.numBytesWrote;
 
 	a_Out << (unsigned int)vCount;
 	a_Out.Write(&v_Data[0], vCount * sizeof(e_AnimatedVertex));
 	a_Out << (unsigned int)triData2.size();
-	a_Out.Write(&triData2[0], triData2.size() * sizeof(uint3));
+	a_Out.Write(&triData2[0], (unsigned int)triData2.size() * sizeof(uint3));
 	
 	a_Out << (unsigned int)V.size();
 	unsigned int off2 = 0;
@@ -213,10 +213,10 @@ void e_AnimatedMesh::CompileToBinary(const char* a_InputFile, c_StringArray& a_A
 	{
 		a_Out << off2;
 		a_Out << (unsigned int)V[i].size();
-		off2 += V[i].size();
+		off2 += (unsigned int)V[i].size();
 	}
 	for(int i = 0; i < V.size(); i++)
-		a_Out.Write(&V[i][0], V[i].size() * sizeof(e_BVHLevelEntry));
+		a_Out.Write(&V[i][0], (unsigned int)V[i].size() * sizeof(e_BVHLevelEntry));
 	
 	a_Out << (unsigned int)M.anims.size();
 	a_Out << (unsigned int)M.anims[0]->jointInfo.size();
@@ -226,7 +226,7 @@ void e_AnimatedMesh::CompileToBinary(const char* a_InputFile, c_StringArray& a_A
 		a_Out << M.anims[a]->numbFrames;
 		a_Out << M.anims[a]->bFrameRate;
 		a_Out << OFF4;
-		OFF4 += M.anims[a]->numbFrames * M.joints.size();
+		OFF4 += M.anims[a]->numbFrames * (unsigned int)M.joints.size();
 	}
 	for(int a = 0; a < M.anims.size(); a++)
 	{

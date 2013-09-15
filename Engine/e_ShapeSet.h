@@ -84,7 +84,7 @@ public:
 		if(r2.hasHit() && Ns)
 			*Ns = n;
 		return r(r2.m_fDist);
-		return pt;
+		//return pt;
 	}
     CUDA_FUNC_IN float Pdf(const float3 &p, const float3 &wi, const e_TriIntersectorData* a_Int) const
 	{

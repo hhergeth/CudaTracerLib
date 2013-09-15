@@ -3,79 +3,126 @@
 #include "..\Defines.h"
 
 #include "curand_kernel.h"
-/*
-class CudaRNG
+
+class LinearCongruental_GENERATOR
 {
-	struct Seed
-	{
-		unsigned int s1, s2, s3;
-	};
-private:
-	Seed s;
-private:
-	#define FLOATMASK 0x00ffffffu
-
-	CUDA_FUNC_IN unsigned int TAUSWORTHE(const unsigned int s, const unsigned int a,	const unsigned int b, const unsigned int c,	const unsigned int d)
-	{
-		return ((s&c)<<d) ^ (((s << a) ^ s) >> b);
-	}
-	CUDA_FUNC_IN unsigned int LCG(const unsigned int x) { return x * 69069; }
-
-	CUDA_FUNC_IN unsigned int ValidSeed(const unsigned int x, const unsigned int m) { return (x < m) ? (x + m) : x; }
+	unsigned int X_i;
 public:
-	CUDA_FUNC_IN CudaRNG()
+	CUDA_FUNC_IN LinearCongruental_GENERATOR(unsigned int seed = 12345)
 	{
-
+		X_i = seed;
 	}
 
-	CUDA_FUNC_IN CudaRNG(unsigned int seed)
+	CUDA_FUNC_IN unsigned int randomUint()
 	{
-		// Avoid 0 value
-		seed = (seed == 0) ? (seed + 0xffffffu) : seed;
-
-		s.s1 = ValidSeed(LCG(seed), 1);
-		s.s2 = ValidSeed(LCG(s.s1), 7);
-		s.s3 = ValidSeed(LCG(s.s2), 15);
-	}
-
-	CUDA_FUNC_IN unsigned long randomUint()
-	{
-		s.s1 = TAUSWORTHE(s.s1, 13, 19, 4294967294UL, 12);
-		s.s2 = TAUSWORTHE(s.s2, 2, 25, 4294967288UL, 4);
-		s.s3 = TAUSWORTHE(s.s3, 3, 11, 4294967280UL, 17);
-
-		return ((s.s1) ^ (s.s2) ^ (s.s3));
+		unsigned int a = 1664525, c = 1013904223;
+		X_i = (a * X_i + c);
+		return X_i;
 	}
 
 	CUDA_FUNC_IN float randomFloat()
 	{
-		return (randomUint() & FLOATMASK) * (1.f / (FLOATMASK + 1UL));
+		return float(randomUint()) / float(0xffffffff);
 	}
 };
-*/
 
-struct k_TracerRNG
+class Lehmer_GENERATOR
 {
-	friend class k_TracerRNGBuffer;
-private:
-	curandState state;
+	unsigned int X_i;
 public:
-#ifdef ISCUDA
-	CUDA_ONLY_FUNC void Initialize(unsigned int a_Index, unsigned int a_Spacing, unsigned int a_Offset)
+	CUDA_FUNC_IN Lehmer_GENERATOR(unsigned int seed = 123456789L)
 	{
-		curand_init(a_Index * a_Spacing, a_Index * a_Offset, 0, &state);
+		X_i = seed;
 	}
-	CUDA_ONLY_FUNC float randomFloat()
+
+	CUDA_FUNC_IN unsigned int randomUint()
 	{
-		return curand_uniform(&state);
+		const unsigned int a = 16807;
+		const unsigned int m = 2147483647;
+		X_i = (unsigned int(X_i * a)) % m;
+		return X_i;
 	}
-	CUDA_ONLY_FUNC unsigned long randomUint()
+
+	CUDA_FUNC_IN float randomFloat()
 	{
-		return curand(&state);
+		return randomUint() / float(2147483647);
 	}
-#else
+};
+
+class TAUSWORTHE_GENERATOR
+{
+	CUDA_FUNC_IN unsigned int TausStep(unsigned int &z, unsigned int S1, unsigned int S2, unsigned int S3, unsigned int M)
+	{
+		unsigned int b=(((z << S1) ^ z) >> S2); 
+		return z = (((z & M) << S3) ^ b); 
+	}
+	CUDA_FUNC_IN unsigned int LCGStep(unsigned int &z, unsigned int A, unsigned int C)
+	{
+		return z=(A*z+C);
+	}
+	unsigned int z1, z2, z3, z4;
+public:
+	CUDA_FUNC_IN TAUSWORTHE_GENERATOR()
+	{
+
+	}
+
+	CUDA_FUNC_IN TAUSWORTHE_GENERATOR(unsigned int seed)
+	{
+		z1 = seed + 1 + 1;
+		z2 = seed + 7 + 1;
+		z3 = seed + 15 + 1;
+		z4 = seed + 127 + 1;
+	}
+
+	CUDA_FUNC_IN unsigned int randomUint()
+	{
+		return TausStep(z1, 13, 19, 12, 4294967294UL) ^ TausStep(z2, 2, 25, 4, 4294967288UL) ^ TausStep(z3, 3, 11, 17, 4294967280UL) ^ LCGStep(z4, 1664525, 1013904223UL);
+	}
+
+	CUDA_FUNC_IN float randomFloat()
+	{
+		return float(randomUint()) / float(0xffffffff);
+	}
+};
+
+class Xorshift_GENERATOR
+{
+	unsigned int y;
+public:
+	CUDA_FUNC_IN Xorshift_GENERATOR()
+	{
+#ifndef ISCUDA
+		y = 123456789;
+#endif
+	}
+
+	CUDA_FUNC_IN Xorshift_GENERATOR(unsigned int seed)
+	{
+		y = seed;
+	}
+
+	CUDA_FUNC_IN unsigned int randomUint()
+	{
+		y = y ^ (y << 13);
+		y = y ^ (y >> 17);
+		y = y ^ (y << 5);
+		return y;
+	}
+
+	CUDA_FUNC_IN float randomFloat()
+	{
+		return float(randomUint()) / float(0xffffffff);
+	}
+};
+
+#define GENERATOR Xorshift_GENERATOR
+
+struct k_TracerRNG_cuRAND
+{
+	curandState state;
 private:
-	unsigned int curand(curandStateXORWOW_t *state)
+	unsigned int curand2(curandStateXORWOW_t *state)
 	{
 		unsigned int t;
 		t = (state->v[0] ^ (state->v[0] >> 2));
@@ -87,12 +134,11 @@ private:
 		state->d += 362437;
 		return state->v[4] + state->d;
 	}
-	float _curand_uniform(unsigned int x)
+	float curand_uniform2(unsigned int x)
 	{
 		return x * CURAND_2POW32_INV + (CURAND_2POW32_INV/2.0f);
 	}
-	void __curand_matvec(unsigned int *vector, unsigned int *matrix, 
-                                unsigned int *result, int n)
+	void __curand_matvec(unsigned int *vector, unsigned int *matrix, unsigned int *result, int n)
 	{
 		for(int i = 0; i < n; i++) {
 			result[i] = 0;
@@ -240,7 +286,7 @@ private:
 		state->boxmuller_flag = 0;
 		state->boxmuller_flag_double = 0;
 	}
-	void curand_init(unsigned long long seed, 
+	void curand_init2(unsigned long long seed, 
                             unsigned long long subsequence, 
                             unsigned long long offset, 
                             curandStateXORWOW_t *state)
@@ -249,19 +295,10 @@ private:
 		_curand_init_scratch(seed, subsequence, offset, state, (unsigned int*)scratch);
 	}
 public:
-	CUDA_FUNC_IN void Initialize(unsigned int a_Index, unsigned int a_Spacing, unsigned int a_Offset)
-	{
-		curand_init(a_Index * a_Spacing, a_Index * a_Offset, 0, &state);
-	}
-	CUDA_FUNC_IN float randomFloat()
-	{
-		return _curand_uniform(curand(&state));
-	}
-	CUDA_FUNC_IN unsigned long randomUint()
-	{
-		return curand(&state);
-	}
-#endif
+	CUDA_DEVICE CUDA_HOST void Initialize(unsigned int a_Index, unsigned int a_Spacing, unsigned int a_Offset);
+	CUDA_DEVICE CUDA_HOST float randomFloat();
+	CUDA_DEVICE CUDA_HOST unsigned long randomUint();
+
 	CUDA_FUNC_IN float2 randomFloat2()
 	{
 		return make_float2(randomFloat(), randomFloat());
@@ -276,52 +313,57 @@ public:
 	}
 };
 
-class k_TracerRNGBuffer
+class CudaRNGBuffer_cuRAND
 {
 private:
 	unsigned int m_uNumGenerators;
-	curandState* m_pHostGenerators;
-	curandState* m_pDeviceGenerators;
-public:
-	unsigned int m_uOffset;
+	k_TracerRNG_cuRAND* m_pHostGenerators;
+	k_TracerRNG_cuRAND* m_pDeviceGenerators;
 public:
 	//curandSetGeneratorOffset(GENERATOR[i], i * a_Offset);
-	k_TracerRNGBuffer(unsigned int a_Length, unsigned int a_Spacing = 1234, unsigned int a_Offset = 0)
-	{
-		m_uOffset = 0;
-		m_uNumGenerators = a_Length;
-		cudaMalloc(&m_pDeviceGenerators, a_Length * sizeof(curandState));
-		m_pHostGenerators = new curandState[a_Length];
-		createGenerators(a_Spacing, a_Offset);
-	}
-	k_TracerRNGBuffer(){}
-	~k_TracerRNGBuffer()
-	{
-		//cudaFree(m_pGenerators);
-	}
-	CUDA_FUNC_IN k_TracerRNG operator()()
-	{
-		k_TracerRNG r;
-		unsigned int i = threadId_Unsafe % m_uNumGenerators;
-#ifdef __CUDACC__
-		r.state = m_pDeviceGenerators[i];
-#else
-		r.state = m_pHostGenerators[i];
-#endif
-		return r;
-	}
-	CUDA_FUNC_IN void operator()(k_TracerRNG& val)
-	{
-#ifdef __CUDACC__
-		unsigned int i = threadId;
-		if(i < m_uNumGenerators)
-			m_pDeviceGenerators[i] = val.state;
-#else
-		m_pHostGenerators[threadId_Unsafe % m_uNumGenerators] = val.state;
-#endif
-	}
+	CudaRNGBuffer_cuRAND(unsigned int a_Length, unsigned int a_Spacing = 1234, unsigned int a_Offset = 0);
+	CudaRNGBuffer_cuRAND(){}
+	CUDA_DEVICE CUDA_HOST k_TracerRNG_cuRAND operator()();
+	CUDA_DEVICE CUDA_HOST void operator()(k_TracerRNG_cuRAND& val);
+	void NextPass();
 private:
 	void createGenerators(unsigned int a_Spacing, unsigned int a_Offset);
 };
 
-typedef k_TracerRNG CudaRNG;
+class k_Tracer_sobol
+{
+public:
+	float* points;
+	GENERATOR state;
+	CUDA_DEVICE CUDA_HOST float randomFloat();
+	CUDA_DEVICE CUDA_HOST unsigned long randomUint();
+
+	CUDA_FUNC_IN float2 randomFloat2()
+	{
+		return make_float2(randomFloat(), randomFloat());
+	}
+	CUDA_FUNC_IN float3 randomFloat3()
+	{
+		return make_float3(randomFloat(), randomFloat(), randomFloat());
+	}
+	CUDA_FUNC_IN float4 randomFloat4()
+	{
+		return make_float4(randomFloat(), randomFloat(), randomFloat(), randomFloat());
+	}
+};
+
+class k_Tracer_sobol_Buffer
+{
+	float points[32];
+	unsigned int X[32];
+	unsigned int passIndex;
+public:
+	k_Tracer_sobol_Buffer(unsigned int a_Length, unsigned int a_Spacing = 1234, unsigned int a_Offset = 0);
+	k_Tracer_sobol_Buffer(){}
+	CUDA_DEVICE CUDA_HOST k_Tracer_sobol operator()();
+	CUDA_DEVICE CUDA_HOST void operator()(k_Tracer_sobol& val);
+	void NextPass();
+};
+
+typedef k_TracerRNG_cuRAND CudaRNG;
+typedef CudaRNGBuffer_cuRAND CudaRNGBuffer;

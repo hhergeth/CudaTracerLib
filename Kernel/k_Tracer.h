@@ -11,7 +11,7 @@ typedef void (*SliderCreateCallback)(float, float, bool, float*, FW::String);
 class k_Tracer
 {
 public:
-	static k_TracerRNGBuffer g_sRngs;
+	static CudaRNGBuffer g_sRngs;
 	static AABB GetEyeHitPointBox(e_DynamicScene* s, e_Camera* c);
 	static TraceResult TraceSingleRay(Ray r, e_DynamicScene* s, e_Camera* c);
 	static void InitRngs(unsigned int N = 1 << 16);
@@ -73,6 +73,7 @@ public:
 	}
 	virtual void DoPass(e_Image* I, bool a_NewTrace)
 	{
+		g_sRngs.NextPass();
 		if(a_NewTrace)
 		{
 			m_uNumRaysTraced = 0;

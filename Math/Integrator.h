@@ -1,7 +1,6 @@
 #pragma once
 
 #include "cutil_math.h"
-#include <limits>
 
 #define m_alpha ((float)sqrtf(2.0/3.0))
 #define m_beta ((float)(1.0/sqrtf(5.0)))
@@ -137,12 +136,12 @@ private:
 
 		if (m_relError != 0 && acc != 0)
 			result = acc * MAX(m_relError,
-				std::numeric_limits<float>::epsilon())
-				/ (r*std::numeric_limits<float>::epsilon());
+				FLT_EPSILON)
+				/ (r*FLT_EPSILON);
 
 		if (m_absError != 0)
 			result = MIN(result, m_absError
-				/ (r*std::numeric_limits<float>::epsilon()));
+				/ (r*FLT_EPSILON));
 
 		return result;
 	}

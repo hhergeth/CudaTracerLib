@@ -6,7 +6,7 @@
 struct e_EnvironmentMap
 {
 public:
-	e_KernelTexture<Spectrum> Map;
+	e_KernelTexture Map;
 	bool isSet;
 public:
 
@@ -25,19 +25,19 @@ public:
 	{
 		e_EnvironmentMap m;
 		m.isSet = false;
-		m.Map = e_KernelTexture<Spectrum>();
+		m.Map = e_KernelTexture();
 		return m;
 	}
 
 	e_EnvironmentMap(Spectrum& f)
 	{
-		Map.SetData(e_KernelConstantTexture<Spectrum>(f));
+		Map.SetData(e_KernelConstantTexture(f));
 		isSet = true;
 	}
 
 	e_EnvironmentMap(const char* path)
 	{
-		Map.SetData(e_KernelImageTexture<Spectrum>(CreateTextureMapping2D(e_KernelUVMapping2D()), path));
+		Map.SetData(e_KernelImageTexture(CreateTextureMapping2D(e_KernelUVMapping2D()), path));
 		isSet = true;
 	}
 

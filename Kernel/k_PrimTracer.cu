@@ -124,7 +124,7 @@ __global__ void primaryKernel(long long width, long long height, e_Image g_Image
 				max3(&s_EyeHitBoxMax, pu);
 			}
 		}
-		g_Image.SetSampleDirect(nextSample(x, y, rng), c / N2);
+		g_Image.AddSample(nextSample(x, y, rng), c / N2);
 		
 		//Ray r = g_CameraData.GenRay(x, y, width, height, rng.randomFloat(), rng.randomFloat());
 		//TraceResult r2 = k_TraceRay(r);

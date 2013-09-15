@@ -94,12 +94,12 @@ template<typename HASH> struct k_PhotonMap
 	unsigned int m_uMaxPhotonCount;
 	unsigned int m_uGridLength;
 
-	k_PhotonMap()
+	CUDA_FUNC_IN k_PhotonMap()
 	{
 
 	}
 
-	k_PhotonMap(unsigned int photonN, unsigned int hashN, k_pPpmPhoton* P)
+	CUDA_FUNC_IN k_PhotonMap(unsigned int photonN, unsigned int hashN, k_pPpmPhoton* P)
 	{
 		m_uGridLength = hashN;
 		m_pDevicePhotons = P;
@@ -107,6 +107,24 @@ template<typename HASH> struct k_PhotonMap
 		cudaMalloc(&m_pDeviceHashGrid, sizeof(unsigned int) * m_uGridLength);
 		cudaMemset(m_pDeviceHashGrid, -1, sizeof(unsigned int) * m_uGridLength);
 		m_uMaxPhotonCount = photonN;
+	}
+
+	void Serialize(OutputStream& O, void* hostbuf)
+	{
+		O << m_uMaxPhotonCount;
+		O << m_uGridLength;
+		cudaMemcpy(hostbuf, m_pDeviceHashGrid, sizeof(unsigned int) * m_uGridLength, cudaMemcpyDeviceToHost);
+		O.Write(hostbuf, sizeof(unsigned int) * m_uGridLength);
+		O.Write(m_sHash);
+	}
+
+	void DeSerialize(InputStream& I, void* hostbuf)
+	{
+		I >> m_uMaxPhotonCount;
+		I >> m_uGridLength;
+		I.Read(hostbuf, sizeof(unsigned int) * m_uGridLength);
+		cudaMemcpy(m_pDeviceHashGrid, hostbuf, sizeof(unsigned int) * m_uGridLength, cudaMemcpyHostToDevice);
+		I.Read(m_sHash);
 	}
 
 	void Free()
@@ -138,7 +156,7 @@ template<typename HASH> struct k_PhotonMap
 			return k_StoreResult::NotValid;
 		uint3 i0 = m_sHash.Transform(p);
 		unsigned int i = m_sHash.Hash(i0);
-		unsigned int j = atomicInc(a_PhotonCounter, -1);
+		unsigned int j = atomicInc(a_PhotonCounter, 0xffffffff);
 		if(j < m_uMaxPhotonCount)
 		{
 			unsigned int k = atomicExch(m_pDeviceHashGrid + i, j);
@@ -165,6 +183,34 @@ struct k_PhotonMapCollection
 	CUDA_FUNC_IN k_PhotonMapCollection()
 	{
 
+	}
+
+	void Serialize(OutputStream& O)
+	{
+		void* hostbuf = malloc(m_uPhotonBufferLength * sizeof(k_pPpmPhoton));
+		O << m_uPhotonBufferLength;
+		O << m_uPhotonNumStored;
+		O << m_uPhotonNumEmitted;
+		O << m_uRealBufferSize;
+		cudaMemcpy(hostbuf, m_pPhotons, m_uPhotonBufferLength * sizeof(k_pPpmPhoton), cudaMemcpyDeviceToHost);
+		O.Write(hostbuf, m_uPhotonBufferLength * sizeof(k_pPpmPhoton));
+		m_sVolumeMap.Serialize(O, hostbuf);
+		m_sSurfaceMap.Serialize(O, hostbuf);
+		free(hostbuf);
+	}
+
+	void DeSerialize(InputStream& I)
+	{
+		void* hostbuf = malloc(m_uPhotonBufferLength * sizeof(k_pPpmPhoton));
+		I >> m_uPhotonBufferLength;
+		I >> m_uPhotonNumStored;
+		I >> m_uPhotonNumEmitted;
+		I >> m_uRealBufferSize;
+		I.Read(hostbuf, m_uPhotonBufferLength * sizeof(k_pPpmPhoton));
+		cudaMemcpy(m_pPhotons, hostbuf, m_uPhotonBufferLength * sizeof(k_pPpmPhoton), cudaMemcpyHostToDevice);
+		m_sVolumeMap.DeSerialize(I, hostbuf);
+		m_sSurfaceMap.DeSerialize(I, hostbuf);
+		free(hostbuf);
 	}
 
 	k_PhotonMapCollection(unsigned int a_BufferLength, unsigned int a_HashNum);
@@ -207,6 +253,7 @@ private:
 
 	float m_fInitialRadius;
 	unsigned long long m_uPhotonsEmitted;
+	unsigned long long m_uPreviosCount;
 
 	float m_fInitialRadiusScale;
 	const unsigned int m_uGridLength;

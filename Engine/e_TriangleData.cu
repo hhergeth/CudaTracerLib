@@ -50,7 +50,7 @@ void TraceResult::Init(bool first)
 	if(first)
 	{
 		m_pNode = 0;
-		__internal__earlyExit = -1;
+		__internal__earlyExit = 0xffffffff;
 	}
 	m_pTri = 0;
 }
@@ -70,7 +70,7 @@ float2 TraceResult::lerpUV() const
 	return m_pTri->lerpUV(m_fUV);
 }
 
-void TraceResult::getBsdfSample(const Ray& r, CudaRNG _rng, BSDFSamplingRecord* bRec) const
+void TraceResult::getBsdfSample(const Ray& r, CudaRNG& _rng, BSDFSamplingRecord* bRec) const
 {
 	bRec->Clear(_rng);
 	bRec->map.P = r(m_fDist);
@@ -87,7 +87,7 @@ void TraceResult::getBsdfSample(const Ray& r, CudaRNG _rng, BSDFSamplingRecord* 
 		bRec->map.sys.RecalculateFromNormal(normalize(bRec->map.sys.toWorld(nor)));
 }
 
-void TraceResult::getBsdfSample(const Ray& r, CudaRNG _rng, BSDFSamplingRecord* bRec, const float3& wo) const
+void TraceResult::getBsdfSample(const Ray& r, CudaRNG& _rng, BSDFSamplingRecord* bRec, const float3& wo) const
 {
 	getBsdfSample(r, _rng, bRec);
 	bRec->wo = bRec->map.sys.toLocal(wo);

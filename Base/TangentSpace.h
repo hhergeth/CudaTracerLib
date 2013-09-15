@@ -112,7 +112,7 @@ inline void ComputeTangentSpace(MD5Model* a_Mesh, e_AnimatedVertex** a_Vertices,
 {
 	unsigned int vertexCount = 0;
 	for(int i = 0; i < a_Mesh->meshes.size(); i++)
-		vertexCount += a_Mesh->meshes[i]->verts.size();
+		vertexCount += (unsigned int)a_Mesh->meshes[i]->verts.size();
 	*a_NumV = vertexCount;
 	*a_Pos = new float3[vertexCount];
 	*a_Vertices = new e_AnimatedVertex[vertexCount];
@@ -139,7 +139,7 @@ inline void ComputeTangentSpace(MD5Model* a_Mesh, e_AnimatedVertex** a_Vertices,
 			}
 			av.m_fVertexPos = a_Pos[0][off + v] = pos;
 		}
-		off += a_Mesh->meshes[i]->verts.size();
+		off += (unsigned int)a_Mesh->meshes[i]->verts.size();
 	}
 
 	off = 0;
@@ -183,7 +183,7 @@ inline void ComputeTangentSpace(MD5Model* a_Mesh, e_AnimatedVertex** a_Vertices,
 			a_Vertices[0][i2 + off].m_fBitangent += tdir;
 			a_Vertices[0][i3 + off].m_fBitangent += tdir;
 		}
-		off += vertices.size();
+		off += (unsigned int)vertices.size();
 	}
 
 	off = 0;
@@ -207,7 +207,7 @@ inline void ComputeTangentSpace(MD5Model* a_Mesh, e_AnimatedVertex** a_Vertices,
 				a_Vertices[0][a].m_fBitangent = normalize(cross(a_Vertices[0][a].m_fTangent, n) * h);
 			}
 		}
-		off += vertices.size();
+		off += (unsigned int)vertices.size();
 	}
 }
 #endif

@@ -61,7 +61,7 @@ Spectrum EstimateDirect(BSDFSamplingRecord& bRec, const e_KernelMaterial& mat, c
 Spectrum UniformSampleAllLights(BSDFSamplingRecord& bRec, const e_KernelMaterial& mat, int nSamples)
 {
 	Spectrum L = Spectrum(0.0f);
-	for(int i = 0; i < g_SceneData.m_sLightSelector.m_uCount; i++)
+	for(unsigned int i = 0; i < g_SceneData.m_sLightSelector.m_uCount; i++)
 	{
 		e_KernelLight* light = g_SceneData.m_sLightData.Data + g_SceneData.m_sLightSelector.m_sIndices[i];
 		Spectrum Ld = Spectrum(0.0f);

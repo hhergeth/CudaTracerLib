@@ -4,6 +4,8 @@
 #include "..\Base\CudaRandom.h"
 #include "e_Samples.h"
 
+//this architecture and the implementations are completly copied from mitsuba!
+
 enum EPhaseFunctionType
 {
 	/// Completely isotropic 1/(4 pi) phase function
@@ -101,30 +103,12 @@ struct e_RayleighPhaseFunction : public e_BasePhaseFunction
 
 struct CUDA_ALIGN(16) e_PhaseFunction
 {
-#define CALL_TYPE(t,f,r) \
-	case t##_TYPE : \
-		r ((t*)Data)->f; \
-		break;
-#define CALL_FUNC(r,f) \
-	switch(type) \
-	{ \
-		CALL_TYPE(e_HGPhaseFunction, f, r) \
-		CALL_TYPE(e_IsotropicPhaseFunction, f, r) \
-		CALL_TYPE(e_KajiyaKayPhaseFunction, f, r) \
-		CALL_TYPE(e_RayleighPhaseFunction, f, r) \
-	}
 	CUDA_ALIGN(16) unsigned char Data[PHF_SIZE];
 	unsigned int type;
 public:
 	e_PhaseFunction()
 	{
 		type = 0;
-	}
-
-	template<typename T> void SetData(const T& val)
-	{
-		memcpy(Data, &val, sizeof(T));
-		type = T::TYPE();
 	}
 
 	CUDA_FUNC_IN EPhaseFunctionType getType() const
@@ -134,25 +118,28 @@ public:
 
 	CUDA_FUNC_IN float Evaluate(const PhaseFunctionSamplingRecord &pRec) const
 	{
-		CALL_FUNC(return, Evaluate(pRec))
+		CALL_FUNC4(e_HGPhaseFunction,e_IsotropicPhaseFunction,e_KajiyaKayPhaseFunction,e_RayleighPhaseFunction, Evaluate(pRec))
+		return 0.0f;
 	}
 
 	CUDA_FUNC_IN float Sample(PhaseFunctionSamplingRecord &pRec, CudaRNG& sampler) const
 	{
-		CALL_FUNC(return, Sample(pRec, sampler))
+		CALL_FUNC4(e_HGPhaseFunction,e_IsotropicPhaseFunction,e_KajiyaKayPhaseFunction,e_RayleighPhaseFunction, Sample(pRec, sampler))
+		return 0.0f;
 	}
 
 	CUDA_FUNC_IN float Sample(PhaseFunctionSamplingRecord &pRec, float &pdf, CudaRNG& sampler) const
 	{
-		CALL_FUNC(return, Sample(pRec, pdf, sampler))
+		CALL_FUNC4(e_HGPhaseFunction,e_IsotropicPhaseFunction,e_KajiyaKayPhaseFunction,e_RayleighPhaseFunction, Sample(pRec, pdf, sampler))
+		return 0.0f;
 	}
 
 	CUDA_FUNC_IN float pdf(const PhaseFunctionSamplingRecord &pRec) const
 	{
 		return Evaluate(pRec);
 	}
-#undef CALL_FUNC
-#undef CALL_TYPE
+
+	STD_VIRTUAL_SET
 };
 
 template<typename T> e_PhaseFunction CreatePhaseFunction(const T& val)

@@ -3,7 +3,7 @@
 
 void e_Image::AddSample(const CameraSample &sample, const Spectrum &L)
 {
-	const bool SPLAT = false;
+	const bool SPLAT = true;
 	if(SPLAT)
 	{
 		float dimageX = sample.imageX - 0.5f;
@@ -82,7 +82,7 @@ void e_Image::SetSampleDirect(const CameraSample &sample, const Spectrum &L)
 
 CUDA_FUNC_IN unsigned int FloatToUInt(float f)
 {
-	unsigned int mask = -unsigned int(*(unsigned int*)&f >> 31) | 0x80000000;
+	int mask = -int(*(unsigned int*)&f >> 31) | 0x80000000;
 	return (*(unsigned int*)&f) ^ mask;
 }
 
@@ -139,7 +139,8 @@ CUDA_GLOBAL void rtm_Scale(e_Image::Pixel* P, RGBCOL* T, unsigned int w, unsigne
 	if(x < w && y < h)
 	{
 		unsigned int i = y * w + x;
-		T[i] = COL(P, i, splatScale).toRGBCOL(); return;
+		T[i] = COL(P, i, splatScale).toRGBCOL();
+		/*
 		float3 yxy;
 		COL(P, i, splatScale).toYxy(yxy.x, yxy.y, yxy.z);
 		float L = alpha / lumAvg * yxy.x;
@@ -147,7 +148,7 @@ CUDA_GLOBAL void rtm_Scale(e_Image::Pixel* P, RGBCOL* T, unsigned int w, unsigne
 		yxy.x = L_d;
 		Spectrum s;
 		s.fromYxy(yxy.x, yxy.y, yxy.z);
-		T[i] = s.toRGBCOL();;
+		T[i] = s.toRGBCOL();;*/
 	}
 }
 

@@ -180,15 +180,15 @@ void e_Mesh::CompileObjToBinary(const char* a_InputFile, OutputStream& a_Out)
 #endif
 		*/
 		matData.push_back(mat);
-		unsigned int matIndex = matData.size() - 1;
+		size_t matIndex = matData.size() - 1;
 
 		const FW::Array<FW::Vec3i>& indices = MB->indices(submesh);
-		for (int i = 0; i < indices.getSize(); i++)
+		for (size_t i = 0; i < indices.getSize(); i++)
 		{
-			const FW::Vec3i& vi = indices[i];
-			for(int j = 0; j < 3; j++)
+			const FW::Vec3i& vi = indices[(int)i];
+			for(size_t j = 0; j < 3; j++)
 			{
-				const unsigned int l = vi.get(j);
+				const int l = vi.get((int)j);
 				const FW::VertexPNT& v = MB[0][l];
 				p[j] = make_float3(v.p.x, v.p.y, v.p.z);
 #ifdef EXT_TRI
@@ -199,7 +199,7 @@ void e_Mesh::CompileObjToBinary(const char* a_InputFile, OutputStream& a_Out)
 				//n[j] = v.n;
 #endif
 			}
-			triData[c++] = e_TriangleData(p, matIndex,t, n, ta, bi);
+			triData[c++] = e_TriangleData(p, (unsigned char)matIndex,t, n, ta, bi);
 		}
 	}
 	FW::Vec3f a, b;
@@ -215,7 +215,7 @@ void e_Mesh::CompileObjToBinary(const char* a_InputFile, OutputStream& a_Out)
 	a_Out << m_numTriangles;
 	a_Out.Write(triData, sizeof(e_TriangleData) * m_numTriangles);
 	a_Out << (unsigned int)matData.size();
-	a_Out.Write(&matData[0], sizeof(e_KernelMaterial) * matData.size());
+	a_Out.Write(&matData[0], sizeof(e_KernelMaterial) * (unsigned int)matData.size());
 	TmpOutStream to(&a_Out);
 	ConstructBVH2(MB, to);
 

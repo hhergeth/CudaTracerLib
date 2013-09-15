@@ -2,12 +2,69 @@
 
 #include <MathTypes.h>
 #include "e_KernelMapping.h"
+#include "e_TraceResult.h"
+
+enum EMeasure {
+	/// Invalid measure
+	EInvalidMeasure = 0,
+	/// Solid angle measure
+	ESolidAngle = 1,
+	/// Length measure
+	ELength = 2,
+	/// Area measure
+	EArea = 3,
+	/// Discrete measure
+	EDiscrete = 4
+};
 
 struct CameraSample
 {
     float imageX, imageY;
     float lensU, lensV;
     float time;
+};
+
+struct PositionSamplingRecord
+{
+public:
+	float3 p;
+	float3 n;
+	float pdf;
+	EMeasure measure;
+	float2 uv;
+public:
+	CUDA_FUNC_IN PositionSamplingRecord() { }
+	CUDA_FUNC_IN PositionSamplingRecord(const float3& _p, const float3& _n, const float2& _uv,EMeasure m = EArea )
+		: p(_p), n(_n), measure(m), uv(_uv)
+	{
+
+	}
+	CUDA_FUNC_IN PositionSamplingRecord(const Ray& r, const TraceResult& r2, EMeasure m = EArea)
+	{
+		p = r(r2.m_fDist);
+		n = r2.lerpFrame().n;
+		measure = m;
+		uv = r2.lerpUV();
+	}
+};
+
+struct DirectionSamplingRecord
+{
+public:
+	float3 d;
+	float pdf;
+	EMeasure measure;
+public:
+	CUDA_FUNC_IN DirectionSamplingRecord() { }
+	CUDA_FUNC_IN DirectionSamplingRecord(const float3 &d, EMeasure m = ESolidAngle)
+		: d(d), measure(m)
+	{
+	}
+	CUDA_FUNC_IN DirectionSamplingRecord(const Ray& r, const TraceResult& r2, EMeasure m = EArea)
+	{
+		d = r.direction;
+		measure = m;
+	}
 };
 
 struct LightSample
@@ -59,19 +116,6 @@ struct PhaseFunctionSamplingRecord
 	}
 };
 
-enum EMeasure {
-	/// Invalid measure
-	EInvalidMeasure = 0,
-	/// Solid angle measure
-	ESolidAngle = 1,
-	/// Length measure
-	ELength = 2,
-	/// Area measure
-	EArea = 3,
-	/// Discrete measure
-	EDiscrete = 4
-};
-
 enum EBSDFType {
 	// =============================================================
 	//                      BSDF lobe types
@@ -113,7 +157,6 @@ enum EBSDFType {
 	EUsesSampler          = 0x20000,
 };
 
-/// Convenient combinations of flags from \ref EBSDFType
 enum ETypeCombinations {
 	/// Any reflection component (scattering into discrete, 1D, or 2D set of directions)
 	EReflection   = EDiffuseReflection | EDeltaReflection
@@ -148,17 +191,13 @@ struct BSDFSamplingRecord
 	float eta;
 	ETransportMode mode;
 	unsigned int typeMask;
-	int component;
 	unsigned int sampledType;
-	int sampledComponent;
 	CUDA_FUNC_IN BSDFSamplingRecord():rng(0){}
 	CUDA_FUNC_IN void Clear(CudaRNG& _rng)
 	{
 		rng = &_rng;
 		typeMask = ETypeCombinations::EAll;
-		component = -1;
 		sampledType = 0;
-		sampledComponent = -1;
 		eta = 1.0f;
 		mode = ERadiance;
 	}

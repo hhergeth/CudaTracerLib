@@ -6,7 +6,7 @@ e_KernelMaterial::e_KernelMaterial(const char* name)
 	if(name)
 		memcpy(Name, name, strlen(name));
 	HeightScale = 1.0f;
-	NodeLightIndex = -1;
+	NodeLightIndex = 0xffffffff;
 	m_fAlphaThreshold = 1.0f;
 	diffuse d2;
 	d2.m_reflectance = CreateTexture(0, Spectrum(0.5f));
@@ -24,7 +24,9 @@ bool e_KernelMaterial::SampleNormalMap(const MapParameters& uv, float3* normal) 
 {
 		if(NormalMap.used)
 		{
-			*normal = NormalMap.tex.Evaluate(uv) * 2.0f - make_float3(1);
+			float3 n;
+			NormalMap.tex.Evaluate(uv).toLinearRGB(n.x,n.y,n.z);
+			*normal = n * 2.0f - make_float3(1);
 			return true;
 		}
 		else if(HeightMap.used)
@@ -36,7 +38,7 @@ bool e_KernelMaterial::SampleNormalMap(const MapParameters& uv, float3* normal) 
 				{
 					MapParameters mp = uv;
 					*(float2*)&mp.uv = mp.uv + make_float2(i - 1, j - 1) * d;
-					m[i * 4 + j] = HeightMap.tex.Evaluate(mp).x;
+					m[i * 4 + j] = HeightMap.tex.Evaluate(mp).average();
 				}
 			*normal = nor(m, 4, 1, 5, 6, 9, HeightScale); 
 			return true;
@@ -47,8 +49,8 @@ bool e_KernelMaterial::SampleNormalMap(const MapParameters& uv, float3* normal) 
 float e_KernelMaterial::SampleAlphaMap(const MapParameters& uv) const
 {
 	if(AlphaMap.used)
-	{
-		return AlphaMap.tex.Evaluate(uv).w;
+	{return 1;
+		//return AlphaMap.tex.Evaluate(uv).w;
 	}
 	else return 1.0f;
 }
@@ -57,4 +59,12 @@ bool e_KernelMaterial::GetBSSRDF(const MapParameters& uv, const e_KernelBSSRDF**
 {
 	*res = &bssrdf;
 	return usedBssrdf;
+}
+
+void e_KernelMaterial::setBssrdf(const Spectrum& sig_a, const Spectrum& sigp_s, float e)
+{
+	usedBssrdf = true;
+	bssrdf.e = e;
+	bssrdf.sig_a = sig_a;
+	bssrdf.sigp_s = sigp_s;
 }

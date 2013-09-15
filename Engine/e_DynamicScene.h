@@ -27,14 +27,12 @@ public:
 	e_Stream<e_BVHNodeData>* m_pBVHStream;
 	e_Stream<int>* m_pBVHIndicesStream;
 	e_Stream<e_KernelMaterial>* m_pMaterialBuffer;
-	e_CachedBuffer<e_FileTexture, e_KernelFileTexture>* m_pTextureBuffer;
-	e_CachedBuffer<e_MIPMap, e_KernelMIPMap>* m_pMIPMapBuffer;
+	e_CachedBuffer<e_MIPMap, e_KernelMIPMap>* m_pTextureBuffer;
 	e_CachedBuffer<e_Mesh, e_KernelMesh>* m_pMeshBuffer;
 	e_Stream<e_Node>* m_pNodeStream;
 	e_Stream<e_VolumeRegion>* m_pVolumes;
 	e_Stream<char>* m_pAnimStream;
 	e_Stream<e_KernelLight>* m_pLightStream;
-	e_Stream<Distribution2D<4096, 4096>>* m_pDist2DStream;
 	e_SceneBVH* m_pBVH;
 	e_TmpVertex* m_pDeviceTmpFloats;
 	e_Terrain* m_pTerrain;
@@ -49,9 +47,7 @@ public:
 	void Free();
 	e_StreamReference(e_Node) CreateNode(const char* a_MeshFile);
 	///Do not use this! Just invalidate and update the material
-	e_BufferReference<e_FileTexture, e_KernelFileTexture> LoadTexture(const char* file);
-	//use this
-	e_BufferReference<e_MIPMap, e_KernelMIPMap> LoadMIPMap(const char* file);
+	e_BufferReference<e_MIPMap, e_KernelMIPMap> LoadTexture(const char* file, bool a_MipMap);
 	void SetNodeTransform(const float4x4& mat, e_StreamReference(e_Node) n)
 	{
 		m_uModified = 1;
@@ -141,10 +137,5 @@ public:
 	void removeLight(e_StreamReference(e_Node) Node, unsigned int mi);
 	void removeAllLights(e_StreamReference(e_Node) Node);
 	void recalculateAreaLights(e_StreamReference(e_Node) Node);
-	e_BufferReference<Distribution2D<4096, 4096>, Distribution2D<4096, 4096>> getDistribution2D()
-	{
-		e_BufferReference<Distribution2D<4096, 4096>, Distribution2D<4096, 4096>> r = m_pDist2DStream->malloc(1);
-		return r;
-	}
 	e_StreamReference(e_KernelLight) setEnvironementMap(const Spectrum& power, const char* file);
 };

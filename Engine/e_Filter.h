@@ -168,19 +168,6 @@ struct CUDA_ALIGN(16) e_KernelFilter
 private:
 	CUDA_ALIGN(16) unsigned char Data[FLT_SIZE];
 	unsigned int type;
-#define CALL_TYPE(t,f,r) \
-	case t##_TYPE : \
-		r ((t*)Data)->f; \
-		break;
-#define CALL_FUNC(r,f) \
-	switch (type) \
-	{ \
-		CALL_TYPE(e_KernelBoxFilter, f, r) \
-		CALL_TYPE(e_KernelGaussianFilter, f, r) \
-		CALL_TYPE(e_KernelMitchellFilter, f, r) \
-		CALL_TYPE(e_KernelLanczosSincFilter, f, r) \
-		CALL_TYPE(e_KernelTriangleFilter, f, r) \
-	}
 public:
 	CUDA_FUNC_IN e_KernelFilter()
 	{
@@ -189,19 +176,9 @@ public:
 
 	CUDA_FUNC_IN float Evaluate(float x, float y) const
 	{
-		CALL_FUNC(return, Evaluate(x, y))
+		CALL_FUNC5(e_KernelBoxFilter,e_KernelGaussianFilter,e_KernelMitchellFilter,e_KernelLanczosSincFilter,e_KernelTriangleFilter, Evaluate(x, y))
+		return 0.0f;
 	}
 
-	template<typename T> CUDA_FUNC_IN T* As()
-	{
-		return (T*)Data;
-	}
-
-	template<typename T> void SetData(const T& val)
-	{
-		memcpy(Data, &val, sizeof(T));
-		type = T::TYPE();
-	}
-#undef CALL_FUNC
-#undef CALL_TYPE
+	STD_VIRTUAL_SET
 };

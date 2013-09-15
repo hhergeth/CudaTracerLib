@@ -82,7 +82,6 @@ AABB k_Tracer::GetEyeHitPointBox(e_DynamicScene* m_pScene, e_Camera* m_pCamera)
 	m_sEyeBox.maxV = make_float3(UIntToFloat(m_sEyeBox.maxV.x), UIntToFloat(m_sEyeBox.maxV.y), UIntToFloat(m_sEyeBox.maxV.z));
 	return m_sEyeBox;*/
 	throw 1;
-	return AABB();
 }
 
 CUDA_DEVICE TraceResult res;
@@ -94,7 +93,7 @@ CUDA_GLOBAL void traceKernel(Ray r)
 
 TraceResult k_Tracer::TraceSingleRay(Ray r, e_DynamicScene* s, e_Camera* c)
 {
-	k_TracerRNGBuffer tmp;
+	CudaRNGBuffer tmp;
 	s->UpdateInvalidated();
 	k_INITIALIZE(s->getKernelSceneData());
 	k_STARTPASS(s, c, tmp);

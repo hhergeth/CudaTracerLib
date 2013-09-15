@@ -77,7 +77,7 @@ public:
 		if(m_sDeallocated.size())
 			a_Out.Write(&m_sDeallocated[0], m_sDeallocated.size() * sizeof(part));
 	}
-	e_BufferReference<H, D> malloc(int a_Count)
+	e_BufferReference<H, D> malloc(unsigned int a_Count)
 	{
 		for(unsigned int i = 0; i < m_sDeallocated.size(); i++)
 			if(m_sDeallocated[i].second >= a_Count)
@@ -124,7 +124,7 @@ public:
 					m_sDeallocated[i].second += a_Ref.getLength();
 					return;
 				}
-			m_sDeallocated.push_back(std::make_pair<unsigned int, unsigned int>(a_Ref.getIndex(), a_Ref.getLength()));
+			m_sDeallocated.push_back(std::make_pair(a_Ref.getIndex(), a_Ref.getLength()));
 		}
 	}
 	void dealloc(unsigned int i, unsigned int j = 1)
@@ -134,7 +134,7 @@ public:
 	void Invalidate()
 	{
 		m_sInvalidated.clear();
-		m_sInvalidated.push_back(std::make_pair<unsigned int, unsigned int>(0, numElements));
+		m_sInvalidated.push_back(std::make_pair(0U, numElements));
 	}
 	void Invalidate(e_BufferReference<H, D> a_Ref)
 	{	
@@ -148,7 +148,7 @@ public:
 				return;
 			}
 		}
-		m_sInvalidated.push_back(std::make_pair<unsigned int, unsigned int>(a_Ref.getIndex(), a_Ref.getLength()));
+		m_sInvalidated.push_back(std::make_pair(a_Ref.getIndex(), a_Ref.getLength()));
 	}
 	void Invalidate(unsigned int i, unsigned int j = 1)
 	{
@@ -324,10 +324,10 @@ template<typename H, typename D> class e_CachedBuffer : public e_Buffer<H, D>
 {
 	inline bool strcmpare(const char* a, const char* b)
 	{
-		int al = strlen(a), bl = strlen(b);
+		size_t al = strlen(a), bl = strlen(b);
 		if(al != bl)
 			return false;
-		else for(int i = 0; i < al; i++)
+		else for(size_t i = 0; i < al; i++)
 			if(a[i] != b[i])
 				return false;
 		return true;
@@ -488,7 +488,7 @@ public:
 					m_sDeallocated[i].second += a_Ref.getLength();
 					return;
 				}
-			m_sDeallocated.push_back(std::make_pair<unsigned int, unsigned int>(a_Ref.getIndex(), a_Ref.getLength()));
+			m_sDeallocated.push_back(std::make_pair(a_Ref.getIndex(), a_Ref.getLength()));
 		}
 	}
 	void dealloc(unsigned int i, unsigned int j = 1)
@@ -498,7 +498,7 @@ public:
 	void Invalidate()
 	{
 		m_sInvalidated.clear();
-		m_sInvalidated.push_back(std::make_pair<unsigned int, unsigned int>(0, m_uPos));
+		m_sInvalidated.push_back(std::make_pair(0U, m_uPos));
 	}
 	void Invalidate(e_BufferReference<T, T> a_Ref)
 	{	
@@ -512,7 +512,7 @@ public:
 				return;
 			}
 		}
-		m_sInvalidated.push_back(std::make_pair<unsigned int, unsigned int>(a_Ref.getIndex(), a_Ref.getLength()));
+		m_sInvalidated.push_back(std::make_pair(a_Ref.getIndex(), a_Ref.getLength()));
 	}
 	void Invalidate(unsigned int i, unsigned int j = 1)
 	{
@@ -532,7 +532,7 @@ public:
 		for(unsigned int i = 0; i < m_sInvalidated.size(); i++)
 		{
 			int q = sizeof(T), f = m_sInvalidated[i].first, n = q * m_sInvalidated[i].second;
-			for(int j = 0; j < m_sInvalidated[i].second; j++)
+			for(unsigned int j = 0; j < m_sInvalidated[i].second; j++)
 				cbf(operator()(f + j));
 			cudaMemcpy(device + f, host + f, n, cudaMemcpyHostToDevice);
 		}

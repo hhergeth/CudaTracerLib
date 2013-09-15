@@ -1,8 +1,9 @@
-#ifndef CUTIL_MATH_H
-#define CUTIL_MATH_H
+#pragma once
 
 #include "cuda_runtime.h"
 #include "..\Defines.h"
+#include <math.h>
+#include <float.h>
 
 #define ISBLACK(v) (fsumf(v) == 0.0f)
 #define BADFLOAT(x) ((*(uint*)&x & 0x7f000000) == 0x7f000000)
@@ -16,17 +17,53 @@
 #define RCPOVERFLOW   2.93873587705571876e-39f
 #define DeltaEpsilon 1e-3f
 
-// The maximum possible value for a 32-bit floating point variable
-#ifndef  FLT_MAX
-#define  FLT_MAX   ((float)3.40282347e+38) 
-#endif
-
 #ifndef isnan
 #define isnan(x) (x != x)
 #endif
 
 // When ray tracing, the epsilon that t > EPSILON in order to avoid self intersections
 #define EPSILON       2e-5f
+
+CUDA_FUNC_IN float int_as_float_(int i)
+{
+#ifdef ISCUDA
+	return __int_as_float(i);
+#else
+	return *(float*)&i; 
+#endif
+}
+
+CUDA_FUNC_IN int float_as_int_(float f)
+{
+#ifdef ISCUDA
+	return __float_as_int(f);
+#else
+	return *(int*)&f;; 
+#endif
+}
+
+#ifndef __CUDACC__
+CUDA_FUNC_IN float fminf(float a, float b)
+{
+  return a < b ? a : b;
+}
+
+CUDA_FUNC_IN float fmaxf(float a, float b)
+{
+  return a > b ? a : b;
+}
+CUDA_FUNC_IN float exp2f(float f) { return powf(2.0f, f); }
+CUDA_FUNC_IN float copysignf(float a, float b)
+{
+  return int_as_float_((float_as_int_(b) &  0x80000000) | 
+                        (float_as_int_(a) & ~0x80000000));
+}
+CUDA_FUNC_IN void sincos(float f, float* a, float* b)
+{
+	*a = sin(f);
+	*b = cos(f);
+}
+#endif
 
 template<typename T> CUDA_FUNC_IN void swapk(T* a, T* b)
 {
@@ -72,99 +109,63 @@ template<typename T> CUDA_FUNC_IN T MAX(T q0, T q1, T q2, T q3)
 	return MAX(MAX(q0, q1, q2), q3);
 }
 
-#define DMAX2(A, B) ((A) > (B) ? (A) : (B))
-#define DMAX3(A, B, C) DMAX2(DMAX2(A, B), C)
-#define DMAX4(A, B, C, D) DMAX2(DMAX3(A, B, C), D)
-#define DMAX5(A, B, C, D, E) DMAX2(DMAX4(A, B, C, D), E)
-#define DMAX6(A, B, C, D, E, F) DMAX2(DMAX5(A, B, C, D, E), F)
-#define DMAX7(A, B, C, D, E, F, G) DMAX2(DMAX6(A, B, C, D, E, F), G)
-#define DMAX8(A, B, C, D, E, F, G, H) DMAX2(DMAX7(A, B, C, D, E, F, G), H)
-#define DMAX9(A, B, C, D, E, F, G, H, I) DMAX2(DMAX8(A, B, C, D, E, F, G, H), I)
-
-#define RND_UP(VAL, MOD) (VAL + (((VAL) % (MOD)) != 0 ? ((MOD) - ((VAL) % (MOD))) : (0)))
-#define RND_16(VAL) RND_UP(VAL, 16)
-
-#ifndef __popc
- CUDA_FUNC_IN int __popc(unsigned int u)
+ CUDA_FUNC_IN int popc(unsigned int u)
  {
-         unsigned int uCount;
+#ifdef ISCUDA
+	 return __popc(u);
+#else
+	unsigned int uCount;
 
-         uCount = u
-                  - ((u >> 1) & 033333333333)
-                  - ((u >> 2) & 011111111111);
-         return
-           ((uCount + (uCount >> 3))
-            & 030707070707) % 63;
- }
+	uCount = u
+			- ((u >> 1) & 033333333333)
+			- ((u >> 2) & 011111111111);
+	return
+	((uCount + (uCount >> 3))
+	& 030707070707) % 63;
 #endif
-
-#define VEC_INDEX(v, i, T) *(((T*)&v) + i)
-#define VEC_INDEXI(v, i, T) (((T*)&v) + i)
-#define FL_INDEX(v, i) VEC_INDEX(v, i, float)
-#define I_INDEX(v, i) VEC_INDEX(v, i, int)
+ }
 
 ////////////////////////////////////////////////////////////////////////////////
 typedef unsigned int uint;
 typedef unsigned short ushort;
 
-#ifndef __CUDACC__
-#include <math.h>
-
-inline float fminf(float a, float b)
+CUDA_FUNC_IN int min_min(int a, int b, int c)
 {
-  return a < b ? a : b;
-}
-
-inline float fmaxf(float a, float b)
-{
-  return a > b ? a : b;
-}
-
-/*
-inline float2 fmaxf(float2& a, float2& b)
-{
-	return make_float2(fmaxf(a.x, b.x), fmaxf(a.y, b.y));
-}
-
-inline float3 fmaxf(float3& a, float3& b)
-{
-	return make_float3(fmaxf(a.x, b.x), fmaxf(a.y, b.y), fmaxf(a.z, b.z));
-}
-
-inline float4 fmaxf(float4& a, float4& b)
-{
-	return make_float4(fmaxf(a.x, b.x), fmaxf(a.y, b.y), fmaxf(a.z, b.z), fmaxf(a.w, b.w));
-}
-*/
-#endif
-
-#ifdef __CUDA_ARCH__
-__device__ __inline__ int   min_min   (int a, int b, int c) { int v; asm("vmin.s32.s32.s32.min %0, %1, %2, %3;" : "=r"(v) : "r"(a), "r"(b), "r"(c)); return v; }
-__device__ __inline__ int   min_max   (int a, int b, int c) { int v; asm("vmin.s32.s32.s32.max %0, %1, %2, %3;" : "=r"(v) : "r"(a), "r"(b), "r"(c)); return v; }
-__device__ __inline__ int   max_min   (int a, int b, int c) { int v; asm("vmax.s32.s32.s32.min %0, %1, %2, %3;" : "=r"(v) : "r"(a), "r"(b), "r"(c)); return v; }
-__device__ __inline__ int   max_max   (int a, int b, int c) { int v; asm("vmax.s32.s32.s32.max %0, %1, %2, %3;" : "=r"(v) : "r"(a), "r"(b), "r"(c)); return v; }
+#ifdef ISCUDA
+	int v; asm("vmin.s32.s32.s32.min %0, %1, %2, %3;" : "=r"(v) : "r"(a), "r"(b), "r"(c)); return v; 
 #else
-CUDA_FUNC_IN float __int_as_float(int i) { return *(float*)&i; }
-CUDA_FUNC_IN int __float_as_int(float f) { return *(int*)&f; }
-CUDA_FUNC_IN int min_min(int a, int b, int c) { return MIN(a,b,c); }
-CUDA_FUNC_IN int min_max(int a, int b, int c) { return MAX(MIN(a,b), c); }
-CUDA_FUNC_IN int max_min(int a, int b, int c) { return MIN(MAX(a,b), c); }
-CUDA_FUNC_IN int max_max(int a, int b, int c) { return MAX(a,b,c); }
+	return MIN(a,b,c);
 #endif
-
-#ifndef __CUDACC__
-CUDA_FUNC_IN float exp2f(float f) { return powf(2.0f, f); }
-CUDA_FUNC_IN float copysignf(float a, float b)
-{
-  return __int_as_float((__float_as_int(b) &  0x80000000) | 
-                        (__float_as_int(a) & ~0x80000000));
 }
+CUDA_FUNC_IN int min_max(int a, int b, int c)
+{
+#ifdef ISCUDA
+	int v; asm("vmin.s32.s32.s32.max %0, %1, %2, %3;" : "=r"(v) : "r"(a), "r"(b), "r"(c)); return v;
+#else
+	return MAX(MIN(a,b), c);
 #endif
+}
+CUDA_FUNC_IN int max_min(int a, int b, int c)
+{
+#ifdef ISCUDA
+	int v; asm("vmax.s32.s32.s32.min %0, %1, %2, %3;" : "=r"(v) : "r"(a), "r"(b), "r"(c)); return v;
+#else
+	return MIN(MAX(a,b), c);
+#endif
+}
+CUDA_FUNC_IN int max_max(int a, int b, int c)
+{
+#ifdef ISCUDA
+	int v; asm("vmax.s32.s32.s32.max %0, %1, %2, %3;" : "=r"(v) : "r"(a), "r"(b), "r"(c)); return v;
+#else
+	return MAX(a,b,c);
+#endif
+}
 
-CUDA_FUNC_IN float fmin_fmin (float a, float b, float c) { return __int_as_float(min_min(__float_as_int(a), __float_as_int(b), __float_as_int(c))); }
-CUDA_FUNC_IN float fmin_fmax (float a, float b, float c) { return __int_as_float(min_max(__float_as_int(a), __float_as_int(b), __float_as_int(c))); }
-CUDA_FUNC_IN float fmax_fmin (float a, float b, float c) { return __int_as_float(max_min(__float_as_int(a), __float_as_int(b), __float_as_int(c))); }
-CUDA_FUNC_IN float fmax_fmax (float a, float b, float c) { return __int_as_float(max_max(__float_as_int(a), __float_as_int(b), __float_as_int(c))); }
+CUDA_FUNC_IN float fmin_fmin (float a, float b, float c) { return int_as_float_(min_min(float_as_int_(a), float_as_int_(b), float_as_int_(c))); }
+CUDA_FUNC_IN float fmin_fmax (float a, float b, float c) { return int_as_float_(min_max(float_as_int_(a), float_as_int_(b), float_as_int_(c))); }
+CUDA_FUNC_IN float fmax_fmin (float a, float b, float c) { return int_as_float_(max_min(float_as_int_(a), float_as_int_(b), float_as_int_(c))); }
+CUDA_FUNC_IN float fmax_fmax (float a, float b, float c) { return int_as_float_(max_max(float_as_int_(a), float_as_int_(b), float_as_int_(c))); }
 
 CUDA_FUNC_IN float spanBeginKepler(float a0, float a1, float b0, float b1, float c0, float c1, float d) {	return fmax_fmax( fminf(a0,a1), fminf(b0,b1), fmin_fmax(c0, c1, d)); }
 CUDA_FUNC_IN float spanEndKepler(float a0, float a1, float b0, float b1, float c0, float c1, float d) {	return fmin_fmin( fmaxf(a0,a1), fmaxf(b0,b1), fmax_fmin(c0, c1, d)); }
@@ -190,62 +191,62 @@ CUDA_FUNC_IN float4 signf(const float4 f)
 	return make_float4(signf(f.x), signf(f.y), signf(f.z), signf(f.w));
 }
 
-CUDA_FUNC_IN float fsumf(float2& v)
+CUDA_FUNC_IN float fsumf(const float2& v)
 {
 	return v.x + v.y;
 }
 
-CUDA_FUNC_IN float fsumf(float3& v)
+CUDA_FUNC_IN float fsumf(const float3& v)
 {
 	return v.x + v.y + v.z;
 }
 
-CUDA_FUNC_IN float fsumf(float4& v)
+CUDA_FUNC_IN float fsumf(const float4& v)
 {
 	return v.x + v.y + v.z + v.w;
 }
 
-CUDA_FUNC_IN float fminf(float2& v)
+CUDA_FUNC_IN float fminf(const float2& v)
 {
 	return MIN(v.x, v.y);
 }
 
-CUDA_FUNC_IN float fminf(float3& v)
+CUDA_FUNC_IN float fminf(const float3& v)
 {
 	return MIN(v.x, MIN(v.y, v.z));
 }
 
-CUDA_FUNC_IN float fminf(float4& v)
+CUDA_FUNC_IN float fminf(const float4& v)
 {
 	return MIN(v.x, MIN(v.y, MIN(v.z, v.w)));
 }
 
-CUDA_FUNC_IN float fmaxf(float2& v)
+CUDA_FUNC_IN float fmaxf(const float2& v)
 {
 	return MAX(v.x, v.y);
 }
 
-CUDA_FUNC_IN float fmaxf(float3& v)
+CUDA_FUNC_IN float fmaxf(const float3& v)
 {
 	return MAX(v.x, MAX(v.y, v.z));
 }
 
-CUDA_FUNC_IN float fmaxf(float4& v)
+CUDA_FUNC_IN float fmaxf(const float4& v)
 {
 	return MAX(v.x, MAX(v.y, MAX(v.z, v.w)));
 }
 
-CUDA_FUNC_IN float2 fabsf(float2& v)
+CUDA_FUNC_IN float2 fabsf(const float2& v)
 {
 	return make_float2(fabsf(v.x), fabsf(v.y));
 }
 
-CUDA_FUNC_IN float3 fabsf(float3& v)
+CUDA_FUNC_IN float3 fabsf(const float3& v)
 {
 	return make_float3(fabsf(v.x), fabsf(v.y), fabsf(v.z));
 }
 
-CUDA_FUNC_IN float4 fabsf(float4& v)
+CUDA_FUNC_IN float4 fabsf(const float4& v)
 {
 	return make_float4(fabsf(v.x), fabsf(v.y), fabsf(v.z), fabsf(v.w));
 }
@@ -269,14 +270,6 @@ CUDA_FUNC_IN float frac(float f)
 {
 	return f - floorf(f);
 }
-
-#ifndef __CUDACC__
-CUDA_FUNC_IN void sincos(float f, float* a, float* b)
-{
-	*a = sin(f);
-	*b = cos(f);
-}
-#endif
 
 template<typename T> CUDA_FUNC_IN T bilerp(const float2& uv, const T& lt, const T& rt, const T& ld, const T& rd)
 {
@@ -1207,6 +1200,20 @@ public:
 		return (float)_copysign(1.0f, value);
 #endif
 	}
+
+	/// Always-positive modulo function (assumes b > 0)
+	CUDA_FUNC_IN static int modulo(int a, int b)
+	{
+		int r = a % b;
+		return (r < 0) ? r+b : r;
+	}
+
+	/// Always-positive modulo function, float version (assumes b > 0)
+	CUDA_FUNC_IN static float modulo(float a, float b)
+	{
+		float r = fmod(a, b);
+		return (r < 0) ? r+b : r;
+	}
 };
 
 class VectorMath
@@ -1230,5 +1237,3 @@ public:
 		return i - 2.0f * n * dot(n,i);
 	}
 };
-
-#endif

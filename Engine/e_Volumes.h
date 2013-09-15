@@ -74,15 +74,6 @@ public:
 
 struct CUDA_ALIGN(16) e_VolumeRegion
 {
-#define CALL_TYPE(t,f,r) \
-	case t##_TYPE : \
-		r ((t*)Data)->f; \
-		break;
-#define CALL_FUNC(r,f) \
-	switch (type) \
-	{ \
-		CALL_TYPE(e_HomogeneousVolumeDensity, f, r) \
-	}
 private:
 	CUDA_ALIGN(16) unsigned char Data[VOL_SIZE];
 	unsigned int type;
@@ -90,12 +81,6 @@ public:
 	CUDA_FUNC_IN e_VolumeRegion()
 	{
 		type = 0;
-	}
-
-	template<typename T> void SetData(const T& val)
-	{
-		memcpy(Data, &val, sizeof(T));
-		type = T::TYPE();
 	}
 
 	CUDA_FUNC_IN e_BaseVolumeRegion* BaseRegion()
@@ -110,35 +95,41 @@ public:
 
 	CUDA_FUNC_IN bool IntersectP(const Ray &ray, const float minT, const float maxT, float *t0, float *t1) const
 	{
-		CALL_FUNC(return, IntersectP(ray, minT, maxT, t0, t1))
+		CALL_FUNC1(e_HomogeneousVolumeDensity, IntersectP(ray, minT, maxT, t0, t1))
+		return false;
 	}
 
     CUDA_FUNC_IN Spectrum sigma_a(const float3& p, const float3& w) const
 	{
-		CALL_FUNC(return, sigma_a(p, w))
+		CALL_FUNC1(e_HomogeneousVolumeDensity, sigma_a(p, w))
+		return 0.0f;
 	}
 
     CUDA_FUNC_IN Spectrum sigma_s(const float3& p, const float3& w) const
 	{
-		CALL_FUNC(return, sigma_s(p, w))
+		CALL_FUNC1(e_HomogeneousVolumeDensity, sigma_s(p, w))
+		return 0.0f;
 	}
 
     CUDA_FUNC_IN Spectrum Lve(const float3& p, const float3& w) const
 	{
-		CALL_FUNC(return, Lve(p, w))
+		CALL_FUNC1(e_HomogeneousVolumeDensity, Lve(p, w))
+		return 0.0f;
 	}
 
     CUDA_FUNC_IN Spectrum sigma_t(const float3 &p, const float3 &wo) const
 	{
-		CALL_FUNC(return, sigma_t(p, wo))
+		CALL_FUNC1(e_HomogeneousVolumeDensity, sigma_t(p, wo))
+		return 0.0f;
 	}
 
     CUDA_FUNC_IN Spectrum tau(const Ray &ray, float minT, float maxT, float step = 1.f, float offset = 0.5) const
 	{
-		CALL_FUNC(return, tau(ray, minT, maxT, step, offset))
+		CALL_FUNC1(e_HomogeneousVolumeDensity, tau(ray, minT, maxT, step, offset))
+		return 0.0f;
 	}
-#undef CALL_FUNC
-#undef CALL_TYPE
+
+	STD_VIRTUAL_SET
 };
 
 struct e_KernelAggregateVolume

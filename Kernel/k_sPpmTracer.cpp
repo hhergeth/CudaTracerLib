@@ -2,19 +2,26 @@
 #include "k_sPpmTracer.h"
 
 #define LNG 200
+#define SER_NAME "photonMapBuf.dat"
 
 k_sPpmTracer::k_sPpmTracer()
 	: k_ProgressiveTracer(), m_uGridLength(LNG*LNG*LNG), m_pEntries(0)
 {
+	m_uPreviosCount = 0;
 	m_bLongRunning = false;
 #ifdef DEBUG
-	m_uNewPhotonsPerRun = 0.1f;
+	m_uNewPhotonsPerRun = 0.01f;
 #else
 	m_uNewPhotonsPerRun = 5;
 #endif
 	m_uModus = 1;
 	m_fInitialRadiusScale = 1;
 	m_sMaps = k_PhotonMapCollection((int)(1000000.0f * m_uNewPhotonsPerRun), m_uGridLength);
+
+	//deSerialize
+	//InputStream I(SER_NAME);
+	//m_sMaps.DeSerialize(I);
+	//I.Close();
 }
 
 void k_sPpmTracer::PrintStatus(std::vector<FW::String>& a_Buf)
@@ -144,6 +151,12 @@ void k_sPpmTracer::DoRender(e_Image* I)
 			doEyePass(I);
 			I->UpdateDisplay();
 			m_sMaps.StartNewPass();
+			m_uPreviosCount = m_uPhotonsEmitted;
+
+			//serialize
+			//OutputStream O(SER_NAME);
+			//m_sMaps.Serialize(O);
+			//O.Close();
 		}
 	}
 	else if(m_uModus == 2)
@@ -187,7 +200,7 @@ void k_sPpmTracer::initNewPass(e_Image* I)
 	float r_scene = length(m_pScene->getKernelSceneData().m_sBox.Size()) / 2;
 	r_min = 10e-7f * r_scene;
 	r_max = 10e-3f * r_scene;
-	float r1 = r_max / 10;
+	float r1 = r_max/10.0f;
 	doStartPass(r1, r1);
 }
 

@@ -216,7 +216,6 @@ float3 MicrofacetDistribution::sample(const float2 &sample, float alphaU, float 
 					cosThetaM
 				);
 			}
-			break;
 	}
 
 	/* Prevent potential numerical issues in other stages of the model */
@@ -290,13 +289,11 @@ float MicrofacetDistribution::smithG1(const float3 &v, const float3 &m, float al
 				return (3.535f * a + 2.181f * aSqr)
 						/ (1.0f + 2.276f * a + 2.577f * aSqr);
 			}
-			break;
 
 		case EGGX: {
 				const float root = alpha * tanTheta;
 				return 2.0f / (1.0f + sqrtf(1.0f + root*root));
 			}
-			break;
 	}
 	return 0;
 }

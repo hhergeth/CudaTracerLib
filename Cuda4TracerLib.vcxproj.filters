@@ -247,6 +247,18 @@
     <ClInclude Include="Math\Integrator.h">
       <Filter>Math</Filter>
     </ClInclude>
+    <ClInclude Include="Engine\e_MaterialLib.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_Sensor.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_TraceResult.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_CameraController.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\e_AnimatedMesh.cpp">
@@ -301,9 +313,6 @@
     <ClCompile Include="Engine\e_Image.cpp">
       <Filter>Engine</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\e_FileTexture.cpp">
-      <Filter>Engine</Filter>
-    </ClCompile>
     <ClCompile Include="Engine\e_MeshCompiler.cpp">
       <Filter>Engine</Filter>
     </ClCompile>
@@ -318,6 +327,9 @@
     </ClCompile>
     <ClCompile Include="Kernel\k_CpuTracer.cpp">
       <Filter>Kernel</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\e_MaterialLib.cpp">
+      <Filter>Engine</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -389,6 +401,12 @@
     </CudaCompile>
     <CudaCompile Include="Math\Integrator.cu">
       <Filter>Math</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Base\CudaRandom.cu">
+      <Filter>Base</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\e_FileTexture.cu">
+      <Filter>Engine</Filter>
     </CudaCompile>
   </ItemGroup>
 </Project>

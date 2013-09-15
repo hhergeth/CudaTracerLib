@@ -62,7 +62,7 @@ private:
 	int xResolution, yResolution;
 	CUDA_FUNC_IN Pixel* getPixel(int i)
 	{
-#ifdef __CUDACC__
+#ifdef ISCUDA
 		return cudaPixels + i;
 #else
 		usedHostPixels = true;

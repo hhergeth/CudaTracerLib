@@ -134,38 +134,16 @@ struct e_KernelTextureMapping2D
 private:
 	unsigned char Data[MAP2D_SIZE];
 	unsigned int type;
-#define CALL_TYPE(t,f,r) \
-	case t##_TYPE : \
-		r ((t*)Data)->f; \
-		break;
-#define CALL_FUNC(r,f) \
-	switch (type) \
-	{ \
-		CALL_TYPE(e_KernelUVMapping2D, f, r) \
-		CALL_TYPE(e_KernelSphericalMapping2D, f, r) \
-		CALL_TYPE(e_KernelPlanarMapping2D, f, r) \
-		CALL_TYPE(e_KernelCylindricalMapping2D, f, r) \
-	}
 public:
 	e_KernelTextureMapping2D()
 	{
 		type = 0;
 	}
-	template<typename T> void SetData(const T& val)
-	{
-		memcpy(Data, &val, sizeof(T));
-		type = T::TYPE();
-	}
-	template<typename T> T* As()
-	{
-		return (T*)Data;
-	}
 	CUDA_FUNC_IN void Map(const MapParameters &dg, float *s, float *t) const
 	{
-		CALL_FUNC(, Map(dg, s, t))
+		CALL_FUNC4(e_KernelUVMapping2D,e_KernelSphericalMapping2D,e_KernelPlanarMapping2D,e_KernelCylindricalMapping2D, Map(dg, s, t))
 	}
-#undef CALL_TYPE
-#undef CALL_FUNC
+	STD_VIRTUAL_SET
 };
 
 #define e_KernelIdentityMapping3D_TYPE 1
@@ -191,45 +169,27 @@ struct e_KernelTextureMapping3D
 private:
 	unsigned char Data[MAP3D_SIZE];
 	unsigned int type;
-#define CALL_TYPE(t,f,r) \
-	case t##_TYPE : \
-		r ((t*)Data)->f; \
-		break;
-#define CALL_FUNC(r,f) \
-	switch (type) \
-	{ \
-		CALL_TYPE(e_KernelIdentityMapping3D, f, r) \
-	}
 public:
 	e_KernelTextureMapping3D()
 	{
 		type = 0;
 	}
-	template<typename T> void SetData(const T& val)
-	{
-		memcpy(Data, &val, sizeof(T));
-		type = T::TYPE();
-	}
-	template<typename T> T* As()
-	{
-		return (T*)Data;
-	}
 	CUDA_FUNC_IN float3 Map(const MapParameters &dg) const
 	{
-		CALL_FUNC(return, Map(dg))
+		CALL_FUNC1(e_KernelIdentityMapping3D, Map(dg))
+		return make_float3(0,0,0);
 	}
-#undef CALL_TYPE
-#undef CALL_FUNC
+	STD_VIRTUAL_SET
 };
 
-template<typename T> static inline e_KernelTextureMapping2D CreateTextureMapping2D(T& val)
+template<typename T> static e_KernelTextureMapping2D CreateTextureMapping2D(T& val)
 {
 	e_KernelTextureMapping2D r;
 	r.SetData(val);
 	return r;
 }
 
-template<typename T> static inline e_KernelTextureMapping3D CreateTextureMapping3D(T& val)
+template<typename T> static e_KernelTextureMapping3D CreateTextureMapping3D(T& val)
 {
 	e_KernelTextureMapping3D r;
 	r.SetData(val);

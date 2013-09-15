@@ -1,5 +1,7 @@
 #pragma once
 
+//this architecture and the implementations are completly copied from mitsuba!
+
 #include <MathTypes.h>
 #include "Engine\e_KernelTexture.h"
 #include "Engine/e_Samples.h"
@@ -17,7 +19,7 @@ struct BSDF
 	CUDA_FUNC_IN bool hasComponent(unsigned int type) const {
 		return (type & m_combinedType) != 0;
 	}
-	BSDF(unsigned int type)
+	CUDA_FUNC_IN BSDF(unsigned int type)
 		: m_combinedType(type)
 	{
 	}
@@ -39,36 +41,17 @@ struct BSDF
 
 struct BSDFFirst
 {
-#define CALL_TYPE(t,f,r) \
-	case t##_TYPE : \
-		r ((t*)Data)->f; \
-		break;
-#define CALL_FUNC(r,f) \
-	switch (m_uType) \
-	{ \
-		CALL_TYPE(diffuse, f, r) \
-		CALL_TYPE(roughdiffuse, f, r) \
-		CALL_TYPE(dielectric, f, r) \
-		CALL_TYPE(thindielectric, f, r) \
-		CALL_TYPE(roughdielectric, f, r) \
-		CALL_TYPE(conductor, f, r) \
-		CALL_TYPE(roughconductor, f, r) \
-		CALL_TYPE(plastic, f, r) \
-		CALL_TYPE(roughplastic, f, r) \
-		CALL_TYPE(phong, f, r) \
-		CALL_TYPE(ward, f, r) \
-		CALL_TYPE(hk, f, r) \
-	}
 private:
 #define SZ DMAX2(DMAX5(sizeof(diffuse), sizeof(roughdiffuse), sizeof(dielectric), sizeof(thindielectric), sizeof(roughdielectric)), \
 		   DMAX6(sizeof(conductor), sizeof(roughconductor), sizeof(plastic), sizeof(phong), sizeof(ward), sizeof(hk)))
 	CUDA_ALIGN(16) unsigned char Data[SZ];
 #undef SZ
-	unsigned int m_uType;
+	unsigned int type;
 public:
 	CUDA_FUNC_IN Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &_sample) const
 	{
-		CALL_FUNC(return, sample(bRec, pdf, _sample));
+		CALL_FUNC12(diffuse,roughdiffuse,dielectric,thindielectric,roughdielectric,conductor,roughconductor,plastic,roughplastic,phong,ward,hk, sample(bRec, pdf, _sample));
+		return 0.0f;
 	}
 	CUDA_FUNC_IN Spectrum sample(BSDFSamplingRecord &bRec, const float2 &_sample) const
 	{
@@ -77,76 +60,44 @@ public:
 	}
 	CUDA_FUNC_IN Spectrum f(BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
 	{
-		CALL_FUNC(return, f(bRec, measure));
+		CALL_FUNC12(diffuse,roughdiffuse,dielectric,thindielectric,roughdielectric,conductor,roughconductor,plastic,roughplastic,phong,ward,hk, f(bRec, measure));
+		return 0.0f;
 	}
 	CUDA_FUNC_IN float pdf(BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
 	{
-		CALL_FUNC(return, pdf(bRec, measure));
+		CALL_FUNC12(diffuse,roughdiffuse,dielectric,thindielectric,roughdielectric,conductor,roughconductor,plastic,roughplastic,phong,ward,hk, pdf(bRec, measure));
+		return 0.0f;
 	}
 	template<typename T> void LoadTextures(T callback) const
 	{
-		CALL_FUNC(, LoadTextures(callback));
+		CALL_FUNC12(diffuse,roughdiffuse,dielectric,thindielectric,roughdielectric,conductor,roughconductor,plastic,roughplastic,phong,ward,hk, LoadTextures(callback));
 	}
 	CUDA_FUNC_IN unsigned int getType() const
 	{
-		CALL_FUNC(return, getType());
+		return ((BSDF*)Data)->getType();
 	}
 	CUDA_FUNC_IN bool hasComponent(unsigned int type) const {
-		CALL_FUNC(return, hasComponent(type));
+		return ((BSDF*)Data)->hasComponent(type);
 	}
-	template<typename T> T* As()
-	{
-		return (T*)Data;
-	}
-	template<typename T> void SetData(const T& val)
-	{
-		memcpy(Data, &val, sizeof(T));
-		m_uType = T::TYPE();
-	}
-#undef CALL_FUNC
-#undef CALL_TYPE
+	STD_VIRTUAL_SET
 };
 
 #include "e_BSDF_Complex.h"
 
 struct BSDFALL
-{		/*CALL_TYPE(coating, f, r) \
-		CALL_TYPE(roughcoating, f, r) \
-		CALL_TYPE(mixturebsdf, f, r) \
-		CALL_TYPE(blend, f, r) \*/
-#define CALL_TYPE(t,f,r) \
-	case t##_TYPE : \
-		r ((t*)Data)->f; \
-		break;
-#define CALL_FUNC(r,f) \
-	switch (m_uType) \
-	{ \
-		CALL_TYPE(diffuse, f, r) \
-		CALL_TYPE(roughdiffuse, f, r) \
-		CALL_TYPE(dielectric, f, r) \
-		CALL_TYPE(thindielectric, f, r) \
-		CALL_TYPE(roughdielectric, f, r) \
-		CALL_TYPE(conductor, f, r) \
-		CALL_TYPE(roughconductor, f, r) \
-		CALL_TYPE(plastic, f, r) \
-		CALL_TYPE(roughplastic, f, r) \
-		CALL_TYPE(phong, f, r) \
-		CALL_TYPE(ward, f, r) \
-		CALL_TYPE(hk, f, r) \
-		CALL_TYPE(coating, f, r) \
-		CALL_TYPE(roughcoating, f, r) \
-	}
+{
 private:
 #define SZ DMAX3(DMAX5(sizeof(diffuse), sizeof(roughdiffuse), sizeof(dielectric), sizeof(thindielectric), sizeof(roughdielectric)), \
 				 DMAX6(sizeof(conductor), sizeof(roughconductor), sizeof(plastic), sizeof(phong), sizeof(ward), sizeof(hk)), \
-				 sizeof(coating))
+				 DMAX2(sizeof(coating), sizeof(roughcoating)))
 	CUDA_ALIGN(16) unsigned char Data[SZ];
 #undef SZ
-	unsigned int m_uType;
+	unsigned int type;
 public:
 	CUDA_FUNC_IN Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &_sample) const
 	{
-		CALL_FUNC(return, sample(bRec, pdf, _sample));
+		CALL_FUNC14(diffuse,roughdiffuse,dielectric,thindielectric,roughdielectric,conductor,roughconductor,plastic,roughplastic,phong,ward,hk,coating,roughcoating, sample(bRec, pdf, _sample));
+		return 0.0f;
 	}
 	CUDA_FUNC_IN Spectrum sample(BSDFSamplingRecord &bRec, const float2 &_sample) const
 	{
@@ -155,32 +106,24 @@ public:
 	}
 	CUDA_FUNC_IN Spectrum f(BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
 	{
-		CALL_FUNC(return, f(bRec, measure));
+		CALL_FUNC14(diffuse,roughdiffuse,dielectric,thindielectric,roughdielectric,conductor,roughconductor,plastic,roughplastic,phong,ward,hk,coating,roughcoating, f(bRec, measure));
+		return 0.0f;
 	}
 	CUDA_FUNC_IN float pdf(BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
 	{
-		CALL_FUNC(return, pdf(bRec, measure));
+		CALL_FUNC14(diffuse,roughdiffuse,dielectric,thindielectric,roughdielectric,conductor,roughconductor,plastic,roughplastic,phong,ward,hk,coating,roughcoating, pdf(bRec, measure));
+		return 0.0f;
 	}
 	template<typename T> void LoadTextures(T callback) const
 	{
-		CALL_FUNC(, LoadTextures(callback));
+		CALL_FUNC14(diffuse,roughdiffuse,dielectric,thindielectric,roughdielectric,conductor,roughconductor,plastic,roughplastic,phong,ward,hk,coating,roughcoating, LoadTextures(callback));
 	}
-	CUDA_FUNC_IN unsigned int getType()
+	CUDA_FUNC_IN unsigned int getType() const
 	{
-		CALL_FUNC(return, getType());
+		return ((BSDF*)Data)->getType();
 	}
 	CUDA_FUNC_IN bool hasComponent(unsigned int type) const {
-		CALL_FUNC(return, hasComponent(type));
+		return ((BSDF*)Data)->hasComponent(type);
 	}
-	template<typename T> T* As()
-	{
-		return (T*)Data;
-	}
-	template<typename T> void SetData(const T& val)
-	{
-		memcpy(Data, &val, sizeof(T));
-		m_uType = T::TYPE();
-	}
-#undef CALL_FUNC
-#undef CALL_TYPE
+	STD_VIRTUAL_SET
 };

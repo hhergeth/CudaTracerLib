@@ -47,16 +47,21 @@
 		return name##_TYPE; \
 	}
 
-#ifdef __CUDACC__
  CUDA_FUNC_IN int getGlobalIdx_2D_2D()
 {
+#ifdef ISCUDA
 	int blockId = blockIdx.x + blockIdx.y * gridDim.x; 
 	int threadId = blockId * (blockDim.x * blockDim.y) + (threadIdx.y * blockDim.x) + threadIdx.x;
 	return threadId;
+#else
+	//return GetCurrentThreadId();
+	return 0;
+#endif
 }
 
 CUDA_FUNC_IN int getGlobalIdx_3D_3D()
 {
+#ifdef ISCUDA
 	int blockId = blockIdx.x 
 			 + blockIdx.y * gridDim.x 
 			 + gridDim.x * gridDim.y * blockIdx.z; 
@@ -65,18 +70,221 @@ CUDA_FUNC_IN int getGlobalIdx_3D_3D()
 			  + (threadIdx.y * blockDim.x)
 			  + threadIdx.x;
 	return threadId;
+#else
+	//return GetCurrentThreadId();
+	return 0;
+#endif
 }
 
 #define threadId getGlobalIdx_2D_2D()
-#define threadId_Unsafe threadId
-#else
-#define threadId 0
-#include <Windows.h>
-#define threadId_Unsafe GetCurrentThreadId()
-#endif
+
+#define DMAX2(A, B) ((A) > (B) ? (A) : (B))
+#define DMAX3(A, B, C) DMAX2(DMAX2(A, B), C)
+#define DMAX4(A, B, C, D) DMAX2(DMAX3(A, B, C), D)
+#define DMAX5(A, B, C, D, E) DMAX2(DMAX4(A, B, C, D), E)
+#define DMAX6(A, B, C, D, E, F) DMAX2(DMAX5(A, B, C, D, E), F)
+#define DMAX7(A, B, C, D, E, F, G) DMAX2(DMAX6(A, B, C, D, E, F), G)
+#define DMAX8(A, B, C, D, E, F, G, H) DMAX2(DMAX7(A, B, C, D, E, F, G), H)
+#define DMAX9(A, B, C, D, E, F, G, H, I) DMAX2(DMAX8(A, B, C, D, E, F, G, H), I)
+
+#define RND_UP(VAL, MOD) (VAL + (((VAL) % (MOD)) != 0 ? ((MOD) - ((VAL) % (MOD))) : (0)))
+#define RND_16(VAL) RND_UP(VAL, 16)
+/*
+#define CALL_FUNC1(_TYPE0_, func)
+#define CALL_FUNC2(_TYPE0_,_TYPE1_, func)
+#define CALL_FUNC3(_TYPE0_,_TYPE1_,_TYPE2_, func)
+#define CALL_FUNC4(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_, func)
+#define CALL_FUNC5(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_, func)
+#define CALL_FUNC6(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_, func)
+#define CALL_FUNC7(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_,_TYPE6_, func)
+#define CALL_FUNC8(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_,_TYPE6_,_TYPE7_, func)
+#define CALL_FUNC9(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_,_TYPE6_,_TYPE7_,_TYPE8_, func)
+#define CALL_FUNC10(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_,_TYPE6_,_TYPE7_,_TYPE8_,_TYPE9_, func)
+#define CALL_FUNC11(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_,_TYPE6_,_TYPE7_,_TYPE8_,_TYPE9_,_TYPE10_, func)
+#define CALL_FUNC12(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_,_TYPE6_,_TYPE7_,_TYPE8_,_TYPE9_,_TYPE10_,_TYPE11_, func)
+#define CALL_FUNC13(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_,_TYPE6_,_TYPE7_,_TYPE8_,_TYPE9_,_TYPE10_,_TYPE11_,_TYPE12_, func) 
+#define CALL_FUNC14(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_,_TYPE6_,_TYPE7_,_TYPE8_,_TYPE9_,_TYPE10_,_TYPE11_,_TYPE12_,_TYPE13_, func) 
+*/
+#define CALL_TYPE(t,func) \
+	case t##_TYPE : \
+		return ((t*)Data)->func;
+#define CALL_FUNC1(_TYPE0_, func) \
+	switch (type) \
+	{ \
+		CALL_TYPE(_TYPE0_, func) \
+	}
+#define CALL_FUNC2(_TYPE0_,_TYPE1_, func) \
+	switch (type) \
+	{ \
+		CALL_TYPE(_TYPE0_, func) \
+		CALL_TYPE(_TYPE1_, func) \
+	}
+#define CALL_FUNC3(_TYPE0_,_TYPE1_,_TYPE2_, func) \
+	switch (type) \
+	{ \
+		CALL_TYPE(_TYPE0_, func) \
+		CALL_TYPE(_TYPE1_, func) \
+		CALL_TYPE(_TYPE2_, func) \
+	}
+#define CALL_FUNC4(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_, func) \
+	switch (type) \
+	{ \
+		CALL_TYPE(_TYPE0_, func) \
+		CALL_TYPE(_TYPE1_, func) \
+		CALL_TYPE(_TYPE2_, func) \
+		CALL_TYPE(_TYPE3_, func) \
+	}
+#define CALL_FUNC5(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_, func) \
+	switch (type) \
+	{ \
+		CALL_TYPE(_TYPE0_, func) \
+		CALL_TYPE(_TYPE1_, func) \
+		CALL_TYPE(_TYPE2_, func) \
+		CALL_TYPE(_TYPE3_, func) \
+		CALL_TYPE(_TYPE4_, func) \
+	}
+
+#define CALL_FUNC6(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_, func) \
+	switch (type) \
+	{ \
+		CALL_TYPE(_TYPE0_, func) \
+		CALL_TYPE(_TYPE1_, func) \
+		CALL_TYPE(_TYPE2_, func) \
+		CALL_TYPE(_TYPE3_, func) \
+		CALL_TYPE(_TYPE4_, func) \
+		CALL_TYPE(_TYPE5_, func) \
+	}
+#define CALL_FUNC7(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_,_TYPE6_, func) \
+	switch (type) \
+	{ \
+		CALL_TYPE(_TYPE0_, func) \
+		CALL_TYPE(_TYPE1_, func) \
+		CALL_TYPE(_TYPE2_, func) \
+		CALL_TYPE(_TYPE3_, func) \
+		CALL_TYPE(_TYPE4_, func) \
+		CALL_TYPE(_TYPE5_, func) \
+		CALL_TYPE(_TYPE6_, func) \
+	}
+#define CALL_FUNC8(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_,_TYPE6_,_TYPE7_, func) \
+	switch (type) \
+	{ \
+		CALL_TYPE(_TYPE0_, func) \
+		CALL_TYPE(_TYPE1_, func) \
+		CALL_TYPE(_TYPE2_, func) \
+		CALL_TYPE(_TYPE3_, func) \
+		CALL_TYPE(_TYPE4_, func) \
+		CALL_TYPE(_TYPE5_, func) \
+		CALL_TYPE(_TYPE6_, func) \
+		CALL_TYPE(_TYPE7_, func) \
+	}
+#define CALL_FUNC9(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_,_TYPE6_,_TYPE7_,_TYPE8_, func) \
+	switch (type) \
+	{ \
+		CALL_TYPE(_TYPE0_, func) \
+		CALL_TYPE(_TYPE1_, func) \
+		CALL_TYPE(_TYPE2_, func) \
+		CALL_TYPE(_TYPE3_, func) \
+		CALL_TYPE(_TYPE4_, func) \
+		CALL_TYPE(_TYPE5_, func) \
+		CALL_TYPE(_TYPE6_, func) \
+		CALL_TYPE(_TYPE7_, func) \
+		CALL_TYPE(_TYPE8_, func) \
+	}
+#define CALL_FUNC10(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_,_TYPE6_,_TYPE7_,_TYPE8_,_TYPE9_, func) \
+	switch (type) \
+	{ \
+		CALL_TYPE(_TYPE0_, func) \
+		CALL_TYPE(_TYPE1_, func) \
+		CALL_TYPE(_TYPE2_, func) \
+		CALL_TYPE(_TYPE3_, func) \
+		CALL_TYPE(_TYPE4_, func) \
+		CALL_TYPE(_TYPE5_, func) \
+		CALL_TYPE(_TYPE6_, func) \
+		CALL_TYPE(_TYPE7_, func) \
+		CALL_TYPE(_TYPE8_, func) \
+		CALL_TYPE(_TYPE9_, func) \
+	}
+#define CALL_FUNC11(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_,_TYPE6_,_TYPE7_,_TYPE8_,_TYPE9_,_TYPE10_, func) \
+	switch (type) \
+	{ \
+		CALL_TYPE(_TYPE0_, func) \
+		CALL_TYPE(_TYPE1_, func) \
+		CALL_TYPE(_TYPE2_, func) \
+		CALL_TYPE(_TYPE3_, func) \
+		CALL_TYPE(_TYPE4_, func) \
+		CALL_TYPE(_TYPE5_, func) \
+		CALL_TYPE(_TYPE6_, func) \
+		CALL_TYPE(_TYPE7_, func) \
+		CALL_TYPE(_TYPE8_, func) \
+		CALL_TYPE(_TYPE9_, func) \
+		CALL_TYPE(_TYPE10_, func) \
+	}
+#define CALL_FUNC12(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_,_TYPE6_,_TYPE7_,_TYPE8_,_TYPE9_,_TYPE10_,_TYPE11_, func) \
+	switch (type) \
+	{ \
+		CALL_TYPE(_TYPE0_, func) \
+		CALL_TYPE(_TYPE1_, func) \
+		CALL_TYPE(_TYPE2_, func) \
+		CALL_TYPE(_TYPE3_, func) \
+		CALL_TYPE(_TYPE4_, func) \
+		CALL_TYPE(_TYPE5_, func) \
+		CALL_TYPE(_TYPE6_, func) \
+		CALL_TYPE(_TYPE7_, func) \
+		CALL_TYPE(_TYPE8_, func) \
+		CALL_TYPE(_TYPE9_, func) \
+		CALL_TYPE(_TYPE10_, func) \
+		CALL_TYPE(_TYPE11_, func) \
+	}
+#define CALL_FUNC13(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_,_TYPE6_,_TYPE7_,_TYPE8_,_TYPE9_,_TYPE10_,_TYPE11_,_TYPE12_, func) \
+	switch (type) \
+	{ \
+		CALL_TYPE(_TYPE0_, func) \
+		CALL_TYPE(_TYPE1_, func) \
+		CALL_TYPE(_TYPE2_, func) \
+		CALL_TYPE(_TYPE3_, func) \
+		CALL_TYPE(_TYPE4_, func) \
+		CALL_TYPE(_TYPE5_, func) \
+		CALL_TYPE(_TYPE6_, func) \
+		CALL_TYPE(_TYPE7_, func) \
+		CALL_TYPE(_TYPE8_, func) \
+		CALL_TYPE(_TYPE9_, func) \
+		CALL_TYPE(_TYPE10_, func) \
+		CALL_TYPE(_TYPE11_, func) \
+		CALL_TYPE(_TYPE12_, func) \
+	}
+#define CALL_FUNC14(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_,_TYPE6_,_TYPE7_,_TYPE8_,_TYPE9_,_TYPE10_,_TYPE11_,_TYPE12_,_TYPE13_, func) \
+	switch (type) \
+	{ \
+		CALL_TYPE(_TYPE0_, func) \
+		CALL_TYPE(_TYPE1_, func) \
+		CALL_TYPE(_TYPE2_, func) \
+		CALL_TYPE(_TYPE3_, func) \
+		CALL_TYPE(_TYPE4_, func) \
+		CALL_TYPE(_TYPE5_, func) \
+		CALL_TYPE(_TYPE6_, func) \
+		CALL_TYPE(_TYPE7_, func) \
+		CALL_TYPE(_TYPE8_, func) \
+		CALL_TYPE(_TYPE9_, func) \
+		CALL_TYPE(_TYPE10_, func) \
+		CALL_TYPE(_TYPE11_, func) \
+		CALL_TYPE(_TYPE12_, func) \
+		CALL_TYPE(_TYPE13_, func) \
+	}
+
+#define STD_VIRTUAL_SET \
+	template<typename T> CUDA_FUNC_IN T* As() \
+	{ \
+		return (T*)Data; \
+	} \
+	template<typename T> CUDA_FUNC_IN void SetData(const T& val) \
+	{ \
+		memcpy(Data, &val, sizeof(T)); \
+		type = T::TYPE(); \
+	}
 
 #pragma warning(disable: 4482)
 #pragma warning(disable: 4244)
 #pragma warning(disable: 4800)
 #pragma warning(disable: 4996)
 #pragma warning(disable: 4305)
+#pragma warning(disable: 4204)

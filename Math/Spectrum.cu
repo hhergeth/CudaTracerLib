@@ -324,30 +324,25 @@ void Spectrum::fromYxy(float Y, float x, float y, EConversionIntent intent)
 #include <algorithm>
 struct InterpolatedSpectrum
 {
-	std::vector<float> m_wavelengths, m_values;
+	const float* m_wavelengths, *m_values;
+	int N;
 
 	InterpolatedSpectrum(const float* wavelengths, const float* values, int nEntries)
 	{
-		m_wavelengths.resize(nEntries);
-		m_values.resize(nEntries);
-
-		for (size_t i=0; i<nEntries; ++i) {
-			m_wavelengths[i] = *wavelengths++;
-			m_values[i] = *values++;
-		}
+		m_wavelengths = wavelengths;
+		m_values = values;
+		N = nEntries;
 	}
 
 	CUDA_FUNC_IN float eval(float lambda) const
 	{
-		typedef std::vector<float>::const_iterator iterator;
-		if (m_wavelengths.size() < 2 ||
+		if (N < 2 ||
 			lambda < m_wavelengths[0] ||
-			lambda > m_wavelengths[m_wavelengths.size()-1])
+			lambda > m_wavelengths[N-1])
 			return 0.0f;
-		std::pair<const float*, const float*> result = STL_equal_range(&m_wavelengths[0], &m_wavelengths[m_wavelengths.size() - 1], lambda);
 
-		size_t idx1 = result.first - &m_wavelengths[0];
-		size_t idx2 = result.second - &m_wavelengths[0];
+		size_t idx1 = STL_lower_bound(m_wavelengths, m_wavelengths + (N - 1), lambda) - m_wavelengths;
+		size_t idx2 = STL_upper_bound(m_wavelengths, m_wavelengths + (N - 1), lambda) - m_wavelengths;
 		if (idx1 == idx2) {
 			float a  = m_wavelengths[idx1-1],
 				  b  = m_wavelengths[idx1],
@@ -461,7 +456,7 @@ void Spectrum::fromContinuousSpectrum(const float* wls, const float* vals, unsig
 	fromXYZ(X, Y, Z);
 #else
 	/* Spectral rendering mode -- average over each bin */
-
+	float * m_wavelengths = SpectrumHelper::getData()->m_wavelengths;
 	for (int i=0; i<SPECTRUM_SAMPLES; i++)
 		s[i] = smooth.average(m_wavelengths[i], m_wavelengths[i+1]);
 #endif
@@ -483,7 +478,7 @@ void SpectrumHelper::staticData::init()
 	CIE_Z.fromContinuousSpectrum(CIE_wavelengths, CIE_Z_entries, CIE_samples);
 
 	CIE_normalization = 0.0f;
-	for (size_t i=0; i<SPECTRUM_SAMPLES; ++i)
+	for (int i=0; i<SPECTRUM_SAMPLES; ++i)
 		CIE_normalization += CIE_Y[i];
 	CIE_normalization = 1.0f / CIE_normalization;
 

@@ -1,6 +1,5 @@
 #include "StdAfx.h"
 #include "e_Terrain.h"
-#include <float.h>
 
 e_TerrainData_Leaf* e_Terrain::getValAt(unsigned int x, unsigned int y)
 {

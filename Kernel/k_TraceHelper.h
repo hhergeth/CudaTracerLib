@@ -11,13 +11,6 @@ extern texture<float4, 1> t_NodeTransforms;
 extern texture<float4, 1> t_NodeInvTransforms;
 #endif
 
-template<typename T> CUDA_ONLY_FUNC void swapDevice(T& a, T& b)
-{
-	T q = a;
-	a = b;
-	b = q;
-}
-
 enum
 {
     MaxBlockHeight      = 6,            // Upper bound for blockDim.y.
@@ -27,12 +20,12 @@ enum
 extern CUDA_ALIGN(16) CUDA_CONST e_KernelDynamicScene g_SceneDataDevice;
 extern CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_RayTracedCounterDevice;
 extern CUDA_ALIGN(16) CUDA_CONST e_CameraData g_CameraDataDevice;
-extern CUDA_ALIGN(16) CUDA_CONST k_TracerRNGBuffer g_RNGDataDevice;
+extern CUDA_ALIGN(16) CUDA_CONST CudaRNGBuffer g_RNGDataDevice;
 
 extern CUDA_ALIGN(16) e_KernelDynamicScene g_SceneDataHost;
 extern CUDA_ALIGN(16) volatile LONG g_RayTracedCounterHost;
 extern CUDA_ALIGN(16) e_CameraData g_CameraDataHost;
-extern CUDA_ALIGN(16) k_TracerRNGBuffer g_RNGDataHost;
+extern CUDA_ALIGN(16) CudaRNGBuffer g_RNGDataHost;
 
 #ifdef ISCUDA
 #define g_SceneData g_SceneDataDevice
@@ -51,21 +44,10 @@ extern CUDA_ALIGN(16) k_TracerRNGBuffer g_RNGDataHost;
 #else
 #define k_TracerBase_update_TracedRays { m_uNumRaysTraced = g_RayTracedCounterHost; }
 #endif
-	
-#ifdef ISCUDA
-	__device__
-#else
-	__host__
-#endif
-bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResult* a_Result, const e_Node* N, int ln);
 
+__device__ __host__ bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResult* a_Result, const e_Node* N, int ln);
 
-#ifdef ISCUDA
-	__device__
-#else
-	__host__
-#endif
-bool k_TraceRay(const float3& dir, const float3& ori, TraceResult* a_Result);
+__device__ __host__ bool k_TraceRay(const float3& dir, const float3& ori, TraceResult* a_Result);
 
 CUDA_FUNC_IN TraceResult k_TraceRay(const Ray& r)
 {
@@ -76,4 +58,4 @@ CUDA_FUNC_IN TraceResult k_TraceRay(const Ray& r)
 }
 
 void k_INITIALIZE(const e_KernelDynamicScene& a_Data);
-void k_STARTPASS(e_DynamicScene* a_Scene, e_Camera* a_Camera, const k_TracerRNGBuffer& a_RngBuf);
+void k_STARTPASS(e_DynamicScene* a_Scene, e_Camera* a_Camera, const CudaRNGBuffer& a_RngBuf);

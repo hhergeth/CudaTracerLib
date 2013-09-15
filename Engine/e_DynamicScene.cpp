@@ -13,9 +13,9 @@ struct textureLoader
 	{
 		S = A;
 	}
-	e_BufferReference<e_FileTexture, e_KernelFileTexture> operator()(char* file)
+	e_BufferReference<e_MIPMap, e_KernelMIPMap> operator()(char* file, bool a_MipMap)
 	{
-		return S->LoadTexture(file);
+		return S->LoadTexture(file, a_MipMap);
 	};
 };
 
@@ -38,7 +38,7 @@ e_SceneInitData e_SceneInitData::CreateFor_S_SanMiguel(unsigned int a_SceneNodes
 	e_SceneInitData r = CreateForSpecificMesh(1000000*i, 1000000*i, 1000000*i, 1000000*i, 4096 * 5, a_Lights, a_SceneNodes);
 	//e_SceneInitData r = CreateForSpecificMesh(7880512, 9359209, 2341126, 28077626, 4096 * 5, a_Lights, a_SceneNodes);//san miguel
 	//e_SceneInitData r = CreateForSpecificMesh(1,1,1,1,1,1,1);
-	return CreateForSpecificMesh(100000, 100000, 100000, 1500000, 255, a_Lights);
+	//return CreateForSpecificMesh(100000, 100000, 100000, 1500000, 255, a_Lights);
 	//r.m_uSizeAnimStream = 16 * 1024 * 1024;
 	r.m_uSizeAnimStream = 1;
 	return r;
@@ -74,7 +74,7 @@ e_DynamicScene::e_DynamicScene(e_Camera* C, e_SceneInitData a_Data, const char* 
 	m_pTexturePath = texPath;
 	int nodeC = 1 << 16, tCount = 1 << 16;
 	m_uModified = 1;
-	m_pAnimStream = LL<char>(a_Data.m_uSizeAnimStream);
+	m_pAnimStream = LL<char>(a_Data.m_uSizeAnimStream + sizeof(Distribution2D<4096, 4096>));
 	m_pTriDataStream = LL<e_TriangleData>(a_Data.m_uNumTriangles);
 	m_pTriIntStream = LL<e_TriIntersectorData>(a_Data.m_uNumInt);
 	m_pBVHStream = LL<e_BVHNodeData>(a_Data.m_uNumBvhNodes);
@@ -82,10 +82,8 @@ e_DynamicScene::e_DynamicScene(e_Camera* C, e_SceneInitData a_Data, const char* 
 	m_pMaterialBuffer = LL<e_KernelMaterial>(a_Data.m_uNumMaterials);
 	m_pMeshBuffer = new e_CachedBuffer<e_Mesh, e_KernelMesh>(a_Data.m_uNumNodes, sizeof(e_AnimatedMesh));
 	m_pNodeStream = LL<e_Node>(a_Data.m_uNumNodes);
-	m_pTextureBuffer = new e_CachedBuffer<e_FileTexture, e_KernelFileTexture>(a_Data.m_uNumTextures);
-	m_pMIPMapBuffer = new e_CachedBuffer<e_MIPMap, e_KernelMIPMap>(a_Data.m_uNumTextures);
+	m_pTextureBuffer = new e_CachedBuffer<e_MIPMap, e_KernelMIPMap>(a_Data.m_uNumTextures);
 	m_pLightStream = LL<e_KernelLight>(a_Data.m_uNumLights);
-	m_pDist2DStream = LL<Distribution2D<4096, 4096>>(1);
 	m_pVolumes = LL<e_VolumeRegion>(128);
 	m_pBVH = new e_SceneBVH(a_Data.m_uNumNodes);
 	if(a_Data.m_uSizeAnimStream > 1024)
@@ -226,13 +224,13 @@ e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_MeshFile2)
 	return N;
 }
 
-e_BufferReference<e_FileTexture, e_KernelFileTexture> e_DynamicScene::LoadTexture(const char* file)
+e_BufferReference<e_MIPMap, e_KernelMIPMap> e_DynamicScene::LoadTexture(const char* file, bool a_MipMap)
 {
 	FW::String a = fileExists(file) ? FW::String(file) : FW::String(m_pTexturePath) + FW::String(file);
 	if(a.getChar(a.getLength() - 1) == '\n')
 		a = a.substring(0, a.getLength() - 1);
 	bool load;
-	e_BufferReference<e_FileTexture, e_KernelFileTexture> T = m_pTextureBuffer->LoadCached(a.getPtr(), &load);
+	e_BufferReference<e_MIPMap, e_KernelMIPMap> T = m_pTextureBuffer->LoadCached(a.getPtr(), &load);
 	if(load)
 	{
 		FW::String a2 = FW::String(m_pCompilePath) + "Images\\" + a.getFileName(), b = a2.substring(0, a2.lastIndexOf('.')) + ".xtex";
@@ -240,35 +238,7 @@ e_BufferReference<e_FileTexture, e_KernelFileTexture> e_DynamicScene::LoadTextur
 		if(FileSize(b.getPtr()) <= 0)
 		{
 			OutputStream a_Out(b.getPtr());
-			e_FileTexture::CompileToBinary(a.getPtr(), a_Out);
-			a_Out.Close();
-		}
-		InputStream I(b.getPtr());
-		new(T) e_FileTexture(I);
-		I.Close();
-		T->CreateKernelTexture();
-		T.Invalidate();
-	}
-	if(!T->getKernelData().m_pDeviceData)
-		throw 1;
-	return T;
-}
-
-e_BufferReference<e_MIPMap, e_KernelMIPMap> e_DynamicScene::LoadMIPMap(const char* file)
-{
-	FW::String a = fileExists(file) ? FW::String(file) : FW::String(m_pTexturePath) + FW::String(file);
-	if(a.getChar(a.getLength() - 1) == '\n')
-		a = a.substring(0, a.getLength() - 2);
-	bool load;
-	e_BufferReference<e_MIPMap, e_KernelMIPMap> T = m_pMIPMapBuffer->LoadCached(a.getPtr(), &load);
-	if(load)
-	{
-		FW::String a2 = FW::String(m_pCompilePath) + "Images\\" + a.getFileName(), b = a2.substring(0, a2.lastIndexOf('.')) + ".xmip";
-		createDirectoryRecursively(b.getDirName().getPtr());
-		if(FileSize(b.getPtr()) <= 0)
-		{
-			OutputStream a_Out(b.getPtr());
-			e_MIPMap::CompileToBinary(a.getPtr(), a_Out);
+			e_MIPMap::CompileToBinary(a.getPtr(), a_Out, a_MipMap);
 			a_Out.Close();
 		}
 		InputStream I(b.getPtr());
@@ -277,6 +247,8 @@ e_BufferReference<e_MIPMap, e_KernelMIPMap> e_DynamicScene::LoadMIPMap(const cha
 		T->CreateKernelTexture();
 		T.Invalidate();
 	}
+	if(!T->getKernelData().m_pDeviceData)
+		throw 1;
 	return T;
 }
 
@@ -294,8 +266,6 @@ void e_DynamicScene::UpdateInvalidated()
 	m_pAnimStream->UpdateInvalidated();
 	m_pLightStream->UpdateInvalidated();
 	m_pVolumes->UpdateInvalidated();
-	m_pMIPMapBuffer->UpdateInvalidated();
-	m_pDist2DStream->UpdateInvalidated();
 	if(m_uModified)
 	{
 		m_uModified = 0;
@@ -356,9 +326,7 @@ unsigned int e_DynamicScene::getCudaBufferSize()
 					m_pNodeStream->getSizeInBytes() + 
 					m_pAnimStream->getSizeInBytes() + 
 					m_pBVH->getSizeInBytes() +
-					m_pMIPMapBuffer->getSizeInBytes() +
 					m_pLightStream->getSizeInBytes() +
-					m_pDist2DStream->getSizeInBytes() +
 					m_pVolumes->getSizeInBytes();
 	for(unsigned int i = 0; i < m_pTextureBuffer->NumUsedElements(); i++)
 		i += m_pTextureBuffer[0](i)->getBufferSize();
@@ -403,7 +371,7 @@ ShapeSet e_DynamicScene::CreateShape(e_StreamReference(e_Node) Node, const char*
 	e_BufferReference<e_Mesh, e_KernelMesh> m = getMesh(Node);
 	unsigned int c = 0, mi = -1;
 		
-	for(int j = 0; j < m->m_sMatInfo.getLength(); j++)
+	for(unsigned int j = 0; j < m->m_sMatInfo.getLength(); j++)
 		if(strstr(m->m_sMatInfo(j)->Name, name))
 		{
 			mi = j;
@@ -424,12 +392,12 @@ ShapeSet e_DynamicScene::CreateShape(e_StreamReference(e_Node) Node, const char*
 			i++;
 			continue;
 		}
-		if(*ind < -1 || *ind >= m->m_sTriInfo.getLength())
+		if(*ind < -1 || *ind >= (int)m->m_sTriInfo.getLength())
 			break;
 		e_TriangleData* d = m->m_sTriInfo(*ind);
 		if(d->getMatIndex(0) == mi)//do not use Node->m_uMaterialOffset, cause mi is local...
 		{
-			int k = 0;
+			unsigned int k = 0;
 			for(; k < c; k++)
 				if(n2[k] == *ind)
 					break;
@@ -459,7 +427,7 @@ void e_DynamicScene::removeLight(e_StreamReference(e_Node) Node, unsigned int mi
 void e_DynamicScene::removeAllLights(e_StreamReference(e_Node) Node)
 {
 	e_BufferReference<e_Mesh, e_KernelMesh> m = getMesh(Node);
-	for(int i = 0; i < m->m_sMatInfo.getLength(); i++)
+	for(unsigned int i = 0; i < m->m_sMatInfo.getLength(); i++)
 		m_pMaterialBuffer->operator()(Node->m_uMaterialOffset + i)->NodeLightIndex = -1;
 	int i = 0;
 	while(i < MAX_AREALIGHT_NUM && Node->m_uLightIndices[i] != -1)
@@ -528,7 +496,7 @@ e_StreamReference(e_KernelMaterial) e_DynamicScene::getMats(e_StreamReference(e_
 e_StreamReference(e_KernelMaterial) e_DynamicScene::getMat(e_StreamReference(e_Node) n, const char* name)
 {
 	e_StreamReference(e_KernelMaterial) m = getMats(n);
-	for(int i = 0; i < m.getLength(); i++)
+	for(unsigned int i = 0; i < m.getLength(); i++)
 	{
 		const char* a = m(i)->Name;
 		if(!strcmp(a, name))
@@ -542,16 +510,13 @@ e_StreamReference(e_KernelMaterial) e_DynamicScene::getMat(e_StreamReference(e_N
 
 e_StreamReference(e_KernelLight) e_DynamicScene::setEnvironementMap(const Spectrum& power, const char* file)
 {
-	//e_BufferReference<e_MIPMap, e_KernelMIPMap> m = LoadMIPMap(file);
-	//e_BufferReference<Distribution2D<4096, 4096>, Distribution2D<4096, 4096>> d = getDistribution2D();
-	//int s = sizeof(e_InfiniteLight);
-	
-	//e_InfiniteLight l = e_InfiniteLight(power, d, m);
-	//e_StreamReference(e_KernelLight) r = createLight(l);
+	e_BufferReference<e_MIPMap, e_KernelMIPMap> m = LoadTexture(file, true);
+	e_StreamReference(char) d = m_pAnimStream->malloc(sizeof(Distribution2D<4096, 4096>));
+	e_InfiniteLight l = e_InfiniteLight(power, d, m);
+	e_StreamReference(e_KernelLight) r = createLight(l);
 	m_sEnvMap = e_EnvironmentMap((char*)file);
 	m_sEnvMap.LoadTextures(textureLoader(this));
-	return e_StreamReference(e_KernelLight)(m_pLightStream, 0, 0);
-	//return r;
+	return r;
 }
 
 bool canUse(float3& p, float3& cp, float3& cd, float f)
@@ -570,14 +535,14 @@ e_ImportantLightSelector::e_ImportantLightSelector(e_DynamicScene* S, e_Camera* 
 	if(M < 5)
 	{
 		m_uCount = M;
-		for(int i = 0; i < M; i++)
+		for(unsigned int i = 0; i < M; i++)
 			m_sIndices[i] = i;
 	}
 	else
 	{
 		float sceneScale = length(C->m_sLastFrustum.Size());
 		float3 dir = C->getDir(), pos = C->getPos();
-		for(int i = 0; i < S->m_pLightStream->NumUsedElements(); i++)
+		for(unsigned int i = 0; i < S->m_pLightStream->NumUsedElements(); i++)
 		{
 			e_StreamReference(e_KernelLight) l = S->m_pLightStream->operator()(i);
 			bool use = true;

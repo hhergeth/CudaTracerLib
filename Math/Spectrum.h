@@ -446,7 +446,7 @@ public:
 class SpectrumConverter
 {
 public:
-	static CUDA_FUNC_IN float y(float3& v)
+	static CUDA_FUNC_IN float y(const float3& v)
 	{
 		const float YWeight[3] = { 0.212671f, 0.715160f, 0.072169f };
 		return YWeight[0] * v.x + YWeight[1] * v.y + YWeight[2] * v.z;
@@ -476,7 +476,7 @@ public:
 	}
 #undef toInt
 
-	static CUDA_FUNC_IN RGBE Float3ToRGBE(float3& c)
+	static CUDA_FUNC_IN RGBE Float3ToRGBE(const float3& c)
 	{
 		float v = fmaxf(c);
 		if(v < 1e-32)
@@ -496,12 +496,12 @@ public:
 	}
 
 	///this is not luminence! This is some strange msdn stuff, no idea
-	static CUDA_FUNC_IN float Luma(float3& c)
+	static CUDA_FUNC_IN float Luma(const float3& c)
 	{
 		return 0.299f * c.x + 0.587f * c.y + 0.114f * c.z;
 	}
 
-	static CUDA_FUNC_IN float3 RGBToXYZ(float3& c)
+	static CUDA_FUNC_IN float3 RGBToXYZ(const float3& c)
 	{
 		float3 r;
 		r.x = dot(make_float3(0.5767309f,  0.1855540f,  0.1881852f), c);
@@ -510,7 +510,7 @@ public:
 		return r;
 	}
 
-	static CUDA_FUNC_IN float3 XYZToRGB(float3& c)
+	static CUDA_FUNC_IN float3 XYZToRGB(const float3& c)
 	{
 		float3 r;
 		r.x = dot(make_float3(2.0413690, -0.5649464, -0.3446944), c);
@@ -519,13 +519,13 @@ public:
 		return r;
 	}
 
-	static CUDA_FUNC_IN float3 XYZToYxy(float3& c)
+	static CUDA_FUNC_IN float3 XYZToYxy(const float3& c)
 	{
 		float s = c.x + c.y + c.z;
 		return make_float3(c.y, c.x / s, c.y / s);
 	}
 
-	static CUDA_FUNC_IN float3 YxyToXYZ(float3& c)
+	static CUDA_FUNC_IN float3 YxyToXYZ(const float3& c)
 	{
 		float3 r;
 		r.x = c.x * c.y / c.z;

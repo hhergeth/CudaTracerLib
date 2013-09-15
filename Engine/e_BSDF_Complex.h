@@ -4,44 +4,24 @@
 
 struct BSDFALL;
 
-/*
-	CUDA_FUNC_IN float3 sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &sample) const
-	{
-
-	}
-	CUDA_FUNC_IN float3 f(const BSDFSamplingRecord &bRec, EMeasure measure) const
-	{
-
-	}
-	CUDA_FUNC_IN float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
-	{
-		
-	}
-	template<typename T> void LoadTextures(T callback) const
-	{
-
-	}
-*/
-
 #define coating_TYPE 13
 struct coating : public BSDF
 {
 	BSDFFirst m_nested;
 	float m_specularSamplingWeight;
 	float m_eta, m_invEta;
-	e_KernelTexture<Spectrum> m_sigmaA;
-	e_KernelTexture<Spectrum> m_specularReflectance;
+	e_KernelTexture m_sigmaA;
+	e_KernelTexture m_specularReflectance;
 	float m_thickness;
 	coating()
 		: BSDF(EDeltaReflection)
 	{
 	}
-	coating(BSDFFirst& nested, float eta, float thickness, e_KernelTexture<Spectrum>& sig)
+	coating(BSDFFirst& nested, float eta, float thickness, e_KernelTexture& sig)
 		: BSDF(EDeltaReflection | nested.getType()), m_nested(nested), m_eta(eta), m_invEta(1.0f / eta), m_thickness(thickness), m_sigmaA(sig)
 	{
 		m_specularReflectance = CreateTexture(0, Spectrum(1.0f));
-		MapParameters mp(make_float3(0), make_float2(0), Frame(make_float3(0,1,0)));
-		float avgAbsorption = (m_sigmaA.Evaluate(mp)*(-2*m_thickness)).exp().average();
+		float avgAbsorption = (m_sigmaA.Average()*(-2*m_thickness)).exp().average();
 		m_specularSamplingWeight = 1.0f / (avgAbsorption + 1.0f);
 	}
 	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &sample) const;
@@ -53,7 +33,7 @@ struct coating : public BSDF
 		m_specularReflectance.LoadTextures(callback);
 		m_nested.LoadTextures(callback);
 	}
-	template<typename T> static coating Create(const T& val, float eta, float thickness, e_KernelTexture<Spectrum>& sig)
+	template<typename T> static coating Create(const T& val, float eta, float thickness, e_KernelTexture& sig)
 	{
 		BSDFFirst nested;
 		nested.SetData(val);
@@ -88,9 +68,9 @@ struct roughcoating : public BSDF
 
 	BSDFFirst m_nested;
 	MicrofacetDistribution m_distribution;
-	e_KernelTexture<Spectrum> m_sigmaA;
-	e_KernelTexture<float> m_alpha;
-	e_KernelTexture<Spectrum> m_specularReflectance;
+	e_KernelTexture m_sigmaA;
+	e_KernelTexture m_alpha;
+	e_KernelTexture m_specularReflectance;
 	float m_specularSamplingWeight;
 	float m_eta, m_invEta;
 	float m_thickness;
@@ -98,13 +78,12 @@ struct roughcoating : public BSDF
 		: BSDF(EGlossyReflection)
 	{
 	}
-	roughcoating(BSDFFirst& nested, MicrofacetDistribution::EType type, float eta, float thickness, e_KernelTexture<Spectrum>& sig, e_KernelTexture<float>& alpha)
+	roughcoating(BSDFFirst& nested, MicrofacetDistribution::EType type, float eta, float thickness, e_KernelTexture& sig, e_KernelTexture& alpha)
 		: BSDF(EGlossyReflection | nested.getType()), m_nested(nested), m_eta(eta), m_invEta(1.0f / eta), m_thickness(thickness), m_sigmaA(sig), m_alpha(alpha)
 	{
 		m_distribution.m_type = type;
 		m_specularReflectance = CreateTexture(0, Spectrum(1.0f));
-		MapParameters mp(make_float3(0), make_float2(0), Frame(make_float3(0,1,0)));
-		float avgAbsorption = (m_sigmaA.Evaluate(mp)*(-2*m_thickness)).exp().average();
+		float avgAbsorption = (m_sigmaA.Average()*(-2*m_thickness)).exp().average();
 		m_specularSamplingWeight = 1.0f / (avgAbsorption + 1.0f);
 	}
 	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &sample) const;
@@ -117,7 +96,7 @@ struct roughcoating : public BSDF
 		m_nested.LoadTextures(callback);
 		m_alpha.LoadTextures(callback);
 	}
-	template<typename T> static roughcoating Create(const T& val, MicrofacetDistribution::EType type, float eta, float thickness, e_KernelTexture<Spectrum>& sig, e_KernelTexture<float>& alpha)
+	template<typename T> static roughcoating Create(const T& val, MicrofacetDistribution::EType type, float eta, float thickness, e_KernelTexture& sig, e_KernelTexture& alpha)
 	{
 		BSDFFirst nested;
 		nested.SetData(val);

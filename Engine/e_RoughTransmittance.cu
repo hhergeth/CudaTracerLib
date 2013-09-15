@@ -8,7 +8,7 @@ e_RoughTransmittance::e_RoughTransmittance(const char* name)
 	InputStream I(path);
 	const char header[] = "MTS_TRANSMITTANCE";
 	char *fileHeader = (char *) alloca(strlen(header));
-	I.Read(fileHeader, strlen(header));
+	I.Read(fileHeader, (unsigned int)strlen(header));
 	if (memcmp(fileHeader, header, strlen(header)) != 0)
 		throw 1;
 	I >> m_etaSamples;
@@ -23,7 +23,7 @@ e_RoughTransmittance::e_RoughTransmittance(const char* name)
 	I >> m_alphaMin;
 	I >> m_alphaMax;
 	float *temp = new float[m_transSize + m_diffTransSize];
-	I.Read(temp, (m_transSize + m_diffTransSize) * sizeof(float));
+	I.Read(temp, (unsigned int)(m_transSize + m_diffTransSize) * sizeof(float));
 	float *ptr = temp;
 	size_t fdrEntry = 0, dataEntry = 0;
 	for (size_t i=0; i<2*m_etaSamples; ++i) {
@@ -75,7 +75,7 @@ float e_RoughTransmittance::Evaluate(float cosTheta, float alpha, float eta) con
 			/ (m_etaMax-m_etaMin), (float) 0.25f);
 
 	result = Spline::evalCubicInterp3D(make_float3(warpedCosTheta, warpedAlpha, warpedEta),
-		data, make_uint3(m_thetaSamples, m_alphaSamples, m_etaSamples),
+		data, make_uint3((unsigned int)m_thetaSamples, (unsigned int)m_alphaSamples, (unsigned int)m_etaSamples),
 		make_float3(0.0f), make_float3(1.0f));
 
 	return MIN((float) 1.0f, MAX((float) 0.0f, result));
@@ -106,7 +106,7 @@ float e_RoughTransmittance::EvaluateDiffuse(float alpha, float eta) const
 			/ (m_etaMax-m_etaMin), (float) 0.25f);
 
 	result = Spline::evalCubicInterp2D(make_float2(warpedAlpha, warpedEta), data,
-		make_uint2(m_alphaSamples, m_etaSamples), make_float2(0.0f), make_float2(1.0f));
+		make_uint2((unsigned int)m_alphaSamples, (unsigned int)m_etaSamples), make_float2(0.0f), make_float2(1.0f));
 	return MIN((float) 1.0f, MAX((float) 0.0f,  result));
 }
 

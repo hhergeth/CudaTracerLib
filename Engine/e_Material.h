@@ -22,10 +22,10 @@ struct e_KernelBSSRDF
 struct e_KernelMaterial
 {
 public:
-	template<typename T> struct mpHlp
+	struct mpHlp
 	{
 		bool used;
-		e_KernelTexture<T> tex;
+		e_KernelTexture tex;
 		mpHlp()
 			: used(false)
 		{
@@ -34,9 +34,9 @@ public:
 	BSDFALL bsdf;
 	e_KernelBSSRDF bssrdf;
 	bool usedBssrdf;
-	mpHlp<float3> NormalMap;
-	mpHlp<float3> HeightMap;
-	mpHlp<float4> AlphaMap;
+	mpHlp NormalMap;
+	mpHlp HeightMap;
+	mpHlp AlphaMap;
 	e_String Name;
 	unsigned int NodeLightIndex;
 	float HeightScale;
@@ -56,7 +56,7 @@ public:
 			AlphaMap.tex.LoadTextures(callback);
 		bsdf.LoadTextures(callback);
 	}
-	void SetNormalMap(const e_KernelTexture<float3>& tex)
+	void SetNormalMap(const e_KernelTexture& tex)
 	{
 		if(HeightMap.used)
 			throw 1;
@@ -67,7 +67,7 @@ public:
 	{
 		SetNormalMap(CreateTexture(path, make_float3(0)));
 	}
-	void SetHeightMap(const e_KernelTexture<float3>& tex)
+	void SetHeightMap(const e_KernelTexture& tex)
 	{
 		if(NormalMap.used)
 			throw 1;
@@ -78,7 +78,7 @@ public:
 	{
 		SetHeightMap(CreateTexture(path, make_float3(0)));
 	}
-	void SetAlphaMap(const e_KernelTexture<float4>& tex)
+	void SetAlphaMap(const e_KernelTexture& tex)
 	{
 		if(AlphaMap.used)
 			throw 1;
@@ -89,10 +89,5 @@ public:
 	{
 		SetAlphaMap(CreateTexture(path, make_float4(0)));
 	}
-	void setBssrdf(const Spectrum& sig_a, const Spectrum& sigp_s, float e)
-	{
-		bssrdf.e = e;
-		bssrdf.sig_a = sig_a;
-		bssrdf.sigp_s = sigp_s;
-	}
+	void setBssrdf(const Spectrum& sig_a, const Spectrum& sigp_s, float e);
 };
