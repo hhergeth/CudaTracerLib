@@ -22,13 +22,11 @@
     <ClInclude Include="Engine\e_BSDF.h" />
     <ClInclude Include="Engine\e_BSDF_Complex.h" />
     <ClInclude Include="Engine\e_Buffer.h" />
-    <ClInclude Include="Engine\e_Camera.h" />
     <ClInclude Include="Engine\e_CameraController.h" />
     <ClInclude Include="Engine\e_DynamicScene.h" />
     <ClInclude Include="Engine\e_EnvironmentMap.h" />
     <ClInclude Include="Engine\e_ErrorHandler.h" />
     <ClInclude Include="Engine\e_Filter.h" />
-    <ClInclude Include="Engine\e_FPCamera.h" />
     <ClInclude Include="Engine\e_Grid.h" />
     <ClInclude Include="Engine\e_Image.h" />
     <ClInclude Include="Engine\e_KernelDynamicScene.h" />
@@ -98,7 +96,6 @@
   <ItemGroup>
     <ClCompile Include="Engine\e_AnimatedMesh.cpp" />
     <ClCompile Include="Engine\e_DynamicScene.cpp" />
-    <ClCompile Include="Engine\e_FPCamera.cpp" />
     <ClCompile Include="Engine\e_Image.cpp" />
     <ClCompile Include="Engine\e_MaterialLib.cpp" />
     <ClCompile Include="Engine\e_Mesh.cpp" />
@@ -140,6 +137,7 @@
     <CudaCompile Include="Engine\e_MicrofacetDistribution.cu" />
     <CudaCompile Include="Engine\e_PhaseFunction.cu" />
     <CudaCompile Include="Engine\e_RoughTransmittance.cu" />
+    <CudaCompile Include="Engine\e_Sensor.cu" />
     <CudaCompile Include="Engine\e_TriangleData.cu" />
     <CudaCompile Include="Engine\e_Volumes.cu" />
     <CudaCompile Include="Kernel\k_PathTracer.cu" />

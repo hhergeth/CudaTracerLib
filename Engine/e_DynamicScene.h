@@ -15,7 +15,7 @@ class e_Terrain;
 
 #include "e_SceneInitData.h"
 #include "e_AnimatedMesh.h"
-#include "e_Camera.h"
+#include "e_Sensor.h"
 
 class e_DynamicScene
 {
@@ -40,9 +40,9 @@ public:
 	const char* m_pTexturePath;
 	const char* m_pCompilePath;
 	e_MeshCompilerManager m_sCmpManager;
-	e_Camera* m_pCamera;
+	e_Sensor* m_pCamera;
 public:
-	e_DynamicScene(e_Camera* C, e_SceneInitData a_Data, const char* texPath, const char* cmpPath);
+	e_DynamicScene(e_Sensor* C, e_SceneInitData a_Data, const char* texPath, const char* cmpPath);
 	~e_DynamicScene();
 	void Free();
 	e_StreamReference(e_Node) CreateNode(const char* a_MeshFile);
@@ -110,11 +110,11 @@ public:
 	}
 	void setTerrain(e_Terrain* T);
 	void printStatus(char* dest);
-	void setCamera(e_Camera* C)
+	void setCamera(e_Sensor* C)
 	{
 		m_pCamera = C;
 	}
-	e_Camera* getCamera()
+	e_Sensor* getCamera()
 	{
 		return m_pCamera;
 	}

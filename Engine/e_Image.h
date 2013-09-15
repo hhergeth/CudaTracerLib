@@ -17,9 +17,8 @@ public:
 	    delete hostPixels;
 		cudaFree(cudaPixels);
 	}
-    CUDA_DEVICE CUDA_HOST void AddSample(const CameraSample &sample, const Spectrum &L);
-    CUDA_DEVICE CUDA_HOST void Splat(const CameraSample &sample, const Spectrum &L);
-	CUDA_DEVICE CUDA_HOST void SetSampleDirect(const CameraSample &sample, const Spectrum &L);
+    CUDA_DEVICE CUDA_HOST void AddSample(int sx, int sy, const Spectrum &L);
+    CUDA_DEVICE CUDA_HOST void Splat(int sx, int sy, const Spectrum &L);
     CUDA_FUNC_IN void GetSampleExtent(int *xstart, int *xend, int *ystart, int *yend)
 	{
 		*xstart = Floor2Int(xPixelStart + 0.5f - filter.As<e_KernelFilterBase>()->xWidth);
@@ -41,13 +40,14 @@ public:
 	void StartNewRendering();
 	struct Pixel {
         Pixel() {
-            rgb = splatRgb = make_float3(0);
-            weightSum = 0.f;
+            xyz[0] = xyz[1] = xyz[2] = 0;
+			xyzSplat[0] = xyzSplat[1] = xyzSplat[2] = 0;
+            weightSum = 0.0f;
         }
-        Spectrum rgb;
+        float xyz[3];
         float weightSum;
-        Spectrum splatRgb;
-        RGBCOL pad;
+        float xyzSplat[3];
+		CUDA_DEVICE CUDA_HOST Spectrum toSpectrum(float splat);
     };
 private:
     // ImageFilm Private Data
@@ -58,7 +58,7 @@ private:
 	Pixel *hostPixels;
 	bool usedHostPixels;
 	RGBCOL* target;
-	float filterTable[FILTER_TABLE_SIZE * FILTER_TABLE_SIZE];
+	float filterTable[FILTER_TABLE_SIZE][FILTER_TABLE_SIZE];
 	int xResolution, yResolution;
 	CUDA_FUNC_IN Pixel* getPixel(int i)
 	{

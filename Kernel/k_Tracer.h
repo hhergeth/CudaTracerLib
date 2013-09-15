@@ -1,7 +1,7 @@
 #pragma once
 
 #include "..\Engine\e_DynamicScene.h"
-#include "..\Engine\e_Camera.h"
+#include "..\Engine\e_Sensor.h"
 #include <vector>
 #include "..\Base\FrameworkInterop.h"
 #include "..\Engine\e_Image.h"
@@ -12,8 +12,8 @@ class k_Tracer
 {
 public:
 	static CudaRNGBuffer g_sRngs;
-	static AABB GetEyeHitPointBox(e_DynamicScene* s, e_Camera* c);
-	static TraceResult TraceSingleRay(Ray r, e_DynamicScene* s, e_Camera* c);
+	static AABB GetEyeHitPointBox(e_DynamicScene* s, e_Sensor* c);
+	static TraceResult TraceSingleRay(Ray r, e_DynamicScene* s, e_Sensor* c);
 	static void InitRngs(unsigned int N = 1 << 16);
 public:
 	k_Tracer()
@@ -24,7 +24,7 @@ public:
 	{
 
 	}
-	virtual void InitializeScene(e_DynamicScene* a_Scene, e_Camera* a_Camera) = 0;
+	virtual void InitializeScene(e_DynamicScene* a_Scene, e_Sensor* a_Camera) = 0;
 	virtual void Resize(unsigned int x, unsigned int y) = 0;
 	virtual void DoPass(e_Image* I, bool a_NewTrace) = 0;
 	virtual void Debug(int2 pixel){}
@@ -49,7 +49,7 @@ protected:
 	float m_fTimeSpentRendering;
 	unsigned int w, h;
 	e_DynamicScene* m_pScene;
-	e_Camera* m_pCamera;
+	e_Sensor* m_pCamera;
 	cudaEvent_t start,stop;
 public:
 	k_TracerBase()
@@ -66,7 +66,7 @@ public:
 		cudaEventDestroy(start);
 		cudaEventDestroy(stop);
 	}
-	virtual void InitializeScene(e_DynamicScene* a_Scene, e_Camera* a_Camera)
+	virtual void InitializeScene(e_DynamicScene* a_Scene, e_Sensor* a_Camera)
 	{
 		m_pScene = a_Scene;
 		m_pCamera = a_Camera;
@@ -144,14 +144,3 @@ public:
 		return m_uPassesDone;
 	}
 };
-
-CUDA_FUNC_IN CameraSample nextSample(int x, int y, CudaRNG& rng, bool DoAntialiasing = false, bool DoDOF = false)
-{
-	CameraSample s;
-	s.imageX = x + (DoAntialiasing ? (rng.randomFloat() - 0.5f) : 0.0f);
-	s.imageY = y + (DoAntialiasing ? (rng.randomFloat() - 0.5f) : 0.0f);
-	s.lensU = DoDOF ? rng.randomFloat() : 0;
-	s.lensV = DoDOF ? rng.randomFloat() : 0;
-	s.time = 0;
-	return s;
-}

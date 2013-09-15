@@ -3,16 +3,17 @@
 #include "k_TraceHelper.h"
 #include "k_TraceAlgorithms.h"
 
-Spectrum pixelFunc(CameraSample& s, int w, int h, CudaRNG& rng)
+Spectrum pixelFunc(int x, int y, int w, int h, CudaRNG& rng)
 {
-	Ray r = g_CameraData.GenRay(s, w, h);
+	Ray r;
+	Spectrum imp = g_CameraData.sampleRay(r, make_float2(x, y), rng.randomFloat2());
 
-	return PathTrace(r.direction, r.origin, rng);
+	return imp * PathTrace(r.direction, r.origin, rng);
 
 	TraceResult r2 = k_TraceRay(r);
 	if(r2.hasHit())
-		return Spectrum(-dot(r2.lerpFrame().n, r.direction));
-	else return Spectrum(0,1,0);
+		return imp * Spectrum(-dot(r2.lerpFrame().n, r.direction));
+	else return imp * Spectrum(0,1,0);
 	//return make_float3(r2.m_fDist / sc);
 }
 
@@ -41,9 +42,8 @@ void k_CpuTracer::threadStart(void* arg)
 		for(int i = N * dat->i; i < (dat->i + 1) * N; i++)
 		{
 			int x = i % w, y = i / w;
-			CameraSample s = nextSample(x, y, rng);
-			Spectrum p = pixelFunc(s, w, h, rng);
-			dat->tracer->IMG->AddSample(s, pixelFunc(s, w, h, rng));
+			Spectrum p = pixelFunc(x, y, w, h, rng);
+			dat->tracer->IMG->AddSample(x, y, p);
 		}
 		g_RNGData(rng);
 		ReleaseSemaphore(dat->sem, 1, 0);
@@ -70,6 +70,5 @@ void k_CpuTracer::Debug(int2 pixel)
 	k_INITIALIZE(m_pScene->getKernelSceneData());
 	k_STARTPASS(m_pScene, m_pCamera, g_sRngs);
 	CudaRNG rng = g_RNGData();
-	CameraSample s = nextSample(pixel.x, pixel.y, rng);
-	pixelFunc(s, w, h, rng);
+	pixelFunc(pixel.x, pixel.y, w, h, rng);
 }

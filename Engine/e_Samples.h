@@ -17,13 +17,6 @@ enum EMeasure {
 	EDiscrete = 4
 };
 
-struct CameraSample
-{
-    float imageX, imageY;
-    float lensU, lensV;
-    float time;
-};
-
 struct PositionSamplingRecord
 {
 public:

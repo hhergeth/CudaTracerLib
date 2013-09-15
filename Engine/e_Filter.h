@@ -28,11 +28,6 @@ struct e_KernelBoxFilter : public e_KernelFilterBase
 
 	}
 
-	e_KernelBoxFilter operator=(const e_KernelBoxFilter& element)
-	{
-		return e_KernelBoxFilter(element.xWidth, element.yWidth);
-	}
-
 	CUDA_FUNC_IN float Evaluate(float x, float y) const
 	{
 		return 1;
@@ -51,11 +46,6 @@ struct e_KernelGaussianFilter : public e_KernelFilterBase
 		: e_KernelFilterBase(xw, yw), alpha(a), expX(expf(-alpha * xWidth * xWidth)),  expY(expf(-alpha * yWidth * yWidth))
 	{
 
-	}
-
-	e_KernelGaussianFilter operator=(const e_KernelGaussianFilter& element)
-	{
-		return e_KernelGaussianFilter(element.xWidth, element.yWidth, element.alpha);
 	}
 
 	CUDA_FUNC_IN float Gaussian(float d, float expv) const {
@@ -79,11 +69,6 @@ struct e_KernelMitchellFilter : public e_KernelFilterBase
 		: e_KernelFilterBase(xw, yw), B(b), C(c)
 	{
 
-	}
-
-	e_KernelMitchellFilter operator=(const e_KernelMitchellFilter& element)
-	{
-		return e_KernelMitchellFilter(element.B, element.C, element.xWidth, element.yWidth);
 	}
 
 	CUDA_FUNC_IN float Mitchell1D(float x) const {
@@ -116,11 +101,6 @@ struct e_KernelLanczosSincFilter : public e_KernelFilterBase
 
 	}
 
-	e_KernelLanczosSincFilter operator=(const e_KernelLanczosSincFilter& element)
-	{
-		return e_KernelLanczosSincFilter(element.xWidth, element.yWidth, element.tau);
-	}
-
 	CUDA_FUNC_IN float Sinc1D(float x) const {
         x = fabsf(x);
         if (x < 1e-5) return 1.f;
@@ -146,11 +126,6 @@ struct e_KernelTriangleFilter : public e_KernelFilterBase
 		: e_KernelFilterBase(xw, yw)
 	{
 
-	}
-
-	e_KernelTriangleFilter operator=(const e_KernelTriangleFilter& element)
-	{
-		return e_KernelTriangleFilter(element.xWidth, element.yWidth);
 	}
 
 	CUDA_FUNC_IN float Evaluate(float x, float y) const
@@ -180,5 +155,5 @@ public:
 		return 0.0f;
 	}
 
-	STD_VIRTUAL_SET
+	STD_VIRTUAL_SET_BASE(e_KernelFilterBase)
 };

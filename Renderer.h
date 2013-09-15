@@ -2,8 +2,9 @@
 
 #include "Base\Timer.h"
 #include "Base\FrameworkInterop.h"
-#include "Engine\e_FPCamera.h"
+#include "Engine\e_Sensor.h"
 #include "Engine\e_DynamicScene.h"
+#include "Engine\e_CameraController.h"
 #include "Kernel\k_Tracer.h"
 #include "Kernel\k_PrimTracer.h"
 #include "Kernel\k_CpuTracer.h"
@@ -110,10 +111,10 @@ public:
 		m_pTracer_0 = t0;
 		m_pTracer_1 = t1;
 	}
-	void InitializeScene(e_DynamicScene* S, e_Camera* C)
+	void InitializeScene(e_DynamicScene* S)
 	{
-		m_pTracer_0->InitializeScene(S, C);
-		m_pTracer_1->InitializeScene(S, C);
+		m_pTracer_0->InitializeScene(S, S->getCamera());
+		m_pTracer_1->InitializeScene(S, S->getCamera());
 	}
 	void Resize(int w, int h)
 	{
@@ -126,7 +127,7 @@ public:
 		m_uState = m_uState == 1 ? 2 : 1;
 		oldMove0 = oldMove1 = true;
 	}
-	void Render(FW::GLContext* gl, e_DynamicScene* S, e_Camera* C, e_Image* I, FW::Image* I2, bool a_DrawSceneBvh, bool a_DrawObjectBvhs, e_StreamReference(e_Node) N)
+	void Render(FW::GLContext* gl, e_DynamicScene* S, e_CameraController* C, e_Image* I, FW::Image* I2, bool a_DrawSceneBvh, bool a_DrawObjectBvhs, e_StreamReference(e_Node) N)
 	{
 		m_sTimer.StartTimer();
 		bool& b = m_uState == 1 ? oldMove0 : oldMove1;
@@ -142,7 +143,7 @@ public:
 		gl->setVGXform(oldXform);
 		glPopAttrib();
 		
-		float4x4 vpq = C->getGLViewProjection();
+		float4x4 vpq = S->getCamera()->getGLViewProjection();
 		if(ShowGui())
 		{
 			if(N)
@@ -192,7 +193,7 @@ public:
 		}
 		m_sTimer.EndTimer();
 	}
-	void Render(e_DynamicScene* S, e_Camera* C, e_Image* I)
+	void Render(e_DynamicScene* S, e_CameraController* C, e_Image* I)
 	{
 		bool& b = m_uState == 1 ? oldMove0 : oldMove1;
 		bool moved = C->Update() || b;
@@ -244,11 +245,10 @@ public:
 		m_uActiveComponent = 0;
 		m_cActiveColor = make_float3(1,0,1);
 	}
-	bool HandleDown(e_StreamReference(e_Node) N, e_DynamicScene* S, e_Camera* C, int2 p, int2 s)
+	bool HandleDown(e_StreamReference(e_Node) N, e_DynamicScene* S, e_Sensor* C, int2 p, int2 s)
 	{
-		e_CameraData c = C->getData();
 		float4x4 m = N->getWorldMatrix(), m2 = N->getInvWorldMatrix();
-		Ray r = c.GenRay(p, s);
+		Ray r = C->GenRay(p.x,p.y);
 		float3 o = m.Translation(), d = o;
 		float d_s[3] = { inter(m.Forward(), r, o), inter(m.Right(), r, o), inter(m.Up(), r, o)};
 		float h = FLT_MAX;
@@ -263,10 +263,9 @@ public:
 		}
 		return m_uActiveComponent != 0;
 	}
-	void HandleMove(e_StreamReference(e_Node) N, e_DynamicScene* S, e_Camera* C, int2 p, int2 s)
+	void HandleMove(e_StreamReference(e_Node) N, e_DynamicScene* S, e_Sensor* C, int2 p, int2 s)
 	{
-		e_CameraData c = C->getData();
-		Ray r = c.GenRay(p, s);
+		Ray r = C->GenRay(p.x,p.y);
 		float4x4 m = N->getWorldMatrix();
 		float v_Dist = inter(m_uActiveComponent == 4 ? m.Forward() : m_uActiveComponent == 5 ? m.Right() : m.Up(), r, m.Translation());
 		float3 hit = r.origin + r.direction * v_Dist;
@@ -275,11 +274,11 @@ public:
 		m_vOldHit = m.Translation();
 		S->SetNodeTransform(m, N);
 	}
-	void HandleUp(e_StreamReference(e_Node) N, e_DynamicScene* S, const e_Camera* C, int2 p, int2 s)
+	void HandleUp(e_StreamReference(e_Node) N, e_DynamicScene* S, const e_Sensor* C, int2 p, int2 s)
 	{
 		m_uActiveComponent = 0;
 	}
-	void DrawPlanes(const e_StreamReference(e_Node) N, const e_Camera* C, FW::GLContext* O)
+	void DrawPlanes(const e_StreamReference(e_Node) N, const e_Sensor* C, FW::GLContext* O)
 	{
 		float4x4 m = N->getWorldMatrix(), vp = C->getGLViewProjection();
 		float3 r = normalize(m.Right()), u = normalize(m.Up()), f = normalize(m.Forward());

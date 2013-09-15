@@ -1,16 +1,15 @@
 #pragma once
 
 #include "e_Sensor.h"
-#include "e_Buffer.h"
 
 class e_CameraController
 {
 	HWND H;
-	e_StreamReference(e_Sensor) Camera;
+	e_Sensor* Camera;
 public:
 	float Speed;
 
-	e_CameraController(HWND h, e_StreamReference(e_Sensor) S, float _speed = 1.0f)
+	e_CameraController(HWND h, e_Sensor* S, float _speed = 1.0f)
 	{
 		Camera = S;
 		H = h;
@@ -23,11 +22,11 @@ public:
 		bool HASMOVED = false;
 		POINT P;
 		GetCursorPos(&P);
-		RECT r;
-		GetWindowRect(H, &r);
+		RECT rect;
+		GetWindowRect(H, &rect);
 		//if(GetFocus() != H)
 		//	return;
-		if(P.x > r.right || P.x < r.left || P.y > r.bottom || P.y < r.top)
+		if(P.x > rect.right || P.x < rect.left || P.y > rect.bottom || P.y < rect.top)
 			return 0;
 
 		float3 Velocity = make_float3(0,0,0);
@@ -42,42 +41,44 @@ public:
 			Velocity += make_float3(Speed,0,0);
 
 		if(GetKeyState('E')  & 0x8000)
-			Velocity -= make_float3(0,Speed,0);
-		else if(GetKeyState('Q')  & 0x8000)
 			Velocity += make_float3(0,Speed,0);
+		else if(GetKeyState('Q')  & 0x8000)
+			Velocity -= make_float3(0,Speed,0);
 		HASMOVED = length(Velocity) != 0;
-		float4x4 m_mView = Camera->As<e_SensorBase>()->toWorld;
-		float3 pos = m_mView.Translation();
-		m_mView = m_mView * float4x4::Translate(-pos);
-		pos += (m_mView.Inverse()) * Velocity;
+		float4x4 m_mView = Camera->View();
+		float3 pos = Camera->Position() + m_mView.TransformNormal(Velocity);
 
-		float4x4 rot = float4x4::Identity();
 		if((GetKeyState(VK_RBUTTON) & 0x80) != 0)
 		{
-			float xd = (r.left + (r.right - r.left) / 2.0f) - (float)P.x;
-			float yd = (r.top + (r.bottom - r.top) / 2.0f) - (float)P.y;
+			float xd = (rect.left + (rect.right - rect.left) / 2.0f) - (float)P.x;
+			float yd = (rect.top + (rect.bottom - rect.top) / 2.0f) - (float)P.y;
 			if(sqrtf(xd * xd + yd * yd) > 50)
 			{
-				P.x = r.left + (r.right - r.left) / 2;
-				P.y = r.top + (r.bottom - r.top) / 2;
+				P.x = rect.left + (rect.right - rect.left) / 2;
+				P.y = rect.top + (rect.bottom - rect.top) / 2;
 				SetCursorPos(P.x, P.y);
 			}
 			else
 			{
 				HASMOVED = 1;
-				int w = (r.right - r.left);
-				int h = (r.bottom - r.top);
-				float mousemoveX = P.x - r.left - (w / 2);
-				float mousemoveY = P.y - r.top - (h / 2);
-				SetCursorPos(r.left + w / 2, r.top + h / 2);
-				float AngleAddX = -((float)(mousemoveX / 3) * (PI / 180.0f));//thats a y rotation
+				int w = (rect.right - rect.left);
+				int h = (rect.bottom - rect.top);
+				float mousemoveX = P.x - rect.left - (w / 2);
+				float mousemoveY = P.y - rect.top - (h / 2);
+				SetCursorPos(rect.left + w / 2, rect.top + h / 2);
+				float AngleAddX = -((float)(mousemoveX / 3) * (PI / 180.0f));//moving the mouse from left to right -> rotation around Y axis
 				float AngleAddY = -((float)(mousemoveY / 3) * (PI / 180.0f));//thats a x rotation
-				rot = float4x4::RotationAxis(m_mView.Up(), -AngleAddX) * float4x4::RotationAxis(rot.Right(), AngleAddY);
+				m_mView *= float4x4::RotationAxis(m_mView.Right(), AngleAddY);
+				m_mView *= float4x4::RotationAxis(m_mView.Up(), AngleAddX);
 			}
 		}
 
-		Camera->As<e_SensorBase>()->toWorld = m_mView *  rot * float4x4::Translate(pos);
-		Camera.Invalidate();
+		float3 f = normalize(!m_mView.Z), r = normalize(cross(f, make_float3(0,1,0))), u = normalize(cross(r, f));
+		m_mView.X = make_float4(r.x, r.y, r.z, 0.0f);
+		m_mView.Y = make_float4(u.x, u.y, u.z, 0.0f);
+		m_mView.Z = make_float4(f.x, f.y, f.z, 0.0f);
+
+		Camera->SetToWorld(pos, m_mView);
 		return HASMOVED;
 	}
 };

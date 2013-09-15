@@ -39,16 +39,10 @@
     <ClInclude Include="Engine\e_AnimatedMesh.h">
       <Filter>Engine</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\e_Camera.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
     <ClInclude Include="Engine\e_DynamicScene.h">
       <Filter>Engine</Filter>
     </ClInclude>
     <ClInclude Include="Engine\e_ErrorHandler.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_FPCamera.h">
       <Filter>Engine</Filter>
     </ClInclude>
     <ClInclude Include="Engine\e_Light.h">
@@ -267,9 +261,6 @@
     <ClCompile Include="Engine\e_DynamicScene.cpp">
       <Filter>Engine</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\e_FPCamera.cpp">
-      <Filter>Engine</Filter>
-    </ClCompile>
     <ClCompile Include="Engine\e_Mesh.cpp">
       <Filter>Engine</Filter>
     </ClCompile>
@@ -406,6 +397,9 @@
       <Filter>Base</Filter>
     </CudaCompile>
     <CudaCompile Include="Engine\e_FileTexture.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\e_Sensor.cu">
       <Filter>Engine</Filter>
     </CudaCompile>
   </ItemGroup>

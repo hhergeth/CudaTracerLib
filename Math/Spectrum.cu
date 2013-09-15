@@ -291,7 +291,8 @@ RGBCOL Spectrum::toRGBCOL() const
 {
 	float r,g,b;
 	toLinearRGB(r,g,b);
-#define toInt(x) (unsigned char((float)powf(clamp01(x),1.0f/1.2f)*255.0f+0.5f))
+//#define toInt(x) (unsigned char((float)powf(clamp01(x),1.0f/1.2f)*255.0f+0.5f))
+#define toInt(x) unsigned char(clamp01(x) * 255.0f)
 	return make_uchar4(toInt(r), toInt(g), toInt(b), 255);
 #undef toInt
 }

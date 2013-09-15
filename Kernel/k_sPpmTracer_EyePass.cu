@@ -153,8 +153,8 @@ template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, float a_
 	BSDFSamplingRecord bRec;
 	if(x < w && y < h)
 	{
-		CameraSample samp = nextSample(x, y, rng);
-		Ray r = g_CameraData.GenRay(samp, w, h);
+		Ray r;
+		Spectrum importance = g_CameraData.sampleRay(r, make_float2(x, y), rng.randomFloat2());
 		TraceResult r2;
 		r2.Init(true);
 		int depth = -1;
@@ -233,7 +233,7 @@ template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, float a_
 			else if(g_SceneData.m_sEnvMap.CanSample())
 					L += throughput * g_SceneData.m_sEnvMap.Sample(r);
 		}
-		g_Image.AddSample(samp, L);
+		g_Image.AddSample(x, y, importance * L);
 	}
 	g_RNGData(rng);
 }
@@ -272,7 +272,7 @@ void k_sPpmTracer::Debug(int2 pixel)
 	cudaMemcpyToSymbol(g_Map2, &m_sMaps, sizeof(k_PhotonMapCollection));
 	k_INITIALIZE(m_pScene->getKernelSceneData());
 	k_STARTPASS(m_pScene, m_pCamera, g_sRngs);
-	k_EyePass<true><<<1, 1>>>(pixel, w, h, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3), A, 1,1, e_Image());
+	//k_EyePass<true><<<1, 1>>>(pixel, w, h, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3), A, 1,1, e_Image());
 }
 
 __global__ void k_StartPass(int w, int h, float r, float rd, k_AdaptiveEntry* E)

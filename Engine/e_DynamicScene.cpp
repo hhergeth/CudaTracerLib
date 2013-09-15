@@ -67,7 +67,7 @@ template<typename T> e_Stream<T>* LL(int i)
 	return r;
 }
 
-e_DynamicScene::e_DynamicScene(e_Camera* C, e_SceneInitData a_Data, const char* texPath, const char* cmpPath)
+e_DynamicScene::e_DynamicScene(e_Sensor* C, e_SceneInitData a_Data, const char* texPath, const char* cmpPath)
 	: m_sEnvMap(e_EnvironmentMap::Identity()), m_pCamera(C)
 {
 	m_pCompilePath = cmpPath;
@@ -336,7 +336,10 @@ unsigned int e_DynamicScene::getCudaBufferSize()
 
 AABB e_DynamicScene::getBox(e_StreamReference(e_Node) n)
 {
-	return n->getWorldBox(getMesh(n));
+	AABB r = AABB::Identity();
+	for(unsigned int i = 0; i < n.getLength(); i++)
+		r.Enlarge(n(i)->getWorldBox(getMesh(n(i))));
+	return r;
 }
 
 e_StreamReference(e_KernelLight) e_DynamicScene::createLight(e_StreamReference(e_Node) Node, const char* materialName, Spectrum& L)
@@ -527,7 +530,7 @@ bool canUse(float3& p, float3& cp, float3& cd, float f)
 	e = clamp(e, 0.5f, 1.0f);
 	return d < f * e;
 }
-e_ImportantLightSelector::e_ImportantLightSelector(e_DynamicScene* S, e_Camera* C)
+e_ImportantLightSelector::e_ImportantLightSelector(e_DynamicScene* S, e_Sensor* C)
 {
 	ZeroMemory(m_sIndices, sizeof(m_sIndices));
 	m_uCount = 0;
@@ -541,7 +544,7 @@ e_ImportantLightSelector::e_ImportantLightSelector(e_DynamicScene* S, e_Camera* 
 	else
 	{
 		float sceneScale = length(C->m_sLastFrustum.Size());
-		float3 dir = C->getDir(), pos = C->getPos();
+		float3 dir = C->View().Forward(), pos = C->Position();
 		for(unsigned int i = 0; i < S->m_pLightStream->NumUsedElements(); i++)
 		{
 			e_StreamReference(e_KernelLight) l = S->m_pLightStream->operator()(i);

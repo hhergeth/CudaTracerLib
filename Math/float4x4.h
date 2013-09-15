@@ -122,7 +122,7 @@ class float4x4
 			return b;
 		}
 		
-		static float4x4 LookAt(const float3 _From, const float3 _To, const float3 _Up)
+		static float4x4 LookAt(const float3& _From, const float3& _To, const float3& _Up)
 		{
 			float3 forward = normalize(_To-_From);
 			float3 side = normalize(cross(forward,_Up));
@@ -137,7 +137,7 @@ class float4x4
 			return mat;
 		}
 
-		static float4x4 Perspective(const float fov, const float asp, const float n, const float f)
+		static float4x4 Perspective(float fov, float asp, float n, float f)
 		{
 			float cosfov = cosf(0.5f * fov), sinfov = sinf(0.5f * fov), h = cosfov / sinfov, w = h / asp;
 			float4x4 mat=float4x4::Identity();
@@ -145,6 +145,16 @@ class float4x4
 			mat.Y = make_float4(0,h,0,0);
 			mat.Z = make_float4(0,0,f / (f - n),1);
 			mat.W = make_float4(0,0,- (n * f) / (f - n),0);
+			return mat;
+		}
+
+		static float4x4 Orthographic(float w, float h, float n, float f)
+		{
+			float4x4 mat=float4x4::Identity();
+			mat.X = make_float4(2.0f / w, 0, 0, 0);
+			mat.Y = make_float4(0, 2.0f / h, 0, 0);
+			mat.Z = make_float4(0, 0, 1.0f / (f - n), 0);
+			mat.W = make_float4(0, 0, n / (n - f), 1);
 			return mat;
 		}
 
@@ -338,7 +348,7 @@ class float4x4
 				d30, d31, d32, d33);
 		}
 
-		CUDA_FUNC_IN float3 Translation()
+		CUDA_FUNC_IN float3 Translation() const
 		{
 			return make_float3(W.x, W.y, W.z);
 		}
@@ -349,20 +359,20 @@ class float4x4
 			W.z = t.z;
 		}
 
-		CUDA_FUNC_IN float3 Scale()
+		CUDA_FUNC_IN float3 Scale() const
 		{
 			return make_float3(length(!X), length(!Y), length(!Z));
 		}
 
-		CUDA_FUNC_IN float3 Forward()
+		CUDA_FUNC_IN float3 Forward() const
 		{
 			return make_float3(Z.x, Z.y, Z.z);
 		}
-		CUDA_FUNC_IN float3 Right()
+		CUDA_FUNC_IN float3 Right() const
 		{
 			return make_float3(X.x, X.y, X.z);
 		}
-		CUDA_FUNC_IN float3 Up()
+		CUDA_FUNC_IN float3 Up() const
 		{
 			return make_float3(Y.x, Y.y, Y.z);
 		}

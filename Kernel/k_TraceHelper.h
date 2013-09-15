@@ -1,5 +1,5 @@
 #pragma once
-#include "..\Engine\e_Camera.h"
+#include "..\Engine\e_Sensor.h"
 #include "..\Engine\e_DynamicScene.h"
 
 #ifdef __CUDACC__ 
@@ -19,12 +19,12 @@ enum
 
 extern CUDA_ALIGN(16) CUDA_CONST e_KernelDynamicScene g_SceneDataDevice;
 extern CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_RayTracedCounterDevice;
-extern CUDA_ALIGN(16) CUDA_CONST e_CameraData g_CameraDataDevice;
+extern CUDA_ALIGN(16) CUDA_CONST e_Sensor g_CameraDataDevice;
 extern CUDA_ALIGN(16) CUDA_CONST CudaRNGBuffer g_RNGDataDevice;
 
 extern CUDA_ALIGN(16) e_KernelDynamicScene g_SceneDataHost;
 extern CUDA_ALIGN(16) volatile LONG g_RayTracedCounterHost;
-extern CUDA_ALIGN(16) e_CameraData g_CameraDataHost;
+extern CUDA_ALIGN(16) e_Sensor g_CameraDataHost;
 extern CUDA_ALIGN(16) CudaRNGBuffer g_RNGDataHost;
 
 #ifdef ISCUDA
@@ -58,4 +58,4 @@ CUDA_FUNC_IN TraceResult k_TraceRay(const Ray& r)
 }
 
 void k_INITIALIZE(const e_KernelDynamicScene& a_Data);
-void k_STARTPASS(e_DynamicScene* a_Scene, e_Camera* a_Camera, const CudaRNGBuffer& a_RngBuf);
+void k_STARTPASS(e_DynamicScene* a_Scene, e_Sensor* a_Camera, const CudaRNGBuffer& a_RngBuf);

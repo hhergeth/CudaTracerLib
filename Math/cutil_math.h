@@ -677,7 +677,7 @@ inline __host__ __device__ bool operator==(float3 &a, float3 &b)
 {
 	return a.x == b.x && a.y == b.y && a.z == b.z;
 }
-inline __host__ __device__ float2 operator!(float3 &a)
+inline __host__ __device__ float2 operator!( const float3 &a)
 {
 	return make_float2(a.x, a.y);
 }
@@ -830,7 +830,7 @@ inline __host__ __device__ bool operator==(float4 &a, float4 &b)
 {
 	return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
 }
-inline __host__ __device__ float3 operator!(float4 &a)
+inline __host__ __device__ float3 operator!( const float4 &a)
 {
 	return make_float3(a.x, a.y, a.z);
 }

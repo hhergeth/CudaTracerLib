@@ -271,8 +271,9 @@ CUDA_FUNC_IN int getGlobalIdx_3D_3D()
 		CALL_TYPE(_TYPE13_, func) \
 	}
 
+//thats not const correct
 #define STD_VIRTUAL_SET \
-	template<typename T> CUDA_FUNC_IN T* As() \
+	template<typename T> CUDA_FUNC_IN T* As() const \
 	{ \
 		return (T*)Data; \
 	} \
@@ -280,6 +281,29 @@ CUDA_FUNC_IN int getGlobalIdx_3D_3D()
 	{ \
 		memcpy(Data, &val, sizeof(T)); \
 		type = T::TYPE(); \
+	} \
+	template<typename T> CUDA_FUNC_IN bool Is() \
+	{ \
+		return type == T::TYPE(); \
+	}
+
+#define STD_VIRTUAL_SET_BASE(BASE_TYPE) \
+	template<typename T> CUDA_FUNC_IN T* As() const \
+	{ \
+		return (T*)Data; \
+	} \
+	template<typename T> CUDA_FUNC_IN void SetData(const T& val) \
+	{ \
+		memcpy(Data, &val, sizeof(T)); \
+		type = T::TYPE(); \
+	} \
+	template<typename T> CUDA_FUNC_IN bool Is() const \
+	{ \
+		return type == T::TYPE(); \
+	} \
+	CUDA_FUNC_IN BASE_TYPE* As() const \
+	{ \
+		return As<BASE_TYPE>(); \
 	}
 
 #pragma warning(disable: 4482)

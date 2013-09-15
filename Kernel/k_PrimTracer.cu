@@ -108,15 +108,16 @@ __global__ void primaryKernel(long long width, long long height, e_Image g_Image
                 break;
 		}
 		unsigned int x = rayidx % width, y = rayidx / width;
+		float2 pixelSample = make_float2(x,y);
 		
 		Spectrum c = Spectrum(0.0f);
 		float N2 = 1;
 		for(float f = 0; f < N2; f++)
 		{
-			CameraSample s = nextSample(x, y, rng);
-			Ray r = g_CameraData.GenRay(s, width, height);
+			Ray r;
+			Spectrum imp = g_CameraData.sampleRay(r, pixelSample, rng.randomFloat2());
 			float3 p = make_float3(0);
-			c += trace(r, rng, &p);
+			c += imp * trace(r, rng, &p);
 			if(fsumf(p))
 			{
 				uint3 pu = make_uint3(FloatToUInt(p.x), FloatToUInt(p.y), FloatToUInt(p.z));
@@ -124,7 +125,7 @@ __global__ void primaryKernel(long long width, long long height, e_Image g_Image
 				max3(&s_EyeHitBoxMax, pu);
 			}
 		}
-		g_Image.AddSample(nextSample(x, y, rng), c / N2);
+		g_Image.AddSample(x, y, c / N2);
 		
 		//Ray r = g_CameraData.GenRay(x, y, width, height, rng.randomFloat(), rng.randomFloat());
 		//TraceResult r2 = k_TraceRay(r);
@@ -141,10 +142,7 @@ __global__ void primaryKernel(long long width, long long height, e_Image g_Image
 
 __global__ void debugPixe2l(unsigned int width, unsigned int height, int2 p)
 {
-	Ray r = g_CameraData.GenRay(p, make_int2(width, height));
-	//dir = make_float3(-0.98181188f, 0.18984018f, -0.0024534566f);
-	//ori = make_float3(68790.375f, -12297.199f, 57510.383f);
-	//ori += make_float3(g_SceneData.m_sTerrain.m_sMin.x, 0, g_SceneData.m_sTerrain.m_sMin.z);
+	Ray r = g_CameraData.GenRay(p.x, p.y);
 	CudaRNG rng = g_RNGData();
 	trace(r, rng, 0);
 }

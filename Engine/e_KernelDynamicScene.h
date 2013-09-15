@@ -13,7 +13,7 @@ struct e_KernelMesh;
 struct e_TriangleData;
 struct e_TriIntersectorData;
 class e_DynamicScene;
-class e_Camera;
+struct e_Sensor;
 struct e_BVHNodeData;
 struct e_KernelMaterial;
 struct e_KernelMIPMap;
@@ -23,7 +23,7 @@ struct e_ImportantLightSelector
 	unsigned int m_sIndices[32];
 	unsigned int m_uCount;
 	CUDA_FUNC_IN e_ImportantLightSelector(){}
-	e_ImportantLightSelector(e_DynamicScene* S, e_Camera* C);
+	e_ImportantLightSelector(e_DynamicScene* S, e_Sensor* C);
 private:
 	bool Use(AABB& box, float3& p, float4x4& proj);
 	bool Use(float3& p, float4x4& vp);

@@ -2,12 +2,12 @@
 
 e_KernelDynamicScene g_SceneDataDevice;
 unsigned int g_RayTracedCounterDevice;
-e_CameraData g_CameraDataDevice;
+e_Sensor g_CameraDataDevice;
 CudaRNGBuffer g_RNGDataDevice;
 
 e_KernelDynamicScene g_SceneDataHost;
 volatile LONG g_RayTracedCounterHost;
-e_CameraData g_CameraDataHost;
+e_Sensor g_CameraDataHost;
 CudaRNGBuffer g_RNGDataHost;
 
 texture<float4, 1> t_nodesA;
@@ -292,18 +292,17 @@ void k_INITIALIZE(const e_KernelDynamicScene& a_Data)
 	r = cudaBindTexture(&offset, &t_NodeInvTransforms, a_Data.m_sSceneBVH.m_pInvNodeTransforms, &cd0, a_Data.m_sNodeData.UsedCount * sizeof(float4x4));
 }
 
-void k_STARTPASS(e_DynamicScene* a_Scene, e_Camera* a_Camera, const CudaRNGBuffer& a_RngBuf)
+void k_STARTPASS(e_DynamicScene* a_Scene, e_Sensor* a_Camera, const CudaRNGBuffer& a_RngBuf)
 {
 	unsigned int b = 0;
 	cudaMemcpyToSymbol(g_RayTracedCounterDevice, &b, sizeof(unsigned int));
-	e_CameraData d = a_Camera->getData();
 	e_KernelDynamicScene d2 = a_Scene->getKernelSceneData();
 	cudaMemcpyToSymbol(g_SceneDataDevice, &d2, sizeof(e_KernelDynamicScene));
-	cudaMemcpyToSymbol(g_CameraDataDevice, &d, sizeof(d));
+	cudaMemcpyToSymbol(g_CameraDataDevice, a_Camera, sizeof(e_Sensor));
 	cudaMemcpyToSymbol(g_RNGDataDevice, &a_RngBuf, sizeof(CudaRNGBuffer));
 
 	g_SceneDataHost = a_Scene->getKernelSceneData(false);
-	g_CameraDataHost = d;
+	g_CameraDataHost = *a_Camera;
 	g_RNGDataHost = a_RngBuf;
 	g_RayTracedCounterHost = 0;
 }

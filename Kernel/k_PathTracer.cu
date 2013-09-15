@@ -32,12 +32,12 @@ __global__ void pathKernel(unsigned int width, unsigned int height, unsigned int
 		}
 
 		unsigned int x = rayidx % width, y = rayidx / width;
-		CameraSample s = nextSample(x, y, rng, true);
-		Ray r = g_CameraData.GenRay(s, width, height);
+		Ray r;
+		Spectrum imp = g_CameraData.sampleRay(r, make_float2(x, y), rng.randomFloat2());
+
+		Spectrum col = imp * PathTrace(r.direction, r.origin, rng);
 		
-		Spectrum col = PathTrace(r.direction, r.origin, rng);
-		
-		g_Image.AddSample(s, col);
+		g_Image.AddSample(x, y, col);
 	}
 	while(true);
 	g_RNGData(rng);
@@ -46,9 +46,7 @@ __global__ void pathKernel(unsigned int width, unsigned int height, unsigned int
 __global__ void debugPixel(unsigned int width, unsigned int height, int2 p)
 {
 	CudaRNG rng = g_RNGData();
-	CameraSample s = nextSample(p.x, p.y, rng);
-	Ray r = g_CameraData.GenRay(s, width, height);
-		
+	Ray r = g_CameraData.GenRay(p.x, p.y);	
 	PathTrace(r.direction, r.origin, rng);
 }
 
