@@ -35,7 +35,7 @@ struct matUpdater
 e_SceneInitData e_SceneInitData::CreateFor_S_SanMiguel(unsigned int a_SceneNodes, unsigned int a_Lights)
 {
 	int i = 4;
-	e_SceneInitData r = CreateForSpecificMesh(1000000*i, 1000000*i, 1000000*i, 1000000*i, 4096 * 5, a_Lights, a_SceneNodes);
+	e_SceneInitData r = CreateForSpecificMesh(1200000*i, 1200000*i, 1200000*i, 1200000*i, 4096 * 5, a_Lights, a_SceneNodes);
 	//e_SceneInitData r = CreateForSpecificMesh(7880512, 9359209, 2341126, 28077626, 4096 * 5, a_Lights, a_SceneNodes);//san miguel
 	//e_SceneInitData r = CreateForSpecificMesh(1,1,1,1,1,1,1);
 	//return CreateForSpecificMesh(100000, 100000, 100000, 1500000, 255, a_Lights);

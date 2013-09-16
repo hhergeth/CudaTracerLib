@@ -68,7 +68,7 @@ public:
 				SetCursorPos(rect.left + w / 2, rect.top + h / 2);
 				float AngleAddX = -((float)(mousemoveX / 3) * (PI / 180.0f));//moving the mouse from left to right -> rotation around Y axis
 				float AngleAddY = -((float)(mousemoveY / 3) * (PI / 180.0f));//thats a x rotation
-				m_mView *= float4x4::RotationAxis(m_mView.Right(), AngleAddY);
+				m_mView *= float4x4::RotationAxis(m_mView.Right(), -AngleAddY);
 				m_mView *= float4x4::RotationAxis(m_mView.Up(), AngleAddX);
 			}
 		}

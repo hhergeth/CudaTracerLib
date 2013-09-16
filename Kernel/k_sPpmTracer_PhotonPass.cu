@@ -109,7 +109,7 @@ template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, Spectrum Le, CudaR
 	return true;
 }
 
-template<bool DIRECT> __global__ void k_PhotonPass(unsigned int spp,int PASS)
+template<bool DIRECT> __global__ void k_PhotonPass(unsigned int spp)
 { 
 	CudaRNG rng = g_RNGData();
 	for(int _photonNum = 0; _photonNum < spp; _photonNum++)
@@ -138,8 +138,8 @@ void k_sPpmTracer::doPhotonPass()
 	k_STARTPASS(m_pScene, m_pCamera, g_sRngs);
 	const unsigned long long p0 = 6 * 32, spp = 3, n = 180;
 	if(m_bDirect)
-		k_PhotonPass<true><<< n, p0 >>>(spp,m_uPhotonsEmitted+m_sMaps.m_uPhotonNumStored);
-	else k_PhotonPass<false><<< n, p0 >>>(spp,m_uPhotonsEmitted+m_sMaps.m_uPhotonNumStored);
+		k_PhotonPass<true><<< n, p0 >>>(spp);
+	else k_PhotonPass<false><<< n, p0 >>>(spp);
 	cudaThreadSynchronize();
 	cudaMemcpyFromSymbol(&m_sMaps, g_Map, sizeof(k_PhotonMapCollection));
 }

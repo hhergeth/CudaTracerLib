@@ -89,7 +89,7 @@ Spectrum UniformSampleOneLight(BSDFSamplingRecord& bRec, const e_KernelMaterial&
 
 Spectrum PathTrace(float3& a_Dir, float3& a_Ori, CudaRNG& rnd, float* distTravalled)
 {
-	const bool DIRECT = false;
+	const bool DIRECT = true;
 	Ray r0 = Ray(a_Ori, a_Dir);
 	TraceResult r;
 	r.Init(true);

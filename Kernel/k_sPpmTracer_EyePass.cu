@@ -145,6 +145,11 @@ template<typename HASH> template<bool VOL> CUDA_ONLY_FUNC Spectrum k_PhotonMap<H
 	return L_n;
 }
 
+CUDA_FUNC_IN Spectrum L_Surface()
+{
+
+}
+
 template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, float a_PassIndex, float a_rSurfaceUNUSED, float a_rVolume, k_AdaptiveStruct A, float scale0, float scale1, e_Image g_Image)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x, y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -166,6 +171,7 @@ template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, float a_
 			{
 				float3 p = r(r2.m_fDist);
 				r2.getBsdfSample(r, rng, &bRec);
+				float3 nor = bRec.map.sys.n;
 				if(g_SceneData.m_sVolume.HasVolumes())
 				{
 					float tmin, tmax;
@@ -201,12 +207,14 @@ template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, float a_
 								while(i != 0xffffffff)
 								{
 									k_pPpmPhoton e = g_Map2.m_sSurfaceMap.m_pDevicePhotons[i];
-									float3 nor = e.getNormal(), wi = e.getWi(), P = e.Pos;
+									float3 n = e.getNormal(), wi = e.getWi(), P = e.Pos;
 									Spectrum l = e.getL();
 									float dist2 = dot(P - p, P - p);
-									if(dist2 < a_rSurfaceUNUSED * a_rSurfaceUNUSED && dot(nor, bRec.map.sys.n) > 0.95f)
+									if(dist2 < a_rSurfaceUNUSED * a_rSurfaceUNUSED && AbsDot(n, bRec.map.sys.n) > 0.95f)
 									{
+										bRec.map.sys.n *= dot(r.direction, bRec.ng) > 0.0f ? -1.0f : 1.0f;
 										bRec.wo = bRec.map.sys.toLocal(wi);
+										bRec.wi = bRec.map.sys.toLocal(-r.direction);
 										Spectrum gamma = r2.getMat().bsdf.f(bRec);
 										Lp += k_tr(a_rSurfaceUNUSED, sqrtf(dist2)) * gamma * l;
 									}
@@ -215,6 +223,9 @@ template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, float a_
 							}
 					L += throughput * Lp / float(g_Map2.m_uPhotonNumEmitted);
 				}
+				bRec.map.sys.n = nor;
+				bRec.wi = bRec.map.sys.toLocal(-r.direction);
+				bRec.sampledType = 0;
 				bRec.typeMask = EDelta | EGlossy;
 				Spectrum t_f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
 				if(!bRec.sampledType)
