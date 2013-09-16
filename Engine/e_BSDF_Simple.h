@@ -41,6 +41,10 @@ struct diffuse : public BSDF
 
 		return Warp::squareToCosineHemispherePdf(bRec.wo);
 	}
+	CUDA_FUNC_IN Spectrum getDiffuseReflectance(BSDFSamplingRecord &bRec) const
+	{
+		return m_reflectance.Evaluate(bRec.map);
+	}
 	template<typename T> void LoadTextures(T callback)
 	{
 		m_reflectance.LoadTextures(callback);
@@ -79,6 +83,10 @@ struct roughdiffuse : public BSDF
 			return 0.0f;
 
 		return Warp::squareToCosineHemispherePdf(bRec.wo);
+	}
+	CUDA_FUNC_IN Spectrum getDiffuseReflectance(BSDFSamplingRecord &bRec) const
+	{
+		return m_reflectance.Evaluate(bRec.map);
 	}
 	template<typename T> void LoadTextures(T callback)
 	{
@@ -126,6 +134,7 @@ struct dielectric : public BSDF
 	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
+	STD_DIFFUSE_REFLECTANCE
 	template<typename T> void LoadTextures(T callback)
 	{
 		m_specularTransmittance.LoadTextures(callback);
@@ -161,6 +170,7 @@ struct thindielectric : public BSDF
 	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
+	STD_DIFFUSE_REFLECTANCE
 	template<typename T> void LoadTextures(T callback)
 	{
 		m_specularTransmittance.LoadTextures(callback);
@@ -193,6 +203,7 @@ struct roughdielectric : public BSDF
 	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &_sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
+	STD_DIFFUSE_REFLECTANCE
 	template<typename T> void LoadTextures(T callback)
 	{
 		m_specularTransmittance.LoadTextures(callback);
@@ -227,6 +238,7 @@ struct conductor : public BSDF
 	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
+	STD_DIFFUSE_REFLECTANCE
 	template<typename T> void LoadTextures(T callback)
 	{
 		m_specularReflectance.LoadTextures(callback);
@@ -256,6 +268,7 @@ struct roughconductor : public BSDF
 	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
+	STD_DIFFUSE_REFLECTANCE
 	template<typename T> void LoadTextures(T callback)
 	{
 		m_specularReflectance.LoadTextures(callback);
@@ -294,6 +307,10 @@ struct plastic : public BSDF
 	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
+	CUDA_FUNC_IN Spectrum getDiffuseReflectance(BSDFSamplingRecord &bRec) const
+	{
+		return m_diffuseReflectance.Evaluate(bRec.map) * (1.0f - m_fdrExt);
+	}
 	template<typename T> void LoadTextures(T callback)
 	{
 		m_diffuseReflectance.LoadTextures(callback);
@@ -373,6 +390,13 @@ struct roughplastic : public BSDF
 	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
+	CUDA_FUNC_IN Spectrum getDiffuseReflectance(BSDFSamplingRecord &bRec) const
+	{
+		float alpha = m_alpha.Evaluate(bRec.map).average();
+		float Ftr = e_RoughTransmittanceManager::EvaluateDiffuse(m_distribution.m_type, alpha, m_eta);
+
+		return m_diffuseReflectance.Evaluate(bRec.map) * Ftr;
+	}
 	template<typename T> void LoadTextures(T callback)
 	{
 		m_diffuseReflectance.LoadTextures(callback);
@@ -405,6 +429,10 @@ struct phong : public BSDF
 	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &_pdf, const float2& _sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
+	CUDA_FUNC_IN Spectrum getDiffuseReflectance(BSDFSamplingRecord &bRec) const
+	{
+		return m_diffuseReflectance.Evaluate(bRec.map);
+	}
 	template<typename T> void LoadTextures(T callback)
 	{
 		m_diffuseReflectance.LoadTextures(callback);
@@ -444,6 +472,10 @@ struct ward : public BSDF
 	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &_pdf, const float2 &_sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
+	CUDA_FUNC_IN Spectrum getDiffuseReflectance(BSDFSamplingRecord &bRec) const
+	{
+		return m_diffuseReflectance.Evaluate(bRec.map);
+	}
 	template<typename T> void LoadTextures(T callback)
 	{
 		m_diffuseReflectance.LoadTextures(callback);
@@ -472,6 +504,16 @@ struct hk : public BSDF
 	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &_pdf, const float2 &_sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
+	CUDA_FUNC_IN Spectrum getDiffuseReflectance(BSDFSamplingRecord &bRec) const
+	{
+		Spectrum sigmaA = m_sigmaA.Evaluate(bRec.map),
+				 sigmaS = m_sigmaS.Evaluate(bRec.map),
+				 sigmaT = sigmaA + sigmaS,
+				 albedo;
+		for (int i = 0; i < SPECTRUM_SAMPLES; i++)
+			albedo[i] = sigmaT[i] > 0 ? (sigmaS[i]/sigmaT[i]) : (float) 0;
+		return albedo;
+	}
 	template<typename T> void LoadTextures(T callback)
 	{
 		m_sigmaS.LoadTextures(callback);

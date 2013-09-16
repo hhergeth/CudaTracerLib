@@ -9,6 +9,13 @@
 #include "e_MicrofacetDistribution.h"
 #include "e_RoughTransmittance.h"
 
+#define STD_DIFFUSE_REFLECTANCE \
+	CUDA_FUNC_IN Spectrum getDiffuseReflectance(BSDFSamplingRecord &bRec) const \
+	{ \
+		bRec.typeMask = EDiffuseReflection; \
+		return f(bRec, ESolidAngle) * PI; \
+	}
+
 struct BSDF
 {
 	unsigned int m_combinedType;
@@ -68,6 +75,11 @@ public:
 		CALL_FUNC12(diffuse,roughdiffuse,dielectric,thindielectric,roughdielectric,conductor,roughconductor,plastic,roughplastic,phong,ward,hk, pdf(bRec, measure));
 		return 0.0f;
 	}
+	CUDA_FUNC_IN Spectrum getDiffuseReflectance(BSDFSamplingRecord &bRec) const
+	{
+		CALL_FUNC12(diffuse,roughdiffuse,dielectric,thindielectric,roughdielectric,conductor,roughconductor,plastic,roughplastic,phong,ward,hk, getDiffuseReflectance(bRec));
+		return 0.0f;
+	}
 	template<typename T> void LoadTextures(T callback) const
 	{
 		CALL_FUNC12(diffuse,roughdiffuse,dielectric,thindielectric,roughdielectric,conductor,roughconductor,plastic,roughplastic,phong,ward,hk, LoadTextures(callback));
@@ -112,6 +124,11 @@ public:
 	CUDA_FUNC_IN float pdf(BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
 	{
 		CALL_FUNC14(diffuse,roughdiffuse,dielectric,thindielectric,roughdielectric,conductor,roughconductor,plastic,roughplastic,phong,ward,hk,coating,roughcoating, pdf(bRec, measure));
+		return 0.0f;
+	}
+	CUDA_FUNC_IN Spectrum getDiffuseReflectance(BSDFSamplingRecord &bRec) const
+	{
+		CALL_FUNC12(diffuse,roughdiffuse,dielectric,thindielectric,roughdielectric,conductor,roughconductor,plastic,roughplastic,phong,ward,hk, getDiffuseReflectance(bRec));
 		return 0.0f;
 	}
 	template<typename T> void LoadTextures(T callback) const

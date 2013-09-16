@@ -145,9 +145,37 @@ template<typename HASH> template<bool VOL> CUDA_ONLY_FUNC Spectrum k_PhotonMap<H
 	return L_n;
 }
 
-CUDA_FUNC_IN Spectrum L_Surface()
+CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED, const float3& p, const float3& wo, const e_KernelMaterial* mat)
 {
-
+	float invSquaredRadius = 1.0f / (a_rSurfaceUNUSED * a_rSurfaceUNUSED);
+	Frame sys = bRec.map.sys;
+	sys.t *= a_rSurfaceUNUSED;
+	sys.s *= a_rSurfaceUNUSED;
+	sys.n *= a_rSurfaceUNUSED;
+	float3 a = -1.0f * sys.t - sys.s, b = sys.t - sys.s, c = -1.0f * sys.t + sys.s, d = sys.t + sys.s;
+	float3 low = fminf(fminf(a, b), fminf(c, d)) + p, high = fmaxf(fmaxf(a, b), fmaxf(c, d)) + p;
+	Spectrum Lp = Spectrum(0.0f);
+	uint3 lo = g_Map2.m_sSurfaceMap.m_sHash.Transform(low), hi = g_Map2.m_sSurfaceMap.m_sHash.Transform(high);
+	for(int a = lo.x; a <= hi.x; a++)
+		for(int b = lo.y; b <= hi.y; b++)
+			for(int c = lo.z; c <= hi.z; c++)
+			{
+				unsigned int i0 = g_Map2.m_sSurfaceMap.m_sHash.Hash(make_uint3(a,b,c)), i = g_Map2.m_sSurfaceMap.m_pDeviceHashGrid[i0];
+				while(i != 0xffffffff)
+				{
+					k_pPpmPhoton e = g_Map2.m_sSurfaceMap.m_pDevicePhotons[i];
+					float3 n = e.getNormal(), wi = e.getWi(), P = e.Pos;
+					Spectrum l = e.getL();
+					float dist2 = dot(P - p, P - p);
+					if(dist2 < a_rSurfaceUNUSED * a_rSurfaceUNUSED && AbsDot(n, bRec.map.sys.n) > 0.95f)
+					{
+						float ke = k_tr(a_rSurfaceUNUSED, sqrtf(dist2));
+						Lp += ke * l;
+					}
+					i = e.next;
+				}
+			}
+	return Lp / float(g_Map2.m_uPhotonNumEmitted);
 }
 
 template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, float a_PassIndex, float a_rSurfaceUNUSED, float a_rVolume, k_AdaptiveStruct A, float scale0, float scale1, e_Image g_Image)
@@ -171,7 +199,6 @@ template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, float a_
 			{
 				float3 p = r(r2.m_fDist);
 				r2.getBsdfSample(r, rng, &bRec);
-				float3 nor = bRec.map.sys.n;
 				if(g_SceneData.m_sVolume.HasVolumes())
 				{
 					float tmin, tmax;
@@ -181,7 +208,7 @@ template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, float a_
 				}
 				if(DIRECT)
 					L += throughput * UniformSampleAllLights(bRec, r2.getMat(), 4);
-				L += throughput * r2.Le(p, bRec.map.sys.n, -r.direction);
+				L += throughput * r2.Le(p, bRec.map.sys.n, -r.direction);//either it's the first bounce -> accounte or it's a specular reflection -> ...
 				const e_KernelBSSRDF* bssrdf;
 				if(r2.getMat().GetBSSRDF(bRec.map, &bssrdf))
 				{
@@ -191,47 +218,20 @@ template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, float a_
 				}
 				if(r2.getMat().bsdf.hasComponent(EDiffuse))
 				{
-					Frame sys = bRec.map.sys;
-					sys.t *= a_rSurfaceUNUSED;
-					sys.s *= a_rSurfaceUNUSED;
-					sys.n *= a_rSurfaceUNUSED;
-					float3 a = -1.0f * sys.t - sys.s, b = sys.t - sys.s, c = -1.0f * sys.t + sys.s, d = sys.t + sys.s;
-					float3 low = fminf(fminf(a, b), fminf(c, d)) + p, high = fmaxf(fmaxf(a, b), fmaxf(c, d)) + p;
-					Spectrum Lp = Spectrum(0.0f);
-					uint3 lo = g_Map2.m_sSurfaceMap.m_sHash.Transform(low), hi = g_Map2.m_sSurfaceMap.m_sHash.Transform(high);
-					for(int a = lo.x; a <= hi.x; a++)
-						for(int b = lo.y; b <= hi.y; b++)
-							for(int c = lo.z; c <= hi.z; c++)
-							{
-								unsigned int i0 = g_Map2.m_sSurfaceMap.m_sHash.Hash(make_uint3(a,b,c)), i = g_Map2.m_sSurfaceMap.m_pDeviceHashGrid[i0];
-								while(i != 0xffffffff)
-								{
-									k_pPpmPhoton e = g_Map2.m_sSurfaceMap.m_pDevicePhotons[i];
-									float3 n = e.getNormal(), wi = e.getWi(), P = e.Pos;
-									Spectrum l = e.getL();
-									float dist2 = dot(P - p, P - p);
-									if(dist2 < a_rSurfaceUNUSED * a_rSurfaceUNUSED && AbsDot(n, bRec.map.sys.n) > 0.95f)
-									{
-										bRec.map.sys.n *= dot(r.direction, bRec.ng) > 0.0f ? -1.0f : 1.0f;
-										bRec.wo = bRec.map.sys.toLocal(wi);
-										bRec.wi = bRec.map.sys.toLocal(-r.direction);
-										Spectrum gamma = r2.getMat().bsdf.f(bRec);
-										Lp += k_tr(a_rSurfaceUNUSED, sqrtf(dist2)) * gamma * l;
-									}
-									i = e.next;
-								}
-							}
-					L += throughput * Lp / float(g_Map2.m_uPhotonNumEmitted);
-				}
-				bRec.map.sys.n = nor;
-				bRec.wi = bRec.map.sys.toLocal(-r.direction);
-				bRec.sampledType = 0;
-				bRec.typeMask = EDelta | EGlossy;
-				Spectrum t_f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
-				if(!bRec.sampledType)
+					Spectrum dif = r2.getMat().bsdf.getDiffuseReflectance(bRec);
+					L += throughput * L_Surface(bRec, a_rSurfaceUNUSED, p, -r.direction, &r2.getMat()) * dif / PI;
 					break;
-				throughput = throughput * t_f;
-				r = Ray(p, bRec.getOutgoing());
+				}
+				else
+				{
+					bRec.sampledType = 0;
+					bRec.typeMask = EDelta | EGlossy;
+					Spectrum t_f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
+					if(!bRec.sampledType)
+						break;
+					throughput = throughput * t_f;
+					r = Ray(p, bRec.getOutgoing());
+				}
 			}
 			else if(g_SceneData.m_sVolume.HasVolumes())
 			{

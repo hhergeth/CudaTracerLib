@@ -34,11 +34,15 @@ struct CUDA_ALIGN(16) ShapeSet
 		{
 			return b1 * p[0] + b2 * p[1] + (1.f - b1 - b2) * p[2];
 		}
-		CUDA_FUNC_IN float3 Sample(float u1, float u2, float3* Ns) const
+		CUDA_FUNC_IN float3 Sample(float u1, float u2, float3* Ns = 0, float* a = 0, float* b = 0) const
 		{
 			float b1, b2;
 			UniformSampleTriangle(u1, u2, &b1, &b2);
 			*Ns = nor();
+			if(a)
+				*a = b1;
+			if(b)
+				*b = b2;
 			return rndPoint(b1, b2);
 		}
 		CUDA_FUNC_IN float3 nor() const
@@ -65,6 +69,17 @@ public:
 		areaDistribution = Distribution1D<MAX_SHAPE_LENGTH>(areas, count);
 	}
     CUDA_FUNC_IN float Area() const { return sumArea; }
+	CUDA_FUNC_IN void SamplePosition(PositionSamplingRecord& pRec, const float2& spatialSample)
+	{
+		const triData& sn = tris[areaDistribution.SampleDiscrete(spatialSample.y, NULL)];
+		pRec.p = sn.Sample(spatialSample.x, spatialSample.y, &pRec.n, &pRec.uv.x, &pRec.uv.y);
+		pRec.pdf = 1.0f / sumArea;
+	}
+    CUDA_FUNC_IN float Pdf(const PositionSamplingRecord &p) const
+	{
+		return 1.0f / sumArea;
+	}
+
     CUDA_FUNC_IN float3 Sample(const LightSample &ls, float3 *Ns, const e_TriIntersectorData* a_Int) const
 	{
 		const triData& sn = tris[areaDistribution.SampleDiscrete(ls.uComponent, NULL)];
@@ -104,7 +119,7 @@ public:
 	}
     CUDA_FUNC_IN float Pdf(const float3 &p) const
 	{
-		return float(count) / sumArea;
+		return 1.0f / sumArea;
 	}
 	AABB getBox() const
 	{

@@ -27,6 +27,7 @@ struct coating : public BSDF
 	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
+	STD_DIFFUSE_REFLECTANCE
 	template<typename T> void LoadTextures(T callback)
 	{
 		m_sigmaA.LoadTextures(callback);
@@ -89,6 +90,7 @@ struct roughcoating : public BSDF
 	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
+	STD_DIFFUSE_REFLECTANCE
 	template<typename T> void LoadTextures(T callback)
 	{
 		m_sigmaA.LoadTextures(callback);
