@@ -138,7 +138,7 @@ bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResult* a_Result,
 				float Oz = v00.w - origx*v00.x - origy*v00.y - origz*v00.z;
 				float invDz = 1.0f / (dirx*v00.x + diry*v00.y + dirz*v00.z);
 				float t = Oz * invDz;
-				if (t > 1e-3f && t < a_Result->m_fDist && triAddr != lastIndex)
+				if (t > 1e-2f && t < a_Result->m_fDist && triAddr != lastIndex)
 				{
 					float Ox = v11.w + origx*v11.x + origy*v11.y + origz*v11.z;
 					float Dx = dirx*v11.x + diry*v11.y + dirz*v11.z;
@@ -160,7 +160,7 @@ bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResult* a_Result,
 							if(USE_ALPHA)
 							{
 								e_KernelMaterial* mat = g_SceneData.m_sMatData.Data + tri->getMatIndex(N->m_uMaterialOffset);
-								float a = mat->SampleAlphaMap(MapParameters(make_float3(0), tri->lerpUV(make_float2(u,v)), Frame()));
+								float a = mat->SampleAlphaMap(MapParameters(make_float3(0), tri->lerpUV(make_float2(u,v)), Frame(), make_float2(u,v),tri));
 								q = a >= mat->m_fAlphaThreshold;
 							}
 							if(q)
@@ -307,12 +307,12 @@ void k_STARTPASS(e_DynamicScene* a_Scene, e_Sensor* a_Camera, const CudaRNGBuffe
 	g_RayTracedCounterHost = 0;
 }
 
-Spectrum TraceResult::Le(const float3& p, const float3& n, const float3& w) const 
+Spectrum TraceResult::Le(const float3& p, const Frame& sys, const float3& w) const 
 {
 	unsigned int i = LightIndex();
 	if(i == 0xffffffff)
 		return Spectrum(0.0f);
-	else return g_SceneData.m_sLightData[i].L(p, n, w);
+	else return g_SceneData.m_sLightData[i].eval(p, sys, w);
 }
 
 unsigned int TraceResult::LightIndex() const

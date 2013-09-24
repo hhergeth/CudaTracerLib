@@ -34,17 +34,7 @@ struct CUDA_ALIGN(16) ShapeSet
 		{
 			return b1 * p[0] + b2 * p[1] + (1.f - b1 - b2) * p[2];
 		}
-		CUDA_FUNC_IN float3 Sample(float u1, float u2, float3* Ns = 0, float* a = 0, float* b = 0) const
-		{
-			float b1, b2;
-			UniformSampleTriangle(u1, u2, &b1, &b2);
-			*Ns = nor();
-			if(a)
-				*a = b1;
-			if(b)
-				*b = b2;
-			return rndPoint(b1, b2);
-		}
+		CUDA_DEVICE CUDA_HOST float3 Sample(float u1, float u2, float3* Ns = 0, float* a = 0, float* b = 0) const;
 		CUDA_FUNC_IN float3 nor() const
 		{
 			return n;
@@ -53,71 +43,11 @@ struct CUDA_ALIGN(16) ShapeSet
 		void Recalculate(float4x4& mat);
 	};
 public:
-    ShapeSet(e_TriIntersectorData** indices, unsigned int indexCount, float4x4& mat)
-	{
-		if(indexCount > MAX_SHAPE_LENGTH)
-			throw 1;
-		count = indexCount;
-		float areas[MAX_SHAPE_LENGTH];
-		sumArea = 0;
-		for(int i = 0; i < count; i++)
-		{
-			tris[i] = triData(indices[i], mat);
-			areas[i] = tris[i].area;
-			sumArea += tris[i].area;
-		}
-		areaDistribution = Distribution1D<MAX_SHAPE_LENGTH>(areas, count);
-	}
+	ShapeSet(){}
+    ShapeSet(e_TriIntersectorData** indices, unsigned int indexCount, float4x4& mat);
     CUDA_FUNC_IN float Area() const { return sumArea; }
-	CUDA_FUNC_IN void SamplePosition(PositionSamplingRecord& pRec, const float2& spatialSample)
-	{
-		const triData& sn = tris[areaDistribution.SampleDiscrete(spatialSample.y, NULL)];
-		pRec.p = sn.Sample(spatialSample.x, spatialSample.y, &pRec.n, &pRec.uv.x, &pRec.uv.y);
-		pRec.pdf = 1.0f / sumArea;
-	}
+	CUDA_DEVICE CUDA_HOST void SamplePosition(PositionSamplingRecord& pRec, const float2& spatialSample) const;
     CUDA_FUNC_IN float Pdf(const PositionSamplingRecord &p) const
-	{
-		return 1.0f / sumArea;
-	}
-
-    CUDA_FUNC_IN float3 Sample(const LightSample &ls, float3 *Ns, const e_TriIntersectorData* a_Int) const
-	{
-		const triData& sn = tris[areaDistribution.SampleDiscrete(ls.uComponent, NULL)];
-		return sn.Sample(ls.uPos[0], ls.uPos[1], Ns);
-	}
-    CUDA_FUNC_IN float3 Sample(const float3 &p, const LightSample &ls, float3 *Ns, const e_TriIntersectorData* a_Int) const
-	{
-		int sn = areaDistribution.SampleDiscrete(ls.uComponent, NULL);
-		float3 pt = tris[sn].Sample(ls.uPos[0], ls.uPos[1], Ns);
-		TraceResult r2;
-		r2.Init();
-		float3 n;
-		Ray r(p, normalize(pt - p));
-		for (int i = 0; i < count; ++i)
-			if(tris[i].dat.Intersect(r, &r2))//a_Int[tris[i].index]
-				n = tris[i].n;
-		if(r2.hasHit() && Ns)
-			*Ns = n;
-		return r(r2.m_fDist);
-		//return pt;
-	}
-    CUDA_FUNC_IN float Pdf(const float3 &p, const float3 &wi, const e_TriIntersectorData* a_Int) const
-	{
-		float pdf = 0.f;
-		TraceResult r;
-		for (int i = 0; i < count; i++)
-		{
-			r.Init();
-			if(tris[i].dat.Intersect(Ray(p, wi), &r))
-			{
-				float pdf2 = DistanceSquared(p, p + wi * r.m_fDist) / (AbsDot(tris[i].nor(), -1.0f * wi) * tris[i].area);//we trust in the compiler
-				if (pdf2 == pdf2)//NAN check
-					pdf += tris[i].area * pdf2;
-			}
-		}
-		return pdf / sumArea;
-	}
-    CUDA_FUNC_IN float Pdf(const float3 &p) const
 	{
 		return 1.0f / sumArea;
 	}
@@ -128,18 +58,7 @@ public:
 			b.Enlarge(tris[i].box());
 		return b;
 	}
-	void Recalculate(float4x4& mat)
-	{
-		float areas[MAX_SHAPE_LENGTH];
-		sumArea = 0;
-		for(int i = 0; i < count; i++)
-		{
-			tris[i].Recalculate(mat);
-			areas[i] = tris[i].area;
-			sumArea += tris[i].area;
-		}
-		areaDistribution = Distribution1D<MAX_SHAPE_LENGTH>(areas, count);
-	}
+	void Recalculate(float4x4& mat);
 private:
     CUDA_ALIGN(16) triData tris[MAX_SHAPE_LENGTH];
     float sumArea;

@@ -30,20 +30,27 @@ CUDA_DEVICE CUDA_HOST float Turbulence(const float3 &P, const float3 &dpdx, cons
 
 CUDA_DEVICE CUDA_HOST float Lanczos(float x, float tau);
 
+struct e_TriangleData;
 struct MapParameters
 {
 	float3 P;
 	Frame sys;
 	float2 uv;
-	CUDA_FUNC_IN MapParameters(): sys(Frame()), uv(float2()), P(float3()){}
-	CUDA_FUNC_IN MapParameters(const float3& p, const float2& u, const Frame& s)
-		: sys(s), uv(u), P(p)
+	float2 bary;
+	const e_TriangleData* Shape;
+	CUDA_FUNC_IN MapParameters(): sys(Frame()), uv(float2()), P(float3()), bary(float2()){}
+	CUDA_FUNC_IN MapParameters(const float3& p, const float2& u, const Frame& s, const float2& b, const e_TriangleData* S)
+		: sys(s), uv(u), P(p), bary(b), Shape(S)
 	{
 	}
 };
 
+struct e_KernelMappingBase : public e_BaseType
+{
+};
+
 #define e_KernelUVMapping2D_TYPE 1
-struct e_KernelUVMapping2D
+struct e_KernelUVMapping2D : public e_KernelMappingBase
 {
 	e_KernelUVMapping2D(float su = 1, float sv = 1, float du = 0, float dv = 0)
 	{
@@ -58,13 +65,13 @@ struct e_KernelUVMapping2D
 		*t = sv * dg.uv.y + dv;
 	}
 	TYPE_FUNC(e_KernelUVMapping2D)
-private:
     float su, sv, du, dv;
 };
 
 #define e_KernelSphericalMapping2D_TYPE 2
-struct e_KernelSphericalMapping2D
+struct e_KernelSphericalMapping2D : public e_KernelMappingBase
 {
+	e_KernelSphericalMapping2D(){}
 	e_KernelSphericalMapping2D(float4x4& toSph)
 		: WorldToTexture(toSph)
 	{
@@ -74,6 +81,7 @@ struct e_KernelSphericalMapping2D
 		sphere(dg.P, s, t);
 	}
 	TYPE_FUNC(e_KernelSphericalMapping2D)
+	float4x4 WorldToTexture;
 private:
 	CUDA_FUNC_IN void sphere(const float3 &P, float *s, float *t) const
 	{
@@ -83,12 +91,12 @@ private:
 		*s = theta * INV_PI;
 		*t = phi * INV_TWOPI;
 	}
-	float4x4 WorldToTexture;
 };
 
 #define e_KernelPlanarMapping2D_TYPE 3
-struct e_KernelPlanarMapping2D
+struct e_KernelPlanarMapping2D : public e_KernelMappingBase
 {
+	e_KernelPlanarMapping2D(){}
 	e_KernelPlanarMapping2D(const float3 &vv1, const float3 &vv2, float dds = 0, float ddt = 0)
         : vs(vv1), vt(vv2), ds(dds), dt(ddt)
 	{
@@ -100,14 +108,14 @@ struct e_KernelPlanarMapping2D
 		*t = dt + dot(vec, vt);
 	}
 	TYPE_FUNC(e_KernelPlanarMapping2D)
-private:
-	const float3 vs, vt;
-    const float ds, dt;
+	float3 vs, vt;
+    float ds, dt;
 };
 
 #define e_KernelCylindricalMapping2D_TYPE 4
-struct e_KernelCylindricalMapping2D
+struct e_KernelCylindricalMapping2D : public e_KernelMappingBase
 {
+	e_KernelCylindricalMapping2D(){}
 	e_KernelCylindricalMapping2D(const float4x4 &toCyl)
         : WorldToTexture(toCyl)
 	{
@@ -117,6 +125,7 @@ struct e_KernelCylindricalMapping2D
 		 cylinder(dg.P, s, t);
 	}
 	TYPE_FUNC(e_KernelCylindricalMapping2D)
+	float4x4 WorldToTexture;
 private:
 	CUDA_FUNC_IN void cylinder(const float3 &p, float *s, float *t) const
 	{
@@ -124,16 +133,12 @@ private:
         *s = (PI + atan2f(vec.y, vec.x)) / (2.f * PI);
         *t = vec.z;
     }
-	float4x4 WorldToTexture;
 };
 
 #define MAP2D_SIZE RND_16(DMAX4(sizeof(e_KernelUVMapping2D), sizeof(e_KernelSphericalMapping2D), sizeof(e_KernelPlanarMapping2D), sizeof(e_KernelCylindricalMapping2D)))
 
-struct e_KernelTextureMapping2D
+struct e_KernelTextureMapping2D : public e_AggregateBaseType<e_KernelMappingBase, MAP2D_SIZE>
 {
-private:
-	unsigned char Data[MAP2D_SIZE];
-	unsigned int type;
 public:
 	e_KernelTextureMapping2D()
 	{
@@ -143,12 +148,12 @@ public:
 	{
 		CALL_FUNC4(e_KernelUVMapping2D,e_KernelSphericalMapping2D,e_KernelPlanarMapping2D,e_KernelCylindricalMapping2D, Map(dg, s, t))
 	}
-	STD_VIRTUAL_SET
 };
 
 #define e_KernelIdentityMapping3D_TYPE 1
-struct e_KernelIdentityMapping3D
+struct e_KernelIdentityMapping3D : public e_KernelMappingBase
 {
+	e_KernelIdentityMapping3D(){}
 	e_KernelIdentityMapping3D(const float4x4& x)
 		: WorldToTexture(x)
 	{
@@ -158,17 +163,13 @@ struct e_KernelIdentityMapping3D
 		return WorldToTexture * dg.P;
 	}
 	TYPE_FUNC(e_KernelIdentityMapping3D)
-private:
     float4x4 WorldToTexture;
 };
 
 #define MAP3D_SIZE RND_16(sizeof(e_KernelIdentityMapping3D))
 
-struct e_KernelTextureMapping3D
+struct e_KernelTextureMapping3D : public e_AggregateBaseType<e_KernelMappingBase, MAP3D_SIZE>
 {
-private:
-	unsigned char Data[MAP3D_SIZE];
-	unsigned int type;
 public:
 	e_KernelTextureMapping3D()
 	{
@@ -179,7 +180,6 @@ public:
 		CALL_FUNC1(e_KernelIdentityMapping3D, Map(dg))
 		return make_float3(0,0,0);
 	}
-	STD_VIRTUAL_SET
 };
 
 template<typename T> static e_KernelTextureMapping2D CreateTextureMapping2D(T& val)

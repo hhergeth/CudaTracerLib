@@ -349,7 +349,7 @@ struct InterpolatedSpectrum
 				  b  = m_wavelengths[idx1],
 				  fa = m_values[idx1-1],
 				  fb = m_values[idx1];
-			return lerp((lambda - a) / (b-a), fb, fa);
+			return lerp(fb, fa, (lambda - a) / (b-a));
 		} else if (idx2 == idx1+1) {
 			/* Hit a value exactly */
 			return m_values[idx1];
@@ -360,27 +360,40 @@ struct InterpolatedSpectrum
 
 	CUDA_FUNC_IN float average(float lambdaMin, float lambdaMax) const
 	{
-		GaussLobattoIntegrator integrator(Integrate_Steps, 1e-4f, 1e-4f, false, false);
-
-		if (lambdaMax <= lambdaMin)
+		if(N < 2)
 			return 0.0f;
 
-		float integral = 0;
+		float rangeStart = MAX(lambdaMin, m_wavelengths[0]);
+		float rangeEnd = MIN(lambdaMax, m_wavelengths[N-1]);
 
-		/// Integrate over 50nm-sized regions
-		size_t nSteps = MAX((size_t) 1,
-				(size_t) std::ceil((lambdaMax - lambdaMin) / 50));
-		float stepSize = (lambdaMax - lambdaMin) / nSteps,
-			  pos = lambdaMin;
+		if (rangeEnd <= rangeStart)
+			return 0.0f;
 
-		for (size_t i=0; i<nSteps; ++i) {
-			integral += integrator.integrate(
-				*this,
-				pos, pos + stepSize);
-			pos += stepSize;
+		size_t entry = MAX((size_t) (STL_lower_bound(m_wavelengths,
+			m_wavelengths + (N - 1), rangeStart) - m_wavelengths), (size_t) 1) - 1;
+
+		float result = 0.0f;
+		for (; entry+1 < N && rangeEnd >= m_wavelengths[entry]; ++entry) {
+			/* Step through the samples and integrate trapezoids */
+
+			float a  = m_wavelengths[entry],
+				  b  = m_wavelengths[entry+1],
+				  ca = MAX(a, rangeStart),
+				  cb = MIN(b, rangeEnd),
+				  fa = m_values[entry],
+				  fb = m_values[entry+1],
+				  invAB = 1.0f / (b - a);
+
+			if (cb <= ca)
+				continue;
+
+			float interpA = lerp(fa, fb, (ca - a) * invAB);
+			float interpB = lerp(fa, fb, (cb - a) * invAB);
+
+			result += 0.5f * (interpA + interpB) * (cb-ca);
 		}
 
-		return integral / (lambdaMax - lambdaMin);
+		return result / (lambdaMax - lambdaMin);
 	}
 
 	///convenience function for integrator
@@ -440,6 +453,19 @@ static InterpolatedSpectrum CIE_X_interp(CIE_wavelengths, CIE_X_entries, CIE_sam
 static InterpolatedSpectrum CIE_Y_interp(CIE_wavelengths, CIE_Y_entries, CIE_samples);
 static InterpolatedSpectrum CIE_Z_interp(CIE_wavelengths, CIE_Z_entries, CIE_samples);
 
+float InterpolateSpectrumSamples(const float *lambda, const float *vals,
+                                 int n, float l) {
+    if (l <= lambda[0])   return vals[0];
+    if (l >= lambda[n-1]) return vals[n-1];
+    for (int i = 0; i < n-1; ++i) {
+        if (l >= lambda[i] && l <= lambda[i+1]) {
+            float t = (l - lambda[i]) / (lambda[i+1] - lambda[i]);
+            return lerp(vals[i], vals[i+1], t);
+        }
+    }
+    return 0.f;
+}
+
 void Spectrum::fromContinuousSpectrum(const float* wls, const float* vals, unsigned int N)
 {
 	InterpolatedSpectrum smooth(wls, vals, N);
@@ -455,7 +481,7 @@ void Spectrum::fromContinuousSpectrum(const float* wls, const float* vals, unsig
 	X *= normalization; Y *= normalization; Z *= normalization;
 
 	fromXYZ(X, Y, Z);
-#else
+#else*/
 	/* Spectral rendering mode -- average over each bin */
 	float * m_wavelengths = SpectrumHelper::getData()->m_wavelengths;
 	for (int i=0; i<SPECTRUM_SAMPLES; i++)

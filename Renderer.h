@@ -10,6 +10,7 @@
 #include "Kernel\k_CpuTracer.h"
 #include "Kernel\k_PathTracer.h"
 #include "Kernel\k_sPpmTracer.h"
+#include "Kernel\k_PhotonTracer.h"
 
 inline void line(float3 a, float3 b, float4x4& vp, FW::GLContext* O, float3 col)
 {
@@ -86,7 +87,8 @@ public:
 		m_pEyeBox = 0;
 		if(stdTracers)
 			//setTracers(new k_PrimTracer(), new k_sPpmTracer());
-			setTracers(new k_PrimTracer(), new k_PathTracer(TRUE));
+			//setTracers(new k_PrimTracer(), new k_PathTracer(TRUE));
+			setTracers(new k_PrimTracer(), new k_PhotonTracer());
 		else setTracers(0, 0);
 		oldMove0 = oldMove1 = false;
 		m_uState = 1;
@@ -140,7 +142,6 @@ public:
 		glPushAttrib(GL_ENABLE_BIT);
 		glDisable(GL_DEPTH_TEST);
 		gl->drawImage(*I2, FW::Vec2f(0.0f), 0.5f, false);
-		gl->setVGXform(oldXform);
 		glPopAttrib();
 		
 		float4x4 vpq = S->getCamera()->getGLViewProjection();
@@ -159,7 +160,6 @@ public:
 					plotBox(box, vpq, gl, make_float3(1,1,0));
 				}
 			}
-			e_ImportantLightSelector sel = S->getKernelSceneData().m_sLightSelector;
 			AABB box = S->getKernelSceneData().m_sBox;
 			float eps = Distance(box.maxV, box.minV) / 100.0f;
 			for(unsigned int i = 0; i < S->getLightCount(); i++)
@@ -170,12 +170,12 @@ public:
 				p0 /= p0.w;
 				float2 p = make_float2(p0.x / p0.w, 1.0f - p0.y / p0.w) * make_float2(I2->getSize());
 				unsigned int col = (RGB(0,0,255)) | 0xff000000;
-				for(unsigned int j = 0; j < sel.m_uCount; j++)
+				/*for(unsigned int j = 0; j < sel.m_uCount; j++)
 					if(sel.m_sIndices[j] == i)
 					{
 						col = (RGB(0,255,0)) | 0xff000000;
 						break;
-					}
+					}*/
 				gl->drawString(FW::String("Light ").appendf("%d", i), FW::Vec4f(p0.x,p0.y,p0.z,p0.w), FW::Vec2f(0), col);//FW::Vec2i(p.x,p.y)
 			}
 			if(m_pEyeBox)

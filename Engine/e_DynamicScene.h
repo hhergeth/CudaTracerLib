@@ -36,18 +36,20 @@ public:
 	e_SceneBVH* m_pBVH;
 	e_TmpVertex* m_pDeviceTmpFloats;
 	e_Terrain* m_pTerrain;
-	e_EnvironmentMap m_sEnvMap;
 	const char* m_pTexturePath;
 	const char* m_pCompilePath;
 	e_MeshCompilerManager m_sCmpManager;
 	e_Sensor* m_pCamera;
+	unsigned int m_uEnvMapIndex;
 public:
 	e_DynamicScene(e_Sensor* C, e_SceneInitData a_Data, const char* texPath, const char* cmpPath);
 	~e_DynamicScene();
 	void Free();
 	e_StreamReference(e_Node) CreateNode(const char* a_MeshFile);
+	void DeleteNode(e_StreamReference(e_Node) ref);
 	///Do not use this! Just invalidate and update the material
 	e_BufferReference<e_MIPMap, e_KernelMIPMap> LoadTexture(const char* file, bool a_MipMap);
+	void UnLoadTexture(e_BufferReference<e_MIPMap, e_KernelMIPMap> ref);
 	void SetNodeTransform(const float4x4& mat, e_StreamReference(e_Node) n)
 	{
 		m_uModified = 1;

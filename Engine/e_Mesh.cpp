@@ -101,6 +101,9 @@ void e_Mesh::CompileObjToBinary(const char* a_InputFile, OutputStream& a_Out)
 	unsigned int m_numTriangles = MB->numTriangles();
 	unsigned int m_numVertices = MB->numVertices();
 
+	if(! MB->numSubmeshes())
+		throw 1;
+
 	e_TriangleData* triData = new e_TriangleData[m_numTriangles];
 	std::vector<e_KernelMaterial> matData;
 	float3 p[3];

@@ -95,8 +95,10 @@ CUDA_FUNC_IN float k(float t)
 
 CUDA_FUNC_IN float k_tr(float r , float t)
 {
-	float ny = 1.0f / (PI * r * r);
-	return ny * k(t / r);
+	//float ny = 1.0f / (PI * r * r);
+	//return ny * k(t / r);
+	float a = 1.0f - t * t / (r * r);
+	return a * a * 3.0f / (r * r * PI);
 }
 
 CUDA_FUNC_IN float k_tr(float r, const float3& t)
@@ -104,7 +106,7 @@ CUDA_FUNC_IN float k_tr(float r, const float3& t)
 	return k_tr(r, length(t));
 }
 
-template<typename HASH> template<bool VOL> CUDA_ONLY_FUNC Spectrum k_PhotonMap<HASH>::L_Volume(float a_r, float a_NumPhotonEmitted, CudaRNG& rng, const Ray& r, float tmin, float tmax, const Spectrum& sigt) const
+template<typename HASH> template<bool VOL> Spectrum k_PhotonMap<HASH>::L_Volume(float a_r, float a_NumPhotonEmitted, CudaRNG& rng, const Ray& r, float tmin, float tmax, const Spectrum& sigt) const
 {
 	float Vs = 1.0f / ((4.0f / 3.0f) * PI * a_r * a_r * a_r * a_NumPhotonEmitted), r2 = a_r * a_r;
 	Spectrum L_n = Spectrum(0.0f);
@@ -147,7 +149,6 @@ template<typename HASH> template<bool VOL> CUDA_ONLY_FUNC Spectrum k_PhotonMap<H
 
 CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED, const float3& p, const float3& wo, const e_KernelMaterial* mat)
 {
-	float invSquaredRadius = 1.0f / (a_rSurfaceUNUSED * a_rSurfaceUNUSED);
 	Frame sys = bRec.map.sys;
 	sys.t *= a_rSurfaceUNUSED;
 	sys.s *= a_rSurfaceUNUSED;
@@ -156,9 +157,9 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED
 	float3 low = fminf(fminf(a, b), fminf(c, d)) + p, high = fmaxf(fmaxf(a, b), fmaxf(c, d)) + p;
 	Spectrum Lp = Spectrum(0.0f);
 	uint3 lo = g_Map2.m_sSurfaceMap.m_sHash.Transform(low), hi = g_Map2.m_sSurfaceMap.m_sHash.Transform(high);
-	for(int a = lo.x; a <= hi.x; a++)
-		for(int b = lo.y; b <= hi.y; b++)
-			for(int c = lo.z; c <= hi.z; c++)
+	for(unsigned int a = lo.x; a <= hi.x; a++)
+		for(unsigned int b = lo.y; b <= hi.y; b++)
+			for(unsigned int c = lo.z; c <= hi.z; c++)
 			{
 				unsigned int i0 = g_Map2.m_sSurfaceMap.m_sHash.Hash(make_uint3(a,b,c)), i = g_Map2.m_sSurfaceMap.m_pDeviceHashGrid[i0];
 				while(i != 0xffffffff)
@@ -192,57 +193,54 @@ template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, float a_
 		r2.Init(true);
 		int depth = -1;
 		Spectrum L(0.0f), throughput(1.0f);
-		while(depth++ < 7)
+		while(k_TraceRay(r.direction, r.origin, &r2) && depth++ < 5)
 		{
-			r2.Init();
-			if(k_TraceRay(r.direction, r.origin, &r2))
-			{
-				float3 p = r(r2.m_fDist);
-				r2.getBsdfSample(r, rng, &bRec);
-				if(g_SceneData.m_sVolume.HasVolumes())
-				{
-					float tmin, tmax;
-					g_SceneData.m_sVolume.IntersectP(r, 0, r2.m_fDist, &tmin, &tmax);
-					L += throughput * g_Map2.L<true>(a_rVolume, rng, r, tmin, tmax, make_float3(0));
-					throughput = throughput * (-g_SceneData.m_sVolume.tau(r, tmin, tmax)).exp();
-				}
-				if(DIRECT)
-					L += throughput * UniformSampleAllLights(bRec, r2.getMat(), 4);
-				L += throughput * r2.Le(p, bRec.map.sys.n, -r.direction);//either it's the first bounce -> accounte or it's a specular reflection -> ...
-				const e_KernelBSSRDF* bssrdf;
-				if(r2.getMat().GetBSSRDF(bRec.map, &bssrdf))
-				{
-					float3 dir = VectorMath::refract(r.direction, bRec.map.sys.n, 1.0f / bssrdf->e);
-					TraceResult r3 = k_TraceRay(Ray(p, dir));
-					L += throughput * g_Map2.L<false>(a_rVolume, rng, Ray(p, dir), 0, r3.m_fDist, bssrdf->sigp_s + bssrdf->sig_a);
-				}
-				if(r2.getMat().bsdf.hasComponent(EDiffuse))
-				{
-					Spectrum dif = r2.getMat().bsdf.getDiffuseReflectance(bRec);
-					L += throughput * L_Surface(bRec, a_rSurfaceUNUSED, p, -r.direction, &r2.getMat()) * dif / PI;
-					break;
-				}
-				else
-				{
-					bRec.sampledType = 0;
-					bRec.typeMask = EDelta | EGlossy;
-					Spectrum t_f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
-					if(!bRec.sampledType)
-						break;
-					throughput = throughput * t_f;
-					r = Ray(p, bRec.getOutgoing());
-				}
-			}
-			else if(g_SceneData.m_sVolume.HasVolumes())
+			float3 p = r(r2.m_fDist);
+			r2.getBsdfSample(r, rng, &bRec);
+			if(g_SceneData.m_sVolume.HasVolumes())
 			{
 				float tmin, tmax;
 				g_SceneData.m_sVolume.IntersectP(r, 0, r2.m_fDist, &tmin, &tmax);
 				L += throughput * g_Map2.L<true>(a_rVolume, rng, r, tmin, tmax, make_float3(0));
-				if(g_SceneData.m_sEnvMap.CanSample())
-					L += throughput * g_SceneData.m_sEnvMap.Sample(r);
+				throughput = throughput * (-g_SceneData.m_sVolume.tau(r, tmin, tmax)).exp();
 			}
-			else if(g_SceneData.m_sEnvMap.CanSample())
-					L += throughput * g_SceneData.m_sEnvMap.Sample(r);
+			if(DIRECT)
+				L += throughput * UniformSampleAllLights(bRec, r2.getMat(), 4);
+			L += throughput * r2.Le(p, bRec.map.sys, -r.direction);//either it's the first bounce -> accounte or it's a specular reflection -> ...
+			const e_KernelBSSRDF* bssrdf;
+			if(r2.getMat().GetBSSRDF(bRec.map, &bssrdf))
+			{
+				float3 dir = VectorMath::refract(r.direction, bRec.map.sys.n, 1.0f / bssrdf->e);
+				TraceResult r3 = k_TraceRay(Ray(p, dir));
+				L += throughput * g_Map2.L<false>(a_rVolume, rng, Ray(p, dir), 0, r3.m_fDist, bssrdf->sigp_s + bssrdf->sig_a);
+			}
+			if(r2.getMat().bsdf.hasComponent(EDiffuse))
+			{
+				Spectrum dif = r2.getMat().bsdf.getDiffuseReflectance(bRec) / PI;
+				L += throughput * L_Surface(bRec, a_rSurfaceUNUSED, p, -r.direction, &r2.getMat()) * dif;
+				break;
+			}
+			else
+			{
+				bRec.sampledType = 0;
+				bRec.typeMask = EDelta | EGlossy;
+				Spectrum t_f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
+				if(!bRec.sampledType)
+					break;
+				throughput = throughput * t_f;
+				r = Ray(p, bRec.getOutgoing());
+				r2.Init();
+			}
+		}
+		if(!r2.hasHit())
+		{
+			if(g_SceneData.m_sVolume.HasVolumes())
+			{
+				float tmin, tmax;
+				g_SceneData.m_sVolume.IntersectP(r, 0, r2.m_fDist, &tmin, &tmax);
+				L += throughput * g_Map2.L<true>(a_rVolume, rng, r, tmin, tmax, make_float3(0));
+			}
+			L += throughput * g_SceneData.EvalEnvironment(r);
 		}
 		g_Image.AddSample(x, y, importance * L);
 	}

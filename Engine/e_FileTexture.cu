@@ -160,6 +160,23 @@ Spectrum e_KernelMIPMap::Sample(const float2& a_UV, float width) const
 	}
 }
 
+Spectrum e_KernelMIPMap::Sample(float width, int x, int y) const
+{
+	float l = m_uLevels - 1 + Log2(MAX((float)width, 1e-8f));
+	int level = (int)clamp(l, 0.0f, float(m_uLevels - 1));
+	void* data;
+#ifdef ISCUDA
+		data = m_pDeviceData + (m_sOffsets[level] + y * (m_uWidth >> level) + x);
+#else
+		data = m_pHostData + (m_sOffsets[level] + y * (m_uWidth >> level) + x);
+#endif
+	Spectrum s;
+	if(m_uType == vtRGBE)
+		s.fromRGBE(*(RGBE*)data);
+	else s.fromRGBCOL(*(RGBCOL*)data);
+	return s;	
+}
+
 e_MIPMap::e_MIPMap(InputStream& a_In)
 {
 	a_In >> m_uWidth;

@@ -38,7 +38,7 @@ e_SceneInitData e_SceneInitData::CreateFor_S_SanMiguel(unsigned int a_SceneNodes
 	e_SceneInitData r = CreateForSpecificMesh(1200000*i, 1200000*i, 1200000*i, 1200000*i, 4096 * 5, a_Lights, a_SceneNodes);
 	//e_SceneInitData r = CreateForSpecificMesh(7880512, 9359209, 2341126, 28077626, 4096 * 5, a_Lights, a_SceneNodes);//san miguel
 	//e_SceneInitData r = CreateForSpecificMesh(1,1,1,1,1,1,1);
-	return CreateForSpecificMesh(100000, 100000, 100000, 1500000, 255, a_Lights);
+	//return CreateForSpecificMesh(100000, 100000, 100000, 1500000, 255, a_Lights);
 	//r.m_uSizeAnimStream = 16 * 1024 * 1024;
 	r.m_uSizeAnimStream = 1;
 	return r;
@@ -68,7 +68,7 @@ template<typename T> e_Stream<T>* LL(int i)
 }
 
 e_DynamicScene::e_DynamicScene(e_Sensor* C, e_SceneInitData a_Data, const char* texPath, const char* cmpPath)
-	: m_sEnvMap(e_EnvironmentMap::Identity()), m_pCamera(C)
+	: m_uEnvMapIndex(0xffffffff), m_pCamera(C)
 {
 	m_pCompilePath = cmpPath;
 	m_pTexturePath = texPath;
@@ -173,7 +173,23 @@ __int64 FileSize(const char* name)
     CloseHandle(hFile);
     return size.QuadPart;
 }
+#include <sys/utime.h>
+LPFILETIME TimetToFileTime( time_t t )
+{
+    LONGLONG ll = Int32x32To64(t, 10000000) + 116444736000000000;
+	LPFILETIME pft;
+    pft->dwLowDateTime = (DWORD) ll;
+    pft->dwHighDateTime = ll >>32;
+	return pft;
+}
+time_t filetime_to_timet(const FILETIME& ft)
+{
+   ULARGE_INTEGER ull;
+   ull.LowPart = ft.dwLowDateTime;
+   ull.HighPart = ft.dwHighDateTime;
 
+   return ull.QuadPart / 10000000ULL - 11644473600ULL;
+}
 e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_MeshFile2)
 {
 	m_uModified = 1;
@@ -184,12 +200,22 @@ e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_MeshFile2)
 	{
 		FW::String t0 = FW::String(m_pCompilePath) + strA.getFileName(), cmpPath = t0.substring(0, t0.lastIndexOf('.')) + FW::String(".xmsh");
 		createDirectoryRecursively(cmpPath.getDirName().getPtr());
-		if(FileSize(cmpPath.getPtr()) <= 4)
+		WIN32_FILE_ATTRIBUTE_DATA objFile, xmshFile;
+		GetFileAttributesEx(a_MeshFile2, GetFileExInfoStandard, &objFile);
+		GetFileAttributesEx(cmpPath.getPtr(), GetFileExInfoStandard, &xmshFile);
+		if(FileSize(cmpPath.getPtr()) <= 4 || objFile.ftLastWriteTime.dwHighDateTime != xmshFile.ftLastWriteTime.dwHighDateTime || objFile.ftLastWriteTime.dwLowDateTime != xmshFile.ftLastWriteTime.dwLowDateTime)
 		{
 			OutputStream a_Out(cmpPath.getPtr());
 			e_MeshCompileType t;
 			m_sCmpManager.Compile(a_MeshFile2, a_Out, &t);
 			a_Out.Close();
+			HANDLE Handle = CreateFile(cmpPath.getPtr(), GENERIC_WRITE, FILE_SHARE_WRITE,
+                    NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+			if(Handle == INVALID_HANDLE_VALUE)
+				throw 1;
+			if(!SetFileTime(Handle, &objFile.ftLastWriteTime, &objFile.ftLastWriteTime, &objFile.ftLastWriteTime))
+				throw 1;
+			CloseHandle(Handle);
 		}
 		InputStream I(cmpPath.getPtr());
 		unsigned int t;
@@ -224,6 +250,11 @@ e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_MeshFile2)
 	return N;
 }
 
+void e_DynamicScene::DeleteNode(e_StreamReference(e_Node) ref)
+{
+	//TODO
+}
+
 e_BufferReference<e_MIPMap, e_KernelMIPMap> e_DynamicScene::LoadTexture(const char* file, bool a_MipMap)
 {
 	FW::String a = fileExists(file) ? FW::String(file) : FW::String(m_pTexturePath) + FW::String(file);
@@ -250,6 +281,11 @@ e_BufferReference<e_MIPMap, e_KernelMIPMap> e_DynamicScene::LoadTexture(const ch
 	if(!T->getKernelData().m_pDeviceData)
 		throw 1;
 	return T;
+}
+
+void e_DynamicScene::UnLoadTexture(e_BufferReference<e_MIPMap, e_KernelMIPMap> ref)
+{
+	//TODO
 }
 
 void e_DynamicScene::UpdateInvalidated()
@@ -301,9 +337,26 @@ e_KernelDynamicScene e_DynamicScene::getKernelSceneData(bool devicePointer)
 	r.m_sVolume = e_KernelAggregateVolume(m_pVolumes, devicePointer);
 	r.m_sSceneBVH = m_pBVH->getData(devicePointer);
 	r.m_sTerrain = m_pTerrain->getKernelData(devicePointer);
-	r.m_sEnvMap = m_sEnvMap;
-	r.m_sLightSelector = e_ImportantLightSelector(this, m_pCamera);
+	r.m_uEnvMapIndex = m_uEnvMapIndex;
 	r.m_sBox = m_pBVH->m_sBox;
+
+	unsigned int l = m_pLightStream->NumUsedElements();
+	if(l < 5)
+	{
+		float* vals = (float*)alloca(sizeof(float) * l);
+		for(unsigned int i = 0; i < l; i++)
+		{
+			vals[i] = 1.0f;
+			r.m_uEmitterIndices[i] = i;
+		}
+		r.m_emitterPDF = Distribution1D<MAX_LIGHT_COUNT>(vals, l);
+		r.m_uEmitterCount = l;
+	}
+	else
+	{
+		throw 1;
+	}
+
 	return r;
 }
 
@@ -513,81 +566,13 @@ e_StreamReference(e_KernelMaterial) e_DynamicScene::getMat(e_StreamReference(e_N
 
 e_StreamReference(e_KernelLight) e_DynamicScene::setEnvironementMap(const Spectrum& power, const char* file)
 {
+	if(m_uEnvMapIndex != -1)
+	{
+
+	}
 	e_BufferReference<e_MIPMap, e_KernelMIPMap> m = LoadTexture(file, true);
-	e_StreamReference(char) d = m_pAnimStream->malloc(sizeof(Distribution2D<4096, 4096>));
-	e_InfiniteLight l = e_InfiniteLight(power, d, m);
+	e_InfiniteLight l = e_InfiniteLight( m_pAnimStream, m, power, getBox(getNodes()));
 	e_StreamReference(e_KernelLight) r = createLight(l);
-	m_sEnvMap = e_EnvironmentMap((char*)file);
-	m_sEnvMap.LoadTextures(textureLoader(this));
+	m_uEnvMapIndex = r.getIndex();
 	return r;
-}
-
-bool canUse(float3& p, float3& cp, float3& cd, float f)
-{
-	float d = Distance(p, cp);
-	float e = dot(normalize(p - cp), cd);
-	e = (e + 1) / 2.0f;
-	e = clamp(e, 0.5f, 1.0f);
-	return d < f * e;
-}
-e_ImportantLightSelector::e_ImportantLightSelector(e_DynamicScene* S, e_Sensor* C)
-{
-	ZeroMemory(m_sIndices, sizeof(m_sIndices));
-	m_uCount = 0;
-	unsigned int N = sizeof(m_sIndices) / sizeof(unsigned int), M = S->m_pLightStream->NumUsedElements();
-	if(M < 5)
-	{
-		m_uCount = M;
-		for(unsigned int i = 0; i < M; i++)
-			m_sIndices[i] = i;
-	}
-	else
-	{
-		float sceneScale = length(C->m_sLastFrustum.Size());
-		float3 dir = C->View().Forward(), pos = C->Position();
-		for(unsigned int i = 0; i < S->m_pLightStream->NumUsedElements(); i++)
-		{
-			e_StreamReference(e_KernelLight) l = S->m_pLightStream->operator()(i);
-			bool use = true;
-			e_DiffuseLight* L2 = (e_DiffuseLight*)l->Data;
-			e_SpotLight* L3 = (e_SpotLight*)l->Data;
-			switch(l->type)
-			{
-			case e_PointLight_TYPE:
-				use = canUse(l->As<e_PointLight>()->lightPos, pos, dir, sceneScale);
-				break;
-			case e_DiffuseLight_TYPE:
-				//use = Use(L2->shapeSet.getBox(), cd.p, proj);
-				break;
-			case e_SpotLight_TYPE:
-				//use = Use(L3->lightPos, vp);
-				break;
-			}
-			if(use)
-				m_sIndices[m_uCount++] = i;
-			if(m_uCount == N)
-				break;//not great
-		}
-	}
-}
-
-bool e_ImportantLightSelector::Use(AABB& box, float3& p, float4x4& proj)
-{
-	Ray r(p, normalize(box.Center() - p));
-	float a,b;
-	box.Intersect(r, &a, &b);
-	float4 q = proj * make_float4(0,0,a,1);
-	q /= q.w;
-	return abs(q.z) < 0.5f;
-}
-
-bool e_ImportantLightSelector::Use(float3& p, float4x4& vp)
-{
-	float4 q = vp * make_float4(p, 1);
-	q = q / q.w;
-	float2 pi = make_float2(q.x, q.y) / 2.0f + make_float2(0.5f);
-#define ISB(f,a,b) (f >= a && f <= b)
-#define ISB2(f,a,b) (ISB(f.x, a, b) && ISB(f.y, a, b))
-	return (ISB2(pi,0,1));
-#undef ISB
 }

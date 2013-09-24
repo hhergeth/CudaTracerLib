@@ -18,10 +18,11 @@ enum EPhaseFunctionType
 	pENonSymmetric    = 0x08
 };
 
-struct e_BasePhaseFunction
+struct e_BasePhaseFunction : public e_BaseType
 {
 	EPhaseFunctionType type;
 
+	e_BasePhaseFunction(){}
 	e_BasePhaseFunction(EPhaseFunctionType t)
 		: type(t)
 	{
@@ -34,6 +35,7 @@ struct e_HGPhaseFunction : public e_BasePhaseFunction
 {
 	float m_g;
 
+	e_HGPhaseFunction(){}
 	e_HGPhaseFunction(float g)
 		: e_BasePhaseFunction(EPhaseFunctionType::pEAngleDependence), m_g(g)
 	{
@@ -70,8 +72,11 @@ struct e_KajiyaKayPhaseFunction : public e_BasePhaseFunction
 {
 	float m_ks, m_kd, m_exponent, m_normalization;
 	float3 orientation;
-
+	
+	e_KajiyaKayPhaseFunction(){}
 	e_KajiyaKayPhaseFunction(float ks, float kd, float e, float3 o);
+
+	virtual void Update();
 
 	CUDA_DEVICE CUDA_HOST float Evaluate(const PhaseFunctionSamplingRecord &pRec) const;
 
@@ -101,10 +106,8 @@ struct e_RayleighPhaseFunction : public e_BasePhaseFunction
 
 #define PHF_SIZE RND_16(DMAX4(sizeof(e_HGPhaseFunction), sizeof(e_IsotropicPhaseFunction), sizeof(e_KajiyaKayPhaseFunction), sizeof(e_RayleighPhaseFunction)))
 
-struct CUDA_ALIGN(16) e_PhaseFunction
+struct CUDA_ALIGN(16) e_PhaseFunction : public e_AggregateBaseType<e_BasePhaseFunction, PHF_SIZE>
 {
-	CUDA_ALIGN(16) unsigned char Data[PHF_SIZE];
-	unsigned int type;
 public:
 	e_PhaseFunction()
 	{
@@ -138,8 +141,6 @@ public:
 	{
 		return Evaluate(pRec);
 	}
-
-	STD_VIRTUAL_SET
 };
 
 template<typename T> e_PhaseFunction CreatePhaseFunction(const T& val)

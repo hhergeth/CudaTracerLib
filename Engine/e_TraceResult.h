@@ -21,7 +21,7 @@ struct TraceResult
 	CUDA_DEVICE CUDA_HOST Frame lerpFrame() const;
 	CUDA_DEVICE CUDA_HOST unsigned int getMatIndex() const;
 	CUDA_DEVICE CUDA_HOST float2 lerpUV() const;
-	CUDA_DEVICE CUDA_HOST Spectrum Le(const float3& p, const float3& n, const float3& w) const;
+	CUDA_DEVICE CUDA_HOST Spectrum Le(const float3& p, const Frame& sys, const float3& w) const;
 	CUDA_DEVICE CUDA_HOST unsigned int LightIndex() const;
 	CUDA_DEVICE CUDA_HOST const e_KernelMaterial& getMat() const;
 	CUDA_DEVICE CUDA_HOST void getBsdfSample(const Ray& r, CudaRNG& _rng, BSDFSamplingRecord* bRec) const;

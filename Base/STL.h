@@ -16,26 +16,39 @@ template<typename T> CUDA_FUNC_IN void STL_Sort(T* a_Array, unsigned int a_Lengt
 				swapk(a_Array[j], a_Array[j + 1]);
 }
 
-template<typename T> CUDA_FUNC_IN const T* STL_upper_bound(const T* first, const T* last, const T& value)
+template<typename T> CUDA_FUNC_IN const T* STL_upper_bound(const T* _First, const T* _Last, const T& _Val)
 {
-	const T* f = first;
-	do
+	unsigned int _Count = _Last - _First;
+	for (; 0 < _Count; )
 	{
-		if(*f > value)
-			return f;
+		unsigned int _Count2 = _Count / 2;
+		const T* _Mid = _First + _Count2;
+
+		if (!(_Val < *_Mid))
+		{
+			_First = ++_Mid;
+			_Count -= _Count2 + 1;
+		}
+		else _Count = _Count2;
 	}
-	while(++f <= last);
-	return first;
+	return (_First);
 }
 
-template<typename T> CUDA_FUNC_IN const T* STL_lower_bound(const T* first, const T* last, const T& value)
+template<typename T> CUDA_FUNC_IN const T* STL_lower_bound(const T* _First, const T* _Last, const T& _Val)
 {
-	const T* f = last;
-	do
+	unsigned int _Count = _Last - _First;
+
+	for (; 0 < _Count; )
 	{
-		if(*f < value)
-			return f;
+		unsigned int _Count2 = _Count / 2;
+		const T* _Mid = _First + _Count2;
+
+		if (*_Mid < _Val)
+		{	
+			_First = ++_Mid;
+			_Count -= _Count2 + 1;
+		}
+		else _Count = _Count2;
 	}
-	while(--f >= first);
-	return first;
+	return (_First);
 }

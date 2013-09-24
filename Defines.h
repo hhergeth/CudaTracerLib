@@ -89,22 +89,7 @@ CUDA_FUNC_IN int getGlobalIdx_3D_3D()
 
 #define RND_UP(VAL, MOD) (VAL + (((VAL) % (MOD)) != 0 ? ((MOD) - ((VAL) % (MOD))) : (0)))
 #define RND_16(VAL) RND_UP(VAL, 16)
-/*
-#define CALL_FUNC1(_TYPE0_, func)
-#define CALL_FUNC2(_TYPE0_,_TYPE1_, func)
-#define CALL_FUNC3(_TYPE0_,_TYPE1_,_TYPE2_, func)
-#define CALL_FUNC4(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_, func)
-#define CALL_FUNC5(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_, func)
-#define CALL_FUNC6(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_, func)
-#define CALL_FUNC7(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_,_TYPE6_, func)
-#define CALL_FUNC8(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_,_TYPE6_,_TYPE7_, func)
-#define CALL_FUNC9(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_,_TYPE6_,_TYPE7_,_TYPE8_, func)
-#define CALL_FUNC10(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_,_TYPE6_,_TYPE7_,_TYPE8_,_TYPE9_, func)
-#define CALL_FUNC11(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_,_TYPE6_,_TYPE7_,_TYPE8_,_TYPE9_,_TYPE10_, func)
-#define CALL_FUNC12(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_,_TYPE6_,_TYPE7_,_TYPE8_,_TYPE9_,_TYPE10_,_TYPE11_, func)
-#define CALL_FUNC13(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_,_TYPE6_,_TYPE7_,_TYPE8_,_TYPE9_,_TYPE10_,_TYPE11_,_TYPE12_, func) 
-#define CALL_FUNC14(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_,_TYPE6_,_TYPE7_,_TYPE8_,_TYPE9_,_TYPE10_,_TYPE11_,_TYPE12_,_TYPE13_, func) 
-*/
+
 #define CALL_TYPE(t,func) \
 	case t##_TYPE : \
 		return ((t*)Data)->func;
@@ -272,39 +257,40 @@ CUDA_FUNC_IN int getGlobalIdx_3D_3D()
 	}
 
 //thats not const correct
-#define STD_VIRTUAL_SET \
-	template<typename T> CUDA_FUNC_IN T* As() const \
-	{ \
-		return (T*)Data; \
-	} \
-	template<typename T> CUDA_FUNC_IN void SetData(const T& val) \
-	{ \
-		memcpy(Data, &val, sizeof(T)); \
-		type = T::TYPE(); \
-	} \
-	template<typename T> CUDA_FUNC_IN bool Is() \
-	{ \
-		return type == T::TYPE(); \
+
+struct e_BaseType
+{
+	virtual void Update()
+	{
+	}
+};
+
+template<typename BaseType, int Size> struct e_AggregateBaseType
+{
+	unsigned int type;
+	CUDA_ALIGN(16) unsigned char Data[Size];
+
+	template<typename SpecializedType> CUDA_FUNC_IN SpecializedType* As() const
+	{
+		return (SpecializedType*)Data;
 	}
 
-#define STD_VIRTUAL_SET_BASE(BASE_TYPE) \
-	template<typename T> CUDA_FUNC_IN T* As() const \
-	{ \
-		return (T*)Data; \
-	} \
-	template<typename T> CUDA_FUNC_IN void SetData(const T& val) \
-	{ \
-		memcpy(Data, &val, sizeof(T)); \
-		type = T::TYPE(); \
-	} \
-	template<typename T> CUDA_FUNC_IN bool Is() const \
-	{ \
-		return type == T::TYPE(); \
-	} \
-	CUDA_FUNC_IN BASE_TYPE* As() const \
-	{ \
-		return As<BASE_TYPE>(); \
+	template<typename SpecializedType> CUDA_FUNC_IN void SetData(const SpecializedType& val)
+	{
+		memcpy(Data, &val, sizeof(SpecializedType));
+		type = SpecializedType::TYPE();
 	}
+
+	template<typename SpecializedType> CUDA_FUNC_IN bool Is() const
+	{
+		return type == SpecializedType::TYPE();
+	}
+
+	CUDA_FUNC_IN BaseType* As() const
+	{
+		return As<BaseType>();
+	}
+};
 
 #pragma warning(disable: 4482)
 #pragma warning(disable: 4244)

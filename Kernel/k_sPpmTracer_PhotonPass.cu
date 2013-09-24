@@ -3,7 +3,7 @@
 
 CUDA_DEVICE k_PhotonMapCollection g_Map;
 
-template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, Spectrum Le, CudaRNG& rng)
+template<bool DIRECT> CUDA_FUNC_IN bool TracePhoton(Ray& r, Spectrum Le, CudaRNG& rng)
 {
 	r.direction = normalize(r.direction);
 	e_KernelAggregateVolume& V = g_SceneData.m_sVolume;
@@ -95,14 +95,14 @@ template<bool DIRECT> CUDA_ONLY_FUNC bool TracePhoton(Ray& r, Spectrum Le, CudaR
 			//inMesh = dot(r.direction, bRec.map.sys.n) < 0;
 			ac = Le * f;
 		}
-		//if(depth > 3)
+		if(depth > 5)
 		{
 			float prob = MIN(1.0f, ac.max() / Le.max());
 			if(rng.randomFloat() > prob)
 				break;
 			Le = ac / prob;
 		}
-		//else Le = ac;
+		else Le = ac;
 		r = Ray(x, (bRec.getOutgoing()));
 		r2.Init();
 	}
@@ -114,17 +114,12 @@ template<bool DIRECT> __global__ void k_PhotonPass(unsigned int spp)
 	CudaRNG rng = g_RNGData();
 	for(int _photonNum = 0; _photonNum < spp; _photonNum++)
 	{
-		int li = (int)float(g_SceneData.m_sLightSelector.m_uCount) * rng.randomFloat();
-		int li2 = g_SceneData.m_sLightSelector.m_sIndices[li];
-		float lightPdf = 1.0f / (float)g_SceneData.m_sLightSelector.m_uCount;
 		Ray photonRay;
-		float3 Nl;
-		float pdf;
-		Spectrum Le = g_SceneData.m_sLightData[li2].Sample_L(g_SceneData, LightSample(rng), rng.randomFloat(), rng.randomFloat(), &photonRay, &Nl, &pdf); 
-		if(pdf == 0 || Le.isZero())
+		const e_KernelLight* light;
+		Spectrum Le = g_SceneData.sampleEmitterRay(photonRay, light, rng.randomFloat2(), rng.randomFloat2());
+		if(Le.isZero())
 			continue;
-		Spectrum alpha = (AbsDot(Nl, photonRay.direction) * Le) / (pdf * lightPdf);
-		if(TracePhoton<DIRECT>(photonRay, alpha, rng))
+		if(TracePhoton<DIRECT>(photonRay, Le, rng))
 			atomicInc(&g_Map.m_uPhotonNumEmitted, 0xffffffff);
 		else break;
 	}

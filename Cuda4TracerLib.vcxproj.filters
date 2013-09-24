@@ -120,14 +120,8 @@
     <ClInclude Include="Math\Ray.h">
       <Filter>Math</Filter>
     </ClInclude>
-    <ClInclude Include="Math\vector.h">
-      <Filter>Math</Filter>
-    </ClInclude>
     <ClInclude Include="Defines.h" />
     <ClInclude Include="Renderer.h" />
-    <ClInclude Include="Math\Montecarlo.h">
-      <Filter>Math</Filter>
-    </ClInclude>
     <ClInclude Include="StdAfx.h" />
     <ClInclude Include="Kernel\k_TraceHelper.h">
       <Filter>Kernel</Filter>
@@ -154,9 +148,6 @@
       <Filter>Kernel</Filter>
     </ClInclude>
     <ClInclude Include="Engine\e_Grid.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_EnvironmentMap.h">
       <Filter>Engine</Filter>
     </ClInclude>
     <ClInclude Include="Engine\e_Image.h">
@@ -253,6 +244,12 @@
     <ClInclude Include="Engine\e_CameraController.h">
       <Filter>Engine</Filter>
     </ClInclude>
+    <ClInclude Include="Kernel\k_PhotonTracer.h">
+      <Filter>Kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_Core.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\e_AnimatedMesh.cpp">
@@ -320,6 +317,9 @@
       <Filter>Kernel</Filter>
     </ClCompile>
     <ClCompile Include="Engine\e_MaterialLib.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\e_Core.cpp">
       <Filter>Engine</Filter>
     </ClCompile>
   </ItemGroup>
@@ -400,6 +400,15 @@
       <Filter>Engine</Filter>
     </CudaCompile>
     <CudaCompile Include="Engine\e_Sensor.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Kernel\k_PhotonTracer.cu">
+      <Filter>Kernel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\e_KernelDynamicScene.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\e_ShapeSet.cu">
       <Filter>Engine</Filter>
     </CudaCompile>
   </ItemGroup>

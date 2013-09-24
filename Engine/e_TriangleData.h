@@ -50,6 +50,8 @@ public:
 		return unsigned int(v ) + off;
 	}
 	CUDA_DEVICE CUDA_HOST float2 lerpUV(const float2& bCoords) const;
+	CUDA_DEVICE CUDA_HOST void getNormalDerivative(const float2& bCoords, float3& dndu, float3& dndv) const;
+	//CUDA_DEVICE CUDA_HOST void getCurvature(const float2& bCoords, float& H, float& K) const;
 };
 #else
 struct e_TriangleData

@@ -2,7 +2,7 @@
 #include "e_Image.h"
 #include <FreeImage.h>
 
-e_Image::e_Image(e_KernelFilter &filt, const float crop[4], int xRes, int yRes, RGBCOL* cudaBuffer)
+e_Image::e_Image(const e_KernelFilter &filt, const float crop[4], int xRes, int yRes, RGBCOL* cudaBuffer)
 	: xResolution(xRes), yResolution(yRes)
 {
 	filter = filt;
@@ -23,7 +23,7 @@ e_Image::e_Image(e_KernelFilter &filt, const float crop[4], int xRes, int yRes, 
 	hostPixels = new Pixel[xPixelCount * yPixelCount];
 }
 
-e_Image::e_Image(e_KernelFilter &filt, int xRes, int yRes, RGBCOL* cudaBuffer)
+e_Image::e_Image(const e_KernelFilter &filt, int xRes, int yRes, RGBCOL* cudaBuffer)
 	: xResolution(xRes), yResolution(yRes)
 {
 	float crop[4] = {0, 1, 0, 1};

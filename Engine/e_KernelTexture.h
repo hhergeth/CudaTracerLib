@@ -5,11 +5,14 @@
 
 typedef char e_String[256];
 
-template <typename T, int SIZE> struct e_KernelTextureGE;
+struct e_KernelTextureBase : public e_BaseType
+{
+};
 
 #define e_KernelBiLerpTexture_TYPE 1
-struct e_KernelBiLerpTexture
+struct e_KernelBiLerpTexture : public e_KernelTextureBase
 {
+	e_KernelBiLerpTexture(){}
 	e_KernelBiLerpTexture(const e_KernelTextureMapping2D& m, const Spectrum &t00, const Spectrum &t01, const Spectrum &t10, const Spectrum &t11)
 	{
 		mapping = m;
@@ -33,14 +36,14 @@ struct e_KernelBiLerpTexture
 	{
 	}
 	TYPE_FUNC(e_KernelBiLerpTexture)
-private:
 	e_KernelTextureMapping2D mapping;
 	Spectrum v00, v01, v10, v11;
 };
 
 #define e_KernelConstantTexture_TYPE 3
-struct e_KernelConstantTexture
+struct e_KernelConstantTexture : public e_KernelTextureBase
 {
+	e_KernelConstantTexture(){}
 	e_KernelConstantTexture(const Spectrum& v)
 		: val(v)
 	{
@@ -59,13 +62,47 @@ struct e_KernelConstantTexture
 
 	}
 	TYPE_FUNC(e_KernelConstantTexture)
-private:
 	Spectrum val;
 };
 
-#define e_KernelFbmTexture_TYPE 5
-struct e_KernelFbmTexture
+#define e_KernelCheckerboardTexture_TYPE 4
+struct e_KernelCheckerboardTexture : public e_KernelTextureBase
 {
+	e_KernelCheckerboardTexture(){}
+	e_KernelCheckerboardTexture(const Spectrum& u, const Spectrum& v, const e_KernelTextureMapping2D& m)
+		: val0(u), val1(v), mapping(m)
+	{
+
+	}
+	CUDA_FUNC_IN Spectrum Evaluate(const MapParameters & dg) const
+	{
+		float2 uv = make_float2(0);
+		mapping.Map(dg, &uv.x, &uv.y);
+		int x = 2*math::modulo((int) (uv.x * 2), 2) - 1,
+			y = 2*math::modulo((int) (uv.y * 2), 2) - 1;
+
+		if (x*y == 1)
+			return val0;
+		else
+			return val1;
+	}
+	CUDA_FUNC_IN Spectrum Average()
+	{
+		return (val0 + val1) / 2.0f;
+	}
+	template<typename L> void LoadTextures(L callback)
+	{
+
+	}
+	TYPE_FUNC(e_KernelCheckerboardTexture)
+	Spectrum val0, val1;
+	e_KernelTextureMapping2D mapping;
+};
+
+#define e_KernelFbmTexture_TYPE 5
+struct e_KernelFbmTexture : public e_KernelTextureBase
+{
+	e_KernelFbmTexture(){}
 	e_KernelFbmTexture(const e_KernelTextureMapping3D& m, int oct, float roughness, const Spectrum& v)
 		: mapping(m), omega(roughness), octaves(oct), val(v)
 	{
@@ -85,7 +122,6 @@ struct e_KernelFbmTexture
 
 	}
 	TYPE_FUNC(e_KernelFbmTexture)
-private:
 	Spectrum val;
 	float omega;
     int octaves;
@@ -93,8 +129,9 @@ private:
 };
 
 #define e_KernelImageTexture_TYPE 6
-struct e_KernelImageTexture
+struct e_KernelImageTexture : public e_KernelTextureBase
 {
+	e_KernelImageTexture(){}
 	e_KernelImageTexture(const e_KernelTextureMapping2D& m, const char* _file)
 		: mapping(m)
 	{
@@ -124,7 +161,6 @@ struct e_KernelImageTexture
 		hostTex = callback(file, false).getDeviceMapped();
 	}
 	TYPE_FUNC(e_KernelImageTexture)
-public:
 	e_KernelMIPMap* deviceTex;
 	e_KernelMIPMap* hostTex;
 	e_KernelTextureMapping2D mapping;
@@ -132,8 +168,9 @@ public:
 };
 
 #define e_KernelMarbleTexture_TYPE 7
-struct e_KernelMarbleTexture
+struct e_KernelMarbleTexture : public e_KernelTextureBase
 {
+	e_KernelMarbleTexture(){}
 	e_KernelMarbleTexture(const e_KernelTextureMapping3D& m, int oct, float roughness, float sc, float var)
 		: mapping(m), omega(roughness), octaves(oct), scale(sc), variation(var)
 	{
@@ -184,15 +221,15 @@ struct e_KernelMarbleTexture
 
 	}
 	TYPE_FUNC(e_KernelMarbleTexture)
-private:
 	int octaves;
     float omega, scale, variation;
 	e_KernelTextureMapping3D mapping;
 };
 
 #define e_KernelUVTexture_TYPE 10
-struct e_KernelUVTexture
+struct e_KernelUVTexture : public e_KernelTextureBase
 {
+	e_KernelUVTexture(){}
 	e_KernelUVTexture(const e_KernelTextureMapping2D& m)
 		: mapping(m)
 	{
@@ -211,13 +248,13 @@ struct e_KernelUVTexture
 	{
 	}
 	TYPE_FUNC(e_KernelUVTexture)
-private:
 	e_KernelTextureMapping2D mapping;
 };
 
 #define e_KernelWindyTexture_TYPE 11
-struct e_KernelWindyTexture
+struct e_KernelWindyTexture : public e_KernelTextureBase
 {
+	e_KernelWindyTexture(){}
 	e_KernelWindyTexture(const e_KernelTextureMapping3D& m, const Spectrum& v)
 		: mapping(m), val(v)
 	{
@@ -239,14 +276,14 @@ struct e_KernelWindyTexture
 
 	}
 	TYPE_FUNC(e_KernelWindyTexture)
-private:
 	Spectrum val;
 	e_KernelTextureMapping3D mapping;
 };
 
 #define e_KernelWrinkledTexture_TYPE 12
-struct e_KernelWrinkledTexture
+struct e_KernelWrinkledTexture : public e_KernelTextureBase
 {
+	e_KernelWrinkledTexture(){}
 	e_KernelWrinkledTexture(const e_KernelTextureMapping3D& m, int oct, float roughness, const Spectrum& v)
 		: mapping(m), omega(roughness), octaves(oct), val(v)
 	{
@@ -266,21 +303,43 @@ struct e_KernelWrinkledTexture
 
 	}
 	TYPE_FUNC(e_KernelWrinkledTexture)
-private:
 	Spectrum val;
 	float omega;
     int octaves;
 	e_KernelTextureMapping3D mapping;
 };
 
-#define STD_TEX_SIZE (RND_16(DMAX8(sizeof(e_KernelBiLerpTexture), sizeof(e_KernelConstantTexture), sizeof(e_KernelFbmTexture), sizeof(e_KernelImageTexture), \
-								  sizeof(e_KernelMarbleTexture), sizeof(e_KernelUVTexture), sizeof(e_KernelWindyTexture), sizeof(e_KernelWrinkledTexture))) + 12)
-
-struct CUDA_ALIGN(16) e_KernelTexture
+#define e_KernelWireframeTexture_TYPE 13
+struct e_KernelWireframeTexture : public e_KernelTextureBase
 {
-public:
-	CUDA_ALIGN(16) unsigned char Data[STD_TEX_SIZE];
-	unsigned int type;
+	e_KernelWireframeTexture(float lineWidth = 0.1f, const Spectrum& interior = Spectrum(0.5f), const Spectrum& edge = Spectrum(0.0f))
+		: width(lineWidth), interiorColor(interior), edgeColor(edge)
+	{
+	}
+	CUDA_FUNC_IN Spectrum Evaluate(const MapParameters & dg) const
+	{
+		if(dg.bary.x < width || dg.bary.y < width || dg.bary.x + dg.bary.y > 1.0f - width)
+			return edgeColor;
+		else return interiorColor;
+	}
+	CUDA_FUNC_IN Spectrum Average()
+	{
+		return Spectrum(0.1f);
+	}
+	template<typename L> void LoadTextures(L callback)
+	{
+	}
+	TYPE_FUNC(e_KernelWireframeTexture)
+	Spectrum interiorColor, edgeColor;
+	float width;
+};
+
+#define TEX_SIZE (RND_16(DMAX9(sizeof(e_KernelBiLerpTexture), sizeof(e_KernelConstantTexture), sizeof(e_KernelFbmTexture), sizeof(e_KernelImageTexture), \
+								  sizeof(e_KernelMarbleTexture), sizeof(e_KernelUVTexture), sizeof(e_KernelWindyTexture), sizeof(e_KernelWrinkledTexture), \
+								  DMAX2(sizeof(e_KernelCheckerboardTexture), sizeof(e_KernelWireframeTexture)))) + 12)
+
+struct CUDA_ALIGN(16) e_KernelTexture : public e_AggregateBaseType<e_KernelTextureBase, TEX_SIZE>
+{
 public:
 #ifdef __CUDACC__
 	CUDA_FUNC_IN e_KernelTexture()
@@ -292,20 +351,19 @@ public:
 		type = 0;
 	}
 #endif
-	STD_VIRTUAL_SET
 	CUDA_FUNC_IN Spectrum Evaluate(const MapParameters & dg) const
 	{
-		CALL_FUNC8(e_KernelBiLerpTexture,e_KernelConstantTexture,e_KernelFbmTexture,e_KernelImageTexture,e_KernelMarbleTexture,e_KernelUVTexture,e_KernelWindyTexture,e_KernelWrinkledTexture, Evaluate(dg))
+		CALL_FUNC10(e_KernelBiLerpTexture,e_KernelConstantTexture,e_KernelCheckerboardTexture,e_KernelFbmTexture,e_KernelImageTexture,e_KernelMarbleTexture,e_KernelUVTexture,e_KernelWindyTexture,e_KernelWrinkledTexture,e_KernelWireframeTexture, Evaluate(dg))
 		return Spectrum(0.0f);
 	}
 	CUDA_FUNC_IN Spectrum Average()
 	{
-		CALL_FUNC8(e_KernelBiLerpTexture,e_KernelConstantTexture,e_KernelFbmTexture,e_KernelImageTexture,e_KernelMarbleTexture,e_KernelUVTexture,e_KernelWindyTexture,e_KernelWrinkledTexture, Average())
+		CALL_FUNC10(e_KernelBiLerpTexture,e_KernelConstantTexture,e_KernelCheckerboardTexture,e_KernelFbmTexture,e_KernelImageTexture,e_KernelMarbleTexture,e_KernelUVTexture,e_KernelWindyTexture,e_KernelWrinkledTexture,e_KernelWireframeTexture, Average())
 		return Spectrum(0.0f);
 	}
 	template<typename L> void LoadTextures(L callback)
 	{
-		CALL_FUNC8(e_KernelBiLerpTexture,e_KernelConstantTexture,e_KernelFbmTexture,e_KernelImageTexture,e_KernelMarbleTexture,e_KernelUVTexture,e_KernelWindyTexture,e_KernelWrinkledTexture, LoadTextures(callback))
+		CALL_FUNC10(e_KernelBiLerpTexture,e_KernelConstantTexture,e_KernelCheckerboardTexture,e_KernelFbmTexture,e_KernelImageTexture,e_KernelMarbleTexture,e_KernelUVTexture,e_KernelWindyTexture,e_KernelWrinkledTexture,e_KernelWireframeTexture, LoadTextures(callback))
 	}
 };
 

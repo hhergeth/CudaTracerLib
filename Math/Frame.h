@@ -31,13 +31,13 @@ struct Frame
 	}
 
 	/// Construct a new coordinate frame from a single float3
-	CUDA_FUNC_IN Frame(const float3 &n) : n(n) {
+	CUDA_FUNC_IN Frame(const float3 &n) : n(normalize(n)) {
 		coordinateSystem(n, s, t);
 	}
 
 	CUDA_FUNC_IN void RecalculateFromNormal(const float3& nor)
 	{
-		n = nor;
+		n = normalize(nor);
 		t = normalize(cross(nor, s));
 		s = normalize(cross(nor, t));
 	}
@@ -54,6 +54,16 @@ struct Frame
 	/// Convert from local coordinates to world coordinates
 	CUDA_FUNC_IN float3 toWorld(const float3 &v) const {
 		return s * v.x + t * v.y + n * v.z;
+	}
+
+	CUDA_FUNC_IN float4x4 ToMatrix()
+	{
+		float4x4 r;
+		r.X = make_float4(t, 0);
+		r.Y = make_float4(s, 0);
+		r.Z = make_float4(n, 0);
+		r.W = make_float4(0, 0, 0, 1);
+		return r;
 	}
 
 	/** \brief Assuming that the given direction is in the local coordinate

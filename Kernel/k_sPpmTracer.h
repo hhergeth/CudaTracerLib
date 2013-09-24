@@ -150,23 +150,31 @@ template<typename HASH> struct k_PhotonMap
 	}
 
 #ifdef __CUDACC__
-	CUDA_ONLY_FUNC k_StoreResult StorePhoton(const float3& p, const Spectrum& l, const float3& wi, const float3& n, unsigned int* a_PhotonCounter) const
+	CUDA_FUNC_IN k_StoreResult StorePhoton(const float3& p, const Spectrum& l, const float3& wi, const float3& n, unsigned int* a_PhotonCounter) const
 	{
 		if(!m_sHash.IsValidHash(p))
 			return k_StoreResult::NotValid;
 		uint3 i0 = m_sHash.Transform(p);
 		unsigned int i = m_sHash.Hash(i0);
+#ifdef ISCUDA
 		unsigned int j = atomicInc(a_PhotonCounter, 0xffffffff);
+#else
+		unsigned int j = InterlockedIncrement(a_PhotonCounter);
+#endif
 		if(j < m_uMaxPhotonCount)
 		{
+#ifdef ISCUDA
 			unsigned int k = atomicExch(m_pDeviceHashGrid + i, j);
+#else
+			unsigned int k = InterlockedExchange(m_pDeviceHashGrid + i, j);
+#endif
 			m_pDevicePhotons[j] = k_pPpmPhoton(p, l, wi, n, k);//m_sHash.EncodePos(p, i0)
 			return k_StoreResult::Success;
 		}
 		return k_StoreResult::Full;
 	}
 
-	template<bool VOL> CUDA_ONLY_FUNC Spectrum L_Volume(float a_r, float a_NumPhotonEmitted, CudaRNG& rng, const Ray& r, float tmin, float tmax, const Spectrum& sigt) const;
+	template<bool VOL> CUDA_FUNC_IN Spectrum L_Volume(float a_r, float a_NumPhotonEmitted, CudaRNG& rng, const Ray& r, float tmin, float tmax, const Spectrum& sigt) const;
 #endif
 };
 
@@ -231,14 +239,14 @@ struct k_PhotonMapCollection
 
 #ifdef __CUDACC__
 
-	template<bool SURFACE> CUDA_ONLY_FUNC k_StoreResult StorePhoton(const float3& p, const Spectrum& l, const float3& wi, const float3& n)
+	template<bool SURFACE> CUDA_FUNC_IN k_StoreResult StorePhoton(const float3& p, const Spectrum& l, const float3& wi, const float3& n)
 	{
 		if(SURFACE)
 			return m_sSurfaceMap.StorePhoton(p, l, wi, n, &m_uPhotonNumStored);
 		else return m_sVolumeMap.StorePhoton(p, l, wi, n, &m_uPhotonNumStored);
 	}
 
-	template<bool VOL> CUDA_ONLY_FUNC Spectrum L(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const Spectrum& sigt) const
+	template<bool VOL> CUDA_FUNC_IN Spectrum L(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const Spectrum& sigt) const
 	{
 		return m_sVolumeMap.L_Volume<VOL>(a_r, m_uPhotonNumEmitted, rng, r, tmin, tmax, sigt);
 	}

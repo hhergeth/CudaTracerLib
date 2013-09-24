@@ -16,7 +16,7 @@
 		return f(bRec, ESolidAngle) * PI; \
 	}
 
-struct BSDF
+struct BSDF : public e_BaseType
 {
 	unsigned int m_combinedType;
 	CUDA_FUNC_IN unsigned int getType()
@@ -46,14 +46,10 @@ struct BSDF
 
 #include "e_BSDF_Simple.h"
 
-struct BSDFFirst
-{
-private:
-#define SZ DMAX2(DMAX5(sizeof(diffuse), sizeof(roughdiffuse), sizeof(dielectric), sizeof(thindielectric), sizeof(roughdielectric)), \
+#define BSDFFirst_SIZE DMAX2(DMAX5(sizeof(diffuse), sizeof(roughdiffuse), sizeof(dielectric), sizeof(thindielectric), sizeof(roughdielectric)), \
 		   DMAX6(sizeof(conductor), sizeof(roughconductor), sizeof(plastic), sizeof(phong), sizeof(ward), sizeof(hk)))
-	CUDA_ALIGN(16) unsigned char Data[SZ];
-#undef SZ
-	unsigned int type;
+struct BSDFFirst : public e_AggregateBaseType<BSDF, BSDFFirst_SIZE>
+{
 public:
 	CUDA_FUNC_IN Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &_sample) const
 	{
@@ -91,20 +87,15 @@ public:
 	CUDA_FUNC_IN bool hasComponent(unsigned int type) const {
 		return ((BSDF*)Data)->hasComponent(type);
 	}
-	STD_VIRTUAL_SET
 };
 
 #include "e_BSDF_Complex.h"
 
-struct BSDFALL
+#define BSDFALL_SIZE DMAX3(DMAX5(sizeof(diffuse), sizeof(roughdiffuse), sizeof(dielectric), sizeof(thindielectric), sizeof(roughdielectric)), \
+							DMAX6(sizeof(conductor), sizeof(roughconductor), sizeof(plastic), sizeof(phong), sizeof(ward), sizeof(hk)), \
+							DMAX2(sizeof(coating), sizeof(roughcoating)))
+struct BSDFALL : public e_AggregateBaseType<BSDF, BSDFALL_SIZE>
 {
-private:
-#define SZ DMAX3(DMAX5(sizeof(diffuse), sizeof(roughdiffuse), sizeof(dielectric), sizeof(thindielectric), sizeof(roughdielectric)), \
-				 DMAX6(sizeof(conductor), sizeof(roughconductor), sizeof(plastic), sizeof(phong), sizeof(ward), sizeof(hk)), \
-				 DMAX2(sizeof(coating), sizeof(roughcoating)))
-	CUDA_ALIGN(16) unsigned char Data[SZ];
-#undef SZ
-	unsigned int type;
 public:
 	CUDA_FUNC_IN Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &_sample) const
 	{
@@ -142,5 +133,4 @@ public:
 	CUDA_FUNC_IN bool hasComponent(unsigned int type) const {
 		return ((BSDF*)Data)->hasComponent(type);
 	}
-	STD_VIRTUAL_SET
 };

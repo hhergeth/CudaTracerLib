@@ -60,6 +60,7 @@ struct e_KernelMIPMap
 	CUDA_DEVICE CUDA_HOST float SampleAlpha(const float2& uv) const;
 	//MipMap functions
 	CUDA_DEVICE CUDA_HOST Spectrum Sample(const float2& a_UV, float width) const;
+	CUDA_DEVICE CUDA_HOST Spectrum Sample(float width, int x, int y) const;
 private:
 	CUDA_DEVICE CUDA_HOST Spectrum Texel(unsigned int level, const float2& a_UV) const;
 	CUDA_DEVICE CUDA_HOST Spectrum triangle(unsigned int level, const float2& a_UV) const;

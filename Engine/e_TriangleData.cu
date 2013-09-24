@@ -34,6 +34,32 @@ float2 e_TriangleData::lerpUV(const float2& bCoords) const
 #undef tof2
 }
 
+void e_TriangleData::getNormalDerivative(const float2& bCoords, float3& dndu, float3& dndv) const
+{
+	uint4 q = m_sDeviceData.Row0;
+	float3 n0 = Uchar2ToNormalizedFloat3(q.x), n1 = Uchar2ToNormalizedFloat3(q.x >> 16), n2 = Uchar2ToNormalizedFloat3(q.y);
+#ifdef ISCUDA
+	#define tof2(x) make_float2(__half2float(x & 0xffff), __half2float(x >> 16))
+#else
+	#define tof2(x) make_float2(half((unsigned short)(x & 0xffff)).ToFloat(), half((unsigned short)(x & 0xffff0000)).ToFloat())
+#endif
+	float2 uv0 = tof2(m_sDeviceData.Row1.x), uv1 = tof2(m_sDeviceData.Row1.y), uv2 = tof2(m_sDeviceData.Row1.z);
+	float w = 1.0f - bCoords.x - bCoords.y, u = bCoords.x, v = bCoords.y;
+
+	float3 N = u * n1 + v * n2 + w * n0;
+	float il = 1.0f / length(N);
+	N *= il;
+	dndu = (n1 - n0) * il; dndu -= N * dot(N, dndu);
+	dndv = (n2 - n0) * il; dndv -= N * dot(N, dndv);
+
+	float2 duv1 = uv1 - uv0, duv2 = uv2 - uv0;
+	float det = duv1.x * duv2.y - duv1.y * duv2.x;
+	float invDet = 1.0f / det;
+	float3 dndu_ = ( duv2.y * dndu - duv1.y * dndv) * invDet;
+	float3 dndv_ = (-duv2.x * dndu + duv1.x * dndv) * invDet;
+	dndu = dndu_; dndv = dndv_;
+}
+
 bool TraceResult::hasHit() const
 {
 	return m_pTri != 0;
@@ -81,6 +107,8 @@ void TraceResult::getBsdfSample(const Ray& r, CudaRNG& _rng, BSDFSamplingRecord*
 		bRec->map.sys.n *= -1.0f;
 	}*/
 	bRec->map.uv = lerpUV();
+	bRec->map.bary = m_fUV;
+	bRec->map.Shape = m_pTri;
 	bRec->wi = normalize(bRec->map.sys.toLocal(-1.0f * r.direction));
 	float3 nor;
 	if(getMat().SampleNormalMap(bRec->map, &nor))

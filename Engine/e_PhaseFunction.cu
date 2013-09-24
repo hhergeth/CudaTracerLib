@@ -11,7 +11,7 @@ float e_HGPhaseFunction::Sample(PhaseFunctionSamplingRecord &pRec, CudaRNG& samp
 	float2 sample = sampler.randomFloat2();
 
 	float cosTheta;
-	if (std::abs(m_g) < EPSILON)
+	if (abs(m_g) < EPSILON)
 	{
 		cosTheta = 1 - 2*sample.x;
 	}
@@ -62,6 +62,23 @@ float e_IsotropicPhaseFunction::Sample(PhaseFunctionSamplingRecord &pRec, float 
 
 e_KajiyaKayPhaseFunction::e_KajiyaKayPhaseFunction(float ks, float kd, float e, float3 o)
 	: e_BasePhaseFunction(EPhaseFunctionType::pEAnisotropic), m_ks(ks), m_kd(kd), m_exponent(e), orientation(o)
+{
+	int nParts = 1000;
+	float stepSize = PI / nParts, m=4, theta = stepSize;
+
+	m_normalization = 0; /* 0 at the endpoints */
+	for (int i=1; i<nParts; ++i) {
+		float value = powf(cosf(theta - PI/2), m_exponent)
+			* sinf(theta);
+		m_normalization += value * m;
+		theta += stepSize;
+		m = 6-m;
+	}
+
+	m_normalization = 1/(m_normalization * stepSize/3 * 2 * PI);
+}
+
+void e_KajiyaKayPhaseFunction::Update()
 {
 	int nParts = 1000;
 	float stepSize = PI / nParts, m=4, theta = stepSize;

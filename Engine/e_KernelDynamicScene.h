@@ -5,7 +5,7 @@
 #include "e_SceneBVH.h"
 #include "e_TerrainHeader.h"
 #include "e_Volumes.h"
-#include "e_EnvironmentMap.h"
+#include "..\Math\Sampling.h"
 
 struct e_KernelLight;
 class e_Node;
@@ -18,17 +18,7 @@ struct e_BVHNodeData;
 struct e_KernelMaterial;
 struct e_KernelMIPMap;
 
-struct e_ImportantLightSelector
-{
-	unsigned int m_sIndices[32];
-	unsigned int m_uCount;
-	CUDA_FUNC_IN e_ImportantLightSelector(){}
-	e_ImportantLightSelector(e_DynamicScene* S, e_Sensor* C);
-private:
-	bool Use(AABB& box, float3& p, float4x4& proj);
-	bool Use(float3& p, float4x4& vp);
-};
-
+#define MAX_LIGHT_COUNT 32
 struct e_KernelDynamicScene
 {
 	e_KernelBuffer<e_TriangleData> m_sTriData;
@@ -44,7 +34,28 @@ struct e_KernelDynamicScene
 	e_KernelSceneBVH m_sSceneBVH;
 	e_KernelTerrainData m_sTerrain;
 	e_KernelAggregateVolume m_sVolume;
-	e_EnvironmentMap m_sEnvMap;
-	e_ImportantLightSelector m_sLightSelector;
+	unsigned int m_uEnvMapIndex;
+	Distribution1D<MAX_LIGHT_COUNT> m_emitterPDF;
+	unsigned int m_uEmitterIndices[MAX_LIGHT_COUNT];
+	unsigned int m_uEmitterCount;
 	AABB m_sBox;
+
+	CUDA_HOST CUDA_DEVICE bool Occluded(const Ray& r, float tmin, float tmax) const;
+	CUDA_DEVICE CUDA_HOST Spectrum EvalEnvironment(const Ray& r) const;
+	CUDA_DEVICE CUDA_HOST float pdfEmitterDiscrete(const e_KernelLight *emitter) const;
+
+	CUDA_DEVICE CUDA_HOST Spectrum sampleEmitterDirect(DirectSamplingRecord &dRec, const float2 &sample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleSensorDirect(DirectSamplingRecord &dRec, const float2 &sample) const;
+	CUDA_DEVICE CUDA_HOST float pdfEmitterDirect(const DirectSamplingRecord &dRec) const;
+	CUDA_DEVICE CUDA_HOST float pdfSensorDirect(const DirectSamplingRecord &dRec) const;
+
+	CUDA_DEVICE CUDA_HOST Spectrum sampleEmitterPosition(PositionSamplingRecord &pRec, const float2 &sample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleSensorPosition(PositionSamplingRecord &pRec, const float2 &sample, const float2 *extra = NULL) const;
+	CUDA_DEVICE CUDA_HOST float pdfEmitterPosition(const PositionSamplingRecord &pRec) const;
+	CUDA_DEVICE CUDA_HOST float pdfSensorPosition(const PositionSamplingRecord &pRec) const;
+
+	CUDA_DEVICE CUDA_HOST Spectrum sampleEmitterRay(Ray& ray, const e_KernelLight*& emitter, const float2 &spatialSample, const float2 &directionalSample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleSensorRay(Ray& ray, const e_Sensor*& emitter, const float2 &spatialSample, const float2 &directionalSample) const;
+private:
+	CUDA_DEVICE CUDA_HOST const e_KernelLight* sampleLight(float& emPdf, float2& sample) const;
 };

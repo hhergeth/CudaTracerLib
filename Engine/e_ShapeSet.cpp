@@ -19,3 +19,34 @@ void ShapeSet::triData::Recalculate(float4x4& mat)
 	area = 0.5f * length(n);
 	n = normalize(n);
 }
+
+ShapeSet::ShapeSet(e_TriIntersectorData** indices, unsigned int indexCount, float4x4& mat)
+{
+	if(indexCount > MAX_SHAPE_LENGTH)
+		throw 1;
+	count = indexCount;
+	float areas[MAX_SHAPE_LENGTH];
+	sumArea = 0;
+	for(int i = 0; i < count; i++)
+	{
+		tris[i] = triData(indices[i], mat);
+		areas[i] = tris[i].area;
+		sumArea += tris[i].area;
+	}
+	areaDistribution = Distribution1D<MAX_SHAPE_LENGTH>(areas, count);
+	areaDistribution.Normalize();
+}
+
+void ShapeSet::Recalculate(float4x4& mat)
+{
+	float areas[MAX_SHAPE_LENGTH];
+	sumArea = 0;
+	for(int i = 0; i < count; i++)
+	{
+		tris[i].Recalculate(mat);
+		areas[i] = tris[i].area;
+		sumArea += tris[i].area;
+	}
+	areaDistribution = Distribution1D<MAX_SHAPE_LENGTH>(areas, count);
+	areaDistribution.Normalize();
+}

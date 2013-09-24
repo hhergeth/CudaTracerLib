@@ -187,7 +187,7 @@ void k_sPpmTracer::initNewPass(e_Image* I)
 		{
 			e_StreamReference(e_KernelMaterial) mat = m_pScene->m_pMaterialBuffer->operator()(s + j, 1);
 			const e_KernelBSSRDF* bssrdf;
-			if(mat->GetBSSRDF(MapParameters(make_float3(1), make_float2(0, 0), Frame()), &bssrdf))
+			if(mat->GetBSSRDF(MapParameters(make_float3(1), make_float2(0, 0), Frame(), make_float2(0,0), 0), &bssrdf))
 			{
 				volBox.Enlarge(n->getWorldBox(m));
 				m_bLongRunning |= 1;
@@ -209,7 +209,7 @@ static float GGGf0;
 static float GGGf1;
 void k_sPpmTracer::StartNewTrace(e_Image* I)
 {
-	m_bDirect = !m_pScene->getVolumes().getLength();m_bDirect=0;
+	m_bDirect = !m_pScene->getVolumes().getLength();m_bDirect=1;
 	if(m_uModus == 1)
 	{
 		initNewPass(I);

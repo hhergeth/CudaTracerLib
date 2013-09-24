@@ -17,10 +17,23 @@ struct coating : public BSDF
 		: BSDF(EDeltaReflection)
 	{
 	}
-	coating(BSDFFirst& nested, float eta, float thickness, e_KernelTexture& sig)
+	coating(BSDFFirst& nested, float eta, float thickness, const e_KernelTexture& sig)
 		: BSDF(EDeltaReflection | nested.getType()), m_nested(nested), m_eta(eta), m_invEta(1.0f / eta), m_thickness(thickness), m_sigmaA(sig)
 	{
 		m_specularReflectance = CreateTexture(0, Spectrum(1.0f));
+		float avgAbsorption = (m_sigmaA.Average()*(-2*m_thickness)).exp().average();
+		m_specularSamplingWeight = 1.0f / (avgAbsorption + 1.0f);
+	}
+	coating(BSDFFirst& nested, float eta, float thickness, const e_KernelTexture& sig, const e_KernelTexture& specular)
+		: BSDF(EDeltaReflection | nested.getType()), m_nested(nested), m_eta(eta), m_invEta(1.0f / eta), m_thickness(thickness), m_sigmaA(sig)
+	{
+		m_specularReflectance = specular;
+		float avgAbsorption = (m_sigmaA.Average()*(-2*m_thickness)).exp().average();
+		m_specularSamplingWeight = 1.0f / (avgAbsorption + 1.0f);
+	}
+	virtual void Update()
+	{
+		m_invEta = 1.0f / m_eta;
 		float avgAbsorption = (m_sigmaA.Average()*(-2*m_thickness)).exp().average();
 		m_specularSamplingWeight = 1.0f / (avgAbsorption + 1.0f);
 	}
@@ -79,11 +92,17 @@ struct roughcoating : public BSDF
 		: BSDF(EGlossyReflection)
 	{
 	}
-	roughcoating(BSDFFirst& nested, MicrofacetDistribution::EType type, float eta, float thickness, e_KernelTexture& sig, e_KernelTexture& alpha)
+	roughcoating(BSDFFirst& nested, MicrofacetDistribution::EType type, float eta, float thickness, e_KernelTexture& sig, e_KernelTexture& alpha, e_KernelTexture& specular)
 		: BSDF(EGlossyReflection | nested.getType()), m_nested(nested), m_eta(eta), m_invEta(1.0f / eta), m_thickness(thickness), m_sigmaA(sig), m_alpha(alpha)
 	{
 		m_distribution.m_type = type;
-		m_specularReflectance = CreateTexture(0, Spectrum(1.0f));
+		m_specularReflectance = specular;
+		float avgAbsorption = (m_sigmaA.Average()*(-2*m_thickness)).exp().average();
+		m_specularSamplingWeight = 1.0f / (avgAbsorption + 1.0f);
+	}
+	virtual void Update()
+	{
+		m_invEta = 1.0f / m_eta;
 		float avgAbsorption = (m_sigmaA.Average()*(-2*m_thickness)).exp().average();
 		m_specularSamplingWeight = 1.0f / (avgAbsorption + 1.0f);
 	}
@@ -102,7 +121,7 @@ struct roughcoating : public BSDF
 	{
 		BSDFFirst nested;
 		nested.SetData(val);
-		return roughcoating(nested, type, eta, thickness, sig, alpha);
+		return roughcoating(nested, type, eta, thickness, sig, alpha, CreateTexture(Spectrum(1.0f)));
 	}
 	TYPE_FUNC(roughcoating)
 private:

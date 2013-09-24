@@ -10,8 +10,8 @@ class e_Image
 public:
     // ImageFilm Public Methods
 	CUDA_FUNC_IN e_Image(){}
-    e_Image(e_KernelFilter &filt, const float crop[4], int xRes, int yRes, RGBCOL* cudaBuffer);
-	e_Image(e_KernelFilter &filt, int xRes, int yRes, RGBCOL* cudaBuffer);
+    e_Image(const e_KernelFilter &filt, const float crop[4], int xRes, int yRes, RGBCOL* cudaBuffer);
+	e_Image(const e_KernelFilter &filt, int xRes, int yRes, RGBCOL* cudaBuffer);
     void Free()
 	{
 	    delete hostPixels;
@@ -49,6 +49,10 @@ public:
         float xyzSplat[3];
 		CUDA_DEVICE CUDA_HOST Spectrum toSpectrum(float splat);
     };
+	e_KernelFilter& accessFilter()
+	{
+		return filter;
+	}
 private:
     // ImageFilm Private Data
 	e_KernelFilter filter;

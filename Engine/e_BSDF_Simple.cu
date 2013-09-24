@@ -101,24 +101,23 @@ Spectrum dielectric::sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &
 	float F = MonteCarlo::fresnelDielectricExt(Frame::cosTheta(bRec.wi), cosThetaT, m_eta);
 
 	if (sampleTransmission && sampleReflection) {
-		float f0 = m_specularReflectance.Evaluate(bRec.map).average(), f1 = m_specularTransmittance.Evaluate(bRec.map).average(), f = F*f0/(f0+f1);f=F;
-		if (sample.x <= f) {
+		if (sample.x <= F) {
 			bRec.sampledType = EDeltaReflection;
 			bRec.wo = reflect(bRec.wi);
 			bRec.eta = 1.0f;
-			pdf = f;
+			pdf = F;
 			
-			return m_specularReflectance.Evaluate(bRec.map) / f * F;
+			return m_specularReflectance.Evaluate(bRec.map);
 		} else {
 			bRec.sampledType = EDeltaTransmission;
 			bRec.wo = refract(bRec.wi, cosThetaT);
 			bRec.eta = cosThetaT < 0 ? m_eta : m_invEta;
-			pdf = 1-f;
+			pdf = 1-F;
 
 			float factor = (bRec.mode == ERadiance)
 				? (cosThetaT < 0 ? m_invEta : m_eta) : 1.0f;
 
-			return m_specularTransmittance.Evaluate(bRec.map) * (factor * factor) / (1 - f) * (1 - F);
+			return m_specularTransmittance.Evaluate(bRec.map) * (factor * factor);
 		}
 	} else if (sampleReflection) {
 		bRec.sampledType = EDeltaReflection;
@@ -126,7 +125,7 @@ Spectrum dielectric::sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &
 		bRec.eta = 1.0f;
 		pdf = 1.0f;
 
-		return m_specularReflectance.Evaluate(bRec.map) * F;
+		return m_specularReflectance.Evaluate(bRec.map);
 	} else if (sampleTransmission) {
 		bRec.sampledType = EDeltaTransmission;
 		bRec.wo = refract(bRec.wi, cosThetaT);

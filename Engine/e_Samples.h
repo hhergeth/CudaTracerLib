@@ -17,96 +17,10 @@ enum EMeasure {
 	EDiscrete = 4
 };
 
-struct PositionSamplingRecord
-{
-public:
-	float3 p;
-	float3 n;
-	float pdf;
-	EMeasure measure;
-	float2 uv;
-public:
-	CUDA_FUNC_IN PositionSamplingRecord() { }
-	CUDA_FUNC_IN PositionSamplingRecord(const float3& _p, const float3& _n, const float2& _uv,EMeasure m = EArea )
-		: p(_p), n(_n), measure(m), uv(_uv)
-	{
-
-	}
-	CUDA_FUNC_IN PositionSamplingRecord(const Ray& r, const TraceResult& r2, EMeasure m = EArea)
-	{
-		p = r(r2.m_fDist);
-		n = r2.lerpFrame().n;
-		measure = m;
-		uv = r2.lerpUV();
-	}
-};
-
-struct DirectionSamplingRecord
-{
-public:
-	float3 d;
-	float pdf;
-	EMeasure measure;
-public:
-	CUDA_FUNC_IN DirectionSamplingRecord() { }
-	CUDA_FUNC_IN DirectionSamplingRecord(const float3 &d, EMeasure m = ESolidAngle)
-		: d(d), measure(m)
-	{
-	}
-	CUDA_FUNC_IN DirectionSamplingRecord(const Ray& r, const TraceResult& r2, EMeasure m = EArea)
-	{
-		d = r.direction;
-		measure = m;
-	}
-};
-
-struct LightSample
-{
-	CUDA_FUNC_IN LightSample() { }
-	CUDA_FUNC_IN LightSample(CudaRNG &rng)
-	{
-		uPos[0] = rng.randomFloat();
-		uPos[1] = rng.randomFloat();
-		uComponent = rng.randomFloat();
-	}
-	CUDA_FUNC_IN LightSample(float up0, float up1, float ucomp)
-	{
-		uPos[0] = up0; uPos[1] = up1;
-		uComponent = ucomp;
-	}
-	float uPos[2], uComponent;
-};
-
 enum ETransportMode
 {
 	ERadiance = 0,
 	EImportance = 1,
-};
-
-struct PhaseFunctionSamplingRecord
-{
-	float3 wi;
-	float3 wo;
-	ETransportMode mode;
-
-	CUDA_FUNC_IN PhaseFunctionSamplingRecord(const float3& _wo, ETransportMode m = ERadiance)
-	{
-		wo = _wo;
-		mode = m;
-	}
-
-	CUDA_FUNC_IN PhaseFunctionSamplingRecord(const float3& _wo, const float3& _wi, ETransportMode m = ERadiance)
-	{
-		wo = _wo;
-		wi = _wi;
-		mode = m;
-	}
-
-	CUDA_FUNC_IN void reverse()
-	{
-		swapk(&wo, &wi);
-		mode = (ETransportMode) (1-mode);
-	}
 };
 
 enum EBSDFType {
@@ -169,6 +83,94 @@ enum ETypeCombinations {
 	EDelta1D      = EDelta1DReflection | EDelta1DTransmission,
 	/// Any kind of scattering
 	EAll          = EDiffuse | EGlossy | EDelta | EDelta1D
+};
+
+struct PositionSamplingRecord
+{
+public:
+	float3 p;
+	float3 n;
+	float pdf;
+	EMeasure measure;
+	float2 uv;
+	///This is so unbelievably yunbelivablyugly it hurts my brain....
+	const void* object;
+public:
+	CUDA_FUNC_IN PositionSamplingRecord() { }
+	CUDA_FUNC_IN PositionSamplingRecord(const float3& _p, const float3& _n, const float2& _uv, const void* _obj, EMeasure m = EArea )
+		: p(_p), n(_n), measure(m), uv(_uv), object(_obj)
+	{
+
+	}
+	CUDA_FUNC_IN PositionSamplingRecord(const Ray& r, const TraceResult& r2, EMeasure m = EArea)
+	{
+		p = r(r2.m_fDist);
+		n = r2.lerpFrame().n;
+		measure = m;
+		uv = r2.lerpUV();
+	}
+};
+
+struct DirectionSamplingRecord
+{
+public:
+	float3 d;
+	float pdf;
+	EMeasure measure;
+public:
+	CUDA_FUNC_IN DirectionSamplingRecord() { }
+	CUDA_FUNC_IN DirectionSamplingRecord(const float3 &d, EMeasure m = ESolidAngle)
+		: d(d), measure(m)
+	{
+	}
+	CUDA_FUNC_IN DirectionSamplingRecord(const Ray& r, const TraceResult& r2, EMeasure m = EArea)
+	{
+		d = r.direction;
+		measure = m;
+	}
+};
+
+struct DirectSamplingRecord : public PositionSamplingRecord
+{
+	float3 ref;
+	float3 refN;
+	float3 d;
+	float dist;
+
+	CUDA_FUNC_IN DirectSamplingRecord()
+	{
+	}
+
+	CUDA_FUNC_IN DirectSamplingRecord(const float3& _p, const float3& _n, const float2& _uvt)
+		: PositionSamplingRecord(_p, _n, _uvt, 0), ref(_p), refN(make_float3(0.0f))
+	{
+	}
+};
+
+struct PhaseFunctionSamplingRecord
+{
+	float3 wi;
+	float3 wo;
+	ETransportMode mode;
+
+	CUDA_FUNC_IN PhaseFunctionSamplingRecord(const float3& _wo, ETransportMode m = ERadiance)
+	{
+		wo = _wo;
+		mode = m;
+	}
+
+	CUDA_FUNC_IN PhaseFunctionSamplingRecord(const float3& _wo, const float3& _wi, ETransportMode m = ERadiance)
+	{
+		wo = _wo;
+		wi = _wi;
+		mode = m;
+	}
+
+	CUDA_FUNC_IN void reverse()
+	{
+		swapk(&wo, &wi);
+		mode = (ETransportMode) (1-mode);
+	}
 };
 
 struct BSDFSamplingRecord

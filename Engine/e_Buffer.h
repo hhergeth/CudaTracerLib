@@ -10,7 +10,7 @@ template<typename T> struct e_KernelBuffer
 	T* Data;
 	unsigned int UsedCount;
 	unsigned int Length;
-	CUDA_ONLY_FUNC T& operator[](unsigned int i) const
+	CUDA_FUNC_IN T& operator[](unsigned int i) const
 	{
 		return Data[i];
 	}
@@ -608,3 +608,41 @@ public:
 		m_sInvalidated.clear();
 	} 
 };*/
+
+template<typename T> class e_Variable
+{
+	T* host, *device;
+public:
+	e_Variable()
+	{
+	}
+	template<typename U, typename V> CUDA_HOST e_Variable(e_BufferReference<U, V> r)
+	{
+		host = (T*)r.operator->();
+		device = (T*)r.getDevice();
+	}
+	CUDA_FUNC_IN T& operator[](unsigned int i) const
+	{
+#ifdef ISCUDA
+		return device[i];
+#else
+		return host[i];
+#endif
+	}
+	CUDA_FUNC_IN T* operator->() const
+	{
+#ifdef ISCUDA
+		return device;
+#else
+		return host;
+#endif
+	}
+	CUDA_FUNC_IN T* operator*() const
+	{
+#ifdef ISCUDA
+		return device;
+#else
+		return host;
+#endif
+	}
+};

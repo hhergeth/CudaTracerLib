@@ -5,9 +5,9 @@
 class e_CameraController
 {
 	HWND H;
-	e_Sensor* Camera;
 public:
 	float Speed;
+	e_Sensor* Camera;
 
 	e_CameraController(HWND h, e_Sensor* S, float _speed = 1.0f)
 	{

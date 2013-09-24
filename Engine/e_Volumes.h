@@ -4,7 +4,7 @@
 #include "e_Buffer.h"
 #include "e_PhaseFunction.h"
 
-struct e_BaseVolumeRegion
+struct e_BaseVolumeRegion : public e_BaseType
 {
 public:
 	AABB Box;
@@ -19,7 +19,8 @@ public:
 struct e_HomogeneousVolumeDensity : public e_BaseVolumeRegion
 {
 public:
-	e_HomogeneousVolumeDensity(const float sa, const float ss, const e_PhaseFunction& func, const float emit, const AABB box)
+	e_HomogeneousVolumeDensity(){}
+	e_HomogeneousVolumeDensity(const float sa, const float ss, const e_PhaseFunction& func, float emit, const AABB& box)
 	{
 		e_BaseVolumeRegion::Box = box;
 		e_BaseVolumeRegion::Func = func;
@@ -29,14 +30,14 @@ public:
         le = Spectrum(emit);
 	}
 
-	e_HomogeneousVolumeDensity(const Spectrum& sa, const Spectrum& ss, const e_PhaseFunction& func, const float emit, const AABB box, const float4x4 v2w)
+	e_HomogeneousVolumeDensity(const Spectrum& sa, const Spectrum& ss, const e_PhaseFunction& func, const Spectrum& emit, const AABB& box, const float4x4& v2w)
 	{
 		e_BaseVolumeRegion::Box = box;
 		e_BaseVolumeRegion::Func = func;
         WorldToVolume = v2w.Inverse();
         sig_a = sa;
         sig_s = ss;
-        le = Spectrum(emit);
+        le = emit;
 	}
 
     CUDA_DEVICE CUDA_HOST bool IntersectP(const Ray &ray, const float minT, const float maxT, float *t0, float *t1) const;
@@ -66,17 +67,13 @@ public:
 	TYPE_FUNC(e_HomogeneousVolumeDensity)
 public:
 	Spectrum sig_a, sig_s, le;
-	float g;
 	float4x4 WorldToVolume;
 };
 
 #define VOL_SIZE RND_16((sizeof(e_HomogeneousVolumeDensity)))
 
-struct CUDA_ALIGN(16) e_VolumeRegion
+struct CUDA_ALIGN(16) e_VolumeRegion : public e_AggregateBaseType<e_BaseVolumeRegion, VOL_SIZE> 
 {
-private:
-	CUDA_ALIGN(16) unsigned char Data[VOL_SIZE];
-	unsigned int type;
 public:
 	CUDA_FUNC_IN e_VolumeRegion()
 	{
@@ -128,8 +125,6 @@ public:
 		CALL_FUNC1(e_HomogeneousVolumeDensity, tau(ray, minT, maxT, step, offset))
 		return 0.0f;
 	}
-
-	STD_VIRTUAL_SET
 };
 
 struct e_KernelAggregateVolume

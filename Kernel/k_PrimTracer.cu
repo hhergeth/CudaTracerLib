@@ -35,9 +35,9 @@ CUDA_ONLY_FUNC void max3(uint3* tar, uint3& val)
 	atomicMax(&tar->z, val.z);
 }
 
-CUDA_ONLY_FUNC Spectrum trace(Ray& r, CudaRNG& rng, float3* pout)
+CUDA_FUNC_IN Spectrum trace(Ray& r, CudaRNG& rng, float3* pout)
 {
-	const bool DIRECT = false;
+	const bool DIRECT = true;
 	TraceResult r2;
 	r2.Init(true);
 	Spectrum c = Spectrum(1.0f), L = Spectrum(0.0f);
@@ -51,14 +51,17 @@ CUDA_ONLY_FUNC Spectrum trace(Ray& r, CudaRNG& rng, float3* pout)
 		if(g_SceneData.m_sVolume.HasVolumes())
 			c = c * (-g_SceneData.m_sVolume.tau(r, 0, r2.m_fDist)).exp();
 		r2.getBsdfSample(r, rng, &bRec);
+		//return Spectrum(dot(bRec.ng, -r.direction));
+		//DirectSamplingRecord dRec(bRec.map.P, bRec.map.sys.n, bRec.map.uv);
+		//return g_SceneData.sampleSensorDirect(dRec, rng.randomFloat2());
 		if(depth == 1 || specBounce || !DIRECT)
-			L += r2.Le(r(r2.m_fDist), bRec.map.sys.n, -r.direction);
+			L += r2.Le(r(r2.m_fDist), bRec.map.sys, -r.direction);
 		if(DIRECT)
 			L += c * UniformSampleAllLights(bRec, r2.getMat(), 1);
 		float pdf;
 		Spectrum f = r2.getMat().bsdf.sample(bRec, pdf, rng.randomFloat2());
 		c = c * f;
-		if((bRec.sampledType & EDiffuse) == EDiffuseReflection)
+		if((bRec.sampledType & EDiffuse) == EDiffuse)
 		{
 			L += c;
 			break;
@@ -68,10 +71,8 @@ CUDA_ONLY_FUNC Spectrum trace(Ray& r, CudaRNG& rng, float3* pout)
 		r.direction = bRec.getOutgoing();
 		r2.Init();
 	}
-	if(!r2.hasHit() && g_SceneData.m_sEnvMap.CanSample())
-		L += c * g_SceneData.m_sEnvMap.Sample(r);
-	else if(!r2.hasHit()) 
-		L = Spectrum(0.0f);
+	if(!r2.hasHit())
+		L += c * g_SceneData.EvalEnvironment(r);
 	return L;
 }
 
@@ -147,8 +148,10 @@ __global__ void debugPixe2l(unsigned int width, unsigned int height, int2 p)
 	trace(r, rng, 0);
 }
 
+static bool done = false;
 void k_PrimTracer::DoRender(e_Image* I)
 {
+	//if(done) return;done = 1;
 	k_OnePassTracer::DoRender(I);
 	unsigned int zero = 0;
 	cudaMemcpyToSymbol(g_NextRayCounter2, &zero, sizeof(unsigned int));
@@ -171,11 +174,15 @@ void k_PrimTracer::DoRender(e_Image* I)
 
 void k_PrimTracer::Debug(int2 pixel)
 {
+	//FW::printf("%f,%f",pixel.x/float(w),pixel.y/float(h));
 	m_pScene->UpdateInvalidated();
 	e_KernelDynamicScene d2 = m_pScene->getKernelSceneData();
 	k_INITIALIZE(d2);
 	k_STARTPASS(m_pScene, m_pCamera, g_sRngs);
-	debugPixe2l<<<1,1>>>(w,h,pixel);
+	//debugPixe2l<<<1,1>>>(w,h,pixel);
+	Ray r = g_CameraData.GenRay(pixel.x, pixel.y);
+	CudaRNG rng = g_RNGData();
+	trace(r, rng, 0);
 }
 
 void k_PrimTracer::CreateSliders(SliderCreateCallback a_Callback)
