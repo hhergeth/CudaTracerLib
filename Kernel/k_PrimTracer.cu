@@ -80,6 +80,7 @@ CUDA_SHARED uint3 s_EyeHitBoxMin;
 CUDA_SHARED uint3 s_EyeHitBoxMax;
 __global__ void primaryKernel(long long width, long long height, e_Image g_Image)
 {
+	return;
 	if(!threadIdx.x && !threadIdx.y)
 	{
 		s_EyeHitBoxMax = make_uint3(FloatToUInt(-FLT_MAX));

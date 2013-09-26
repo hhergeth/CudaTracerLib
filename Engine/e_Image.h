@@ -53,6 +53,16 @@ public:
 	{
 		return filter;
 	}
+	void rebuildFilterTable()
+	{
+		float w = filter.As<e_KernelFilterBase>()->xWidth, h = filter.As<e_KernelFilterBase>()->yWidth;
+		for (int y = 0; y < FILTER_TABLE_SIZE; ++y)
+			for (int x = 0; x < FILTER_TABLE_SIZE; ++x)
+			{
+				float _x = x + 0.5f, _y = y + 0.5f, s = FILTER_TABLE_SIZE;
+				filterTable[x][y] = filter.Evaluate(_x / s * w, y / s * h);
+			}
+	}
 private:
     // ImageFilm Private Data
 	e_KernelFilter filter;

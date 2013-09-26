@@ -8,9 +8,7 @@ e_KernelMaterial::e_KernelMaterial(const char* name)
 	HeightScale = 1.0f;
 	NodeLightIndex = 0xffffffff;
 	m_fAlphaThreshold = 1.0f;
-	diffuse d2;
-	d2.m_reflectance = CreateTexture(0, Spectrum(0.5f));
-	bsdf.SetData(d2);
+	bsdf.type = 0;
 	usedBssrdf = false;
 }
 

@@ -11,13 +11,7 @@ e_Image::e_Image(const e_KernelFilter &filt, const float crop[4], int xRes, int 
     xPixelCount = MAX(1, Ceil2Int(xResolution * cropWindow[1]) - xPixelStart);
     yPixelStart = Ceil2Int(yResolution * cropWindow[2]);
     yPixelCount = MAX(1, Ceil2Int(yResolution * cropWindow[3]) - yPixelStart);
-	float w = filter.As<e_KernelFilterBase>()->xWidth, h = filter.As<e_KernelFilterBase>()->yWidth;
-	for (int y = 0; y < FILTER_TABLE_SIZE; ++y)
-		for (int x = 0; x < FILTER_TABLE_SIZE; ++x)
-		{
-			float _x = x + 0.5f, _y = y + 0.5f, s = FILTER_TABLE_SIZE;
-			filterTable[x][y] = filter.Evaluate(_x / s * w, y / s * h);
-		}
+	rebuildFilterTable();
 	target = cudaBuffer;
 	cudaMalloc(&cudaPixels, sizeof(Pixel) * xPixelCount * yPixelCount);
 	hostPixels = new Pixel[xPixelCount * yPixelCount];
@@ -36,13 +30,7 @@ e_Image::e_Image(const e_KernelFilter &filt, int xRes, int yRes, RGBCOL* cudaBuf
     xPixelCount = MAX(1, Ceil2Int(xResolution * cropWindow[1]) - xPixelStart);
     yPixelStart = Ceil2Int(yResolution * cropWindow[2]);
     yPixelCount = MAX(1, Ceil2Int(yResolution * cropWindow[3]) - yPixelStart);
-	float w = filter.As<e_KernelFilterBase>()->xWidth, h = filter.As<e_KernelFilterBase>()->yWidth;
-	for (int y = 0; y < FILTER_TABLE_SIZE; ++y)
-		for (int x = 0; x < FILTER_TABLE_SIZE; ++x)
-		{
-			float _x = x + 0.5f, _y = y + 0.5f, s = FILTER_TABLE_SIZE;
-			filterTable[x][y] = filter.Evaluate(_x / s * w, y / s * h);
-		}
+	rebuildFilterTable();
 	target = cudaBuffer;
 	cudaMalloc(&cudaPixels, sizeof(Pixel) * xPixelCount * yPixelCount);
 	hostPixels = new Pixel[xPixelCount * yPixelCount];
