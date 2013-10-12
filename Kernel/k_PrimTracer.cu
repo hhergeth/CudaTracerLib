@@ -51,9 +51,28 @@ CUDA_FUNC_IN Spectrum trace(Ray& r, CudaRNG& rng, float3* pout)
 		if(g_SceneData.m_sVolume.HasVolumes())
 			c = c * (-g_SceneData.m_sVolume.tau(r, 0, r2.m_fDist)).exp();
 		r2.getBsdfSample(r, rng, &bRec);
-		//return Spectrum(dot(bRec.ng, -r.direction));
-		//DirectSamplingRecord dRec(bRec.map.P, bRec.map.sys.n, bRec.map.uv);
-		//return g_SceneData.sampleSensorDirect(dRec, rng.randomFloat2());
+		/*
+		DirectSamplingRecord dRecLight(r(r2.m_fDist), bRec.ng, bRec.map.uv);
+		Spectrum le = g_SceneData.sampleEmitterDirect(dRecLight, rng.randomFloat2());
+		DirectSamplingRecord dRecSensor(r(r2.m_fDist), bRec.ng, bRec.map.uv);
+		Spectrum im = g_SceneData.sampleSensorDirect(dRecSensor, rng.randomFloat2());
+		if(!g_SceneData.Occluded(Ray(r(r2.m_fDist), dRecLight.d), 0, dRecLight.dist))
+		{
+			return im * 1000000.0f;
+
+			float3 wi = normalize(dRecLight.p - r(r2.m_fDist));
+			float3 wo = normalize(dRecSensor.p - r(r2.m_fDist));
+			bRec.wi = bRec.map.sys.toLocal(wo);
+			bRec.wo = bRec.map.sys.toLocal(wi);
+			Spectrum f = r2.getMat().bsdf.f(bRec);
+			float pdf = r2.getMat().bsdf.pdf(bRec);
+			//return AbsDot(wi, bRec.map.sys.n) * AbsDot(wo, bRec.map.sys.n) * f / pdf * le;
+			float pdf2 = 1.0f / (AbsDot(wo, bRec.map.sys.n) * AbsDot(wo, bRec.map.sys.n) * AbsDot(wo, bRec.map.sys.n)) * 1.0f / (dRecLight.dist * dRecLight.dist);
+			return le * f / (pdf / pdf2);
+		}
+		else return 0.0f;*/return Spectrum(1,0,0);
+		return Spectrum(dot(bRec.ng, -r.direction));
+
 		if(depth == 1 || specBounce || !DIRECT)
 			L += r2.Le(r(r2.m_fDist), bRec.map.sys, -r.direction);
 		if(DIRECT)
@@ -80,7 +99,6 @@ CUDA_SHARED uint3 s_EyeHitBoxMin;
 CUDA_SHARED uint3 s_EyeHitBoxMax;
 __global__ void primaryKernel(long long width, long long height, e_Image g_Image)
 {
-	return;
 	if(!threadIdx.x && !threadIdx.y)
 	{
 		s_EyeHitBoxMax = make_uint3(FloatToUInt(-FLT_MAX));

@@ -59,3 +59,7 @@ CUDA_FUNC_IN TraceResult k_TraceRay(const Ray& r)
 
 void k_INITIALIZE(const e_KernelDynamicScene& a_Data);
 void k_STARTPASS(e_DynamicScene* a_Scene, e_Sensor* a_Camera, const CudaRNGBuffer& a_RngBuf);
+
+
+
+void __internal__IntersectBuffers(int N, void* a_RayBuffer, TraceResult* a_ResBuffer, unsigned int RAY_STRUCT_STRIDE, unsigned int RAY_STRUCT_RAY_OFFSET);

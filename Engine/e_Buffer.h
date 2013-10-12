@@ -239,7 +239,7 @@ public:
 
 template<typename H, typename D> class e_BufferReference
 {
-private:
+public:
 	unsigned int m_uIndex;
 	unsigned int m_uLength;
 	e_Buffer<H, D>* m_pStream;

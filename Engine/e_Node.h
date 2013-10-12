@@ -3,7 +3,7 @@
 #include <MathTypes.h>
 #include "e_Mesh.h"
 
-class e_Node
+class CUDA_ALIGN(16) e_Node
 {
 private:
 	//kernel side data

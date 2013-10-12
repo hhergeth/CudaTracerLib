@@ -50,13 +50,7 @@ public:
 	///Do not use this! Just invalidate and update the material
 	e_BufferReference<e_MIPMap, e_KernelMIPMap> LoadTexture(const char* file, bool a_MipMap);
 	void UnLoadTexture(e_BufferReference<e_MIPMap, e_KernelMIPMap> ref);
-	void SetNodeTransform(const float4x4& mat, e_StreamReference(e_Node) n)
-	{
-		m_uModified = 1;
-		n->setTransform(mat);
-		n.Invalidate();
-		recalculateAreaLights(n);
-	}
+	void SetNodeTransform(const float4x4& mat, e_StreamReference(e_Node) n);
 	void TransformNode(const float4x4& mat, e_StreamReference(e_Node) n)
 	{
 		SetNodeTransform(n->getWorldMatrix() * mat, n);

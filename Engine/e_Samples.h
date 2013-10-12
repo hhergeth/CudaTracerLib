@@ -93,7 +93,7 @@ public:
 	float pdf;
 	EMeasure measure;
 	float2 uv;
-	///This is so unbelievably yunbelivablyugly it hurts my brain....
+	///This is so unbelievably ugly it hurts my brain....
 	const void* object;
 public:
 	CUDA_FUNC_IN PositionSamplingRecord() { }
@@ -142,8 +142,9 @@ struct DirectSamplingRecord : public PositionSamplingRecord
 	}
 
 	CUDA_FUNC_IN DirectSamplingRecord(const float3& _p, const float3& _n, const float2& _uvt)
-		: PositionSamplingRecord(_p, _n, _uvt, 0), ref(_p), refN(make_float3(0.0f))
+		: PositionSamplingRecord(_p, _n, _uvt, 0), ref(_p), refN(_n)
 	{
+		refN = _n;
 	}
 };
 

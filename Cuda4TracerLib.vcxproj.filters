@@ -250,6 +250,9 @@
     <ClInclude Include="Engine\e_Core.h">
       <Filter>Engine</Filter>
     </ClInclude>
+    <ClInclude Include="Kernel\k_FastTracer.h">
+      <Filter>Kernel</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\e_AnimatedMesh.cpp">
@@ -321,6 +324,9 @@
     </ClCompile>
     <ClCompile Include="Engine\e_Core.cpp">
       <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\SceneBuilder\PlyParser.cpp">
+      <Filter>Engine\SceneBuilder</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -410,6 +416,9 @@
     </CudaCompile>
     <CudaCompile Include="Engine\e_ShapeSet.cu">
       <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Kernel\k_FastTracer.cu">
+      <Filter>Kernel</Filter>
     </CudaCompile>
   </ItemGroup>
 </Project>

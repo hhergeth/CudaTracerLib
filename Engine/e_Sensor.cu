@@ -109,8 +109,8 @@ void e_PerspectiveCamera::Update()
 	m_imageRect.minV.z = -FLT_MAX; m_imageRect.maxV.z = FLT_MAX;
 	m_normalization = 1.0f / (m_imageRect.Size().x * m_imageRect.Size().y);
 
-	DirectSamplingRecord dRec(make_float3(301.48853f,398.27206f,559.20007f),make_float3(0),make_float2(0));
-	sampleDirect(dRec, make_float2(0));
+//	DirectSamplingRecord dRec(make_float3(301.48853f,398.27206f,559.20007f),make_float3(0),make_float2(0));
+	//sampleDirect(dRec, make_float2(0));
 }
 
 float e_PerspectiveCamera::importance(const float3 &d) const
@@ -145,6 +145,11 @@ Spectrum e_PerspectiveCamera::sampleRay(Ray &ray, const float2 &pixelSample, con
 	return Spectrum(1.0f);
 }
 
+CUDA_FUNC_IN float PdfWtoA(const float pdfW, const float dist, const float cosThere)
+{
+    return pdfW * fabs(cosThere) / (dist * dist);
+}
+
 Spectrum e_PerspectiveCamera::sampleDirect(DirectSamplingRecord &dRec, const float2 &sample) const
 {
 	float3 refP = toWorldInverse * dRec.ref;
@@ -172,12 +177,17 @@ Spectrum e_PerspectiveCamera::sampleDirect(DirectSamplingRecord &dRec, const flo
 	localD *= invDist;
 
 	dRec.p = toWorld.Translation();
-	dRec.d = normalize(dRec.p - dRec.ref);
+	dRec.d = invDist * (dRec.p - dRec.ref);
 	dRec.dist = dist;
 	dRec.n = toWorld.Forward();
 	dRec.pdf = 1;
 	dRec.measure = EDiscrete;
-	
+
+	const float cosToCamera = dot(dRec.refN, dRec.d);
+	const float cosAtCamera = Frame::cosTheta(-dRec.d);
+	const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera) * m_normalization;
+	const float cameraPdfA = PdfWtoA(cameraPdfW, dist, cosToCamera);
+	//return cameraPdfA;
 	return Spectrum(importance(localD)*invDist*invDist);
 }
 

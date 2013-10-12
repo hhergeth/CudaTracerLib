@@ -162,13 +162,39 @@ private:
 public:
 	CUDA_FUNC_IN float pdf(float3& a, float3& b);
 };
-
+*/
+#define blend_TYPE 16
 struct blend : public BSDF
 {
-private:
-	BSDFALL* bsdfs[2];
-	float weight;
+	BSDFFirst bsdfs[2];
+	e_KernelTexture weight;
 public:
-	CUDA_FUNC_IN float pdf(float3& a, float3& b);
+	blend()
+		: BSDF(0)
+	{
+	}
+	blend(const BSDFFirst& nested1, const BSDFFirst& nested2, const e_KernelTexture& _weight)
+		: BSDF(nested1.getType() | nested2.getType()), weight(_weight)
+	{
+		bsdfs[0] = nested1;
+		bsdfs[1] = nested2;
+	}
+	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &sample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
+	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
+	STD_DIFFUSE_REFLECTANCE
+	template<typename T> void LoadTextures(T callback)
+	{
+		weight.LoadTextures(callback);
+		bsdfs[0].LoadTextures(callback);
+		bsdfs[1].LoadTextures(callback);
+	}
+	template<typename U, typename V> static blend Create(const U& a, const V& b, const e_KernelTexture& weight)
+	{
+		BSDFFirst n1, n2;
+		n1.SetData(a);
+		n2.SetData(b);
+		return blend(n1, n2, weight);
+	}
+	TYPE_FUNC(blend)
 };
-*/

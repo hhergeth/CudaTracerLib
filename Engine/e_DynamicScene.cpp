@@ -35,10 +35,10 @@ struct matUpdater
 e_SceneInitData e_SceneInitData::CreateFor_S_SanMiguel(unsigned int a_SceneNodes, unsigned int a_Lights)
 {
 	int i = 4;
-	e_SceneInitData r = CreateForSpecificMesh(1200000*i, 1200000*i, 1200000*i, 1200000*i, 4096 * 5, a_Lights, a_SceneNodes);
+	e_SceneInitData r = CreateForSpecificMesh(1200000*i, 1200000*i, 1200000*i, 1200000*i, 4096 * 5, a_Lights, a_SceneNodes, a_SceneNodes / 2);
 	//e_SceneInitData r = CreateForSpecificMesh(7880512, 9359209, 2341126, 28077626, 4096 * 5, a_Lights, a_SceneNodes);//san miguel
 	//e_SceneInitData r = CreateForSpecificMesh(1,1,1,1,1,1,1);
-	//return CreateForSpecificMesh(100000, 100000, 100000, 1500000, 255, a_Lights);
+	return CreateForSpecificMesh(100000, 100000, 100000, 1500000, 255, a_Lights, a_SceneNodes, a_SceneNodes / 2);
 	//r.m_uSizeAnimStream = 16 * 1024 * 1024;
 	r.m_uSizeAnimStream = 1;
 	return r;
@@ -74,13 +74,13 @@ e_DynamicScene::e_DynamicScene(e_Sensor* C, e_SceneInitData a_Data, const char* 
 	m_pTexturePath = texPath;
 	int nodeC = 1 << 16, tCount = 1 << 16;
 	m_uModified = 1;
-	m_pAnimStream = LL<char>(a_Data.m_uSizeAnimStream + sizeof(Distribution2D<4096, 4096>));
+	m_pAnimStream = LL<char>(a_Data.m_uSizeAnimStream + (a_Data.m_bSupportEnvironmentMap ? sizeof(Distribution2D<4096, 4096>) : 0));
 	m_pTriDataStream = LL<e_TriangleData>(a_Data.m_uNumTriangles);
 	m_pTriIntStream = LL<e_TriIntersectorData>(a_Data.m_uNumInt);
 	m_pBVHStream = LL<e_BVHNodeData>(a_Data.m_uNumBvhNodes);
 	m_pBVHIndicesStream = LL<int>(a_Data.m_uNumBvhIndices);
 	m_pMaterialBuffer = LL<e_KernelMaterial>(a_Data.m_uNumMaterials);
-	m_pMeshBuffer = new e_CachedBuffer<e_Mesh, e_KernelMesh>(a_Data.m_uNumNodes, sizeof(e_AnimatedMesh));
+	m_pMeshBuffer = new e_CachedBuffer<e_Mesh, e_KernelMesh>(a_Data.m_uNumMeshes, sizeof(e_AnimatedMesh));
 	m_pNodeStream = LL<e_Node>(a_Data.m_uNumNodes);
 	m_pTextureBuffer = new e_CachedBuffer<e_MIPMap, e_KernelMIPMap>(a_Data.m_uNumTextures);
 	m_pLightStream = LL<e_KernelLight>(a_Data.m_uNumLights);
@@ -235,7 +235,9 @@ e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_MeshFile2)
 		m_pMeshBuffer->Invalidate(M);
 	}
 	e_StreamReference(e_Node) N = m_pNodeStream->malloc(1);
-	e_StreamReference(e_KernelMaterial) m2 = m_pMaterialBuffer->malloc(M->m_sMatInfo);
+	e_StreamReference(e_KernelMaterial) m2 = M->m_sMatInfo;
+	if(m_pMaterialBuffer->NumUsedElements() + M->m_sMatInfo.getLength() < m_pMaterialBuffer->getLength() - 1)
+		m2 = m_pMaterialBuffer->malloc(M->m_sMatInfo);
 	m2.Invalidate();
 	new(N.operator->()) e_Node(M.getIndex(), M.operator->(), strA.getPtr(), m2);
 	unsigned int li[MAX_AREALIGHT_NUM];
@@ -286,6 +288,14 @@ e_BufferReference<e_MIPMap, e_KernelMIPMap> e_DynamicScene::LoadTexture(const ch
 void e_DynamicScene::UnLoadTexture(e_BufferReference<e_MIPMap, e_KernelMIPMap> ref)
 {
 	//TODO
+}
+
+void e_DynamicScene::SetNodeTransform(const float4x4& mat, e_StreamReference(e_Node) n)
+{
+	m_uModified = 1;
+	n->setTransform(mat);
+	n.Invalidate();
+	recalculateAreaLights(n);
 }
 
 void e_DynamicScene::UpdateInvalidated()
@@ -341,7 +351,7 @@ e_KernelDynamicScene e_DynamicScene::getKernelSceneData(bool devicePointer)
 	r.m_sBox = m_pBVH->m_sBox;
 
 	unsigned int l = m_pLightStream->NumUsedElements();
-	if(l < 5)
+	if(l < 20)
 	{
 		float* vals = (float*)alloca(sizeof(float) * l);
 		for(unsigned int i = 0; i < l; i++)
@@ -376,8 +386,7 @@ unsigned int e_DynamicScene::getCudaBufferSize()
 					m_pMaterialBuffer->getSizeInBytes() +
 					m_pTextureBuffer->getSizeInBytes() + 
 					m_pMeshBuffer->getSizeInBytes() +
-					m_pNodeStream->getSizeInBytes() + 
-					m_pAnimStream->getSizeInBytes() + 
+					m_pNodeStream->getSizeInBytes() +
 					m_pBVH->getSizeInBytes() +
 					m_pLightStream->getSizeInBytes() +
 					m_pVolumes->getSizeInBytes();
@@ -568,7 +577,7 @@ e_StreamReference(e_KernelLight) e_DynamicScene::setEnvironementMap(const Spectr
 {
 	if(m_uEnvMapIndex != -1)
 	{
-
+		//TODO
 	}
 	e_BufferReference<e_MIPMap, e_KernelMIPMap> m = LoadTexture(file, true);
 	e_InfiniteLight l = e_InfiniteLight( m_pAnimStream, m, power, getBox(getNodes()));

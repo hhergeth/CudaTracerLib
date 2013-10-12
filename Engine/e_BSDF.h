@@ -61,12 +61,12 @@ public:
 		float p;
 		return sample(bRec, p, _sample);
 	}
-	CUDA_FUNC_IN Spectrum f(BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
+	CUDA_FUNC_IN Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
 	{
 		CALL_FUNC12(diffuse,roughdiffuse,dielectric,thindielectric,roughdielectric,conductor,roughconductor,plastic,roughplastic,phong,ward,hk, f(bRec, measure));
 		return 0.0f;
 	}
-	CUDA_FUNC_IN float pdf(BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
+	CUDA_FUNC_IN float pdf(const BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
 	{
 		CALL_FUNC12(diffuse,roughdiffuse,dielectric,thindielectric,roughdielectric,conductor,roughconductor,plastic,roughplastic,phong,ward,hk, pdf(bRec, measure));
 		return 0.0f;
@@ -93,13 +93,13 @@ public:
 
 #define BSDFALL_SIZE DMAX3(DMAX5(sizeof(diffuse), sizeof(roughdiffuse), sizeof(dielectric), sizeof(thindielectric), sizeof(roughdielectric)), \
 							DMAX6(sizeof(conductor), sizeof(roughconductor), sizeof(plastic), sizeof(phong), sizeof(ward), sizeof(hk)), \
-							DMAX2(sizeof(coating), sizeof(roughcoating)))
+							DMAX3(sizeof(coating), sizeof(roughcoating), sizeof(blend)))
 struct BSDFALL : public e_AggregateBaseType<BSDF, BSDFALL_SIZE>
 {
 public:
 	CUDA_FUNC_IN Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &_sample) const
 	{
-		CALL_FUNC14(diffuse,roughdiffuse,dielectric,thindielectric,roughdielectric,conductor,roughconductor,plastic,roughplastic,phong,ward,hk,coating,roughcoating, sample(bRec, pdf, _sample));
+		CALL_FUNC15(diffuse,roughdiffuse,dielectric,thindielectric,roughdielectric,conductor,roughconductor,plastic,roughplastic,phong,ward,hk,coating,roughcoating, blend, sample(bRec, pdf, _sample));
 		return 0.0f;
 	}
 	CUDA_FUNC_IN Spectrum sample(BSDFSamplingRecord &bRec, const float2 &_sample) const
@@ -107,24 +107,24 @@ public:
 		float p;
 		return sample(bRec, p, _sample);
 	}
-	CUDA_FUNC_IN Spectrum f(BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
+	CUDA_FUNC_IN Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
 	{
-		CALL_FUNC14(diffuse,roughdiffuse,dielectric,thindielectric,roughdielectric,conductor,roughconductor,plastic,roughplastic,phong,ward,hk,coating,roughcoating, f(bRec, measure));
+		CALL_FUNC15(diffuse,roughdiffuse,dielectric,thindielectric,roughdielectric,conductor,roughconductor,plastic,roughplastic,phong,ward,hk,coating,roughcoating, blend, f(bRec, measure));
 		return 0.0f;
 	}
-	CUDA_FUNC_IN float pdf(BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
+	CUDA_FUNC_IN float pdf(const BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
 	{
-		CALL_FUNC14(diffuse,roughdiffuse,dielectric,thindielectric,roughdielectric,conductor,roughconductor,plastic,roughplastic,phong,ward,hk,coating,roughcoating, pdf(bRec, measure));
+		CALL_FUNC15(diffuse,roughdiffuse,dielectric,thindielectric,roughdielectric,conductor,roughconductor,plastic,roughplastic,phong,ward,hk,coating,roughcoating, blend, pdf(bRec, measure));
 		return 0.0f;
 	}
 	CUDA_FUNC_IN Spectrum getDiffuseReflectance(BSDFSamplingRecord &bRec) const
 	{
-		CALL_FUNC12(diffuse,roughdiffuse,dielectric,thindielectric,roughdielectric,conductor,roughconductor,plastic,roughplastic,phong,ward,hk, getDiffuseReflectance(bRec));
+		CALL_FUNC15(diffuse,roughdiffuse,dielectric,thindielectric,roughdielectric,conductor,roughconductor,plastic,roughplastic,phong,ward,hk,coating,roughcoating, blend, getDiffuseReflectance(bRec));
 		return 0.0f;
 	}
 	template<typename T> void LoadTextures(T callback) const
 	{
-		CALL_FUNC14(diffuse,roughdiffuse,dielectric,thindielectric,roughdielectric,conductor,roughconductor,plastic,roughplastic,phong,ward,hk,coating,roughcoating, LoadTextures(callback));
+		CALL_FUNC15(diffuse,roughdiffuse,dielectric,thindielectric,roughdielectric,conductor,roughconductor,plastic,roughplastic,phong,ward,hk,coating,roughcoating, blend, LoadTextures(callback));
 	}
 	CUDA_FUNC_IN unsigned int getType() const
 	{

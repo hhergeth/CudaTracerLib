@@ -7,8 +7,6 @@
 
 #define EXT_TRI
 
-
-
 #ifdef EXT_TRI
 struct e_TriangleData
 {
@@ -74,24 +72,29 @@ struct e_TriangleData
 		float3 p = P[0] - P[2];
 		float3 q = P[1] - P[2];
 		float3 d = normalize(cross(p, q));
-		m_sHostData.Normal = TOUCHAR3(d);
+		m_sHostData.Normal = NormalizedFloat3ToUchar3(d);
 		m_sHostData.MatIndex = matIndex;
 	}
-	CUDA_FUNC_IN Frame lerpFrame(float2& bCoords)
+
+	CUDA_FUNC_IN Frame lerpFrame(const float2& bCoords, const float4x4& localToWorld, float3* ng = 0) const
 	{
-		unsigned int q = m_sDeviceData.Row0;
-		Frame sys;
-		sys.n = TOFLOAT3(q & 255, (q >> 8) & 255, (q >> 16) & 255);
-		return sys;
+		float3 n = Uchar3ToNormalizedFloat3(m_sHostData.Normal);
+		if(ng)
+			*ng = n;
+		return Frame(n);
 	}
-	CUDA_FUNC_IN unsigned int getMatIndex()
+	CUDA_FUNC_IN unsigned int getMatIndex(const unsigned int off) const
 	{
 		unsigned int v = m_sDeviceData.Row0;
-		return v >> 24;
+		return unsigned int(v >> 24) + off;
 	}
-	CUDA_FUNC_IN float2 lerpUV(float2& bCoords)
+	CUDA_FUNC_IN float2 lerpUV(const float2& bCoords) const
 	{
 		return make_float2(0);
+	}
+	CUDA_FUNC_IN void getNormalDerivative(const float2& bCoords, float3& dndu, float3& dndv) const
+	{
+
 	}
 };
 #endif

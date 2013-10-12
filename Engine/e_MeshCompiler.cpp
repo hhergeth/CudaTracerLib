@@ -41,6 +41,19 @@ void e_Md5Compiler::Compile(const char* a_InputFile, OutputStream& a_Out)
 	e_AnimatedMesh::CompileToBinary(a_InputFile, A, a_Out);
 }
 
+bool e_PlyCompiler::IsApplicable(const char* a_InputFile, e_MeshCompileType* out)
+{
+	bool b = FW::String(a_InputFile).toLower().endsWith(".ply");
+	if(out && b)
+		*out = e_MeshCompileType::Static;
+	return b;
+}
+
+void e_PlyCompiler::Compile(const char* a_InputFile, OutputStream& a_Out)
+{
+	compileply(a_InputFile, a_Out);
+}
+
 void e_MeshCompilerManager::Compile(const char* a_InputFile, OutputStream& a_Out, e_MeshCompileType* out)
 {
 	e_MeshCompileType t;

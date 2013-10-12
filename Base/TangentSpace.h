@@ -5,7 +5,7 @@ inline float3 getVec(const FW::VertexPNT& v)
 {
 	return make_float3(v.p.x, v.p.y, v.p.z);
 }
-inline void ComputeTangentSpace(FW::Mesh<FW::VertexPNT>* a_Mesh, float3* a_Normals, float3* a_Tangents, float3* a_BiTangents)
+inline void ComputeTangentSpace(FW::Mesh<FW::VertexPNT>* a_Mesh, float3* a_Normals, float3* a_Tangents, float3* a_BiTangents = 0)
 {
 	bool f = true;
 	for(int i = 0; i < MIN(12, a_Mesh->numVertices()); i++)
@@ -99,7 +99,8 @@ inline void ComputeTangentSpace(FW::Mesh<FW::VertexPNT>* a_Mesh, float3* a_Norma
         
 				// Calculate handedness
 				float h = (dot(cross(n, t), tan2[a]) < 0.0F) ? -1.0F : 1.0F;
-				a_BiTangents[a] = normalize(cross(a_Tangents[a], n) * h);
+				if(a_BiTangents)
+					a_BiTangents[a] = normalize(cross(a_Tangents[a], n) * h);
 			}
 		}
 	}

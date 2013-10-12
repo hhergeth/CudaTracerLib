@@ -105,7 +105,6 @@ public:
 		A->m_sTriInfo = a_Stream1->malloc(m_sTriInfo);
 		A->m_sNodeInfo = a_Stream2->malloc(m_sNodeInfo);
 		A->m_sIntInfo = a_Stream0->malloc(m_sIntInfo);
-		A->createKernelData();
 		A->m_pOffset = m_pOffset;
 		A->BASEHOST = BASEHOST;
 		A->BASEDEVICE = BASEDEVICE;

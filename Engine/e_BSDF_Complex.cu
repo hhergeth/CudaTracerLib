@@ -325,3 +325,42 @@ float roughcoating::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 
 	return result;
 }
+
+Spectrum blend::sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &_sample) const
+{
+	float weights[2];
+	weights[1] = clamp(this->weight.Evaluate(bRec.map).average(), 0.0f, 1.0f);
+	weights[0] = 1.0f - weights[1];
+	float2 sample = _sample;
+	unsigned int entry;
+	if (sample.x < weights[0])
+		{entry = 0; sample.x /= weights[0]; }
+	else { entry = 1; sample.x = (sample.x - weights[0]) / weights[1]; }
+	Spectrum result = bsdfs[entry].sample(bRec, pdf, sample);
+	if (result.isZero()) // sampling failed
+		return result;
+
+	result *= weights[entry] * pdf;
+	pdf *= weights[entry];
+
+	EMeasure measure = BSDF::getMeasure(bRec.sampledType);
+	for (size_t i=0; i<2; ++i) {
+		if (entry == i)
+			continue;
+		pdf += bsdfs[i].pdf(bRec, measure) * weights[i];
+		result += bsdfs[i].f(bRec, measure) * weights[i];
+	}
+	return result/pdf;
+}
+
+Spectrum blend::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
+{
+	float weight = clamp(this->weight.Evaluate(bRec.map).average(), 0.0f, 1.0f);
+	return bsdfs[0].f(bRec, measure) * (1-weight) + bsdfs[1].f(bRec, measure) * weight;
+}
+
+float blend::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
+{
+	float weight = clamp(this->weight.Evaluate(bRec.map).average(), 0.0f, 1.0f);
+	return bsdfs[0].pdf(bRec, measure) * (1-weight) + bsdfs[1].pdf(bRec, measure) * weight;
+}

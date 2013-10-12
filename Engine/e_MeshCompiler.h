@@ -4,6 +4,9 @@
 #include <vector>
 #include "e_AnimatedMesh.h"
 
+//ugly
+void compileply(const char* a_InputFile, OutputStream& a_Out);
+
 enum e_MeshCompileType
 {
 	Static,
@@ -31,6 +34,13 @@ public:
 	virtual bool IsApplicable(const char* a_InputFile, e_MeshCompileType* out);
 };
 
+class e_PlyCompiler : public e_MeshCompiler
+{
+public:
+	virtual void Compile(const char* a_InputFile, OutputStream& a_Out);
+	virtual bool IsApplicable(const char* a_InputFile, e_MeshCompileType* out);
+};
+
 class e_MeshCompilerManager
 {
 private:
@@ -40,6 +50,7 @@ public:
 	{
 		Register(new e_ObjCompiler());
 		Register(new e_Md5Compiler());
+		Register(new e_PlyCompiler());
 	}
 	~e_MeshCompilerManager()
 	{

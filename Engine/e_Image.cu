@@ -157,6 +157,8 @@ CUDA_GLOBAL void rtm_Copy(e_Image::Pixel* P, RGBCOL* T, unsigned int w, unsigned
 
 void e_Image::UpdateDisplay(float splatScale)
 {
+	if(!target)
+		return;
 	if(usedHostPixels)
 	{
 		cudaMemcpy(cudaPixels, hostPixels, sizeof(Pixel) * xResolution * yResolution, cudaMemcpyHostToDevice);

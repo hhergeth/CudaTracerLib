@@ -16,6 +16,29 @@ public:
 	virtual void Read(void* a_Out, unsigned int a_Size) = 0;
 	virtual unsigned long long getPos() = 0;
 	virtual unsigned long long getFileSize() = 0;
+	bool eof(){return getPos() == getFileSize();}
+	virtual void Move(int off) = 0;
+	template<typename T> bool get(T& c)
+	{
+		if(getPos() + sizeof(T) <= getFileSize())
+		{
+			Read(&c, sizeof(T));
+			return true;
+		}
+		else return false;
+	}
+	bool ReadTo(std::string& str, char end)
+	{
+		char ch;
+		str.clear();
+		while (get(ch) && ch != end)
+			str.push_back(ch);
+		return ch == end;
+	}
+	bool getline(std::string& str)
+	{
+		return ReadTo(str, '\n');
+	}
 public:
 	IInStream& operator>>(char& rhs)
 	{
@@ -157,9 +180,9 @@ public:
 			throw 1;
 		numBytesRead += a_Size;
 	}
-	void Move(unsigned int off)
+	void Move(int off)
 	{
-		DWORD r = SetFilePointer(H, off, 0, 1);
+		DWORD r = SetFilePointer(H, off, 0, FILE_CURRENT);
 		if(r == INVALID_SET_FILE_POINTER)
 			throw 1;
 	}

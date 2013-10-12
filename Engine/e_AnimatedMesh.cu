@@ -58,17 +58,13 @@ __global__ void g_ComputeTriangles(e_TmpVertex* a_Tmp, uint3* a_TriData, e_Trian
 	{
 		uint3 t = a_TriData[N];
 		float3 n = normalize(cross(a_Tmp[t.y].m_fPos - a_Tmp[t.x].m_fPos, a_Tmp[t.z].m_fPos - a_Tmp[t.x].m_fPos));
+#ifdef EXT_TRI
 		a_TriData2[N].m_sDeviceData.Row0.x = cnv(a_Tmp[t.x].m_fNormal) | cnv(a_Tmp[t.y].m_fNormal, 16);
 		a_TriData2[N].m_sDeviceData.Row0.y = cnv(a_Tmp[t.z].m_fNormal) | cnv(a_Tmp[t.x].m_fTangent, 16);
 		a_TriData2[N].m_sDeviceData.Row0.z = cnv(a_Tmp[t.y].m_fTangent) | cnv(a_Tmp[t.z].m_fTangent, 16);
-#define TOUINT3(v) ((unsigned char((v.x + 1) * 127.0f) << 16) | (unsigned char((v.y + 1) * 127.0f) << 8) | (unsigned char((v.z + 1) * 127.0f)))
-		//unsigned int n0 = TOUINT3(a_Tmp[t.x].m_fNormal), n1 = TOUINT3(a_Tmp[t.y].m_fNormal), n2 = TOUINT3(a_Tmp[t.z].m_fNormal);
-		//unsigned int t0 = TOUINT3(a_Tmp[t.x].m_fTangent), t1 = TOUINT3(a_Tmp[t.y].m_fTangent), t2 = TOUINT3(a_Tmp[t.z].m_fTangent);
-		//unsigned int b0 = TOUINT3(a_Tmp[t.x].m_fBiTangent), b1 = TOUINT3(a_Tmp[t.y].m_fBiTangent), b2 = TOUINT3(a_Tmp[t.z].m_fBiTangent);
-		//a_TriData2[N].m_sDeviceData.Row0 = make_uint4(n1 << 24 | n0, n2 << 16 | n1 >> 8, t0 << 8 | n2 >> 16, t2 << 24 | t1);
-		//a_TriData2[N].m_sDeviceData.Row1 = make_uint3(b0 << 8 | t2 >> 8, b1 << 8 | b0 >> 16, a_TriData2[N].getMatIndex(0) << 24 | b2);
-		//a_TriData2[N].NOR[0] = a_Tmp[t.x].m_fNormal; a_TriData2[N].NOR[1] = a_Tmp[t.y].m_fNormal; a_TriData2[N].NOR[2] = a_Tmp[t.z].m_fNormal;
-#undef TOUINT3
+#else
+		//a_TriData2[N].m_sDeviceData.Row0.
+#endif
 	}
 }
 

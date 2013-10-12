@@ -5,7 +5,7 @@
 #include "e_Material.h"
 #include "e_Buffer.h"
 
-#define MAX_AREALIGHT_NUM 32
+#define MAX_AREALIGHT_NUM 4
 
 struct e_KernelMesh
 {
@@ -14,7 +14,6 @@ struct e_KernelMesh
 	unsigned int m_uBVHTriangleOffset;
 	unsigned int m_uBVHIndicesOffset;
 	unsigned int m_uStdMaterialOffset;
-	unsigned int OFF[3];
 };
 
 struct e_TriIntersectorData
@@ -158,7 +157,6 @@ public:
 	e_StreamReference(int) m_sIndicesInfo;
 	e_MeshPartLight m_sLights[MAX_AREALIGHT_NUM];
 	unsigned int m_uUsedLights;
-	e_KernelMesh m_sData;
 public:
 	e_Mesh(InputStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<int>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4);
 	void Free(e_Stream<e_TriIntersectorData>& a_Stream0, e_Stream<e_TriangleData>& a_Stream1, e_Stream<e_BVHNodeData>& a_Stream2, e_Stream<int>& a_Stream3, e_Stream<e_KernelMaterial>& a_Stream4);
@@ -166,10 +164,7 @@ public:
 	static e_SceneInitData ParseBinary(const char* a_InputFile);
 	e_KernelMesh getKernelData()
 	{
-		return m_sData;
-	}
-	e_KernelMesh createKernelData()
-	{
+		e_KernelMesh m_sData;
 		m_sData.m_uBVHIndicesOffset = m_sIndicesInfo.getIndex();
 		m_sData.m_uBVHNodeOffset = m_sNodeInfo.getIndex() * sizeof(e_BVHNodeData) / sizeof(float4);
 		m_sData.m_uBVHTriangleOffset = m_sIntInfo.getIndex() * sizeof(e_TriIntersectorData) / sizeof(float4);

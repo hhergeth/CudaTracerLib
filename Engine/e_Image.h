@@ -5,6 +5,23 @@
 
 #define FILTER_TABLE_SIZE 16
 
+class e_DirectImage
+{
+private:
+	int w;
+	RGBCOL* target;
+public:
+	e_DirectImage(RGBCOL* buf, int _w)
+		: target(buf), w(_w)
+	{
+	}
+	CUDA_ONLY_FUNC void SetPixel(int x, int y, const Spectrum& s)
+	{
+		int i = y * w + x;
+		target[i] = s.toRGBCOL();
+	}
+};
+
 class e_Image
 {
 public:
@@ -62,6 +79,10 @@ public:
 				float _x = x + 0.5f, _y = y + 0.5f, s = FILTER_TABLE_SIZE;
 				filterTable[x][y] = filter.Evaluate(_x / s * w, y / s * h);
 			}
+	}
+	e_DirectImage CreateDirectImage()
+	{
+		return e_DirectImage(target, xResolution);
 	}
 private:
     // ImageFilm Private Data

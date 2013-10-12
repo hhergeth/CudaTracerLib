@@ -256,6 +256,47 @@ CUDA_FUNC_IN int getGlobalIdx_3D_3D()
 		CALL_TYPE(_TYPE13_, func) \
 	}
 
+#define CALL_FUNC15(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_,_TYPE6_,_TYPE7_,_TYPE8_,_TYPE9_,_TYPE10_,_TYPE11_,_TYPE12_,_TYPE13_,_TYPE14_, func) \
+	switch (type) \
+	{ \
+		CALL_TYPE(_TYPE0_, func) \
+		CALL_TYPE(_TYPE1_, func) \
+		CALL_TYPE(_TYPE2_, func) \
+		CALL_TYPE(_TYPE3_, func) \
+		CALL_TYPE(_TYPE4_, func) \
+		CALL_TYPE(_TYPE5_, func) \
+		CALL_TYPE(_TYPE6_, func) \
+		CALL_TYPE(_TYPE7_, func) \
+		CALL_TYPE(_TYPE8_, func) \
+		CALL_TYPE(_TYPE9_, func) \
+		CALL_TYPE(_TYPE10_, func) \
+		CALL_TYPE(_TYPE11_, func) \
+		CALL_TYPE(_TYPE12_, func) \
+		CALL_TYPE(_TYPE13_, func) \
+		CALL_TYPE(_TYPE14_, func) \
+	}
+
+#define CALL_FUNC16(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_,_TYPE6_,_TYPE7_,_TYPE8_,_TYPE9_,_TYPE10_,_TYPE11_,_TYPE12_,_TYPE13_,_TYPE14_,_TYPE15_, func) \
+	switch (type) \
+	{ \
+		CALL_TYPE(_TYPE0_, func) \
+		CALL_TYPE(_TYPE1_, func) \
+		CALL_TYPE(_TYPE2_, func) \
+		CALL_TYPE(_TYPE3_, func) \
+		CALL_TYPE(_TYPE4_, func) \
+		CALL_TYPE(_TYPE5_, func) \
+		CALL_TYPE(_TYPE6_, func) \
+		CALL_TYPE(_TYPE7_, func) \
+		CALL_TYPE(_TYPE8_, func) \
+		CALL_TYPE(_TYPE9_, func) \
+		CALL_TYPE(_TYPE10_, func) \
+		CALL_TYPE(_TYPE11_, func) \
+		CALL_TYPE(_TYPE12_, func) \
+		CALL_TYPE(_TYPE13_, func) \
+		CALL_TYPE(_TYPE15_, func) \
+		CALL_TYPE(_TYPE16_, func) \
+	}
+
 //thats not const correct
 
 struct e_BaseType

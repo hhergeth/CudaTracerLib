@@ -1,6 +1,7 @@
 #include "e_TriangleData.h"
 #include "e_Node.h"
 
+#ifdef EXT_TRI
 Frame e_TriangleData::lerpFrame(const float2& bCoords, const float4x4& localToWorld, float3* ng) const
 {
 	//float3 na = NOR[0], nb = NOR[1], nc = NOR[2];
@@ -59,6 +60,7 @@ void e_TriangleData::getNormalDerivative(const float2& bCoords, float3& dndu, fl
 	float3 dndv_ = (-duv2.x * dndu + duv1.x * dndv) * invDet;
 	dndu = dndu_; dndv = dndv_;
 }
+#endif
 
 bool TraceResult::hasHit() const
 {

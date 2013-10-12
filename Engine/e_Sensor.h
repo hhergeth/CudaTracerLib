@@ -33,6 +33,7 @@ public:
 	{
 		toWorld = w;
 		toWorldInverse = w.Inverse();
+		Update();
 	}
 	///_fov in degrees
 	virtual void SetFov(float _fov)

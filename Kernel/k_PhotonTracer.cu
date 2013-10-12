@@ -4,27 +4,42 @@
 
 CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_NextRayCounter3;
 
-CUDA_FUNC_IN void doWork(e_Image& g_Image, CudaRNG& rng)
+CUDA_FUNC_IN void handleEmission(const Spectrum& weight, const PositionSamplingRecord& pRec, e_Image& g_Image, CudaRNG& rng)
 {
-	Ray r;
-	const e_KernelLight* emitter;
-	//Spectrum Le = g_SceneData.sampleEmitterRay(r, emitter, rng.randomFloat2(), rng.randomFloat2());DirectSamplingRecord dRec;
-	PositionSamplingRecord pRec;
-	unsigned int i = threadId;
-	Spectrum Le = g_SceneData.sampleEmitterPosition(pRec, rng.randomFloat2());
-	emitter = (const e_KernelLight*)pRec.object;
-	if(Le.isZero())
-		return;
 	DirectSamplingRecord dRec(pRec.p, pRec.n, pRec.uv);
-	Spectrum imp = g_SceneData.sampleSensorDirect(dRec, rng.randomFloat2());
+	Spectrum value = weight * g_SceneData.sampleSensorDirect(dRec, rng.randomFloat2());
+	if (value.isZero())
+		return;
 	if(!g_SceneData.Occluded(Ray(dRec.ref, dRec.d), 0, dRec.dist))
 	{
-		Spectrum weight = emitter->evalDirection(DirectionSamplingRecord(dRec.d), pRec);
-		g_Image.AddSample(int(dRec.uv.x), int(dRec.uv.y), imp * Le * weight);
+		const e_KernelLight* emitter = (const e_KernelLight*)pRec.object;
+		value *= emitter->evalDirection(DirectionSamplingRecord(dRec.d), pRec);
+		g_Image.AddSample(int(dRec.uv.x), int(dRec.uv.y), value);
 	}
-	DirectionSamplingRecord dRec2;
-	Le *= emitter->sampleDirection(dRec2, pRec, rng.randomFloat2());
-	r = Ray(pRec.p, dRec2.d);
+}
+
+CUDA_FUNC_IN void handleSurfaceInteraction(const Spectrum& weight, BSDFSamplingRecord& bRec, const TraceResult r2, e_Image& g_Image, CudaRNG& rng)
+{
+	DirectSamplingRecord dRec(bRec.map.P, bRec.map.sys.n, bRec.map.uv);
+	Spectrum value = g_SceneData.sampleSensorDirect(dRec, rng.randomFloat2());
+	if(!g_SceneData.Occluded(Ray(dRec.ref, dRec.d), 0, dRec.dist))
+	{
+		bRec.wo = bRec.map.sys.toLocal(dRec.d);
+		value *= r2.getMat().bsdf.f(bRec);
+		g_Image.AddSample(int(dRec.uv.x), int(dRec.uv.y),  value);
+	}
+}
+
+CUDA_FUNC_IN void doWork(e_Image& g_Image, CudaRNG& rng)
+{
+	PositionSamplingRecord pRec;
+	Spectrum power = g_SceneData.sampleEmitterPosition(pRec, rng.randomFloat2()), throughput = Spectrum(1.0f);
+
+	handleEmission(power, pRec, g_Image, rng);
+
+	DirectionSamplingRecord dRec;
+	power *= ((const e_KernelLight*)pRec.object)->sampleDirection(dRec, pRec, rng.randomFloat2());
+	Ray r(pRec.p, dRec.d);
 	TraceResult r2;
 	r2.Init(true);
 	int depth = -1;
@@ -33,29 +48,22 @@ CUDA_FUNC_IN void doWork(e_Image& g_Image, CudaRNG& rng)
 	{
 		r2.getBsdfSample(r, rng, &bRec);
 		bRec.mode = EImportance;
-		dRec = DirectSamplingRecord(bRec.map.P, bRec.map.sys.n, bRec.map.uv);
-		imp = g_SceneData.sampleSensorDirect(dRec, rng.randomFloat2());
-		if(!g_SceneData.Occluded(Ray(dRec.ref, dRec.d), 0, dRec.dist))
-		{
-			bRec.wo = bRec.map.sys.toLocal(dRec.d);
-			Spectrum f = r2.getMat().bsdf.f(bRec);
-			g_Image.AddSample(int(dRec.uv.x), int(dRec.uv.y),  Le * f * imp );
-		}
 		
-		Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
+		handleSurfaceInteraction(power * throughput, bRec, r2, g_Image, rng);
+		
+		Spectrum bsdfWeight = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
 		r = Ray(bRec.map.P, bRec.getOutgoing());
 		r2.Init();
-		if(!bRec.sampledType)
+		if(bsdfWeight.isZero())
 			break;
-		Spectrum ac = Le * f;
+		throughput *= bsdfWeight;
 		if(depth > 5)
 		{
-			float prob = MIN(1.0f, ac.max() / Le.max());
-			if(rng.randomFloat() > prob)
+			float q = MIN(throughput.max(), 0.95f);
+			if(rng.randomFloat() >= q)
 				break;
-			Le = ac / prob;
+			throughput /= q;
 		}
-		else Le = ac;
 	}
 }
 

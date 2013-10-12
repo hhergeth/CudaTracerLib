@@ -49,8 +49,6 @@ e_Mesh::e_Mesh(InputStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_S
 	m_sIndicesInfo = a_Stream3->malloc(m_uIndicesSize / 4);
 	a_In.Read(m_sIndicesInfo(0), m_sIndicesInfo.getSizeInBytes());
 	m_sIndicesInfo.Invalidate();
-	
-	createKernelData();
 }
 
 e_SceneInitData e_Mesh::ParseBinary(const char* a_InputFile)
@@ -83,7 +81,7 @@ e_SceneInitData e_Mesh::ParseBinary(const char* a_InputFile)
 	char msg[2048];
 	sprintf(msg, "return CreateForSpecificMesh(%d, %d, %d, %d, 255, a_Lights);\n", m_uTriangleCount, (int)ceilf((float)m_uIntSize / 48.0f), m_uNodeSize / 64, m_uIndicesSize / 4);
 	OutputDebugString(msg);
-	return e_SceneInitData::CreateForSpecificMesh(m_uTriangleCount, (int)ceilf((float)m_uIntSize / 48.0f), m_uNodeSize / 64, m_uIndicesSize / 4, 255, 128);
+	return e_SceneInitData::CreateForSpecificMesh(m_uTriangleCount, (int)ceilf((float)m_uIntSize / 48.0f), m_uNodeSize / 64, m_uIndicesSize / 4, 255, 16, 16, 8);
 }
 
 void e_Mesh::Free(e_Stream<e_TriIntersectorData>& a_Stream0, e_Stream<e_TriangleData>& a_Stream1, e_Stream<e_BVHNodeData>& a_Stream2, e_Stream<int>& a_Stream3, e_Stream<e_KernelMaterial>& a_Stream4)
@@ -221,10 +219,11 @@ void e_Mesh::CompileObjToBinary(const char* a_InputFile, OutputStream& a_Out)
 	a_Out.Write(&matData[0], sizeof(e_KernelMaterial) * (unsigned int)matData.size());
 	TmpOutStream to(&a_Out);
 	ConstructBVH2(MB, to);
-
+#ifdef EXT_TRI
 	delete [] v_Normals;
 	delete [] v_Tangents;
 	delete [] v_BiTangents;
+#endif
 	delete [] triData;
 	delete MB;
 }
