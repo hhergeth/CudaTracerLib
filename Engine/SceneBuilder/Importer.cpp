@@ -36,9 +36,13 @@ void exportBVH(char* Input, char* Output)
     FW::printf("Done.\n\n");
 }
 
-
+#include "stdafx.h"
+#include <iostream>
+#include "..\..\Base\Timer.h"
 void ConstructBVH2(FW::MeshBase* M, FW::OutputStream& O)
 {
+	cTimer T;
+	T.StartTimer();
 	FW::BVH::BuildParams m_buildParams;
 	FW::BVH::Stats stats;
 	FW::Scene* m_scene = new FW::Scene(*M);
@@ -46,4 +50,6 @@ void ConstructBVH2(FW::MeshBase* M, FW::OutputStream& O)
     stats.print();
 	FW::CudaBVH* m_bvh = new FW::CudaBVH(bvh, BVHLayout_Compact2);
 	m_bvh->serialize(O);
+	double tSec = T.EndTimer();
+	std::cout << "BVH Construction of " << M->numTriangles() << " objects took " << tSec << " seconds\n";
 }

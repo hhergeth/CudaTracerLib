@@ -585,3 +585,13 @@ e_StreamReference(e_KernelLight) e_DynamicScene::setEnvironementMap(const Spectr
 	m_uEnvMapIndex = r.getIndex();
 	return r;
 }
+
+e_SceneBVH* e_DynamicScene::getSceneBVH()
+{
+	if(m_uModified)
+	{
+		m_uModified = 0;
+		m_pBVH->Build(m_pNodeStream->UsedElements(), m_pMeshBuffer->UsedElements());
+	}
+	return m_pBVH;
+}

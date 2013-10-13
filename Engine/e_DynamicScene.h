@@ -92,10 +92,7 @@ public:
 	{
 		return m_pMaterialBuffer->UsedElements();
 	}
-	e_SceneBVH* getSceneBVH()
-	{
-		return m_pBVH;
-	}
+	e_SceneBVH* getSceneBVH();
 	unsigned int getCudaBufferSize();
 	unsigned int getTriangleCount()
 	{
