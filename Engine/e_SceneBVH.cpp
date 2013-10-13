@@ -162,7 +162,7 @@ struct buffer
 private:
 	struct entry
 	{
-		BBoxTmp* item;
+		BBoxTmp item;
 		int indices[3];//indices into sortedBuffers
 	};
 	int* sortedBuffers[3];//indices into entries
@@ -171,6 +171,8 @@ public:
 	int N;
 private:
 	buffer(){}
+	int initialN;
+	std::vector<BBoxTmp> refAdds;//we have to keep the additional values
 public:
 	buffer(int n, BBoxTmp* work)
 	{
@@ -187,7 +189,7 @@ public:
 				return (ca < cb || (ca == cb && left._pNode < right._pNode));
 			}
 		};
-		N = n;
+		initialN = N = n;
 		for(int i = 0; i < 3; i++)
 		{
 			sortedBuffers[i] = new int[n];
@@ -199,7 +201,7 @@ public:
 		entries = new entry[n];
 		for(int i = 0; i < N; i++)
 		{
-			entries[sortedBuffers[0][i]].item = work + i;
+			entries[sortedBuffers[0][i]].item = work[i];
 			//we are iterating over SLOTS not objects
 			for(int j = 0; j < 3; j++)
 				entries[sortedBuffers[j][i]].indices[j] = i;
@@ -214,7 +216,8 @@ public:
 	}
 
 	bool validate()
-	{return true;
+	{
+		//return true;
 		for(int i = 0; i < N; i++)
 		{
 			for(int j = 0; j < 3; j++)
@@ -225,10 +228,11 @@ public:
 
 	buffer part(int dim, int start, int n)
 	{
-		validate();
 		buffer b;
 		b.N = n;
 		b.entries = new entry[n];
+		//b.initialN = n;
+		//b.initialValues = 
 		for(int i = 0; i < 3; i++)
 		{
 			b.sortedBuffers[i] = new int[n];
@@ -253,16 +257,62 @@ public:
 			if(c != n)
 				throw 1;
 		}
-		b.validate();
 		return b;
 	}
+
+	void appendAndRebuild(std::vector<BBoxTmp>& refs)
+	{
+		struct cmp
+		{
+			int dim;
+			buffer* b;
+			cmp(int i,buffer* a) : dim(i),b(a){}
+			bool operator()(int l, int r) const
+			{
+				BBoxTmp& left = l < b->initialN ? *b->operator[](l) : b->refAdds[l - b->initialN], 
+					   & right = r < b->initialN ? *b->operator[](l) : b->refAdds[r - b->initialN];
+				float ca = left.box.b.m128_f32[dim] + left.box.t.m128_f32[dim];
+				float cb = right.box.b.m128_f32[dim] + right.box.t.m128_f32[dim];
+				return (ca < cb || (ca == cb && left._pNode < right._pNode));
+			}
+		};
+		refAdds.insert(refAdds.end(), refs.begin(), refs.end());
+		Free();
+		N += refs.size();
+		entries = new entry[N];
+		for(int i = 0; i < initialN; i++)
+			entries[i].item = *operator[](i);
+		for(int j = 0; j < refAdds.size(); j++)
+			entries[initialN + j].item = refAdds[j];
+		for(int i = 0; i < 3; i++)
+		{
+			sortedBuffers[i] = new int[N];
+			for(int j = 0; j < initialN; j++)
+				sortedBuffers[i][j] = j;
+			int c = initialN;
+			for(int j = 0; j < refAdds.size(); j++)
+				sortedBuffers[i][c] = c++;
+			std::make_heap(sortedBuffers[i], sortedBuffers[i] + N, cmp(i, this));
+			std::sort_heap(sortedBuffers[i], sortedBuffers[i] + N, cmp(i, this));
+		}
+		for(int i = 0; i < N; i++)
+			for(int j = 0; j < 3; j++)
+				entries[sortedBuffers[j][i]].indices[j] = i;
+		validate();
+	}
+
 	BBoxTmp* operator()(int dim, int i)
 	{
-		return entries[sortedBuffers[dim][i]].item;
+		return &entries[sortedBuffers[dim][i]].item;
+	}
+	BBoxTmp* operator[](int i)
+	{
+		return operator()(0, i);
 	}
 };
 
-static __m128_box* m_rightBounds = new __m128_box[MAX_OBJECT_COUNT]; 
+static __m128_box* m_rightBounds = new __m128_box[MAX_OBJECT_COUNT];
+static SpatialBin* m_bins[3] = {new SpatialBin[NumSpatialBins],new SpatialBin[NumSpatialBins],new SpatialBin[NumSpatialBins]};
 ObjectSplit findObjectSplit(buffer& buf, Platform& P, float nodeSAH)
 {
 	int numRef = buf.N;
@@ -295,11 +345,202 @@ ObjectSplit findObjectSplit(buffer& buf, Platform& P, float nodeSAH)
 	}
 	return split;
 }
+__m128 clampToBin(__m128& v)
+{
+	return _mm_min_ps (_mm_max_ps(v, psZero), psBinClamp);
+}
+void splitReference(BBoxTmp& left, BBoxTmp& right, const BBoxTmp* ref, int dim, float pos)
+{
+	left._pNode = right._pNode = ref->_pNode;
+    left.box = right.box = AABB();
+	if(ref->box.b.m128_f32[dim] < pos && pos < ref->box.t.m128_f32[dim])
+	{
+
+	}
+	left.box.t.m128_f32[dim] = pos;
+	right.box.b.m128_f32[dim] = pos;
+	left.box.Intersect(ref->box);
+	right.box.Intersect(ref->box);
+}
+SpatialSplit findSpatialSplit(buffer& buf, __m128_box& box, Platform& P, float nodeSAH)
+{
+	__m128 origin = box.b;
+	__m128 binSize = _mm_mul_ps(_mm_sub_ps(box.t, origin), binScale);
+    __m128 invBinSize = _mm_mul_ps(_mm_set_ps1(1.0f), binSize);
+
+    for (int dim = 0; dim < 3; dim++)
+    {
+        for (int i = 0; i < NumSpatialBins; i++)
+        {
+            SpatialBin& bin = m_bins[dim][i];
+			bin.bounds = __m128_box::Identity();
+            bin.enter = 0;
+            bin.exit = 0;
+        }
+    }
+
+	for (int refIdx = 0; refIdx < buf.N; refIdx++)
+    {
+		__m128 firstBin = clampToBin(_mm_mul_ps(_mm_sub_ps(buf(0, refIdx)->box.b, origin), invBinSize));
+		__m128 lastBin = clampToBin(_mm_mul_ps(_mm_sub_ps(buf(0, refIdx)->box.t, origin), invBinSize));
+
+        for (int dim = 0; dim < 3; dim++)
+        {
+            BBoxTmp currRef = *buf(0, refIdx);
+			for (int i = firstBin.m128_f32[dim]; i < lastBin.m128_f32[dim]; i++)
+            {
+                BBoxTmp leftRef, rightRef;
+				splitReference(leftRef, rightRef, &currRef, dim, origin.m128_f32[dim] + binSize.m128_f32[dim] * (float)(i + 1));
+				m_bins[dim][i].bounds.Enlarge(leftRef.box);
+                currRef = rightRef;
+            }
+			m_bins[dim][(int)lastBin.m128_f32[dim]].bounds.Enlarge(currRef.box);
+            m_bins[dim][(int)firstBin.m128_f32[dim]].enter++;
+            m_bins[dim][(int)lastBin.m128_f32[dim]].exit++;
+        }
+    }
+
+    SpatialSplit split;
+    for (int dim = 0; dim < 3; dim++)
+    {
+        // Sweep right to left and determine bounds.
+
+		__m128_box rightBounds = __m128_box::Identity();
+        for (int i = NumSpatialBins - 1; i > 0; i--)
+        {
+			rightBounds.Enlarge(m_bins[dim][i].bounds);
+            m_rightBounds[i - 1] = rightBounds;
+        }
+
+        // Sweep left to right and select lowest SAH.
+
+        __m128_box leftBounds = __m128_box::Identity();
+        int leftNum = 0;
+		int rightNum = buf.N;
+
+        for (int i = 1; i < NumSpatialBins; i++)
+        {
+            leftBounds.Enlarge(m_bins[dim][i - 1].bounds);
+            leftNum += m_bins[dim][i - 1].enter;
+            rightNum -= m_bins[dim][i - 1].exit;
+
+            float sah = nodeSAH + leftBounds.area() * P.getTriangleCost(leftNum) + m_rightBounds[i - 1].area() * P.getTriangleCost(rightNum);
+            if (sah < split.sah)
+            {
+                split.sah = sah;
+                split.dim = dim;
+				split.pos = origin.m128_f32[dim] + binSize.m128_f32[dim] * (float)i;
+            }
+        }
+    }
+    return split;
+}
+struct NodeSpec
+{
+        int                 numRef;
+		__m128_box          bounds;
+
+        NodeSpec(void) : numRef(0) {}
+};
 int createLeaf(buffer& buf)
 {
 	return ~buf(0, 0)->_pNode;
 }
-int performObjectSplit(buffer& buf, nativelist<e_BVHNodeData>& a_Nodes, __m128_box& box, Platform& P, int level=0)
+void performObjectSplit(buffer& buf, NodeSpec& left, NodeSpec& right, ObjectSplit& split, Platform& P)
+{
+    left.numRef = split.numLeft;
+    left.bounds = split.leftBounds;
+	right.numRef = buf.N - split.numLeft;
+    right.bounds = split.rightBounds;
+}
+void performSpatialSplit(buffer& buf, NodeSpec& left, NodeSpec& right, SpatialSplit& split, Platform& P)
+{
+	int leftStart = 0;
+    int leftEnd = leftStart;
+	int rightStart = buf.N;
+	left.bounds = __m128_box::Identity();
+	right.bounds = __m128_box::Identity();
+	for (int i = leftEnd; i < rightStart; i++)
+    {
+        // Entirely on the left-hand side?
+
+		if (buf[i]->box.t.m128_f32[split.dim] <= split.pos)
+        {
+			left.bounds.Enlarge(buf[i]->box);
+            swapk(buf[i], buf[leftEnd++]);
+        }
+
+        // Entirely on the right-hand side?
+
+		else if (buf[i]->box.b.m128_f32[split.dim] >= split.pos)
+        {
+			right.bounds.Enlarge(buf[i]->box);
+            swapk(buf[i--], buf[--rightStart]);
+        }
+    }
+
+	std::vector<BBoxTmp> refs;
+	refs.reserve(MAX(buf.N / 10, 128));
+	while (leftEnd < rightStart)
+    {
+        // Split reference.
+
+        BBoxTmp lref, rref;
+        splitReference(lref, rref, buf[leftEnd], split.dim, split.pos);
+
+        // Compute SAH for duplicate/unsplit candidates.
+
+        __m128_box lub = left.bounds;  // Unsplit to left:     new left-hand bounds.
+        __m128_box rub = right.bounds; // Unsplit to right:    new right-hand bounds.
+        __m128_box ldb = left.bounds;  // Duplicate:           new left-hand bounds.
+        __m128_box rdb = right.bounds; // Duplicate:           new right-hand bounds.
+        lub.Enlarge(buf[leftEnd]->box);
+        rub.Enlarge(buf[leftEnd]->box);
+        ldb.Enlarge(lref.box);
+        rdb.Enlarge(rref.box);
+
+        float lac = P.getTriangleCost(leftEnd - leftStart);
+		float rac = P.getTriangleCost(buf.N - rightStart);
+        float lbc = P.getTriangleCost(leftEnd - leftStart + 1);
+        float rbc = P.getTriangleCost(buf.N - rightStart + 1);
+		
+        float unsplitLeftSAH = lub.area() * lbc + right.bounds.area() * rac;
+		float unsplitRightSAH = left.bounds.area() * lac + rub.area() * rbc;
+        float duplicateSAH = ldb.area() * lbc + rdb.area() * rbc;
+        float minSAH = MIN(unsplitLeftSAH, unsplitRightSAH, duplicateSAH);
+
+        // Unsplit to left?
+
+        if (minSAH == unsplitLeftSAH)
+        {
+            left.bounds = lub;
+            leftEnd++;
+        }
+
+        // Unsplit to right?
+
+        else if (minSAH == unsplitRightSAH)
+        {
+            right.bounds = rub;
+            swapk(buf[leftEnd], buf[--rightStart]);
+        }
+
+        // Duplicate?
+
+        else
+        {
+            left.bounds = ldb;
+            right.bounds = rdb;
+            *buf[leftEnd++] = lref;
+			refs.push_back(rref);
+        }
+    }
+	buf.appendAndRebuild(refs);
+
+    left.numRef = leftEnd - leftStart;
+	right.numRef = buf.N - rightStart;
+}
+int buildNode(buffer& buf, nativelist<e_BVHNodeData>& a_Nodes, __m128_box& box, Platform& P, float m_minOverlap, int level=0)
 {
 	if (buf.N <= P.getMinLeafSize() || level >= MaxDepth)
 		return createLeaf(buf);
@@ -307,15 +548,36 @@ int performObjectSplit(buffer& buf, nativelist<e_BVHNodeData>& a_Nodes, __m128_b
 	float leafSAH = area * P.getTriangleCost(buf.N);
     float nodeSAH = area * P.getNodeCost(2);
     ObjectSplit object = findObjectSplit(buf, P, nodeSAH);
-    if (nodeSAH == leafSAH && buf.N <= P.getMaxLeafSize())
+	SpatialSplit spatial;
+    if (level < MaxSpatialDepth)
+    {
+        __m128_box overlap = object.leftBounds;
+        overlap.Intersect(object.rightBounds);
+        if (overlap.area() >= m_minOverlap)
+            spatial = findSpatialSplit(buf, box, P, nodeSAH);
+    }
+	float minSAH = MIN(leafSAH, object.sah, spatial.sah);
+	if (minSAH == leafSAH && buf.N <= P.getMaxLeafSize())
         return createLeaf(buf);
-	buffer leftB = buf.part(object.sortDim, 0, object.numLeft);
-	buffer rightB = buf.part(object.sortDim, object.numLeft, buf.N - object.numLeft);
+    NodeSpec left, right;
+	int dim;
+    if (minSAH == spatial.sah)
+	{
+        performSpatialSplit(buf, left, right, spatial, P);
+		dim = spatial.dim;
+	}
+    if (!left.numRef || !right.numRef)
+	{
+        performObjectSplit(buf, left, right, object, P);
+		dim = object.sortDim;
+	}
+	buffer leftB = buf.part(dim, 0, left.numRef);
+	buffer rightB = buf.part(dim, left.numRef, right.numRef);
 	e_BVHNodeData* n = a_Nodes.Add();
-	n->setLeft(object.leftBounds.ToBox());
-	n->setRight(object.rightBounds.ToBox());
-	int ld = performObjectSplit(leftB, a_Nodes, object.leftBounds, P, level + 1);
-	int rd = performObjectSplit(rightB, a_Nodes, object.rightBounds, P, level + 1);
+	n->setLeft(left.bounds.ToBox());
+	n->setRight(right.bounds.ToBox());
+	int ld = buildNode(leftB, a_Nodes, left.bounds, P, level + 1);
+	int rd = buildNode(rightB, a_Nodes, right.bounds, P, level + 1);
 	n->setChildren(make_int2(ld, rd));
 	leftB.Free();
 	rightB.Free();
@@ -417,7 +679,9 @@ void e_SceneBVH::Build(e_StreamReference(e_Node) a_Nodes, e_BufferReference<e_Me
 		cTimer T;
 		T.StartTimer();
 		//startNode = RecurseNative(a_Nodes.getLength(), data, nativelist<e_BVHNodeData>(nds.operator->()), bottom, top);
-		startNode = performObjectSplit(buffer(a_Nodes.getLength(), data), nativelist<e_BVHNodeData>(nds.operator->()), __m128_box(bottom, top), Platform(1));
+		Platform P(1);
+		float mo = __m128_box(bottom, top).area() * 1.0e-5f;
+		startNode = buildNode(buffer(a_Nodes.getLength(), data), nativelist<e_BVHNodeData>(nds.operator->()),  __m128_box(bottom, top), P, mo);
 		double tSec = T.EndTimer();
 		std::cout << "BVH Construction of " << a_Nodes.getLength() << " objects took " << tSec << " seconds\n";
 	}
