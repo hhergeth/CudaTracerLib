@@ -17,6 +17,18 @@ texture<float4, 1> t_SceneNodes;
 texture<float4, 1> t_NodeTransforms;
 texture<float4, 1> t_NodeInvTransforms;
 
+CUDA_FUNC_IN void loadInvModl(int i, float4x4* o)
+{
+#ifdef ISCUDA
+	o->X = tex1Dfetch(t_NodeInvTransforms, i * 4 + 0);
+	o->Y = tex1Dfetch(t_NodeInvTransforms, i * 4 + 1);
+	o->Z = tex1Dfetch(t_NodeInvTransforms, i * 4 + 2);
+	o->W = tex1Dfetch(t_NodeInvTransforms, i * 4 + 3);
+#else
+	*o = g_SceneData.m_sSceneBVH.m_pInvNodeTransforms[i];
+#endif
+}
+
 bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResult* a_Result, const e_Node* N, int lastIndex)
 {
 	const bool USE_ALPHA = true;
@@ -266,7 +278,8 @@ bool k_TraceRay(const float3& dir, const float3& ori, TraceResult* a_Result)
 			int node = ~nodeAddrOuter;
 			e_Node* N = g_SceneData.m_sNodeData.Data + node;
 			//transform a_Result->m_fDist to local system
-			float4x4 modl = N->getInvWorldMatrix();
+			float4x4 modl;
+			loadInvModl(node, &modl);
 			float3 d = modl.TransformNormal(dir), o = modl.TransformNormal(ori) + modl.Translation();
 			float3 scale = modl.Scale();
 			float scalef = length(d / scale);
@@ -539,7 +552,8 @@ __global__ void intersectKernel(int numRays, void* a_RayBuffer, TraceResult* a_R
 				e_Node* N = g_SceneData.m_sNodeData.Data + (~leafAddr);
 				if(terminated)
 				{
-					float4x4 modl = N->getInvWorldMatrix();
+					float4x4 modl;
+					loadInvModl(~leafAddr, &modl);
 					float3 d = modl.TransformNormal(make_float3(dirx,diry,dirz)), o = modl.TransformNormal(make_float3(origx,origy,origz)) + modl.Translation();
 					float3 scale = modl.Scale();
 					lscalef = length(d / scale);

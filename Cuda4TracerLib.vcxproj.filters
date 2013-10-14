@@ -253,6 +253,9 @@
     <ClInclude Include="Kernel\k_FastTracer.h">
       <Filter>Kernel</Filter>
     </ClInclude>
+    <ClInclude Include="Base\BVHBuilder.h">
+      <Filter>Base</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\e_AnimatedMesh.cpp">
@@ -327,6 +330,9 @@
     </ClCompile>
     <ClCompile Include="Engine\SceneBuilder\PlyParser.cpp">
       <Filter>Engine\SceneBuilder</Filter>
+    </ClCompile>
+    <ClCompile Include="Base\BVHBuilder.cpp">
+      <Filter>Base</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

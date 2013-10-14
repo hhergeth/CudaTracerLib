@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Base\BVHBuilder.h" />
     <ClInclude Include="Base\CudaRandom.h" />
     <ClInclude Include="Base\FileStream.h" />
     <ClInclude Include="Base\FrameworkInterop.h" />
@@ -94,6 +95,7 @@
     <ClInclude Include="StdAfx.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Base\BVHBuilder.cpp" />
     <ClCompile Include="Engine\e_AnimatedMesh.cpp" />
     <ClCompile Include="Engine\e_Core.cpp" />
     <ClCompile Include="Engine\e_DynamicScene.cpp" />
@@ -194,7 +196,7 @@
     <OutDir>Build\$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LinkIncremental>true</LinkIncremental>
+    <LinkIncremental>false</LinkIncremental>
     <IncludePath>$(ProjectDir);C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs;C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs\gpu-ray-traversal\src\framework;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs;C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs\gpu-ray-traversal\build\$(Platform)_$(Configuration)\framework;$(LibraryPath)</LibraryPath>
     <IntDir>Build\$(Platform)\$(Configuration)\</IntDir>
@@ -209,6 +211,7 @@
       <MinimalRebuild>false</MinimalRebuild>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <ShowIncludes>false</ShowIncludes>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -242,6 +245,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <MinimalRebuild>false</MinimalRebuild>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <ShowIncludes>false</ShowIncludes>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>

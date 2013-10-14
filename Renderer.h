@@ -247,7 +247,7 @@ public:
 	}
 	bool HandleDown(e_StreamReference(e_Node) N, e_DynamicScene* S, e_Sensor* C, int2 p, int2 s)
 	{
-		float4x4 m = N->getWorldMatrix(), m2 = N->getInvWorldMatrix();
+		float4x4 m = N->getWorldMatrix(), m2 = N->getWorldMatrix().Inverse();
 		Ray r = C->GenRay(p.x,p.y);
 		float3 o = m.Translation(), d = o;
 		float d_s[3] = { inter(m.Forward(), r, o), inter(m.Right(), r, o), inter(m.Up(), r, o)};

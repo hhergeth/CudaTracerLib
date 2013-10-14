@@ -189,7 +189,7 @@ public:
 		}
 		m_sInvalidated.clear();
 	}
-	unsigned int getLength()
+	unsigned int getLength() const
 	{
 		return m_uLength;
 	}
@@ -199,7 +199,7 @@ public:
 			BAD_EXCEPTION("Invalid index of %d, length is %d", i, m_uLength)
 		return e_BufferReference<H, D>(this, i, l);
 	}
-	unsigned int NumUsedElements()
+	unsigned int NumUsedElements() const
 	{
 		return m_uPos;
 	}
@@ -207,11 +207,11 @@ public:
 	{
 		return e_BufferReference<H, D>(this, 0, m_uLength - m_uPos);
 	}
-	unsigned int getSizeInBytes()
+	unsigned int getSizeInBytes() const
 	{
 		return m_uLength * sizeof(D);
 	}
-	e_KernelBuffer<D> getKernelData(bool devicePointer = true)
+	e_KernelBuffer<D> getKernelData(bool devicePointer = true) const
 	{
 		e_KernelBuffer<D> r;
 		r.Data = devicePointer ? device : deviceMapped;
@@ -219,19 +219,19 @@ public:
 		r.UsedCount = m_uPos;
 		return r;
 	}
-	e_BufferReference<H, D> translate(const H* val)
+	e_BufferReference<H, D> translate(const H* val) const
 	{
 		unsigned long long t0 = ((unsigned long long)val - (unsigned long long)host) / sizeof(H), t1 = ((unsigned long long)val - (unsigned long long)device) / sizeof(D);
 		unsigned int i = t0 < m_uLength ? t0 : t1;
 		return e_BufferReference<H, D>(this, i, 1);
 	}
-	e_BufferReference<H, D> translate(const D* val)
+	e_BufferReference<H, D> translate(const D* val) const
 	{
 		unsigned long long t0 = ((unsigned long long)val - (unsigned long long)host) / sizeof(H), t1 = ((unsigned long long)val - (unsigned long long)device) / sizeof(D);
 		unsigned int i = t0 < m_uLength ? t0 : t1;
 		return e_BufferReference<H, D>(this, i, 1);
 	}
-	D* getDeviceMapped(int i)
+	D* getDeviceMapped(int i) const
 	{
 		return deviceMapped + i;
 	}
@@ -255,15 +255,15 @@ public:
 		m_uLength = c;
 		m_pStream = s;
 	}
-	unsigned int getIndex()
+	unsigned int getIndex() const
 	{
 		return m_uIndex;
 	}
-	unsigned int getLength()
+	unsigned int getLength() const
 	{
 		return m_uLength;
 	}
-	unsigned int getSizeInBytes()
+	unsigned int getSizeInBytes() const
 	{
 		return m_uLength * sizeof(H);
 	}
@@ -271,7 +271,7 @@ public:
 	{
 		m_pStream->Invalidate(*this);
 	}
-	e_BufferReference<H, D> operator()(unsigned int i = 0)
+	e_BufferReference<H, D> operator()(unsigned int i = 0) const
 	{
 		return e_BufferReference<H, D>(m_pStream, m_uIndex + i, 1);
 	}
@@ -300,11 +300,11 @@ public:
 	{
 		return atH(m_uIndex);
 	}
-	D* getDevice()
+	D* getDevice() const
 	{
 		return atD(m_uIndex);
 	}
-	template<typename U> U* operator()(unsigned int i = 0)
+	template<typename U> U* operator()(unsigned int i = 0) const
 	{
 		U* base = (U*)atH(m_uIndex);
 		return base + i;
@@ -322,7 +322,7 @@ private:
 
 template<typename H, typename D> class e_CachedBuffer : public e_Buffer<H, D>
 {
-	inline bool strcmpare(const char* a, const char* b)
+	inline bool strcmpare(const char* a, const char* b) const
 	{
 		size_t al = strlen(a), bl = strlen(b);
 		if(al != bl)
