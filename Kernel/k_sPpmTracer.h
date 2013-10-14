@@ -280,7 +280,7 @@ public:
 	}
 	virtual void Resize(unsigned int _w, unsigned int _h);
 	virtual void Debug(int2 pixel);
-	virtual void PrintStatus(std::vector<FW::String>& a_Buf);
+	virtual void PrintStatus(std::vector<std::string>& a_Buf);
 	virtual void CreateSliders(SliderCreateCallback a_Callback);
 protected:
 	virtual void DoRender(e_Image* I);

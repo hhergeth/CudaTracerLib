@@ -53,7 +53,7 @@ struct __m128_box
 	}
 	bool isValid()
 	{
-		return b.m128_f32[0] <= t.m128_f32[1] && b.m128_f32[1] <= t.m128_f32[1] && b.m128_f32[2] <= t.m128_f32[2];
+		return b.m128_f32[0] <= t.m128_f32[0] && b.m128_f32[1] <= t.m128_f32[1] && b.m128_f32[2] <= t.m128_f32[2];
 	}
 };
 
@@ -61,31 +61,6 @@ struct BBoxTmp
 {
     __m128_box box;
 	unsigned int _pNode;
-};
-
-template<typename T> class nativelist
-{
-public:
-	T* buffer;
-	unsigned int p;
-	nativelist(T* a)
-	{
-		buffer = a;
-		p = 0;
-	}
-	T* Add()
-	{
-		return &buffer[p++];
-	}
-	void Add(T& a)
-	{
-		buffer[p++] = a;
-	}
-	unsigned int index(T* a)
-	{
-		return ((unsigned long long)a - (unsigned long long)buffer) / sizeof(T);
-	}
-	inline T* operator[](int n) { return &buffer[n]; }
 };
 
 struct ObjectSplit
@@ -401,11 +376,12 @@ SpatialSplit findSpatialSplit(buffer& buf, __m128_box& box, BVHBuilder::Platform
     }
     return split;
 }
-int createLeaf(buffer& buf, const IBVHBuilderCallback* clb)
+int createLeaf(buffer& buf, IBVHBuilderCallback* clb)
 {
-	for(int i = 0; i < buf.N; i++)
+	unsigned int start = clb->handleLeafObjects(buf(0, 0)->_pNode);
+	for(int i = 1; i < buf.N; i++)
 		clb->handleLeafObjects(buf(0, i)->_pNode);
-	return ~buf(0, 0)->_pNode;
+	return ~start;
 }
 void performObjectSplit(buffer& buf, NodeSpec& left, NodeSpec& right, ObjectSplit& split, BVHBuilder::Platform& P)
 {
@@ -501,7 +477,7 @@ void performSpatialSplit(buffer& buf, NodeSpec& left, NodeSpec& right, SpatialSp
     left.numRef = leftEnd - leftStart;
 	right.numRef = buf.N - rightStart;
 }
-int buildNode(buffer& buf, nativelist<e_BVHNodeData>& a_Nodes, __m128_box& box, BVHBuilder::Platform& P, float m_minOverlap, const IBVHBuilderCallback* clb, int level=0)
+int buildNode(buffer& buf,  __m128_box& box, BVHBuilder::Platform& P, float m_minOverlap, IBVHBuilderCallback* clb, int level=0)
 {
 	if (buf.N <= P.getMinLeafSize() || level >= MaxDepth)
 		return createLeaf(buf, clb);
@@ -510,7 +486,7 @@ int buildNode(buffer& buf, nativelist<e_BVHNodeData>& a_Nodes, __m128_box& box, 
     float nodeSAH = area * P.getNodeCost(2);
     ObjectSplit object = findObjectSplit(buf, P, nodeSAH);
 	SpatialSplit spatial;
-    if (0&&level < MaxSpatialDepth)
+    if (level < MaxSpatialDepth)
     {
         __m128_box overlap = object.leftBounds;
         overlap.Intersect(object.rightBounds);
@@ -536,18 +512,19 @@ int buildNode(buffer& buf, nativelist<e_BVHNodeData>& a_Nodes, __m128_box& box, 
 	}
 	buffer leftB = buf.part(dim, 0, left.numRef);
 	buffer rightB = buf.part(dim, left.numRef, right.numRef);
-	e_BVHNodeData* n = a_Nodes.Add();
+	int index;
+	e_BVHNodeData* n = clb->HandleNodeAllocation(&index);
 	n->setLeft(left.bounds.ToBox());
 	n->setRight(right.bounds.ToBox());
-	int ld = buildNode(leftB, a_Nodes, left.bounds, P, m_minOverlap, clb, level + 1);
-	int rd = buildNode(rightB, a_Nodes, right.bounds, P, m_minOverlap, clb, level + 1);
+	int ld = buildNode(leftB, left.bounds, P, m_minOverlap, clb, level + 1);
+	int rd = buildNode(rightB, right.bounds, P, m_minOverlap, clb, level + 1);
 	n->setChildren(make_int2(ld, rd));
 	leftB.Free();
 	rightB.Free();
-	return a_Nodes.index(n);
+	return index;
 }
 
-void BVHBuilder::BuildBVH(const IBVHBuilderCallback* clb, const BVHBuilder::Platform& P, e_BVHNodeData* bvh, unsigned int* startNode)
+void BVHBuilder::BuildBVH(IBVHBuilderCallback* clb, const BVHBuilder::Platform& P)
 {
 	unsigned int N = clb->Count();
 	__m128 bottom(_mm_set1_ps(FLT_MAX)), top(_mm_set1_ps(-FLT_MAX));
@@ -571,16 +548,17 @@ void BVHBuilder::BuildBVH(const IBVHBuilderCallback* clb, const BVHBuilder::Plat
 		Platform P(1);
 		float mo = __m128_box(bottom, top).area() * 1.0e-5f;
 		buffer B = buffer(N, data);
-		*startNode = buildNode(B, nativelist<e_BVHNodeData>(bvh),  sbox, P, mo, clb);
+		int sNode = buildNode(B,  sbox, P, mo, clb);
+		clb->HandleStartNode(sNode);
 		B.Free();
 		double tSec = T.EndTimer();
 		std::cout << "BVH Construction of " << N << " objects took " << tSec << " seconds\n";
 	}
 	else
 	{
-		startNode = 0;
-		bvh->setDummy();
-		//m_sBox = a_Nodes->getWorldBox();
+		clb->HandleStartNode(0);
+		int idx;
+		clb->HandleNodeAllocation(&idx)->setDummy();
 	}
 	_mm_free(data);
 }

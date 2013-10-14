@@ -71,7 +71,7 @@ CUDA_FUNC_IN Spectrum trace(Ray& r, CudaRNG& rng, float3* pout)
 			return le * f / (pdf / pdf2);
 		}
 		else return 0.0f;*/return Spectrum(1,0,0);
-		return Spectrum(dot(bRec.ng, -r.direction));
+		//return Spectrum(dot(bRec.ng, -r.direction));
 
 		if(depth == 1 || specBounce || !DIRECT)
 			L += r2.Le(r(r2.m_fDist), bRec.map.sys, -r.direction);

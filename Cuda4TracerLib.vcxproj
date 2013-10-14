@@ -16,6 +16,7 @@
     <ClInclude Include="Base\FileStream.h" />
     <ClInclude Include="Base\FrameworkInterop.h" />
     <ClInclude Include="Base\STL.h" />
+    <ClInclude Include="Base\StringUtils.h" />
     <ClInclude Include="Base\TangentSpace.h" />
     <ClInclude Include="Base\Timer.h" />
     <ClInclude Include="Defines.h" />
@@ -91,7 +92,6 @@
     <ClInclude Include="Math\Spectrum.h" />
     <ClInclude Include="Math\Spline.h" />
     <ClInclude Include="Math\Warp.h" />
-    <ClInclude Include="Renderer.h" />
     <ClInclude Include="StdAfx.h" />
   </ItemGroup>
   <ItemGroup>

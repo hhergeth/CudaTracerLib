@@ -1,5 +1,6 @@
 #include <StdAfx.h>
 #include "k_sPpmTracer.h"
+#include "..\Base\StringUtils.h"
 
 #define LNG 200
 #define SER_NAME "photonMapBuf.dat"
@@ -24,12 +25,12 @@ k_sPpmTracer::k_sPpmTracer()
 	//I.Close();
 }
 
-void k_sPpmTracer::PrintStatus(std::vector<FW::String>& a_Buf)
+void k_sPpmTracer::PrintStatus(std::vector<std::string>& a_Buf)
 {
 	double pC = floor((double)m_uPhotonsEmitted / 1000000.0);
-	a_Buf.push_back(FW::sprintf("Photons emitted : %d[Mil]", (int)pC));
+	a_Buf.push_back(format("Photons emitted : %d[Mil]", (int)pC));
 	double pCs = getValuePerSecond(m_uPhotonsEmitted, 1000000.0);
-	a_Buf.push_back(FW::sprintf("Photons/Sec : %f", (float)pCs));
+	a_Buf.push_back(format("Photons/Sec : %f", (float)pCs));
 }
 
 void k_PhotonMapCollection::Resize(unsigned int a_BufferLength)
@@ -91,7 +92,7 @@ void k_sPpmTracer::Resize(unsigned int _w, unsigned int _h)
 		cudaFree(m_pEntries);
 	cudaMalloc(&m_pEntries, sizeof(k_AdaptiveEntry) * _w * _h);
 }
-
+/*
 void print(k_PhotonMapCollection& m_sMaps)
 {
 		k_pPpmPhoton* photons = new k_pPpmPhoton[m_sMaps.m_uPhotonBufferLength];
@@ -130,7 +131,7 @@ void print(k_PhotonMapCollection& m_sMaps)
 				var += (counts[i] - avg) * (counts[i] - avg) / float(usedCells);
 		FW::String s = FW::sprintf("max : %d, avg : %f, used cells : %f, var : %f", maxCount, avgNum, f1, sqrtf(var));
 		OutputDebugString(s.getPtr());
-}
+}*/
 
 void k_sPpmTracer::DoRender(e_Image* I)
 {

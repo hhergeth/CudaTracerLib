@@ -9,9 +9,10 @@ void e_SceneBVH::Build(e_StreamReference(e_Node) a_Nodes, e_BufferReference<e_Me
 		e_StreamReference(e_Node) a_Nodes;
 		e_BufferReference<e_Mesh, e_KernelMesh> a_Meshes;
 		e_SceneBVH* t;
+		int nodesAllocated;
 	public:
 		clb(e_StreamReference(e_Node) a, e_BufferReference<e_Mesh, e_KernelMesh> b, e_SceneBVH* c)
-			: a_Nodes(a), a_Meshes(b), t(c)
+			: a_Nodes(a), a_Meshes(b), t(c), nodesAllocated(0)
 		{
 		}
 		virtual unsigned int Count() const
@@ -22,18 +23,27 @@ void e_SceneBVH::Build(e_StreamReference(e_Node) a_Nodes, e_BufferReference<e_Me
 		{
 			*out = a_Nodes(index)->getWorldBox(a_Meshes(a_Nodes(index)->m_uMeshIndex));
 		}
-		virtual void HandleBoundingBox(const AABB& box) const
+		virtual void HandleBoundingBox(const AABB& box)
 		{
 			t->m_sBox = box;
+		}
+		virtual e_BVHNodeData* HandleNodeAllocation(int* index)
+		{
+			*index = nodesAllocated;
+			return t->m_pNodes->operator()(nodesAllocated++);
+		}
+		virtual void HandleStartNode(int startNode)
+		{
+			t->startNode = startNode;
 		}
 	};
 
 	clb b(a_Nodes, a_Meshes, this);
-	BVHBuilder::BuildBVH(&b, BVHBuilder::Platform(1), m_pNodes->UsedElements(), (unsigned int*)&startNode);
+	BVHBuilder::BuildBVH(&b, BVHBuilder::Platform(1));
 	for(int i = 0; i < a_Nodes.getLength(); i++)
 	{
-		m_pTransforms->operator()(i) = a_Nodes[i].getWorldMatrix().Transpose();
-		m_pInvTransforms->operator()(i) = a_Nodes[i].getWorldMatrix().Inverse().Transpose();
+		m_pTransforms->operator()(i) = a_Nodes[i].getWorldMatrix();
+		m_pInvTransforms->operator()(i) = a_Nodes[i].getWorldMatrix().Inverse();
 	}
 
 	m_pNodes->Invalidate();

@@ -2,19 +2,6 @@
 
 #include "..\MathTypes.h"
 
-class IBVHBuilderCallback
-{
-public:
-	virtual void getBox(unsigned int index, AABB* out) const = 0;
-	virtual void handleLeafObjects(unsigned int leafIndex) const
-	{
-	}
-	virtual unsigned int Count() const = 0;
-	virtual void HandleBoundingBox(const AABB& box) const
-	{
-	}
-};
-
 struct e_BVHNodeData
 {
 //      nodes[innerOfs + 0 ] = Vec4f(c0.lo.x, c0.hi.x, c0.lo.y, c0.hi.y)
@@ -71,6 +58,25 @@ struct e_BVHNodeData
 	}
 };
 
+class IBVHBuilderCallback
+{
+public:
+	virtual void getBox(unsigned int index, AABB* out) const = 0;
+	virtual unsigned int handleLeafObjects(unsigned int pNode)
+	{
+		return pNode;
+	}
+	virtual void handleLastLeafObject()
+	{
+	}
+	virtual unsigned int Count() const = 0;
+	virtual void HandleBoundingBox(const AABB& box)
+	{
+	}
+	virtual e_BVHNodeData* HandleNodeAllocation(int* index) = 0;
+	virtual void HandleStartNode(int startNode) = 0;
+};
+
 class BVHBuilder
 {
 public:
@@ -117,5 +123,5 @@ public:
 		int     m_minLeafSize;
 		int     m_maxLeafSize;
 	};
-	static void BuildBVH(const IBVHBuilderCallback* clb, const BVHBuilder::Platform& P, e_BVHNodeData* bvh, unsigned int* startNode);
+	static void BuildBVH(IBVHBuilderCallback* clb, const BVHBuilder::Platform& P);
 };

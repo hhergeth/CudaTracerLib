@@ -1,5 +1,4 @@
 #include "e_Image.h"
-#include "..\Base\FrameworkInterop.h"
 
 Spectrum e_Image::Pixel::toSpectrum(float splat)
 {

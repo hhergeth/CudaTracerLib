@@ -3,10 +3,9 @@
 #include "..\Engine\e_DynamicScene.h"
 #include "..\Engine\e_Sensor.h"
 #include <vector>
-#include "..\Base\FrameworkInterop.h"
 #include "..\Engine\e_Image.h"
 
-typedef void (*SliderCreateCallback)(float, float, bool, float*, FW::String);
+typedef void (*SliderCreateCallback)(float, float, bool, float*, std::string);
 
 class k_Tracer
 {
@@ -28,7 +27,7 @@ public:
 	virtual void Resize(unsigned int x, unsigned int y) = 0;
 	virtual void DoPass(e_Image* I, bool a_NewTrace) = 0;
 	virtual void Debug(int2 pixel){}
-	virtual void PrintStatus(std::vector<FW::String>& a_Buf)
+	virtual void PrintStatus(std::vector<std::string>& a_Buf)
 	{
 	}
 	virtual void CreateSliders(SliderCreateCallback a_Callback)

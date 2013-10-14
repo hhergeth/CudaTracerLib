@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <string>
 #include "e_Terrain.h"
-#include "..\Base\FrameworkInterop.h"
+#include "..\Base\StringUtils.h"
 
 struct textureLoader
 {
@@ -42,15 +42,6 @@ e_SceneInitData e_SceneInitData::CreateFor_S_SanMiguel(unsigned int a_SceneNodes
 	//r.m_uSizeAnimStream = 16 * 1024 * 1024;
 	r.m_uSizeAnimStream = 1;
 	return r;
-}
-
-bool hasEnding (std::string const &fullString, std::string const &ending)
-{
-    if (fullString.length() >= ending.length()) {
-        return (0 == fullString.compare (fullString.length() - ending.length(), ending.length(), ending));
-    } else {
-        return false;
-    }
 }
 
 inline bool fileExists(const TCHAR * file)
@@ -193,23 +184,23 @@ time_t filetime_to_timet(const FILETIME& ft)
 e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_MeshFile2)
 {
 	m_uModified = 1;
-	FW::String strA = FW::String(a_MeshFile2).toLower();
+	std::string strA = toLower(a_MeshFile2);
 	bool load;
-	e_BufferReference<e_Mesh, e_KernelMesh> M = m_pMeshBuffer->LoadCached(strA.getPtr(), &load);
+	e_BufferReference<e_Mesh, e_KernelMesh> M = m_pMeshBuffer->LoadCached(strA.c_str(), &load);
 	if(load)
 	{
-		FW::String t0 = FW::String(m_pCompilePath) + strA.getFileName(), cmpPath = t0.substring(0, t0.lastIndexOf('.')) + FW::String(".xmsh");
-		createDirectoryRecursively(cmpPath.getDirName().getPtr());
+		std::string t0 = std::string(m_pCompilePath) + getFileName(strA), cmpPath = t0.substr(0, t0.rfind('.')) + std::string(".xmsh");
+		createDirectoryRecursively(getDirName(cmpPath).c_str());
 		WIN32_FILE_ATTRIBUTE_DATA objFile, xmshFile;
 		GetFileAttributesEx(a_MeshFile2, GetFileExInfoStandard, &objFile);
-		GetFileAttributesEx(cmpPath.getPtr(), GetFileExInfoStandard, &xmshFile);
-		if(FileSize(cmpPath.getPtr()) <= 4 || objFile.ftLastWriteTime.dwHighDateTime != xmshFile.ftLastWriteTime.dwHighDateTime || objFile.ftLastWriteTime.dwLowDateTime != xmshFile.ftLastWriteTime.dwLowDateTime)
+		GetFileAttributesEx(cmpPath.c_str(), GetFileExInfoStandard, &xmshFile);
+		if(FileSize(cmpPath.c_str()) <= 4 || objFile.ftLastWriteTime.dwHighDateTime != xmshFile.ftLastWriteTime.dwHighDateTime || objFile.ftLastWriteTime.dwLowDateTime != xmshFile.ftLastWriteTime.dwLowDateTime)
 		{
-			OutputStream a_Out(cmpPath.getPtr());
+			OutputStream a_Out(cmpPath.c_str());
 			e_MeshCompileType t;
 			m_sCmpManager.Compile(a_MeshFile2, a_Out, &t);
 			a_Out.Close();
-			HANDLE Handle = CreateFile(cmpPath.getPtr(), GENERIC_WRITE, FILE_SHARE_WRITE,
+			HANDLE Handle = CreateFile(cmpPath.c_str(), GENERIC_WRITE, FILE_SHARE_WRITE,
                     NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
 			if(Handle == INVALID_HANDLE_VALUE)
 				throw 1;
@@ -217,7 +208,7 @@ e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_MeshFile2)
 				throw 1;
 			CloseHandle(Handle);
 		}
-		InputStream I(cmpPath.getPtr());
+		InputStream I(cmpPath.c_str());
 		unsigned int t;
 		I >> t;
 		if(t == (unsigned int)e_MeshCompileType::Static)
@@ -239,7 +230,7 @@ e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_MeshFile2)
 	if(m_pMaterialBuffer->NumUsedElements() + M->m_sMatInfo.getLength() < m_pMaterialBuffer->getLength() - 1)
 		m2 = m_pMaterialBuffer->malloc(M->m_sMatInfo);
 	m2.Invalidate();
-	new(N.operator->()) e_Node(M.getIndex(), M.operator->(), strA.getPtr(), m2);
+	new(N.operator->()) e_Node(M.getIndex(), M.operator->(), strA.c_str(), m2);
 	unsigned int li[MAX_AREALIGHT_NUM];
 	ZeroMemory(li, sizeof(li));
 	for(unsigned int i = 0; i < M->m_uUsedLights; i++)
@@ -259,22 +250,22 @@ void e_DynamicScene::DeleteNode(e_StreamReference(e_Node) ref)
 
 e_BufferReference<e_MIPMap, e_KernelMIPMap> e_DynamicScene::LoadTexture(const char* file, bool a_MipMap)
 {
-	FW::String a = fileExists(file) ? FW::String(file) : FW::String(m_pTexturePath) + FW::String(file);
-	if(a.getChar(a.getLength() - 1) == '\n')
-		a = a.substring(0, a.getLength() - 1);
+	std::string a = fileExists(file) ? std::string(file) : std::string(m_pTexturePath) + std::string(file);
+	if(a[a.size() - 1] == '\n')
+		a = a.substr(0, a.size() - 1);
 	bool load;
-	e_BufferReference<e_MIPMap, e_KernelMIPMap> T = m_pTextureBuffer->LoadCached(a.getPtr(), &load);
+	e_BufferReference<e_MIPMap, e_KernelMIPMap> T = m_pTextureBuffer->LoadCached(a.c_str(), &load);
 	if(load)
 	{
-		FW::String a2 = FW::String(m_pCompilePath) + "Images\\" + a.getFileName(), b = a2.substring(0, a2.lastIndexOf('.')) + ".xtex";
-		createDirectoryRecursively(b.getDirName().getPtr());
-		if(FileSize(b.getPtr()) <= 0)
+		std::string a2 = std::string(m_pCompilePath) + "Images\\" + getFileName(a), b = a2.substr(0, a2.find('.')) + ".xtex";
+		createDirectoryRecursively(getDirName(b).c_str());
+		if(FileSize(b.c_str()) <= 0)
 		{
-			OutputStream a_Out(b.getPtr());
-			e_MIPMap::CompileToBinary(a.getPtr(), a_Out, a_MipMap);
+			OutputStream a_Out(b.c_str());
+			e_MIPMap::CompileToBinary(a.c_str(), a_Out, a_MipMap);
 			a_Out.Close();
 		}
-		InputStream I(b.getPtr());
+		InputStream I(b.c_str());
 		new(T) e_MIPMap(I);
 		I.Close();
 		T->CreateKernelTexture();

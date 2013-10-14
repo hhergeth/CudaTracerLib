@@ -121,7 +121,6 @@
       <Filter>Math</Filter>
     </ClInclude>
     <ClInclude Include="Defines.h" />
-    <ClInclude Include="Renderer.h" />
     <ClInclude Include="StdAfx.h" />
     <ClInclude Include="Kernel\k_TraceHelper.h">
       <Filter>Kernel</Filter>
@@ -254,6 +253,9 @@
       <Filter>Kernel</Filter>
     </ClInclude>
     <ClInclude Include="Base\BVHBuilder.h">
+      <Filter>Base</Filter>
+    </ClInclude>
+    <ClInclude Include="Base\StringUtils.h">
       <Filter>Base</Filter>
     </ClInclude>
   </ItemGroup>
