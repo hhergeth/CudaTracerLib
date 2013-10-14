@@ -1,6 +1,5 @@
 #include <StdAfx.h>
 #include "..\e_Mesh.h"
-#include "..\..\Base\FrameworkInterop.h"
 #include <fstream>
 #include <iostream>
 #include <istream>
@@ -102,23 +101,23 @@ struct varReader
 struct stringHelper
 {
 	std::string var;
-	int pos, next;
+	unsigned int pos, next;
 	stringHelper(){}
 	stringHelper(std::string v)
 	{
 		var = v;
 		pos = 0;
-		next = -1;
+		next = (unsigned int)-1;
 	}
 	bool hasNext()
 	{
 		pos = next + 1;
-		next = var.find(' ', pos);
-		return next != -1;
+		next = (unsigned int)var.find(' ', pos);
+		return next != (unsigned int)-1;
 	}
 	char* cString()
 	{
-		if(next != -1)
+		if(next != (unsigned int)-1)
 			var[next] = 0;
 		return &var[pos];
 	}
@@ -176,11 +175,11 @@ void compileply(const char* a_InputFile, OutputStream& a_Out)
 			if(name == "vertex")
 			{
 				elementIndex = 0;
-				vertexCount = count;
+				vertexCount = (int)count;
 				vertexProp = true;
 			}
 			else if(name == "face")
-				faceCount = count;
+				faceCount = (int)count;
 		}
 		else if (keyword == "property")
 		{
@@ -231,8 +230,8 @@ void compileply(const char* a_InputFile, OutputStream& a_Out)
 	if(hasPos != 7)
 		throw 1;
 
-	FW::Mesh<FW::VertexPNT> M2;
-	FW::VertexPNT* Vertices = (FW::VertexPNT*)malloc(vertexCount * sizeof(FW::VertexPNT));
+	float3* Vertices = (float3*)malloc(vertexCount * sizeof(float3));
+	float2* TexCoords = (float2*)malloc(vertexCount * sizeof(float2));
 	unsigned int* Indices = (unsigned int*)malloc(sizeof(unsigned int) * faceCount * 4);
 	unsigned int indexCount = 0;
 		
@@ -246,14 +245,12 @@ void compileply(const char* a_InputFile, OutputStream& a_Out)
 		{
 			istream.getline(line);
 			hlp = stringHelper(line);
-			for(unsigned int i = 0; i < elementIndex; i++)
+			for(int i = 0; i < elementIndex; i++)
 				fReader.read(hlp.nextC(), 0, (float*)stack + i);
-			FW::VertexPNT V;
 			float* d = (float*)stack;
-			V.p = FW::Vec3f(d[posStart + 0], d[posStart + 1], d[posStart + 2]);
+			Vertices[v] = make_float3(d[posStart + 0], d[posStart + 1], d[posStart + 2]);
 			if(hasUV)
-				V.t = FW::Vec2f(d[uvStart + 0], d[uvStart + 0]);
-			Vertices[v] = V;
+				TexCoords[v] = make_float2(d[uvStart + 0], d[uvStart + 0]);
 		}
 		for(int f = 0; f < faceCount; f++)	//1 -> 0
 		{
@@ -285,14 +282,8 @@ void compileply(const char* a_InputFile, OutputStream& a_Out)
 		istream.Read(FILE_BUF, istream.getFileSize() - istream.getPos() - 1);
 		unsigned int file_pos = 0;
 
-		FW::Vec3f p;
-		for(int v = 0; v < vertexCount; v++)
-		{
-			Vertices[v].p = *(FW::Vec3f*)(FILE_BUF + file_pos);
-			Vertices[v].n = FW::Vec3f(0.0f);
-			Vertices[v].t = FW::Vec2f(0.0f);
-			file_pos += 12;
-		}
+		memcpy(Vertices, FILE_BUF + file_pos, sizeof(float3) * vertexCount);
+		file_pos += sizeof(float3) * vertexCount;
 		for(int f = 0; f < faceCount; f++)
 		{
 			unsigned int* dat = (unsigned int*)(FILE_BUF + file_pos + 1);
@@ -318,30 +309,25 @@ void compileply(const char* a_InputFile, OutputStream& a_Out)
 	//if(pos != size)
 	//	throw 1;
 
-	M2.addSubmesh();
-	M2.addVertices(&Vertices[0], (int)vertexCount);
 	float3* Normals = new float3[vertexCount], *Tangents = new float3[vertexCount];
-	M2.mutableIndices(0).add((FW::Vec3i*)&Indices[0], indexCount / 3);
-	ComputeTangentSpace(&M2, Normals, Tangents);
+	ComputeTangentSpace(Vertices, TexCoords, Indices, vertexCount, faceCount, Normals, Tangents);
 	e_TriangleData* triData = new e_TriangleData[indexCount / 3];
 	float3 p[3];
 	float3 n[3];
 	float3 ta[3];
 	float3 bi[3];
 	float2 te[3];
-		AABB box = AABB::Identity();
+	AABB box = AABB::Identity();
 	for(unsigned int t = 0; t < indexCount; t += 3)
 	{
-		FW::Vec3i index(Indices[t], Indices[t+1], Indices[t+2]);
 		for(size_t j = 0; j < 3; j++)
 		{
-			const int l = index.get((int)j);
-			const FW::VertexPNT& v = M2[l];
-			p[j] = make_float3(v.p.x, v.p.y, v.p.z);
-			te[j] = make_float2(v.t.x, v.t.y);
+			int l = Indices[t + j];
+			p[j] = Vertices[l];
+			te[j] = TexCoords[l];
 			ta[j] = Tangents[l];
 			n[j] = Normals[l];
-			box.Enlarge(v.p);
+			box.Enlarge(p[j]);
 		}
 		triData[t / 3] = e_TriangleData(p, (unsigned char)0, te, n, ta, bi);
 	}
@@ -354,7 +340,6 @@ void compileply(const char* a_InputFile, OutputStream& a_Out)
 	diffuse mat;
 	mat.m_reflectance = CreateTexture(0, Spectrum(1,0,0));
 	defaultMat.bsdf.SetData(mat);
-	M2.compact();
 	a_Out << box;
 	a_Out.Write(m_sLights, sizeof(m_sLights));
 	a_Out << 0;
@@ -362,7 +347,7 @@ void compileply(const char* a_InputFile, OutputStream& a_Out)
 	a_Out.Write(&triData[0], sizeof(e_TriangleData) * (int)(indexCount / 3));
 	a_Out << 1;
 	a_Out.Write(&defaultMat, sizeof(e_KernelMaterial) * 1);
-	ConstructBVH2(&M2, TmpOutStream(&a_Out));
+	ConstructBVH(Vertices, Indices, vertexCount, faceCount * 3, a_Out);
 	::free(Vertices);
 	::free(Indices);
 	delete [] triData;

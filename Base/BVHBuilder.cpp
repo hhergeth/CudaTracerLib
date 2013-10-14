@@ -100,7 +100,7 @@ struct NodeSpec
 
 #define MaxSpatialDepth 48
 #define MaxDepth 64
-#define MAX_OBJECT_COUNT 1024 * 1024 * 5
+#define MAX_OBJECT_COUNT 1024 * 1024 * 12
 #define NumSpatialBins 128
 static __m128 binScale = _mm_set_ps1(1.0f / float(NumSpatialBins)), psZero = _mm_set_ps1(0), psBinClamp = _mm_set_ps1(NumSpatialBins - 1);
 struct buffer
@@ -225,7 +225,7 @@ public:
 			newEntries[N + j].item = refs[j];
 		Free();
 		entries = newEntries;
-		N += refs.size();
+		N += (int)refs.size();
 		for(int i = 0; i < 3; i++)
 		{
 			sortedBuffers[i] = new int[N];
@@ -381,6 +381,7 @@ int createLeaf(buffer& buf, IBVHBuilderCallback* clb)
 	unsigned int start = clb->handleLeafObjects(buf(0, 0)->_pNode);
 	for(int i = 1; i < buf.N; i++)
 		clb->handleLeafObjects(buf(0, i)->_pNode);
+	clb->handleLastLeafObject();
 	return ~start;
 }
 void performObjectSplit(buffer& buf, NodeSpec& left, NodeSpec& right, ObjectSplit& split, BVHBuilder::Platform& P)

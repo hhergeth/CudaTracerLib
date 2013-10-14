@@ -40,7 +40,7 @@ void e_SceneBVH::Build(e_StreamReference(e_Node) a_Nodes, e_BufferReference<e_Me
 
 	clb b(a_Nodes, a_Meshes, this);
 	BVHBuilder::BuildBVH(&b, BVHBuilder::Platform(1));
-	for(int i = 0; i < a_Nodes.getLength(); i++)
+	for(unsigned int i = 0; i < a_Nodes.getLength(); i++)
 	{
 		m_pTransforms->operator()(i) = a_Nodes[i].getWorldMatrix();
 		m_pInvTransforms->operator()(i) = a_Nodes[i].getWorldMatrix().Inverse();

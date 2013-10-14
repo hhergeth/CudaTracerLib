@@ -2,7 +2,6 @@
 #include "e_AnimatedMesh.h"
 #include <MathTypes.h>
 #include "SceneBuilder/MD5Parser.h"
-#include "..\Base\FrameworkInterop.h"
 #include "SceneBuilder/Importer.h"
 #define TS_DEC_MD5
 #include "..\Base\TangentSpace.h"
@@ -135,7 +134,6 @@ void e_AnimatedMesh::CompileToBinary(const char* a_InputFile, c_StringArray& a_A
 	float3* v_Pos;
 	std::vector<e_TriangleData> triData;
 	std::vector<e_KernelMaterial> matData;
-	FW::Mesh<FW::VertexP> M2;
 	unsigned int off = 0;
 	unsigned int vCount;
 	ComputeTangentSpace(&M, &v_Data, &v_Pos, &vCount);
@@ -151,9 +149,7 @@ void e_AnimatedMesh::CompileToBinary(const char* a_InputFile, c_StringArray& a_A
 		//mat.NormalMap = e_Sampler<float3>("n_hellknight.tga", 1);
 		matData.push_back(mat);
 
-		int s2 = M2.addSubmesh();
 		Mesh* sm = M.meshes[s];
-		M2.addVertices((FW::VertexP*)(v_Pos + off), (int)sm->verts.size());
 		size_t st = triData2.size();
 
 		for(int t = 0; t < sm->tris.size(); t++)
@@ -172,10 +168,8 @@ void e_AnimatedMesh::CompileToBinary(const char* a_InputFile, c_StringArray& a_A
 			uint3 q = *(uint3*)&sm->tris[t].v + make_uint3(off);
 			triData2.push_back(q);
 		}
-		M2.mutableIndices(s2).add((FW::Vec3i*)&triData2[st], (int)sm->tris.size());
 		off += (unsigned int)sm->verts.size();
 	}
-	M2.compact();
 
 	a_Out << box;
 	a_Out.Write(m_sLights, sizeof(m_sLights));
@@ -185,11 +179,11 @@ void e_AnimatedMesh::CompileToBinary(const char* a_InputFile, c_StringArray& a_A
 	a_Out.Write(&triData[0], sizeof(e_TriangleData) * (unsigned int)triData.size());
 	a_Out << (unsigned int)matData.size();
 	a_Out.Write(&matData[0], sizeof(e_KernelMaterial) * (unsigned int)matData.size());
-	float4* v_BVH;
-	ConstructBVH(M2, TmpOutStream(&a_Out), &v_BVH);
+	std::vector<e_BVHNodeData> v_BVH;
+	ConstructBVH(v_Pos, (unsigned int*)&triData2[0], (int)vCount, (int)triData2.size() * 3, &v_BVH);
 
 	std::vector<std::vector<e_BVHLevelEntry>> V;
-	constructLayout(V, (e_BVHNodeData*)v_BVH, 0, -1);
+	constructLayout(V, (e_BVHNodeData*)&v_BVH[0], 0, -1);
 
 	a_Out << (unsigned int)vCount;
 	size_t BLOCKSIZE = 4 + vCount * sizeof(e_AnimatedVertex) + 4 + triData2.size() * sizeof(uint3)

@@ -98,6 +98,22 @@ void e_Mesh::CompileObjToBinary(const char* a_InputFile, OutputStream& a_Out)
 	FW::Mesh<FW::VertexPNT>* MB = new FW::Mesh<FW::VertexPNT>(*FW::importMesh(FW::String(a_InputFile)));
 	unsigned int m_numTriangles = MB->numTriangles();
 	unsigned int m_numVertices = MB->numVertices();
+	float3* Vertices = new float3[m_numVertices];
+	float2* TexCoords = new float2[m_numVertices];
+	unsigned int* Indices = new unsigned int[m_numTriangles * 3];
+	unsigned int cq = 0;
+	for (int submesh = 0; submesh < MB->numSubmeshes(); submesh++)
+	{
+		const FW::Array<FW::Vec3i>& indices = MB->indices(submesh);
+		for (size_t i = 0; i < indices.getSize(); i++)
+			for(int j = 0; j < 3; j++)
+				Indices[cq++] = indices[i][j];
+	}
+	for(unsigned int i = 0; i < m_numVertices; i++)
+	{
+		TexCoords[i] = MB[0][i].t;
+		Vertices[i] = MB[0][i].p;
+	}
 
 	if(! MB->numSubmeshes())
 		throw 1;
@@ -114,7 +130,7 @@ void e_Mesh::CompileObjToBinary(const char* a_InputFile, OutputStream& a_Out)
 	ZeroMemory(v_Normals, sizeof(float3) * m_numVertices);
 	ZeroMemory(v_Tangents, sizeof(float3) * m_numVertices);
 	ZeroMemory(v_BiTangents, sizeof(float3) * m_numVertices);
-	ComputeTangentSpace(MB, v_Normals, v_Tangents, v_BiTangents);
+	ComputeTangentSpace(Vertices, TexCoords, Indices, m_numVertices, m_numTriangles, v_Normals, v_Tangents, v_BiTangents);
 #endif
 	e_MeshPartLight m_sLights[MAX_AREALIGHT_NUM];
 	int c = 0, lc = 0;
@@ -217,13 +233,15 @@ void e_Mesh::CompileObjToBinary(const char* a_InputFile, OutputStream& a_Out)
 	a_Out.Write(triData, sizeof(e_TriangleData) * m_numTriangles);
 	a_Out << (unsigned int)matData.size();
 	a_Out.Write(&matData[0], sizeof(e_KernelMaterial) * (unsigned int)matData.size());
-	TmpOutStream to(&a_Out);
-	ConstructBVH2(MB, to);
+	ConstructBVH(Vertices, Indices, m_numVertices, m_numTriangles * 3, a_Out);
 #ifdef EXT_TRI
 	delete [] v_Normals;
 	delete [] v_Tangents;
 	delete [] v_BiTangents;
 #endif
+	delete [] Vertices;
+	delete [] TexCoords;
+	delete [] Indices;
 	delete [] triData;
 	delete MB;
 }

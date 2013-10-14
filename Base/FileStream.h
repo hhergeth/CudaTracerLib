@@ -185,6 +185,7 @@ public:
 		DWORD r = SetFilePointer(H, off, 0, FILE_CURRENT);
 		if(r == INVALID_SET_FILE_POINTER)
 			throw 1;
+		numBytesRead += off;
 	}
 	template<typename T> void Move(unsigned int N)
 	{

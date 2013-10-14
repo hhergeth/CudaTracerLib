@@ -1,76 +1,66 @@
 #pragma once
 
 #ifdef TS_DEC_FRAMEWORK
-inline float3 getVec(const FW::VertexPNT& v)
-{
-	return make_float3(v.p.x, v.p.y, v.p.z);
-}
-inline void ComputeTangentSpace(FW::Mesh<FW::VertexPNT>* a_Mesh, float3* a_Normals, float3* a_Tangents, float3* a_BiTangents = 0)
+inline void ComputeTangentSpace(float3* V, float2* T, unsigned int* I, unsigned int vertexCount, unsigned int triCount, float3* a_Normals, float3* a_Tangents, float3* a_BiTangents = 0)
 {
 	bool f = true;
-	for(int i = 0; i < MIN(12, a_Mesh->numVertices()); i++)
-		if(length(a_Mesh->vertex(i).t) != 0)
+	for(unsigned int i = 0; i < MIN(12u, vertexCount); i++)
+		if(length(T[i]) != 0)
 		{
 			f = false;
 			break;
 		}
 
-	unsigned int vertexCount = a_Mesh->numVertices();
 	float3 *tan1 = new float3[vertexCount * 2];
     float3 *tan2 = tan1 + vertexCount;
     ZeroMemory(tan1, vertexCount * sizeof(float3) * 2);
-	for (int submesh = 0; submesh < a_Mesh->numSubmeshes(); submesh++)
+	for (unsigned int f = 0; f < triCount; f++)
 	{
-		const FW::Array<FW::Vec3i>& indices = a_Mesh->indices(submesh);
-		for (int i = 0; i < indices.getSize(); i++)
+		unsigned int i1 = I[f * 3 + 0];
+		unsigned int i2 = I[f * 3 + 1];
+		unsigned int i3 = I[f * 3 + 2];
+		const float3 v1 = V[i1], v2 = V[i2], v3 = V[i3];
+
+		const float3 e0 = v3 - v1, e1 = v2 - v1;//, n = normalize(v1q.n + v2q.n + v3q.n);
+		const float2 w1 = T[i1], w2 = T[i2], w3 = T[i3];
+		const float3 n2 = normalize(cross(e1, e0));
+		//if(fsumf(n2 - n) > 1e-3)
+		//	throw 1;
+		a_Normals[i1] += n2;
+		a_Normals[i2] += n2;
+		a_Normals[i3] += n2;
+        
+		float x1 = v2.x - v1.x;
+		float x2 = v3.x - v1.x;
+		float y1 = v2.y - v1.y;
+		float y2 = v3.y - v1.y;
+		float z1 = v2.z - v1.z;
+		float z2 = v3.z - v1.z;
+        
+		float s1 = w2.x - w1.x;
+		float s2 = w3.x - w1.x;
+		float t1 = w2.y - w1.y;
+		float t2 = w3.y - w1.y;
+		if(f)
 		{
-			long i1 = indices[i].x;
-			long i2 = indices[i].y;
-			long i3 = indices[i].z;
-			const FW::VertexPNT& v1q = a_Mesh[0][i1], &v2q = a_Mesh[0][i2], &v3q = a_Mesh[0][i3];
-
-			const float3 v1 = getVec(v1q), v2 = getVec(v2q), v3 = getVec(v3q), e0 = v3 - v1, e1 = v2 - v1;//, n = normalize(v1q.n + v2q.n + v3q.n);
-			const float2 w1 = v1q.t, w2 = v2q.t, w3 = v3q.t;
-			const float3 n2 = normalize(cross(e1, e0));
-			//if(fsumf(n2 - n) > 1e-3)
-			//	throw 1;
-			a_Normals[i1] += n2;
-			a_Normals[i2] += n2;
-			a_Normals[i3] += n2;
-        
-			float x1 = v2.x - v1.x;
-			float x2 = v3.x - v1.x;
-			float y1 = v2.y - v1.y;
-			float y2 = v3.y - v1.y;
-			float z1 = v2.z - v1.z;
-			float z2 = v3.z - v1.z;
-        
-			float s1 = w2.x - w1.x;
-			float s2 = w3.x - w1.x;
-			float t1 = w2.y - w1.y;
-			float t2 = w3.y - w1.y;
-			if(f)
-			{
-				s1 = x1 - x2 + 0.1f;
-				s2 = x1 + x2 + 0.1f;
-				t1 = y1 - y2 + 0.1f;
-				t2 = z1 + z2 + 0.1f;
-			}
-        
-			float r = 1.0F / (s1 * t2 - s2 * t1);
-			float3 sdir = make_float3((t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r,	(t2 * z1 - t1 * z2) * r);
-			float3 tdir = make_float3((s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r,	(s1 * z2 - s2 * z1) * r);
-        
-			tan1[i1] += sdir;
-			tan1[i2] += sdir;
-			tan1[i3] += sdir;
-        
-			tan2[i1] += tdir;
-			tan2[i2] += tdir;
-			tan2[i3] += tdir;
+			s1 = x1 - x2 + 0.1f;
+			s2 = x1 + x2 + 0.1f;
+			t1 = y1 - y2 + 0.1f;
+			t2 = z1 + z2 + 0.1f;
 		}
-	}
-
+        
+		float r = 1.0F / (s1 * t2 - s2 * t1);
+		float3 sdir = make_float3((t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r,	(t2 * z1 - t1 * z2) * r);
+		float3 tdir = make_float3((s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r,	(s1 * z2 - s2 * z1) * r);
+        
+		tan1[i1] += sdir;
+		tan1[i2] += sdir;
+		tan1[i3] += sdir;
+        
+		tan2[i1] += tdir;
+		tan2[i2] += tdir;
+		tan2[i3] += tdir;
+	}/*
 	if(a_Mesh->numVertices() < (1 << 16))
 		for(int a = 0; a < a_Mesh->numVertices(); a++)
 			for(int i = a + 1; i < a_Mesh->numVertices(); i++)
@@ -81,27 +71,24 @@ inline void ComputeTangentSpace(FW::Mesh<FW::VertexPNT>* a_Mesh, float3* a_Norma
 					tan2[a] += tan2[i];
 					tan2[i] = tan2[a];
 					break;
-				}
+				}*/
 
-	for (int submesh = 0; submesh < a_Mesh->numSubmeshes(); submesh++)
+
+	for (unsigned int i = 0; i < triCount; i++)
 	{
-		const FW::Array<FW::Vec3i>& indices = a_Mesh->indices(submesh);
-		for (int i = 0; i < indices.getSize(); i++)
+		for(int j = 0; j < 3; j++)
 		{
-			for(int j = 0; j < 3; j++)
-			{
-				unsigned int a = indices[i][j];
-				const float3 n = a_Normals[a] = normalize(normalize(a_Normals[a]));
-				const float3 t = tan1[a];
+			unsigned int a = I[i * 3 + j];
+			const float3 n = a_Normals[a] = normalize(normalize(a_Normals[a]));
+			const float3 t = tan1[a];
         
-				// Gram-Schmidt orthogonalize
-				a_Tangents[a] = normalize(t - n * dot(n, t));
+			// Gram-Schmidt orthogonalize
+			a_Tangents[a] = normalize(t - n * dot(n, t));
         
-				// Calculate handedness
-				float h = (dot(cross(n, t), tan2[a]) < 0.0F) ? -1.0F : 1.0F;
-				if(a_BiTangents)
-					a_BiTangents[a] = normalize(cross(a_Tangents[a], n) * h);
-			}
+			// Calculate handedness
+			float h = (dot(cross(n, t), tan2[a]) < 0.0F) ? -1.0F : 1.0F;
+			if(a_BiTangents)
+				a_BiTangents[a] = normalize(cross(a_Tangents[a], n) * h);
 		}
 	}
     delete[] tan1;
