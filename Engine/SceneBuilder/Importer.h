@@ -58,10 +58,10 @@ namespace bvh_helper
 		}
 		virtual e_BVHNodeData* HandleNodeAllocation(int* index)
 		{
-			*index = nodeIndex++;
+			*index = nodeIndex++ * 4;
 			if(nodeIndex > L0)
 				throw 1;
-			return nodes + *index;
+			return nodes + *index / 4;
 		}
 		virtual unsigned int handleLeafObjects(unsigned int pNode)
 		{
@@ -92,7 +92,7 @@ namespace bvh_helper
 inline void ConstructBVH(float3* vertices, unsigned int* indices, int vCount, int cCount, e_BVHNodeData** nodes = 0, float4** tris = 0, unsigned int** ind = 0, int* A = 0, int* B = 0)
 {
 	bvh_helper::clb c(vCount, cCount, vertices, indices);
-	BVHBuilder::BuildBVH(&c, BVHBuilder::Platform(1.0f));
+	BVHBuilder::BuildBVH(&c, BVHBuilder::Platform());
 	if(nodes)
 		*nodes = c.nodes;
 	else delete [] c.nodes;

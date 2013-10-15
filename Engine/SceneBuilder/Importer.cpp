@@ -69,7 +69,7 @@ void ConstructBVH(float3* vertices, unsigned int* indices, int vCount, int cCoun
 	ConstructBVH2(&M, O);*/
 	
 	bvh_helper::clb c(vCount, cCount, vertices, indices);
-	BVHBuilder::BuildBVH(&c, BVHBuilder::Platform(1.0f));
+	BVHBuilder::BuildBVH(&c, BVHBuilder::Platform());
 	O << 5u;
 	O << (unsigned long long)c.nodeIndex * 64;
 	if(c.nodeIndex)

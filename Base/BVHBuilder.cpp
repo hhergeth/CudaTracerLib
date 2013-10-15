@@ -103,7 +103,7 @@ struct NodeSpec
 #define MAX_OBJECT_COUNT 1024 * 1024 * 12
 #define NumSpatialBins 128
 static __m128 binScale = _mm_set_ps1(1.0f / float(NumSpatialBins)), psZero = _mm_set_ps1(0), psBinClamp = _mm_set_ps1(NumSpatialBins - 1);
-struct buffer
+struct buffer2
 {
 private:
 	struct entry
@@ -116,9 +116,9 @@ private:
 public:
 	int N;
 private:
-	buffer(){}
+	buffer2(){}
 public:
-	buffer(int n, BBoxTmp* work)
+	buffer2(int n, BBoxTmp* work)
 	{
 		struct cmp
 		{
@@ -170,37 +170,33 @@ public:
 		}
 	}
 
-	buffer part(int dim, int start, int n)
+	buffer2 part(int dim, int start, int n)
 	{
-		buffer b;
+		buffer2 b;
 		b.N = n;
 		b.entries = new entry[n];
 		for(int i = 0; i < 3; i++)
-			b.sortedBuffers[i] = new int[n];
-		for(int j = 0; j < N; j++)//iterate over all elements
 		{
-			//determine whether the current should be inserted
-			int indexInSortedDim = entries[j].indices[dim];
-			if(indexInSortedDim >= start && indexInSortedDim < start + n)
+			b.sortedBuffers[i] = new int[n];
+			int c = 0, end = start + n;
+			for(int indexInIteratingDim = 0; indexInIteratingDim < N; indexInIteratingDim++)//iterate over all elements
 			{
-				//okay so we should insert this object
-				//new index in current dimension will be c!
-
-				//but we also need the index of the object...
-				int index = indexInSortedDim - start;
-				b.entries[index].item = entries[j].item;
-				for(int i = 0; i < 3; i++)
+				//determine whether the current should be inserted
+				int entryIndex = sortedBuffers[i][indexInIteratingDim];
+				int indexInSortedDim = entries[entryIndex].indices[dim];
+				if(indexInSortedDim >= start && indexInSortedDim < end)
 				{
+					//okay so we should insert this object
+					//new index in current dimension will be c!
+
+					//but we also need the index of the object...
+					int index = indexInSortedDim - start;//start is the beginning in the sorted dim
 					b.sortedBuffers[i][c] = index;
 					b.entries[index].indices[i] = c;
+					b.entries[index].item = entries[entryIndex].item;
+					c++;
 				}
-				c++;
 			}
-		}
-		for(int i = 0; i < 3; i++)
-		{
-			int c = 0;
-
 			if(c != n)
 				throw 1;
 		}
@@ -212,12 +208,12 @@ public:
 		struct cmp
 		{
 			int dim;
-			buffer* b;
-			cmp(int i,buffer* a) : dim(i),b(a){}
+			buffer2* b;
+			cmp(int i,buffer2* a) : dim(i),b(a){}
 			bool operator()(int l, int r) const
 			{
 				BBoxTmp& left = *b->operator[](l), 
-					   & right = *b->operator[](l);
+					   & right = *b->operator[](r);
 				float ca = left.box.b.m128_f32[dim] + left.box.t.m128_f32[dim];
 				float cb = right.box.b.m128_f32[dim] + right.box.t.m128_f32[dim];
 				return (ca < cb || (ca == cb && left._pNode < right._pNode));
@@ -245,9 +241,81 @@ public:
 		validate();
 	}
 
+	void sort(int dim)
+	{
+	}
+
 	BBoxTmp* operator()(int dim, int i)
 	{
 		return &entries[sortedBuffers[dim][i]].item;
+	}
+	BBoxTmp* operator[](int i)
+	{
+		return operator()(0, i);
+	}
+};
+#define buffer buffer3
+struct buffer3
+{
+private:
+	BBoxTmp* items;
+	int sortedDim;
+	buffer3(){}
+public:
+	int N;
+public:
+	buffer3(int n, BBoxTmp* work)
+	{
+		items = work;
+		sortedDim = -1;
+		N = n;
+	}
+	void Free()
+	{
+		delete [] items;
+	}
+	buffer3 part(int dim, int start, int n)
+	{
+		sort(dim);
+		buffer3 r;
+		r.N = n;
+		r.sortedDim = -1;
+		r.items = new BBoxTmp[n];
+		memcpy(r.items, items + start, n * sizeof(BBoxTmp));
+		return r;
+	}
+	void appendAndRebuild(std::vector<BBoxTmp>& refs)
+	{
+		BBoxTmp* a = new BBoxTmp[N + refs.size()];
+		memcpy(a, items, sizeof(BBoxTmp) * N);
+		memcpy(a + N, &refs[0], sizeof(BBoxTmp) * refs.size());
+		items = a;
+		N += refs.size();
+		sortedDim = -1;
+		sort(sortedDim);
+	}
+	void sort(int dim)
+	{
+		if(dim == sortedDim)
+			return;
+		sortedDim = dim;
+		struct cmp
+		{
+			int dim;
+			cmp(int i) : dim(i){}
+			bool operator()(BBoxTmp& left, BBoxTmp& right) const
+			{
+				float ca = left.box.b.m128_f32[dim] + left.box.t.m128_f32[dim];
+				float cb = right.box.b.m128_f32[dim] + right.box.t.m128_f32[dim];
+				return (ca < cb || (ca == cb && left._pNode < right._pNode));
+			}
+		};
+		std::make_heap(items, items + N, cmp(sortedDim));
+		std::sort_heap(items, items + N, cmp(sortedDim));
+	}
+	BBoxTmp* operator()(int dim, int i)
+	{
+		return items + i;
 	}
 	BBoxTmp* operator[](int i)
 	{
@@ -258,7 +326,7 @@ public:
 float sqr(float f){return f*f;}
 static __m128_box* m_rightBounds = new __m128_box[MAX_OBJECT_COUNT];
 static SpatialBin* m_bins[3] = {new SpatialBin[NumSpatialBins],new SpatialBin[NumSpatialBins],new SpatialBin[NumSpatialBins]};
-ObjectSplit findObjectSplit(buffer& buf, BVHBuilder::Platform& P, float nodeSAH)
+ObjectSplit findObjectSplit(buffer& buf, const BVHBuilder::Platform& P, float nodeSAH)
 {
 	float3 a1 = make_float3(1,2,3);
 	__m128 b1 = TOSSE3(a1);
@@ -275,12 +343,10 @@ ObjectSplit findObjectSplit(buffer& buf, BVHBuilder::Platform& P, float nodeSAH)
 		split.rightBounds = __m128_box(AABB(make_float3(0), make_float3(0)));
 		return split;
 	}
-	std::cout << "\n";
-	for(int i = 0; i < numRef; i++)
-		std::cout << "idx : " << buf[i]->_pNode << "\n";
 	float bestTieBreak = FLT_MAX;
 	for (int m_sortDim = 0; m_sortDim < 3; m_sortDim++)
 	{
+		buf.sort(m_sortDim);
 		__m128_box rightBounds = __m128_box::Identity();
         for (int i = numRef - 1; i > 0; i--)
         {
@@ -325,7 +391,7 @@ void splitReference(BBoxTmp& left, BBoxTmp& right, const BBoxTmp* ref, int dim, 
 	left.box.Intersect(ref->box);
 	right.box.Intersect(ref->box);
 }
-SpatialSplit findSpatialSplit(buffer& buf, __m128_box& box, BVHBuilder::Platform& P, float nodeSAH)
+SpatialSplit findSpatialSplit(buffer& buf, __m128_box& box, const BVHBuilder::Platform& P, float nodeSAH)
 {
 	__m128 origin = box.b;
 	__m128 binSize = _mm_mul_ps(_mm_sub_ps(box.t, origin), binScale);
@@ -410,14 +476,14 @@ int createLeaf(buffer& buf, IBVHBuilderCallback* clb)
 	clb->handleLastLeafObject();
 	return ~start;
 }
-void performObjectSplit(buffer& buf, NodeSpec& left, NodeSpec& right, ObjectSplit& split, BVHBuilder::Platform& P)
+void performObjectSplit(buffer& buf, NodeSpec& left, NodeSpec& right, ObjectSplit& split, const BVHBuilder::Platform& P)
 {
     left.numRef = split.numLeft;
     left.bounds = split.leftBounds;
 	right.numRef = buf.N - split.numLeft;
     right.bounds = split.rightBounds;
 }
-void performSpatialSplit(buffer& buf, NodeSpec& left, NodeSpec& right, SpatialSplit& split, BVHBuilder::Platform& P)
+void performSpatialSplit(buffer& buf, NodeSpec& left, NodeSpec& right, SpatialSplit& split, const BVHBuilder::Platform& P)
 {
 	int leftStart = 0;
     int leftEnd = leftStart;
@@ -504,7 +570,7 @@ void performSpatialSplit(buffer& buf, NodeSpec& left, NodeSpec& right, SpatialSp
     left.numRef = leftEnd - leftStart;
 	right.numRef = buf.N - rightStart;
 }
-int buildNode(buffer& buf,  __m128_box& box, BVHBuilder::Platform& P, float m_minOverlap, IBVHBuilderCallback* clb, int level=0)
+int buildNode(buffer& buf,  __m128_box& box, const BVHBuilder::Platform& P, float m_minOverlap, IBVHBuilderCallback* clb, int level=0)
 {
 	if ((buf.N <= P.getMinLeafSize() && level > 0) || level >= MaxDepth)
 		return createLeaf(buf, clb);
@@ -555,7 +621,7 @@ void BVHBuilder::BuildBVH(IBVHBuilderCallback* clb, const BVHBuilder::Platform& 
 {
 	unsigned int N = clb->Count();
 	__m128 bottom(_mm_set1_ps(FLT_MAX)), top(_mm_set1_ps(-FLT_MAX));
-	BBoxTmp* data = (BBoxTmp*)_mm_malloc(N * sizeof(BBoxTmp), 128);
+	BBoxTmp* data = new BBoxTmp[N];
 	AABB box;
 	for(unsigned int i = 0; i < N; i++)
 	{
@@ -572,7 +638,6 @@ void BVHBuilder::BuildBVH(IBVHBuilderCallback* clb, const BVHBuilder::Platform& 
 	{
 		cTimer T;
 		T.StartTimer();
-		Platform P(1);
 		float mo = __m128_box(bottom, top).area() * 1.0e-5f;
 		buffer B = buffer(N, data);
 		int sNode = buildNode(B,  sbox, P, mo, clb);
@@ -586,6 +651,6 @@ void BVHBuilder::BuildBVH(IBVHBuilderCallback* clb, const BVHBuilder::Platform& 
 		clb->HandleStartNode(0);
 		int idx;
 		clb->HandleNodeAllocation(&idx)->setDummy();
+		_mm_free(data);
 	}
-	_mm_free(data);
 }
