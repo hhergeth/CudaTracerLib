@@ -66,7 +66,7 @@ void ConstructBVH(float3* vertices, unsigned int* indices, int vCount, int cCoun
 	M.addSubmesh();
 	M.addVertices((FW::VertexP*)vertices, vCount);
 	M.setIndices(0, (int*)indices, cCount);
-	ConstructBVH2(&M, O);*/
+	ConstructBVH2(&M, O);return;*/
 	
 	bvh_helper::clb c(vCount, cCount, vertices, indices);
 	BVHBuilder::BuildBVH(&c, BVHBuilder::Platform());

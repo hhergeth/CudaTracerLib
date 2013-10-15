@@ -150,6 +150,7 @@ public:
 			for(int j = 0; j < 3; j++)
 				entries[sortedBuffers[j][i]].indices[j] = i;
 		}
+		delete [] work;
 	}
 
 	void Free()
@@ -254,7 +255,7 @@ public:
 		return operator()(0, i);
 	}
 };
-#define buffer buffer3
+#define buffer buffer2
 struct buffer3
 {
 private:
@@ -286,13 +287,17 @@ public:
 	}
 	void appendAndRebuild(std::vector<BBoxTmp>& refs)
 	{
+		if(refs.size() == 0)
+			return;
 		BBoxTmp* a = new BBoxTmp[N + refs.size()];
 		memcpy(a, items, sizeof(BBoxTmp) * N);
 		memcpy(a + N, &refs[0], sizeof(BBoxTmp) * refs.size());
+		free(items);
 		items = a;
 		N += refs.size();
+		int d = sortedDim;
 		sortedDim = -1;
-		sort(sortedDim);
+		sort(d);
 	}
 	void sort(int dim)
 	{
@@ -313,13 +318,30 @@ public:
 		std::make_heap(items, items + N, cmp(sortedDim));
 		std::sort_heap(items, items + N, cmp(sortedDim));
 	}
+	void removeDegenerates()
+	{
+		for(int i = N - 1; i >= 0; i--)
+		{
+			__m128 s = _mm_sub_ps(items[0].box.t, items[0].box.b);
+			float mi = MIN(s.m128_f32[0], s.m128_f32[1], s.m128_f32[2]), ma = MAX(s.m128_f32[0], s.m128_f32[1], s.m128_f32[2]);
+			if(mi < 0.0f || (s.m128_f32[0] + s.m128_f32[1] + s.m128_f32[2]) == ma)
+			{
+				BBoxTmp old = items[i];
+				N--;
+				if(i < N)
+					items[i] = items[N];
+			}
+		}
+	}
 	BBoxTmp* operator()(int dim, int i)
 	{
+		if(dim != sortedDim)
+			throw 1;
 		return items + i;
 	}
 	BBoxTmp* operator[](int i)
 	{
-		return operator()(0, i);
+		return items + i;
 	}
 };
 
@@ -328,10 +350,6 @@ static __m128_box* m_rightBounds = new __m128_box[MAX_OBJECT_COUNT];
 static SpatialBin* m_bins[3] = {new SpatialBin[NumSpatialBins],new SpatialBin[NumSpatialBins],new SpatialBin[NumSpatialBins]};
 ObjectSplit findObjectSplit(buffer& buf, const BVHBuilder::Platform& P, float nodeSAH)
 {
-	float3 a1 = make_float3(1,2,3);
-	__m128 b1 = TOSSE3(a1);
-	float3 c1 = TOVEC3(b1);
-
 	int numRef = buf.N;
 	ObjectSplit split;
 	if(numRef == 1)
@@ -339,7 +357,7 @@ ObjectSplit findObjectSplit(buffer& buf, const BVHBuilder::Platform& P, float no
 		split.sah = 0.0f;
 		split.numLeft = 1;
 		split.sortDim = 0;
-		split.leftBounds = buf(0, 0)->box;
+		split.leftBounds = buf[0]->box;
 		split.rightBounds = __m128_box(AABB(make_float3(0), make_float3(0)));
 		return split;
 	}
@@ -374,10 +392,6 @@ ObjectSplit findObjectSplit(buffer& buf, const BVHBuilder::Platform& P, float no
 	}
 	return split;
 }
-__m128 clampToBin(__m128& v)
-{
-	return _mm_min_ps (_mm_max_ps(v, psZero), psBinClamp);
-}
 void splitReference(BBoxTmp& left, BBoxTmp& right, const BBoxTmp* ref, int dim, float pos)
 {
 	left._pNode = right._pNode = ref->_pNode;
@@ -385,11 +399,13 @@ void splitReference(BBoxTmp& left, BBoxTmp& right, const BBoxTmp* ref, int dim, 
 	if(ref->box.b.m128_f32[dim] < pos && pos < ref->box.t.m128_f32[dim])
 	{
 		left.box = right.box = ref->box;
-	}
+	}/*
 	left.box.t.m128_f32[dim] = pos;
 	right.box.b.m128_f32[dim] = pos;
 	left.box.Intersect(ref->box);
-	right.box.Intersect(ref->box);
+	right.box.Intersect(ref->box);*/
+	//no idea what whould be the correct way to do it
+	//but can one actually split a AABB further without supplementary information?
 }
 SpatialSplit findSpatialSplit(buffer& buf, __m128_box& box, const BVHBuilder::Platform& P, float nodeSAH)
 {
@@ -410,13 +426,15 @@ SpatialSplit findSpatialSplit(buffer& buf, __m128_box& box, const BVHBuilder::Pl
 
 	for (int refIdx = 0; refIdx < buf.N; refIdx++)
     {
-		__m128 b = buf(0, refIdx)->box.b, t = buf(0, refIdx)->box.t;
-		__m128 firstBin = clampToBin(_mm_mul_ps(_mm_sub_ps(b, origin), invBinSize));
-		__m128 lastBin = clampToBin(_mm_mul_ps(_mm_sub_ps(t, origin), invBinSize));
+		__m128 b = buf[refIdx]->box.b, t = buf[refIdx]->box.t;
+		__m128 firstBin = _mm_mul_ps(_mm_sub_ps(b, origin), invBinSize);
+		__m128 lastBin = _mm_mul_ps(_mm_sub_ps(t, origin), invBinSize);
+		firstBin = _mm_min_ps (_mm_max_ps(firstBin, psZero), psBinClamp);
+		lastBin = _mm_min_ps (_mm_max_ps(lastBin, firstBin), psBinClamp);
 
         for (int dim = 0; dim < 3; dim++)
         {
-            BBoxTmp currRef = *buf(0, refIdx);
+            BBoxTmp currRef = *buf[refIdx];
 			for (int i = firstBin.m128_f32[dim]; i < lastBin.m128_f32[dim]; i++)
             {
                 BBoxTmp leftRef, rightRef;
@@ -431,7 +449,6 @@ SpatialSplit findSpatialSplit(buffer& buf, __m128_box& box, const BVHBuilder::Pl
     }
 
     SpatialSplit split;
-	split.sah = FLT_MAX;
     for (int dim = 0; dim < 3; dim++)
     {
         // Sweep right to left and determine bounds.
@@ -470,9 +487,9 @@ int createLeaf(buffer& buf, IBVHBuilderCallback* clb)
 {
 	if(!buf.N)
 		return -214783648;
-	unsigned int start = clb->handleLeafObjects(buf(0, 0)->_pNode);
+	unsigned int start = clb->handleLeafObjects(buf[0]->_pNode);
 	for(int i = 1; i < buf.N; i++)
-		clb->handleLeafObjects(buf(0, i)->_pNode);
+		clb->handleLeafObjects(buf[i]->_pNode);
 	clb->handleLastLeafObject();
 	return ~start;
 }
@@ -572,6 +589,7 @@ void performSpatialSplit(buffer& buf, NodeSpec& left, NodeSpec& right, SpatialSp
 }
 int buildNode(buffer& buf,  __m128_box& box, const BVHBuilder::Platform& P, float m_minOverlap, IBVHBuilderCallback* clb, int level=0)
 {
+	//buf.removeDegenerates();
 	if ((buf.N <= P.getMinLeafSize() && level > 0) || level >= MaxDepth)
 		return createLeaf(buf, clb);
 	float area = box.area();
@@ -626,6 +644,8 @@ void BVHBuilder::BuildBVH(IBVHBuilderCallback* clb, const BVHBuilder::Platform& 
 	for(unsigned int i = 0; i < N; i++)
 	{
 		clb->getBox(i, &box);
+		//if(fmaxf(box.Size()) < 0.01f)
+		//	box.maxV += make_float3(0.01f);
 		data[i].box.b = TOSSE3(box.minV);
 		data[i].box.t = TOSSE3(box.maxV);
 		data[i]._pNode = i;
