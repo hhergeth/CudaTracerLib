@@ -27,7 +27,7 @@ struct e_TriIntersectorData
 	{
 		float3 p = v0 - v2;
 		float3 q = v1 - v2;
-		float3 d = -cross(p, q);
+		float3 d = cross(p, q);
 		float3 c = v2;
 		float4x4 m( p.x, q.x, d.x, c.x,
 					p.y, q.y, d.y, c.y,
@@ -37,6 +37,10 @@ struct e_TriIntersectorData
 		this->a = make_float4(m[2].x, m[2].y, m[2].z, -m[2].w);
 		this->b = make_float4(m[0].x, m[0].y, m[0].z, m[0].w);
 		this->c = make_float4(m[1].x, m[1].y, m[1].z, m[1].w);
+#ifndef ISCUDA
+		if(*(int*)&a.x == 0x80000000)
+			throw 1;
+#endif
 	}
 
 	CUDA_FUNC_IN void getData(float3& v0, float3& v1, float3& v2) const

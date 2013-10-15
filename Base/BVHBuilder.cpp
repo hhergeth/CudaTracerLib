@@ -10,8 +10,8 @@ void print(const __m128& v)
 	std::cout << "{" << v.m128_f32[0] << ", " << v.m128_f32[1] << ", " << v.m128_f32[2] << ", " << v.m128_f32[3] << "}\n";
 }
 
-#define TOVEC3(x) make_float3(x.m128_f32[2], x.m128_f32[1], x.m128_f32[0])
-#define TOSSE3(v) _mm_set_ps(0, v.x, v.y, v.z)
+#define TOVEC3(x) make_float3(x.m128_f32[0], x.m128_f32[1], x.m128_f32[2])
+#define TOSSE3(v) _mm_set_ps(0, v.z, v.y, v.x)
 struct __m128_box
 {
 	__m128 b;
@@ -145,7 +145,7 @@ public:
 		entries = new entry[n];
 		for(int i = 0; i < N; i++)
 		{
-			entries[sortedBuffers[0][i]].item = work[i];
+			entries[sortedBuffers[0][i]].item = work[sortedBuffers[0][i]];
 			//we are iterating over SLOTS not objects
 			for(int j = 0; j < 3; j++)
 				entries[sortedBuffers[j][i]].indices[j] = i;
@@ -176,26 +176,31 @@ public:
 		b.N = n;
 		b.entries = new entry[n];
 		for(int i = 0; i < 3; i++)
-		{
 			b.sortedBuffers[i] = new int[n];
-			int c = 0, end = start + n;
-			for(int j = 0; j < N; j++)//iterate over all elements
+		for(int j = 0; j < N; j++)//iterate over all elements
+		{
+			//determine whether the current should be inserted
+			int indexInSortedDim = entries[j].indices[dim];
+			if(indexInSortedDim >= start && indexInSortedDim < start + n)
 			{
-				//determine whether the current should be inserted
-				int indexInSortedDim = entries[j].indices[dim];
-				if(indexInSortedDim >= start && indexInSortedDim < end)
-				{
-					//okay so we should insert this object
-					//new index in current dimension will be c!
+				//okay so we should insert this object
+				//new index in current dimension will be c!
 
-					//but we also need the index of the object...
-					int index = indexInSortedDim - start;
+				//but we also need the index of the object...
+				int index = indexInSortedDim - start;
+				b.entries[index].item = entries[j].item;
+				for(int i = 0; i < 3; i++)
+				{
 					b.sortedBuffers[i][c] = index;
 					b.entries[index].indices[i] = c;
-					b.entries[index].item = entries[j].item;
-					c++;
 				}
+				c++;
 			}
+		}
+		for(int i = 0; i < 3; i++)
+		{
+			int c = 0;
+
 			if(c != n)
 				throw 1;
 		}
@@ -250,12 +255,29 @@ public:
 	}
 };
 
+float sqr(float f){return f*f;}
 static __m128_box* m_rightBounds = new __m128_box[MAX_OBJECT_COUNT];
 static SpatialBin* m_bins[3] = {new SpatialBin[NumSpatialBins],new SpatialBin[NumSpatialBins],new SpatialBin[NumSpatialBins]};
 ObjectSplit findObjectSplit(buffer& buf, BVHBuilder::Platform& P, float nodeSAH)
 {
+	float3 a1 = make_float3(1,2,3);
+	__m128 b1 = TOSSE3(a1);
+	float3 c1 = TOVEC3(b1);
+
 	int numRef = buf.N;
 	ObjectSplit split;
+	if(numRef == 1)
+	{
+		split.sah = 0.0f;
+		split.numLeft = 1;
+		split.sortDim = 0;
+		split.leftBounds = buf(0, 0)->box;
+		split.rightBounds = __m128_box(AABB(make_float3(0), make_float3(0)));
+		return split;
+	}
+	std::cout << "\n";
+	for(int i = 0; i < numRef; i++)
+		std::cout << "idx : " << buf[i]->_pNode << "\n";
 	float bestTieBreak = FLT_MAX;
 	for (int m_sortDim = 0; m_sortDim < 3; m_sortDim++)
 	{
@@ -268,9 +290,11 @@ ObjectSplit findObjectSplit(buffer& buf, BVHBuilder::Platform& P, float nodeSAH)
 		__m128_box leftBounds = __m128_box::Identity();
         for (int i = 1; i < numRef; i++)
         {
-			leftBounds.Enlarge(buf(m_sortDim, i - 1)->box);
-            float sah = nodeSAH + leftBounds.area() * P.getTriangleCost(i) + m_rightBounds[i - 1].area() * P.getTriangleCost(numRef - i);
-            float tieBreak = sqrtf((float)i) + sqrtf((float)(numRef - i));
+			__m128_box bb = buf(m_sortDim, i - 1)->box;
+			leftBounds.Enlarge(bb);
+			float lA = leftBounds.area(), rA = m_rightBounds[i - 1].area();
+            float sah = nodeSAH + lA * P.getTriangleCost(i) + rA * P.getTriangleCost(numRef - i);
+            float tieBreak = sqr((float)i) + sqr((float)(numRef - i));
             if (sah < split.sah || (sah == split.sah && tieBreak < bestTieBreak))
             {
                 split.sah = sah;
@@ -378,6 +402,8 @@ SpatialSplit findSpatialSplit(buffer& buf, __m128_box& box, BVHBuilder::Platform
 }
 int createLeaf(buffer& buf, IBVHBuilderCallback* clb)
 {
+	if(!buf.N)
+		return -214783648;
 	unsigned int start = clb->handleLeafObjects(buf(0, 0)->_pNode);
 	for(int i = 1; i < buf.N; i++)
 		clb->handleLeafObjects(buf(0, i)->_pNode);
@@ -480,7 +506,7 @@ void performSpatialSplit(buffer& buf, NodeSpec& left, NodeSpec& right, SpatialSp
 }
 int buildNode(buffer& buf,  __m128_box& box, BVHBuilder::Platform& P, float m_minOverlap, IBVHBuilderCallback* clb, int level=0)
 {
-	if (buf.N <= P.getMinLeafSize() || level >= MaxDepth)
+	if ((buf.N <= P.getMinLeafSize() && level > 0) || level >= MaxDepth)
 		return createLeaf(buf, clb);
 	float area = box.area();
 	float leafSAH = area * P.getTriangleCost(buf.N);
@@ -497,7 +523,7 @@ int buildNode(buffer& buf,  __m128_box& box, BVHBuilder::Platform& P, float m_mi
 		}
     }
 	float minSAH = MIN(leafSAH, object.sah, spatial.sah);
-	if (minSAH == leafSAH && buf.N <= P.getMaxLeafSize())
+	if (minSAH == leafSAH && buf.N <= P.getMaxLeafSize() && level > 0)
         return createLeaf(buf, clb);
     NodeSpec left, right;
 	int dim;
@@ -517,8 +543,8 @@ int buildNode(buffer& buf,  __m128_box& box, BVHBuilder::Platform& P, float m_mi
 	e_BVHNodeData* n = clb->HandleNodeAllocation(&index);
 	n->setLeft(left.bounds.ToBox());
 	n->setRight(right.bounds.ToBox());
-	int ld = buildNode(leftB, left.bounds, P, m_minOverlap, clb, level + 1);
 	int rd = buildNode(rightB, right.bounds, P, m_minOverlap, clb, level + 1);
+	int ld = buildNode(leftB, left.bounds, P, m_minOverlap, clb, level + 1);
 	n->setChildren(make_int2(ld, rd));
 	leftB.Free();
 	rightB.Free();

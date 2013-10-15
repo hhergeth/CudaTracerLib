@@ -34,7 +34,8 @@ e_Mesh::e_Mesh(InputStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_S
 	unsigned long long m_uNodeSize;
 	a_In >> m_uNodeSize;
 	m_sNodeInfo = a_Stream2->malloc(m_uNodeSize / 64);
-	a_In.Read(m_sNodeInfo(0), m_uNodeSize);
+	e_BVHNodeData* n2 = m_sNodeInfo(0);
+	a_In.Read(n2, m_uNodeSize);
 	m_sNodeInfo.Invalidate();
 
 	unsigned long long m_uIntSize;
@@ -234,6 +235,7 @@ void e_Mesh::CompileObjToBinary(const char* a_InputFile, OutputStream& a_Out)
 	a_Out << (unsigned int)matData.size();
 	a_Out.Write(&matData[0], sizeof(e_KernelMaterial) * (unsigned int)matData.size());
 	ConstructBVH(Vertices, Indices, m_numVertices, m_numTriangles * 3, a_Out);
+	//ConstructBVH2(MB, a_Out);
 #ifdef EXT_TRI
 	delete [] v_Normals;
 	delete [] v_Tangents;

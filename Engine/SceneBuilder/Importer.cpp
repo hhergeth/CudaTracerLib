@@ -1,60 +1,84 @@
-/*
+#include <StdAfx.h>
 #include "CudaBVH.hpp"
+#include "..\..\Base\FileStream.h"
+#include "..\..\Base\FrameworkInterop.h"
 
-using namespace FW;
-
-void ConstructBVH(Mesh<VertexP>& M, OutputStream& O, float4** a_Nodes)
+class TmpInStream : public FW::InputStream
 {
-	Scene S(M);
-	BVH B(&S, Platform(), BVH::BuildParams());
-	CudaBVH B2(B, BVHLayout_Compact2);
-	*a_Nodes = new float4[B2.getNodeBuffer().getSize() / 16];
-	memcpy(*a_Nodes, B2.getNodeBuffer().getPtr(),B2.getNodeBuffer().getSize()); 
-	B2.serialize(O);
-}
+public:
+	TmpInStream       (::InputStream* A)                      { F = A; }
+	virtual ~TmpInStream      (void)
+	{
 
-#include <io/File.hpp>
-void exportBVH(char* Input, char* Output)
+	}
+	virtual int             read                    (void* ptr, int size)
+	{
+		F->Read(ptr, size);
+		return size;
+	}
+
+private:
+	::InputStream* F;
+};
+
+class TmpOutStream : public FW::OutputStream
 {
-	FW::BVH::BuildParams m_buildParams;
-	FW::BVH::Stats stats;
-    m_buildParams.stats = &stats;
+public:
+	TmpOutStream(::OutputStream* A)
+	{
+		F = A;
+	}
+	virtual                 ~TmpOutStream     (void)
+	{
 
-	FW::MeshBase* mesh = importMesh(Input);
-	FW::Scene* m_scene = new Scene(*mesh);
+	}
 
-	FW::printf("\nBuilding BVH...\nThis will take a while.\n");
+	virtual void            write                   (const void* ptr, int size)
+	{
+		F->Write(ptr, size);
+	}
+	virtual void            flush                   (void)
+	{
 
-    // Build BVH.
+	}
+private:
+	::OutputStream* F;
+};
 
-    FW::BVH bvh(m_scene, FW::Platform(), m_buildParams);
-    stats.print();
-	FW::CudaBVH* m_bvh = new FW::CudaBVH(bvh, BVHLayout_Compact2);
-
-    // Display status.
-
-    FW::printf("Done.\n\n");
-}
-
-#include "stdafx.h"
-#include <iostream>
-#include "..\..\Base\Timer.h"
-void ConstructBVH2(FW::MeshBase* M, FW::OutputStream& O)
+void ConstructBVH2(FW::MeshBase* M, ::OutputStream& O)
 {
-	cTimer T;
-	T.StartTimer();
 	FW::BVH::BuildParams m_buildParams;
 	FW::BVH::Stats stats;
 	FW::Scene* m_scene = new FW::Scene(*M);
     FW::BVH bvh(m_scene, FW::Platform(), m_buildParams);
     stats.print();
 	FW::CudaBVH* m_bvh = new FW::CudaBVH(bvh, BVHLayout_Compact2);
-	m_bvh->serialize(O);
-	double tSec = T.EndTimer();
-	std::cout << "BVH Construction of " << M->numTriangles() << " objects took " << tSec << " seconds\n";
+	TmpOutStream t(&O);
+	m_bvh->serialize(t);
+	delete m_bvh;
+	delete m_scene;
 }
-*/
 
-#include "StdAfx.h"
 #include "Importer.h"
-
+void ConstructBVH(float3* vertices, unsigned int* indices, int vCount, int cCount, OutputStream& O)
+{/*
+	FW::Mesh<FW::VertexP> M;
+	M.addSubmesh();
+	M.addVertices((FW::VertexP*)vertices, vCount);
+	M.setIndices(0, (int*)indices, cCount);
+	ConstructBVH2(&M, O);*/
+	
+	bvh_helper::clb c(vCount, cCount, vertices, indices);
+	BVHBuilder::BuildBVH(&c, BVHBuilder::Platform(1.0f));
+	O << 5u;
+	O << (unsigned long long)c.nodeIndex * 64;
+	if(c.nodeIndex)
+		O.Write(c.nodes, (unsigned int)c.nodeIndex * sizeof(e_BVHNodeData));
+	O << (unsigned long long)c.triIndex * 16;
+	if(c.triIndex )
+		O.Write(c.tris, (unsigned int)c.triIndex * 16);
+	O << (unsigned long long)c.triIndex * 4;
+	if(c.triIndex )
+		O.Write(c.indices, (unsigned int)c.triIndex * sizeof(int));
+	c.Free();
+}

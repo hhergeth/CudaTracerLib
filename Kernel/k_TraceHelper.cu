@@ -131,7 +131,7 @@ bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResult* a_Result,
 			if(!mask)
 				break;
 		}
-		while (leafAddr < 0)
+		while (leafAddr < 0 && leafAddr != -214783648)
 		{
 			for (int triAddr = ~leafAddr;; triAddr += 3)
 			{
@@ -273,7 +273,7 @@ bool k_TraceRay(const float3& dir, const float3& ori, TraceResult* a_Result)
 				}
 			}
 		}
-		if(nodeAddrOuter < 0)
+		if(nodeAddrOuter < 0 && nodeAddrOuter != -214783648)
 		{
 			int node = ~nodeAddrOuter;
 			e_Node* N = g_SceneData.m_sNodeData.Data + node;
@@ -547,7 +547,7 @@ __global__ void intersectKernel(int numRays, void* a_RayBuffer, TraceResult* a_R
 
             // Process postponed leaf nodes.
 
-            while (leafAddr < 0)
+            while (leafAddr < 0 && leafAddr != -214783648)
             {
 				e_Node* N = g_SceneData.m_sNodeData.Data + (~leafAddr);
 				if(terminated)
@@ -654,7 +654,7 @@ __global__ void intersectKernel(int numRays, void* a_RayBuffer, TraceResult* a_R
 						if(!mask)
 							break;
 					}
-					while (lleafAddr < 0)
+					while (lleafAddr < 0 && lleafAddr != -214783648)
 					{
 						for (int triAddr = ~lleafAddr;; triAddr += 3)
 						{

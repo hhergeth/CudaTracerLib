@@ -83,16 +83,9 @@ public:
 	class Platform
 	{
 	public:
-		Platform(int maxLeaf)
-		{ 
-			m_SAHNodeCost = 1.f;
-			m_SAHTriangleCost = 1.f;
-			m_nodeBatchSize = 1;
-			m_triBatchSize = 1;
-			m_minLeafSize=1;
-			m_maxLeafSize=maxLeaf;
-		}
-		Platform(float nodeCost=1.f, float triCost=1.f, int nodeBatchSize=1, int triBatchSize=1) {  m_SAHNodeCost = nodeCost; m_SAHTriangleCost = triCost; m_nodeBatchSize = nodeBatchSize; m_triBatchSize = triBatchSize; m_minLeafSize=1; m_maxLeafSize=0x7FFFFFF; }
+		Platform()                                                                                                          { m_SAHNodeCost = 1.f; m_SAHTriangleCost = 1.f; m_nodeBatchSize = 1; m_triBatchSize = 1; m_minLeafSize=1; m_maxLeafSize=0x7FFFFFF; }
+		Platform(float nodeCost=1.f, float triCost=1.f, int nodeBatchSize=1, int triBatchSize=1) { m_SAHNodeCost = nodeCost; m_SAHTriangleCost = triCost; m_nodeBatchSize = nodeBatchSize; m_triBatchSize = triBatchSize; m_minLeafSize=1; m_maxLeafSize=0x7FFFFFF; }
+
 
 		// SAH weights
 		float getSAHTriangleCost() const                    { return m_SAHTriangleCost; }
@@ -115,6 +108,7 @@ public:
 		void  setLeafPreferences(int minSize,int maxSize)   { m_minLeafSize=minSize; m_maxLeafSize=maxSize; }
 		int   getMinLeafSize() const                        { return m_minLeafSize; }
 		int   getMaxLeafSize() const                        { return m_maxLeafSize; }
+
 	private:
 		float   m_SAHNodeCost;
 		float   m_SAHTriangleCost;

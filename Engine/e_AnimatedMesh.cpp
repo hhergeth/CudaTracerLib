@@ -179,7 +179,7 @@ void e_AnimatedMesh::CompileToBinary(const char* a_InputFile, c_StringArray& a_A
 	a_Out.Write(&triData[0], sizeof(e_TriangleData) * (unsigned int)triData.size());
 	a_Out << (unsigned int)matData.size();
 	a_Out.Write(&matData[0], sizeof(e_KernelMaterial) * (unsigned int)matData.size());
-	std::vector<e_BVHNodeData> v_BVH;
+	e_BVHNodeData* v_BVH;
 	ConstructBVH(v_Pos, (unsigned int*)&triData2[0], (int)vCount, (int)triData2.size() * 3, &v_BVH);
 
 	std::vector<std::vector<e_BVHLevelEntry>> V;
