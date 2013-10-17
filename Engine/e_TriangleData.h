@@ -41,7 +41,7 @@ public:
 			//NOR[i] = N[i];
 		}
 	}
-	CUDA_DEVICE CUDA_HOST Frame lerpFrame(const float2& bCoords, const float4x4& localToWorld, float3* ng = 0) const;
+	CUDA_DEVICE CUDA_HOST void lerpFrame(const float2& bCoords, const float4x4& localToWorld, Frame& sys, float3* ng = 0) const;
 	CUDA_FUNC_IN unsigned int getMatIndex(const unsigned int off) const 
 	{
 		unsigned int v = m_sDeviceData.Row0.w;

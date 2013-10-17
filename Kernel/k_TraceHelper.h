@@ -61,5 +61,25 @@ void k_INITIALIZE(const e_KernelDynamicScene& a_Data);
 void k_STARTPASS(e_DynamicScene* a_Scene, e_Sensor* a_Camera, const CudaRNGBuffer& a_RngBuf);
 
 
+struct traversalRay
+{
+	float4 a;
+	float4 b;
+};
 
-void __internal__IntersectBuffers(int N, void* a_RayBuffer, TraceResult* a_ResBuffer, unsigned int RAY_STRUCT_STRIDE, unsigned int RAY_STRUCT_RAY_OFFSET);
+struct CUDA_ALIGN(16) traversalResult
+{
+	float dist;
+	int nodeIdx;
+	int triIdx;
+	int bCoords;//half2
+	CUDA_FUNC_IN void toResult(TraceResult* tR, e_KernelDynamicScene& g_SceneData)
+	{
+		tR->m_fDist = dist;
+		tR->m_fUV = ((half2*)&bCoords)->ToFloat2();
+		tR->m_pNode = g_SceneData.m_sNodeData.Data + nodeIdx;
+		tR->m_pTri = g_SceneData.m_sTriData.Data + triIdx;
+	}
+};
+
+void __internal__IntersectBuffers(int N, traversalRay* a_RayBuffer, traversalResult* a_ResBuffer, bool skipOuter);

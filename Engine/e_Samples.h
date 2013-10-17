@@ -102,13 +102,6 @@ public:
 	{
 
 	}
-	CUDA_FUNC_IN PositionSamplingRecord(const Ray& r, const TraceResult& r2, EMeasure m = EArea)
-	{
-		p = r(r2.m_fDist);
-		n = r2.lerpFrame().n;
-		measure = m;
-		uv = r2.lerpUV();
-	}
 };
 
 struct DirectionSamplingRecord

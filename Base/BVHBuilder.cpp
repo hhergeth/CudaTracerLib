@@ -221,8 +221,7 @@ public:
 			}
 		};
 		entry* newEntries = new entry[N + refs.size()];
-		for(int i = 0; i < N; i++)
-			newEntries[i].item = *operator[](i);
+		memcpy(newEntries, entries, sizeof(entry) * N);
 		for(int j = 0; j < refs.size(); j++)
 			newEntries[N + j].item = refs[j];
 		Free();

@@ -190,7 +190,7 @@ void k_sPpmTracer::initNewPass(e_Image* I)
 			const e_KernelBSSRDF* bssrdf;
 			if(mat->GetBSSRDF(MapParameters(make_float3(1), make_float2(0, 0), Frame(), make_float2(0,0), 0), &bssrdf))
 			{
-				volBox.Enlarge(n->getWorldBox(m));
+				volBox.Enlarge(m_pScene->getBox(n));
 				m_bLongRunning |= 1;
 			}
 		}

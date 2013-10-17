@@ -3,11 +3,8 @@
 #include <MathTypes.h>
 #include "e_Mesh.h"
 
-class CUDA_ALIGN(16) e_Node
+class e_Node
 {
-private:
-	//kernel side data
-	float4x4 m_sWorldMatrix;
 public:
 	unsigned int m_uMeshIndex;
 	unsigned int m_uMaterialOffset;
@@ -21,7 +18,6 @@ public:
 	e_Node(unsigned int MeshIndex, e_Mesh* mesh, const char* file, e_StreamReference(e_KernelMaterial) mat)
 	{
 		m_uMeshIndex = MeshIndex;
-		m_sWorldMatrix = float4x4::Identity();
 #ifdef _DEBUG
 		ZeroMemory(m_cFile, sizeof(m_cFile));
 		strcpy(m_cFile, file);
@@ -37,17 +33,9 @@ public:
 		for(unsigned int i = lic; i < sizeof(m_uLightIndices) / sizeof(unsigned int); i++)
 			m_uLightIndices[i] = 0xffffffff;
 	}
-	AABB getWorldBox(e_Mesh* mesh) const
+	AABB getWorldBox(e_Mesh* mesh, const float4x4& mat) const
 	{
-		return mesh->m_sLocalBox.Transform(m_sWorldMatrix);
-	}
-	CUDA_FUNC_IN float4x4 getWorldMatrix() const
-	{
-		return m_sWorldMatrix;
-	}
-	void setTransform(const float4x4& m)
-	{
-		m_sWorldMatrix = m;
+		return mesh->m_sLocalBox.Transform(mat);
 	}
 	unsigned int getNextFreeLightIndex()
 	{

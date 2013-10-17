@@ -25,9 +25,6 @@ public:
 	e_Stream<float4x4>* m_pInvTransforms;
 	int startNode;
 	AABB m_sBox;
-
-	e_StreamReference(float4x4) tr0, tr1;
-	e_StreamReference(e_BVHNodeData) nds;
 public:
 	e_SceneBVH(unsigned int a_NodeCount);
 	~e_SceneBVH();
@@ -37,6 +34,8 @@ public:
 	{
 		return m_pNodes->getSizeInBytes();
 	}
+	void setTransform(unsigned int nodeIdx, const float4x4& mat);
+	void UpdateInvalidated();
 private:
 
 };

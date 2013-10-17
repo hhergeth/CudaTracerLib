@@ -21,7 +21,7 @@ void e_SceneBVH::Build(e_StreamReference(e_Node) a_Nodes, e_BufferReference<e_Me
 		}
 		virtual void getBox(unsigned int index, AABB* out) const
 		{
-			*out = a_Nodes(index)->getWorldBox(a_Meshes(a_Nodes(index)->m_uMeshIndex));
+			*out = a_Nodes(index)->getWorldBox(a_Meshes(a_Nodes(index)->m_uMeshIndex), *t->m_pTransforms[0](index));
 		}
 		virtual void HandleBoundingBox(const AABB& box)
 		{
@@ -29,7 +29,7 @@ void e_SceneBVH::Build(e_StreamReference(e_Node) a_Nodes, e_BufferReference<e_Me
 		}
 		virtual e_BVHNodeData* HandleNodeAllocation(int* index)
 		{
-			*index = nodesAllocated;
+			*index = nodesAllocated * 4;
 			return t->m_pNodes->operator()(nodesAllocated++);
 		}
 		virtual void HandleStartNode(int startNode)
@@ -39,12 +39,9 @@ void e_SceneBVH::Build(e_StreamReference(e_Node) a_Nodes, e_BufferReference<e_Me
 	};
 
 	clb b(a_Nodes, a_Meshes, this);
-	BVHBuilder::BuildBVH(&b, BVHBuilder::Platform());
-	for(unsigned int i = 0; i < a_Nodes.getLength(); i++)
-	{
-		m_pTransforms->operator()(i) = a_Nodes[i].getWorldMatrix();
-		m_pInvTransforms->operator()(i) = a_Nodes[i].getWorldMatrix().Inverse();
-	}
+	BVHBuilder::Platform Pq;
+	Pq.m_maxLeafSize = 1;
+	BVHBuilder::BuildBVH(&b, Pq);
 
 	m_pNodes->Invalidate();
 	m_pNodes->UpdateInvalidated();
@@ -61,9 +58,30 @@ e_SceneBVH::e_SceneBVH(unsigned int a_NodeCount)
 	m_pInvTransforms = new e_Stream<float4x4>(a_NodeCount);
 	startNode = -1;
 	m_sBox = AABB::Identity();
-	tr0 = m_pTransforms->malloc(m_pTransforms->getLength());
-	tr1 = m_pInvTransforms->malloc(m_pInvTransforms->getLength());
-	nds = m_pNodes->malloc(m_pNodes->getLength());
+	for(int i = 0; i < a_NodeCount; i++)
+	{
+		*m_pTransforms[0](i).operator->() = *m_pInvTransforms[0](i).operator->() = float4x4::Identity();
+	}
+	//INVALIDATE
+	m_pTransforms->malloc(m_pTransforms->getLength());
+	m_pInvTransforms->malloc(m_pInvTransforms->getLength());
+	m_pNodes->malloc(m_pNodes->getLength());
+}
+
+
+void e_SceneBVH::UpdateInvalidated()
+{
+	m_pNodes->UpdateInvalidated();
+	m_pTransforms->UpdateInvalidated();
+	m_pInvTransforms->UpdateInvalidated();
+}
+
+void e_SceneBVH::setTransform(unsigned int nodeIdx, const float4x4& mat)
+{
+	*m_pTransforms[0](nodeIdx).operator->() = mat;
+	*m_pInvTransforms[0](nodeIdx).operator->() = mat.Inverse();
+	m_pTransforms->Invalidate(nodeIdx, 1);
+	m_pInvTransforms->Invalidate(nodeIdx, 1);
 }
 
 e_SceneBVH::~e_SceneBVH()

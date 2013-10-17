@@ -50,10 +50,18 @@ public:
 	///Do not use this! Just invalidate and update the material
 	e_BufferReference<e_MIPMap, e_KernelMIPMap> LoadTexture(const char* file, bool a_MipMap);
 	void UnLoadTexture(e_BufferReference<e_MIPMap, e_KernelMIPMap> ref);
+	float4x4 GetNodeTransform(unsigned int i)
+	{
+		return GetNodeTransform(getNodes()(i));
+	}
+	float4x4 GetNodeTransform(e_StreamReference(e_Node) n)
+	{
+		return *m_pBVH->m_pTransforms[0](n.getIndex());
+	}
 	void SetNodeTransform(const float4x4& mat, e_StreamReference(e_Node) n);
 	void TransformNode(const float4x4& mat, e_StreamReference(e_Node) n)
 	{
-		SetNodeTransform(n->getWorldMatrix() * mat, n);
+		SetNodeTransform(GetNodeTransform(n) * mat, n);
 	}
 	void MoveNode(float3 p, e_StreamReference(e_Node) n)
 	{

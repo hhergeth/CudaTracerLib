@@ -53,8 +53,7 @@ inline bool fileExists(const TCHAR * file)
 template<typename T> e_Stream<T>* LL(int i)
 {
 	e_Stream<T>* r = new e_Stream<T>(i);
-	//FW::String s = FW::sprintf("%d [MB]\n", r->getSizeInBytes() / (1024 * 1024));
-	//OutputDebugString(s.getPtr());
+	//OutputDebugString(format("%d [MB]\n", r->getSizeInBytes() / (1024 * 1024)).c_str());
 	return r;
 }
 
@@ -284,7 +283,8 @@ void e_DynamicScene::UnLoadTexture(e_BufferReference<e_MIPMap, e_KernelMIPMap> r
 void e_DynamicScene::SetNodeTransform(const float4x4& mat, e_StreamReference(e_Node) n)
 {
 	m_uModified = 1;
-	n->setTransform(mat);
+	for(int i = 0; i < n.getLength(); i++)
+		m_pBVH->setTransform(n.getIndex() + i, mat);
 	n.Invalidate();
 	recalculateAreaLights(n);
 }
@@ -307,6 +307,7 @@ void e_DynamicScene::UpdateInvalidated()
 	{
 		m_uModified = 0;
 		m_pBVH->Build(m_pNodeStream->UsedElements(), m_pMeshBuffer->UsedElements());
+		m_pBVH->UpdateInvalidated();
 	}
 }
 
@@ -391,7 +392,7 @@ AABB e_DynamicScene::getBox(e_StreamReference(e_Node) n)
 {
 	AABB r = AABB::Identity();
 	for(unsigned int i = 0; i < n.getLength(); i++)
-		r.Enlarge(n(i)->getWorldBox(getMesh(n(i))));
+		r.Enlarge(n(i)->getWorldBox(getMesh(n(i)), GetNodeTransform(n)));
 	return r;
 }
 
@@ -466,7 +467,7 @@ ShapeSet e_DynamicScene::CreateShape(e_StreamReference(e_Node) Node, const char*
 		i += 3;
 	}
 
-	ShapeSet r = ShapeSet(n, c, Node->getWorldMatrix());
+	ShapeSet r = ShapeSet(n, c, GetNodeTransform(Node));
 	return r;
 }
 
@@ -500,7 +501,7 @@ void e_DynamicScene::recalculateAreaLights(e_StreamReference(e_Node) Node)
 	while(a[i] != -1)
 	{
 		e_StreamReference(e_KernelLight) l = m_pLightStream->operator()(a[i]);
-		float4x4 mat = Node->getWorldMatrix();
+		float4x4 mat = GetNodeTransform(Node);
 		l->As<e_DiffuseLight>()->shapeSet.Recalculate(mat);
 		m_pLightStream->Invalidate(Node->m_uLightIndices[i]);
 		i++;
@@ -582,6 +583,7 @@ e_SceneBVH* e_DynamicScene::getSceneBVH()
 	if(m_uModified)
 	{
 		m_uModified = 0;
+		m_pBVH->UpdateInvalidated();
 		m_pBVH->Build(m_pNodeStream->UsedElements(), m_pMeshBuffer->UsedElements());
 	}
 	return m_pBVH;

@@ -151,7 +151,10 @@
     <CudaCompile Include="Kernel\k_PhotonTracer.cu" />
     <CudaCompile Include="Kernel\k_PrimTracer.cu" />
     <CudaCompile Include="Kernel\k_TraceAlgorithms.cu" />
-    <CudaCompile Include="Kernel\k_TraceHelper.cu" />
+    <CudaCompile Include="Kernel\k_TraceHelper.cu">
+      <FastMath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</FastMath>
+      <TargetMachinePlatform Condition="'$(Configuration)|$(Platform)'=='Release|x64'">32</TargetMachinePlatform>
+    </CudaCompile>
     <CudaCompile Include="Kernel\k_Tracer.cu" />
     <CudaCompile Include="Kernel\k_sPpmTracer_EyePass.cu" />
     <CudaCompile Include="Kernel\k_sPpmTracer_PhotonPass.cu" />
@@ -246,6 +249,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <ShowIncludes>false</ShowIncludes>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions</EnableEnhancedInstructionSet>
+      <FloatingPointModel>Precise</FloatingPointModel>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>

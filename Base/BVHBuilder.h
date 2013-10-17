@@ -109,7 +109,7 @@ public:
 		int   getMinLeafSize() const                        { return m_minLeafSize; }
 		int   getMaxLeafSize() const                        { return m_maxLeafSize; }
 
-	private:
+	public:
 		float   m_SAHNodeCost;
 		float   m_SAHTriangleCost;
 		int     m_triBatchSize;

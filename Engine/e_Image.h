@@ -7,7 +7,7 @@
 
 class e_DirectImage
 {
-private:
+public:
 	int w;
 	RGBCOL* target;
 public:
@@ -53,7 +53,7 @@ public:
 	}
     void WriteDisplayImage(const char* fileName);
 	void WriteImage(const char* fileName, float splatScale = 1.0f);
-    void UpdateDisplay(float splatScale = 1.0f);
+    void UpdateDisplay(bool forceHDR = false, float splatScale = 1.0f);
 	void StartNewRendering();
 	struct Pixel {
         Pixel() {
@@ -84,6 +84,10 @@ public:
 	{
 		return e_DirectImage(target, xResolution);
 	}
+	bool& accessHDR()
+	{
+		return doHDR;
+	}
 private:
     // ImageFilm Private Data
 	e_KernelFilter filter;
@@ -95,6 +99,7 @@ private:
 	RGBCOL* target;
 	float filterTable[FILTER_TABLE_SIZE][FILTER_TABLE_SIZE];
 	int xResolution, yResolution;
+	bool doHDR;
 	CUDA_FUNC_IN Pixel* getPixel(int i)
 	{
 #ifdef ISCUDA

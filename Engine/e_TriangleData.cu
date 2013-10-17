@@ -2,24 +2,22 @@
 #include "e_Node.h"
 
 #ifdef EXT_TRI
-Frame e_TriangleData::lerpFrame(const float2& bCoords, const float4x4& localToWorld, float3* ng) const
+void e_TriangleData::lerpFrame(const float2& bCoords, const float4x4& localToWorld, Frame& sys, float3* ng) const
 {
 	//float3 na = NOR[0], nb = NOR[1], nc = NOR[2];
 	uint4 q = m_sDeviceData.Row0;
 	float3 na = Uchar2ToNormalizedFloat3(q.x), nb = Uchar2ToNormalizedFloat3(q.x >> 16), nc = Uchar2ToNormalizedFloat3(q.y);
-	float3 ta = Uchar2ToNormalizedFloat3(q.y >> 16), tb = Uchar2ToNormalizedFloat3(q.z), tc = Uchar2ToNormalizedFloat3(q.z >> 16);
-	Frame sys;
+	/*float3 ta = Uchar2ToNormalizedFloat3(q.y >> 16), tb = Uchar2ToNormalizedFloat3(q.z), tc = Uchar2ToNormalizedFloat3(q.z >> 16);
 	float w = 1.0f - bCoords.x - bCoords.y, u = bCoords.x, v = bCoords.y;
 	sys.n = (u * na + v * nb + w * nc);
-	sys.t = (u * ta + v * tb + w * tc);
+	sys.t = (u * ta + v * tb + w * tc);*/
 
-	sys = sys * localToWorld;
-	sys.n = normalize(sys.n);
+	//sys = sys * localToWorld;
+	//sys.n = normalize(sys.n);
 	sys.s = normalize(cross(sys.t, sys.n));
-	sys.t = normalize(cross(sys.s, sys.n));
-	if(ng)
-		*ng = normalize(localToWorld.TransformNormal((na + nb + nc) / 3.0f));//that aint the def of a face normal but to get the vertices we would have to invert the matrix
-	return sys;
+	//sys.t = normalize(cross(sys.s, sys.n));
+	//if(ng)
+	//	*ng = normalize(localToWorld.TransformNormal((na + nb + nc) / 3.0f));//that aint the def of a face normal but to get the vertices we would have to invert the matrix
 }
 
 float2 e_TriangleData::lerpUV(const float2& bCoords) const
@@ -83,11 +81,6 @@ void TraceResult::Init(bool first)
 	m_pTri = 0;
 }
 
-Frame TraceResult::lerpFrame() const
-{
-	return m_pTri->lerpFrame(m_fUV, m_pNode->getWorldMatrix(), 0);
-}
-
 unsigned int TraceResult::getMatIndex() const
 {
 	return m_pTri->getMatIndex(m_pNode->m_uMaterialOffset);
@@ -96,25 +89,6 @@ unsigned int TraceResult::getMatIndex() const
 float2 TraceResult::lerpUV() const
 {
 	return m_pTri->lerpUV(m_fUV);
-}
-
-void TraceResult::getBsdfSample(const Ray& r, CudaRNG& _rng, BSDFSamplingRecord* bRec) const
-{
-	bRec->Clear(_rng);
-	bRec->map.P = r(m_fDist);
-	bRec->map.sys = m_pTri->lerpFrame(m_fUV, m_pNode->getWorldMatrix(), &bRec->ng);
-	/*if(dot(r.direction, bRec->ng) > 0.0f)
-	{
-		bRec->ng *= -1.0f;
-		bRec->map.sys.n *= -1.0f;
-	}*/
-	bRec->map.uv = lerpUV();
-	bRec->map.bary = m_fUV;
-	bRec->map.Shape = m_pTri;
-	bRec->wi = normalize(bRec->map.sys.toLocal(-1.0f * r.direction));
-	float3 nor;
-	if(getMat().SampleNormalMap(bRec->map, &nor))
-		bRec->map.sys.RecalculateFromNormal(normalize(bRec->map.sys.toWorld(nor)));
 }
 
 void TraceResult::getBsdfSample(const Ray& r, CudaRNG& _rng, BSDFSamplingRecord* bRec, const float3& wo) const

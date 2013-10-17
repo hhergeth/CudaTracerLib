@@ -11,8 +11,10 @@ Spectrum pixelFunc(int x, int y, int w, int h, CudaRNG& rng)
 	return imp * PathTrace(r.direction, r.origin, rng);
 
 	TraceResult r2 = k_TraceRay(r);
+	Frame sys;
+	r2.lerpFrame(sys);
 	if(r2.hasHit())
-		return imp * Spectrum(-dot(r2.lerpFrame().n, r.direction));
+		return imp * Spectrum(-dot(sys.n, r.direction));
 	else return imp * Spectrum(0,1,0);
 	//return make_float3(r2.m_fDist / sc);
 }

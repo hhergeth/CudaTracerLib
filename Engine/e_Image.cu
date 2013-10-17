@@ -154,27 +154,30 @@ CUDA_GLOBAL void rtm_Copy(e_Image::Pixel* P, RGBCOL* T, unsigned int w, unsigned
 		T[y * w + x] = P[y * w + x].toSpectrum(splatScale).toRGBCOL();
 }
 
-void e_Image::UpdateDisplay(float splatScale)
+void e_Image::UpdateDisplay(bool forceHDR, float splatScale)
 {
 	if(!target)
 		return;
 	if(usedHostPixels)
 	{
 		cudaMemcpy(cudaPixels, hostPixels, sizeof(Pixel) * xResolution * yResolution, cudaMemcpyHostToDevice);
-	}/*
-	CUDA_ALIGN(16) float Lum_avg = 0;
-	unsigned int val = FloatToUInt(0);
-	cudaError_t r = cudaMemcpyToSymbol(g_LogLum, &Lum_avg, sizeof(Lum_avg));
-	r = cudaMemcpyToSymbol(g_MaxLum, &val, sizeof(unsigned int));
-	rtm_SumLogLum<<<dim3(xResolution / 32 + 1, yResolution / 32 + 1), dim3(32, 32)>>>(cudaPixels, target, xResolution, yResolution, splatScale);
-	r = cudaThreadSynchronize();
-	r = cudaMemcpyFromSymbol(&Lum_avg, g_LogLum, sizeof(Lum_avg));
-	unsigned int mLum;
-	r = cudaMemcpyFromSymbol(&mLum, g_MaxLum, sizeof(unsigned int));
-	float maxLum = UIntToFloat(mLum);
-	float L_w = exp(Lum_avg / float(xResolution * yResolution));
-	//float middleGrey = 1.03f - 2.0f / (2.0f + log10(L_w + 1.0f));
-	float alpha = 0.35, lumWhite2 = MAX(maxLum * maxLum, 0.1f);
-	rtm_Scale<<<dim3(xResolution / 32 + 1, yResolution / 32 + 1), dim3(32, 32)>>>(cudaPixels, target, xResolution, yResolution, splatScale, L_w, alpha, lumWhite2);*/
-	rtm_Copy<<<dim3(xResolution / 32 + 1, yResolution / 32 + 1), dim3(32, 32)>>>(cudaPixels, target, xResolution, yResolution, splatScale);
+	}
+	if(forceHDR || doHDR)
+	{
+		CUDA_ALIGN(16) float Lum_avg = 0;
+		unsigned int val = FloatToUInt(0);
+		cudaError_t r = cudaMemcpyToSymbol(g_LogLum, &Lum_avg, sizeof(Lum_avg));
+		r = cudaMemcpyToSymbol(g_MaxLum, &val, sizeof(unsigned int));
+		rtm_SumLogLum<<<dim3(xResolution / 32 + 1, yResolution / 32 + 1), dim3(32, 32)>>>(cudaPixels, target, xResolution, yResolution, splatScale);
+		r = cudaThreadSynchronize();
+		r = cudaMemcpyFromSymbol(&Lum_avg, g_LogLum, sizeof(Lum_avg));
+		unsigned int mLum;
+		r = cudaMemcpyFromSymbol(&mLum, g_MaxLum, sizeof(unsigned int));
+		float maxLum = UIntToFloat(mLum);
+		float L_w = exp(Lum_avg / float(xResolution * yResolution));
+		//float middleGrey = 1.03f - 2.0f / (2.0f + log10(L_w + 1.0f));
+		float alpha = 0.35, lumWhite2 = MAX(maxLum * maxLum, 0.1f);
+		rtm_Scale<<<dim3(xResolution / 32 + 1, yResolution / 32 + 1), dim3(32, 32)>>>(cudaPixels, target, xResolution, yResolution, splatScale, L_w, alpha, lumWhite2);
+	}
+	else rtm_Copy<<<dim3(xResolution / 32 + 1, yResolution / 32 + 1), dim3(32, 32)>>>(cudaPixels, target, xResolution, yResolution, splatScale);
 }

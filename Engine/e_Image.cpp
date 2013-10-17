@@ -5,6 +5,7 @@
 e_Image::e_Image(const e_KernelFilter &filt, const float crop[4], int xRes, int yRes, RGBCOL* cudaBuffer)
 	: xResolution(xRes), yResolution(yRes)
 {
+	doHDR = false;
 	filter = filt;
     memcpy(cropWindow, crop, 4 * sizeof(float));
 	xPixelStart = Ceil2Int(xResolution * cropWindow[0]);
@@ -20,6 +21,7 @@ e_Image::e_Image(const e_KernelFilter &filt, const float crop[4], int xRes, int 
 e_Image::e_Image(const e_KernelFilter &filt, int xRes, int yRes, RGBCOL* cudaBuffer)
 	: xResolution(xRes), yResolution(yRes)
 {
+	doHDR = false;
 	float crop[4] = {0, 1, 0, 1};
 	filter = filt;
 	//filter.SetData(e_KernelGaussianFilter(2, 2, 0.55f));

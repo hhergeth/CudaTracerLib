@@ -66,7 +66,9 @@ template<bool DIRECT> CUDA_FUNC_IN bool TracePhoton(Ray& r, Spectrum Le, CudaRNG
 				if(cancel)
 				{
 					x = x + r.direction * r3.m_fDist;
-					float3 wi = VectorMath::refract(r.direction, -r3.lerpFrame().n, 1.0f/bssrdf->e);
+					Frame sys;
+					r3.lerpFrame(sys);
+					float3 wi = VectorMath::refract(r.direction, -sys.n, 1.0f/bssrdf->e);
 					bRec.wo = bRec.map.sys.toLocal(wi);//ugly
 					break;
 				}

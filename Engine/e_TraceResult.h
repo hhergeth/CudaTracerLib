@@ -18,7 +18,7 @@ struct TraceResult
 	CUDA_DEVICE CUDA_HOST bool hasHit() const;
 	CUDA_DEVICE CUDA_HOST void Init(bool first = false);
 	CUDA_DEVICE CUDA_HOST operator bool() const;
-	CUDA_DEVICE CUDA_HOST Frame lerpFrame() const;
+	CUDA_DEVICE CUDA_HOST void lerpFrame(Frame& sys) const;
 	CUDA_DEVICE CUDA_HOST unsigned int getMatIndex() const;
 	CUDA_DEVICE CUDA_HOST float2 lerpUV() const;
 	CUDA_DEVICE CUDA_HOST Spectrum Le(const float3& p, const Frame& sys, const float3& w) const;
