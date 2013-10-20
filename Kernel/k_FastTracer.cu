@@ -17,7 +17,7 @@ struct cameraData
 };
 }
 
-__global__ void pathCreateKernel(unsigned int w, unsigned int h, traversalRay* a_RayBuffer, k_FastTracer::rayData* a_PayloadBuffer, traversalResult* a_ResBuffer, cameraData cData)
+__global__ void pathCreateKernel(unsigned int w, unsigned int h, k_RayBuffer<k_FastTracer::rayData, 2> buf, cameraData cData)
 {
     int rayidx = threadIdx.x + blockDim.x * (threadIdx.y + blockDim.y * (blockIdx.x + gridDim.x * blockIdx.y));
 	if(rayidx >= w * h)
@@ -25,21 +25,21 @@ __global__ void pathCreateKernel(unsigned int w, unsigned int h, traversalRay* a
 	unsigned int x = rayidx % w, y = rayidx / w;
 		
 	//g_CameraData.sampleRay(a_RayBuffer[rayidx].r, make_float2(x,y),rng.randomFloat2());
-	a_PayloadBuffer[rayidx].throughput = Spectrum(1.0f);
+	buf.getPayloadBuffer()[rayidx].throughput = Spectrum(1.0f);
 	//a_RayBuffer[rayidx].a = make_float4(cData.m_Position, 0.0f);
 	//a_RayBuffer[rayidx].b = make_float4(normalize(q - cData.m_Position), FLT_MAX);
 	Ray r;
 	g_CameraData.sampleRay(r, make_float2(x,y), make_float2(0,0));
 	
-	a_RayBuffer[rayidx].a = make_float4(r.origin, 0.0f);
-	a_RayBuffer[rayidx].b = make_float4(r.direction, FLT_MAX);
-	a_PayloadBuffer[rayidx].x = x;
-	a_PayloadBuffer[rayidx].y = y;
+	buf[0].getRayBuffer()[rayidx].a = make_float4(r.origin, 0.0f);
+	buf[0].getRayBuffer()[rayidx].b = make_float4(r.direction, FLT_MAX);
+	buf.getPayloadBuffer()[rayidx].x = x;
+	buf.getPayloadBuffer()[rayidx].y = y;
 }
 
 CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_NextInsertCounter;
 
-__global__ void pathIterateKernel(unsigned int w, unsigned int h, traversalRay* a_RayBuffer, k_FastTracer::rayData* a_PayloadBuffer, traversalResult* a_ResBuffer, RGBCOL* tar, float SCALE)
+__global__ void pathIterateKernel(unsigned int w, unsigned int h, k_RayBuffer<k_FastTracer::rayData, 2> buf, RGBCOL* tar, float SCALE)
 {/*
 	CudaRNG rng = g_RNGData();
 	int rayidx;
@@ -103,7 +103,7 @@ __global__ void pathIterateKernel(unsigned int w, unsigned int h, traversalRay* 
 	//if(r2.hasHit())
 	{
 		//tar[rayidx] = Spectrum(a_ResBuffer[rayidx].m_fDist/SCALE).toRGBCOL();
-		float f = a_ResBuffer[rayidx].dist/SCALE * 255.0f;
+		float f = buf[0].getResultBuffer()[rayidx].dist/SCALE * 255.0f;
 		unsigned char c = (unsigned char)f;
 		unsigned int i = (255 << 24) | (c << 16) | (c << 8) | c;
 		unsigned int* t = ((unsigned int*)tar) + rayidx;
@@ -111,28 +111,28 @@ __global__ void pathIterateKernel(unsigned int w, unsigned int h, traversalRay* 
 	}
 }
 
-__global__ void pathIterateKernel(unsigned int N, unsigned int w, traversalRay* a_RayBuffer, k_FastTracer::rayData* a_PayloadBuffer, traversalResult* a_ResBuffer, e_Image I, bool last)
+__global__ void pathIterateKernel(unsigned int N, unsigned int w, k_RayBuffer<k_FastTracer::rayData, 2> buf, e_Image I, bool last)
 {
     int rayidx = threadIdx.x + blockDim.x * (threadIdx.y + blockDim.y * (blockIdx.x + gridDim.x * blockIdx.y));
 	if(rayidx >= N)
 		return;
-	k_FastTracer::rayData& d = a_PayloadBuffer[rayidx];
+	k_FastTracer::rayData& d = buf.getPayloadBuffer()[rayidx];
 	Ray r;
 	TraceResult r2;
 	BSDFSamplingRecord bRec;
-	if(a_ResBuffer[rayidx].dist)
+	if(buf[0].getResultBuffer()[rayidx].dist)
 	{
 		CudaRNG rng = g_RNGData();
-		r.origin = !a_RayBuffer[rayidx].a;
-		r.direction = !a_RayBuffer[rayidx].b;
-		a_ResBuffer[rayidx].toResult(&r2, g_SceneData);
+		r.origin = !buf[0].getRayBuffer()[rayidx].a;
+		r.direction = !buf[0].getRayBuffer()[rayidx].b;
+		buf[0].getResultBuffer()[rayidx].toResult(&r2, g_SceneData);
 		r2.getBsdfSample(r, rng, &bRec);
 		Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
 		d.L += r2.Le(bRec.map.P, bRec.map.sys, r.direction) * d.throughput;
 		d.throughput *= f;
 		unsigned int id = atomicInc(&g_NextInsertCounter, -1);
-		a_RayBuffer[id].a = make_float4(bRec.map.P, 0);
-		a_RayBuffer[id].b = make_float4(bRec.getOutgoing(), FLT_MAX);
+		buf[0].getRayBuffer()[id].a = make_float4(bRec.map.P, 0);
+		buf[0].getRayBuffer()[id].b = make_float4(bRec.getOutgoing(), FLT_MAX);
 		if(last)
 			I.AddSample(d.x, d.y, d.L);//Spectrum(-dot(bRec.ng, r.direction))
 		g_RNGData(rng);
@@ -151,7 +151,7 @@ void k_FastTracer::doDirect(e_Image* I)
 	k_INITIALIZE(m_pScene->getKernelSceneData());
 	k_STARTPASS(m_pScene, m_pCamera, g_sRngs);
 	float scl = length(g_SceneData.m_sBox.Size());
-	pathCreateKernel<<< dim3((w*h)/(32*8)+1,1,1), dim3(32, 8, 1)>>>(w, h, intersector->getRayBuffer(), intersector->getPayloadBuffer(), intersector->getResultBuffer(), cameraData(m_pCamera->As<e_PerspectiveCamera>()));
+	pathCreateKernel<<< dim3((w*h)/(32*8)+1,1,1), dim3(32, 8, 1)>>>(w, h, *intersector, cameraData(m_pCamera->As<e_PerspectiveCamera>()));
 	/*
 	TT.StartTimer();
 	Ray r;
@@ -176,16 +176,16 @@ void k_FastTracer::doDirect(e_Image* I)
 	float elapsedTime;
 	cudaEventElapsedTime(&elapsedTime, start, stop);
 	//m_fTimeSpentRendering = elapsedTime * 1e-3f;
-
+	
 	cudaEventRecord(start, 0);
 	I->StartNewRendering();
-	pathIterateKernel<<< dim3((w*h)/(32*8)+1,1,1), dim3(32, 8, 1)>>>(w * h, w, intersector->getRayBuffer(), intersector->getPayloadBuffer(), intersector->getResultBuffer(), *I, 1);
+	pathIterateKernel<<< dim3((w*h)/(32*8)+1,1,1), dim3(32, 8, 1)>>>(w * h, w, *intersector, *I, 1);
 	I->UpdateDisplay();
 	cudaEventRecord(stop, 0);
 	cudaEventSynchronize(stop);
 	cudaEventElapsedTime(&elapsedTime, start, stop);
 	m_fTimeSpentRendering = elapsedTime * 1e-3f;
-
+	
 	/*TT.StartTimer();
 	I->StartNewRendering();
 	CudaRNG rng = g_RNGData();
@@ -227,7 +227,7 @@ void k_FastTracer::doPath(e_Image* I)
 	cudaMemcpyToSymbol(g_NextInsertCounter, &zero, sizeof(unsigned int));
 	k_INITIALIZE(m_pScene->getKernelSceneData());
 	k_STARTPASS(m_pScene, m_pCamera, g_sRngs);
-	pathCreateKernel<<< dim3((w*h)/(32*8)+1,1,1), dim3(32, 8, 1)>>>(w, h, intersector->getRayBuffer(), intersector->getPayloadBuffer(), intersector->getResultBuffer(), cameraData(m_pCamera->As<e_PerspectiveCamera>()));
+	pathCreateKernel<<< dim3((w*h)/(32*8)+1,1,1), dim3(32, 8, 1)>>>(w, h, *intersector, cameraData(m_pCamera->As<e_PerspectiveCamera>()));
 	int raysToTrace = w * h, pass = 0;
 	m_uNumRaysTraced = 0;
 	const int depth = 5;
@@ -236,7 +236,7 @@ void k_FastTracer::doPath(e_Image* I)
 		intersector->ClearResults();
 		intersector->IntersectBuffers(raysToTrace);
 		cudaMemcpyToSymbol(g_NextInsertCounter, &zero, sizeof(unsigned int));
-		pathIterateKernel<<< dim3((w*h)/(32*8)+1,1,1), dim3(32, 8, 1)>>>(w * h, w, intersector->getRayBuffer(), intersector->getPayloadBuffer(), intersector->getResultBuffer(), *I, pass == depth);
+		pathIterateKernel<<< dim3((w*h)/(32*8)+1,1,1), dim3(32, 8, 1)>>>(w * h, w, *intersector, *I, pass == depth);
 		m_uNumRaysTraced += raysToTrace;
 		cudaMemcpyFromSymbol(&raysToTrace, g_NextInsertCounter, sizeof(unsigned int));
 	}
@@ -249,18 +249,17 @@ void k_FastTracer::DoRender(e_Image* I)
 {
 	doPath(I);
 }
-
+/*
 void k_FastTracer::Resize(unsigned int w, unsigned int h)
 {
 	k_ProgressiveTracer::Resize(w, h);
-	k_RayIntersectKernel<rayData>* oldIntersector = intersector;
-	intersector = new k_RayIntersectKernel<rayData>(w * h);
-	if(oldIntersector)
-		oldIntersector->Free();
 	if(hostRays)
 		cudaFreeHost(hostRays);
 	if(hostResults)
 		cudaFreeHost(hostResults);
 	cudaMallocHost(&hostRays, sizeof(traversalRay) * w * h);
 	cudaMallocHost(&hostResults, sizeof(traversalResult) * w * h);
-}
+	if(intersector)
+		intersector->Free();
+	intersector = new k_RayBuffer<rayData, 2>(w * h);
+}*/

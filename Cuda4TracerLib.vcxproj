@@ -80,6 +80,7 @@
     <ClInclude Include="Kernel\k_Tracer.h" />
     <ClInclude Include="MathTypes.h" />
     <ClInclude Include="Math\AABB.h" />
+    <ClInclude Include="Math\Compression.h" />
     <ClInclude Include="Math\cutil_math.h" />
     <ClInclude Include="Math\float4x4.h" />
     <ClInclude Include="Math\Frame.h" />

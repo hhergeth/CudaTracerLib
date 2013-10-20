@@ -254,7 +254,7 @@ public:
 		return operator()(0, i);
 	}
 };
-#define buffer buffer2
+#define buffer buffer3
 struct buffer3
 {
 private:

@@ -34,7 +34,16 @@ public:
 	    delete hostPixels;
 		cudaFree(cudaPixels);
 	}
-    CUDA_DEVICE CUDA_HOST void AddSample(int sx, int sy, const Spectrum &L);
+	inline CUDA_DEVICE CUDA_HOST void AddSample(int sx, int sy, const Spectrum &L)
+	{
+		float xyz[3];
+		L.toXYZ(xyz[0], xyz[1], xyz[2]);
+		int x = sx, y = sy;
+		Pixel* pixel = getPixel((y - yPixelStart) * xPixelCount + (x - xPixelStart));
+		for(int i = 0; i < 3; i++)
+			pixel->xyz[i] += xyz[i];
+		pixel->weightSum += 1;
+	}
     CUDA_DEVICE CUDA_HOST void Splat(int sx, int sy, const Spectrum &L);
     CUDA_FUNC_IN void GetSampleExtent(int *xstart, int *xend, int *ystart, int *yend)
 	{

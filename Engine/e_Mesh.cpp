@@ -203,6 +203,8 @@ void e_Mesh::CompileObjToBinary(const char* a_InputFile, OutputStream& a_Out)
 		const FW::Array<FW::Vec3i>& indices = MB->indices(submesh);
 		for (size_t i = 0; i < indices.getSize(); i++)
 		{
+			if(c == 266813)
+				c = c;
 			const FW::Vec3i& vi = indices[(int)i];
 			for(size_t j = 0; j < 3; j++)
 			{
@@ -211,9 +213,9 @@ void e_Mesh::CompileObjToBinary(const char* a_InputFile, OutputStream& a_Out)
 				p[j] = make_float3(v.p.x, v.p.y, v.p.z);
 #ifdef EXT_TRI
 				t[j] = make_float2(v.t.x, v.t.y);
-				ta[j] = v_Tangents[l];
-				bi[j] = v_BiTangents[l];
-				n[j] = v_Normals[l];
+				ta[j] = normalize(v_Tangents[l]);
+				bi[j] = normalize(v_BiTangents[l]);
+				n[j] = normalize(v_Normals[l]);
 				//n[j] = v.n;
 #endif
 			}

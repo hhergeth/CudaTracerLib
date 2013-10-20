@@ -11,7 +11,7 @@ Spectrum e_Image::Pixel::toSpectrum(float splat)
 	s2.fromXYZ(xyzSplat[0], xyzSplat[1], xyzSplat[2]);
 	return s + s2 * splat;
 }
-
+/*
 void e_Image::AddSample(int sx, int sy, const Spectrum &_L)
 {
 	Spectrum L = _L;
@@ -20,7 +20,7 @@ void e_Image::AddSample(int sx, int sy, const Spectrum &_L)
 		return;
 	float xyz[3];
 	L.toXYZ(xyz[0], xyz[1], xyz[2]);
-	const bool SPLAT = true;
+	const bool SPLAT = false;
 	if(SPLAT)
 	{
 		float dimageX = sx - 0.5f;
@@ -65,12 +65,12 @@ void e_Image::AddSample(int sx, int sy, const Spectrum &_L)
 	{
 		int x = sx, y = sy;
 		Pixel* pixel = getPixel((y - yPixelStart) * xPixelCount + (x - xPixelStart));
-		for(int i = 0; i < 3; i++)
-			pixel->xyz[i] += xyz[i];
+		//for(int i = 0; i < 3; i++)
+		//	pixel->xyz[i] += xyz[i];
 		pixel->weightSum += 1;
 	}
 }
-
+*/
 void e_Image::Splat(int sx, int sy, const Spectrum &L)
 {
 	if (sx < xPixelStart || sx - xPixelStart >= xPixelCount || sy < yPixelStart || sy - yPixelStart >= yPixelCount)

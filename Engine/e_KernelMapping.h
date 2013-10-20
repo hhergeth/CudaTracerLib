@@ -38,7 +38,8 @@ struct MapParameters
 	float2 uv;
 	float2 bary;
 	const e_TriangleData* Shape;
-	CUDA_FUNC_IN MapParameters(): sys(Frame()), uv(float2()), P(float3()), bary(float2()){}
+	CUDA_FUNC_IN MapParameters(){}
+	//CUDA_FUNC_IN MapParameters(): sys(Frame()), uv(float2()), P(float3()), bary(float2()){}
 	CUDA_FUNC_IN MapParameters(const float3& p, const float2& u, const Frame& s, const float2& b, const e_TriangleData* S)
 		: sys(s), uv(u), P(p), bary(b), Shape(S)
 	{

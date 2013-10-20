@@ -277,41 +277,14 @@ template<typename T> CUDA_FUNC_IN T bilerp(const float2& uv, const T& lt, const 
 	return a + (b - a) * uv.y;
 }
 
-CUDA_FUNC_IN uchar3 NormalizedFloat3ToUchar3(float3& v)
-{
-#define CNV(x) x * 127.0f + 127.0f
-	return make_uchar3(CNV(v.x), CNV(v.y), CNV(v.z));
-#undef CNV
+
+
+CUDA_FUNC_IN int Floor2Int(float val) {
+    return (int)floorf(val);
 }
 
-CUDA_FUNC_IN float3 Uchar3ToNormalizedFloat3(uchar3 v)
-{
-#define CNV(x) (float(x) - 127.0f) / 127.0f
-	return make_float3(CNV(v.x), CNV(v.y), CNV(v.z));
-#undef CNV
-}
-
-CUDA_FUNC_IN uchar2 NormalizedFloat3ToUchar2(const float3& v)
-{
-	float theta = (acos(v.z)*(255.0f/PI));
-	float phi = (atan2(v.y,v.x)*(255.0f/(2.0f*PI)));
-	phi = phi < 0 ? (phi + 255) : phi;
-	return make_uchar2((unsigned char)theta, (unsigned char)phi);
-}
-
-CUDA_FUNC_IN float3 Uchar2ToNormalizedFloat3(const uchar2 v)
-{
-	float theta = float(v.x)*(1.0f/255.0f)*PI;
-	float phi = float(v.y)*(1.0f/255.0f)*PI*2.0f;
-	float sinphi, cosphi, costheta, sintheta;
-	sincos(phi, &sinphi, &cosphi);
-	sincos(theta, &sintheta, &costheta);
-	return make_float3(sintheta*cosphi, sintheta * sinphi, costheta);
-}
-
-CUDA_FUNC_IN float3 Uchar2ToNormalizedFloat3(unsigned int lowBits)
-{
-	return Uchar2ToNormalizedFloat3(make_uchar2(lowBits & 0xff, (lowBits >> 8) & 255));
+CUDA_FUNC_IN int Round2Int(float val) {
+    return Floor2Int(val + 0.5f);
 }
 
 // float functions
@@ -1106,10 +1079,6 @@ CUDA_FUNC_IN float Log2(float x) {
     return logf(x) * invLog2;
 }
 
-CUDA_FUNC_IN int Floor2Int(float val) {
-    return (int)floorf(val);
-}
-
 CUDA_FUNC_IN int Log2Int(float v)
 {
     return Floor2Int(Log2(v));
@@ -1125,10 +1094,6 @@ CUDA_FUNC_IN unsigned int RoundUpPow2(unsigned int v) {
     v |= v >> 4;    v |= v >> 8;
     v |= v >> 16;
     return v+1;
-}
-
-CUDA_FUNC_IN int Round2Int(float val) {
-    return Floor2Int(val + 0.5f);
 }
 
 CUDA_FUNC_IN int Float2Int(float val) {

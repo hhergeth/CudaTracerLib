@@ -15,8 +15,8 @@ public:
 	{
 		struct
 		{
-			uchar2 Normals[3];//Row0.x,y
-			uchar2 Tangents[3];//Row0.y,z
+			unsigned short Normals[3];//Row0.x,y
+			unsigned short Tangents[3];//Row0.y,z
 			unsigned int MatIndex;//Row0.w
 			ushort2 TexCoord[3];//Row1.x,y,z
 		} m_sHostData;
@@ -29,18 +29,7 @@ public:
 	//float3 NOR[3];
 public:
 	e_TriangleData(){}
-	e_TriangleData(float3* P, unsigned char matIndex, float2* T, float3* N, float3* Tan, float3* BiTan)
-	{
-		m_sHostData.MatIndex = matIndex;
-		for(int i = 0; i < 3; i++)
-		{
-			m_sHostData.Normals[i] = NormalizedFloat3ToUchar2(normalize(N[i]));
-			m_sHostData.Tangents[i] = NormalizedFloat3ToUchar2(normalize(Tan[i]));
-			half2 h2 = half2(T[i]);
-			m_sHostData.TexCoord[i] = *(ushort2*)&h2;
-			//NOR[i] = N[i];
-		}
-	}
+	e_TriangleData(float3* P, unsigned char matIndex, float2* T, float3* N, float3* Tan, float3* BiTan);
 	CUDA_DEVICE CUDA_HOST void lerpFrame(const float2& bCoords, const float4x4& localToWorld, Frame& sys, float3* ng = 0) const;
 	CUDA_FUNC_IN unsigned int getMatIndex(const unsigned int off) const 
 	{
@@ -49,6 +38,8 @@ public:
 	}
 	CUDA_DEVICE CUDA_HOST float2 lerpUV(const float2& bCoords) const;
 	CUDA_DEVICE CUDA_HOST void getNormalDerivative(const float2& bCoords, float3& dndu, float3& dndv) const;
+	CUDA_DEVICE CUDA_HOST void setData(const float3& na, const float3& nb, const float3& nc,
+									   const float3& ta, const float3& tb, const float3& tc);
 	//CUDA_DEVICE CUDA_HOST void getCurvature(const float2& bCoords, float& H, float& K) const;
 };
 #else

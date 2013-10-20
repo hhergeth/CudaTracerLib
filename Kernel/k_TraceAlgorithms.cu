@@ -118,7 +118,7 @@ Spectrum PathTrace(float3& a_Dir, float3& a_Ori, CudaRNG& rnd, float* distTraval
 	{
 		if(distTravalled && depth == 1)
 			*distTravalled = r.m_fDist;
-		r.getBsdfSample(r0, rnd, &bRec);
+		r.getBsdfSample(r0, rnd, &bRec);// return (Spectrum(bRec.map.sys.n) + Spectrum(1)) / 2.0f;return bRec.map.sys.n;
 		if(!DIRECT || (depth == 1 || specularBounce))
 			cl += cf * r.Le(r0(r.m_fDist), bRec.map.sys, -r0.direction);
 		if(DIRECT)

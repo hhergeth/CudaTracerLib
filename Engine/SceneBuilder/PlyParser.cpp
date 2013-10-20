@@ -325,8 +325,8 @@ void compileply(const char* a_InputFile, OutputStream& a_Out)
 			int l = Indices[t + j];
 			p[j] = Vertices[l];
 			te[j] = TexCoords[l];
-			ta[j] = Tangents[l];
-			n[j] = Normals[l];
+			ta[j] = normalize(Tangents[l]);
+			n[j] = normalize(Normals[l]);
 			box.Enlarge(p[j]);
 		}
 		triData[t / 3] = e_TriangleData(p, (unsigned char)0, te, n, ta, bi);

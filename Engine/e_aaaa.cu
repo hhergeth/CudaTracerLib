@@ -32,3 +32,4 @@ CUDA_FUNC_IN Spectrum Evaluate(float cosi, float eta_i, float eta_t)
     }
 }
 
+

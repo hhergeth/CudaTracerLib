@@ -45,12 +45,6 @@ __global__ void g_ComputeVertices(e_TmpVertex* a_Dest, e_AnimatedVertex* a_Sourc
 	}
 }
 
-CUDA_FUNC_IN unsigned int cnv(float3& f, unsigned int off = 0)
-{
-	uchar2 r = NormalizedFloat3ToUchar2(f);
-	return ((unsigned int)r.x | ((unsigned int)r.y << 8)) << off;
-}
-
 __global__ void g_ComputeTriangles(e_TmpVertex* a_Tmp, uint3* a_TriData, e_TriangleData* a_TriData2, unsigned int a_TCount)
 {
 	unsigned int N = blockIdx.x * blockDim.x + threadIdx.x;
@@ -59,9 +53,8 @@ __global__ void g_ComputeTriangles(e_TmpVertex* a_Tmp, uint3* a_TriData, e_Trian
 		uint3 t = a_TriData[N];
 		float3 n = normalize(cross(a_Tmp[t.y].m_fPos - a_Tmp[t.x].m_fPos, a_Tmp[t.z].m_fPos - a_Tmp[t.x].m_fPos));
 #ifdef EXT_TRI
-		a_TriData2[N].m_sDeviceData.Row0.x = cnv(a_Tmp[t.x].m_fNormal) | cnv(a_Tmp[t.y].m_fNormal, 16);
-		a_TriData2[N].m_sDeviceData.Row0.y = cnv(a_Tmp[t.z].m_fNormal) | cnv(a_Tmp[t.x].m_fTangent, 16);
-		a_TriData2[N].m_sDeviceData.Row0.z = cnv(a_Tmp[t.y].m_fTangent) | cnv(a_Tmp[t.z].m_fTangent, 16);
+		a_TriData2[N].setData(a_Tmp[t.x].m_fNormal, a_Tmp[t.y].m_fNormal, a_Tmp[t.z].m_fNormal,
+							  a_Tmp[t.x].m_fTangent, a_Tmp[t.y].m_fTangent, a_Tmp[t.z].m_fTangent);
 #else
 		//a_TriData2[N].m_sDeviceData.Row0.
 #endif

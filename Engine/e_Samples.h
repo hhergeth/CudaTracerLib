@@ -181,7 +181,7 @@ struct BSDFSamplingRecord
 	ETransportMode mode;
 	unsigned int typeMask;
 	unsigned int sampledType;
-	CUDA_FUNC_IN BSDFSamplingRecord():rng(0){}
+	CUDA_FUNC_IN BSDFSamplingRecord(){}
 	CUDA_FUNC_IN void Clear(CudaRNG& _rng)
 	{
 		rng = &_rng;
