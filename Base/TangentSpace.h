@@ -16,9 +16,9 @@ inline void ComputeTangentSpace(float3* V, float2* T, unsigned int* I, unsigned 
     ZeroMemory(tan1, vertexCount * sizeof(float3) * 2);
 	for (unsigned int f = 0; f < triCount; f++)
 	{
-		unsigned int i1 = I[f * 3 + 0];
-		unsigned int i2 = I[f * 3 + 1];
-		unsigned int i3 = I[f * 3 + 2];
+		unsigned int i1 = I ? I[f * 3 + 0] : f * 3 + 0;
+		unsigned int i2 = I ? I[f * 3 + 1] : f * 3 + 1;
+		unsigned int i3 = I ? I[f * 3 + 2] : f * 3 + 2;
 		const float3 v1 = V[i1], v2 = V[i2], v3 = V[i3];
 
 		const float3 e0 = v3 - v1, e1 = v2 - v1;//, n = normalize(v1q.n + v2q.n + v3q.n);
@@ -78,7 +78,7 @@ inline void ComputeTangentSpace(float3* V, float2* T, unsigned int* I, unsigned 
 	{
 		for(int j = 0; j < 3; j++)
 		{
-			unsigned int a = I[i * 3 + j];
+			unsigned int a = I ? I[i * 3 + j] : i * 3 + j;
 			const float3 n = a_Normals[a] = normalize(normalize(a_Normals[a]));
 			const float3 t = tan1[a];
         

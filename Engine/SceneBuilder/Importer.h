@@ -13,8 +13,12 @@ namespace bvh_helper
 	class clb : public IBVHBuilderCallback
 	{
 		float3* V;
-		unsigned int* I;
+		unsigned int* Iab;
 		unsigned int v, i;
+		unsigned int _index(unsigned int i, unsigned int o) const
+		{
+			return Iab ? Iab[i * 3 + o] : (i * 3 + o);
+		}
 	public:
 		e_BVHNodeData* nodes;
 		unsigned int nodeIndex;
@@ -26,7 +30,7 @@ namespace bvh_helper
 		int L0, L1;
 	public:
 		clb(int _v, int _i, float3* _V, unsigned int* _I)
-			: V(_V), I(_I), v(_v), i(_i)
+			: V(_V), Iab(_I), v(_v), i(_i)
 		{
 			nodeIndex = triIndex = 0;
 			const float duplicates = 0.35f, f = 1.0f + duplicates;
@@ -50,7 +54,9 @@ namespace bvh_helper
 		{
 			*out = AABB::Identity();
 			for(int i = 0; i < 3; i++)
-				out->Enlarge(V[I[index * 3 + i]]);
+				out->Enlarge(V[_index(index, i)]);
+			if(fminf(out->Size()) < 0.01f)
+				out->maxV += make_float3(0.01f);
 		}
 		virtual void HandleBoundingBox(const AABB& box)
 		{
@@ -70,7 +76,7 @@ namespace bvh_helper
 			if(triIndex > L1)
 				throw 1;
 			e_TriIntersectorData* t = (e_TriIntersectorData*)(tris + c);
-			t->setData(V[I[pNode * 3 + 0]], V[I[pNode * 3 + 1]], V[I[pNode * 3 + 2]]);
+			t->setData(V[_index(pNode, 0)], V[_index(pNode, 1)], V[_index(pNode, 2)]);
 			indices[c] = pNode;
 			return c;
 		}
@@ -89,24 +95,35 @@ namespace bvh_helper
 	};
 }
 
-inline void ConstructBVH(float3* vertices, unsigned int* indices, int vCount, int cCount, e_BVHNodeData** nodes = 0, float4** tris = 0, unsigned int** ind = 0, int* A = 0, int* B = 0)
+struct BVH_Construction_Result
+{
+	e_BVHNodeData* nodes;
+	float4* tris;
+	unsigned int* ind;
+	unsigned int nodeCount;
+	//number of float4's <=> indices
+	unsigned int triCount;
+	AABB box;
+	void Free()
+	{
+		delete [] nodes;
+		delete [] tris;
+		delete [] ind;
+	}
+};
+
+inline BVH_Construction_Result ConstructBVH(float3* vertices, unsigned int* indices, unsigned int vCount, unsigned int cCount)
 {
 	bvh_helper::clb c(vCount, cCount, vertices, indices);
 	BVHBuilder::BuildBVH(&c, BVHBuilder::Platform());
-	if(nodes)
-		*nodes = c.nodes;
-	else delete [] c.nodes;
-	if(tris)
-		*tris = c.tris;
-	else delete [] c.tris;
-	if(ind)
-		*ind = c.indices;
-	else delete [] c.indices;
-	if(A)
-		*A = c.nodeIndex;
-	if(B)
-		*B = c.triIndex;
-
+	BVH_Construction_Result r;
+	r.box = c.box;
+	r.ind = c.indices;
+	r.nodeCount = c.nodeIndex;
+	r.nodes = c.nodes;
+	r.triCount = c.triIndex;
+	r.tris = c.tris;
+	return r;
 }
 
 void ConstructBVH(float3* vertices, unsigned int* indices, int vCount, int cCount, OutputStream& O);

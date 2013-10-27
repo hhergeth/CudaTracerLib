@@ -118,7 +118,7 @@ template<typename HASH> struct k_PhotonMap
 		O.Write(m_sHash);
 	}
 
-	void DeSerialize(InputStream& I, void* hostbuf)
+	void DeSerialize(IInStream& I, void* hostbuf)
 	{
 		I >> m_uMaxPhotonCount;
 		I >> m_uGridLength;

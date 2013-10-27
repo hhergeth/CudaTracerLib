@@ -116,6 +116,7 @@
     <ClCompile Include="Engine\SceneBuilder\CudaBVH.cpp" />
     <ClCompile Include="Engine\SceneBuilder\Importer.cpp" />
     <ClCompile Include="Engine\SceneBuilder\MD5Parser.cpp" />
+    <ClCompile Include="Engine\SceneBuilder\ObjParser.cpp" />
     <ClCompile Include="Engine\SceneBuilder\PlyParser.cpp" />
     <ClCompile Include="Engine\SceneBuilder\RayBuffer.cpp" />
     <ClCompile Include="Engine\SceneBuilder\Scene.cpp" />

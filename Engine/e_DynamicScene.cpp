@@ -242,6 +242,24 @@ e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_MeshFile2)
 	return N;
 }
 
+e_StreamReference(e_Node) e_DynamicScene::CreateNode(unsigned int a_TriangleCount, unsigned int a_MaterialCount)
+{
+	e_StreamReference(e_Node) N = m_pNodeStream->malloc(1);
+	e_StreamReference(e_KernelMaterial) m2 = m_pMaterialBuffer->malloc(a_MaterialCount);
+	e_BufferReference<e_Mesh, e_KernelMesh> M = m_pMeshBuffer->malloc(1);
+	M->m_sIndicesInfo = m_pBVHIndicesStream->malloc(1);
+	M->m_sIntInfo = m_pTriIntStream->malloc(1);
+	M->m_sMatInfo = m2;
+	M->m_sNodeInfo = m_pBVHStream->malloc(1);
+	M->m_sTriInfo = m_pTriDataStream->malloc(a_TriangleCount);
+	M->m_uType = MESH_STATIC_TOKEN;
+	M->m_uUsedLights = 0;
+	N->setLightData(0, 0);
+	new(N.operator->()) e_Node(M.getIndex(), M.operator->(), "auto generated node", m2);
+	N.Invalidate();
+	return N;
+}
+
 void e_DynamicScene::DeleteNode(e_StreamReference(e_Node) ref)
 {
 	//TODO

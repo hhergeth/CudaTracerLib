@@ -647,16 +647,14 @@ template<bool ANY_HIT> __global__ void intersectKernel_SKIPOUTER(int numRays, tr
 			if( __popc(__ballot(true)) < DYNAMIC_FETCH_THRESHOLD )
 				break;
 		}
+		int4 res = make_int4(0,0,0,0);
 		if(hitIndex != -1)
 		{
-			int4 res;
 			res.x = __float_as_int(hitT);
 			res.y = 0;
-			res.z = tex1Dfetch(t_triIndices, hitIndex + g_SceneData.m_sMeshData[g_SceneData.m_sNodeData.Data->m_uMeshIndex].m_uBVHIndicesOffset);
-			//half2 h(bCoords);
-			//res.w = *(int*)&h;
-			((int4*)a_ResBuffer)[rayidx] = res;
+			res.z = tex1Dfetch(t_triIndices, hitIndex + g_SceneData.m_sMeshData[(g_SceneData.m_sNodeData.Data + 0)->m_uMeshIndex].m_uBVHIndicesOffset);
 		}
+		((int4*)a_ResBuffer)[rayidx] = res;
 	} while(true);
 }
 
@@ -1045,26 +1043,33 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 
         // Remap intersected triangle index, and store the result.
 
+		int4 res = make_int4(0,0,0,0);
 		if(hitIndex != -1)
 		{
-			int4 res;
 			res.x = __float_as_int(hitT);
 			res.y = nodeIdx;
 			res.z = tex1Dfetch(t_triIndices, hitIndex + g_SceneData.m_sMeshData[(g_SceneData.m_sNodeData.Data + nodeIdx)->m_uMeshIndex].m_uBVHIndicesOffset);
 			half2 h(bCorrds);
 			res.w = *(int*)&h;
-			((int4*)a_ResBuffer)[rayidx] = res;
 		}
+		((int4*)a_ResBuffer)[rayidx] = res;
 	outerlabel:
     } while(true);
 }
 
-void __internal__IntersectBuffers(int N, traversalRay* a_RayBuffer, traversalResult* a_ResBuffer, bool skipOuter)
+void __internal__IntersectBuffers(int N, traversalRay* a_RayBuffer, traversalResult* a_ResBuffer, bool SKIP_OUTER, bool ANY_HIT)
 {
 	cudaDeviceSetCacheConfig (cudaFuncCachePreferL1);
 	unsigned int zero = 0;
 	cudaMemcpyToSymbol(g_warpCounter, &zero, sizeof(unsigned int));
-	if(skipOuter)
-		intersectKernel_SKIPOUTER<false><<< 180, dim3(32, 4, 1)>>>(N, a_RayBuffer, a_ResBuffer);
-	else intersectKernel<false><<< 180, dim3(32, 4, 1)>>>(N, a_RayBuffer, a_ResBuffer);
+	if(SKIP_OUTER)
+		if(ANY_HIT)
+			intersectKernel_SKIPOUTER<true><<< 180, dim3(32, 4, 1)>>>(N, a_RayBuffer, a_ResBuffer);
+		else intersectKernel_SKIPOUTER<false><<< 180, dim3(32, 4, 1)>>>(N, a_RayBuffer, a_ResBuffer);
+	else
+	{
+		if(ANY_HIT)
+			intersectKernel<true><<< 180, dim3(32, 4, 1)>>>(N, a_RayBuffer, a_ResBuffer);
+		else intersectKernel<false><<< 180, dim3(32, 4, 1)>>>(N, a_RayBuffer, a_ResBuffer);;
+	}
 }

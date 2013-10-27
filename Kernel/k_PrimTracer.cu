@@ -70,7 +70,7 @@ CUDA_FUNC_IN Spectrum trace(Ray& r, CudaRNG& rng, float3* pout)
 			float pdf2 = 1.0f / (AbsDot(wo, bRec.map.sys.n) * AbsDot(wo, bRec.map.sys.n) * AbsDot(wo, bRec.map.sys.n)) * 1.0f / (dRecLight.dist * dRecLight.dist);
 			return le * f / (pdf / pdf2);
 		}
-		else return 0.0f;*/return Spectrum(1,0,0);
+		else return 0.0f;*/
 		//return Spectrum(dot(bRec.ng, -r.direction));
 
 		if(depth == 1 || specBounce || !DIRECT)

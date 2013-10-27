@@ -58,7 +58,7 @@ e_SceneInitData e_Mesh::ParseBinary(const char* a_InputFile)
 	AABB m_sLocalBox;
 	a_In >> m_sLocalBox;
 	a_In.Move(sizeof(e_MeshPartLight) * MAX_AREALIGHT_NUM + 8);
-#define PRINT(n, t) { a_In.Move<t>(n); char msg[255]; msg[0] = 0; sprintf(msg, "Buf : %s, length : %d, size : %d[MB]\n", #t, (n), (n) * sizeof(t) / (1024 * 1024)); OutputDebugString(msg);}
+#define PRINT(n, t) { a_In.Move(n * sizeof(t)); char msg[255]; msg[0] = 0; sprintf(msg, "Buf : %s, length : %d, size : %d[MB]\n", #t, (n), (n) * sizeof(t) / (1024 * 1024)); OutputDebugString(msg);}
 #define PRINT2(n, t) { a_In.Move(n); char msg[255]; msg[0] = 0; sprintf(msg, "Buf : %s, length : %d, size : %d[MB]\n", #t, (n) / sizeof(t), (n) / (1024 * 1024)); OutputDebugString(msg);}
 	unsigned int m_uTriangleCount;
 	a_In >> m_uTriangleCount;
@@ -203,8 +203,6 @@ void e_Mesh::CompileObjToBinary(const char* a_InputFile, OutputStream& a_Out)
 		const FW::Array<FW::Vec3i>& indices = MB->indices(submesh);
 		for (size_t i = 0; i < indices.getSize(); i++)
 		{
-			if(c == 266813)
-				c = c;
 			const FW::Vec3i& vi = indices[(int)i];
 			for(size_t j = 0; j < 3; j++)
 			{

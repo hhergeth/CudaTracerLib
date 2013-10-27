@@ -179,11 +179,10 @@ void e_AnimatedMesh::CompileToBinary(const char* a_InputFile, c_StringArray& a_A
 	a_Out.Write(&triData[0], sizeof(e_TriangleData) * (unsigned int)triData.size());
 	a_Out << (unsigned int)matData.size();
 	a_Out.Write(&matData[0], sizeof(e_KernelMaterial) * (unsigned int)matData.size());
-	e_BVHNodeData* v_BVH;
-	ConstructBVH(v_Pos, (unsigned int*)&triData2[0], (int)vCount, (int)triData2.size() * 3, &v_BVH);
+	BVH_Construction_Result bvh = ConstructBVH(v_Pos, (unsigned int*)&triData2[0], (int)vCount, (int)triData2.size() * 3);
 
 	std::vector<std::vector<e_BVHLevelEntry>> V;
-	constructLayout(V, (e_BVHNodeData*)&v_BVH[0], 0, -1);
+	constructLayout(V, bvh.nodes, 0, -1);
 
 	a_Out << (unsigned int)vCount;
 	size_t BLOCKSIZE = 4 + vCount * sizeof(e_AnimatedVertex) + 4 + triData2.size() * sizeof(uint3)
@@ -232,4 +231,5 @@ void e_AnimatedMesh::CompileToBinary(const char* a_InputFile, c_StringArray& a_A
 		OutputDebugString("Count error");
 		throw 1;
 	}
+	bvh.Free();
 }

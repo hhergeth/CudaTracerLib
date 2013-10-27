@@ -339,6 +339,9 @@
     <ClCompile Include="Base\BVHBuilder.cpp">
       <Filter>Base</Filter>
     </ClCompile>
+    <ClCompile Include="Engine\SceneBuilder\ObjParser.cpp">
+      <Filter>Engine\SceneBuilder</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="Kernel\k_PrimTracer.cu">

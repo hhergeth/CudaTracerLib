@@ -25,7 +25,7 @@ bool e_ObjCompiler::IsApplicable(const char* a_InputFile, e_MeshCompileType* out
 
 void e_ObjCompiler::Compile(const char* a_InputFile, OutputStream& a_Out)
 {
-	e_Mesh::CompileObjToBinary(a_InputFile, a_Out);
+	compileobj(a_InputFile, a_Out);
 }
 
 bool e_Md5Compiler::IsApplicable(const char* a_InputFile, e_MeshCompileType* out)

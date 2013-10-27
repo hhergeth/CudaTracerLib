@@ -46,6 +46,7 @@ public:
 	~e_DynamicScene();
 	void Free();
 	e_StreamReference(e_Node) CreateNode(const char* a_MeshFile);
+	e_StreamReference(e_Node) CreateNode(unsigned int a_TriangleCount, unsigned int a_MaterialCount);
 	void DeleteNode(e_StreamReference(e_Node) ref);
 	///Do not use this! Just invalidate and update the material
 	e_BufferReference<e_MIPMap, e_KernelMIPMap> LoadTexture(const char* file, bool a_MipMap);
@@ -139,4 +140,8 @@ public:
 	void removeAllLights(e_StreamReference(e_Node) Node);
 	void recalculateAreaLights(e_StreamReference(e_Node) Node);
 	e_StreamReference(e_KernelLight) setEnvironementMap(const Spectrum& power, const char* file);
+	void InvalidateSceneBVH()
+	{
+		m_uModified = 1;
+	}
 };

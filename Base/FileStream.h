@@ -7,17 +7,16 @@
 
 class IInStream
 {
-private:
-	template<typename T> void Read(T& a)
-	{
-		Read((char*)&a, sizeof(T));
-	}
 public:
 	virtual void Read(void* a_Out, unsigned int a_Size) = 0;
 	virtual unsigned long long getPos() = 0;
 	virtual unsigned long long getFileSize() = 0;
 	bool eof(){return getPos() == getFileSize();}
 	virtual void Move(int off) = 0;
+	template<typename T> void Move(int num)
+	{
+		Move(num * sizeof(T));
+	}
 	template<typename T> bool get(T& c)
 	{
 		if(getPos() + sizeof(T) <= getFileSize())
@@ -38,6 +37,31 @@ public:
 	bool getline(std::string& str)
 	{
 		return ReadTo(str, '\n');
+	}
+	std::string getline()
+	{
+		std::string s;
+		getline(s);
+		return s;
+	}
+	unsigned char* ReadToEnd()
+	{
+		unsigned long long l = getFileSize(), r = l - getPos();
+		void* v = malloc(r);
+		Read((char*)v, r);
+		return (unsigned char*)v;
+	}
+	template<typename T> T* ReadToEnd()
+	{
+		return (T*)ReadToEnd();
+	}
+	template<typename T> void Read(T* a_Data, unsigned int a_Size)
+	{
+		Read((void*)a_Data, a_Size);
+	}
+	template<typename T> void Read(T& a)
+	{
+		Read((char*)&a, sizeof(T));
 	}
 public:
 	IInStream& operator>>(char& rhs)
@@ -142,6 +166,24 @@ public:
 	{
 		numBytesRead = 0;
 		H = CreateFile(a_Name, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+		if(H == INVALID_HANDLE_VALUE)
+		{
+			LPVOID lpMsgBuf;
+			LPVOID lpDisplayBuf;
+			DWORD dw = GetLastError(); 
+
+			FormatMessage(
+				FORMAT_MESSAGE_ALLOCATE_BUFFER | 
+				FORMAT_MESSAGE_FROM_SYSTEM |
+				FORMAT_MESSAGE_IGNORE_INSERTS,
+				NULL,
+				dw,
+				MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+				(LPTSTR) &lpMsgBuf,
+				0, NULL );
+			OutputDebugString((LPTSTR)lpMsgBuf);
+			throw 1;
+		}
 	}
 	void Close()
 	{
@@ -152,21 +194,6 @@ public:
 		DWORD h;
 		DWORD l = GetFileSize(H, &h);
 		return ((size_t)h << 32) | (size_t)l;
-	}
-	template<typename T> T* ReadToEnd()
-	{
-		unsigned long long l = getFileSize(), r = l - numBytesRead;
-		void* v = malloc(r);
-		Read((char*)v, r);
-		return (T*)v;
-	}
-	template<typename T> void Read(T* a_Data, unsigned int a_Size)
-	{
-		Read((void*)a_Data, a_Size);
-	}
-	template<typename T> void Read(const T& a_Data)
-	{
-		Read(&a_Data, sizeof(T));
 	}
 	virtual unsigned long long getPos()
 	{
@@ -187,9 +214,47 @@ public:
 			throw 1;
 		numBytesRead += off;
 	}
-	template<typename T> void Move(unsigned int N)
+};
+
+class MemInputStream : public IInStream
+{
+public:
+	unsigned int numBytesRead, length;
+private:
+	unsigned char* buf;
+public:
+	MemInputStream(InputStream& in)
 	{
-		Move(sizeof(T) * N);
+		buf = in.ReadToEnd();
+	}
+	MemInputStream(const char* a_Name)
+	{
+		InputStream in(a_Name);
+		numBytesRead = 0;
+		length = in.getFileSize();
+		buf = in.ReadToEnd();
+		in.Close();
+	}
+	void Close()
+	{
+		delete [] buf;
+	}
+	virtual unsigned long long getFileSize()
+	{
+		return length;
+	}
+	virtual unsigned long long getPos()
+	{
+		return numBytesRead;
+	}
+	virtual void Read(void* a_Data, unsigned int a_Size)
+	{
+		memcpy(a_Data, buf + numBytesRead, a_Size);
+		numBytesRead += a_Size;
+	}
+	void Move(int off)
+	{
+		numBytesRead += off;
 	}
 };
 

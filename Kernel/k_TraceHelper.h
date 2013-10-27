@@ -82,4 +82,4 @@ struct CUDA_ALIGN(16) traversalResult
 	}
 };
 
-void __internal__IntersectBuffers(int N, traversalRay* a_RayBuffer, traversalResult* a_ResBuffer, bool skipOuter);
+void __internal__IntersectBuffers(int N, traversalRay* a_RayBuffer, traversalResult* a_ResBuffer, bool SKIP_OUTER, bool ANY_HIT);

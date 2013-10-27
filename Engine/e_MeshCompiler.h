@@ -6,6 +6,7 @@
 
 //ugly
 void compileply(const char* a_InputFile, OutputStream& a_Out);
+void compileobj(const char* a_InputFile, OutputStream& a_Out);
 
 enum e_MeshCompileType
 {
