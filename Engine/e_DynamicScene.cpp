@@ -44,12 +44,6 @@ e_SceneInitData e_SceneInitData::CreateFor_S_SanMiguel(unsigned int a_SceneNodes
 	return r;
 }
 
-inline bool fileExists(const TCHAR * file)
-{
-   WIN32_FIND_DATA FindFileData;
-   return FindFirstFile(file, &FindFileData) != INVALID_HANDLE_VALUE;
-}
-
 template<typename T> e_Stream<T>* LL(int i)
 {
 	e_Stream<T>* r = new e_Stream<T>(i);
@@ -109,77 +103,6 @@ e_DynamicScene::~e_DynamicScene()
 	Free();
 }
 
-void createDirectoryRecursively(const std::string &directory)
-{
-  static const std::string separators("\\/");
- 
-  // If the specified directory name doesn't exist, do our thing
-  DWORD fileAttributes = ::GetFileAttributes(directory.c_str());
-  if(fileAttributes == INVALID_FILE_ATTRIBUTES) {
- 
-    // Recursively do it all again for the parent directory, if any
-    std::size_t slashIndex = directory.find_last_of(separators);
-    if(slashIndex != std::wstring::npos) {
-      createDirectoryRecursively(directory.substr(0, slashIndex));
-    }
- 
-    // Create the last directory on the path (the recursive calls will have taken
-    // care of the parent directories by now)
-    BOOL result = ::CreateDirectory(directory.c_str(), nullptr);
-    if(result == FALSE) {
-      throw std::runtime_error("Could not create directory");
-    }
- 
-  } else { // Specified directory name already exists as a file or directory
- 
-    bool isDirectoryOrJunction =
-      ((fileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) ||
-      ((fileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0);
- 
-    if(!isDirectoryOrJunction) {
-      throw std::runtime_error(
-        "Could not create directory because a file with the same name exists"
-      );
-    }
- 
-  }
-}
-
-__int64 FileSize(const char* name)
-{
-    HANDLE hFile = CreateFile(name, GENERIC_READ, 
-        FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 
-        FILE_ATTRIBUTE_NORMAL, NULL);
-    if (hFile==INVALID_HANDLE_VALUE)
-        return -1; // error condition, could call GetLastError to find out more
-
-    LARGE_INTEGER size;
-    if (!GetFileSizeEx(hFile, &size))
-    {
-        CloseHandle(hFile);
-        return -1; // error condition, could call GetLastError to find out more
-    }
-
-    CloseHandle(hFile);
-    return size.QuadPart;
-}
-#include <sys/utime.h>
-LPFILETIME TimetToFileTime( time_t t )
-{
-    LONGLONG ll = Int32x32To64(t, 10000000) + 116444736000000000;
-	LPFILETIME pft;
-    pft->dwLowDateTime = (DWORD) ll;
-    pft->dwHighDateTime = ll >>32;
-	return pft;
-}
-time_t filetime_to_timet(const FILETIME& ft)
-{
-   ULARGE_INTEGER ull;
-   ull.LowPart = ft.dwLowDateTime;
-   ull.HighPart = ft.dwHighDateTime;
-
-   return ull.QuadPart / 10000000ULL - 11644473600ULL;
-}
 e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_MeshFile2)
 {
 	m_uModified = 1;
@@ -189,23 +112,18 @@ e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_MeshFile2)
 	if(load)
 	{
 		std::string t0 = std::string(m_pCompilePath) + getFileName(strA), cmpPath = t0.substr(0, t0.rfind('.')) + std::string(".xmsh");
-		createDirectoryRecursively(getDirName(cmpPath).c_str());
-		WIN32_FILE_ATTRIBUTE_DATA objFile, xmshFile;
-		GetFileAttributesEx(a_MeshFile2, GetFileExInfoStandard, &objFile);
-		GetFileAttributesEx(cmpPath.c_str(), GetFileExInfoStandard, &xmshFile);
-		if(FileSize(cmpPath.c_str()) <= 4 || objFile.ftLastWriteTime.dwHighDateTime != xmshFile.ftLastWriteTime.dwHighDateTime || objFile.ftLastWriteTime.dwLowDateTime != xmshFile.ftLastWriteTime.dwLowDateTime)
+		CreateDirectoryRecursively(getDirName(cmpPath).c_str());
+		unsigned long long objStamp = GetTimeStamp(a_MeshFile2);
+		unsigned long long xmshStamp = GetTimeStamp(cmpPath.c_str());
+		unsigned long long si = GetFileSize(cmpPath.c_str());
+		if(si <= 4 || si == -1 || objStamp != xmshStamp)
 		{
+			std::cout << "Started compiling mesh : " << a_MeshFile2 << "\n";
 			OutputStream a_Out(cmpPath.c_str());
 			e_MeshCompileType t;
 			m_sCmpManager.Compile(a_MeshFile2, a_Out, &t);
 			a_Out.Close();
-			HANDLE Handle = CreateFile(cmpPath.c_str(), GENERIC_WRITE, FILE_SHARE_WRITE,
-                    NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
-			if(Handle == INVALID_HANDLE_VALUE)
-				throw 1;
-			if(!SetFileTime(Handle, &objFile.ftLastWriteTime, &objFile.ftLastWriteTime, &objFile.ftLastWriteTime))
-				throw 1;
-			CloseHandle(Handle);
+			SetTimeStamp(cmpPath.c_str(), objStamp);
 		}
 		InputStream I(cmpPath.c_str());
 		unsigned int t;
@@ -231,7 +149,7 @@ e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_MeshFile2)
 	m2.Invalidate();
 	new(N.operator->()) e_Node(M.getIndex(), M.operator->(), strA.c_str(), m2);
 	unsigned int li[MAX_AREALIGHT_NUM];
-	ZeroMemory(li, sizeof(li));
+	Platform::SetMemory(li, sizeof(li));
 	for(unsigned int i = 0; i < M->m_uUsedLights; i++)
 	{
 		ShapeSet s = CreateShape(N, M->m_sLights[i].MatName);
@@ -267,7 +185,7 @@ void e_DynamicScene::DeleteNode(e_StreamReference(e_Node) ref)
 
 e_BufferReference<e_MIPMap, e_KernelMIPMap> e_DynamicScene::LoadTexture(const char* file, bool a_MipMap)
 {
-	std::string a = fileExists(file) ? std::string(file) : std::string(m_pTexturePath) + std::string(file);
+	std::string a = GetFileSize(file) != -1 ? std::string(file) : std::string(m_pTexturePath) + std::string(file);
 	if(a[a.size() - 1] == '\n')
 		a = a.substr(0, a.size() - 1);
 	bool load;
@@ -275,8 +193,8 @@ e_BufferReference<e_MIPMap, e_KernelMIPMap> e_DynamicScene::LoadTexture(const ch
 	if(load)
 	{
 		std::string a2 = std::string(m_pCompilePath) + "Images\\" + getFileName(a), b = a2.substr(0, a2.find('.')) + ".xtex";
-		createDirectoryRecursively(getDirName(b).c_str());
-		if(FileSize(b.c_str()) <= 0)
+		CreateDirectoryRecursively(getDirName(b).c_str());
+		if(GetFileSize(b.c_str()) <= 0)
 		{
 			OutputStream a_Out(b.c_str());
 			e_MIPMap::CompileToBinary(a.c_str(), a_Out, a_MipMap);

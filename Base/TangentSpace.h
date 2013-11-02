@@ -13,7 +13,7 @@ inline void ComputeTangentSpace(float3* V, float2* T, unsigned int* I, unsigned 
 
 	float3 *tan1 = new float3[vertexCount * 2];
     float3 *tan2 = tan1 + vertexCount;
-    ZeroMemory(tan1, vertexCount * sizeof(float3) * 2);
+    Platform::SetMemory(tan1, vertexCount * sizeof(float3) * 2);
 	for (unsigned int f = 0; f < triCount; f++)
 	{
 		unsigned int i1 = I ? I[f * 3 + 0] : f * 3 + 0;
@@ -104,8 +104,8 @@ inline void ComputeTangentSpace(MD5Model* a_Mesh, e_AnimatedVertex** a_Vertices,
 	*a_NumV = vertexCount;
 	*a_Pos = new float3[vertexCount];
 	*a_Vertices = new e_AnimatedVertex[vertexCount];
-	ZeroMemory(a_Pos[0], sizeof(float3) * vertexCount);
-	ZeroMemory(a_Vertices[0], sizeof(e_AnimatedVertex) * vertexCount);
+	Platform::SetMemory(a_Pos[0], sizeof(float3) * vertexCount);
+	Platform::SetMemory(a_Vertices[0], sizeof(e_AnimatedVertex) * vertexCount);
 
 	unsigned int off = 0;
 	for(int i = 0; i < a_Mesh->meshes.size(); i++)

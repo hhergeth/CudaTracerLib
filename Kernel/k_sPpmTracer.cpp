@@ -135,7 +135,7 @@ void print(k_PhotonMapCollection& m_sMaps)
 
 void k_sPpmTracer::DoRender(e_Image* I)
 {
-	//k_ProgressiveTracer::DoRender(I);
+	k_ProgressiveTracer::DoRender(I);
 	if(m_uModus == 1)
 	{
 		updateBuffer();
@@ -150,7 +150,7 @@ void k_sPpmTracer::DoRender(e_Image* I)
 
 			m_uPhotonsEmitted += m_sMaps.m_uPhotonNumEmitted;
 			doEyePass(I);
-			I->UpdateDisplay();
+			I->DoUpdateDisplay();
 			m_sMaps.StartNewPass();
 			m_uPreviosCount = m_uPhotonsEmitted;
 
@@ -163,9 +163,9 @@ void k_sPpmTracer::DoRender(e_Image* I)
 	else if(m_uModus == 2)
 	{
 		m_uPassesDone = 1;
-		I->StartNewRendering();
+		I->Clear();
 		doEyePass(I);
-		I->UpdateDisplay();
+		I->DoUpdateDisplay();
 	}
 }
 
@@ -173,7 +173,8 @@ void k_sPpmTracer::initNewPass(e_Image* I)
 {
 	k_ProgressiveTracer::StartNewTrace(I);
 	m_uPhotonsEmitted = 0;
-	AABB m_sEyeBox = m_pCamera->m_sLastFrustum;
+	//AABB m_sEyeBox = m_pCamera->m_sLastFrustum;
+	AABB m_sEyeBox = GetEyeHitPointBox(m_pScene, m_pCamera);
 	float r = fsumf(m_sEyeBox.maxV - m_sEyeBox.minV) / float(w) * m_fInitialRadiusScale;
 	m_sEyeBox.minV -= make_float3(r);
 	m_sEyeBox.maxV += make_float3(r);

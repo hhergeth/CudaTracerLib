@@ -19,7 +19,7 @@ public:
 	{
 		m_uMeshIndex = MeshIndex;
 #ifdef _DEBUG
-		ZeroMemory(m_cFile, sizeof(m_cFile));
+		Platform::SetMemory(m_cFile, sizeof(m_cFile));
 		strcpy(m_cFile, file);
 #endif
 		m_uMaterialOffset = mat.getIndex();

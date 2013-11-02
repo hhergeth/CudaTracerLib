@@ -2,7 +2,6 @@
 
 #include "k_Tracer.h"
 #include "..\Base\CudaRandom.h"
-#include "..\Engine\e_PointBVH.h"
 #include "..\Base\Timer.h"
 #include <time.h>
 #include "..\Engine\e_Grid.h"

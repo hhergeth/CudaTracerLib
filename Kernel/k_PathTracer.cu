@@ -62,7 +62,7 @@ void k_PathTracer::DoRender(e_Image* I)
 	else pathKernel<<< 180, dim3(32, MaxBlockHeight, 1)>>>(w, h, m_uPassesDone, *I);
 	m_uPassesDone++;
 	k_TracerBase_update_TracedRays
-	I->UpdateDisplay();
+	I->DoUpdateDisplay();
 }
 
 void k_PathTracer::Debug(int2 pixel)

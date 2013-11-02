@@ -4,9 +4,7 @@
 
 // MD5 Loader, by A.J. Tavakoli
 
-#ifdef _WIN32
-#include <windows.h> // yuck
-#endif
+
 
 #include <iostream>
 #include <string>

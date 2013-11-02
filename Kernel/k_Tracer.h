@@ -114,7 +114,7 @@ public:
 protected:
 	virtual void StartNewTrace(e_Image* I)
 	{
-		I->StartNewRendering();
+		I->Clear();
 	}
 	virtual void DoRender(e_Image* I)
 	{
@@ -129,7 +129,7 @@ protected:
 	unsigned int m_uPassesDone;
 	virtual void StartNewTrace(e_Image* I)
 	{
-		I->StartNewRendering();
+		I->Clear();
 		m_uPassesDone = 0; 
 	}
 	virtual void DoRender(e_Image* I)

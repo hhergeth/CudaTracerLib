@@ -8,9 +8,7 @@ CUDA_FUNC_IN void handleEmission(const Spectrum& weight, const PositionSamplingR
 {
 	DirectSamplingRecord dRec(pRec.p, pRec.n, pRec.uv);
 	Spectrum value = weight * g_SceneData.sampleSensorDirect(dRec, rng.randomFloat2());
-	if (value.isZero())
-		return;
-	if(!g_SceneData.Occluded(Ray(dRec.ref, dRec.d), 0, dRec.dist))
+	if(!value.isZero() && !g_SceneData.Occluded(Ray(dRec.ref, dRec.d), 0, dRec.dist))
 	{
 		const e_KernelLight* emitter = (const e_KernelLight*)pRec.object;
 		value *= emitter->evalDirection(DirectionSamplingRecord(dRec.d), pRec);
@@ -21,8 +19,8 @@ CUDA_FUNC_IN void handleEmission(const Spectrum& weight, const PositionSamplingR
 CUDA_FUNC_IN void handleSurfaceInteraction(const Spectrum& weight, BSDFSamplingRecord& bRec, const TraceResult r2, e_Image& g_Image, CudaRNG& rng)
 {
 	DirectSamplingRecord dRec(bRec.map.P, bRec.map.sys.n, bRec.map.uv);
-	Spectrum value = g_SceneData.sampleSensorDirect(dRec, rng.randomFloat2());
-	if(!g_SceneData.Occluded(Ray(dRec.ref, dRec.d), 0, dRec.dist))
+	Spectrum value = weight * g_SceneData.sampleSensorDirect(dRec, rng.randomFloat2());
+	if(!value.isZero() && !g_SceneData.Occluded(Ray(dRec.ref, dRec.d), 0, dRec.dist))
 	{
 		bRec.wo = bRec.map.sys.toLocal(dRec.d);
 		value *= r2.getMat().bsdf.f(bRec);
@@ -108,5 +106,5 @@ void k_PhotonTracer::DoRender(e_Image* I)
 	pathKernel<<< 180, dim3(32, MaxBlockHeight, 1)>>>(256 * 256, *I);
 	m_uPassesDone++;
 	k_TracerBase_update_TracedRays
-	I->UpdateDisplay();
+	I->DoUpdateDisplay();
 }

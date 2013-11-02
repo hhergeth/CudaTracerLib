@@ -1,5 +1,11 @@
 #pragma once
 
+#ifdef _MSC_VER
+#define ISWINDOWS
+#else
+#define ISUNIX
+#endif
+
 //__forceinline__
 #define CUDA_INLINE inline
 

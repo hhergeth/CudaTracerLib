@@ -14,7 +14,7 @@
     <ClInclude Include="Base\BVHBuilder.h" />
     <ClInclude Include="Base\CudaRandom.h" />
     <ClInclude Include="Base\FileStream.h" />
-    <ClInclude Include="Base\FrameworkInterop.h" />
+    <ClInclude Include="Base\Platform.h" />
     <ClInclude Include="Base\STL.h" />
     <ClInclude Include="Base\StringUtils.h" />
     <ClInclude Include="Base\TangentSpace.h" />
@@ -43,7 +43,6 @@
     <ClInclude Include="Engine\e_MicrofacetDistribution.h" />
     <ClInclude Include="Engine\e_Node.h" />
     <ClInclude Include="Engine\e_PhaseFunction.h" />
-    <ClInclude Include="Engine\e_PointBVH.h" />
     <ClInclude Include="Engine\e_RoughTransmittance.h" />
     <ClInclude Include="Engine\e_SceneBVH.h" />
     <ClInclude Include="Engine\e_SceneInitData.h" />
@@ -56,20 +55,8 @@
     <ClInclude Include="Engine\e_TriangleData.h" />
     <ClInclude Include="Engine\e_Volumes.h" />
     <ClInclude Include="Engine\e_Samples.h" />
-    <ClInclude Include="Engine\SceneBuilder\BVH.hpp" />
-    <ClInclude Include="Engine\SceneBuilder\BVHNode.hpp" />
-    <ClInclude Include="Engine\SceneBuilder\CudaBVH.hpp" />
-    <ClInclude Include="Engine\SceneBuilder\CudaTracerKernels.hpp" />
     <ClInclude Include="Engine\SceneBuilder\Importer.h" />
     <ClInclude Include="Engine\SceneBuilder\MD5Parser.h" />
-    <ClInclude Include="Engine\SceneBuilder\Platform.hpp" />
-    <ClInclude Include="Engine\SceneBuilder\RayBuffer.hpp" />
-    <ClInclude Include="Engine\SceneBuilder\RayBufferKernels.hpp" />
-    <ClInclude Include="Engine\SceneBuilder\RendererKernels.hpp" />
-    <ClInclude Include="Engine\SceneBuilder\Scene.hpp" />
-    <ClInclude Include="Engine\SceneBuilder\SplitBVHBuilder.hpp" />
-    <ClInclude Include="Engine\SceneBuilder\Util.hpp" />
-    <ClInclude Include="Kernel\k_CPUTracer.h" />
     <ClInclude Include="Kernel\k_FastTracer.h" />
     <ClInclude Include="Kernel\k_PathTracer.h" />
     <ClInclude Include="Kernel\k_PhotonTracer.h" />
@@ -97,6 +84,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Base\BVHBuilder.cpp" />
+    <ClCompile Include="Base\FileStream.cpp" />
+    <CudaCompile Include="Base\Platform.cu">
+      <FileType>CppCode</FileType>
+    </CudaCompile>
     <ClCompile Include="Engine\e_AnimatedMesh.cpp" />
     <ClCompile Include="Engine\e_Core.cpp" />
     <ClCompile Include="Engine\e_DynamicScene.cpp" />
@@ -104,27 +95,19 @@
     <ClCompile Include="Engine\e_MaterialLib.cpp" />
     <ClCompile Include="Engine\e_Mesh.cpp" />
     <ClCompile Include="Engine\e_MeshCompiler.cpp" />
-    <ClCompile Include="Engine\e_PointBVH.cpp" />
     <ClCompile Include="Engine\e_SceneBVH.cpp" />
     <ClCompile Include="Engine\e_ShapeSet.cpp" />
     <ClCompile Include="Engine\e_Terrain.cpp" />
     <CudaCompile Include="Engine\e_FileTexture.cu">
       <FileType>CppCode</FileType>
     </CudaCompile>
-    <ClCompile Include="Engine\SceneBuilder\BVH.cpp" />
-    <ClCompile Include="Engine\SceneBuilder\BVHNode.cpp" />
-    <ClCompile Include="Engine\SceneBuilder\CudaBVH.cpp" />
     <ClCompile Include="Engine\SceneBuilder\Importer.cpp" />
     <ClCompile Include="Engine\SceneBuilder\MD5Parser.cpp" />
     <ClCompile Include="Engine\SceneBuilder\ObjParser.cpp" />
     <ClCompile Include="Engine\SceneBuilder\PlyParser.cpp" />
-    <ClCompile Include="Engine\SceneBuilder\RayBuffer.cpp" />
-    <ClCompile Include="Engine\SceneBuilder\Scene.cpp" />
-    <ClCompile Include="Engine\SceneBuilder\SplitBVHBuilder.cpp" />
-    <ClCompile Include="Engine\SceneBuilder\Util.cpp" />
-    <ClCompile Include="Kernel\k_CpuTracer.cpp" />
     <ClCompile Include="Kernel\k_sPpmTracer.cpp" />
     <ClCompile Include="Kernel\k_Tracer.cpp" />
+    <ClCompile Include="Source.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
@@ -141,6 +124,7 @@
     <CudaCompile Include="Engine\e_KernelMapping.cu" />
     <CudaCompile Include="Engine\e_Light.cu" />
     <CudaCompile Include="Engine\e_Material.cu" />
+    <CudaCompile Include="Engine\e_Mesh.cu" />
     <CudaCompile Include="Engine\e_MicrofacetDistribution.cu" />
     <CudaCompile Include="Engine\e_PhaseFunction.cu" />
     <CudaCompile Include="Engine\e_RoughTransmittance.cu" />
@@ -195,15 +179,15 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(ProjectDir);C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs;C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs\gpu-ray-traversal\src\framework;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs;C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs\gpu-ray-traversal\build\$(Platform)_$(Configuration)\framework;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(ProjectDir);$(SolutionDir)Libs/Include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)Libs/Lib/$(Configuration);$(LibraryPath)</LibraryPath>
     <IntDir>Build\$(Platform)\$(Configuration)\</IntDir>
     <OutDir>Build\$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(ProjectDir);C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs;C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs\gpu-ray-traversal\src\framework;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs;C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs\gpu-ray-traversal\build\$(Platform)_$(Configuration)\framework;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(ProjectDir);$(SolutionDir)Libs/Include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)Libs/Lib/$(Configuration);$(LibraryPath)</LibraryPath>
     <IntDir>Build\$(Platform)\$(Configuration)\</IntDir>
     <OutDir>Build\$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
@@ -211,7 +195,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>NOMINMAX;FW_DO_NOT_OVERRIDE_NEW_DELETE;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>DEBUG;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <MinimalRebuild>false</MinimalRebuild>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -221,8 +205,9 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>opengl32.lib;cudart.lib;curand.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;Shlwapi.lib;framework.lib;zlibstat.lib;C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs\$(Platform)\FreeImage.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <IgnoreSpecificDefaultLibraries>LIBC.lib</IgnoreSpecificDefaultLibraries>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+      <IgnoreSpecificDefaultLibraries>
+      </IgnoreSpecificDefaultLibraries>
     </Link>
     <PostBuildEvent>
       <Command>echo copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"
@@ -238,6 +223,9 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
     </CudaCompile>
     <Lib />
+    <Lib>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -245,7 +233,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>NOMINMAX;FW_DO_NOT_OVERRIDE_NEW_DELETE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <MinimalRebuild>false</MinimalRebuild>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -258,8 +246,9 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>opengl32.lib;cudart.lib;curand.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;Shlwapi.lib;framework.lib;zlibstat.lib;C:\Users\Hannes\Documents\Visual Studio 2010\Projects\Libs\$(Platform)\FreeImage.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <IgnoreSpecificDefaultLibraries>LIBC.lib</IgnoreSpecificDefaultLibraries>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+      <IgnoreSpecificDefaultLibraries>
+      </IgnoreSpecificDefaultLibraries>
     </Link>
     <PostBuildEvent>
       <Command>echo copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"
@@ -277,8 +266,12 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <FastMath>false</FastMath>
       <Optimization>O3</Optimization>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
+      <HostDebugInfo>true</HostDebugInfo>
     </CudaCompile>
     <Lib />
+    <Lib>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+    </Lib>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

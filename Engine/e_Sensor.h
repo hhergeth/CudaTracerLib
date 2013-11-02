@@ -229,10 +229,7 @@ public:
 
 	CUDA_DEVICE CUDA_HOST bool getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, float2 &samplePosition) const;
 
-	float4x4 getProjectionMatrix() const
-	{
-		return float4x4::Perspective(fov, aspect, m_fNearFarDepths.x, m_fNearFarDepths.y);
-	}
+	float4x4 getProjectionMatrix() const;
 
 	TYPE_FUNC(e_PerspectiveCamera)
 };

@@ -2,38 +2,21 @@
 
 #include "e_Filter.h"
 #include "e_Samples.h"
+#ifdef ISWINDOWS
+#include <windows.h>
+#endif
+#include <cuda_gl_interop.h>
 
 #define FILTER_TABLE_SIZE 16
-
-class e_DirectImage
-{
-public:
-	int w;
-	RGBCOL* target;
-public:
-	e_DirectImage(RGBCOL* buf, int _w)
-		: target(buf), w(_w)
-	{
-	}
-	CUDA_ONLY_FUNC void SetPixel(int x, int y, const Spectrum& s)
-	{
-		int i = y * w + x;
-		target[i] = s.toRGBCOL();
-	}
-};
 
 class e_Image
 {
 public:
     // ImageFilm Public Methods
 	CUDA_FUNC_IN e_Image(){}
-    e_Image(const e_KernelFilter &filt, const float crop[4], int xRes, int yRes, RGBCOL* cudaBuffer);
-	e_Image(const e_KernelFilter &filt, int xRes, int yRes, RGBCOL* cudaBuffer);
-    void Free()
-	{
-	    delete hostPixels;
-		cudaFree(cudaPixels);
-	}
+	e_Image(const e_KernelFilter &filt, int xRes, int yRes, unsigned int viewGLTexture);
+	e_Image(const e_KernelFilter &filt, int xRes, int yRes, RGBCOL* target = 0);
+    void Free();
 	inline CUDA_DEVICE CUDA_HOST void AddSample(int sx, int sy, const Spectrum &L)
 	{
 		float xyz[3];
@@ -44,6 +27,7 @@ public:
 			pixel->xyz[i] += xyz[i];
 		pixel->weightSum += 1;
 	}
+	CUDA_DEVICE CUDA_HOST void SetSample(int sx, int sy, RGBCOL c);
     CUDA_DEVICE CUDA_HOST void Splat(int sx, int sy, const Spectrum &L);
     CUDA_FUNC_IN void GetSampleExtent(int *xstart, int *xend, int *ystart, int *yend)
 	{
@@ -62,8 +46,9 @@ public:
 	}
     void WriteDisplayImage(const char* fileName);
 	void WriteImage(const char* fileName, float splatScale = 1.0f);
-    void UpdateDisplay(bool forceHDR = false, float splatScale = 1.0f);
-	void StartNewRendering();
+	void StartRendering();
+	void EndRendering();
+	void Clear();
 	struct Pixel {
         Pixel() {
             xyz[0] = xyz[1] = xyz[2] = 0;
@@ -89,15 +74,14 @@ public:
 				filterTable[x][y] = filter.Evaluate(_x / s * w, y / s * h);
 			}
 	}
-	e_DirectImage CreateDirectImage()
-	{
-		return e_DirectImage(target, xResolution);
-	}
 	bool& accessHDR()
 	{
 		return doHDR;
 	}
+	void DoUpdateDisplay();
 private:
+	bool m_bDoUpdate;
+    void InternalUpdateDisplay(bool forceHDR = false, float splatScale = 1.0f);
     // ImageFilm Private Data
 	e_KernelFilter filter;
     float cropWindow[4];
@@ -105,7 +89,6 @@ private:
     Pixel *cudaPixels;
 	Pixel *hostPixels;
 	bool usedHostPixels;
-	RGBCOL* target;
 	float filterTable[FILTER_TABLE_SIZE][FILTER_TABLE_SIZE];
 	int xResolution, yResolution;
 	bool doHDR;
@@ -118,4 +101,16 @@ private:
 		return hostPixels + i;
 #endif
 	}
+
+	//opengl
+	int outState;
+	unsigned int viewGLTexture;
+	cudaGraphicsResource_t viewCudaResource;
+
+	bool isMapped;
+	cudaArray_t viewCudaArray;
+	cudaSurfaceObject_t viewCudaSurfaceObject;
+
+	bool ownsTarget;
+	RGBCOL* viewTarget;
 };

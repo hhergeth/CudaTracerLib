@@ -2,12 +2,7 @@
 #include <vector>
 #include "..\..\Base\BVHBuilder.h"
 #include "..\e_Mesh.h"
-/*
-void ConstructBVH(FW::Mesh<FW::VertexP>& M, FW::OutputStream& O, float4** a_Nodes);
 
-void exportBVH(char* Input, char* Output);
-
-*/
 namespace bvh_helper
 {
 	class clb : public IBVHBuilderCallback

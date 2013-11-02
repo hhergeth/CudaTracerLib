@@ -205,7 +205,7 @@ template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, float a_
 				throughput = throughput * (-g_SceneData.m_sVolume.tau(r, tmin, tmax)).exp();
 			}
 			if(DIRECT)
-				L += throughput * UniformSampleAllLights(bRec, r2.getMat(), 4);
+				L += throughput * UniformSampleAllLights(bRec, r2.getMat(), 1);
 			L += throughput * r2.Le(p, bRec.map.sys, -r.direction);//either it's the first bounce -> accounte or it's a specular reflection -> ...
 			const e_KernelBSSRDF* bssrdf;
 			if(r2.getMat().GetBSSRDF(bRec.map, &bssrdf))
@@ -255,7 +255,6 @@ void k_sPpmTracer::doEyePass(e_Image* I)
 	k_INITIALIZE(m_pScene->getKernelSceneData());
 	k_STARTPASS(m_pScene, m_pCamera, g_sRngs);
 	float s1 = float(m_uPassesDone - 1) / float(m_uPassesDone), s2 = 1.0f / float(m_uPassesDone);
-	//I->StartNewRendering();
 	if(m_pScene->getVolumes().getLength() || m_bLongRunning || w * h > 800 * 800)
 	{
 		unsigned int p = 16, q = 8, pq = p * q;

@@ -1,6 +1,7 @@
 #include "StdAfx.h"
 #include "e_FileTexture.h"
 #include "e_ErrorHandler.h"
+#define FREEIMAGE_LIB
 #include <FreeImage.h>
 
 Spectrum e_KernelMIPMap::Texel(unsigned int level, const float2& a_UV) const

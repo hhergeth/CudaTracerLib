@@ -10,6 +10,10 @@ void print(const __m128& v)
 	std::cout << "{" << v.m128_f32[0] << ", " << v.m128_f32[1] << ", " << v.m128_f32[2] << ", " << v.m128_f32[3] << "}\n";
 }
 
+//TODO : 
+//implement non sorting algortihm, there is a bug when using the spatial variant
+//use callback for split method
+
 #define TOVEC3(x) make_float3(x.m128_f32[0], x.m128_f32[1], x.m128_f32[2])
 #define TOSSE3(v) _mm_set_ps(0, v.z, v.y, v.x)
 struct __m128_box

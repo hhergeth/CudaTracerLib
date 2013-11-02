@@ -357,7 +357,7 @@ public:
 		*load = true;
 		entry e;
 		e.count = 1;
-		ZeroMemory(e.file, sizeof(e.file));
+		Platform::SetMemory(e.file, sizeof(e.file));
 		memcpy(e.file, file, strlen(file));
 		m_sEntries.push_back(e);
 		return this->malloc(1);

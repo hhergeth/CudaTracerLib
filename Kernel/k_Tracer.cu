@@ -30,28 +30,26 @@ CUDA_FUNC_IN float UIntToFloat(unsigned int f)
 	return *(float*)&q;
 }
 */
-/*
+
 CUDA_DEVICE uint3 g_EyeHitBoxMin;
 CUDA_DEVICE uint3 g_EyeHitBoxMax;
 __global__ void k_GuessPass(int w, int h)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x, y = blockIdx.y * blockDim.y + threadIdx.y, N = y * w + x;
-	CudaRNG localState = g_RNGData();
+	CudaRNG rng = g_RNGData();
 	if(x < w && y < h)
 	{
-		CameraSample s = nextSample(x, y, localState);
-		Ray r = g_CameraData.GenRay(s, w, h);
+		Ray r = g_CameraData.GenRay(w, h);
 		TraceResult r2;
 		r2.Init();
 		int d = -1;
 		while(k_TraceRay(r.direction, r.origin, &r2) && ++d < 10)
 		{
 			float3 p = r(r2.m_fDist);
-			e_KernelBSDF bsdf = r2.GetBSDF(p);
-			float3 inc;
-			float pdf;
-			bsdf.Sample_f(-1.0f * r.direction, &inc, BSDFSample(localState), &pdf);
-			r = Ray(r(r2.m_fDist), inc);
+			BSDFSamplingRecord bRec;
+			r2.getBsdfSample(r, rng, &bRec);
+			Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
+			r = Ray(r(r2.m_fDist), bRec.getOutgoing());
 			uint3 pu = make_uint3(FloatToUInt(p.x), FloatToUInt(p.y), FloatToUInt(p.z));
 			atomicMin(&g_EyeHitBoxMin.x, pu.x);
 			atomicMin(&g_EyeHitBoxMin.y, pu.y);
@@ -62,11 +60,11 @@ __global__ void k_GuessPass(int w, int h)
 			r2.Init();
 		}
 	}
-	g_RNGData(localState);
+	g_RNGData(rng);
 }
-*/
+
 AABB k_Tracer::GetEyeHitPointBox(e_DynamicScene* m_pScene, e_Sensor* m_pCamera)
-{/*
+{
 	uint3 ma = make_uint3(FloatToUInt(-FLT_MAX)), mi = make_uint3(FloatToUInt(FLT_MAX));
 	cudaMemcpyToSymbol(g_EyeHitBoxMin, &mi, 12);
 	cudaMemcpyToSymbol(g_EyeHitBoxMax, &ma, 12);
@@ -80,8 +78,8 @@ AABB k_Tracer::GetEyeHitPointBox(e_DynamicScene* m_pScene, e_Sensor* m_pCamera)
 	cudaMemcpyFromSymbol(&m_sEyeBox.maxV, g_EyeHitBoxMax, 12);
 	m_sEyeBox.minV = make_float3(UIntToFloat(m_sEyeBox.minV.x), UIntToFloat(m_sEyeBox.minV.y), UIntToFloat(m_sEyeBox.minV.z));
 	m_sEyeBox.maxV = make_float3(UIntToFloat(m_sEyeBox.maxV.x), UIntToFloat(m_sEyeBox.maxV.y), UIntToFloat(m_sEyeBox.maxV.z));
-	return m_sEyeBox;*/
-	throw 1;
+	return m_sEyeBox;
+	//throw 1;
 }
 
 CUDA_DEVICE TraceResult res;

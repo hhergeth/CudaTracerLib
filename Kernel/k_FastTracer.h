@@ -52,11 +52,7 @@ public:
 	}
 	CUDA_FUNC_IN CUDA_HOST traversalRay* InsertRay(unsigned int payloadIdx, unsigned int* a_RayIndex = 0, traversalResult** a_Out = 0)
 	{
-#ifdef ISCUDA
-		unsigned int i = atomicInc(m_cInsertCounter, 0xffffffff);
-#else
-		unsigned int i = InterlockedIncrement(m_cInsertCounter);
-#endif
+		unsigned int i = Platform::Increment(m_cInsertCounter);
 		if(a_RayIndex)
 			*a_RayIndex = i;
 		m_pIndexBuffer[i] = payloadIdx;
@@ -66,11 +62,7 @@ public:
 	}
 	CUDA_FUNC_IN CUDA_HOST traversalRay* InsertRay(unsigned int payloadIdx, unsigned int rayIdx, traversalResult** a_Out = 0)
 	{
-#ifdef ISCUDA
-		unsigned int i = atomicInc(m_cInsertCounter, 0xffffffff);
-#else
-		unsigned int i = InterlockedIncrement(m_cInsertCounter);
-#endif
+		unsigned int i = Platform::Increment(m_cInsertCounter);
 		m_pIndexBuffer[rayIdx] = payloadIdx;
 		if(a_Out)
 			*a_Out = m_pResultBuffer + rayIdx;

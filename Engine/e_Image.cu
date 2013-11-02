@@ -1,4 +1,5 @@
 #include "e_Image.h"
+#include <cuda_surface_types.h>
 
 Spectrum e_Image::Pixel::toSpectrum(float splat)
 {
@@ -105,7 +106,7 @@ CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_MaxLum;
 
 CUDA_ALIGN(16) CUDA_SHARED float s_LogLum;
 CUDA_ALIGN(16) CUDA_SHARED unsigned int s_MaxLum;
-CUDA_GLOBAL void rtm_SumLogLum(e_Image::Pixel* P, RGBCOL* T, unsigned int w, unsigned int h, float splatScale)
+CUDA_GLOBAL void rtm_SumLogLum(e_Image::Pixel* P, unsigned int w, unsigned int h, float splatScale)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x, y = blockIdx.y * blockDim.y + threadIdx.y;
 	if(x < w && y < h)
@@ -130,7 +131,40 @@ CUDA_GLOBAL void rtm_SumLogLum(e_Image::Pixel* P, RGBCOL* T, unsigned int w, uns
 	}
 }
 
-CUDA_GLOBAL void rtm_Scale(e_Image::Pixel* P, RGBCOL* T, unsigned int w, unsigned int h, float splatScale, float lumAvg, float alpha, float lumWhite2)
+struct memTarget
+{
+	RGBCOL* viewTarget;
+	int w;
+
+	CUDA_FUNC_IN  void operator()(int x, int y, RGBCOL c)
+	{
+		viewTarget[y * w + x] = c;
+	}
+};
+
+struct texTarget
+{
+	cudaSurfaceObject_t viewCudaSurfaceObject;
+	int w;
+
+	CUDA_ONLY_FUNC void operator()(int x, int y, RGBCOL c)
+	{
+		surf2Dwrite(c, viewCudaSurfaceObject, x * 4, y);
+	}
+};
+
+void e_Image::SetSample(int x, int y, RGBCOL c)
+{
+	if(outState == 1)
+#ifdef ISCUDA
+		surf2Dwrite(c, viewCudaSurfaceObject, x * 4, y);
+#else
+		;
+#endif
+	else viewTarget[y * xResolution + x] = c;
+}
+
+template<typename TARGET> CUDA_GLOBAL void rtm_Scale(e_Image::Pixel* P, TARGET T, unsigned int w, unsigned int h, float splatScale, float lumAvg, float alpha, float lumWhite2)
 {
 	unsigned int x = threadId % w, y = threadId / w;
 	if(x < w && y < h)
@@ -143,32 +177,37 @@ CUDA_GLOBAL void rtm_Scale(e_Image::Pixel* P, RGBCOL* T, unsigned int w, unsigne
 		yxy.x = L_d;
 		Spectrum s;
 		s.fromYxy(yxy.x, yxy.y, yxy.z);
-		T[i] = s.toRGBCOL();
+		T(x, y, s.toRGBCOL());
 	}
 }
 
-CUDA_GLOBAL void rtm_Copy(e_Image::Pixel* P, RGBCOL* T, unsigned int w, unsigned int h, float splatScale)
+template<typename TARGET> CUDA_GLOBAL void rtm_Copy(e_Image::Pixel* P, TARGET T, unsigned int w, unsigned int h, float splatScale)
 {
 	unsigned int x = threadId % w, y = threadId / w;
 	if(x < w && y < h)
-		T[y * w + x] = P[y * w + x].toSpectrum(splatScale).toRGBCOL();
+		T(x, y, P[y * w + x].toSpectrum(splatScale).toRGBCOL());
 }
 
-void e_Image::UpdateDisplay(bool forceHDR, float splatScale)
+void e_Image::InternalUpdateDisplay(bool forceHDR, float splatScale)
 {
-	if(!target)
+	if(outState > 2)
 		return;
 	if(usedHostPixels)
 	{
 		cudaMemcpy(cudaPixels, hostPixels, sizeof(Pixel) * xResolution * yResolution, cudaMemcpyHostToDevice);
 	}
+	memTarget T1;
+	texTarget T2;
+	T1.w = T2.w = xResolution;
+	T1.viewTarget = viewTarget;
+	T2.viewCudaSurfaceObject = viewCudaSurfaceObject;
 	if(forceHDR || doHDR)
 	{
 		CUDA_ALIGN(16) float Lum_avg = 0;
 		unsigned int val = FloatToUInt(0);
 		cudaError_t r = cudaMemcpyToSymbol(g_LogLum, &Lum_avg, sizeof(Lum_avg));
 		r = cudaMemcpyToSymbol(g_MaxLum, &val, sizeof(unsigned int));
-		rtm_SumLogLum<<<dim3(xResolution / 32 + 1, yResolution / 32 + 1), dim3(32, 32)>>>(cudaPixels, target, xResolution, yResolution, splatScale);
+		rtm_SumLogLum<<<dim3(xResolution / 32 + 1, yResolution / 32 + 1), dim3(32, 32)>>>(cudaPixels, xResolution, yResolution, splatScale);
 		r = cudaThreadSynchronize();
 		r = cudaMemcpyFromSymbol(&Lum_avg, g_LogLum, sizeof(Lum_avg));
 		unsigned int mLum;
@@ -177,7 +216,25 @@ void e_Image::UpdateDisplay(bool forceHDR, float splatScale)
 		float L_w = exp(Lum_avg / float(xResolution * yResolution));
 		//float middleGrey = 1.03f - 2.0f / (2.0f + log10(L_w + 1.0f));
 		float alpha = 0.35, lumWhite2 = MAX(maxLum * maxLum, 0.1f);
-		rtm_Scale<<<dim3(xResolution / 32 + 1, yResolution / 32 + 1), dim3(32, 32)>>>(cudaPixels, target, xResolution, yResolution, splatScale, L_w, alpha, lumWhite2);
+		if(outState == 1)
+			rtm_Scale<<<dim3(xResolution / 32 + 1, yResolution / 32 + 1), dim3(32, 32)>>>(cudaPixels, T2, xResolution, yResolution, splatScale, L_w, alpha, lumWhite2);
+		else rtm_Scale<<<dim3(xResolution / 32 + 1, yResolution / 32 + 1), dim3(32, 32)>>>(cudaPixels, T1, xResolution, yResolution, splatScale, L_w, alpha, lumWhite2);
 	}
-	else rtm_Copy<<<dim3(xResolution / 32 + 1, yResolution / 32 + 1), dim3(32, 32)>>>(cudaPixels, target, xResolution, yResolution, splatScale);
+	else
+	{
+		if(outState == 1)
+			rtm_Copy<<<dim3(xResolution / 32 + 1, yResolution / 32 + 1), dim3(32, 32)>>>(cudaPixels, T2, xResolution, yResolution, splatScale);
+		else rtm_Copy<<<dim3(xResolution / 32 + 1, yResolution / 32 + 1), dim3(32, 32)>>>(cudaPixels, T1, xResolution, yResolution, splatScale);
+	}
+}
+
+void e_Image::Clear()
+{
+	usedHostPixels = false;
+	Platform::SetMemory(hostPixels, sizeof(Pixel) * xResolution * yResolution);
+	cudaMemset(cudaPixels, 0, sizeof(Pixel) * xResolution * yResolution);
+	if(outState == 2)
+		cudaMemset(viewTarget, 0, sizeof(RGBCOL) * xResolution * yResolution);
+	else if(outState == 1)
+		cudaMemcpyToArray(viewCudaArray, 0, 0, viewTarget, sizeof(RGBCOL) * xResolution * yResolution, cudaMemcpyDeviceToDevice);
 }

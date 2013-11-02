@@ -335,7 +335,7 @@ void compileply(const char* a_InputFile, OutputStream& a_Out)
 	delete [] Tangents;
 
 	e_MeshPartLight m_sLights[MAX_AREALIGHT_NUM];
-	ZeroMemory(m_sLights, sizeof(m_sLights));
+	Platform::SetMemory(m_sLights, sizeof(m_sLights));
 	e_KernelMaterial defaultMat("Default_Material");
 	diffuse mat;
 	mat.m_reflectance = CreateTexture(0, Spectrum(1,0,0));

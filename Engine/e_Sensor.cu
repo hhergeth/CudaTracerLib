@@ -21,7 +21,7 @@ Spectrum e_SphericalCamera::sampleDirect(DirectSamplingRecord &dRec, const float
 
 	dRec.uv = make_float2(
 		math::modulo(atan2f(d.x, -d.z) * INV_TWOPI, 1.0f) * m_resolution.x,
-		math::safe_acos(d.y) * INV_PI * m_resolution.y
+		(1.0f - math::safe_acos(d.y) * INV_PI) * m_resolution.y
 	);
 
 	float sinTheta = math::safe_sqrt(1-d.y*d.y);
@@ -64,7 +64,7 @@ bool e_SphericalCamera::getSamplePosition(const PositionSamplingRecord &pRec, co
 
 	samplePosition = make_float2(
 		math::modulo(atan2(d.x, -d.z) * INV_TWOPI, (float) 1) * m_resolution.x,
-		math::safe_acos(d.y) * INV_PI * m_resolution.y
+		(1.0f - math::safe_acos(d.y) * INV_PI) * m_resolution.y
 	);
 
 	return true;
@@ -111,6 +111,12 @@ void e_PerspectiveCamera::Update()
 
 //	DirectSamplingRecord dRec(make_float3(301.48853f,398.27206f,559.20007f),make_float3(0),make_float2(0));
 	//sampleDirect(dRec, make_float2(0));
+}
+
+float4x4 e_PerspectiveCamera::getProjectionMatrix() const
+{
+	return m_cameraToSample * float4x4::Scale(make_float3(2,2,1)) * float4x4::Translate(-1,-1,0);
+	//return float4x4::Perspective(fov, aspect, m_fNearFarDepths.x, m_fNearFarDepths.y);
 }
 
 float e_PerspectiveCamera::importance(const float3 &d) const
@@ -183,11 +189,11 @@ Spectrum e_PerspectiveCamera::sampleDirect(DirectSamplingRecord &dRec, const flo
 	dRec.pdf = 1;
 	dRec.measure = EDiscrete;
 
-	const float cosToCamera = dot(dRec.refN, dRec.d);
+	const float cosToCamera = AbsDot(dRec.refN, dRec.d);
 	const float cosAtCamera = Frame::cosTheta(-dRec.d);
 	const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera) * m_normalization;
 	const float cameraPdfA = PdfWtoA(cameraPdfW, dist, cosToCamera);
-	//return cameraPdfA;
+	return cameraPdfA;
 	return Spectrum(importance(localD)*invDist*invDist);
 }
 

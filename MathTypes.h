@@ -9,5 +9,4 @@
 #include "Math/Frame.h"
 #include "Math\Sampling.h"
 
-//hack
-#include <Windows.h>
+#include "Base\Platform.h"

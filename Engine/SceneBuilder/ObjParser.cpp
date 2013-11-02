@@ -59,7 +59,7 @@ struct Material
 		float			IndexOfRefraction;
 		float3			Tf;
         std::string     textures[TextureType_Max];
-		int				SubMesh;
+		//int				SubMesh;
 
         Material(void)
         {
@@ -211,9 +211,6 @@ struct ImportState
     std::vector<float2>						texCoords;
 
 	HashTable<std::string, Material, 1<<12> materialHash;
-
-    std::vector<int>						vertexTmp;
-    std::vector<int3>						indexTmp;
 };
 
 void loadMtl(ImportState& s, IInStream& mtlIn, const std::string& dirName)
@@ -238,8 +235,7 @@ void loadMtl(ImportState& s, IInStream& mtlIn, const std::string& dirName)
             if (!s.materialHash.contains(std::string(ptr)))
             {
 				mat = new Material();
-				mat->SubMesh = -1;
-				ZeroMemory(ptrLast, sizeof(ptrLast));
+				Platform::SetMemory(ptrLast, sizeof(ptrLast));
 				memcpy(ptrLast, ptr, strlen(ptr));
 				mat->Name = std::string(ptrLast);
             }
@@ -365,19 +361,17 @@ void loadMtl(ImportState& s, IInStream& mtlIn, const std::string& dirName)
 struct SubMesh
 {
 	int indexStart;
-	int indexCount;
 	Material mat;
 	SubMesh(unsigned int start)
 		: indexStart(start)
 	{
-		indexCount = -1;
 	}
 };
 
 void compileobj(const char* a_InputFile, OutputStream& a_Out)
 {
 	std::string dirName = getDirName(a_InputFile);
-	InputStream objIn(a_InputFile);
+	IInStream* objIn = OpenFile(a_InputFile);
 	ImportState* state = new ImportState();
 	ImportState& s = *state;//do not put it on the stack it is kinda big
 	int submesh = -1;
@@ -390,7 +384,7 @@ void compileobj(const char* a_InputFile, OutputStream& a_Out)
 	AABB box = AABB::Identity();
 
 	std::string line;
-	while(objIn.getline(line))
+	while(objIn->getline(line))
 	{
 		const char* ptr = trim(line).c_str();
         parseSpace(ptr);
@@ -426,7 +420,6 @@ void compileobj(const char* a_InputFile, OutputStream& a_Out)
         }
         else if (parseLiteral(ptr, "f ") && parseSpace(ptr)) // face
         {
-            s.vertexTmp.clear();
             while (*ptr)
             {
                 int ptn[3];
@@ -456,22 +449,7 @@ void compileobj(const char* a_InputFile, OutputStream& a_Out)
 				box.Enlarge(s.positions[ptn[0]]);
 				positions.push_back((ptn[0] == -1) ? make_float3(0.0f) : s.positions[ptn[0]]);
 				texCoords.push_back((ptn[1] == -1) ? make_float2(0.0f) : s.texCoords[ptn[1]]);
-				s.vertexTmp.push_back(positions.size() - 1);
-            }
-            if (!*ptr)
-            {
-                if (submesh == -1)
-                {
-                    if (defaultSubmesh == -1)
-					{
-						subMeshes.push_back(indices.size());
-						defaultSubmesh = subMeshes.size();
-					}
-                    submesh = defaultSubmesh;
-                }
-				for (int i = 2; i < s.vertexTmp.size(); i++)
-					s.indexTmp.push_back(make_int3(s.vertexTmp[0], s.vertexTmp[i - 1], s.vertexTmp[i]));
-                valid = true;
+				indices.push_back(positions.size() - 1);
             }
         }
         else if (parseLiteral(ptr, "usemtl ") && parseSpace(ptr)) // material name
@@ -479,27 +457,13 @@ void compileobj(const char* a_InputFile, OutputStream& a_Out)
 			Material* mat = s.materialHash.search(std::string(ptr));
             if (submesh != -1)
             {
-				for(int i = 0; i < s.indexTmp.size(); i++)
-				{
-					indices.push_back(s.indexTmp[i].x);
-					indices.push_back(s.indexTmp[i].y);
-					indices.push_back(s.indexTmp[i].z);
-				}
-				subMeshes[submesh].indexCount += s.indexTmp.size() * 3;
-                s.indexTmp.clear();
 				submesh = -1;
             }
             if (mat)
             {
-                if (mat->SubMesh == -1)
-                {
-					mat->SubMesh = subMeshes.size();
-					SubMesh q = SubMesh(indices.size());
-					subMeshes.push_back(q);
-					subMeshes[mat->SubMesh].mat = *mat;
-                }
-                submesh = mat->SubMesh;
-                s.indexTmp.clear();
+				SubMesh q = SubMesh(indices.size());
+				q.mat = *mat;
+				subMeshes.push_back(q);
             }
             valid = true;
         }
@@ -549,18 +513,9 @@ void compileobj(const char* a_InputFile, OutputStream& a_Out)
             valid = true;
         }
     }
+	delete objIn;
 
     // Flush remaining indices.
-
-    if (submesh != -1)
-	{
-		for(int i = 0; i < s.indexTmp.size(); i++)
-			{
-				indices.push_back(s.indexTmp[i].x);
-				indices.push_back(s.indexTmp[i].y);
-				indices.push_back(s.indexTmp[i].z);
-			}
-	}
 
 	unsigned int m_numTriangles = indices.size() / 3;
 	unsigned int m_numVertices = positions.size();
@@ -573,9 +528,9 @@ void compileobj(const char* a_InputFile, OutputStream& a_Out)
 	float2 t[3];
 #ifdef EXT_TRI
 	float3* v_Normals = new float3[m_numVertices], *v_Tangents = new float3[m_numVertices], *v_BiTangents = new float3[m_numVertices];
-	ZeroMemory(v_Normals, sizeof(float3) * m_numVertices);
-	ZeroMemory(v_Tangents, sizeof(float3) * m_numVertices);
-	ZeroMemory(v_BiTangents, sizeof(float3) * m_numVertices);
+	Platform::SetMemory(v_Normals, sizeof(float3) * m_numVertices);
+	Platform::SetMemory(v_Tangents, sizeof(float3) * m_numVertices);
+	Platform::SetMemory(v_BiTangents, sizeof(float3) * m_numVertices);
 	ComputeTangentSpace(&positions[0], &texCoords[0], &indices[0], m_numVertices, m_numTriangles, v_Normals, v_Tangents, v_BiTangents);
 #endif
 	e_MeshPartLight m_sLights[MAX_AREALIGHT_NUM];
@@ -619,7 +574,7 @@ void compileobj(const char* a_InputFile, OutputStream& a_Out)
 		}
 		if(length(M.emission) != 0)
 		{
-			ZeroMemory(m_sLights + lc, sizeof(e_MeshPartLight));
+			Platform::SetMemory(m_sLights + lc, sizeof(e_MeshPartLight));
 			m_sLights[lc].L = M.emission;
 			strcpy(m_sLights[lc].MatName, M.Name.c_str());
 			mat.NodeLightIndex = lc++;
@@ -645,7 +600,8 @@ void compileobj(const char* a_InputFile, OutputStream& a_Out)
 		matData.push_back(mat);
 		size_t matIndex = matData.size() - 1;
 
-		for (size_t i = subMeshes[submesh].indexStart; i < subMeshes[submesh].indexStart + subMeshes[submesh].indexCount; i += 3)
+		unsigned int start = subMeshes[submesh].indexStart, end = submesh < subMeshes.size() - 1 ? subMeshes[submesh + 1].indexStart - 1 : indices.size();
+		for (size_t i = start; i < end; i += 3)
 		{
 			unsigned int* vi = &indices[i];
 			for(size_t j = 0; j < 3; j++)

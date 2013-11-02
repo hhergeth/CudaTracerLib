@@ -193,7 +193,7 @@ void e_AnimatedMesh::CompileToBinary(const char* a_InputFile, c_StringArray& a_A
 	for(size_t a = 0; a < M.anims.size(); a++)
 		BLOCKSIZE += M.anims[a]->numbFrames * (M.numJoints * sizeof(float4x4));
 	a_Out << BLOCKSIZE;
-	unsigned int endTo = (unsigned int)BLOCKSIZE + a_Out.numBytesWrote;
+	unsigned int endTo = (unsigned int)BLOCKSIZE + a_Out.GetNumBytesWritten();
 
 	a_Out << (unsigned int)vCount;
 	a_Out.Write(&v_Data[0], vCount * sizeof(e_AnimatedVertex));
@@ -226,9 +226,9 @@ void e_AnimatedMesh::CompileToBinary(const char* a_InputFile, c_StringArray& a_A
 		c_Animation ANIM(M.anims[a], &M);
 		ANIM.serialize(a_Out);
 	}
-	if(a_Out.numBytesWrote != endTo)
+	if(a_Out.GetNumBytesWritten() != endTo)
 	{
-		OutputDebugString("Count error");
+		std::cout << "Count error\n";
 		throw 1;
 	}
 	bvh.Free();

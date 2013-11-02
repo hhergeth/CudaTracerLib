@@ -23,7 +23,7 @@ extern CUDA_ALIGN(16) CUDA_CONST e_Sensor g_CameraDataDevice;
 extern CUDA_ALIGN(16) CUDA_CONST CudaRNGBuffer g_RNGDataDevice;
 
 extern CUDA_ALIGN(16) e_KernelDynamicScene g_SceneDataHost;
-extern CUDA_ALIGN(16) volatile LONG g_RayTracedCounterHost;
+extern CUDA_ALIGN(16) unsigned int g_RayTracedCounterHost;
 extern CUDA_ALIGN(16) e_Sensor g_CameraDataHost;
 extern CUDA_ALIGN(16) CudaRNGBuffer g_RNGDataHost;
 

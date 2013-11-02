@@ -1,7 +1,7 @@
-#include <Windows.h>
-
 #pragma once
 
+#ifdef ISWINDOWS
+#include <Windows.h>
 class cTimer
 {
 private:
@@ -29,3 +29,31 @@ public:
 		return (double)time.QuadPart / (double)frequency.QuadPart;
 	}
 };
+#else
+#include <time.h>
+class cTimer
+{
+private:
+	int frequency;
+	int start;
+    int stop;
+public:
+	cTimer()
+	{
+		clock_getres( CLOCK_MONOTONIC ) ;
+	}
+	void StartTimer()
+	{
+		start = clock_gettime(CLOCK_MONOTONIC);
+	}
+	double EndTimer()
+	{
+		stop = clock_gettime(CLOCK_MONOTONIC);
+		return getElapsedTime();
+	}
+	double getElapsedTime()
+	{
+		return double(stop - start) / double(frequency);
+	}
+};
+#endif

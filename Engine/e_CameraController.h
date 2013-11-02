@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef ISWINDOWS
+#pragma message("Can't use camera controllers without msvcpp")
+#endif
+
 #include "e_Sensor.h"
 
 class e_CameraController

@@ -8,7 +8,7 @@ e_Sensor g_CameraDataDevice;
 CudaRNGBuffer g_RNGDataDevice;
 
 e_KernelDynamicScene g_SceneDataHost;
-volatile LONG g_RayTracedCounterHost;
+unsigned int g_RayTracedCounterHost;
 e_Sensor g_CameraDataHost;
 CudaRNGBuffer g_RNGDataHost;
 
@@ -217,11 +217,7 @@ bool k_TraceRay(const float3& dir, const float3& ori, TraceResult* a_Result)
 {
 	int lastIndex = a_Result->__internal__earlyExit;
 	const e_Node* lastNode = a_Result->m_pNode;
-#ifdef ISCUDA
-	atomicInc(&g_RayTracedCounterDevice, 0xffffffff);
-#else
-	InterlockedIncrement(&g_RayTracedCounterHost);
-#endif
+	Platform::Increment(&g_RayTracedCounter);
 	if(!g_SceneData.m_sNodeData.UsedCount)
 		return false;
 #ifdef SKIP_OUTER_TREE

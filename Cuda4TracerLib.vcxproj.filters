@@ -24,9 +24,6 @@
     <ClInclude Include="Base\FileStream.h">
       <Filter>Base</Filter>
     </ClInclude>
-    <ClInclude Include="Base\FrameworkInterop.h">
-      <Filter>Base</Filter>
-    </ClInclude>
     <ClInclude Include="Base\TangentSpace.h">
       <Filter>Base</Filter>
     </ClInclude>
@@ -54,9 +51,6 @@
     <ClInclude Include="Engine\e_Node.h">
       <Filter>Engine</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\e_PointBVH.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
     <ClInclude Include="Engine\e_SceneBVH.h">
       <Filter>Engine</Filter>
     </ClInclude>
@@ -66,40 +60,7 @@
     <ClInclude Include="Engine\e_TerrainHeader.h">
       <Filter>Engine</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\SceneBuilder\BVH.hpp">
-      <Filter>Engine\SceneBuilder</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\SceneBuilder\BVHNode.hpp">
-      <Filter>Engine\SceneBuilder</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\SceneBuilder\CudaBVH.hpp">
-      <Filter>Engine\SceneBuilder</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\SceneBuilder\CudaTracerKernels.hpp">
-      <Filter>Engine\SceneBuilder</Filter>
-    </ClInclude>
     <ClInclude Include="Engine\SceneBuilder\Importer.h">
-      <Filter>Engine\SceneBuilder</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\SceneBuilder\Platform.hpp">
-      <Filter>Engine\SceneBuilder</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\SceneBuilder\RayBuffer.hpp">
-      <Filter>Engine\SceneBuilder</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\SceneBuilder\RayBufferKernels.hpp">
-      <Filter>Engine\SceneBuilder</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\SceneBuilder\RendererKernels.hpp">
-      <Filter>Engine\SceneBuilder</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\SceneBuilder\Scene.hpp">
-      <Filter>Engine\SceneBuilder</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\SceneBuilder\SplitBVHBuilder.hpp">
-      <Filter>Engine\SceneBuilder</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\SceneBuilder\Util.hpp">
       <Filter>Engine\SceneBuilder</Filter>
     </ClInclude>
     <ClInclude Include="Kernel\k_Tracer.h">
@@ -178,9 +139,6 @@
     </ClInclude>
     <ClInclude Include="Engine\e_PhaseFunction.h">
       <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Kernel\k_CPUTracer.h">
-      <Filter>Kernel</Filter>
     </ClInclude>
     <ClInclude Include="Math\Frame.h">
       <Filter>Math</Filter>
@@ -261,6 +219,9 @@
     <ClInclude Include="Math\Compression.h">
       <Filter>Math</Filter>
     </ClInclude>
+    <ClInclude Include="Base\Platform.h">
+      <Filter>Base</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\e_AnimatedMesh.cpp">
@@ -272,37 +233,13 @@
     <ClCompile Include="Engine\e_Mesh.cpp">
       <Filter>Engine</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\e_PointBVH.cpp">
-      <Filter>Engine</Filter>
-    </ClCompile>
     <ClCompile Include="Engine\e_SceneBVH.cpp">
       <Filter>Engine</Filter>
     </ClCompile>
     <ClCompile Include="Engine\e_Terrain.cpp">
       <Filter>Engine</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\SceneBuilder\BVH.cpp">
-      <Filter>Engine\SceneBuilder</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\SceneBuilder\BVHNode.cpp">
-      <Filter>Engine\SceneBuilder</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\SceneBuilder\CudaBVH.cpp">
-      <Filter>Engine\SceneBuilder</Filter>
-    </ClCompile>
     <ClCompile Include="Engine\SceneBuilder\Importer.cpp">
-      <Filter>Engine\SceneBuilder</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\SceneBuilder\RayBuffer.cpp">
-      <Filter>Engine\SceneBuilder</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\SceneBuilder\Scene.cpp">
-      <Filter>Engine\SceneBuilder</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\SceneBuilder\SplitBVHBuilder.cpp">
-      <Filter>Engine\SceneBuilder</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\SceneBuilder\Util.cpp">
       <Filter>Engine\SceneBuilder</Filter>
     </ClCompile>
     <ClCompile Include="stdafx.cpp" />
@@ -324,9 +261,6 @@
     <ClCompile Include="Engine\e_ShapeSet.cpp">
       <Filter>Engine</Filter>
     </ClCompile>
-    <ClCompile Include="Kernel\k_CpuTracer.cpp">
-      <Filter>Kernel</Filter>
-    </ClCompile>
     <ClCompile Include="Engine\e_MaterialLib.cpp">
       <Filter>Engine</Filter>
     </ClCompile>
@@ -342,6 +276,10 @@
     <ClCompile Include="Engine\SceneBuilder\ObjParser.cpp">
       <Filter>Engine\SceneBuilder</Filter>
     </ClCompile>
+    <ClCompile Include="Base\FileStream.cpp">
+      <Filter>Base</Filter>
+    </ClCompile>
+    <ClCompile Include="Source.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="Kernel\k_PrimTracer.cu">
@@ -433,6 +371,12 @@
     </CudaCompile>
     <CudaCompile Include="Kernel\k_FastTracer.cu">
       <Filter>Kernel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Base\Platform.cu">
+      <Filter>Base</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\e_Mesh.cu">
+      <Filter>Engine</Filter>
     </CudaCompile>
   </ItemGroup>
 </Project>

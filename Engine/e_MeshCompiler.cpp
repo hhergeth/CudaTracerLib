@@ -36,6 +36,8 @@ bool e_Md5Compiler::IsApplicable(const char* a_InputFile, e_MeshCompileType* out
 	return b;
 }
 
+#if defined(ISWINDOWS)
+#include <Windows.h>
 void e_Md5Compiler::Compile(const char* a_InputFile, OutputStream& a_Out)
 {
 	c_StringArray A;
@@ -51,7 +53,29 @@ void e_Md5Compiler::Compile(const char* a_InputFile, OutputStream& a_Out)
 			break;
 	}
 	e_AnimatedMesh::CompileToBinary(a_InputFile, A, a_Out);
+	FindClose(hFind);
 }
+#elif defined(ISUNIX)
+#include <dirent.h>
+void e_Md5Compiler::Compile(const char* a_InputFile, OutputStream& a_Out)
+{
+	c_StringArray A;
+	char dir[255];
+	ZeroMemory(dir, sizeof(dir));
+	_splitpath(a_InputFile, 0, dir, 0, 0);
+	struct dirent **namelist;
+	int n;
+    n = scandir(".*md5anim", &namelist, 0, alphasort); 
+	while(n--)
+	{ 
+        A(std::string(dir) + std::string(namelist[n]->d_name)); 
+        free(namelist[n]); 
+    }
+	e_AnimatedMesh::CompileToBinary(a_InputFile, A, a_Out);
+}
+#endif
+
+
 
 bool e_PlyCompiler::IsApplicable(const char* a_InputFile, e_MeshCompileType* out)
 {

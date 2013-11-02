@@ -1,13 +1,13 @@
 #pragma once
 
-#ifdef __CUDACC__
-#define BAD_EXCEPTION(...) { }
+#if defined(ISCUDA)
+	#define BAD_EXCEPTION(...) { }
 #else
 	#define BAD_EXCEPTION(...) \
 		{ \
 			char* buf = new char[256]; \
 			sprintf(buf, ##__VA_ARGS__); \
-			OutputDebugString(buf); \
+			std::cout << buf; \
 			throw 1; \
 		}
 #endif

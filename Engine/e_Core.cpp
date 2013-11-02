@@ -7,7 +7,7 @@
 
 void InitializeCuda4Tracer()
 {
-	cudaFree(0);
+	cudaError er = cudaFree(0);
 	SpectrumHelper::StaticInitialize();
 	e_RoughTransmittanceManager::StaticInitialize();
 }

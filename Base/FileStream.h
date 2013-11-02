@@ -1,16 +1,20 @@
 #pragma once
 
-#include <Windows.h>
 #include <iostream>
 #include <fstream>
 #include <MathTypes.h>
 
 class IInStream
 {
+protected:
+	unsigned long long m_uFileSize;
 public:
 	virtual void Read(void* a_Out, unsigned int a_Size) = 0;
 	virtual unsigned long long getPos() = 0;
-	virtual unsigned long long getFileSize() = 0;
+	unsigned long long getFileSize()
+	{
+		return m_uFileSize;
+	}
 	bool eof(){return getPos() == getFileSize();}
 	virtual void Move(int off) = 0;
 	template<typename T> void Move(int num)
@@ -26,14 +30,7 @@ public:
 		}
 		else return false;
 	}
-	bool ReadTo(std::string& str, char end)
-	{
-		char ch;
-		str.clear();
-		while (get(ch) && ch != end)
-			str.push_back(ch);
-		return ch == end;
-	}
+	bool ReadTo(std::string& str, char end);
 	bool getline(std::string& str)
 	{
 		return ReadTo(str, '\n');
@@ -44,13 +41,7 @@ public:
 		getline(s);
 		return s;
 	}
-	unsigned char* ReadToEnd()
-	{
-		unsigned long long l = getFileSize(), r = l - getPos();
-		void* v = malloc(r);
-		Read((char*)v, r);
-		return (unsigned char*)v;
-	}
+	unsigned char* ReadToEnd();
 	template<typename T> T* ReadToEnd()
 	{
 		return (T*)ReadToEnd();
@@ -158,136 +149,74 @@ public:
 
 class InputStream : public IInStream
 {
-public:
+private:
 	unsigned int numBytesRead;
-	HANDLE H;
+	void* H;
 public:
-	InputStream(const char* a_Name)
-	{
-		numBytesRead = 0;
-		H = CreateFile(a_Name, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
-		if(H == INVALID_HANDLE_VALUE)
-		{
-			LPVOID lpMsgBuf;
-			LPVOID lpDisplayBuf;
-			DWORD dw = GetLastError(); 
-
-			FormatMessage(
-				FORMAT_MESSAGE_ALLOCATE_BUFFER | 
-				FORMAT_MESSAGE_FROM_SYSTEM |
-				FORMAT_MESSAGE_IGNORE_INSERTS,
-				NULL,
-				dw,
-				MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-				(LPTSTR) &lpMsgBuf,
-				0, NULL );
-			OutputDebugString((LPTSTR)lpMsgBuf);
-			throw 1;
-		}
-	}
-	void Close()
-	{
-		CloseHandle(H);
-	}
-	virtual unsigned long long getFileSize()
-	{
-		DWORD h;
-		DWORD l = GetFileSize(H, &h);
-		return ((size_t)h << 32) | (size_t)l;
-	}
+	InputStream(const char* a_Name);
+	void Close();
 	virtual unsigned long long getPos()
 	{
 		return numBytesRead;
 	}
-	virtual void Read(void* a_Data, unsigned int a_Size)
-	{
-		DWORD a;
-		BOOL b = ReadFile(H, a_Data, a_Size, &a, 0);
-		if(!b || a != a_Size)
-			throw 1;
-		numBytesRead += a_Size;
-	}
-	void Move(int off)
-	{
-		DWORD r = SetFilePointer(H, off, 0, FILE_CURRENT);
-		if(r == INVALID_SET_FILE_POINTER)
-			throw 1;
-		numBytesRead += off;
-	}
+	virtual void Read(void* a_Data, unsigned int a_Size);
+	void Move(int off);
 };
 
 class MemInputStream : public IInStream
 {
-public:
-	unsigned int numBytesRead, length;
 private:
-	unsigned char* buf;
+	unsigned int numBytesRead;
+	const unsigned char* buf;
 public:
-	MemInputStream(InputStream& in)
-	{
-		buf = in.ReadToEnd();
-	}
-	MemInputStream(const char* a_Name)
-	{
-		InputStream in(a_Name);
-		numBytesRead = 0;
-		length = in.getFileSize();
-		buf = in.ReadToEnd();
-		in.Close();
-	}
+	MemInputStream(const unsigned char* buf, unsigned int length, bool canKeep = false);
+	MemInputStream(InputStream& in);
+	MemInputStream(const char* a_Name);
 	void Close()
 	{
 		delete [] buf;
-	}
-	virtual unsigned long long getFileSize()
-	{
-		return length;
 	}
 	virtual unsigned long long getPos()
 	{
 		return numBytesRead;
 	}
-	virtual void Read(void* a_Data, unsigned int a_Size)
-	{
-		memcpy(a_Data, buf + numBytesRead, a_Size);
-		numBytesRead += a_Size;
-	}
+	virtual void Read(void* a_Data, unsigned int a_Size);
 	void Move(int off)
 	{
 		numBytesRead += off;
 	}
 };
 
+unsigned long long GetFileSize(const char* filename);
+
+IInStream* OpenFile(const char* filename);
+
+void CreateDirectoryRecursively(const std::string &directory);
+
+unsigned long long GetTimeStamp(const char* filename);
+
+void SetTimeStamp(const char* filename, unsigned long long);
+
 class OutputStream
 {
-public:
+private:
 	unsigned int numBytesWrote;
-	HANDLE H;
+	void* H;
+	void _Write(const void* data, unsigned int size);
 public:
-	OutputStream(const char* a_Name)
+	OutputStream(const char* a_Name);
+	void Close();
+	unsigned int GetNumBytesWritten()
 	{
-		numBytesWrote = 0;
-		H = CreateFile(a_Name, GENERIC_WRITE, FILE_SHARE_WRITE, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
-	}
-	void Close()
-	{
-		CloseHandle(H);
+		return numBytesWrote;
 	}
 	template<typename T> void Write(T* a_Data, unsigned int a_Size)
 	{
-		DWORD a;
-		BOOL b = WriteFile(H, a_Data, a_Size, &a, 0);
-		if(!b || a != a_Size)
-			throw 1;
-		numBytesWrote += a_Size;
+		_Write(a_Data, a_Size);
 	}
 	template<typename T> void Write(const T& a_Data)
 	{
-		DWORD a;
-		BOOL b = WriteFile(H, (void*)&a_Data, sizeof(T), &a, 0);
-		if(!b || a != sizeof(T))
-			throw 1;
-		numBytesWrote += sizeof(T);
+		_Write(&a_Data, sizeof(T));
 	}
 	OutputStream& operator<<(char rhs)
 	{
