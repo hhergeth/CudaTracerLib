@@ -6,9 +6,10 @@ void e_TriIntersectorData::setData(float3& a, float3& b, float3& c)
 	float3 d = cross(a - c, b - c);
 	if(AbsDot(normalize(cross(a - c, b - c)), make_float3(1, 0, 0)) < 0.2f)
 	{
-		e += make_float3(0,0.2f,-0.2f);
-		p *= 1.05f;
-		q *= 1.05f;
+		float l = length(d) / 100.0f;
+		e += e * make_float3(0,0.005f,-0.005f);
+		p *= 1.005f;
+		q *= 1.005f;
 	}
 	//e = d - make_float3(1,0,0);
 	float4x4 m( p.x, q.x, e.x + 1, c.x,

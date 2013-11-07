@@ -116,7 +116,7 @@ e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_MeshFile2)
 		unsigned long long objStamp = GetTimeStamp(a_MeshFile2);
 		unsigned long long xmshStamp = GetTimeStamp(cmpPath.c_str());
 		unsigned long long si = GetFileSize(cmpPath.c_str());
-		if(si <= 4 || si == -1 || objStamp != xmshStamp)
+		//if(si <= 4 || si == -1 || objStamp != xmshStamp)
 		{
 			std::cout << "Started compiling mesh : " << a_MeshFile2 << "\n";
 			OutputStream a_Out(cmpPath.c_str());

@@ -78,7 +78,7 @@ CUDA_FUNC_IN Spectrum trace(Ray& r, CudaRNG& rng, float3* pout)
 		if(DIRECT)
 			L += c * UniformSampleAllLights(bRec, r2.getMat(), 1);
 		float pdf;
-		Spectrum f = r2.getMat().bsdf.sample(bRec, pdf, rng.randomFloat2());
+		Spectrum f = r2.getMat().bsdf.sample(bRec, pdf, rng.randomFloat2()); return f;
 		c = c * f;
 		if((bRec.sampledType & EDiffuse) == EDiffuse)
 		{

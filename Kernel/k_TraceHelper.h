@@ -2,15 +2,6 @@
 #include "..\Engine\e_Sensor.h"
 #include "..\Engine\e_DynamicScene.h"
 
-#ifdef __CUDACC__ 
-extern texture<float4, 1> t_nodesA;
-extern texture<float4, 1> t_tris;
-extern texture<int,  1>   t_triIndices;
-extern texture<float4, 1> t_SceneNodes;
-extern texture<float4, 1> t_NodeTransforms;
-extern texture<float4, 1> t_NodeInvTransforms;
-#endif
-
 enum
 {
     MaxBlockHeight      = 6,            // Upper bound for blockDim.y.

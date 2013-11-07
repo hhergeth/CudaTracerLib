@@ -19,7 +19,9 @@ struct e_KernelMesh
 
 struct e_TriIntersectorData
 {
-	float4 a,b,c,d;
+private:
+	float4 a,b,c;
+public:
 	CUDA_DEVICE CUDA_HOST void setData(float3& v0, float3& v1, float3& v2);
 
 	CUDA_DEVICE CUDA_HOST void getData(float3& v0, float3& v1, float3& v2) const;
