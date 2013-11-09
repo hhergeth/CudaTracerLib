@@ -12,6 +12,7 @@ class e_Node;
 struct e_KernelMesh;
 struct e_TriangleData;
 struct e_TriIntersectorData;
+struct e_TriIntersectorData2;
 class e_DynamicScene;
 struct e_Sensor;
 struct e_BVHNodeData;
@@ -24,7 +25,7 @@ struct e_KernelDynamicScene
 	e_KernelBuffer<e_TriangleData> m_sTriData;
 	e_KernelBuffer<e_TriIntersectorData> m_sBVHIntData;
 	e_KernelBuffer<e_BVHNodeData> m_sBVHNodeData;
-	e_KernelBuffer<int> m_sBVHIndexData;
+	e_KernelBuffer<e_TriIntersectorData2> m_sBVHIndexData;
 	e_KernelBuffer<e_KernelMaterial> m_sMatData;
 	e_KernelBuffer<e_KernelMIPMap> m_sTexData;
 	e_KernelBuffer<e_KernelMesh> m_sMeshData;

@@ -113,6 +113,13 @@ template<typename K, typename V, int N> struct HashTable
 				return &data[i].value;
 		return 0;
 	}
+	int searchi(K& k)
+	{
+		for(unsigned int i = 0; i < this->i; i++)
+			if(data[i].key == k)
+				return i;
+		return -i;
+	}
 };
 
 bool parseFloats(const char*& ptr, float* values, int num)
@@ -361,7 +368,7 @@ void loadMtl(ImportState& s, IInStream& mtlIn, const std::string& dirName)
 struct SubMesh
 {
 	int indexStart;
-	Material mat;
+	int mat;
 	SubMesh(unsigned int start)
 		: indexStart(start)
 	{
@@ -454,15 +461,15 @@ void compileobj(const char* a_InputFile, OutputStream& a_Out)
         }
         else if (parseLiteral(ptr, "usemtl ") && parseSpace(ptr)) // material name
         {
-			Material* mat = s.materialHash.search(std::string(ptr));
+			int mat = s.materialHash.searchi(std::string(ptr));
             if (submesh != -1)
             {
 				submesh = -1;
             }
-            if (mat)
+            if (mat != -1)
             {
 				SubMesh q = SubMesh(indices.size());
-				q.mat = *mat;
+				q.mat = mat;
 				subMeshes.push_back(q);
             }
             valid = true;
@@ -515,29 +522,14 @@ void compileobj(const char* a_InputFile, OutputStream& a_Out)
     }
 	delete objIn;
 
-    // Flush remaining indices.
-
-	unsigned int m_numTriangles = indices.size() / 3;
-	unsigned int m_numVertices = positions.size();
-	e_TriangleData* triData = new e_TriangleData[m_numTriangles];
-	std::vector<e_KernelMaterial> matData;
-	float3 p[3];
-	float3 n[3];
-	float3 ta[3];
-	float3 bi[3];
-	float2 t[3];
-#ifdef EXT_TRI
-	float3* v_Normals = new float3[m_numVertices], *v_Tangents = new float3[m_numVertices], *v_BiTangents = new float3[m_numVertices];
-	Platform::SetMemory(v_Normals, sizeof(float3) * m_numVertices);
-	Platform::SetMemory(v_Tangents, sizeof(float3) * m_numVertices);
-	Platform::SetMemory(v_BiTangents, sizeof(float3) * m_numVertices);
-	ComputeTangentSpace(&positions[0], &texCoords[0], &indices[0], m_numVertices, m_numTriangles, v_Normals, v_Tangents, v_BiTangents);
-#endif
 	e_MeshPartLight m_sLights[MAX_AREALIGHT_NUM];
+	Platform::SetMemory(m_sLights, sizeof(m_sLights));
 	int c = 0, lc = 0;
-	for (int submesh = 0; submesh < subMeshes.size(); submesh++)
+    std::vector<e_KernelMaterial> matData;
+	matData.reserve(s.materialHash.i);
+	for(unsigned int i = 0; i < s.materialHash.i; i++)
 	{
-		Material M = subMeshes[submesh].mat;
+		Material M = s.materialHash.data[i].value;
 		e_KernelMaterial mat(M.Name.c_str());
 		float f = 0.0f;
 		if(M.IlluminationModel == 2)
@@ -571,13 +563,6 @@ void compileobj(const char* a_InputFile, OutputStream& a_Out)
 			d.m_specularReflectance = CreateTexture(0, Spectrum(0.0f));
 			d.m_specularTransmittance = CreateTexture(0, Spectrum(M.Tf));
 			mat.bsdf.SetData(d);
-		}
-		if(length(M.emission) != 0)
-		{
-			Platform::SetMemory(m_sLights + lc, sizeof(e_MeshPartLight));
-			m_sLights[lc].L = M.emission;
-			strcpy(m_sLights[lc].MatName, M.Name.c_str());
-			mat.NodeLightIndex = lc++;
 		}/*
 		if(0&&M.textures[3].c_str().size())
 		{
@@ -597,8 +582,48 @@ void compileobj(const char* a_InputFile, OutputStream& a_Out)
 			memcpy(m.m_cNormalPath, M.textures[3].getID().getPtr(), M.textures[3].getID().getLength());
 #endif
 		*/
+		/*		Material M = s.materialHash.data[matIndex].value;
+		if(length(M.emission) != 0)
+		{
+			//duplicate material
+			matData.push_back(matData[matIndex]);
+			matIndex = matData.size() - 1;
+			std::cout << "duplicating material : " << matData[matIndex].Name << "\n";
+
+			Platform::SetMemory(m_sLights + lc, sizeof(e_MeshPartLight));
+			m_sLights[lc].L = M.emission;
+			strcpy(m_sLights[lc].MatName, M.Name.c_str());
+			matData[matIndex].NodeLightIndex = lc++;
+		}
+		*/
+		if(length(M.emission))
+		{
+			m_sLights[lc].L = M.emission;
+			strcpy(m_sLights[lc].MatName, M.Name.c_str());
+			mat.NodeLightIndex = lc++;
+		}
 		matData.push_back(mat);
-		size_t matIndex = matData.size() - 1;
+	}
+
+	unsigned int m_numTriangles = indices.size() / 3;
+	unsigned int m_numVertices = positions.size();
+	e_TriangleData* triData = new e_TriangleData[m_numTriangles];
+	float3 p[3];
+	float3 n[3];
+	float3 ta[3];
+	float3 bi[3];
+	float2 t[3];
+#ifdef EXT_TRI
+	float3* v_Normals = new float3[m_numVertices], *v_Tangents = new float3[m_numVertices], *v_BiTangents = new float3[m_numVertices];
+	Platform::SetMemory(v_Normals, sizeof(float3) * m_numVertices);
+	Platform::SetMemory(v_Tangents, sizeof(float3) * m_numVertices);
+	Platform::SetMemory(v_BiTangents, sizeof(float3) * m_numVertices);
+	ComputeTangentSpace(&positions[0], &texCoords[0], &indices[0], m_numVertices, m_numTriangles, v_Normals, v_Tangents, v_BiTangents);
+#endif
+	
+	for (int submesh = 0; submesh < subMeshes.size(); submesh++)
+	{
+		size_t matIndex = subMeshes[submesh].mat;
 
 		unsigned int start = subMeshes[submesh].indexStart, end = submesh < subMeshes.size() - 1 ? subMeshes[submesh + 1].indexStart - 1 : indices.size();
 		for (size_t i = start; i < end; i += 3)

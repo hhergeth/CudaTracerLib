@@ -280,6 +280,9 @@
       <Filter>Base</Filter>
     </ClCompile>
     <ClCompile Include="Source.cpp" />
+    <ClCompile Include="Base\StringUtils.cpp">
+      <Filter>Base</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="Kernel\k_PrimTracer.cu">

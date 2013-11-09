@@ -17,9 +17,9 @@ namespace bvh_helper
 	public:
 		e_BVHNodeData* nodes;
 		unsigned int nodeIndex;
-		float4* tris;
+		e_TriIntersectorData* tris;
 		unsigned int triIndex;
-		unsigned int* indices;
+		e_TriIntersectorData2* indices;
 		AABB box;
 		int startNode;
 		int L0, L1;
@@ -27,13 +27,16 @@ namespace bvh_helper
 		clb(int _v, int _i, float3* _V, unsigned int* _I)
 			: V(_V), Iab(_I), v(_v), i(_i)
 		{
+			std::cout << _v << "\n";
+			std::cout << _i << "\n";
 			nodeIndex = triIndex = 0;
-			const float duplicates = 0.35f, f = 1.0f + duplicates;
+			const float duplicates = 0.5f, f = 1.0f + duplicates;
 			L0 = (int)(float(_i / 3) * f);
 			L1 = (int)(float(_i / 3) * f * 4);
 			nodes = new e_BVHNodeData[L0];
-			tris = new float4[L1];
-			indices = new unsigned int[L1];
+			tris = new e_TriIntersectorData[L1];
+			indices = new e_TriIntersectorData2[L1];
+			Platform::SetMemory(indices, L1 * sizeof(e_TriIntersectorData2));
 		}
 		void Free()
 		{
@@ -66,22 +69,22 @@ namespace bvh_helper
 		}
 		virtual unsigned int handleLeafObjects(unsigned int pNode)
 		{
-			unsigned int c = triIndex;
-			triIndex += 3;
+			unsigned int c = triIndex++;
 			if(triIndex > L1)
 				throw 1;
-			e_TriIntersectorData* t = (e_TriIntersectorData*)(tris + c);
-			t->setData(V[_index(pNode, 0)], V[_index(pNode, 1)], V[_index(pNode, 2)]);
-			indices[c] = pNode;
+			tris[c].setData(V[_index(pNode, 0)], V[_index(pNode, 1)], V[_index(pNode, 2)], pNode, indices + c);
+			indices[c].setFlag(false);
+			indices[c].setIndex(pNode);
 			return c;
 		}
 		virtual void handleLastLeafObject()
 		{
-			*(int*)&tris[triIndex].x = 0x80000000;
-			indices[triIndex] = -1;
-			triIndex += 1;
-			if(triIndex > L1)
-				throw 1;
+			//*(int*)&tris[triIndex].x = 0x80000000;
+			//indices[triIndex] = -1;
+			//triIndex += 1;
+			//if(triIndex > L1)
+			//	throw 1;
+			indices[triIndex - 1].setFlag(true);
 		}
 		virtual void HandleStartNode(int startNode)
 		{
@@ -93,17 +96,16 @@ namespace bvh_helper
 struct BVH_Construction_Result
 {
 	e_BVHNodeData* nodes;
-	float4* tris;
-	unsigned int* ind;
+	e_TriIntersectorData* tris;
+	e_TriIntersectorData2* tris2;
 	unsigned int nodeCount;
-	//number of float4's <=> indices
 	unsigned int triCount;
 	AABB box;
 	void Free()
 	{
 		delete [] nodes;
 		delete [] tris;
-		delete [] ind;
+		delete [] tris2;
 	}
 };
 
@@ -113,7 +115,7 @@ inline BVH_Construction_Result ConstructBVH(float3* vertices, unsigned int* indi
 	BVHBuilder::BuildBVH(&c, BVHBuilder::Platform());
 	BVH_Construction_Result r;
 	r.box = c.box;
-	r.ind = c.indices;
+	r.tris2 = c.indices;
 	r.nodeCount = c.nodeIndex;
 	r.nodes = c.nodes;
 	r.triCount = c.triIndex;

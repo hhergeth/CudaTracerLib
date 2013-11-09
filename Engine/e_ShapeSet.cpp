@@ -11,16 +11,15 @@ AABB ShapeSet::triData::box() const
 
 void ShapeSet::triData::Recalculate(float4x4& mat)
 {
-	datRef->getData(p[0], p[1], p[2]);
+	datRef.getData(p[0], p[1], p[2]);
 	for(int i = 0; i < 3; i++)
 		p[i] = mat * p[i];
-	dat.setData(p[0], p[1], p[2]);
 	n = -cross(p[2] - p[0], p[1] - p[0]);
 	area = 0.5f * length(n);
 	n = normalize(n);
 }
 
-ShapeSet::ShapeSet(e_TriIntersectorData** indices, unsigned int indexCount, float4x4& mat)
+ShapeSet::ShapeSet(e_TriIntersectorHelper* indices, unsigned int indexCount, float4x4& mat)
 {
 	if(indexCount > MAX_SHAPE_LENGTH)
 		throw 1;

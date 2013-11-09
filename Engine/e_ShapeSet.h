@@ -11,11 +11,10 @@ struct CUDA_ALIGN(16) ShapeSet
 {
 	CUDA_ALIGN(16) struct triData
 	{
-		CUDA_ALIGN(16) e_TriIntersectorData dat;
 		CUDA_ALIGN(16) float3 p[3];
 		CUDA_ALIGN(16) float3 n;
 		CUDA_ALIGN(16) float area;
-		CUDA_ALIGN(16) const e_TriIntersectorData* datRef;
+		CUDA_ALIGN(16) e_TriIntersectorHelper datRef;
 
 		CUDA_FUNC_IN void UniformSampleTriangle(float u1, float u2, float *u, float *v) const
 		{
@@ -25,9 +24,9 @@ struct CUDA_ALIGN(16) ShapeSet
 		}
 		
 		triData(){}
-		triData(const e_TriIntersectorData* a_Int, float4x4& mat)
+		triData(e_TriIntersectorHelper ref, float4x4& mat)
 		{
-			datRef = a_Int;
+			datRef = ref;
 			Recalculate(mat);
 		}
 		CUDA_FUNC_IN float3 rndPoint(float b1, float b2) const
@@ -44,7 +43,7 @@ struct CUDA_ALIGN(16) ShapeSet
 	};
 public:
 	ShapeSet(){}
-    ShapeSet(e_TriIntersectorData** indices, unsigned int indexCount, float4x4& mat);
+    ShapeSet(e_TriIntersectorHelper* indices, unsigned int indexCount, float4x4& mat);
     CUDA_FUNC_IN float Area() const { return sumArea; }
 	CUDA_DEVICE CUDA_HOST void SamplePosition(PositionSamplingRecord& pRec, const float2& spatialSample) const;
     CUDA_FUNC_IN float Pdf(const PositionSamplingRecord &p) const

@@ -193,13 +193,13 @@ void k_FastTracer::doDirect(e_Image* I)
 	cudaMemcpy(intersector->m_pRayBuffer, hostRays, sizeof(traversalRay) * w * h, cudaMemcpyHostToDevice);
 	m_fTimeSpentRendering = (float)TT.EndTimer();*/
 	
-	//cudaEventRecord(start, 0);
+	cudaEventRecord(start, 0);
 	intersector->IntersectBuffers<false>(0, m_pScene->getNodeCount() == 1);
-	//cudaEventRecord(stop, 0);
-	//cudaEventSynchronize(stop);
-	//float elapsedTime;
-	//cudaEventElapsedTime(&elapsedTime, start, stop);
-	//m_fTimeSpentRendering = elapsedTime * 1e-3f;
+	cudaEventRecord(stop, 0);
+	cudaEventSynchronize(stop);
+	float elapsedTime;
+	cudaEventElapsedTime(&elapsedTime, start, stop);
+	m_fTimeSpentRendering = elapsedTime * 1e-3f;
 		/*
 	cudaEventRecord(start, 0);
 	I->StartNewRendering();
@@ -237,7 +237,7 @@ void k_FastTracer::doDirect(e_Image* I)
 	
 	m_uPassesDone++;
 	m_uNumRaysTraced = w * h;
-	//cudaEventRecord(start, 0);
+	cudaEventRecord(start, 0);
 }
 
 void k_FastTracer::doPath(e_Image* I)
@@ -254,11 +254,8 @@ void k_FastTracer::doPath(e_Image* I)
 	{
 		m_uNumRaysTraced += intersector->IntersectBuffers<false>(0);
 		unsigned int n = intersector[0][0].getCreatedRayCount();
-		unsigned int a = intersector[0][1].getCreatedRayCount();
 		intersector->StartNewTraversal();
-		unsigned int b = intersector[0][1].getCreatedRayCount();
 		pathIterateKernel<<< dim3(n/(32*8)+1,1,1), dim3(32, 8, 1)>>>(n, *I, pass, *intersector);
-		unsigned int c = intersector[0][1].getCreatedRayCount();
 		if(pass != MAX_PASS)
 			m_uNumRaysTraced += intersector->IntersectBuffers<true>(1);
 	}
@@ -269,6 +266,6 @@ void k_FastTracer::doPath(e_Image* I)
 
 void k_FastTracer::DoRender(e_Image* I)
 {
-	//doPath(I);
-	doDirect(I);
+	doPath(I);
+	//doDirect(I);
 }

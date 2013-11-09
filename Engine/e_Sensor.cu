@@ -151,6 +151,11 @@ Spectrum e_PerspectiveCamera::sampleRay(Ray &ray, const float2 &pixelSample, con
 	return Spectrum(1.0f);
 }
 
+CUDA_FUNC_IN float G(const float3& N_x, const float3& N_y, const float3& theta, const float3& x, const float3& y)
+{
+	return (AbsDot(N_x, theta) * AbsDot(N_y, -1.0f * theta)) / DistanceSquared(x, y);
+}
+
 CUDA_FUNC_IN float PdfWtoA(const float pdfW, const float dist, const float cosThere)
 {
     return pdfW * fabs(cosThere) / (dist * dist);
@@ -189,11 +194,13 @@ Spectrum e_PerspectiveCamera::sampleDirect(DirectSamplingRecord &dRec, const flo
 	dRec.pdf = 1;
 	dRec.measure = EDiscrete;
 
+	//return G(normalize(dRec.n), normalize(dRec.refN), dRec.d, dRec.p, dRec.ref) * m_normalization;
+
 	const float cosToCamera = AbsDot(dRec.refN, dRec.d);
 	const float cosAtCamera = Frame::cosTheta(-dRec.d);
 	const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera) * m_normalization;
 	const float cameraPdfA = PdfWtoA(cameraPdfW, dist, cosToCamera);
-	return cameraPdfA;
+	//return cameraPdfA;
 	return Spectrum(importance(localD)*invDist*invDist);
 }
 

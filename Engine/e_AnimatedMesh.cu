@@ -63,7 +63,7 @@ __global__ void g_ComputeTriangles(e_TmpVertex* a_Tmp, uint3* a_TriData, e_Trian
 
 CUDA_DEVICE AABB g_BOX;
 
-__global__ void g_ComputeBVHState(e_TriIntersectorData* a_BVHIntersectionData, e_BVHNodeData* a_BVHNodeData, int* a_BVHIndexData, e_TmpVertex* a_Tmp, uint3* a_TriData, e_BVHLevelEntry* a_Level, unsigned int a_NCount)
+__global__ void g_ComputeBVHState(e_TriIntersectorData* a_BVHIntersectionData, e_BVHNodeData* a_BVHNodeData, e_TriIntersectorData2* a_BVHIntersectionData2, e_TmpVertex* a_Tmp, uint3* a_TriData, e_BVHLevelEntry* a_Level, unsigned int a_NCount)
 {
 	unsigned int N = blockIdx.x * blockDim.x + threadIdx.x;
 	if(N < a_NCount)
@@ -82,16 +82,13 @@ __global__ void g_ComputeBVHState(e_TriIntersectorData* a_BVHIntersectionData, e
 		{
 			for (int triAddr = ~e.m_sNode;; triAddr += 3)
 			{
-				int i = a_BVHIndexData[triAddr];
-				if(i == -1)
-					break;
+				int i = a_BVHIntersectionData2[triAddr].getIndex();
 				uint3 t = a_TriData[i];
 				float3 v0 = a_Tmp[t.x].m_fPos, v1 = a_Tmp[t.y].m_fPos, v2 = a_Tmp[t.z].m_fPos;
 				box.Enlarge(v0);
 				box.Enlarge(v1);
 				box.Enlarge(v2);
-				e_TriIntersectorData* T = (e_TriIntersectorData*)((float4*)a_BVHIntersectionData + triAddr);
-				T->setData(v0, v1, v2);
+				a_BVHIntersectionData[triAddr].setData(v0, v1, v2, i, a_BVHIntersectionData2 + triAddr);
 			}
 		}
 		if(e.m_sSide == -1)
@@ -113,6 +110,6 @@ void e_AnimatedMesh::k_ComputeState(unsigned int a_Anim, unsigned int a_Frame, f
 	cudaThreadSynchronize();
 	for(int l = k_Data.m_uBVHLevelCount - 1; l >= 0; l--){
 		g_ComputeBVHState<<<m_pLevels[l].y / 256 + 1, 256>>>(a_Data.m_sBVHIntData.Data + m_sIntInfo.getIndex(), a_Data.m_sBVHNodeData.Data + m_sNodeInfo.getIndex(), a_Data.m_sBVHIndexData.Data + m_sIndicesInfo.getIndex(), a_DeviceTmp, TRANS(m_pTriangles), TRANS(m_pLevelEntries + m_pLevels[l].x), m_pLevels[l].y);
-		cudaThreadSynchronize();}
+	cudaThreadSynchronize();}
 	cudaMemcpyFromSymbol(&m_sLocalBox, g_BOX, sizeof(AABB));
 }

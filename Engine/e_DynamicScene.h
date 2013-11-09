@@ -25,7 +25,7 @@ public:
 	e_Stream<e_TriangleData>* m_pTriDataStream;
 	e_Stream<e_TriIntersectorData>* m_pTriIntStream;
 	e_Stream<e_BVHNodeData>* m_pBVHStream;
-	e_Stream<int>* m_pBVHIndicesStream;
+	e_Stream<e_TriIntersectorData2>* m_pBVHIndicesStream;
 	e_Stream<e_KernelMaterial>* m_pMaterialBuffer;
 	e_CachedBuffer<e_MIPMap, e_KernelMIPMap>* m_pTextureBuffer;
 	e_CachedBuffer<e_Mesh, e_KernelMesh>* m_pMeshBuffer;

@@ -12,12 +12,12 @@ unsigned int g_RayTracedCounterHost;
 e_Sensor g_CameraDataHost;
 CudaRNGBuffer g_RNGDataHost;
 
-texture<float4, 1> t_nodesA;
-texture<float4, 1> t_tris;
-texture<int,  1>   t_triIndices;
-texture<float4, 1> t_SceneNodes;
-texture<float4, 1> t_NodeTransforms;
-texture<float4, 1> t_NodeInvTransforms;
+texture<float4, 1>		t_nodesA;
+texture<float4, 1>		t_tris;
+texture<unsigned int,  1>		t_triIndices;
+texture<float4, 1>		t_SceneNodes;
+texture<float4, 1>		t_NodeTransforms;
+texture<float4, 1>		t_NodeInvTransforms;
 
 CUDA_FUNC_IN void loadModl(int i, float4x4* o)
 {
@@ -147,20 +147,22 @@ bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResult* a_Result,
 		}
 		while (leafAddr < 0 && leafAddr != -214783648)
 		{
-			for (int triAddr = ~leafAddr;; triAddr += 3)
+			for (int triAddr = ~leafAddr;; triAddr++)
 			{
 #ifdef ISCUDA
-				const float4 v00 = tex1Dfetch(t_tris, mesh.m_uBVHTriangleOffset + triAddr + 0);
-				const float4 v11 = tex1Dfetch(t_tris, mesh.m_uBVHTriangleOffset + triAddr + 1);
-				const float4 v22 = tex1Dfetch(t_tris, mesh.m_uBVHTriangleOffset + triAddr + 2);
+				const float4 v00 = tex1Dfetch(t_tris, mesh.m_uBVHTriangleOffset + triAddr * 3 + 0);
+				const float4 v11 = tex1Dfetch(t_tris, mesh.m_uBVHTriangleOffset + triAddr * 3 + 1);
+				const float4 v22 = tex1Dfetch(t_tris, mesh.m_uBVHTriangleOffset + triAddr * 3 + 2);
+				unsigned int index = tex1Dfetch(t_triIndices, mesh.m_uBVHIndicesOffset + triAddr);
 #else
 				float4* dat = (float4*)g_SceneData.m_sBVHIntData.Data;
-				const float4 v00 = dat[mesh.m_uBVHTriangleOffset + triAddr + 0];
-				const float4 v11 = dat[mesh.m_uBVHTriangleOffset + triAddr + 1];
-				const float4 v22 = dat[mesh.m_uBVHTriangleOffset + triAddr + 2];
+				float4* dat2 = (float4*)g_SceneData.m_sBVHIndexData.Data;
+				const float4 v00 = dat[mesh.m_uBVHTriangleOffset + triAddr * 3 + 0];
+				const float4 v11 = dat[mesh.m_uBVHTriangleOffset + triAddr * 3 + 1];
+				const float4 v22 = dat[mesh.m_uBVHTriangleOffset + triAddr * 3 + 2];
+				unsigned int index = g_SceneData.m_sBVHIndexData.Data[mesh.m_uBVHIndicesOffset + triAddr].index;
 #endif
-				if (float_as_int_(v00.x) == 0x80000000)
-					break;
+
 				float Oz = v00.w - origx*v00.x - origy*v00.y - origz*v00.z;
 				float invDz = 1.0f / (dirx*v00.x + diry*v00.y + dirz*v00.z);
 				float t = Oz * invDz;
@@ -176,11 +178,7 @@ bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResult* a_Result,
 						float v = Oy + t*Dy;
 						if (v >= 0.0f && u + v <= 1.0f)
 						{
-#ifdef ISCUDA
-							unsigned int ti = tex1Dfetch(t_triIndices, triAddr + mesh.m_uBVHIndicesOffset);
-#else
-							unsigned int ti = g_SceneData.m_sBVHIndexData.Data[triAddr + mesh.m_uBVHIndicesOffset];
-#endif
+							unsigned int ti = index >> 1;
 							e_TriangleData* tri = g_SceneData.m_sTriData.Data + ti + mesh.m_uTriangleOffset;
 							int q = 1;
 							if(USE_ALPHA)
@@ -201,6 +199,8 @@ bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResult* a_Result,
 						}
 					}
 				}
+				if(index & 1)
+					break;
 			}
 			leafAddr = nodeAddr;
 			if (nodeAddr < 0)
@@ -320,11 +320,11 @@ bool k_TraceRay(const float3& dir, const float3& ori, TraceResult* a_Result)
 void k_INITIALIZE(const e_KernelDynamicScene& a_Data)
 {
 	size_t offset;
-	cudaChannelFormatDesc cd0 = cudaCreateChannelDesc<float4>(), cd1 = cudaCreateChannelDesc<int>();
+	cudaChannelFormatDesc cd0 = cudaCreateChannelDesc<float4>(), cd1 = cudaCreateChannelDesc<unsigned int>();
 	cudaError_t
 	r = cudaBindTexture(&offset, &t_nodesA, a_Data.m_sBVHNodeData.Data, &cd0, a_Data.m_sBVHNodeData.UsedCount * sizeof(e_BVHNodeData));
 	r = cudaBindTexture(&offset, &t_tris, a_Data.m_sBVHIntData.Data, &cd0, a_Data.m_sBVHIntData.UsedCount * sizeof(e_TriIntersectorData));
-	r = cudaBindTexture(&offset, &t_triIndices, a_Data.m_sBVHIndexData.Data, &cd1, a_Data.m_sBVHIndexData.UsedCount * sizeof(int));
+	r = cudaBindTexture(&offset, &t_triIndices, a_Data.m_sBVHIndexData.Data, &cd1, a_Data.m_sBVHIndexData.UsedCount * sizeof(e_TriIntersectorData2));
 	r = cudaBindTexture(&offset, &t_SceneNodes, a_Data.m_sSceneBVH.m_pNodes, &cd0, a_Data.m_sBVHNodeData.UsedCount * sizeof(e_BVHNodeData));
 	r = cudaBindTexture(&offset, &t_NodeTransforms, a_Data.m_sSceneBVH.m_pNodeTransforms, &cd0, a_Data.m_sNodeData.UsedCount * sizeof(float4x4));
 	r = cudaBindTexture(&offset, &t_NodeInvTransforms, a_Data.m_sSceneBVH.m_pInvNodeTransforms, &cd0, a_Data.m_sNodeData.UsedCount * sizeof(float4x4));
@@ -584,16 +584,13 @@ template<bool ANY_HIT> __global__ void intersectKernel_SKIPOUTER(int numRays, tr
 			}
 			while (leafAddr < 0)
 			{
-				for (int triAddr = ~leafAddr;; triAddr += 3)
+				for (int triAddr = ~leafAddr;; triAddr++)
 				{
 					// Tris in TEX (good to fetch as a single batch)
-					const float4 v00 = tex1Dfetch(t_tris, triAddr + 0);
-					const float4 v11 = tex1Dfetch(t_tris, triAddr + 1);
-					const float4 v22 = tex1Dfetch(t_tris, triAddr + 2);
-
-					// End marker (negative zero) => all triangles processed.
-					if (__float_as_int(v00.x) == 0x80000000)
-						break;
+					const float4 v00 = tex1Dfetch(t_tris, triAddr * 3 + 0);
+					const float4 v11 = tex1Dfetch(t_tris, triAddr * 3 + 1);
+					const float4 v22 = tex1Dfetch(t_tris, triAddr * 3 + 2);
+					unsigned int index = tex1Dfetch(t_triIndices, triAddr);
 
 					float Oz = v00.w - origx*v00.x - origy*v00.y - origz*v00.z;
 					float invDz = 1.0f / (dirx*v00.x + diry*v00.y + dirz*v00.z);
@@ -621,7 +618,7 @@ template<bool ANY_HIT> __global__ void intersectKernel_SKIPOUTER(int numRays, tr
 								// Closest intersection not required => terminate.
 
 								hitT = t;
-								hitIndex = triAddr;
+								hitIndex = index >> 1;
 								//bCoords = make_float2(u,v);
 								if (ANY_HIT)
 								{
@@ -631,6 +628,8 @@ template<bool ANY_HIT> __global__ void intersectKernel_SKIPOUTER(int numRays, tr
 							}
 						}
 					}
+					if(index & 1)
+						break;
 				} // triangle
 
 				leafAddr = nodeAddr;
@@ -648,7 +647,7 @@ template<bool ANY_HIT> __global__ void intersectKernel_SKIPOUTER(int numRays, tr
 		{
 			res.x = __float_as_int(hitT);
 			res.y = 0;
-			res.z = tex1Dfetch(t_triIndices, hitIndex + g_SceneData.m_sMeshData[(g_SceneData.m_sNodeData.Data + 0)->m_uMeshIndex].m_uBVHIndicesOffset);
+			res.z = hitIndex;
 		}
 		((int4*)a_ResBuffer)[rayidx] = res;
 	} while(true);
@@ -954,16 +953,13 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 					}
 					while (lleafAddr < 0 && lleafAddr != -214783648)
 					{
-						for (int triAddr = ~lleafAddr;; triAddr += 3)
+						for (int triAddr = ~lleafAddr;; triAddr++)
 						{
 							// Tris in TEX (good to fetch as a single batch)
-							const float4 v00 = tex1Dfetch(t_tris, triAddr + 0 + m_uBVHTriangleOffset);
-							const float4 v11 = tex1Dfetch(t_tris, triAddr + 1 + m_uBVHTriangleOffset);
-							const float4 v22 = tex1Dfetch(t_tris, triAddr + 2 + m_uBVHTriangleOffset);
-
-							// End marker (negative zero) => all triangles processed.
-							if (__float_as_int(v00.x) == 0x80000000)
-								break;
+							const float4 v00 = tex1Dfetch(t_tris, triAddr * 3 + 0 + m_uBVHTriangleOffset);
+							const float4 v11 = tex1Dfetch(t_tris, triAddr * 3 + 1 + m_uBVHTriangleOffset);
+							const float4 v22 = tex1Dfetch(t_tris, triAddr * 3 + 2 + m_uBVHTriangleOffset);
+							unsigned int index = tex1Dfetch(t_triIndices, triAddr + m_uBVHTriangleOffset / 3);
 
 							float Oz = v00.w - lorigx*v00.x - lorigy*v00.y - lorigz*v00.z;
 							float invDz = 1.0f / (ldirx*v00.x + ldiry*v00.y + ldirz*v00.z);
@@ -992,7 +988,7 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 
 										nodeIdx = ~leafAddr;
 										lhitT = t;
-										hitIndex = triAddr;
+										hitIndex = index >> 1;
 										bCorrds = make_float2(u,v);
 										if (ANY_HIT)
 										{
@@ -1001,7 +997,9 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 										}
 									}
 								}
-							}
+							}			
+							if(index & 1)
+								break;
 						} // triangle
 						hitT = lhitT * sqrt(ldirx*ldirx+ldiry*ldiry+ldirz*ldirz);
 
@@ -1013,13 +1011,13 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 						}
 					}
 					//BUGGY
-					/*if( __popc(__ballot(true)) < DYNAMIC_FETCH_THRESHOLD / 2 )
-					{
-						//we can't pop yet
-						nodeAddr = EntrypointSentinel - 1;
-						//can't break cause we don't want to pop postponed leaf
-						goto outerlabel;//jump AFTER store cause we will do that later
-					}*/
+					//if( __popc(__ballot(true)) < DYNAMIC_FETCH_THRESHOLD / 2 )
+					//{
+					//	//we can't pop yet
+					//	nodeAddr = EntrypointSentinel - 1;
+					//	//can't break cause we don't want to pop postponed leaf
+					//	goto outerlabel;//jump AFTER store cause we will do that later
+					//}
 				}
                 // Another leaf was postponed => process it as well.
 
@@ -1044,7 +1042,7 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 		{
 			res.x = __float_as_int(hitT);
 			res.y = nodeIdx;
-			res.z = tex1Dfetch(t_triIndices, hitIndex + g_SceneData.m_sMeshData[(g_SceneData.m_sNodeData.Data + nodeIdx)->m_uMeshIndex].m_uBVHIndicesOffset);
+			res.z = hitIndex;
 			half2 h(bCorrds);
 			res.w = *(int*)&h;
 		}

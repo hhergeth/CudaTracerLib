@@ -9,6 +9,7 @@ public:
 	k_PhotonTracer()
 	{
 	}
+	virtual void Debug(int2 pixel);
 protected:
 	virtual void DoRender(e_Image* I);
 };

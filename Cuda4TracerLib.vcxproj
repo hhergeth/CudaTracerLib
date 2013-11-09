@@ -88,6 +88,7 @@
     <CudaCompile Include="Base\Platform.cu">
       <FileType>CppCode</FileType>
     </CudaCompile>
+    <ClCompile Include="Base\StringUtils.cpp" />
     <ClCompile Include="Engine\e_AnimatedMesh.cpp" />
     <ClCompile Include="Engine\e_Core.cpp" />
     <ClCompile Include="Engine\e_DynamicScene.cpp" />

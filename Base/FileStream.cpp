@@ -127,7 +127,7 @@ unsigned long long GetFileSize(const char* filename)
 
 IInStream* OpenFile(const char* filename)
 {
-	if(GetFileSize(filename) < 1024 * 1024 * 256)//256mb
+	if(GetFileSize(filename) < 1024 * 1024 * 1024)
 		return new MemInputStream(filename);
 	else return new InputStream(filename);
 	return 0;

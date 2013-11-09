@@ -12,7 +12,7 @@ CUDA_FUNC_IN void handleEmission(const Spectrum& weight, const PositionSamplingR
 	{
 		const e_KernelLight* emitter = (const e_KernelLight*)pRec.object;
 		value *= emitter->evalDirection(DirectionSamplingRecord(dRec.d), pRec);
-		g_Image.AddSample(int(dRec.uv.x), int(dRec.uv.y), value);
+		g_Image.Splat(int(dRec.uv.x), int(dRec.uv.y), value);
 	}
 }
 
@@ -24,7 +24,7 @@ CUDA_FUNC_IN void handleSurfaceInteraction(const Spectrum& weight, BSDFSamplingR
 	{
 		bRec.wo = bRec.map.sys.toLocal(dRec.d);
 		value *= r2.getMat().bsdf.f(bRec);
-		g_Image.AddSample(int(dRec.uv.x), int(dRec.uv.y),  value);
+		g_Image.Splat(int(dRec.uv.x), int(dRec.uv.y),  value);
 	}
 }
 
@@ -96,8 +96,10 @@ __global__ void pathKernel(unsigned int N, e_Image g_Image)
 	g_RNGData(rng);
 }
 
+static e_Image I2;
 void k_PhotonTracer::DoRender(e_Image* I)
 {
+	I2 = *I;
 	k_ProgressiveTracer::DoRender(I);
 	unsigned int zero = 0;
 	cudaMemcpyToSymbol(g_NextRayCounter3, &zero, sizeof(unsigned int));
@@ -107,4 +109,10 @@ void k_PhotonTracer::DoRender(e_Image* I)
 	m_uPassesDone++;
 	k_TracerBase_update_TracedRays
 	I->DoUpdateDisplay();
+}
+
+void k_PhotonTracer::Debug(int2 pixel)
+{
+	CudaRNG rng = g_RNGData();
+	doWork(I2, rng);
 }

@@ -6,15 +6,14 @@ void ConstructBVH(float3* vertices, unsigned int* indices, int vCount, int cCoun
 {	
 	bvh_helper::clb c(vCount, cCount, vertices, indices);
 	BVHBuilder::BuildBVH(&c, BVHBuilder::Platform());
-	O << 5u;
-	O << (unsigned long long)c.nodeIndex * 64;
+	O << (unsigned long long)c.nodeIndex;
 	if(c.nodeIndex)
 		O.Write(c.nodes, (unsigned int)c.nodeIndex * sizeof(e_BVHNodeData));
-	O << (unsigned long long)c.triIndex * 16;
+	O << (unsigned long long)c.triIndex;
 	if(c.triIndex )
-		O.Write(c.tris, (unsigned int)c.triIndex * 16);
-	O << (unsigned long long)c.triIndex * 4;
+		O.Write(c.tris, (unsigned int)c.triIndex * sizeof(e_TriIntersectorData));
+	O << (unsigned long long)c.triIndex;
 	if(c.triIndex )
-		O.Write(c.indices, (unsigned int)c.triIndex * sizeof(int));
+		O.Write(c.indices, (unsigned int)c.triIndex * sizeof(e_TriIntersectorData2));
 	c.Free();
 }

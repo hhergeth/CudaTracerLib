@@ -62,7 +62,7 @@ e_DynamicScene::e_DynamicScene(e_Sensor* C, e_SceneInitData a_Data, const char* 
 	m_pTriDataStream = LL<e_TriangleData>(a_Data.m_uNumTriangles);
 	m_pTriIntStream = LL<e_TriIntersectorData>(a_Data.m_uNumInt);
 	m_pBVHStream = LL<e_BVHNodeData>(a_Data.m_uNumBvhNodes);
-	m_pBVHIndicesStream = LL<int>(a_Data.m_uNumBvhIndices);
+	m_pBVHIndicesStream = LL<e_TriIntersectorData2>(a_Data.m_uNumBvhIndices);
 	m_pMaterialBuffer = LL<e_KernelMaterial>(a_Data.m_uNumMaterials);
 	m_pMeshBuffer = new e_CachedBuffer<e_Mesh, e_KernelMesh>(a_Data.m_uNumMeshes, sizeof(e_AnimatedMesh));
 	m_pNodeStream = LL<e_Node>(a_Data.m_uNumNodes);
@@ -116,7 +116,7 @@ e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_MeshFile2)
 		unsigned long long objStamp = GetTimeStamp(a_MeshFile2);
 		unsigned long long xmshStamp = GetTimeStamp(cmpPath.c_str());
 		unsigned long long si = GetFileSize(cmpPath.c_str());
-		//if(si <= 4 || si == -1 || objStamp != xmshStamp)
+		if(si <= 4 || si == -1 || objStamp != xmshStamp)
 		{
 			std::cout << "Started compiling mesh : " << a_MeshFile2 << "\n";
 			OutputStream a_Out(cmpPath.c_str());
@@ -194,7 +194,7 @@ e_BufferReference<e_MIPMap, e_KernelMIPMap> e_DynamicScene::LoadTexture(const ch
 	{
 		std::string a2 = std::string(m_pCompilePath) + "Images\\" + getFileName(a), b = a2.substr(0, a2.find('.')) + ".xtex";
 		CreateDirectoryRecursively(getDirName(b).c_str());
-		if(GetFileSize(b.c_str()) <= 0)
+		if((int)GetFileSize(b.c_str()) <= 0)
 		{
 			OutputStream a_Out(b.c_str());
 			e_MIPMap::CompileToBinary(a.c_str(), a_Out, a_MipMap);
@@ -359,8 +359,7 @@ e_StreamReference(e_KernelLight) e_DynamicScene::createLight(e_StreamReference(e
 
 ShapeSet e_DynamicScene::CreateShape(e_StreamReference(e_Node) Node, const char* name, unsigned int* a_Mi)
 {
-	e_TriIntersectorData* n[MAX_SHAPE_LENGTH];
-	unsigned int n2[MAX_SHAPE_LENGTH];
+	e_TriIntersectorHelper n[MAX_SHAPE_LENGTH];
 	e_BufferReference<e_Mesh, e_KernelMesh> m = getMesh(Node);
 	unsigned int c = 0, mi = -1;
 		
@@ -375,32 +374,25 @@ ShapeSet e_DynamicScene::CreateShape(e_StreamReference(e_Node) Node, const char*
 	if(a_Mi)
 		*a_Mi = mi;
 
-	int i = 0, e = m->m_sIntInfo.getLength() * 4;
+	int i = 0, e = m->m_sIntInfo.getLength();
 	while(i < e)
 	{
-		e_TriIntersectorData* sec = (e_TriIntersectorData*)(m->m_sIntInfo.operator()<float4>(i));
-		int* ind = (int*)m->m_sIndicesInfo(i);
-		if(*ind == -1)
-		{
-			i++;
-			continue;
-		}
-		if(*ind < -1 || *ind >= (int)m->m_sTriInfo.getLength())
-			break;
-		e_TriangleData* d = m->m_sTriInfo(*ind);
+		e_StreamReference(e_TriIntersectorData) sec = m->m_sIntInfo.operator()(i);
+		e_StreamReference(e_TriIntersectorData2) sec2 = m->m_sIndicesInfo.operator()(i);
+		unsigned int i2 = sec2->getIndex();
+		e_TriangleData* d = m->m_sTriInfo(i2);
 		if(d->getMatIndex(0) == mi)//do not use Node->m_uMaterialOffset, cause mi is local...
 		{
 			unsigned int k = 0;
 			for(; k < c; k++)
-				if(n2[k] == *ind)
+				if(n[k].dat2->getIndex() == i2)
 					break;
 			if(k == c)
 			{
-				n[c] = sec;
-				n2[c++] = *ind;
+				n[c++] = e_TriIntersectorHelper(sec, sec2);
 			}
 		}
-		i += 3;
+		i++;
 	}
 
 	ShapeSet r = ShapeSet(n, c, GetNodeTransform(Node));

@@ -103,9 +103,7 @@ inline std::string &rtrim(std::string &s) {
         return s;
 }
 
-inline std::string &trim(std::string &s) {
-        return ltrim(rtrim(s));
-}
+std::string &trim(std::string &s);
 
 inline bool parseSpace(const char*& ptr)
 {
