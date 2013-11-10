@@ -222,6 +222,9 @@
     <ClInclude Include="Base\Platform.h">
       <Filter>Base</Filter>
     </ClInclude>
+    <ClInclude Include="Kernel\k_BDPT.h">
+      <Filter>Kernel</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\e_AnimatedMesh.cpp">
@@ -380,6 +383,9 @@
     </CudaCompile>
     <CudaCompile Include="Engine\e_Mesh.cu">
       <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Kernel\k_BDPT.cu">
+      <Filter>Kernel</Filter>
     </CudaCompile>
   </ItemGroup>
 </Project>

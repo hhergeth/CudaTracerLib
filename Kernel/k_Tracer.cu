@@ -95,8 +95,9 @@ TraceResult k_Tracer::TraceSingleRay(Ray r, e_DynamicScene* s, e_Sensor* c)
 	s->UpdateInvalidated();
 	k_INITIALIZE(s->getKernelSceneData());
 	k_STARTPASS(s, c, tmp);
-	traceKernel<<<1,1>>>(r);
-	TraceResult r2;
-	cudaMemcpyFromSymbol(&r2, res, sizeof(r2));
-	return r2;
+	//traceKernel<<<1,1>>>(r);
+	return k_TraceRay(r);
+	//TraceResult r2;
+	//cudaMemcpyFromSymbol(&r2, res, sizeof(r2));
+	//return r2;
 }

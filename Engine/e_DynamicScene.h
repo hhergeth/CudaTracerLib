@@ -144,4 +144,15 @@ public:
 	{
 		m_uModified = 1;
 	}
+	unsigned int getLightCount(e_StreamReference(e_Node) n)
+	{
+		int i = 0;
+		while(n->m_uLightIndices[i] != 0xffffffff && i < MAX_AREALIGHT_NUM)
+			i++;
+		return i;
+	}
+	e_StreamReference(e_KernelLight) getLight(e_StreamReference(e_Node) n, unsigned int i)
+	{
+		return m_pLightStream->operator()(n->m_uLightIndices[i], 1);
+	}
 };

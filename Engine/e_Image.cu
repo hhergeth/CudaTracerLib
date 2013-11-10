@@ -74,9 +74,9 @@ void e_Image::AddSample(int sx, int sy, const Spectrum &_L)
 */
 void e_Image::Splat(int sx, int sy, const Spectrum &L)
 {
-	if (sx < xPixelStart || sx - xPixelStart >= xPixelCount || sy < yPixelStart || sy - yPixelStart >= yPixelCount)
+	if (sx >= xResolution || sy >= yResolution)
 		return;
-	Pixel* pixel = getPixel((sy - yPixelStart) * xPixelCount + (sx - xPixelStart));
+	Pixel* pixel = getPixel(sy * xResolution + sx);
 	float xyz[3];
 	L.toXYZ(xyz[0], xyz[1], xyz[2]);
 #ifdef ISCUDA
@@ -188,7 +188,7 @@ template<typename TARGET> CUDA_GLOBAL void rtm_Copy(e_Image::Pixel* P, TARGET T,
 		T(x, y, P[y * w + x].toSpectrum(splatScale).toRGBCOL());
 }
 
-void e_Image::InternalUpdateDisplay(bool forceHDR, float splatScale)
+void e_Image::InternalUpdateDisplay(float splatScale)
 {
 	if(outState > 2)
 		return;
@@ -201,7 +201,7 @@ void e_Image::InternalUpdateDisplay(bool forceHDR, float splatScale)
 	T1.w = T2.w = xResolution;
 	T1.viewTarget = viewTarget;
 	T2.viewCudaSurfaceObject = viewCudaSurfaceObject;
-	if(forceHDR || doHDR)
+	if(doHDR)
 	{
 		CUDA_ALIGN(16) float Lum_avg = 0;
 		unsigned int val = FloatToUInt(0);

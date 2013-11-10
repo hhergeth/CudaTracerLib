@@ -105,10 +105,10 @@ void k_PhotonTracer::DoRender(e_Image* I)
 	cudaMemcpyToSymbol(g_NextRayCounter3, &zero, sizeof(unsigned int));
 	k_INITIALIZE(m_pScene->getKernelSceneData());
 	k_STARTPASS(m_pScene, m_pCamera, g_sRngs);
-	pathKernel<<< 180, dim3(32, MaxBlockHeight, 1)>>>(256 * 256, *I);
+	pathKernel<<< 180, dim3(32, 4, 1)>>>(N, *I);
 	m_uPassesDone++;
 	k_TracerBase_update_TracedRays
-	I->DoUpdateDisplay();
+	I->DoUpdateDisplay(float(w*h) / float(m_uPassesDone * N));
 }
 
 void k_PhotonTracer::Debug(int2 pixel)

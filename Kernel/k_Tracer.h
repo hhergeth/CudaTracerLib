@@ -127,16 +127,8 @@ class k_ProgressiveTracer : public k_TracerBase
 {
 protected:
 	unsigned int m_uPassesDone;
-	virtual void StartNewTrace(e_Image* I)
-	{
-		I->Clear();
-		m_uPassesDone = 0; 
-	}
-	virtual void DoRender(e_Image* I)
-	{
-		m_uNumRaysTraced = 0;
-		m_fTimeSpentRendering = 0;
-	}
+	virtual void StartNewTrace(e_Image* I);
+	virtual void DoRender(e_Image* I);
 public:
 	unsigned int getPassesDone()
 	{

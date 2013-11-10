@@ -114,7 +114,7 @@ public:
 		e_KernelMesh m_sData;
 		m_sData.m_uBVHIndicesOffset = m_sIndicesInfo.getIndex();
 		m_sData.m_uBVHNodeOffset = m_sNodeInfo.getIndex() * sizeof(e_BVHNodeData) / sizeof(float4);
-		m_sData.m_uBVHTriangleOffset = m_sIntInfo.getIndex() * 2;
+		m_sData.m_uBVHTriangleOffset = m_sIntInfo.getIndex() * 3;
 		m_sData.m_uTriangleOffset = m_sTriInfo.getIndex();
 		m_sData.m_uStdMaterialOffset = m_sMatInfo.getIndex();
 		return m_sData;

@@ -23,3 +23,15 @@ float k_TracerBase::getTimeSpentRendering()
 {
 	return m_fTimeSpentRendering;
 }
+
+void k_ProgressiveTracer::StartNewTrace(e_Image* I)
+{
+	I->Clear();
+	m_uPassesDone = 0; 
+}
+
+void k_ProgressiveTracer::DoRender(e_Image* I)
+{
+	m_uNumRaysTraced = 0;
+	//m_fTimeSpentRendering = 0;
+}

@@ -539,12 +539,13 @@ void compileobj(const char* a_InputFile, OutputStream& a_Out)
 			mat.bsdf.SetData(d);
 		}
 		else if(M.IlluminationModel == 5)
-		{
+		{/*
 			dielectric d;
 			d.m_invEta = d.m_eta = 1;
 			d.m_specularReflectance = CreateTexture(0, Spectrum(M.specular));
 			d.m_specularTransmittance = CreateTexture(0, Spectrum(0.0f));
-			mat.bsdf.SetData(d);
+			mat.bsdf.SetData(d);*/
+			mat.bsdf.SetData(conductor(Spectrum(0.0f), Spectrum(1.0f)));
 		}
 		else if(M.IlluminationModel == 7)
 		{

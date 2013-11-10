@@ -13,14 +13,9 @@ e_Image::e_Image(const e_KernelFilter &filt, int xRes, int yRes, unsigned int vi
 	//filter.SetData(e_KernelGaussianFilter(2, 2, 0.55f));
 	//filter.SetData(e_KernelMitchellFilter(1.0f/3.0f,1.0f/3.0, 4, 4));
 	//filter.SetData(e_KernelLanczosSincFilter(4,4,5));
-    memcpy(cropWindow, crop, 4 * sizeof(float));
-	xPixelStart = Ceil2Int(xResolution * cropWindow[0]);
-    xPixelCount = MAX(1, Ceil2Int(xResolution * cropWindow[1]) - xPixelStart);
-    yPixelStart = Ceil2Int(yResolution * cropWindow[2]);
-    yPixelCount = MAX(1, Ceil2Int(yResolution * cropWindow[3]) - yPixelStart);
 	rebuildFilterTable();
-	cudaMalloc(&cudaPixels, sizeof(Pixel) * xPixelCount * yPixelCount);
-	hostPixels = new Pixel[xPixelCount * yPixelCount];
+	cudaMalloc(&cudaPixels, sizeof(Pixel) * xResolution * yResolution);
+	hostPixels = new Pixel[xResolution * yResolution];
 	outState = 1;
 	isMapped = 0;
 	this->viewGLTexture = viewGLTexture;
@@ -42,14 +37,9 @@ e_Image::e_Image(const e_KernelFilter &filt, int xRes, int yRes, RGBCOL* target)
 	//filter.SetData(e_KernelGaussianFilter(2, 2, 0.55f));
 	//filter.SetData(e_KernelMitchellFilter(1.0f/3.0f,1.0f/3.0, 4, 4));
 	//filter.SetData(e_KernelLanczosSincFilter(4,4,5));
-    memcpy(cropWindow, crop, 4 * sizeof(float));
-	xPixelStart = Ceil2Int(xResolution * cropWindow[0]);
-    xPixelCount = MAX(1, Ceil2Int(xResolution * cropWindow[1]) - xPixelStart);
-    yPixelStart = Ceil2Int(yResolution * cropWindow[2]);
-    yPixelCount = MAX(1, Ceil2Int(yResolution * cropWindow[3]) - yPixelStart);
 	rebuildFilterTable();
-	cudaMalloc(&cudaPixels, sizeof(Pixel) * xPixelCount * yPixelCount);
-	hostPixels = new Pixel[xPixelCount * yPixelCount];
+	cudaMalloc(&cudaPixels, sizeof(Pixel) * xResolution * yResolution);
+	hostPixels = new Pixel[xResolution * yResolution];
 	outState = 2;
 	isMapped = 0;
 	this->viewTarget = target;
@@ -129,15 +119,18 @@ void e_Image::StartRendering()
 	}
 }
 
-void e_Image::DoUpdateDisplay()
+//urgs
+float gsplat;
+void e_Image::DoUpdateDisplay(float splat)
 {
 	m_bDoUpdate = true;
+	gsplat = splat;
 }
 
 void e_Image::EndRendering()
 {
 	if(m_bDoUpdate)
-		InternalUpdateDisplay();
+		InternalUpdateDisplay(gsplat);
 	m_bDoUpdate = false;
 	cudaError r = cudaDestroySurfaceObject(viewCudaSurfaceObject);
 	r = cudaGraphicsUnmapResources(1, &viewCudaResource);

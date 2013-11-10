@@ -2,6 +2,7 @@
 #include "k_TraceHelper.h"
 #include "k_TraceAlgorithms.h"
 /*
+					//Adaptive Progressive Photon Mapping Implementation
 					k_AdaptiveEntry ent = A.E[y * w + x];
 					float rSqr = ent.r * ent.r, maxr = MAX(ent.r, ent.rd), rd2 = ent.rd * ent.rd, rd = ent.rd;
 					Frame sys = bRec.map.sys;
@@ -115,7 +116,7 @@ template<typename HASH> template<bool VOL> Spectrum k_PhotonMap<HASH>::L_Volume(
 		return L_n;//that would be dumb
 	a = clamp(a, tmin, tmax);
 	b = clamp(b, tmin, tmax);
-	float d = 8.0f * a_r;
+	float d = 4.0f * a_r;
 	while(b > a)
 	{
 		Spectrum L = Spectrum(0.0f);

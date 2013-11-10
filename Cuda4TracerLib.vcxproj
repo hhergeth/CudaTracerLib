@@ -57,6 +57,7 @@
     <ClInclude Include="Engine\e_Samples.h" />
     <ClInclude Include="Engine\SceneBuilder\Importer.h" />
     <ClInclude Include="Engine\SceneBuilder\MD5Parser.h" />
+    <ClInclude Include="Kernel\k_BDPT.h" />
     <ClInclude Include="Kernel\k_FastTracer.h" />
     <ClInclude Include="Kernel\k_PathTracer.h" />
     <ClInclude Include="Kernel\k_PhotonTracer.h" />
@@ -133,6 +134,7 @@
     <CudaCompile Include="Engine\e_ShapeSet.cu" />
     <CudaCompile Include="Engine\e_TriangleData.cu" />
     <CudaCompile Include="Engine\e_Volumes.cu" />
+    <CudaCompile Include="Kernel\k_BDPT.cu" />
     <CudaCompile Include="Kernel\k_FastTracer.cu" />
     <CudaCompile Include="Kernel\k_PathTracer.cu" />
     <CudaCompile Include="Kernel\k_PhotonTracer.cu" />

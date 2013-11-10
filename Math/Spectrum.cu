@@ -195,9 +195,9 @@ void Spectrum::toIPT(float &I, float &P, float &T) const
 	float S =   0.0000f * X + 0.0000f * Y + 0.9184f * Z;
 
 	/* Nonlinear transformation for perceptual uniformity */
-	float Lp = signf(L) * powf(abs(L), (float) 0.43);
-	float Mp = signf(M) * powf(abs(M), (float) 0.43);
-	float Sp = signf(S) * powf(abs(S), (float) 0.43);
+	float Lp = signf(L) * powf(::abs(L), (float) 0.43);
+	float Mp = signf(M) * powf(::abs(M), (float) 0.43);
+	float Sp = signf(S) * powf(::abs(S), (float) 0.43);
 
 	/* Second linear transformation to get to IPT space */
 	I = 0.4000f * Lp + 0.4000f * Mp + 0.2000f * Sp;
@@ -211,9 +211,9 @@ void Spectrum::fromIPT(float I, float P, float T, Spectrum::EConversionIntent in
 	float Mp = 1.0000f * I - 0.1139f * P + 0.1332f * T;
 	float Sp = 1.0000f * I + 0.0326f * P - 0.6769f * T;
 
-	float L = signf(Lp) * powf(abs(Lp), (float) (1.0/0.43));
-	float M = signf(Mp) * powf(abs(Mp), (float) (1.0/0.43));
-	float S = signf(Sp) * powf(abs(Sp), (float) (1.0/0.43));
+	float L = signf(Lp) * powf(::abs(Lp), (float) (1.0/0.43));
+	float M = signf(Mp) * powf(::abs(Mp), (float) (1.0/0.43));
+	float S = signf(Sp) * powf(::abs(Sp), (float) (1.0/0.43));
 
 	float X = 1.8502f * L - 1.1383f * M + 0.2384f * S;
 	float Y = 0.3668f * L + 0.6439f * M - 0.0107f * S;

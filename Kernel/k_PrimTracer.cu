@@ -182,7 +182,7 @@ void k_PrimTracer::DoRender(e_Image* I)
 	primaryKernel<<< 180, dim3(32, MaxBlockHeight, 1)>>>(w, h, *I);
 	cudaError_t r = cudaThreadSynchronize();
 	k_TracerBase_update_TracedRays
-	I->DoUpdateDisplay();
+	I->DoUpdateDisplay(1.0f);
 	AABB m_sEyeBox;
 	cudaMemcpyFromSymbol(&m_sEyeBox.minV, g_EyeHitBoxMin2, 12);
 	cudaMemcpyFromSymbol(&m_sEyeBox.maxV, g_EyeHitBoxMax2, 12);

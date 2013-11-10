@@ -150,7 +150,7 @@ void k_sPpmTracer::DoRender(e_Image* I)
 
 			m_uPhotonsEmitted += m_sMaps.m_uPhotonNumEmitted;
 			doEyePass(I);
-			I->DoUpdateDisplay();
+			I->DoUpdateDisplay(m_uPassesDone);
 			m_sMaps.StartNewPass();
 			m_uPreviosCount = m_uPhotonsEmitted;
 
@@ -165,7 +165,7 @@ void k_sPpmTracer::DoRender(e_Image* I)
 		m_uPassesDone = 1;
 		I->Clear();
 		doEyePass(I);
-		I->DoUpdateDisplay();
+		I->DoUpdateDisplay(m_uPassesDone);
 	}
 }
 
@@ -211,7 +211,7 @@ static float GGGf0;
 static float GGGf1;
 void k_sPpmTracer::StartNewTrace(e_Image* I)
 {
-	m_bDirect = !m_pScene->getVolumes().getLength();m_bDirect=1;
+	m_bDirect = !m_pScene->getVolumes().getLength();//m_bDirect=0;
 	if(m_uModus == 1)
 	{
 		initNewPass(I);

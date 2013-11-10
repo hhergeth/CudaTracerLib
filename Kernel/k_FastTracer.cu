@@ -261,7 +261,7 @@ void k_FastTracer::doPath(e_Image* I)
 	}
 	while(intersector->getCreatedRayCount() && pass++ < MAX_PASS);
 	m_uPassesDone++;
-	I->DoUpdateDisplay();
+	I->DoUpdateDisplay(m_uPassesDone);
 }
 
 void k_FastTracer::DoRender(e_Image* I)

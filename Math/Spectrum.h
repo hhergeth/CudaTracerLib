@@ -187,6 +187,22 @@ public:
 		return value;
 	}
 
+	/// Component-wise abs
+	CUDA_FUNC_IN TSpectrum abs() const {
+		TSpectrum value;
+		for(int i = 0; i < N; i++)
+			value.s[i] = ::abs(s[i]);
+		return value;
+	}
+
+	/// Component-wise saturate
+	CUDA_FUNC_IN TSpectrum saturate() const {
+		TSpectrum value;
+		for(int i = 0; i < N; i++)
+			value.s[i] = clamp01(s[i]);
+		return value;
+	}
+
 	/// Component-wise square root
 	CUDA_FUNC_IN TSpectrum safe_sqrt() const {
 		TSpectrum value;
