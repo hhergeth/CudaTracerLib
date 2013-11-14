@@ -31,6 +31,13 @@ CUDA_FUNC_IN float G(const float3& N_x, const float3& N_y, const float3& x, cons
 	return AbsDot(N_x, theta) * AbsDot(N_y, -theta) / DistanceSquared(x, y);
 }
 
+CUDA_FUNC_IN bool V(const float3& a, const float3& b)
+{
+	float3 d = b - a;
+	float l = length(d);
+	return !g_SceneData.Occluded(Ray(a, d / l), 0, l);
+}
+
 CUDA_FUNC_IN void randomWalk(PathVertex* vertices, unsigned int* N, Ray r, CudaRNG& rng, bool eye)
 {
 	Spectrum cumulative(1.0f); 
@@ -38,8 +45,9 @@ CUDA_FUNC_IN void randomWalk(PathVertex* vertices, unsigned int* N, Ray r, CudaR
 	{
 		TraceResult r2 = k_TraceRay(r);
 		if(!r2.hasHit())
-			break;
+			return;
 		PathVertex& v = vertices[*N];
+		(*N)++;
 		v.r2 = r2;
 		v.p = r(r2.m_fDist);
 		BSDFSamplingRecord bRec;
@@ -48,53 +56,48 @@ CUDA_FUNC_IN void randomWalk(PathVertex* vertices, unsigned int* N, Ray r, CudaR
 		if(eye)
 		{
 			v.wo = -r.direction;
-			r.direction = v.wi = bRec.getOutgoing();
+			r.direction = v.wi = normalize(bRec.getOutgoing());
 			cumulative *= f;
 		}
 		else
 		{
 			v.wi = -r.direction;
-			r.direction = v.wo = bRec.getOutgoing();
+			r.direction = v.wo = normalize(bRec.getOutgoing());
 			cumulative *= f;
 		}
 		v.cumulative = cumulative;
 		if(cumulative.isZero())
-			break;
-		*N++;
+			return;
 		r.origin = v.p;
 	}
 }
 
 CUDA_FUNC_IN Spectrum evalPath(const Path& P, int nEye, int nLight, CudaRNG& rng)
 {
-	//eye vertex
-	const PathVertex& e_i = P.EyePath[nEye - 1];
-	//light vertex
-	const PathVertex& l_j = P.LightPath[nLight - 1];
-
+	const PathVertex& ev = P.EyePath[nEye - 1];
+	const PathVertex& lv = P.LightPath[nLight - 1];
 	Spectrum L(1.0f);
 	if(nEye > 1)
 		L *= P.EyePath[nEye - 2].cumulative;
 	if(nLight > 1)
 		L *= P.LightPath[nLight - 2].cumulative;
 
-	float3 dir = l_j.p - e_i.p;
-	float l = length(dir);
-	dir /= l;
-	Ray r(e_i.p, dir);
-	if(!g_SceneData.Occluded(r, 0, l))
-	{
-		BSDFSamplingRecord bRec;
-		e_i.r2.getBsdfSample(Ray(e_i.p, e_i.wi), rng, &bRec, dir);
-		L *= e_i.r2.getMat().bsdf.f(bRec);
-		float3 N_x = bRec.map.sys.n;
-		l_j.r2.getBsdfSample(Ray(l_j.p, -dir), rng, &bRec, l_j.wo);
-		L *= l_j.r2.getMat().bsdf.f(bRec);
-		float3 N_y = bRec.map.sys.n;
-		float g = G(N_x, N_y, e_i.p, l_j.p);
-		L *= g;
-	}
+	float3 dir = normalize(lv.p - ev.p);
+	BSDFSamplingRecord bRec;
+	ev.r2.getBsdfSample(Ray(ev.p, -1.0f * ev.wi), rng, &bRec, dir);
+	L *= ev.r2.getMat().bsdf.f(bRec);
+	float3 N_x = bRec.map.sys.n;
+	lv.r2.getBsdfSample(Ray(lv.p, dir), rng, &bRec, lv.wo);
+	L *= lv.r2.getMat().bsdf.f(bRec);
+	float3 N_y = bRec.map.sys.n;
+	float g = G(N_x, N_y, ev.p, lv.p);
+	L *= g;
 	return L;
+}
+
+CUDA_FUNC_IN float pathWeight(int i, int j)
+{
+	return 1;
 }
 
 CUDA_FUNC_IN void BDPT(int x, int y, e_Image& g_Image, CudaRNG& rng)
@@ -104,90 +107,72 @@ CUDA_FUNC_IN void BDPT(int x, int y, e_Image& g_Image, CudaRNG& rng)
 	Spectrum imp = g_CameraData.sampleRay(r, make_float2(x, y), rng.randomFloat2());
 	randomWalk(P.EyePath, &P.s, r, rng, true);
 	const e_KernelLight* light;
-	imp = g_SceneData.sampleEmitterRay(r, light, rng.randomFloat2(), rng.randomFloat2());
+	Spectrum Le  = g_SceneData.sampleEmitterRay(r, light, rng.randomFloat2(), rng.randomFloat2());
 	randomWalk(P.LightPath, &P.t, r, rng, false);
 
-	while(P.s < MAX_SUBPATH_LENGTH)
-	{
-		TraceResult r2 = k_TraceRay(r);
-		if(!r2.hasHit())
-			break;
-		P.EyePath[P.s].L = imp;
-		P.EyePath[P.s].incRay = r;
-		P.EyePath[P.s].r2 = r2;
-		P.s++;
-
-		BSDFSamplingRecord bRec;
-		r2.getBsdfSample(r, rng, &bRec);
-		bRec.mode = EImportance;
-		Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
-		imp *= f;
-		r = Ray(r(r2.m_fDist), bRec.getOutgoing());
-	}
-	
-
-	while(P.t < MAX_SUBPATH_LENGTH)
-	{
-		TraceResult r2 = k_TraceRay(r);
-		if(!r2.hasHit())
-			break;
-		P.LightPath[P.t].L = imp;
-		P.LightPath[P.t].incRay = r;
-		P.LightPath[P.t].r2 = r2;
-		P.t++;
-
-		BSDFSamplingRecord bRec;
-		r2.getBsdfSample(r, rng, &bRec);
-		Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
-		imp *= f;
-		r = Ray(r(r2.m_fDist), bRec.getOutgoing());
-	}
-
 	Spectrum L(0.0f);
-	for(int i = 0; i < P.s; i++)
+	BSDFSamplingRecord bRec;
+	for(int i = 1; i < P.s + 1; i++)
 	{
+		const PathVertex& ev = P.EyePath[i - 1];
+		if(!ev.r2.hasHit())
+			break;//urgs wtf?
+
 		//case ii
-		UniformSampleAllLights(0, 0, 1);
-		//case iv
-		for(int j = 0; j < P.t; j++)
+		ev.r2.getBsdfSample(Ray(ev.p, -1.0f * ev.wo), rng, &bRec);
+		DirectSamplingRecord dRec(ev.p, bRec.map.sys.n, bRec.map.uv);
+		Spectrum localLe = light->sampleDirect(dRec, rng.randomFloat2());
+		bRec.wo = bRec.map.sys.toLocal(dRec.d);
+		if(V(ev.p, dRec.p))
 		{
-						
+			if(i > 1)
+				localLe *= P.EyePath[i - 2].cumulative;
+			L += localLe * ev.r2.getMat().bsdf.f(bRec) * pathWeight(i, 0);
+		}
+
+		//case iv
+		for(int j = 1; j < P.t + 1; j++)
+		{
+			const PathVertex& lv = P.LightPath[j - 1];
+			if(V(ev.p, lv.p))
+				L += Le * evalPath(P, i, j, rng) * pathWeight(i, j);
 		}
 	}
+	
+	for(int j = 1; j < P.t + 1; j++)
+	{
+		const PathVertex& lv = P.LightPath[j - 1];
+		if(!lv.r2.hasHit())
+			break;//urgs wtf?
+		
+		lv.r2.getBsdfSample(Ray(lv.p, -1.0f * lv.wi), rng, &bRec);
+		DirectSamplingRecord dRec(lv.p, bRec.map.sys.n, bRec.map.uv);
+		Spectrum localLe = Le * g_SceneData.sampleSensorDirect(dRec, rng.randomFloat2());
+		if(V(dRec.p, lv.p))
+		{
+			if(j > 1)
+				localLe *= P.LightPath[j - 2].cumulative;
+			
+			bRec.wo = bRec.map.sys.toLocal(dRec.d);
+			localLe *= lv.r2.getMat().bsdf.f(bRec);
+			//g_Image.AddSample((int)dRec.uv.x, (int)dRec.uv.y, localLe * pathWeight(0, j) / float(P.t));
+			g_Image.Splat((int)dRec.uv.x, (int)dRec.uv.y, localLe * pathWeight(0, j) / float(P.t));
+		}
+	}
+
 	g_Image.AddSample(x, y, L);
 }
 
 CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_NextRayCounter12;
 
-__global__ void pathKernel(unsigned int width, unsigned int height, int N, e_Image g_Image)
+__global__ void pathKernel(unsigned int w, unsigned int h, e_Image g_Image)
 {
+	int x = threadIdx.x + blockIdx.x * blockDim.x, y = threadIdx.y + blockIdx.y * blockDim.y;
 	CudaRNG rng = g_RNGData();
-	int rayidx;
-	__shared__ volatile int nextRayArray[MaxBlockHeight];
-	do
-    {
-        const int tidx = threadIdx.x;
-        volatile int& rayBase = nextRayArray[threadIdx.y];
-
-        const bool          terminated     = 1;//nodeAddr == EntrypointSentinel;
-        const unsigned int  maskTerminated = __ballot(terminated);
-        const int           numTerminated  = __popc(maskTerminated);
-        const int           idxTerminated  = __popc(maskTerminated & ((1u<<tidx)-1));	
-
-        if(terminated)
-        {			
-            if (idxTerminated == 0)
-				rayBase = atomicAdd(&g_NextRayCounter12, numTerminated);
-
-            rayidx = rayBase + idxTerminated;
-			if (rayidx >= N)
-                break;
-		}
-
-		unsigned int x = rayidx % width, y = rayidx / width;
+	if(x < w && y < h)
+	{
 		BDPT(x, y, g_Image, rng);
 	}
-	while(true);
 	g_RNGData(rng);
 }
 
@@ -198,19 +183,20 @@ __global__ void debugPixel12(unsigned int width, unsigned int height, int2 p)
 	PathTrace(r.direction, r.origin, rng);
 }
 
+static e_Image* gI;
 void k_BDPT::DoRender(e_Image* I)
 {
+	gI = I;
 	k_ProgressiveTracer::DoRender(I);
 	unsigned int zero = 0;
 	cudaMemcpyToSymbol(g_NextRayCounter12, &zero, sizeof(unsigned int));
 	k_INITIALIZE(m_pScene->getKernelSceneData());
 	k_STARTPASS(m_pScene, m_pCamera, g_sRngs);
-	//int N = w * h, T = 180 * 4 * 32 * 2;
-	//for(int i = 0; i < N; i += T)
-		pathKernel<<< 180, dim3(32, 4, 1)>>>(w, h, w*h, *I);
+	int p = 16;
+	pathKernel<<< dim3(w/p+1,h/p+1,1), dim3(p, p, 1)>>>(w, h, *I);
 	m_uPassesDone++;
 	k_TracerBase_update_TracedRays
-	I->DoUpdateDisplay(m_uPassesDone);
+	I->DoUpdateDisplay(float(w*h) / float(m_uPassesDone * w * h));
 }
 
 void k_BDPT::Debug(int2 pixel)
@@ -218,5 +204,6 @@ void k_BDPT::Debug(int2 pixel)
 	m_pScene->UpdateInvalidated();
 	k_INITIALIZE(m_pScene->getKernelSceneData());
 	k_STARTPASS(m_pScene, m_pCamera, g_sRngs);
-	debugPixel12<<<1,1>>>(w,h,pixel);
+	//debugPixel12<<<1,1>>>(w,h,pixel);
+	BDPT(pixel.x, pixel.y, *gI, g_RNGData());
 }

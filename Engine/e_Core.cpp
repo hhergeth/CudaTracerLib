@@ -14,3 +14,14 @@ void InitializeCuda4Tracer()
 	e_RoughTransmittanceManager::StaticInitialize();
 	FreeImage_Initialise();
 }
+
+void ThrowCudaErrors()
+{
+	cudaError r = cudaGetLastError();
+	if(r)
+	{
+		const char* msg = cudaGetErrorString(r);
+		std::cout << msg;
+		throw std::runtime_error(msg);
+	}
+}

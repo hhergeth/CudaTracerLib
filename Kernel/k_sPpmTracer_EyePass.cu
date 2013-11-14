@@ -191,7 +191,7 @@ template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, float a_
 		Ray r;
 		Spectrum importance = g_CameraData.sampleRay(r, make_float2(x, y), rng.randomFloat2());
 		TraceResult r2;
-		r2.Init(true);
+		r2.Init();
 		int depth = -1;
 		Spectrum L(0.0f), throughput(1.0f);
 		while(k_TraceRay(r.direction, r.origin, &r2) && depth++ < 5)

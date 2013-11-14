@@ -60,18 +60,17 @@ inline void ComputeTangentSpace(float3* V, float2* T, unsigned int* I, unsigned 
 		tan2[i1] += tdir;
 		tan2[i2] += tdir;
 		tan2[i3] += tdir;
-	}/*
-	if(a_Mesh->numVertices() < (1 << 16))
-		for(int a = 0; a < a_Mesh->numVertices(); a++)
-			for(int i = a + 1; i < a_Mesh->numVertices(); i++)
-				if(a_Mesh->getVertexPtr(a)->p == a_Mesh->getVertexPtr(i)->p)
+	}
+	if(triCount < (1 << 16))
+		for (unsigned int a = 0; a < vertexCount; a++)
+			for (unsigned int i = a + 1; i < vertexCount; i++)
+				if(DistanceSquared(V[a], V[i]) < 0.01f)
 				{
 					tan1[a] += tan1[i];
 					tan1[i] = tan1[a];
 					tan2[a] += tan2[i];
 					tan2[i] = tan2[a];
-					break;
-				}*/
+				}
 
 
 	for (unsigned int i = 0; i < triCount; i++)

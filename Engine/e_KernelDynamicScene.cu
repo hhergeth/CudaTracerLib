@@ -9,7 +9,7 @@ const e_KernelLight* e_KernelDynamicScene::sampleLight(float& emPdf, float2& sam
 
 bool e_KernelDynamicScene::Occluded(const Ray& r, float tmin, float tmax) const
 {
-	const float eps = 0.01f;
+	const float eps = 0.01f;//remember this is an occluded test, so we shrink the interval!
 	TraceResult r2;
 	r2.Init();
 	return k_TraceRay(r.direction, r.origin, &r2) && r2.m_fDist > tmin * (1.0f + eps) && r2.m_fDist < tmax * (1.0f - eps);

@@ -134,7 +134,10 @@
     <CudaCompile Include="Engine\e_ShapeSet.cu" />
     <CudaCompile Include="Engine\e_TriangleData.cu" />
     <CudaCompile Include="Engine\e_Volumes.cu" />
-    <CudaCompile Include="Kernel\k_BDPT.cu" />
+    <CudaCompile Include="Kernel\k_BDPT.cu">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">O3</Optimization>
+      <FastMath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</FastMath>
+    </CudaCompile>
     <CudaCompile Include="Kernel\k_FastTracer.cu" />
     <CudaCompile Include="Kernel\k_PathTracer.cu" />
     <CudaCompile Include="Kernel\k_PhotonTracer.cu" />
@@ -143,6 +146,7 @@
     <CudaCompile Include="Kernel\k_TraceHelper.cu">
       <FastMath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</FastMath>
       <TargetMachinePlatform Condition="'$(Configuration)|$(Platform)'=='Release|x64'">32</TargetMachinePlatform>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">InheritFromHost</Optimization>
     </CudaCompile>
     <CudaCompile Include="Kernel\k_Tracer.cu" />
     <CudaCompile Include="Kernel\k_sPpmTracer_EyePass.cu" />

@@ -96,14 +96,10 @@ TraceResult::operator bool() const
 	return hasHit();
 }
 
-void TraceResult::Init(bool first)
+void TraceResult::Init()
 {
 	m_fDist = FLT_MAX;
-	if(first)
-	{
-		m_pNode = 0;
-		__internal__earlyExit = 0xffffffff;
-	}
+	m_pNode = 0;
 	m_pTri = 0;
 }
 

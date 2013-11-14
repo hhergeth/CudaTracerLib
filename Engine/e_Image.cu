@@ -79,13 +79,13 @@ void e_Image::Splat(int sx, int sy, const Spectrum &L)
 	Pixel* pixel = getPixel(sy * xResolution + sx);
 	float xyz[3];
 	L.toXYZ(xyz[0], xyz[1], xyz[2]);
-#ifdef ISCUDA
+/*#ifdef ISCUDA
 	for(int i = 0; i < 3; i++)
 		atomicAdd(pixel->xyzSplat + i, xyz[i]);
-#else
+#else*/
 	for(int i = 0; i < 3; i++)
 		pixel->xyzSplat[i] += xyz[i];
-#endif
+//#endif
 }
 
 CUDA_FUNC_IN unsigned int FloatToUInt(float f)

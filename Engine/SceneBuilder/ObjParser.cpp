@@ -441,7 +441,7 @@ void compileobj(const char* a_InputFile, OutputStream& a_Out)
                 }
                 parseSpace(ptr);
 
-				int size[3] = {(int)s.positions.size(), 0, (int)s.texCoords.size()};
+				int size[3] = {(int)s.positions.size(), (int)s.texCoords.size(), 0};
                 for (int i = 0; i < 3; i++)
                 {
                     if (ptn[i] < 0)

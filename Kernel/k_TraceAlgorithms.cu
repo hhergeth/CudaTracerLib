@@ -108,7 +108,7 @@ Spectrum PathTrace(float3& a_Dir, float3& a_Ori, CudaRNG& rnd, float* distTraval
 	const bool DIRECT = 1;
 	Ray r0 = Ray(a_Ori, a_Dir);
 	TraceResult r;
-	r.Init(true);
+	r.Init();
 	Spectrum cl = Spectrum(0.0f);   // accumulated color
 	Spectrum cf = Spectrum(1.0f);  // accumulated reflectance
 	int depth = 0;

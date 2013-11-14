@@ -39,7 +39,7 @@ CUDA_FUNC_IN Spectrum trace(Ray& r, CudaRNG& rng, float3* pout)
 {
 	const bool DIRECT = true;
 	TraceResult r2;
-	r2.Init(true);
+	r2.Init();
 	Spectrum c = Spectrum(1.0f), L = Spectrum(0.0f);
 	unsigned int depth = 0;
 	bool specBounce = false;
@@ -72,7 +72,6 @@ CUDA_FUNC_IN Spectrum trace(Ray& r, CudaRNG& rng, float3* pout)
 		}
 		else return 0.0f;*/
 		//return Spectrum(dot(bRec.ng, -r.direction));
-
 		if(depth == 1 || specBounce || !DIRECT)
 			L += r2.Le(r(r2.m_fDist), bRec.map.sys, -r.direction);
 		if(DIRECT)

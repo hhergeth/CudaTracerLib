@@ -14,9 +14,8 @@ struct TraceResult
 	float2 m_fUV;
 	const e_TriangleData* m_pTri;
 	const e_Node* m_pNode;
-	unsigned int __internal__earlyExit;
 	CUDA_DEVICE CUDA_HOST bool hasHit() const;
-	CUDA_DEVICE CUDA_HOST void Init(bool first = false);
+	CUDA_DEVICE CUDA_HOST void Init();
 	CUDA_DEVICE CUDA_HOST operator bool() const;
 	CUDA_DEVICE CUDA_HOST void lerpFrame(Frame& sys) const;
 	CUDA_DEVICE CUDA_HOST unsigned int getMatIndex() const;

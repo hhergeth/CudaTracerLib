@@ -43,7 +43,7 @@ CUDA_FUNC_IN void loadInvModl(int i, float4x4* o)
 #endif
 }
 
-bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResult* a_Result, const e_Node* N, int lastIndex)
+CUDA_FUNC_IN bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResult* a_Result, const e_Node* N)
 {
 	const bool USE_ALPHA = true;
 	unsigned int mIndex = N->m_uMeshIndex;
@@ -130,17 +130,17 @@ bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResult* a_Result,
 				stackPtr -= 4;
 			}
 
-			unsigned int mask;
 #ifdef ISCUDA
-			asm("{\n"
-				"   .reg .pred p;               \n"
-				"setp.ge.s32        p, %1, 0;   \n"
-				"vote.ballot.b32    %0,p;       \n"
-				"}"
-				: "=r"(mask)
-				: "r"(leafAddr));
+            unsigned int mask;
+            asm("{\n"
+                "   .reg .pred p;               \n"
+                "setp.ge.s32        p, %1, 0;   \n"
+                "vote.ballot.b32    %0,p;       \n"
+                "}"
+                : "=r"(mask)
+                : "r"(leafAddr));
 #else
-			mask = leafAddr >= 0;
+			unsigned int mask = leafAddr >= 0;
 #endif
 			if(!mask)
 				break;
@@ -166,7 +166,7 @@ bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResult* a_Result,
 				float Oz = v00.w - origx*v00.x - origy*v00.y - origz*v00.z;
 				float invDz = 1.0f / (dirx*v00.x + diry*v00.y + dirz*v00.z);
 				float t = Oz * invDz;
-				if (t > 1e-2f && t < a_Result->m_fDist && triAddr != lastIndex)
+				if (t > 1e-2f && t < a_Result->m_fDist)
 				{
 					float Ox = v11.w + origx*v11.x + origy*v11.y + origz*v11.z;
 					float Dx = dirx*v11.x + diry*v11.y + dirz*v11.z;
@@ -189,7 +189,6 @@ bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResult* a_Result,
 							}
 							if(q)
 							{
-								a_Result->__internal__earlyExit = triAddr;
 								a_Result->m_pNode = N;
 								a_Result->m_pTri = tri;
 								a_Result->m_fUV = make_float2(u, v);
@@ -215,8 +214,6 @@ bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResult* a_Result,
 
 bool k_TraceRay(const float3& dir, const float3& ori, TraceResult* a_Result)
 {
-	int lastIndex = a_Result->__internal__earlyExit;
-	const e_Node* lastNode = a_Result->m_pNode;
 	Platform::Increment(&g_RayTracedCounter);
 	if(!g_SceneData.m_sNodeData.UsedCount)
 		return false;
@@ -308,7 +305,7 @@ bool k_TraceRay(const float3& dir, const float3& ori, TraceResult* a_Result)
 			float3 scale = modl.Scale();
 			float scalef = length(d / scale);
 			a_Result->m_fDist /= scalef;
-			k_TraceRayNode(d, o, a_Result, N, lastNode == N ? lastIndex : -1);
+			k_TraceRayNode(d, o, a_Result, N);
 			//transform a_Result->m_fDist back to world
 			a_Result->m_fDist *= scalef;
 		}
@@ -419,7 +416,6 @@ template<bool ANY_HIT> __global__ void intersectKernel_SKIPOUTER(int numRays, tr
     float   origx, origy, origz;            // Ray origin.
     char*   stackPtr;                       // Current position in traversal stack.
     int     leafAddr;                       // First postponed leaf, non-negative if none.
-    int     leafAddr2;                      // Second postponed leaf, non-negative if none.
     int     nodeAddr = EntrypointSentinel;  // Non-negative: current internal node, negative: second postponed leaf.
     int     hitIndex;                       // Triangle index of the closest intersection, -1 if none.
     float   hitT;                           // t-value of the closest intersection.
@@ -487,7 +483,6 @@ template<bool ANY_HIT> __global__ void intersectKernel_SKIPOUTER(int numRays, tr
 
             stackPtr = (char*)&traversalStack[0];
             leafAddr = 0;   // No postponed leaf.
-            leafAddr2= 0;   // No postponed leaf.
             nodeAddr = 0;   // Start from the root.
             hitIndex = -1;  // No triangle intersected so far.
 		}
@@ -665,7 +660,6 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
     float   origx, origy, origz;            // Ray origin.
     char*   stackPtr;                       // Current position in traversal stack.
     int     leafAddr;                       // First postponed leaf, non-negative if none.
-    int     leafAddr2;                      // Second postponed leaf, non-negative if none.
     int     nodeAddr = EntrypointSentinel;  // Non-negative: current internal node, negative: second postponed leaf.
     int     hitIndex;                       // Triangle index of the closest intersection, -1 if none.
     float   hitT;                           // t-value of the closest intersection.
@@ -688,7 +682,6 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
     float   lorigx, lorigy, lorigz;
     char*   lstackPtr;
     int     lleafAddr;
-    int     lleafAddr2;
     int     lnodeAddr = EntrypointSentinel;
     float   lhitT;
     float   ltmin;
@@ -753,7 +746,6 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 
             stackPtr = (char*)&traversalStack[0];
             leafAddr = 0;   // No postponed leaf.
-            leafAddr2= 0;   // No postponed leaf.
             leafAddr = nodeAddr = g_SceneData.m_sSceneBVH.m_sStartNode;   // Start from the root. set the leafAddr to support scenes with one node
             hitIndex = -1;  // No triangle intersected so far.
         }
@@ -871,7 +863,6 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 					loodz  = lorigz * lidirz;
 				    lstackPtr = (char*)&ltraversalStack[0];
 					lleafAddr = 0;   // No postponed leaf.
-					lleafAddr2= 0;   // No postponed leaf.
 					lnodeAddr = 0;   // Start from the root.
 				}
 
@@ -1047,7 +1038,7 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 			res.w = *(int*)&h;
 		}
 		((int4*)a_ResBuffer)[rayidx] = res;
-	outerlabel:
+//outerlabel: ;
     } while(true);
 }
 

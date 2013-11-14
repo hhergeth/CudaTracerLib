@@ -36,7 +36,7 @@ extern CUDA_ALIGN(16) CudaRNGBuffer g_RNGDataHost;
 #define k_TracerBase_update_TracedRays { m_uNumRaysTraced = g_RayTracedCounterHost; }
 #endif
 
-__device__ __host__ bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResult* a_Result, const e_Node* N, int ln);
+//__device__ __host__ bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResult* a_Result, const e_Node* N, int ln);
 
 __device__ __host__ bool k_TraceRay(const float3& dir, const float3& ori, TraceResult* a_Result);
 

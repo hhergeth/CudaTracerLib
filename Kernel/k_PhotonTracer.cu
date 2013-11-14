@@ -39,7 +39,7 @@ CUDA_FUNC_IN void doWork(e_Image& g_Image, CudaRNG& rng)
 	power *= ((const e_KernelLight*)pRec.object)->sampleDirection(dRec, pRec, rng.randomFloat2());
 	Ray r(pRec.p, dRec.d);
 	TraceResult r2;
-	r2.Init(true);
+	r2.Init();
 	int depth = -1;
 	BSDFSamplingRecord bRec;
 	while(++depth < 12 && k_TraceRay(r.direction, r.origin, &r2))

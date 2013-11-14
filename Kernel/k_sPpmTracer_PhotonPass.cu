@@ -8,7 +8,7 @@ template<bool DIRECT> CUDA_FUNC_IN bool TracePhoton(Ray& r, Spectrum Le, CudaRNG
 	r.direction = normalize(r.direction);
 	e_KernelAggregateVolume& V = g_SceneData.m_sVolume;
 	TraceResult r2;
-	r2.Init(true);
+	r2.Init();
 	int depth = -1;
 	//bool inMesh = false;
 	BSDFSamplingRecord bRec;
