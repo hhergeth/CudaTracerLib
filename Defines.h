@@ -303,6 +303,8 @@ CUDA_FUNC_IN int getGlobalIdx_3D_3D()
 		CALL_TYPE(_TYPE16_, func) \
 	}
 
+typedef char e_String[256];
+
 //thats not const correct
 
 struct e_BaseType

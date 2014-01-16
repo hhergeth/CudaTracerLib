@@ -92,7 +92,6 @@ CUDA_GLOBAL void traceKernel(Ray r)
 TraceResult k_Tracer::TraceSingleRay(Ray r, e_DynamicScene* s, e_Sensor* c)
 {
 	CudaRNGBuffer tmp;
-	s->UpdateInvalidated();
 	k_INITIALIZE(s->getKernelSceneData());
 	k_STARTPASS(s, c, tmp);
 	//traceKernel<<<1,1>>>(r);

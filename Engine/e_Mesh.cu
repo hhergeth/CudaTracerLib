@@ -1,25 +1,8 @@
 #include "e_Mesh.h"
 #include "..\Base\StringUtils.h"
-void printv(float4 v)
-{
-	Platform::OutputDebug(format("{%.4f, %.4f, %.4f, %.4f}", v.x, v.y, v.z, v.w).c_str());
-}
-void printm(float4x4 m)
-{
-	Platform::OutputDebug("{");
-	printv(m.X);
-	Platform::OutputDebug("\n,");
-	printv(m.Y);
-	Platform::OutputDebug("\n,");
-	printv(m.Z);
-	Platform::OutputDebug("\n,");
-	printv(m.W);
-	Platform::OutputDebug("}");
-}
 
-void e_TriIntersectorData::setData(float3& a, float3& b, float3& c, unsigned int index, e_TriIntersectorData2* t2)
+void e_TriIntersectorData::setData(float3& a, float3& b, float3& c)
 {
-	t2->setIndex(index);
 	float3 p = a - c, q = b - c, e = -p - q;
 	float3 d = cross(a - c, b - c);
 	//if(AbsDot(normalize(cross(a - c, b - c)), make_float3(1, 0, 0)) < 0.05f)
@@ -56,7 +39,7 @@ void e_TriIntersectorData::setData(float3& a, float3& b, float3& c, unsigned int
 	//t2->setXs(m[2].x, m[0].x, m[1].x);
 }
 
-void e_TriIntersectorData::getData(float3& v0, float3& v1, float3& v2, e_TriIntersectorData2* t2) const
+void e_TriIntersectorData::getData(float3& v0, float3& v1, float3& v2) const
 {
 	float4x4 m(b.x, b.y, b.z, b.w, c.x, c.y, c.z, c.w, a.x, a.y, a.z, -a.w, 0, 0, 0, 1);
 	m = m.Inverse();

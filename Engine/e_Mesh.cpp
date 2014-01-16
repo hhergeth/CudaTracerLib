@@ -78,11 +78,11 @@ e_SceneInitData e_Mesh::ParseBinary(const char* a_InputFile)
 	return e_SceneInitData::CreateForSpecificMesh(m_uTriangleCount, m_uIntSize, m_uNodeSize, m_uIndicesSize, 255, 16, 16, 8);
 }
 
-void e_Mesh::Free(e_Stream<e_TriIntersectorData>& a_Stream0, e_Stream<e_TriangleData>& a_Stream1, e_Stream<e_BVHNodeData>& a_Stream2, e_Stream<e_TriIntersectorData2>& a_Stream3, e_Stream<e_KernelMaterial>& a_Stream4)
+void e_Mesh::Free(e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4)
 {
-	a_Stream0.dealloc(m_sIntInfo);
-	a_Stream1.dealloc(m_sTriInfo);
-	a_Stream2.dealloc(m_sNodeInfo);
-	a_Stream3.dealloc(m_sIndicesInfo);
-	a_Stream4.dealloc(m_sMatInfo);
+	a_Stream0->dealloc(m_sIntInfo);
+	a_Stream1->dealloc(m_sTriInfo);
+	a_Stream2->dealloc(m_sNodeInfo);
+	a_Stream3->dealloc(m_sIndicesInfo);
+	a_Stream4->dealloc(m_sMatInfo);
 }

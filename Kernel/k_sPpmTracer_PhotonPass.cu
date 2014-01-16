@@ -105,7 +105,7 @@ template<bool DIRECT> CUDA_FUNC_IN bool TracePhoton(Ray& r, Spectrum Le, CudaRNG
 			Le = ac / prob;
 		}
 		else Le = ac;
-		r = Ray(x, (bRec.getOutgoing()));
+		r = Ray(x, bRec.getOutgoing());
 		r2.Init();
 	}
 	return true;

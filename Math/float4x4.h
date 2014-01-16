@@ -13,15 +13,6 @@ class float4x4
 		CUDA_FUNC_IN float4x4()
 		{
 		}
-		static float4x4 NewIdentity()
-		{
-			float4x4 v;
-			v.X = make_float4( 1, 0, 0, 0 );
-			v.Y = make_float4( 0, 1, 0, 0 );
-			v.Z = make_float4( 0, 0, 1, 0 );
-			v.W = make_float4( 0, 0, 0, 1 );
-			return v;
-		}
 		CUDA_FUNC_IN float4x4( float4 x, float4 y, float4 z, float4 w ) { X = x; Y = y; Z = z; W = w; }
 		CUDA_FUNC_IN float4x4( float xx, float xy, float xz, float xw,
 			float yx, float yy, float yz, float yw,
@@ -122,7 +113,7 @@ class float4x4
 			return b;
 		}
 		
-		static float4x4 LookAt(const float3& _From, const float3& _To, const float3& _Up)
+		CUDA_FUNC_IN static float4x4 LookAt(const float3& _From, const float3& _To, const float3& _Up)
 		{
 			float3 forward = normalize(_To-_From);
 			float3 side = normalize(cross(forward,_Up));
@@ -137,7 +128,7 @@ class float4x4
 			return mat;
 		}
 
-		static float4x4 Perspective(float fov, float asp, float n, float f)
+		CUDA_FUNC_IN static float4x4 Perspective(float fov, float asp, float n, float f)
 		{
 			float cosfov = cosf(0.5f * fov), sinfov = sinf(0.5f * fov), h = cosfov / sinfov, w = h / asp;
 			float4x4 mat=float4x4::Identity();
@@ -148,7 +139,7 @@ class float4x4
 			return mat;
 		}
 
-		static float4x4 Orthographic(float w, float h, float n, float f)
+		CUDA_FUNC_IN static float4x4 Orthographic(float w, float h, float n, float f)
 		{
 			float4x4 mat=float4x4::Identity();
 			mat.X = make_float4(2.0f / w, 0, 0, 0);
@@ -158,7 +149,7 @@ class float4x4
 			return mat;
 		}
 
-		static float4x4 Lerp(const float4x4&a, const float4x4&b, float t)
+		CUDA_FUNC_IN static float4x4 Lerp(const float4x4&a, const float4x4&b, float t)
 		{
 			float t2 = 1.0f - t;
 			float4x4 r;
@@ -167,29 +158,29 @@ class float4x4
 			return r;
 		}
 
-		static float4x4 RotateX( float a )
+		CUDA_FUNC_IN static float4x4 RotateX( float a )
 		{
 			float x = cosf( a );
 			float y = sinf( a );
 			return float4x4(1, 0, 0, 0,	0, x, y, 0,	0, -y, x, 0, 0, 0, 0, 1 );
 		}
-		static float4x4 RotateY( float a )
+		CUDA_FUNC_IN static float4x4 RotateY( float a )
 		{
 			float x = cosf( a );
 			float y = sinf( a );
 			return float4x4( x, 0, -y, 0, 0, 1, 0, 0, y, 0, x, 0, 0, 0, 0, 1 );
 		}
-		static float4x4 RotateZ( float a )
+		CUDA_FUNC_IN static float4x4 RotateZ( float a )
 		{
 			float x = cosf( a );
 			float y = sinf( a );
 			return float4x4( x, y, 0, 0, -y, x, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 );
 		}
-		static float4x4 Rotate( float3 _XYZ )
+		CUDA_FUNC_IN static float4x4 Rotate( float3 _XYZ )
 		{
 			return RotateX(_XYZ.x)*RotateY(_XYZ.y)*RotateZ(_XYZ.z);
 		}
-		static float4x4 RotationAxis(const float3& _axis, const float angle)
+		CUDA_FUNC_IN static float4x4 RotationAxis(const float3& _axis, const float angle)
 		{
 			float3 axis = _axis;
 			float4x4 t = float4x4::Identity();
@@ -248,17 +239,17 @@ class float4x4
 							X.w, Y.w, Z.w, W.w);
 		}
 
-		static const float4x4 Identity()
+		CUDA_FUNC_IN static const float4x4 Identity()
 		{
 			return float4x4( 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
 		}
 		
-		static float4x4 Translate( float3 t )
+		CUDA_FUNC_IN static float4x4 Translate( float3 t )
 		{
 			return float4x4( 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, t.x, t.y, t.z, 1 );
 		}
 		
-		static float4x4 Translate( float x, float y, float z )
+		CUDA_FUNC_IN static float4x4 Translate( float x, float y, float z )
 		{
 			return float4x4( 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, z, 1 );
 		}
@@ -277,11 +268,11 @@ class float4x4
 #undef B
 		}
 
-		static float4x4 Scale( float3 s )
+		CUDA_FUNC_IN static float4x4 Scale( float3 s )
 		{
 			return float4x4( s.x, 0, 0, 0, 0, s.y, 0, 0, 0, 0, s.z, 0, 0, 0, 0, 1 );
 		}
-		static float4x4 Scale( float s )
+		CUDA_FUNC_IN static float4x4 Scale( float s )
 		{
 			return float4x4( s, 0, 0, 0, 0, s, 0, 0, 0, 0, s, 0, 0, 0, 0, 1 );
 		}

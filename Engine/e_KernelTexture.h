@@ -3,8 +3,6 @@
 #include "e_KernelMapping.h"
 #include "e_FileTexture.h"
 
-typedef char e_String[256];
-
 struct e_KernelTextureBase : public e_BaseType
 {
 };

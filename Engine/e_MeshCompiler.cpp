@@ -40,15 +40,17 @@ bool e_Md5Compiler::IsApplicable(const char* a_InputFile, e_MeshCompileType* out
 #include <Windows.h>
 void e_Md5Compiler::Compile(const char* a_InputFile, OutputStream& a_Out)
 {
-	c_StringArray A;
+	std::vector<std::string> A;
 	char dir[255];
 	ZeroMemory(dir, sizeof(dir));
-	_splitpath(a_InputFile, 0, dir, 0, 0);
+	char drive[255];
+	ZeroMemory(drive, sizeof(drive));
+	_splitpath(a_InputFile, drive, dir, 0, 0);
 	WIN32_FIND_DATA dat;
-	HANDLE hFind = FindFirstFile((std::string(dir) + "\\*.md5anim").c_str(), &dat);
+	HANDLE hFind = FindFirstFile((std::string(drive) + std::string(dir) + "\\*.md5anim").c_str(), &dat);
 	while(hFind != INVALID_HANDLE_VALUE)
 	{
-		A((char*)(std::string(dir) + std::string(dat.cFileName)).c_str());
+		A.push_back(std::string(drive) + std::string(dir) + std::string(dat.cFileName));
 		if(!FindNextFile(hFind, &dat))
 			break;
 	}

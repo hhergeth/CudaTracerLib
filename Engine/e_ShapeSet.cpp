@@ -9,9 +9,9 @@ AABB ShapeSet::triData::box() const
 	return b;
 }
 
-void ShapeSet::triData::Recalculate(float4x4& mat)
+void ShapeSet::triData::Recalculate(const float4x4& mat)
 {
-	datRef.getData(p[0], p[1], p[2]);
+	datRef->getData(p[0], p[1], p[2]);
 	for(int i = 0; i < 3; i++)
 		p[i] = mat * p[i];
 	n = -cross(p[2] - p[0], p[1] - p[0]);
@@ -19,7 +19,7 @@ void ShapeSet::triData::Recalculate(float4x4& mat)
 	n = normalize(n);
 }
 
-ShapeSet::ShapeSet(e_TriIntersectorHelper* indices, unsigned int indexCount, float4x4& mat)
+ShapeSet::ShapeSet(e_StreamReference(e_TriIntersectorData)* indices, unsigned int indexCount, float4x4& mat)
 {
 	if(indexCount > MAX_SHAPE_LENGTH)
 		throw 1;
@@ -36,7 +36,7 @@ ShapeSet::ShapeSet(e_TriIntersectorHelper* indices, unsigned int indexCount, flo
 	areaDistribution.Normalize();
 }
 
-void ShapeSet::Recalculate(float4x4& mat)
+void ShapeSet::Recalculate(const float4x4& mat)
 {
 	float areas[MAX_SHAPE_LENGTH];
 	sumArea = 0;

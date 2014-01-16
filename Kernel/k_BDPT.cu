@@ -92,6 +92,10 @@ CUDA_FUNC_IN Spectrum evalPath(const Path& P, int nEye, int nLight, CudaRNG& rng
 	float3 N_y = bRec.map.sys.n;
 	float g = G(N_x, N_y, ev.p, lv.p);
 	L *= g;
+
+	//const float bsdfPdf = ev.r2.getMat().bsdf.pdf(bRec);
+	//const float misWeight = MonteCarlo::PowerHeuristic(1, dRec.pdf, 1, bsdfPdf);
+
 	return L;
 }
 
@@ -100,7 +104,7 @@ CUDA_FUNC_IN float pathWeight(int i, int j)
 	return 1;
 }
 
-CUDA_FUNC_IN void BDPT(int x, int y, e_Image& g_Image, CudaRNG& rng)
+CUDA_FUNC_IN void BDPT(int x, int y, int w, int h, e_Image& g_Image, CudaRNG& rng)
 {
 	Path P;
 	Ray r;
@@ -109,7 +113,7 @@ CUDA_FUNC_IN void BDPT(int x, int y, e_Image& g_Image, CudaRNG& rng)
 	const e_KernelLight* light;
 	Spectrum Le  = g_SceneData.sampleEmitterRay(r, light, rng.randomFloat2(), rng.randomFloat2());
 	randomWalk(P.LightPath, &P.t, r, rng, false);
-
+	
 	Spectrum L(0.0f);
 	BSDFSamplingRecord bRec;
 	for(int i = 1; i < P.s + 1; i++)
@@ -127,6 +131,8 @@ CUDA_FUNC_IN void BDPT(int x, int y, e_Image& g_Image, CudaRNG& rng)
 		{
 			if(i > 1)
 				localLe *= P.EyePath[i - 2].cumulative;
+			const float bsdfPdf = ev.r2.getMat().bsdf.pdf(bRec);
+			const float misWeight = MonteCarlo::PowerHeuristic(1, dRec.pdf, 1, bsdfPdf);
 			L += localLe * ev.r2.getMat().bsdf.f(bRec) * pathWeight(i, 0);
 		}
 
@@ -152,11 +158,10 @@ CUDA_FUNC_IN void BDPT(int x, int y, e_Image& g_Image, CudaRNG& rng)
 		{
 			if(j > 1)
 				localLe *= P.LightPath[j - 2].cumulative;
-			
 			bRec.wo = bRec.map.sys.toLocal(dRec.d);
 			localLe *= lv.r2.getMat().bsdf.f(bRec);
-			//g_Image.AddSample((int)dRec.uv.x, (int)dRec.uv.y, localLe * pathWeight(0, j) / float(P.t));
-			g_Image.Splat((int)dRec.uv.x, (int)dRec.uv.y, localLe * pathWeight(0, j) / float(P.t));
+			if(dRec.uv.x >= 0 && dRec.uv.x < w && dRec.uv.y >= 0 && dRec.uv.y < h)
+				g_Image.Splat((int)dRec.uv.x, (int)dRec.uv.y, localLe * pathWeight(0, j) / float(P.t));
 		}
 	}
 
@@ -167,12 +172,10 @@ CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_NextRayCounter12;
 
 __global__ void pathKernel(unsigned int w, unsigned int h, e_Image g_Image)
 {
-	int x = threadIdx.x + blockIdx.x * blockDim.x, y = threadIdx.y + blockIdx.y * blockDim.y;
+	int x = blockIdx.x * blockDim.x + threadIdx.x, y = blockIdx.y * blockDim.y + threadIdx.y;
 	CudaRNG rng = g_RNGData();
 	if(x < w && y < h)
-	{
-		BDPT(x, y, g_Image, rng);
-	}
+		BDPT(x, y, w, h, g_Image, rng);
 	g_RNGData(rng);
 }
 
@@ -193,7 +196,7 @@ void k_BDPT::DoRender(e_Image* I)
 	k_INITIALIZE(m_pScene->getKernelSceneData());
 	k_STARTPASS(m_pScene, m_pCamera, g_sRngs);
 	int p = 16;
-	pathKernel<<< dim3(w/p+1,h/p+1,1), dim3(p, p, 1)>>>(w, h, *I);
+	pathKernel<<< dim3((w + p - 1) / p, (h + p - 1) / p,1), dim3(p, p, 1)>>>(w, h, *I);
 	m_uPassesDone++;
 	k_TracerBase_update_TracedRays
 	I->DoUpdateDisplay(float(w*h) / float(m_uPassesDone * w * h));
@@ -201,9 +204,8 @@ void k_BDPT::DoRender(e_Image* I)
 
 void k_BDPT::Debug(int2 pixel)
 {
-	m_pScene->UpdateInvalidated();
 	k_INITIALIZE(m_pScene->getKernelSceneData());
 	k_STARTPASS(m_pScene, m_pCamera, g_sRngs);
 	//debugPixel12<<<1,1>>>(w,h,pixel);
-	BDPT(pixel.x, pixel.y, *gI, g_RNGData());
+	BDPT(pixel.x, pixel.y, w, h, *gI, g_RNGData());
 }

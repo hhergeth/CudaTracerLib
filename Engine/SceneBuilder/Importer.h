@@ -72,7 +72,8 @@ namespace bvh_helper
 			unsigned int c = triIndex++;
 			if(triIndex > L1)
 				throw 1;
-			tris[c].setData(V[_index(pNode, 0)], V[_index(pNode, 1)], V[_index(pNode, 2)], pNode, indices + c);
+			indices[c].setIndex(pNode);
+			tris[c].setData(V[_index(pNode, 0)], V[_index(pNode, 1)], V[_index(pNode, 2)]);
 			indices[c].setFlag(false);
 			indices[c].setIndex(pNode);
 			return c;
@@ -123,4 +124,4 @@ inline BVH_Construction_Result ConstructBVH(float3* vertices, unsigned int* indi
 	return r;
 }
 
-void ConstructBVH(float3* vertices, unsigned int* indices, int vCount, int cCount, OutputStream& O);
+void ConstructBVH(float3* vertices, unsigned int* indices, int vCount, int cCount, OutputStream& O, BVH_Construction_Result* out = 0);

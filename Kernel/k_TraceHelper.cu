@@ -224,12 +224,9 @@ bool k_TraceRay(const float3& dir, const float3& ori, TraceResult* a_Result)
 	float4x4 modl;
 	loadInvModl(node, &modl);
 	float3 d = modl.TransformNormal(dir), o = modl.TransformNormal(ori) + modl.Translation();
-	float3 scale = modl.Scale();
-	float scalef = length(d / scale);
-	a_Result->m_fDist /= scalef;
+	a_Result->m_fDist /= length(d);
 	k_TraceRayNode(d, o, a_Result, N, lastNode == N ? lastIndex : -1);
-	//transform a_Result->m_fDist back to world
-	a_Result->m_fDist *= scalef;
+	a_Result->m_fDist *= length(d);
 #else
 	int traversalStackOuter[64];
 	int at = 1;
@@ -246,15 +243,15 @@ bool k_TraceRay(const float3& dir, const float3& ori, TraceResult* a_Result)
 		while (nodeAddrOuter >= 0)
 		{
 #ifdef ISCUDA
-			const float4 n0xy = tex1Dfetch(t_SceneNodes, nodeAddrOuter * 4 + 0); // (c0.lo.x, c0.hi.x, c0.lo.y, c0.hi.y)
-			const float4 n1xy = tex1Dfetch(t_SceneNodes, nodeAddrOuter * 4 + 1); // (c1.lo.x, c1.hi.x, c1.lo.y, c1.hi.y)
-			const float4 nz   = tex1Dfetch(t_SceneNodes, nodeAddrOuter * 4 + 2); // (c0.lo.z, c0.hi.z, c1.lo.z, c1.hi.z)
-				  float4 tmp  = tex1Dfetch(t_SceneNodes, nodeAddrOuter * 4 + 3); // child_index0, child_index1
+			const float4 n0xy = tex1Dfetch(t_SceneNodes, nodeAddrOuter + 0); // (c0.lo.x, c0.hi.x, c0.lo.y, c0.hi.y)
+			const float4 n1xy = tex1Dfetch(t_SceneNodes, nodeAddrOuter + 1); // (c1.lo.x, c1.hi.x, c1.lo.y, c1.hi.y)
+			const float4 nz   = tex1Dfetch(t_SceneNodes, nodeAddrOuter + 2); // (c0.lo.z, c0.hi.z, c1.lo.z, c1.hi.z)
+				  float4 tmp  = tex1Dfetch(t_SceneNodes, nodeAddrOuter + 3); // child_index0, child_index1
 #else
-			const float4 n0xy = g_SceneData.m_sSceneBVH.m_pNodes[nodeAddrOuter].a;
-			const float4 n1xy = g_SceneData.m_sSceneBVH.m_pNodes[nodeAddrOuter].b;
-			const float4 nz   = g_SceneData.m_sSceneBVH.m_pNodes[nodeAddrOuter].c;
-				  float4 tmp  = g_SceneData.m_sSceneBVH.m_pNodes[nodeAddrOuter].d;
+			const float4 n0xy = g_SceneData.m_sSceneBVH.m_pNodes[nodeAddrOuter / 4].a;
+			const float4 n1xy = g_SceneData.m_sSceneBVH.m_pNodes[nodeAddrOuter / 4].b;
+			const float4 nz   = g_SceneData.m_sSceneBVH.m_pNodes[nodeAddrOuter / 4].c;
+				  float4 tmp  = g_SceneData.m_sSceneBVH.m_pNodes[nodeAddrOuter / 4].d;
 #endif
 			int2  cnodesOuter = *(int2*)&tmp;
 			const float c0lox = n0xy.x * I.x - O.x;
@@ -302,12 +299,9 @@ bool k_TraceRay(const float3& dir, const float3& ori, TraceResult* a_Result)
 			float4x4 modl;
 			loadInvModl(node, &modl);
 			float3 d = modl.TransformNormal(dir), o = modl.TransformNormal(ori) + modl.Translation();
-			float3 scale = modl.Scale();
-			float scalef = length(d / scale);
-			a_Result->m_fDist /= scalef;
+			a_Result->m_fDist /= length(d);
 			k_TraceRayNode(d, o, a_Result, N);
-			//transform a_Result->m_fDist back to world
-			a_Result->m_fDist *= scalef;
+			a_Result->m_fDist *= length(d);
 		}
 	}
 	return a_Result->hasHit();
@@ -430,7 +424,7 @@ template<bool ANY_HIT> __global__ void intersectKernel_SKIPOUTER(int numRays, tr
     float   idirx;
     float   idiry;
     float   idirz;
-	//float2 bCoords;
+	float2 bCoords;
 
     // Initialize persistent threads.
 
@@ -461,16 +455,21 @@ template<bool ANY_HIT> __global__ void intersectKernel_SKIPOUTER(int numRays, tr
 
             // Fetch ray.
 
-			float4 o = ((float4*)a_RayBuffer)[rayidx * 2 + 0];
-			float4 d = ((float4*)a_RayBuffer)[rayidx * 2 + 1];
+			float4 o1 = ((float4*)a_RayBuffer)[rayidx * 2 + 0];
+			float4 d1 = ((float4*)a_RayBuffer)[rayidx * 2 + 1];
+			//to local
+			float4x4 modl;
+			loadInvModl(0, &modl);
+			float3 d = modl.TransformNormal(!d1), o = modl * !o1;
+
             origx = o.x;
             origy = o.y;
             origz = o.z;
-            tmin  = o.w;
+			tmin  = o1.w / length(d);
             dirx  = d.x;
             diry  = d.y;
             dirz  = d.z;
-            hitT  = d.w;
+            hitT  = d1.w / length(d);
             float ooeps = exp2f(-80.0f); // Avoid div by zero.
             idirx = 1.0f / (fabsf(d.x) > ooeps ? d.x : copysignf(ooeps, d.x));
             idiry = 1.0f / (fabsf(d.y) > ooeps ? d.y : copysignf(ooeps, d.y));
@@ -614,7 +613,7 @@ template<bool ANY_HIT> __global__ void intersectKernel_SKIPOUTER(int numRays, tr
 
 								hitT = t;
 								hitIndex = index >> 1;
-								//bCoords = make_float2(u,v);
+								bCoords = make_float2(u,v);
 								if (ANY_HIT)
 								{
 									nodeAddr = EntrypointSentinel;
@@ -640,9 +639,11 @@ template<bool ANY_HIT> __global__ void intersectKernel_SKIPOUTER(int numRays, tr
 		int4 res = make_int4(0,0,0,0);
 		if(hitIndex != -1)
 		{
-			res.x = __float_as_int(hitT);
+			res.x = __float_as_int(hitT * sqrtf(dirx * dirx + diry * diry + dirz * dirz));
 			res.y = 0;
 			res.z = hitIndex;
+			half2 h(bCoords);
+			res.w = *(int*)&h;
 		}
 		((int4*)a_ResBuffer)[rayidx] = res;
 	} while(true);
@@ -849,7 +850,7 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 					lorigx = o.x;
 					lorigy = o.y;
 					lorigz = o.z;
-					ltmin  = 0.0f;
+					ltmin  = tmin / length(d);
 					ldirx  = d.x;
 					ldiry  = d.y;
 					ldirz  = d.z;
@@ -867,7 +868,10 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 				}
 
 				unsigned int m_uBVHNodeOffset	  = g_SceneData.m_sMeshData[N->m_uMeshIndex].m_uBVHNodeOffset, 
-							 m_uBVHTriangleOffset = g_SceneData.m_sMeshData[N->m_uMeshIndex].m_uBVHTriangleOffset;
+							 m_uBVHTriangleOffset = g_SceneData.m_sMeshData[N->m_uMeshIndex].m_uBVHTriangleOffset,
+							 m_uBVHIndicesOffset = g_SceneData.m_sMeshData[N->m_uMeshIndex].m_uBVHIndicesOffset,
+							 m_uTriangleOffset = g_SceneData.m_sMeshData[N->m_uMeshIndex].m_uTriangleOffset;
+
 				while(lnodeAddr != EntrypointSentinel)
 				{
 					while (unsigned int(lnodeAddr) < unsigned int(EntrypointSentinel))
@@ -950,7 +954,7 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 							const float4 v00 = tex1Dfetch(t_tris, triAddr * 3 + 0 + m_uBVHTriangleOffset);
 							const float4 v11 = tex1Dfetch(t_tris, triAddr * 3 + 1 + m_uBVHTriangleOffset);
 							const float4 v22 = tex1Dfetch(t_tris, triAddr * 3 + 2 + m_uBVHTriangleOffset);
-							unsigned int index = tex1Dfetch(t_triIndices, triAddr + m_uBVHTriangleOffset / 3);
+							unsigned int index = tex1Dfetch(t_triIndices, triAddr + m_uBVHIndicesOffset);
 
 							float Oz = v00.w - lorigx*v00.x - lorigy*v00.y - lorigz*v00.z;
 							float invDz = 1.0f / (ldirx*v00.x + ldiry*v00.y + ldirz*v00.z);
@@ -979,7 +983,7 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 
 										nodeIdx = ~leafAddr;
 										lhitT = t;
-										hitIndex = index >> 1;
+										hitIndex = index >> 1 + m_uTriangleOffset;
 										bCorrds = make_float2(u,v);
 										if (ANY_HIT)
 										{

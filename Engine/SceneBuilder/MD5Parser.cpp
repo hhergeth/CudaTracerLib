@@ -202,11 +202,13 @@ void MD5Model::readElements(std::ifstream &fin) {
   } // while ( not EOF )
 }
 
+#include "..\..\Base\StringUtils.h"
 
 void MD5Model::readAnimElements(std::ifstream &fin, Anim &anim) {
   while ( !fin.eof() ) {
     std::string str;
     TOKEN tok = getNextToken(fin, &str);
+	toLower(str);
 
     // token is TOKEN_INVALID when end of file is reached
     if ( TOKEN_INVALID == tok )
@@ -214,7 +216,7 @@ void MD5Model::readAnimElements(std::ifstream &fin, Anim &anim) {
 
     if ( str == "commandline" )
       readCommandLineEl(fin);
-    else if ( str == "numJoints" ) {
+    else if ( str == "numjoints" ) {
       // just make sure that the number of joints is the same as the number
       // specified in the mesh file
       int n = readInt(fin);
@@ -222,7 +224,7 @@ void MD5Model::readAnimElements(std::ifstream &fin, Anim &anim) {
       if ( n != numJoints )
         throw Exception("MD5Model::readAnimElements(): anim file does not match mesh");
     }
-    else if ( str == "numMeshes" ) {
+    else if ( str == "nummeshes" ) {
       // just make sure that the number of meshes is the same as the number
       // specified in the mesh file
       int n = readInt(fin);
@@ -230,19 +232,19 @@ void MD5Model::readAnimElements(std::ifstream &fin, Anim &anim) {
       if ( n != numMeshes )
         throw Exception("MD5Model::readAnimElements(): anim file does not match mesh");
     }
-    else if ( str == "numbFrames" )
+    else if ( str == "numframes" )
       readNumbFramesEl(fin, anim);
-    else if ( str == "bFrameRate" )
+    else if ( str == "framerate" )
       readbFrameRateEl(fin, anim);
-    else if ( str == "numAnimatedComponents" )
+    else if ( str == "numanimatedcomponents" )
       readNumAnimatedComponentsEl(fin, anim);
     else if ( str == "hierarchy" )
       readHierarchyEl(fin, anim);
     else if ( str == "bounds" )
       readBoundsEl(fin, anim);
-    else if ( str == "basebFrame" )
+    else if ( str == "baseframe" )
       readBasebFrameEl(fin, anim);
-    else if ( str == "bFrame" )
+    else if ( str == "frame" )
       readbFrameEl(fin, anim);
     else {
       // invalid element

@@ -79,7 +79,6 @@ public:
 			m_fTimeSpentRendering = 0;
 			StartNewTrace(I);
 		}
-		m_pScene->UpdateInvalidated();
 		cudaEventRecord(start, 0);
 		DoRender(I);
 		cudaEventRecord(stop, 0);

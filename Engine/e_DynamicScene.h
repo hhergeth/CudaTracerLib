@@ -74,7 +74,13 @@ public:
 		m_pMaterialBuffer->operator()(N->m_uMaterialOffset + mi).Invalidate();
 	}
 	void AnimateMesh(e_StreamReference(e_Node) n, float t, unsigned int anim);
-	void UpdateInvalidated();
+	e_AnimatedMesh* AccessAnimatedMesh(e_StreamReference(e_Node) n)
+	{
+		e_BufferReference<e_Mesh, e_KernelMesh> m = getMesh(n);
+		e_AnimatedMesh* m2 = (e_AnimatedMesh*)m.operator->();
+		return m2;
+	}
+	bool UpdateScene();
 	e_KernelDynamicScene getKernelSceneData(bool devicePointer = true);
 	//void UpdateMaterial(e_StreamReference(e_KernelMaterial) m);
 	e_StreamReference(e_Node) getNodes()

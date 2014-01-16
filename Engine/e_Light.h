@@ -103,6 +103,12 @@ struct e_DiffuseLight : public e_LightBase
 		setEmit(m_radiance * L);
 	}
 
+	void Recalculate(const float4x4& mat)
+	{
+		shapeSet.Recalculate(mat);
+		Update();
+	}
+
 	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const float2 &spatialSample, const float2 &directionalSample) const;
 
 	CUDA_DEVICE CUDA_HOST Spectrum eval(const float3& p, const Frame& sys, const float3 &d) const;

@@ -14,7 +14,7 @@ struct CUDA_ALIGN(16) ShapeSet
 		CUDA_ALIGN(16) float3 p[3];
 		CUDA_ALIGN(16) float3 n;
 		CUDA_ALIGN(16) float area;
-		CUDA_ALIGN(16) e_TriIntersectorHelper datRef;
+		CUDA_ALIGN(16) e_StreamReference(e_TriIntersectorData) datRef;
 
 		CUDA_FUNC_IN void UniformSampleTriangle(float u1, float u2, float *u, float *v) const
 		{
@@ -24,7 +24,7 @@ struct CUDA_ALIGN(16) ShapeSet
 		}
 		
 		triData(){}
-		triData(e_TriIntersectorHelper ref, float4x4& mat)
+		triData(e_StreamReference(e_TriIntersectorData) ref, float4x4& mat)
 		{
 			datRef = ref;
 			Recalculate(mat);
@@ -39,11 +39,11 @@ struct CUDA_ALIGN(16) ShapeSet
 			return n;
 		}
 		AABB box() const;
-		void Recalculate(float4x4& mat);
+		void Recalculate(const float4x4& mat);
 	};
 public:
 	ShapeSet(){}
-    ShapeSet(e_TriIntersectorHelper* indices, unsigned int indexCount, float4x4& mat);
+    ShapeSet(e_StreamReference(e_TriIntersectorData)* indices, unsigned int indexCount, float4x4& mat);
     CUDA_FUNC_IN float Area() const { return sumArea; }
 	CUDA_DEVICE CUDA_HOST void SamplePosition(PositionSamplingRecord& pRec, const float2& spatialSample) const;
     CUDA_FUNC_IN float Pdf(const PositionSamplingRecord &p) const
@@ -57,7 +57,7 @@ public:
 			b.Enlarge(tris[i].box());
 		return b;
 	}
-	void Recalculate(float4x4& mat);
+	void Recalculate(const float4x4& mat);
 private:
     CUDA_ALIGN(16) triData tris[MAX_SHAPE_LENGTH];
     float sumArea;

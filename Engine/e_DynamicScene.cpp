@@ -178,9 +178,14 @@ e_StreamReference(e_Node) e_DynamicScene::CreateNode(unsigned int a_TriangleCoun
 	return N;
 }
 
+//free material -> free textures, do not load textures twice!
 void e_DynamicScene::DeleteNode(e_StreamReference(e_Node) ref)
 {
-	//TODO
+	if(m_pMeshBuffer->Release(getMesh(ref)))
+	{
+		getMesh(ref)->Free(m_pTriIntStream, m_pTriDataStream, m_pBVHStream, m_pBVHIndicesStream, m_pMaterialBuffer);
+	}
+	m_pNodeStream->dealloc(ref);
 }
 
 e_BufferReference<e_MIPMap, e_KernelMIPMap> e_DynamicScene::LoadTexture(const char* file, bool a_MipMap)
@@ -213,7 +218,10 @@ e_BufferReference<e_MIPMap, e_KernelMIPMap> e_DynamicScene::LoadTexture(const ch
 
 void e_DynamicScene::UnLoadTexture(e_BufferReference<e_MIPMap, e_KernelMIPMap> ref)
 {
-	//TODO
+	if(m_pTextureBuffer->Release(ref))
+	{
+		ref->Free();
+	}
 }
 
 void e_DynamicScene::SetNodeTransform(const float4x4& mat, e_StreamReference(e_Node) n)
@@ -225,7 +233,7 @@ void e_DynamicScene::SetNodeTransform(const float4x4& mat, e_StreamReference(e_N
 	recalculateAreaLights(n);
 }
 
-void e_DynamicScene::UpdateInvalidated()
+bool e_DynamicScene::UpdateScene()
 {
 	m_pTerrain->UpdateInvalidated();
 	m_pNodeStream->UpdateInvalidated();
@@ -244,19 +252,20 @@ void e_DynamicScene::UpdateInvalidated()
 		m_uModified = 0;
 		m_pBVH->Build(m_pNodeStream->UsedElements(), m_pMeshBuffer->UsedElements());
 		m_pBVH->UpdateInvalidated();
+		return true;
 	}
+	return false;
 }
 
-void e_DynamicScene::AnimateMesh(e_StreamReference(e_Node) a_Node, float t, unsigned int anim)
+void e_DynamicScene::AnimateMesh(e_StreamReference(e_Node) n, float t, unsigned int anim)
 {
 	m_uModified = 1;
-	e_BufferReference<e_Mesh, e_KernelMesh> m = m_pMeshBuffer->operator()(a_Node->m_uMeshIndex);
-	e_AnimatedMesh* m2 = (e_AnimatedMesh*)m.operator->();
+	e_AnimatedMesh* m2 = AccessAnimatedMesh(n);
 	unsigned int k;
 	float l;
 	m2->ComputeFrameIndex(t, anim, &k, &l);
 	m2->k_ComputeState(anim, k, l, getKernelSceneData(), m_pBVHStream, m_pDeviceTmpFloats);
-	m.Invalidate();
+	getMesh(n).Invalidate();
 }
 
 e_KernelDynamicScene e_DynamicScene::getKernelSceneData(bool devicePointer)
@@ -359,7 +368,9 @@ e_StreamReference(e_KernelLight) e_DynamicScene::createLight(e_StreamReference(e
 
 ShapeSet e_DynamicScene::CreateShape(e_StreamReference(e_Node) Node, const char* name, unsigned int* a_Mi)
 {
-	e_TriIntersectorHelper n[MAX_SHAPE_LENGTH];
+	e_StreamReference(e_TriIntersectorData) n[MAX_SHAPE_LENGTH];
+	e_StreamReference(e_TriIntersectorData2) n2[MAX_SHAPE_LENGTH];
+
 	e_BufferReference<e_Mesh, e_KernelMesh> m = getMesh(Node);
 	unsigned int c = 0, mi = -1;
 		
@@ -385,11 +396,12 @@ ShapeSet e_DynamicScene::CreateShape(e_StreamReference(e_Node) Node, const char*
 		{
 			unsigned int k = 0;
 			for(; k < c; k++)
-				if(n[k].dat2->getIndex() == i2)
+				if(n2[k]->getIndex() == i2)
 					break;
 			if(k == c)
 			{
-				n[c++] = e_TriIntersectorHelper(sec, sec2);
+				n2[c] = sec2;
+				n[c++] = sec;
 			}
 		}
 		i++;
@@ -430,7 +442,7 @@ void e_DynamicScene::recalculateAreaLights(e_StreamReference(e_Node) Node)
 	{
 		e_StreamReference(e_KernelLight) l = m_pLightStream->operator()(a[i]);
 		float4x4 mat = GetNodeTransform(Node);
-		l->As<e_DiffuseLight>()->shapeSet.Recalculate(mat);
+		l->As<e_DiffuseLight>()->Recalculate(mat);
 		m_pLightStream->Invalidate(Node->m_uLightIndices[i]);
 		i++;
 	}

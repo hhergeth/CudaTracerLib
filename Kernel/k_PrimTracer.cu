@@ -1,6 +1,7 @@
 #include "k_PrimTracer.h"
 #include "k_TraceHelper.h"
 #include "k_TraceAlgorithms.h"
+#include "..\Engine\e_Core.h"
 
 CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_NextRayCounter2;
 CUDA_DEVICE uint3 g_EyeHitBoxMin2;
@@ -37,7 +38,7 @@ CUDA_ONLY_FUNC void max3(uint3* tar, uint3& val)
 
 CUDA_FUNC_IN Spectrum trace(Ray& r, CudaRNG& rng, float3* pout)
 {
-	const bool DIRECT = true;
+	const bool DIRECT = 1;
 	TraceResult r2;
 	r2.Init();
 	Spectrum c = Spectrum(1.0f), L = Spectrum(0.0f);
@@ -77,7 +78,7 @@ CUDA_FUNC_IN Spectrum trace(Ray& r, CudaRNG& rng, float3* pout)
 		if(DIRECT)
 			L += c * UniformSampleAllLights(bRec, r2.getMat(), 1);
 		float pdf;
-		Spectrum f = r2.getMat().bsdf.sample(bRec, pdf, rng.randomFloat2()); return f;
+		Spectrum f = r2.getMat().bsdf.sample(bRec, pdf, rng.randomFloat2()); 
 		c = c * f;
 		if((bRec.sampledType & EDiffuse) == EDiffuse)
 		{
@@ -170,6 +171,7 @@ static bool done = false;
 void k_PrimTracer::DoRender(e_Image* I)
 {
 	//if(done) return;done = 1;
+	ThrowCudaErrors();
 	k_OnePassTracer::DoRender(I);
 	unsigned int zero = 0;
 	cudaMemcpyToSymbol(g_NextRayCounter2, &zero, sizeof(unsigned int));
@@ -193,7 +195,6 @@ void k_PrimTracer::DoRender(e_Image* I)
 void k_PrimTracer::Debug(int2 pixel)
 {
 	//FW::printf("%f,%f",pixel.x/float(w),pixel.y/float(h));
-	m_pScene->UpdateInvalidated();
 	e_KernelDynamicScene d2 = m_pScene->getKernelSceneData();
 	k_INITIALIZE(d2);
 	k_STARTPASS(m_pScene, m_pCamera, g_sRngs);

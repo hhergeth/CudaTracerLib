@@ -39,6 +39,7 @@ public:
 		m_uPos = 0;
 		m_uLength = a_NumElements;
 		host = (H*)::malloc(m_uHostBlockSize * a_NumElements);
+		Platform::SetMemory(host, m_uHostBlockSize * a_NumElements);
 		cudaMalloc(&device, sizeof(D) * a_NumElements);
 		cudaMemset(device, 0, sizeof(D) * a_NumElements);
 		deviceMapped = (D*)::malloc(a_NumElements * sizeof(D));
@@ -107,9 +108,20 @@ public:
 			return e_BufferReference<H, D>();
 		}
 	}
-	e_BufferReference<H, D> malloc(e_BufferReference<H, D> r)
+	e_BufferReference<H, D> malloc(e_BufferReference<H, D> r, bool copyToNew = true)
 	{
-		return malloc(r.getLength());
+		e_BufferReference<H, D> r2 = malloc(r.getLength());
+		if(copyToNew)
+			memcpy(r, r2);
+		return r2;
+	}
+	///Copies dest->length bytes from source to dest, on the host aswell as the device
+	void memcpy(e_BufferReference<H, D> source, e_BufferReference<H, D> dest)
+	{
+		if(source.getLength() < dest.getLength() || source.m_pStream != this || dest.m_pStream != this)
+			throw 1;
+		::memcpy(dest.atH(dest->getIndex()), source.atH(source.getIndex()), m_uHostBlockSize * dest.getLength());
+		Invalidate(dest);
 	}
 	void dealloc(e_BufferReference<H, D> a_Ref)
 	{
@@ -309,7 +321,16 @@ public:
 		U* base = (U*)atH(m_uIndex);
 		return base + i;
 	}
-private:
+	void ReadFrom(IInStream& a_In)
+	{
+		a_In.Read(operator H *(), getSizeInBytes());
+		Invalidate();
+	}
+	void WriteTo(OutputStream& a_Out)
+	{
+		a_Out.Write(operator H *(), getSizeInBytes());
+	}
+//private:
 	H* atH(unsigned int i) const 
 	{
 		return (H*)((char*)m_pStream->host + m_pStream->m_uHostBlockSize * i);
@@ -336,7 +357,12 @@ private:
 	struct entry
 	{
 		unsigned int count;
-		char file[256];
+		e_String file;
+		entry()
+		{
+			count = 0;
+			Platform::SetMemory(file, sizeof(file));
+		}
 	};
 	std::vector<entry> m_sEntries;
 public:
@@ -358,23 +384,25 @@ public:
 		entry e;
 		e.count = 1;
 		Platform::SetMemory(e.file, sizeof(e.file));
-		memcpy(e.file, file, strlen(file));
-		m_sEntries.push_back(e);
-		return this->malloc(1);
+		::memcpy(e.file, file, strlen(file));
+		e_BufferReference<H, D> ref = malloc(1);
+		if(m_sEntries.size() <= ref.getIndex())
+			m_sEntries.push_back(e);
+		else m_sEntries[ref.getIndex()] = e;
+		return ref;
 	}
-	void Release(char* file)
-	{/*
-		for(unsigned int i = 0; i < m_sEntries.size(); i++)
-			if(strcmp(m_sEntries[i].file, file))
-			{
-				m_sEntries[i].count--;
-				if(!m_sEntries[i].count)
-				{
-					this->dealloc(e_DataStreamReference<T>(i, 1, this));
-					m_sData.erase(i, i);
-				}
-				break;
-			}*/
+	///Returns true noting free
+	bool Release(e_BufferReference<H, D> ref)
+	{
+		unsigned int i = ref.getIndex();
+		m_sEntries[i].count--;
+		if(!m_sEntries[i].count)
+		{
+			this->dealloc(i);
+			//m_sData.erase(i, i);//do not erase
+			return true;
+		}
+		return false;
 	}
 };
 
@@ -400,6 +428,7 @@ public:
 		m_uPos = 0;
 		m_uLength = N;
 		host = (T*)::malloc(m_uHostBlockSize * N);
+		Platform::SetMemory(host, m_uHostBlockSize * N);
 		cudaMalloc(&device, sizeof(T) * N);
 		cudaMemset(device, 0, sizeof(T) * N);
 		deviceMapped = 0;
@@ -471,9 +500,20 @@ public:
 		Invalidate(r);
 		return r;
 	}
-	e_BufferReference<T, T> malloc(e_BufferReference<T, T> r)
+	e_BufferReference<T, T> malloc(e_BufferReference<T, T> r, bool copyToNew = true)
 	{
-		return malloc(r.getLength());
+		e_BufferReference<T, T> r2 = malloc(r.getLength());
+		if(copyToNew)
+			memcpy(r, r2);
+		return r2;
+	}
+	///Copies dest->length bytes from source to dest, on the host aswell as the device
+	void memcpy(e_BufferReference<T, T> source, e_BufferReference<T, T> dest)
+	{
+		if(source.getLength() < dest.getLength() || source.m_pStream != this || dest.m_pStream != this)
+			throw 1;
+		::memcpy(dest.atH(dest.getIndex()), source.atH(source.getIndex()), m_uHostBlockSize * dest.getLength());
+		Invalidate(dest);
 	}
 	void dealloc(e_BufferReference<T, T> a_Ref)
 	{

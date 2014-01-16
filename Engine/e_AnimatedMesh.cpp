@@ -15,12 +15,10 @@ float4x4 mul(float4x4& a, float4x4& b)
 struct c_bFrame
 {
 	float4x4* data;
-	unsigned int L;
 
 	c_bFrame(){}
 	c_bFrame(bFrame* F, float4x4* a_InverseTransforms)
 	{
-		L = (unsigned int)F->joints.size();
 		data = new float4x4[F->joints.size()];
 		for(int i = 0; i < F->joints.size(); i++)
 		{
@@ -32,101 +30,62 @@ struct c_bFrame
 			data[i] = mul(a_InverseTransforms[i], data[i]);
 	}
 
-	void serialize(OutputStream& a_Out)
+	~c_bFrame()
 	{
-		a_Out.Write(data, sizeof(float4x4) * L);
+		//delete data;
 	}
 };
 
 struct c_Animation
 {
 	unsigned int m_uNumbFrames;
-	unsigned int m_uNumBones;
 	unsigned int m_ubFrameRate;
 	c_bFrame* data;
 
 	c_Animation(Anim* A, MD5Model* M)
 	{
 		m_uNumbFrames = (unsigned int)A->numbFrames;
-		m_uNumBones = (unsigned int)A->baseJoints.size();
 		m_ubFrameRate = (unsigned int)A->bFrameRate;
 
-		float4x4* inverseJoints = new float4x4[m_uNumBones];
-		for(unsigned int i = 0; i < m_uNumBones; i++)
+		float4x4* inverseJoints = new float4x4[A->baseJoints.size()];
+		for(unsigned int i = 0; i < A->baseJoints.size(); i++)
 			inverseJoints[i] = mul(M->joints[i].quat.toMatrix(), float4x4::Translate(*(float3*)&M->joints[i].pos)).Inverse();
 		data = new c_bFrame[m_uNumbFrames];
 		for(unsigned int i = 0; i < m_uNumbFrames; i++)
 			data[i] = c_bFrame(&A->bFrames[i], inverseJoints);
 	}
 
-	void serialize(OutputStream& a_Out)
+	~c_Animation()
 	{
-		for(unsigned int i = 0; i < m_uNumbFrames; i++)
-			data[i].serialize(a_Out);
+		//delete [] data;
 	}
 };
-
-void constructLayout(std::vector<std::vector<e_BVHLevelEntry>>& a_Out, e_BVHNodeData* a_Data, int node, int parent, unsigned int level = 0, unsigned int side = 0)
-{
-	if(a_Out.size() <= level)
-		a_Out.push_back(std::vector<e_BVHLevelEntry>());
-	a_Out[level].push_back(e_BVHLevelEntry(parent, node, side));
-	if(node >= 0)
-	{
-		int2 d = a_Data[node / 4].getChildren();
-		constructLayout(a_Out, a_Data, d.x, node, level + 1, -1);
-		constructLayout(a_Out, a_Data, d.y, node, level + 1, +1);
-	}
-}
 
 e_AnimatedMesh::e_AnimatedMesh(InputStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4, e_Stream<char>* a_Stream5)
 	: e_Mesh(a_In, a_Stream0, a_Stream1, a_Stream2, a_Stream3, a_Stream4)
 {
 	m_uType = MESH_ANIMAT_TOKEN;
-	BASEHOST = a_Stream5->operator()();
-	BASEDEVICE = a_Stream5->UsedElements().getDevice();
-	unsigned int numVertices;
-	a_In >> numVertices;
-	unsigned int BLOCKSIZE;
-	a_In >> BLOCKSIZE;
-	unsigned int OFF = 0;
-	m_pOffset = a_Stream5->malloc(BLOCKSIZE);
-	char* DATA = m_pOffset();
-#define APPEND(s) { a_In.Read(DATA + OFF, s); OFF += s; while(OFF % 16) OFF++; }
-#define APPEND2(s) { a_In.Read(DATA + OFF, s); OFF += s; }
-	a_In >> k_Data.m_uVertexCount;
-	m_pVertices = (e_AnimatedVertex*)(DATA + OFF);
-	APPEND(k_Data.m_uVertexCount * sizeof(e_AnimatedVertex))
-	a_In >> k_Data.m_uTriangleCount;
-	k_Data.m_uTriDataOffset = OFF;
-	m_pTriangles = (uint3*)(DATA + OFF);
-	APPEND(k_Data.m_uTriangleCount * sizeof(uint3))
-	k_Data.m_uBVHLevelOffset = OFF;
-	a_In >> k_Data.m_uBVHLevelCount;
-	m_pLevels = (int2*)(DATA + OFF);
-	APPEND(k_Data.m_uBVHLevelCount * sizeof(uint2))
-	m_pLevelEntries = (e_BVHLevelEntry*)(DATA + OFF);
-	for(unsigned int l = 0; l < k_Data.m_uBVHLevelCount; l++)
-		APPEND2(m_pLevels[l].y * sizeof(e_BVHLevelEntry));
-	a_In >> k_Data.m_uAnimCount;
-	a_In >> k_Data.m_uJointCount;
-	k_Data.m_uAnimHeaderOffset = OFF;
-	m_pAnimations = (e_Animation*)(DATA + OFF);
-	APPEND(k_Data.m_uAnimCount * sizeof(e_Animation))
-	k_Data.m_uAnimBodyOffset = OFF;
-	m_pAnimData = (float4x4*)(DATA + OFF);
-	e_Animation* lA = m_pAnimations + k_Data.m_uAnimCount - 1;
-	unsigned int numB = lA->m_uDataOffset + lA->m_uNumFrames * k_Data.m_uJointCount;
-	APPEND(sizeof(float4x4) * numB)
-	a_Stream5->Invalidate(m_pOffset);
+	a_In.Read(&k_Data, sizeof(k_Data));
+	for(int i = 0; i < k_Data.m_uAnimCount; i++)
+	{
+		e_Animation A;
+		A.deSerialize(a_In, a_Stream5);
+		m_pAnimations.push_back(A);
+	}
+	m_sVertices = a_Stream5->malloc(sizeof(e_AnimatedVertex) * k_Data.m_uVertexCount);
+	m_sVertices.ReadFrom(a_In);
+	m_sTriangles = a_Stream5->malloc(sizeof(uint3) * m_sTriInfo.getLength());
+	m_sTriangles.ReadFrom(a_In);
+	m_sHierchary.deSerialize(a_In, a_Stream5);
+	a_Stream5->UpdateInvalidated();
 }
 
-void e_AnimatedMesh::CompileToBinary(const char* a_InputFile, c_StringArray& a_Anims, OutputStream& a_Out)
+void e_AnimatedMesh::CompileToBinary(const char* a_InputFile, std::vector<std::string>& a_Anims, OutputStream& a_Out)
 {
 	MD5Model M;
 	M.loadMesh(a_InputFile);
-	for(int i = 0; i < a_Anims.data.size(); i++)
-		M.loadAnim(a_Anims.data[i]);
+	for(unsigned int i = 0; i < a_Anims.size(); i++)
+		M.loadAnim(a_Anims[i].c_str());
 	AABB box;
 	box = box.Identity();
 	std::vector<uint3> triData2;
@@ -179,57 +138,65 @@ void e_AnimatedMesh::CompileToBinary(const char* a_InputFile, c_StringArray& a_A
 	a_Out.Write(&triData[0], sizeof(e_TriangleData) * (unsigned int)triData.size());
 	a_Out << (unsigned int)matData.size();
 	a_Out.Write(&matData[0], sizeof(e_KernelMaterial) * (unsigned int)matData.size());
-	BVH_Construction_Result bvh = ConstructBVH(v_Pos, (unsigned int*)&triData2[0], (int)vCount, (int)triData2.size() * 3);
-	throw 1;//not serializing it all
-	std::vector<std::vector<e_BVHLevelEntry>> V;
-	constructLayout(V, bvh.nodes, 0, -1);
+	BVH_Construction_Result bvh;
+	ConstructBVH(v_Pos, (unsigned int*)&triData2[0], (int)vCount, (int)triData2.size() * 3, a_Out, &bvh);
 
-	a_Out << (unsigned int)vCount;
-	size_t BLOCKSIZE = 4 + vCount * sizeof(e_AnimatedVertex) + 4 + triData2.size() * sizeof(uint3)
-		+ 4 + V.size() * 8
-		+ 8 + M.anims.size() * 12;
-	for(size_t i = 0; i < V.size(); i++)
-		BLOCKSIZE += (unsigned int)V[i].size() * sizeof(e_BVHLevelEntry);
-	for(size_t a = 0; a < M.anims.size(); a++)
-		BLOCKSIZE += M.anims[a]->numbFrames * (M.numJoints * sizeof(float4x4));
-	a_Out << BLOCKSIZE;
-	unsigned int endTo = (unsigned int)BLOCKSIZE + a_Out.GetNumBytesWritten();
-
-	a_Out << (unsigned int)vCount;
+	e_KernelAnimatedMesh mesh;
+	mesh.m_uAnimCount = M.anims.size();
+	mesh.m_uJointCount = M.joints.size();
+	mesh.m_uVertexCount = vCount;
+	a_Out.Write(mesh);
+	for(int a = 0; a < M.anims.size(); a++)
+	{
+		c_Animation A(M.anims[a], &M);
+		std::vector<e_Frame> F;
+		for(int i = 0; i < A.m_uNumbFrames; i++)
+			F.push_back(e_Frame(A.data[i].data, mesh.m_uJointCount));
+		e_Animation(A.m_ubFrameRate, a_Anims[a].c_str(), F).serialize(a_Out);
+	}
 	a_Out.Write(&v_Data[0], vCount * sizeof(e_AnimatedVertex));
-	a_Out << (unsigned int)triData2.size();
 	a_Out.Write(&triData2[0], (unsigned int)triData2.size() * sizeof(uint3));
-	
-	a_Out << (unsigned int)V.size();
-	unsigned int off2 = 0;
-	for(int i = 0; i < V.size(); i++)
-	{
-		a_Out << off2;
-		a_Out << (unsigned int)V[i].size();
-		off2 += (unsigned int)V[i].size();
-	}
-	for(int i = 0; i < V.size(); i++)
-		a_Out.Write(&V[i][0], (unsigned int)V[i].size() * sizeof(e_BVHLevelEntry));
-	
-	a_Out << (unsigned int)M.anims.size();
-	a_Out << (unsigned int)M.anims[0]->jointInfo.size();
-	unsigned int OFF4 = 0;
-	for(int a = 0; a < M.anims.size(); a++)
-	{
-		a_Out << M.anims[a]->numbFrames;
-		a_Out << M.anims[a]->bFrameRate;
-		a_Out << OFF4;
-		OFF4 += M.anims[a]->numbFrames * (unsigned int)M.joints.size();
-	}
-	for(int a = 0; a < M.anims.size(); a++)
-	{
-		c_Animation ANIM(M.anims[a], &M);
-		ANIM.serialize(a_Out);
-	}
-	if(a_Out.GetNumBytesWritten() != endTo)
-	{
-		std::cout << "Count error\n";
-		throw 1;
-	}
+	e_BVHHierarchy hier(bvh.nodes);
+	hier.serialize(a_Out);
 	bvh.Free();
+}
+
+void e_AnimatedMesh::CreateNewMesh(e_AnimatedMesh* A, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4, e_Stream<char>* a_Stream5)
+{
+	A->m_uType = MESH_ANIMAT_TOKEN;
+	A->m_uUsedLights = 0;
+	A->m_sLocalBox = m_sLocalBox;
+	A->m_sMatInfo = m_sMatInfo;
+	A->m_sIndicesInfo = (m_sIndicesInfo);
+	A->m_sTriInfo = a_Stream1->malloc(m_sTriInfo, true);
+	A->m_sNodeInfo = a_Stream2->malloc(m_sNodeInfo, true);
+	A->m_sIntInfo = a_Stream0->malloc(m_sIntInfo, true);
+	
+	A->k_Data = k_Data;
+	A->m_pAnimations = m_pAnimations;
+	A->m_sVertices = m_sVertices;
+	A->m_sTriangles = m_sTriangles;
+	A->m_sHierchary = m_sHierchary;
+}
+
+e_BVHHierarchy::e_BVHHierarchy(e_BVHNodeData* ref)
+{
+	std::queue<e_BVHLevelEntry> bfs;
+	bfs.push(e_BVHLevelEntry(-1,0,0, 0));
+	while(!bfs.empty())
+	{
+		e_BVHLevelEntry n = bfs.front(); bfs.pop();
+		m_pEntries.push_back(n);
+		if(n.m_sNode < 0)
+			continue;
+		int2 d0 = ref[n.m_sNode].getChildren(), d = make_int2(d0.x < 0 ? d0.x : d0.x / 4, d0.y < 0 ? d0.y : d0.y / 4);
+		bfs.push(e_BVHLevelEntry(n.m_sNode, d.x, +1, n.m_sLevel + 1));
+		bfs.push(e_BVHLevelEntry(n.m_sNode, d.y, -1, n.m_sLevel + 1));
+	}
+	for(int i = 0; i < 32; i++)
+		levels[i] = 0xffffffff;
+	for(unsigned int i = 0; i < m_pEntries.size(); i++)
+		levels[m_pEntries[i].m_sLevel] = std::min(levels[m_pEntries[i].m_sLevel], i);
+	m_uNumLevels = m_pEntries[m_pEntries.size() - 1].m_sLevel;
+	levels[m_uNumLevels] = m_pEntries.size();
 }

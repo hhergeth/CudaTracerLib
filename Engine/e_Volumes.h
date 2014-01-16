@@ -24,7 +24,7 @@ public:
 	{
 		e_BaseVolumeRegion::Box = box;
 		e_BaseVolumeRegion::Func = func;
-        WorldToVolume = float4x4::NewIdentity();
+        WorldToVolume = float4x4::Identity();
         sig_a = Spectrum(sa);
         sig_s = Spectrum(ss);
         le = Spectrum(emit);

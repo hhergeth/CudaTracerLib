@@ -65,10 +65,12 @@ void k_PathTracer::DoRender(e_Image* I)
 	I->DoUpdateDisplay(m_uPassesDone);
 }
 
-void k_PathTracer::Debug(int2 pixel)
+void k_PathTracer::Debug(int2 p)
 {
-	m_pScene->UpdateInvalidated();
 	k_INITIALIZE(m_pScene->getKernelSceneData());
 	k_STARTPASS(m_pScene, m_pCamera, g_sRngs);
-	debugPixel<<<1,1>>>(w,h,pixel);
+	//debugPixel<<<1,1>>>(w,h,p);
+	CudaRNG rng = g_RNGData();
+	Ray r = g_CameraData.GenRay(p.x, p.y);	
+	PathTrace(r.direction, r.origin, rng);
 }

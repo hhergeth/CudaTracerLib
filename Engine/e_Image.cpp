@@ -2,18 +2,21 @@
 #include "e_Image.h"
 #define FREEIMAGE_LIB
 #include <FreeImage.h>
+#include <stdexcept>
+#include <iostream>
 
-e_Image::e_Image(const e_KernelFilter &filt, int xRes, int yRes, unsigned int viewGLTexture)
+	//filter = filt;
+	//filter.SetData(e_KernelGaussianFilter(2, 2, 0.55f));
+	//filter.SetData(e_KernelMitchellFilter(1.0f/3.0f,1.0f/3.0, 4, 4));
+	//filter.SetData(e_KernelLanczosSincFilter(4,4,5));
+	//rebuildFilterTable();
+
+e_Image::e_Image(int xRes, int yRes, unsigned int viewGLTexture)
 	: xResolution(xRes), yResolution(yRes)
 {
 	ownsTarget = false;
 	doHDR = false;
-	float crop[4] = {0, 1, 0, 1};
-	filter = filt;
-	//filter.SetData(e_KernelGaussianFilter(2, 2, 0.55f));
-	//filter.SetData(e_KernelMitchellFilter(1.0f/3.0f,1.0f/3.0, 4, 4));
-	//filter.SetData(e_KernelLanczosSincFilter(4,4,5));
-	rebuildFilterTable();
+	setStdFilter();
 	cudaMalloc(&cudaPixels, sizeof(Pixel) * xResolution * yResolution);
 	hostPixels = new Pixel[xResolution * yResolution];
 	outState = 1;
@@ -21,23 +24,18 @@ e_Image::e_Image(const e_KernelFilter &filt, int xRes, int yRes, unsigned int vi
 	this->viewGLTexture = viewGLTexture;
 	cudaError er = cudaGraphicsGLRegisterImage(&viewCudaResource, viewGLTexture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsSurfaceLoadStore);
 	if(er)
-		throw 1;
+		throw std::runtime_error(cudaGetErrorString(er));
 	//use this to clear the array
 	cudaMalloc(&viewTarget, sizeof(RGBCOL) * xRes * yRes);
 	ownsTarget = true;
 	cudaMemset(viewTarget, 0, sizeof(RGBCOL) * xRes * yRes);
 }
 
-e_Image::e_Image(const e_KernelFilter &filt, int xRes, int yRes, RGBCOL* target)
+e_Image::e_Image(int xRes, int yRes, RGBCOL* target)
 	: xResolution(xRes), yResolution(yRes)
 {
 	doHDR = false;
-	float crop[4] = {0, 1, 0, 1};
-	filter = filt;
-	//filter.SetData(e_KernelGaussianFilter(2, 2, 0.55f));
-	//filter.SetData(e_KernelMitchellFilter(1.0f/3.0f,1.0f/3.0, 4, 4));
-	//filter.SetData(e_KernelLanczosSincFilter(4,4,5));
-	rebuildFilterTable();
+	setStdFilter();
 	cudaMalloc(&cudaPixels, sizeof(Pixel) * xResolution * yResolution);
 	hostPixels = new Pixel[xResolution * yResolution];
 	outState = 2;
@@ -132,7 +130,10 @@ void e_Image::EndRendering()
 	if(m_bDoUpdate)
 		InternalUpdateDisplay(gsplat);
 	m_bDoUpdate = false;
-	cudaError r = cudaDestroySurfaceObject(viewCudaSurfaceObject);
-	r = cudaGraphicsUnmapResources(1, &viewCudaResource);
+	if(outState == 1)
+	{
+		cudaError r = cudaDestroySurfaceObject(viewCudaSurfaceObject);
+		r = cudaGraphicsUnmapResources(1, &viewCudaResource);
+	}
 	isMapped = 0;
 }

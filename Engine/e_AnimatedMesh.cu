@@ -74,42 +74,54 @@ __global__ void g_ComputeBVHState(e_TriIntersectorData* a_BVHIntersectionData, e
 		if(e.m_sNode >= 0)
 		{
 			AABB l, r;
-			a_BVHNodeData[e.m_sNode / 4].getBox(l, r);
+			a_BVHNodeData[e.m_sNode].getBox(l, r);
 			box.minV = fminf(l.minV, r.minV);
 			box.maxV = fmaxf(l.maxV, r.maxV);
 		}
 		else if(e.m_sNode < 0)
 		{
-			for (int triAddr = ~e.m_sNode;; triAddr += 3)
+			for (int triAddr = ~e.m_sNode; ; triAddr++)
 			{
-				int i = a_BVHIntersectionData2[triAddr].getIndex();
-				uint3 t = a_TriData[i];
+				e_TriIntersectorData2 i = a_BVHIntersectionData2[triAddr];
+				uint3 t = a_TriData[i.getIndex()];
 				float3 v0 = a_Tmp[t.x].m_fPos, v1 = a_Tmp[t.y].m_fPos, v2 = a_Tmp[t.z].m_fPos;
 				box.Enlarge(v0);
 				box.Enlarge(v1);
 				box.Enlarge(v2);
-				a_BVHIntersectionData[triAddr].setData(v0, v1, v2, i, a_BVHIntersectionData2 + triAddr);
+				a_BVHIntersectionData[triAddr].setData(v0, v1, v2);//no change in indices
+				if(i.getFlag())
+					break;
 			}
 		}
-		if(e.m_sSide == -1)
-			a_BVHNodeData[e.m_sParent / 4].setLeft(box);
-		else if(e.m_sSide == 1)
-			a_BVHNodeData[e.m_sParent / 4].setRight(box);
+		if(e.m_sSide == 1)
+			a_BVHNodeData[e.m_sParent].setLeft(box);
+		else if(e.m_sSide == -1)
+			a_BVHNodeData[e.m_sParent].setRight(box);
 		if(N == 0 && a_NCount == 1)
 			g_BOX = box;
 	}
 }
 
+#include "e_Core.h"
+
 void e_AnimatedMesh::k_ComputeState(unsigned int a_Anim, unsigned int a_Frame, float a_Lerp, e_KernelDynamicScene a_Data, e_Stream<e_BVHNodeData>* a_BVHNodeStream, e_TmpVertex* a_DeviceTmp)
 {
 	unsigned int n = (a_Frame + 1) % m_pAnimations[a_Anim].m_uNumFrames;
-	float4x4* m0 = TRANS(m_pAnimData + m_pAnimations[a_Anim].m_uDataOffset + k_Data.m_uJointCount * a_Frame), *m1 = TRANS(m_pAnimData + m_pAnimations[a_Anim].m_uDataOffset + k_Data.m_uJointCount * n);
-	g_ComputeVertices<<<k_Data.m_uVertexCount / 256 + 1, 256>>>(a_DeviceTmp, TRANS(m_pVertices), m0, m1, a_Lerp, k_Data.m_uVertexCount);
+	float4x4* m0 = (float4x4*)m_pAnimations[a_Anim].m_pFrames[a_Frame].m_sMatrices.getDevice();
+	float4x4* m1 = (float4x4*)m_pAnimations[a_Anim].m_pFrames[n].m_sMatrices.getDevice();
+	g_ComputeVertices<<<k_Data.m_uVertexCount / 256 + 1, 256>>>(a_DeviceTmp, (e_AnimatedVertex*)m_sVertices.getDevice(), m0, m1, a_Lerp, k_Data.m_uVertexCount);
 	cudaThreadSynchronize();
-	g_ComputeTriangles<<<k_Data.m_uTriangleCount / 256 + 1, 256>>>(a_DeviceTmp, TRANS(m_pTriangles), a_Data.m_sTriData.Data + m_sTriInfo.getIndex(), k_Data.m_uTriangleCount);
+	ThrowCudaErrors();
+	g_ComputeTriangles<<<m_sTriInfo.getLength() / 256 + 1, 256>>>(a_DeviceTmp, (uint3*)m_sTriangles.getDevice(), m_sTriInfo.getDevice(), m_sTriInfo.getLength());
 	cudaThreadSynchronize();
-	for(int l = k_Data.m_uBVHLevelCount - 1; l >= 0; l--){
-		g_ComputeBVHState<<<m_pLevels[l].y / 256 + 1, 256>>>(a_Data.m_sBVHIntData.Data + m_sIntInfo.getIndex(), a_Data.m_sBVHNodeData.Data + m_sNodeInfo.getIndex(), a_Data.m_sBVHIndexData.Data + m_sIndicesInfo.getIndex(), a_DeviceTmp, TRANS(m_pTriangles), TRANS(m_pLevelEntries + m_pLevels[l].x), m_pLevels[l].y);
-	cudaThreadSynchronize();}
+	ThrowCudaErrors();
+	for(int l = m_sHierchary.m_uNumLevels - 1; l >= 0; l--)
+	{
+		int l2 = m_sHierchary.numInLevel(l);
+		g_ComputeBVHState<<<l2 / 256 + 1, 256>>>(m_sIntInfo.getDevice(), m_sNodeInfo.getDevice(), m_sIndicesInfo.getDevice(), a_DeviceTmp, 
+												 (uint3*)m_sTriangles.getDevice(), m_sHierchary.getLevelStartOnDevice(l), l2);
+		cudaThreadSynchronize();
+		ThrowCudaErrors();
+	}
 	cudaMemcpyFromSymbol(&m_sLocalBox, g_BOX, sizeof(AABB));
 }

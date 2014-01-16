@@ -36,7 +36,8 @@ return InterlockedAdd((long*)add, val);
 void Platform::SetMemory(void* dest, unsigned long long length, unsigned int val)
 {
 #if defined(ISWINDOWS)
-	ZeroMemory(dest, length);
+	//ZeroMemory(dest, length); looool
+	memset(dest, val, length);
 #elif defined(ISUNIX)
 
 #endif

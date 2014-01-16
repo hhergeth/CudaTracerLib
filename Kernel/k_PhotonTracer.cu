@@ -115,4 +115,5 @@ void k_PhotonTracer::Debug(int2 pixel)
 {
 	CudaRNG rng = g_RNGData();
 	doWork(I2, rng);
+	g_RNGData(rng);
 }

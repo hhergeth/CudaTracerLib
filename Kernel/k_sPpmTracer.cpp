@@ -153,11 +153,6 @@ void k_sPpmTracer::DoRender(e_Image* I)
 			I->DoUpdateDisplay(m_uPassesDone);
 			m_sMaps.StartNewPass();
 			m_uPreviosCount = m_uPhotonsEmitted;
-
-			//serialize
-			//OutputStream O(SER_NAME);
-			//m_sMaps.Serialize(O);
-			//O.Close();
 		}
 	}
 	else if(m_uModus == 2)
@@ -211,7 +206,7 @@ static float GGGf0;
 static float GGGf1;
 void k_sPpmTracer::StartNewTrace(e_Image* I)
 {
-	m_bDirect = !m_pScene->getVolumes().getLength();//m_bDirect=0;
+	m_bDirect = !m_pScene->getVolumes().getLength();m_bDirect=0;
 	if(m_uModus == 1)
 	{
 		initNewPass(I);

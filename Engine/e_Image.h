@@ -14,8 +14,9 @@ class e_Image
 public:
     // ImageFilm Public Methods
 	CUDA_FUNC_IN e_Image(){}
-	e_Image(const e_KernelFilter &filt, int xRes, int yRes, unsigned int viewGLTexture);
-	e_Image(const e_KernelFilter &filt, int xRes, int yRes, RGBCOL* target = 0);
+
+	e_Image(int xRes, int yRes, unsigned int viewGLTexture);
+	e_Image(int xRes, int yRes, RGBCOL* target = 0);
     void Free();
 	void getExtent(unsigned int& xRes, unsigned int &yRes)
 	{
@@ -31,6 +32,17 @@ public:
 		for(int i = 0; i < 3; i++)
 			pixel->xyz[i] += xyz[i];
 		pixel->weightSum += 1;
+	}
+	void setStdFilter()
+	{
+		e_KernelFilter flt;
+		flt.SetData(e_KernelBoxFilter(1,1));
+		setFilter(flt);
+	}
+	void setFilter(const e_KernelFilter& filt)
+	{
+		filter = filt;
+		rebuildFilterTable();
 	}
 	CUDA_DEVICE CUDA_HOST void SetSample(int sx, int sy, RGBCOL c);
     CUDA_DEVICE CUDA_HOST void Splat(int sx, int sy, const Spectrum &L);
@@ -69,6 +81,7 @@ public:
 		return doHDR;
 	}
 	void DoUpdateDisplay(float splat);
+	RGBCOL* getCudaPixels(){return viewTarget;}
 private:
 	void InternalUpdateDisplay(float splat);
 	bool m_bDoUpdate;
