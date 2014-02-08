@@ -35,7 +35,7 @@ CUDA_DEVICE uint3 g_EyeHitBoxMin;
 CUDA_DEVICE uint3 g_EyeHitBoxMax;
 __global__ void k_GuessPass(int w, int h)
 {
-	int x = blockIdx.x * blockDim.x + threadIdx.x, y = blockIdx.y * blockDim.y + threadIdx.y, N = y * w + x;
+	int x = blockIdx.x * blockDim.x + threadIdx.x, y = blockIdx.y * blockDim.y + threadIdx.y;
 	CudaRNG rng = g_RNGData();
 	if(x < w && y < h)
 	{

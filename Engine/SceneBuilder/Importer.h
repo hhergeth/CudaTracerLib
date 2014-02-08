@@ -22,9 +22,9 @@ namespace bvh_helper
 		e_TriIntersectorData2* indices;
 		AABB box;
 		int startNode;
-		int L0, L1;
+		unsigned int L0, L1;
 	public:
-		clb(int _v, int _i, float3* _V, unsigned int* _I)
+		clb(unsigned int _v, unsigned int _i, float3* _V, unsigned int* _I)
 			: V(_V), Iab(_I), v(_v), i(_i)
 		{
 			std::cout << _v << "\n";

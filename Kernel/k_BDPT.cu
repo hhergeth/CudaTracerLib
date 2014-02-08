@@ -116,7 +116,7 @@ CUDA_FUNC_IN void BDPT(int x, int y, int w, int h, e_Image& g_Image, CudaRNG& rn
 	
 	Spectrum L(0.0f);
 	BSDFSamplingRecord bRec;
-	for(int i = 1; i < P.s + 1; i++)
+	for(unsigned int i = 1; i < P.s + 1; i++)
 	{
 		const PathVertex& ev = P.EyePath[i - 1];
 		if(!ev.r2.hasHit())
@@ -137,7 +137,7 @@ CUDA_FUNC_IN void BDPT(int x, int y, int w, int h, e_Image& g_Image, CudaRNG& rn
 		}
 
 		//case iv
-		for(int j = 1; j < P.t + 1; j++)
+		for(unsigned int j = 1; j < P.t + 1; j++)
 		{
 			const PathVertex& lv = P.LightPath[j - 1];
 			if(V(ev.p, lv.p))
@@ -145,7 +145,7 @@ CUDA_FUNC_IN void BDPT(int x, int y, int w, int h, e_Image& g_Image, CudaRNG& rn
 		}
 	}
 	
-	for(int j = 1; j < P.t + 1; j++)
+	for(unsigned int j = 1; j < P.t + 1; j++)
 	{
 		const PathVertex& lv = P.LightPath[j - 1];
 		if(!lv.r2.hasHit())

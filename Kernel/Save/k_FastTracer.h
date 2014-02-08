@@ -3,118 +3,7 @@
 #include "k_Tracer.h"
 #include "..\Base\CudaRandom.h"
 #include "k_TraceHelper.h"
-#include "..\Engine\e_Core.h"
 
-template<typename T, int N> struct k_RayBuffer
-{
-private:
-	traversalRay* m_pRayBuffer[N];
-	traversalResult* m_pResultBuffer[N];
-	T* m_pPayloadBuffer;
-	unsigned int* m_cInsertCounter;
-	unsigned int Length;
-public:
-	k_RayBuffer(unsigned int Length)
-		: Length(Length)
-	{
-		for(int i = 0; i < N; i++)
-		{
-			cudaMalloc(&m_pRayBuffer[i], sizeof(traversalRay) * Length);
-			cudaMalloc(&m_pResultBuffer[i], sizeof(traversalResult) * Length);
-		}
-		cudaMalloc(&m_pPayloadBuffer, sizeof(T) * Length);
-		cudaMalloc(&m_cInsertCounter, sizeof(unsigned int));
-	}
-	void Free()
-	{
-		for(int i = 0; i < N; i++)
-		{
-			cudaFree(m_pRayBuffer);
-			cudaFree(m_pResultBuffer);
-		}
-		cudaFree(m_pPayloadBuffer);
-		cudaFree(m_cInsertCounter);
-	}
-	template<bool ANY_HIT> unsigned int IntersectBuffers(bool doAll = true, bool skipOuterTree = false)
-	{
-		unsigned int n = getCreatedRayCount();
-		if(n > Length)
-		{
-			//I'd worry cause you ve written to invalid memory
-			throw 1;
-		}
-		int a = doAll ? N : 1;
-		for(int i = 0; i < a; i++)
-			__internal__IntersectBuffers(n, m_pRayBuffer[i], m_pResultBuffer[i], skipOuterTree, ANY_HIT);
-		return a * n;
-	}
-	void StartNewTraversal()
-	{
-		setGeneratedRayCount(0);
-	}
-	unsigned int getCreatedRayCount()
-	{
-		unsigned int r;
-		cudaMemcpy(&r, m_cInsertCounter, 4, cudaMemcpyDeviceToHost);
-		return r;
-	}
-	void setGeneratedRayCount(unsigned int N)
-	{
-		cudaMemcpy(m_cInsertCounter, &N, 4, cudaMemcpyHostToDevice);
-	}
-	CUDA_FUNC_IN CUDA_HOST unsigned int insertRay()
-	{
-		unsigned int i = Platform::Increment(m_cInsertCounter);
-		return i;
-	}
-	CUDA_FUNC_IN CUDA_HOST traversalRay& operator()(unsigned int i, unsigned int j)
-	{
-		return m_pRayBuffer[j][i];
-	}
-	CUDA_FUNC_IN CUDA_HOST traversalResult& res(unsigned int i, unsigned int j)
-	{
-		return m_pResultBuffer[j][i];
-	}
-	CUDA_FUNC_IN CUDA_HOST T& operator()(unsigned int i)
-	{
-		return m_pPayloadBuffer[i];
-	}
-};
-
-template<typename T, int N, int M> struct k_RayBufferManager
-{
-	k_RayBuffer<T, N>* buffers[M];
-	unsigned int idx;
-
-	k_RayBufferManager(unsigned int Length)
-		: idx(0)
-	{
-		for(int i = 0; i < M; i++)
-			buffers[i] = new k_RayBuffer<T, N>(Length);
-	}
-
-	void Free()
-	{
-		for(int i = 0; i < M; i++)
-		{
-			buffers[i]->Free();
-			delete buffers[i];
-		}
-	}
-
-	k_RayBuffer<T, N>* current()
-	{
-		return buffers[idx];
-	}
-
-	k_RayBuffer<T, N>* next()
-	{
-		idx = (idx + 1) % M;
-		return buffers[idx];
-	}
-};
-
-/*
 class k_RayIntersectKernel
 {
 public:
@@ -247,7 +136,7 @@ public:
 		return r;
 	}
 };
-*/
+
 class k_FastTracer : public k_ProgressiveTracer
 {
 public:
@@ -260,33 +149,30 @@ public:
 		unsigned int dIndex;
 		short x,y;
 	};
-	//traversalRay* hostRays;
-	//traversalResult* hostResults;
+	traversalRay* hostRays;
+	traversalResult* hostResults;
 	k_FastTracer()
-		: intersector(0)//, hostRays(0), hostResults(0)
+		: intersector(0), hostRays(0), hostResults(0)
 	{
 		
 	}
 	virtual void Resize(unsigned int w, unsigned int h)
 	{
 		k_ProgressiveTracer::Resize(w, h);
-		//if(hostRays)
-		//	cudaFreeHost(hostRays);
-		//if(hostResults)
-		//	cudaFreeHost(hostResults);
-		//cudaMallocHost(&hostRays, sizeof(traversalRay) * w * h);
-		//cudaMallocHost(&hostResults, sizeof(traversalResult) * w * h);
-		//if(intersector)
-		//	intersector->Free();
-		ThrowCudaErrors();
-		intersector = new k_RayBufferManager<rayData, 2, 2>(w * h);
-		ThrowCudaErrors();
+		if(hostRays)
+			cudaFreeHost(hostRays);
+		if(hostResults)
+			cudaFreeHost(hostResults);
+		cudaMallocHost(&hostRays, sizeof(traversalRay) * w * h);
+		cudaMallocHost(&hostResults, sizeof(traversalResult) * w * h);
+		if(intersector)
+			intersector->Free();
+		intersector = new k_RayBuffer<rayData, 2>(w * h);
 	}
-	virtual void Debug(int2 pixel);
 protected:
 	virtual void DoRender(e_Image* I);
 private:
-	k_RayBufferManager<rayData, 2, 2>* intersector;
+	k_RayBuffer<rayData, 2>* intersector;
 	void doDirect(e_Image* I);
 	void doPath(e_Image* I);
 };

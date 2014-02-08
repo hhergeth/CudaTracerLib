@@ -167,10 +167,8 @@ __global__ void debugPixe2l(unsigned int width, unsigned int height, int2 p)
 	trace(r, rng, 0);
 }
 
-static bool done = false;
 void k_PrimTracer::DoRender(e_Image* I)
 {
-	//if(done) return;done = 1;
 	ThrowCudaErrors();
 	k_OnePassTracer::DoRender(I);
 	unsigned int zero = 0;

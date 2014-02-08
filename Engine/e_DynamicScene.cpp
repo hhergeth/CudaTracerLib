@@ -227,7 +227,7 @@ void e_DynamicScene::UnLoadTexture(e_BufferReference<e_MIPMap, e_KernelMIPMap> r
 void e_DynamicScene::SetNodeTransform(const float4x4& mat, e_StreamReference(e_Node) n)
 {
 	m_uModified = 1;
-	for(int i = 0; i < n.getLength(); i++)
+	for(unsigned int i = 0; i < n.getLength(); i++)
 		m_pBVH->setTransform(n.getIndex() + i, mat);
 	n.Invalidate();
 	recalculateAreaLights(n);

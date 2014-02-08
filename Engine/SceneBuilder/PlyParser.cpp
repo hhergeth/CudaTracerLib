@@ -221,7 +221,7 @@ void compileply(const char* a_InputFile, OutputStream& a_Out)
 					listCount = varReader(size_type_string);
 					listElements = varReader(scalar_type_string);
 				}
-				else throw 1;
+				//else throw 1;
 			}
 		}
 		else if(keyword == "end_header")

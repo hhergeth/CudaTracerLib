@@ -296,12 +296,15 @@ bool k_TraceRay(const float3& dir, const float3& ori, TraceResult* a_Result)
 			int node = ~nodeAddrOuter;
 			e_Node* N = g_SceneData.m_sNodeData.Data + node;
 			//transform a_Result->m_fDist to local system
-			float4x4 modl;
+			float4x4 modl, modl2;
 			loadInvModl(node, &modl);
+			loadModl(node, &modl2);
 			float3 d = modl.TransformNormal(dir), o = modl.TransformNormal(ori) + modl.Translation();
-			a_Result->m_fDist /= length(d);
+			//a_Result->m_fDist /= length(d);
+			//a_Result->m_fDist = Distance(modl * (ori + dir * a_Result->m_fDist), modl * ori);
 			k_TraceRayNode(d, o, a_Result, N);
-			a_Result->m_fDist *= length(d);
+			//a_Result->m_fDist *= length(d);
+			//a_Result->m_fDist = Distance(modl2 * (o + dir * a_Result->m_fDist), modl2 * o);
 		}
 	}
 	return a_Result->hasHit();
@@ -465,11 +468,13 @@ template<bool ANY_HIT> __global__ void intersectKernel_SKIPOUTER(int numRays, tr
             origx = o.x;
             origy = o.y;
             origz = o.z;
-			tmin  = o1.w / length(d);
+			//tmin  = o1.w / length(d);
+			tmin = o1.w;
             dirx  = d.x;
             diry  = d.y;
             dirz  = d.z;
-            hitT  = d1.w / length(d);
+            //hitT  = d1.w / length(d);
+			hitT = d1.w;
             float ooeps = exp2f(-80.0f); // Avoid div by zero.
             idirx = 1.0f / (fabsf(d.x) > ooeps ? d.x : copysignf(ooeps, d.x));
             idiry = 1.0f / (fabsf(d.y) > ooeps ? d.y : copysignf(ooeps, d.y));
@@ -639,7 +644,8 @@ template<bool ANY_HIT> __global__ void intersectKernel_SKIPOUTER(int numRays, tr
 		int4 res = make_int4(0,0,0,0);
 		if(hitIndex != -1)
 		{
-			res.x = __float_as_int(hitT * sqrtf(dirx * dirx + diry * diry + dirz * dirz));
+			//res.x = __float_as_int(hitT * sqrtf(dirx * dirx + diry * diry + dirz * dirz));
+			res.x = __float_as_int(hitT);
 			res.y = 0;
 			res.z = hitIndex;
 			half2 h(bCoords);
@@ -850,11 +856,13 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 					lorigx = o.x;
 					lorigy = o.y;
 					lorigz = o.z;
-					ltmin  = tmin / length(d);
+					//ltmin  = tmin / length(d);
+					ltmin = tmin;
 					ldirx  = d.x;
 					ldiry  = d.y;
 					ldirz  = d.z;
-					lhitT  = hitT / length(d);
+					//lhitT  = hitT / length(d);
+					lhitT = hitT;
 					float ooeps = exp2f(-80.0f); // Avoid div by zero.
 					lidirx = 1.0f / (fabsf(d.x) > ooeps ? d.x : copysignf(ooeps, d.x));
 					lidiry = 1.0f / (fabsf(d.y) > ooeps ? d.y : copysignf(ooeps, d.y));
@@ -996,7 +1004,8 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 							if(index & 1)
 								break;
 						} // triangle
-						hitT = lhitT * sqrt(ldirx*ldirx+ldiry*ldiry+ldirz*ldirz);
+						//hitT = lhitT * sqrt(ldirx*ldirx+ldiry*ldiry+ldirz*ldirz);
+						hitT = lhitT;
 
 						lleafAddr = lnodeAddr;
 						if (lnodeAddr < 0)

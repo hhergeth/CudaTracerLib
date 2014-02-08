@@ -129,7 +129,7 @@ struct e_Animation
 
 	e_Animation(unsigned int fps, const char* name, std::vector<e_Frame>& frames)
 	{
-		m_uNumFrames = frames.size();
+		m_uNumFrames = (unsigned int)frames.size();
 		m_uFrameRate = fps;
 		memcpy(m_sName, name, strlen(name));
 		m_sName[strlen(name)] = 0;
@@ -141,7 +141,7 @@ struct e_Animation
 		a_Out << m_uNumFrames;
 		a_Out << m_uFrameRate;
 		a_Out.Write(m_sName);
-		for(int i = 0; i < m_uNumFrames; i++)
+		for(unsigned int i = 0; i < m_uNumFrames; i++)
 			m_pFrames[i].serialize(a_Out);
 	}
 
@@ -150,7 +150,7 @@ struct e_Animation
 		a_In >> m_uNumFrames;
 		a_In >> m_uFrameRate;
 		a_In.Read(m_sName, sizeof(m_sName));
-		for(int i = 0; i < m_uNumFrames; i++)
+		for(unsigned int i = 0; i < m_uNumFrames; i++)
 		{
 			m_pFrames.push_back(e_Frame());
 			m_pFrames[i].deSerialize(a_In, Buf);

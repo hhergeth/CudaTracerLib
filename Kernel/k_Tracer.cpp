@@ -14,6 +14,11 @@ void k_Tracer::InitRngs(unsigned int N)
 	}
 }
 
+k_Tracer::k_Tracer()
+{
+	InitRngs(1024 * 768);
+}
+
 float k_TracerBase::getValuePerSecond(float val, float invScale)
 {
 	return val / (m_fTimeSpentRendering * invScale);

@@ -58,7 +58,7 @@ e_SceneBVH::e_SceneBVH(unsigned int a_NodeCount)
 	m_pInvTransforms = new e_Stream<float4x4>(a_NodeCount);
 	startNode = -1;
 	m_sBox = AABB::Identity();
-	for(int i = 0; i < a_NodeCount; i++)
+	for(unsigned int i = 0; i < a_NodeCount; i++)
 	{
 		*m_pTransforms[0](i).operator->() = *m_pInvTransforms[0](i).operator->() = float4x4::Identity();
 	}

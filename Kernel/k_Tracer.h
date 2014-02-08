@@ -15,10 +15,7 @@ public:
 	static TraceResult TraceSingleRay(Ray r, e_DynamicScene* s, e_Sensor* c);
 	static void InitRngs(unsigned int N = 1 << 16);
 public:
-	k_Tracer()
-	{
-		InitRngs();
-	}
+	k_Tracer();
 	virtual ~k_Tracer()
 	{
 

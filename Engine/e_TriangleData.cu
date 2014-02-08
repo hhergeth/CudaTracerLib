@@ -44,6 +44,7 @@ void e_TriangleData::lerpFrame(const float2& bCoords, const float4x4& localToWor
 	sys.t = normalize(cross(sys.s, sys.n));
 	if(ng)
 		*ng = normalize(localToWorld.TransformNormal((na + nb + nc) / 3.0f));//that aint the def of a face normal but to get the vertices we would have to invert the matrix
+		//*ng = sys.n;
 }
 
 float2 e_TriangleData::lerpUV(const float2& bCoords) const

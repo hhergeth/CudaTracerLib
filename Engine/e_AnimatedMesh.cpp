@@ -66,7 +66,7 @@ e_AnimatedMesh::e_AnimatedMesh(InputStream& a_In, e_Stream<e_TriIntersectorData>
 {
 	m_uType = MESH_ANIMAT_TOKEN;
 	a_In.Read(&k_Data, sizeof(k_Data));
-	for(int i = 0; i < k_Data.m_uAnimCount; i++)
+	for(unsigned int i = 0; i < k_Data.m_uAnimCount; i++)
 	{
 		e_Animation A;
 		A.deSerialize(a_In, a_Stream5);
@@ -142,15 +142,15 @@ void e_AnimatedMesh::CompileToBinary(const char* a_InputFile, std::vector<std::s
 	ConstructBVH(v_Pos, (unsigned int*)&triData2[0], (int)vCount, (int)triData2.size() * 3, a_Out, &bvh);
 
 	e_KernelAnimatedMesh mesh;
-	mesh.m_uAnimCount = M.anims.size();
-	mesh.m_uJointCount = M.joints.size();
+	mesh.m_uAnimCount = (unsigned int)M.anims.size();
+	mesh.m_uJointCount = (unsigned int)M.joints.size();
 	mesh.m_uVertexCount = vCount;
 	a_Out.Write(mesh);
 	for(int a = 0; a < M.anims.size(); a++)
 	{
 		c_Animation A(M.anims[a], &M);
 		std::vector<e_Frame> F;
-		for(int i = 0; i < A.m_uNumbFrames; i++)
+		for(unsigned int i = 0; i < A.m_uNumbFrames; i++)
 			F.push_back(e_Frame(A.data[i].data, mesh.m_uJointCount));
 		e_Animation(A.m_ubFrameRate, a_Anims[a].c_str(), F).serialize(a_Out);
 	}
@@ -198,5 +198,5 @@ e_BVHHierarchy::e_BVHHierarchy(e_BVHNodeData* ref)
 	for(unsigned int i = 0; i < m_pEntries.size(); i++)
 		levels[m_pEntries[i].m_sLevel] = std::min(levels[m_pEntries[i].m_sLevel], i);
 	m_uNumLevels = m_pEntries[m_pEntries.size() - 1].m_sLevel;
-	levels[m_uNumLevels] = m_pEntries.size();
+	levels[m_uNumLevels] = (unsigned int)m_pEntries.size();
 }

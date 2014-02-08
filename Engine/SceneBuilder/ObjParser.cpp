@@ -118,7 +118,7 @@ template<typename K, typename V, int N> struct HashTable
 		for(unsigned int i = 0; i < this->i; i++)
 			if(data[i].key == k)
 				return i;
-		return -i;
+		return -1;
 	}
 };
 
@@ -215,6 +215,7 @@ bool parseTexture(const char*& ptr, TextureSpec& value, const std::string& dirNa
 struct ImportState
 {
 	std::vector<float3>						positions;
+	std::vector<float3>						normals;
     std::vector<float2>						texCoords;
 
 	HashTable<std::string, Material, 1<<12> materialHash;
@@ -385,6 +386,7 @@ void compileobj(const char* a_InputFile, OutputStream& a_Out)
     int defaultSubmesh = -1;
 	
 	std::vector<float3> positions;
+	std::vector<float3> normals;
 	std::vector<float2> texCoords;
 	std::vector<unsigned int> indices;
 	std::vector<SubMesh> subMeshes;
@@ -407,6 +409,15 @@ void compileobj(const char* a_InputFile, OutputStream& a_Out)
             if (parseFloats(ptr, (float*)&v, 3) && parseSpace(ptr) && !*ptr)
             {
 				s.positions.push_back(v);
+                valid = true;
+            }
+        }
+        else if (parseLiteral(ptr, "vn ") && parseSpace(ptr)) // position vertex
+        {
+            float3 v;
+            if (parseFloats(ptr, (float*)&v, 3) && parseSpace(ptr) && !*ptr)
+            {
+				s.normals.push_back(v);
                 valid = true;
             }
         }
@@ -441,7 +452,7 @@ void compileobj(const char* a_InputFile, OutputStream& a_Out)
                 }
                 parseSpace(ptr);
 
-				int size[3] = {(int)s.positions.size(), (int)s.texCoords.size(), 0};
+				int size[3] = {(int)s.positions.size(), (int)s.texCoords.size(), (int)s.normals.size()};
                 for (int i = 0; i < 3; i++)
                 {
                     if (ptn[i] < 0)
@@ -453,10 +464,12 @@ void compileobj(const char* a_InputFile, OutputStream& a_Out)
                         ptn[i] = -1;
                 }
 				
-				box.Enlarge(s.positions[ptn[0]]);
-				positions.push_back((ptn[0] == -1) ? make_float3(0.0f) : s.positions[ptn[0]]);
+				float3 p = (ptn[0] == -1) ? make_float3(0.0f) : s.positions[ptn[0]];
+				box.Enlarge(p);
+				positions.push_back(p);
 				texCoords.push_back((ptn[1] == -1) ? make_float2(0.0f) : s.texCoords[ptn[1]]);
-				indices.push_back(positions.size() - 1);
+				normals.push_back((ptn[2] == -1) ? make_float3(0.0f) : s.normals[ptn[2]]);
+				indices.push_back(unsigned int(positions.size() - 1));
             }
         }
         else if (parseLiteral(ptr, "usemtl ") && parseSpace(ptr)) // material name
@@ -468,7 +481,7 @@ void compileobj(const char* a_InputFile, OutputStream& a_Out)
             }
             if (mat != -1)
             {
-				SubMesh q = SubMesh(indices.size());
+				SubMesh q = SubMesh((unsigned int)indices.size());
 				q.mat = mat;
 				subMeshes.push_back(q);
             }
@@ -606,8 +619,8 @@ void compileobj(const char* a_InputFile, OutputStream& a_Out)
 		matData.push_back(mat);
 	}
 
-	unsigned int m_numTriangles = indices.size() / 3;
-	unsigned int m_numVertices = positions.size();
+	unsigned int m_numTriangles = (unsigned int)indices.size() / 3;
+	unsigned int m_numVertices = (unsigned int)positions.size();
 	e_TriangleData* triData = new e_TriangleData[m_numTriangles];
 	float3 p[3];
 	float3 n[3];
@@ -620,13 +633,15 @@ void compileobj(const char* a_InputFile, OutputStream& a_Out)
 	Platform::SetMemory(v_Tangents, sizeof(float3) * m_numVertices);
 	Platform::SetMemory(v_BiTangents, sizeof(float3) * m_numVertices);
 	ComputeTangentSpace(&positions[0], &texCoords[0], &indices[0], m_numVertices, m_numTriangles, v_Normals, v_Tangents, v_BiTangents);
+	if(m_numVertices == m_numTriangles * 3)
+		v_Normals = &normals[0];
 #endif
 	
-	for (int submesh = 0; submesh < subMeshes.size(); submesh++)
+	for (unsigned int submesh = 0; submesh < subMeshes.size(); submesh++)
 	{
 		size_t matIndex = subMeshes[submesh].mat;
 
-		unsigned int start = subMeshes[submesh].indexStart, end = submesh < subMeshes.size() - 1 ? subMeshes[submesh + 1].indexStart - 1 : indices.size();
+		unsigned int start = (unsigned int)subMeshes[submesh].indexStart, end = submesh < subMeshes.size() - 1 ? (unsigned int)subMeshes[submesh + 1].indexStart - 1 : (unsigned int)indices.size();
 		for (size_t i = start; i < end; i += 3)
 		{
 			unsigned int* vi = &indices[i];
@@ -655,7 +670,8 @@ void compileobj(const char* a_InputFile, OutputStream& a_Out)
 	a_Out.Write(&matData[0], sizeof(e_KernelMaterial) * (unsigned int)matData.size());
 	ConstructBVH(&positions[0], &indices[0], m_numVertices, m_numTriangles * 3, a_Out);
 #ifdef EXT_TRI
-	delete [] v_Normals;
+	if(m_numVertices != m_numTriangles * 3)
+		delete [] v_Normals;
 	delete [] v_Tangents;
 	delete [] v_BiTangents;
 #endif

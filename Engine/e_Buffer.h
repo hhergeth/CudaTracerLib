@@ -105,7 +105,7 @@ public:
 		else
 		{
 			BAD_EXCEPTION("Cuda data stream malloc failure, %d elements requested, %d available.", a_Count, m_uLength - m_uPos)
-			return e_BufferReference<H, D>();
+			//return e_BufferReference<H, D>();
 		}
 	}
 	e_BufferReference<H, D> malloc(e_BufferReference<H, D> r, bool copyToNew = true)
@@ -495,7 +495,7 @@ public:
 		else
 		{
 			BAD_EXCEPTION("Cuda data stream malloc failure, %d elements requested, %d available.", a_Count, m_uLength - m_uPos)
-			return e_BufferReference<T, T>();
+			//return e_BufferReference<T, T>();
 		}
 		Invalidate(r);
 		return r;

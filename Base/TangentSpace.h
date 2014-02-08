@@ -14,6 +14,7 @@ inline void ComputeTangentSpace(float3* V, float2* T, unsigned int* I, unsigned 
 	float3 *tan1 = new float3[vertexCount * 2];
     float3 *tan2 = tan1 + vertexCount;
     Platform::SetMemory(tan1, vertexCount * sizeof(float3) * 2);
+	Platform::SetMemory(a_Normals, vertexCount * sizeof(float3));
 	for (unsigned int f = 0; f < triCount; f++)
 	{
 		unsigned int i1 = I ? I[f * 3 + 0] : f * 3 + 0;
@@ -61,6 +62,7 @@ inline void ComputeTangentSpace(float3* V, float2* T, unsigned int* I, unsigned 
 		tan2[i2] += tdir;
 		tan2[i3] += tdir;
 	}
+	/*
 	if(triCount < (1 << 16))
 		for (unsigned int a = 0; a < vertexCount; a++)
 			for (unsigned int i = a + 1; i < vertexCount; i++)
@@ -71,7 +73,7 @@ inline void ComputeTangentSpace(float3* V, float2* T, unsigned int* I, unsigned 
 					tan2[a] += tan2[i];
 					tan2[i] = tan2[a];
 				}
-
+*/
 
 	for (unsigned int i = 0; i < triCount; i++)
 	{
