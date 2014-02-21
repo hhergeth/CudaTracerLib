@@ -225,6 +225,9 @@
     <ClInclude Include="Kernel\k_BDPT.h">
       <Filter>Kernel</Filter>
     </ClInclude>
+    <ClInclude Include="Engine\SceneBuilder\tiny_obj_loader.h">
+      <Filter>Engine\SceneBuilder</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\e_AnimatedMesh.cpp">
@@ -285,6 +288,12 @@
     <ClCompile Include="Source.cpp" />
     <ClCompile Include="Base\StringUtils.cpp">
       <Filter>Base</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\SceneBuilder\tiny_obj_loader.cpp">
+      <Filter>Engine\SceneBuilder</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\SceneBuilder\ObjParser2.cpp">
+      <Filter>Engine\SceneBuilder</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

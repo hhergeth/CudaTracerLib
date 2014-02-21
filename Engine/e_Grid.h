@@ -78,10 +78,12 @@ struct k_HashGrid_Reg
 	float3 m_vInvSize;
 	float3 m_vCellSize;
 	AABB m_sBox;
+	unsigned int N;
 
 	CUDA_FUNC_IN k_HashGrid_Reg(){}
 
 	CUDA_FUNC_IN k_HashGrid_Reg(const AABB& box, float a_InitialRadius, unsigned int a_NumEntries)
+		: N(a_NumEntries - 1)
 	{
 		float3 q = (box.maxV - box.minV) / 2.0f, m = (box.maxV + box.minV) / 2.0f;
 		float e = 0.015f, e2 = 1.0f + e;
@@ -95,7 +97,7 @@ struct k_HashGrid_Reg
 
 	CUDA_FUNC_IN unsigned int Hash(const uint3& p) const
 	{
-		return (unsigned int)(p.z * m_fGridSize * m_fGridSize + p.y * m_fGridSize + p.x);
+		return clamp((unsigned int)(p.z * m_fGridSize * m_fGridSize + p.y * m_fGridSize + p.x), 0u, N);
 	}
 
 	CUDA_FUNC_IN  uint3 Transform(const float3& p) const

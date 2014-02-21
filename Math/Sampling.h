@@ -20,6 +20,7 @@ template<int N> struct Distribution1D
         for (unsigned int i = 0; i < n; i++)
             append(f[i])
 #undef append
+		Normalize();//questionable, removing it would break code
     }
 	CUDA_FUNC_IN float operator[](unsigned int entry) const
 	{

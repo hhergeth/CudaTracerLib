@@ -92,46 +92,47 @@ void k_sPpmTracer::Resize(unsigned int _w, unsigned int _h)
 		cudaFree(m_pEntries);
 	cudaMalloc(&m_pEntries, sizeof(k_AdaptiveEntry) * _w * _h);
 }
-/*
-void print(k_PhotonMapCollection& m_sMaps)
+
+void print(k_PhotonMapCollection& m_sMaps, k_PhotonMap<k_HashGrid_Reg>& m_Map, std::string name)
 {
-		k_pPpmPhoton* photons = new k_pPpmPhoton[m_sMaps.m_uPhotonBufferLength];
-		unsigned int* grid = new unsigned int[m_sMaps.m_sVolumeMap.m_uGridLength];
-		cudaMemcpy(photons, m_sMaps.m_pPhotons, sizeof(k_pPpmPhoton) * m_sMaps.m_uPhotonBufferLength, cudaMemcpyDeviceToHost);
-		cudaMemcpy(grid, m_sMaps.m_sVolumeMap.m_pDeviceHashGrid, sizeof(unsigned int) * m_sMaps.m_sVolumeMap.m_uGridLength, cudaMemcpyDeviceToHost);
+	k_pPpmPhoton* photons = new k_pPpmPhoton[m_sMaps.m_uPhotonBufferLength];
+	unsigned int* grid = new unsigned int[m_Map.m_uGridLength];
+	cudaMemcpy(photons, m_sMaps.m_pPhotons, sizeof(k_pPpmPhoton) * m_sMaps.m_uPhotonBufferLength, cudaMemcpyDeviceToHost);
+	cudaMemcpy(grid, m_Map.m_pDeviceHashGrid, sizeof(unsigned int) * m_Map.m_uGridLength, cudaMemcpyDeviceToHost);
 			
-		unsigned int usedCells = 0, maxCount = 0;
-		unsigned char* counts = new unsigned char[m_sMaps.m_sVolumeMap.m_uGridLength];
-		for(unsigned int i = 0; i < m_sMaps.m_sVolumeMap.m_uGridLength; i++)
+	unsigned int usedCells = 0, maxCount = 0;
+	unsigned char* counts = new unsigned char[m_Map.m_uGridLength];
+	for(unsigned int i = 0; i < m_Map.m_uGridLength; i++)
+	{
+		if(grid[i] != -1)
 		{
-			if(grid[i] != -1)
-			{
-				usedCells++;
-				k_pPpmPhoton* p = photons + grid[i];
-				unsigned int c = 1;
-				for( ; p->next != -1; c++)
-					p = photons + p->next;
-				counts[i] = c;
-				maxCount = MAX(maxCount, c);
-			}
-			else
-			{
-				counts[i] = 0;
-			}
+			usedCells++;
+			k_pPpmPhoton* p = photons + grid[i];
+			unsigned int c = 1;
+			for( ; p->next != -1; c++)
+				p = photons + p->next;
+			counts[i] = c;
+			maxCount = MAX(maxCount, c);
 		}
-		OutputStream os("grid1.bin");
-		os << maxCount;
-		os.Write(counts, sizeof(unsigned char) * m_sMaps.m_sVolumeMap.m_uGridLength);
-		os.Close();
-		float avgNum = float(m_sMaps.m_uPhotonBufferLength) / float(usedCells), f1 = float(usedCells) / float(m_sMaps.m_sVolumeMap.m_uGridLength);
-		float var = 0;
-		int avg = (int)avgNum;
-		for(unsigned int i = 0; i < m_sMaps.m_sVolumeMap.m_uGridLength; i++)
-			if(counts[i])
-				var += (counts[i] - avg) * (counts[i] - avg) / float(usedCells);
-		FW::String s = FW::sprintf("max : %d, avg : %f, used cells : %f, var : %f", maxCount, avgNum, f1, sqrtf(var));
-		OutputDebugString(s.getPtr());
-}*/
+		else
+		{
+			counts[i] = 0;
+		}
+	}
+	OutputStream os(name.c_str());
+	float avgNum = float(m_sMaps.m_uPhotonBufferLength) / float(usedCells), f1 = float(usedCells) / float(m_Map.m_uGridLength);
+	os << m_Map.m_sHash.m_fGridSize;
+	os << (int)avgNum * 2;
+	os.Write(counts, sizeof(unsigned char) * m_Map.m_uGridLength);
+	os.Close();
+	float var = 0;
+	int avg = (int)avgNum;
+	for(unsigned int i = 0; i < m_Map.m_uGridLength; i++)
+		if(counts[i])
+			var += (counts[i] - avg) * (counts[i] - avg) / float(usedCells);
+	std::string s = format("max : %d, avg : %f, used cells : %f, var : %f\n", maxCount, avgNum, f1, sqrtf(var));
+	OutputDebugString(s.c_str());
+}
 
 void k_sPpmTracer::DoRender(e_Image* I)
 {
@@ -146,7 +147,7 @@ void k_sPpmTracer::DoRender(e_Image* I)
 		{
 			m_uPassesDone++;
 			
-			//print(m_sMaps);
+			//print(m_sMaps, m_sMaps.m_sSurfaceMap, "s_map.bin"); print(m_sMaps, m_sMaps.m_sVolumeMap, "v_map.bin");
 
 			m_uPhotonsEmitted += m_sMaps.m_uPhotonNumEmitted;
 			doEyePass(I);
@@ -191,6 +192,7 @@ void k_sPpmTracer::initNewPass(e_Image* I)
 			}
 		}
 	}
+	//volBox = m_pScene->getKernelSceneData().m_sBox;
 	m_sMaps.StartNewRendering(m_sEyeBox, volBox, r);
 	m_sMaps.StartNewPass();
 

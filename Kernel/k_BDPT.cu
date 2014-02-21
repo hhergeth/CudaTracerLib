@@ -170,9 +170,9 @@ CUDA_FUNC_IN void BDPT(int x, int y, int w, int h, e_Image& g_Image, CudaRNG& rn
 
 CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_NextRayCounter12;
 
-__global__ void pathKernel(unsigned int w, unsigned int h, e_Image g_Image)
+__global__ void pathKernel(unsigned int w, unsigned int h, int xoff, int yoff, e_Image g_Image)
 {
-	int x = blockIdx.x * blockDim.x + threadIdx.x, y = blockIdx.y * blockDim.y + threadIdx.y;
+	int x = blockIdx.x * blockDim.x + threadIdx.x + xoff, y = blockIdx.y * blockDim.y + threadIdx.y + yoff;
 	CudaRNG rng = g_RNGData();
 	if(x < w && y < h)
 		BDPT(x, y, w, h, g_Image, rng);
@@ -183,7 +183,7 @@ __global__ void debugPixel12(unsigned int width, unsigned int height, int2 p)
 {
 	CudaRNG rng = g_RNGData();
 	Ray r = g_CameraData.GenRay(p.x, p.y);	
-	PathTrace(r.direction, r.origin, rng);
+	PathTrace<false>(r.direction, r.origin, rng);
 }
 
 static e_Image* gI;
@@ -196,7 +196,16 @@ void k_BDPT::DoRender(e_Image* I)
 	k_INITIALIZE(m_pScene->getKernelSceneData());
 	k_STARTPASS(m_pScene, m_pCamera, g_sRngs);
 	int p = 16;
-	pathKernel<<< dim3((w + p - 1) / p, (h + p - 1) / p,1), dim3(p, p, 1)>>>(w, h, *I);
+	if(w < 200 && h < 200)
+		pathKernel<<< dim3((w + p - 1) / p, (h + p - 1) / p,1), dim3(p, p, 1)>>>(w, h, 0, 0, *I);
+	else
+	{
+		unsigned int q = 8, pq = p * q;
+		int nx = w / pq + 1, ny = h / pq + 1;
+		for(int i = 0; i < nx; i++)
+			for(int j = 0; j < ny; j++)
+				pathKernel<<< dim3(q, q,1), dim3(p, p, 1)>>>(w, h, pq * i, pq * j, *I);
+	}
 	m_uPassesDone++;
 	k_TracerBase_update_TracedRays
 	I->DoUpdateDisplay(float(w*h) / float(m_uPassesDone * w * h));

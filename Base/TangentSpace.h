@@ -3,13 +3,14 @@
 #ifdef TS_DEC_FRAMEWORK
 inline void ComputeTangentSpace(float3* V, float2* T, unsigned int* I, unsigned int vertexCount, unsigned int triCount, float3* a_Normals, float3* a_Tangents, float3* a_BiTangents = 0)
 {
-	bool f = true;
-	for(unsigned int i = 0; i < MIN(12u, vertexCount); i++)
-		if(length(T[i]) != 0)
-		{
-			f = false;
-			break;
-		}
+	bool hasUV = T == 0;
+	if(T)
+		for(unsigned int i = 0; i < MIN(12u, vertexCount); i++)
+			if(length(T[i]) != 0)
+			{
+				hasUV = false;
+				break;
+			}
 
 	float3 *tan1 = new float3[vertexCount * 2];
     float3 *tan2 = tan1 + vertexCount;
@@ -23,7 +24,7 @@ inline void ComputeTangentSpace(float3* V, float2* T, unsigned int* I, unsigned 
 		const float3 v1 = V[i1], v2 = V[i2], v3 = V[i3];
 
 		const float3 e0 = v3 - v1, e1 = v2 - v1;//, n = normalize(v1q.n + v2q.n + v3q.n);
-		const float2 w1 = T[i1], w2 = T[i2], w3 = T[i3];
+		const float2 w1 = T ? T[i1] : make_float2(0), w2 = T ? T[i2] : make_float2(0), w3 = T ? T[i3] : make_float2(0);
 		const float3 n2 = normalize(cross(e1, e0));
 		//if(fsumf(n2 - n) > 1e-3)
 		//	throw 1;
@@ -42,7 +43,7 @@ inline void ComputeTangentSpace(float3* V, float2* T, unsigned int* I, unsigned 
 		float s2 = w3.x - w1.x;
 		float t1 = w2.y - w1.y;
 		float t2 = w3.y - w1.y;
-		if(f)
+		if(hasUV)
 		{
 			s1 = x1 - x2 + 0.1f;
 			s2 = x1 + x2 + 0.1f;

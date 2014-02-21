@@ -279,6 +279,11 @@ public:
 		//if(intersector)
 		//	intersector->Free();
 		ThrowCudaErrors();
+		if(intersector)
+		{
+			intersector->Free();
+			delete intersector;
+		}
 		intersector = new k_RayBufferManager<rayData, 2, 2>(w * h);
 		ThrowCudaErrors();
 	}

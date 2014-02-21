@@ -57,6 +57,7 @@
     <ClInclude Include="Engine\e_Samples.h" />
     <ClInclude Include="Engine\SceneBuilder\Importer.h" />
     <ClInclude Include="Engine\SceneBuilder\MD5Parser.h" />
+    <ClInclude Include="Engine\SceneBuilder\tiny_obj_loader.h" />
     <ClInclude Include="Kernel\k_BDPT.h" />
     <ClInclude Include="Kernel\k_FastTracer.h" />
     <ClInclude Include="Kernel\k_PathTracer.h" />
@@ -106,7 +107,9 @@
     <ClCompile Include="Engine\SceneBuilder\Importer.cpp" />
     <ClCompile Include="Engine\SceneBuilder\MD5Parser.cpp" />
     <ClCompile Include="Engine\SceneBuilder\ObjParser.cpp" />
+    <ClCompile Include="Engine\SceneBuilder\ObjParser2.cpp" />
     <ClCompile Include="Engine\SceneBuilder\PlyParser.cpp" />
+    <ClCompile Include="Engine\SceneBuilder\tiny_obj_loader.cpp" />
     <ClCompile Include="Kernel\k_sPpmTracer.cpp" />
     <ClCompile Include="Kernel\k_Tracer.cpp" />
     <ClCompile Include="Source.cpp" />

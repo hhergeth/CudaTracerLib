@@ -15,6 +15,10 @@ class e_MaterialLibrary
 private:
 	static MaterialEntry* getMat(const char* name);
 public:
+	static bool hasMat(const char* name)
+	{
+		return getMat(name) != 0;
+	}
 	static Spectrum getSigmaS(const char* name)
 	{
 		MaterialEntry* m = getMat(name);

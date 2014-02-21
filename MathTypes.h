@@ -10,3 +10,4 @@
 #include "Math\Sampling.h"
 
 #include "Base\Platform.h"
+#include "Engine\e_Core.h"

@@ -116,8 +116,8 @@ template<typename HASH> template<bool VOL> Spectrum k_PhotonMap<HASH>::L_Volume(
 		return L_n;//that would be dumb
 	a = clamp(a, tmin, tmax);
 	b = clamp(b, tmin, tmax);
-	float d = 4.0f * a_r;
-	while(b > a)
+	float d = 4.0f * a_r; int II = 0;
+	while(b > a && II++ < 50)
 	{
 		Spectrum L = Spectrum(0.0f);
 		float3 x = r(b);
@@ -169,7 +169,7 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED
 					float3 n = e.getNormal(), wi = e.getWi(), P = e.Pos;
 					Spectrum l = e.getL();
 					float dist2 = dot(P - p, P - p);
-					if(dist2 < a_rSurfaceUNUSED * a_rSurfaceUNUSED && AbsDot(n, bRec.map.sys.n) > 0.95f)
+					if(dist2 < a_rSurfaceUNUSED * a_rSurfaceUNUSED )//&& AbsDot(n, bRec.map.sys.n) > 0.95f
 					{
 						float ke = k_tr(a_rSurfaceUNUSED, sqrtf(dist2));
 						Lp += ke * l;
@@ -180,72 +180,89 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED
 	return Lp / float(g_Map2.m_uPhotonNumEmitted);
 }
 
-template<bool DIRECT> __global__ void k_EyePass(int2 off, int w, int h, float a_PassIndex, float a_rSurfaceUNUSED, float a_rVolume, k_AdaptiveStruct A, float scale0, float scale1, e_Image g_Image)
+template<bool DIRECT, bool DEBUGKERNEL> CUDA_FUNC_IN void k_EyePassF(int x, int y, float a_PassIndex, float a_rSurfaceUNUSED, float a_rVolume, k_AdaptiveStruct A, float scale0, float scale1, e_Image g_Image)
+{
+	CudaRNG rng = g_RNGData();
+	BSDFSamplingRecord bRec;
+	Ray r;
+	Spectrum importance = g_CameraData.sampleRay(r, make_float2(x, y), rng.randomFloat2());
+	TraceResult r2;
+	r2.Init();
+	int depth = -1;
+	Spectrum L(0.0f), throughput(1.0f);
+	while(k_TraceRay(r.direction, r.origin, &r2) && depth++ < 5)
+	{
+		float3 p = r(r2.m_fDist);
+		r2.getBsdfSample(r, rng, &bRec);
+		if(g_SceneData.m_sVolume.HasVolumes())
+		{
+			float tmin, tmax;
+			g_SceneData.m_sVolume.IntersectP(r, 0, r2.m_fDist, &tmin, &tmax);
+			L += throughput * g_Map2.L<true>(a_rVolume, rng, r, tmin, tmax, make_float3(0));
+			throughput = throughput * (-g_SceneData.m_sVolume.tau(r, tmin, tmax)).exp();
+		}
+		if(DIRECT)
+			L += throughput * UniformSampleAllLights(bRec, r2.getMat(), 1);
+		L += throughput * r2.Le(p, bRec.map.sys, -r.direction);//either it's the first bounce -> account or it's a specular reflection -> ...
+		const e_KernelBSSRDF* bssrdf;
+		if(r2.getMat().GetBSSRDF(bRec.map, &bssrdf))
+		{
+			r = BSSRDF_Entry(bssrdf, bRec.map.sys, p, r.direction);
+			TraceResult r3 = k_TraceRay(r);
+			L += throughput * g_Map2.L<false>(a_rVolume, rng, r, 0, r3.m_fDist, bssrdf->sigp_s + bssrdf->sig_a);
+			//normally one would go to the other side but due to photon mapping the path is terminated
+			break;
+			//Frame sys;
+			//r3.lerpFrame(sys);
+			//r = BSSRDF_Exit(bssrdf, sys, r(r3), r.direction);
+			//r2.Init();
+		}
+		bool hasDiffuse = r2.getMat().bsdf.hasComponent(EDiffuse), hasSpecGlossy = r2.getMat().bsdf.hasComponent(EDelta | EGlossy);
+		if(hasDiffuse && !DEBUGKERNEL)
+		{
+			Spectrum dif = r2.getMat().bsdf.getDiffuseReflectance(bRec) / PI;
+			L += throughput * L_Surface(bRec, a_rSurfaceUNUSED, p, -r.direction, &r2.getMat()) * dif;
+			if(!hasSpecGlossy)
+				break;
+		}
+		if(hasSpecGlossy)
+		{
+			bRec.sampledType = 0;
+			bRec.typeMask = EDelta | EGlossy;
+			Spectrum t_f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
+			if(!bRec.sampledType)
+				break;
+			throughput = throughput * t_f;
+			r = Ray(p, bRec.getOutgoing());
+			r2.Init();
+		}
+		//else break;
+	}
+	/*if(!r2.hasHit())
+	{
+		if(g_SceneData.m_sVolume.HasVolumes())
+		{
+			float tmin, tmax;
+			g_SceneData.m_sVolume.IntersectP(r, 0, r2.m_fDist, &tmin, &tmax);
+			L += throughput * g_Map2.L<true>(a_rVolume, rng, r, tmin, tmax, make_float3(0));
+		}
+		L += throughput * g_SceneData.EvalEnvironment(r);
+	}*/
+	g_Image.AddSample(x, y, importance * L);
+}
+
+template<bool DIRECT, bool DEBUGKERNEL> __global__ void k_EyePassD(int2 off, int w, int h, float a_PassIndex, float a_rSurfaceUNUSED, float a_rVolume, k_AdaptiveStruct A, float scale0, float scale1, e_Image g_Image)
+{
+	k_EyePassF<DIRECT, DEBUGKERNEL>(off.x, off.y, a_PassIndex, a_rSurfaceUNUSED, a_rVolume, A, scale0, scale1, g_Image);
+}
+
+template<bool DIRECT, bool DEBUGKERNEL> __global__ void k_EyePass(int2 off, int w, int h, float a_PassIndex, float a_rSurfaceUNUSED, float a_rVolume, k_AdaptiveStruct A, float scale0, float scale1, e_Image g_Image)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x, y = blockIdx.y * blockDim.y + threadIdx.y;
-	CudaRNG rng = g_RNGData();
-	x += off.x; y += off.y;
-	BSDFSamplingRecord bRec;
+	x += off.x;
+	y += off.y;
 	if(x < w && y < h)
-	{
-		Ray r;
-		Spectrum importance = g_CameraData.sampleRay(r, make_float2(x, y), rng.randomFloat2());
-		TraceResult r2;
-		r2.Init();
-		int depth = -1;
-		Spectrum L(0.0f), throughput(1.0f);
-		while(k_TraceRay(r.direction, r.origin, &r2) && depth++ < 5)
-		{
-			float3 p = r(r2.m_fDist);
-			r2.getBsdfSample(r, rng, &bRec);
-			if(g_SceneData.m_sVolume.HasVolumes())
-			{
-				float tmin, tmax;
-				g_SceneData.m_sVolume.IntersectP(r, 0, r2.m_fDist, &tmin, &tmax);
-				L += throughput * g_Map2.L<true>(a_rVolume, rng, r, tmin, tmax, make_float3(0));
-				throughput = throughput * (-g_SceneData.m_sVolume.tau(r, tmin, tmax)).exp();
-			}
-			if(DIRECT)
-				L += throughput * UniformSampleAllLights(bRec, r2.getMat(), 1);
-			L += throughput * r2.Le(p, bRec.map.sys, -r.direction);//either it's the first bounce -> accounte or it's a specular reflection -> ...
-			const e_KernelBSSRDF* bssrdf;
-			if(r2.getMat().GetBSSRDF(bRec.map, &bssrdf))
-			{
-				float3 dir = VectorMath::refract(r.direction, bRec.map.sys.n, 1.0f / bssrdf->e);
-				TraceResult r3 = k_TraceRay(Ray(p, dir));
-				L += throughput * g_Map2.L<false>(a_rVolume, rng, Ray(p, dir), 0, r3.m_fDist, bssrdf->sigp_s + bssrdf->sig_a);
-			}
-			if(r2.getMat().bsdf.hasComponent(EDiffuse))
-			{
-				Spectrum dif = r2.getMat().bsdf.getDiffuseReflectance(bRec) / PI;
-				L += throughput * L_Surface(bRec, a_rSurfaceUNUSED, p, -r.direction, &r2.getMat()) * dif;
-				break;
-			}
-			else
-			{
-				bRec.sampledType = 0;
-				bRec.typeMask = EDelta | EGlossy;
-				Spectrum t_f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
-				if(!bRec.sampledType)
-					break;
-				throughput = throughput * t_f;
-				r = Ray(p, bRec.getOutgoing());
-				r2.Init();
-			}
-		}
-		if(!r2.hasHit())
-		{
-			if(g_SceneData.m_sVolume.HasVolumes())
-			{
-				float tmin, tmax;
-				g_SceneData.m_sVolume.IntersectP(r, 0, r2.m_fDist, &tmin, &tmax);
-				L += throughput * g_Map2.L<true>(a_rVolume, rng, r, tmin, tmax, make_float3(0));
-			}
-			L += throughput * g_SceneData.EvalEnvironment(r);
-		}
-		g_Image.AddSample(x, y, importance * L);
-	}
-	g_RNGData(rng);
+		k_EyePassF<DIRECT, DEBUGKERNEL>(x, y, a_PassIndex, a_rSurfaceUNUSED, a_rVolume, A, scale0, scale1, g_Image);
 }
 
 #define TN(r) (r * powf(float(m_uPassesDone), -1.0f/6.0f))
@@ -258,20 +275,20 @@ void k_sPpmTracer::doEyePass(e_Image* I)
 	float s1 = float(m_uPassesDone - 1) / float(m_uPassesDone), s2 = 1.0f / float(m_uPassesDone);
 	if(m_pScene->getVolumes().getLength() || m_bLongRunning || w * h > 800 * 800)
 	{
-		unsigned int p = 16, q = 8, pq = p * q;
+		unsigned int q = 8, p = 16, pq = p * q;
 		int nx = w / pq + 1, ny = h / pq + 1;
 		for(int i = 0; i < nx; i++)
 			for(int j = 0; j < ny; j++)
 				if(m_bDirect)
-					k_EyePass<true><<<dim3( q, q, 1), dim3(p, p, 1)>>>(make_int2(pq * i, pq * j), w, h, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3), A, s1,s2, *I);
-				else k_EyePass<false><<<dim3( q, q, 1), dim3(p, p, 1)>>>(make_int2(pq * i, pq * j), w, h, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3), A, s1,s2, *I);
+					k_EyePass<true, false><<<dim3( q, q, 1), dim3(p, p, 1)>>>(make_int2(pq * i, pq * j), w, h, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3), A, s1,s2, *I);
+				else k_EyePass<false, false><<<dim3( q, q, 1), dim3(p, p, 1)>>>(make_int2(pq * i, pq * j), w, h, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3), A, s1,s2, *I);
 	}
 	else
 	{
 		const unsigned int p = 16;
 		if(m_bDirect)
-			k_EyePass<true><<<dim3( w / p + 1, h / p + 1, 1), dim3(p, p, 1)>>>(make_int2(0,0), w, h, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3), A, s1,s2, *I);
-		else k_EyePass<false><<<dim3( w / p + 1, h / p + 1, 1), dim3(p, p, 1)>>>(make_int2(0,0), w, h, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3), A, s1,s2, *I);
+			k_EyePass<true, false><<<dim3( w / p + 1, h / p + 1, 1), dim3(p, p, 1)>>>(make_int2(0,0), w, h, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3), A, s1,s2, *I);
+		else k_EyePass<false, false><<<dim3( w / p + 1, h / p + 1, 1), dim3(p, p, 1)>>>(make_int2(0,0), w, h, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3), A, s1,s2, *I);
 	}
 }
 
@@ -281,7 +298,8 @@ void k_sPpmTracer::Debug(int2 pixel)
 	cudaMemcpyToSymbol(g_Map2, &m_sMaps, sizeof(k_PhotonMapCollection));
 	k_INITIALIZE(m_pScene->getKernelSceneData());
 	k_STARTPASS(m_pScene, m_pCamera, g_sRngs);
-	//k_EyePass<true><<<1, 1>>>(pixel, w, h, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3), A, 1,1, e_Image());
+	k_EyePassD<true, true><<<1, 1>>>(pixel, w, h, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3), A, 1,1, e_Image());
+	//k_EyePassF<false, true>(pixel, w, h, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3), A, 1,1, e_Image());
 }
 
 __global__ void k_StartPass(int w, int h, float r, float rd, k_AdaptiveEntry* E)

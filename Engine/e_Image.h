@@ -23,16 +23,7 @@ public:
 		xRes = xResolution;
 		yRes = yResolution;
 	}
-	inline CUDA_DEVICE CUDA_HOST void AddSample(int sx, int sy, const Spectrum &L)
-	{
-		float xyz[3];
-		L.toXYZ(xyz[0], xyz[1], xyz[2]);
-		int x = sx, y = sy;
-		Pixel* pixel = getPixel(y * xResolution + x);
-		for(int i = 0; i < 3; i++)
-			pixel->xyz[i] += xyz[i];
-		pixel->weightSum += 1;
-	}
+	CUDA_DEVICE CUDA_HOST void AddSample(int sx, int sy, const Spectrum &L);
 	void setStdFilter()
 	{
 		e_KernelFilter flt;
@@ -56,26 +47,23 @@ public:
             xyz[0] = xyz[1] = xyz[2] = 0;
 			xyzSplat[0] = xyzSplat[1] = xyzSplat[2] = 0;
             weightSum = 0.0f;
+			I = I2 = 0.0f;
         }
         float xyz[3];
         float weightSum;
         float xyzSplat[3];
+		float I, I2;
 		CUDA_DEVICE CUDA_HOST Spectrum toSpectrum(float splat);
+		CUDA_FUNC_IN float var()
+		{
+			return I2 - I * I;
+		}
     };
 	e_KernelFilter& accessFilter()
 	{
 		return filter;
 	}
-	void rebuildFilterTable()
-	{
-		float w = filter.As<e_KernelFilterBase>()->xWidth, h = filter.As<e_KernelFilterBase>()->yWidth;
-		for (int y = 0; y < FILTER_TABLE_SIZE; ++y)
-			for (int x = 0; x < FILTER_TABLE_SIZE; ++x)
-			{
-				float _x = x + 0.5f, _y = y + 0.5f, s = FILTER_TABLE_SIZE;
-				filterTable[x][y] = filter.Evaluate(_x / s * w, _y / s * h);
-			}
-	}
+	void rebuildFilterTable();
 	bool& accessHDR()
 	{
 		return doHDR;

@@ -20,28 +20,28 @@ CUDA_FUNC_IN float3 nor(float* D, int l, int t, int m, int r, int b, float Heigh
 
 bool e_KernelMaterial::SampleNormalMap(const MapParameters& uv, float3* normal) const
 {
-		if(NormalMap.used)
-		{
-			float3 n;
-			NormalMap.tex.Evaluate(uv).toLinearRGB(n.x,n.y,n.z);
-			*normal = n * 2.0f - make_float3(1);
-			return true;
-		}
-		else if(HeightMap.used)
-		{
-			float d = 1.0f / 256;//fucked up guess
-			float m[16];
-			for(int i = 0; i < 4; i++)
-				for(int j = 0; j < 4; j++)
-				{
-					MapParameters mp = uv;
-					*(float2*)&mp.uv = mp.uv + make_float2(i - 1, j - 1) * d;
-					m[i * 4 + j] = HeightMap.tex.Evaluate(mp).average();
-				}
-			*normal = nor(m, 4, 1, 5, 6, 9, HeightScale); 
-			return true;
-		}
-		else return false;
+	if(NormalMap.used)
+	{
+		float3 n;
+		NormalMap.tex.Evaluate(uv).toLinearRGB(n.x,n.y,n.z);
+		*normal = n * 2.0f - make_float3(1);
+		return true;
+	}
+	else if(HeightMap.used)
+	{
+		float d = 1.0f / 256;//fucked up guess
+		float m[16];
+		for(int i = 0; i < 4; i++)
+			for(int j = 0; j < 4; j++)
+			{
+				MapParameters mp = uv;
+				*(float2*)&mp.uv = mp.uv + make_float2(i - 1, j - 1) * d;
+				//m[i * 4 + j] = HeightMap.tex.Evaluate(mp).average();
+			}
+		*normal = nor(m, 4, 1, 5, 6, 9, HeightScale); 
+		return true;
+	}
+	else return false;
 }
 
 float e_KernelMaterial::SampleAlphaMap(const MapParameters& uv) const

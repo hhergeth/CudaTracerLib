@@ -1,5 +1,6 @@
 #include "k_Tracer.h"
 #include "k_TraceHelper.h"
+#include "..\Engine\e_Core.h"
 
 //SHOULD NOT WORK
 CUDA_FUNC_IN unsigned int FloatToUInt(float f2)
@@ -31,24 +32,30 @@ CUDA_FUNC_IN float UIntToFloat(unsigned int f)
 }
 */
 
+__global__ void ABCQQ()
+{
+	e_KernelMaterial& mat = g_SceneData.m_sMatData.Data[0];
+	mat.AlphaMap.used = true;
+}
+
 CUDA_DEVICE uint3 g_EyeHitBoxMin;
 CUDA_DEVICE uint3 g_EyeHitBoxMax;
-__global__ void k_GuessPass(int w, int h)
+__global__ void k_GuessPass(int w, int h, float scx, float scy)
 {
-	int x = blockIdx.x * blockDim.x + threadIdx.x, y = blockIdx.y * blockDim.y + threadIdx.y;
+	int x = threadId % w, y = threadId / w;
 	CudaRNG rng = g_RNGData();
 	if(x < w && y < h)
 	{
-		Ray r = g_CameraData.GenRay(w, h);
+		Ray r = g_CameraData.GenRay(float(x * scx), float(y * scy));
 		TraceResult r2;
 		r2.Init();
 		int d = -1;
-		while(k_TraceRay(r.direction, r.origin, &r2) && ++d < 10)
+		while(k_TraceRay(r.direction, r.origin, &r2) && ++d < 5)
 		{
 			float3 p = r(r2.m_fDist);
 			BSDFSamplingRecord bRec;
 			r2.getBsdfSample(r, rng, &bRec);
-			Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
+			r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
 			r = Ray(r(r2.m_fDist), bRec.getOutgoing());
 			uint3 pu = make_uint3(FloatToUInt(p.x), FloatToUInt(p.y), FloatToUInt(p.z));
 			atomicMin(&g_EyeHitBoxMin.x, pu.x);
@@ -65,21 +72,23 @@ __global__ void k_GuessPass(int w, int h)
 
 AABB k_Tracer::GetEyeHitPointBox(e_DynamicScene* m_pScene, e_Sensor* m_pCamera)
 {
+	ThrowCudaErrors();
 	uint3 ma = make_uint3(FloatToUInt(-FLT_MAX)), mi = make_uint3(FloatToUInt(FLT_MAX));
 	cudaMemcpyToSymbol(g_EyeHitBoxMin, &mi, 12);
 	cudaMemcpyToSymbol(g_EyeHitBoxMax, &ma, 12);
 	k_INITIALIZE(m_pScene->getKernelSceneData());
 	k_STARTPASS(m_pScene, m_pCamera, g_sRngs);
 	int qw = 128, qh = 128, p0 = 16;
-	k_GuessPass<<<dim3( qw/p0, qh/p0, 1), dim3(p0, p0, 1)>>>(qw, qh);
+	float a = (float)m_pCamera->As()->m_resolution.x / qw, b = (float)m_pCamera->As()->m_resolution.y / qh;
+	k_GuessPass<<<dim3( qw/p0, qh/p0, 1), dim3(p0, p0, 1)>>>(qw, qh, a, b);
 	cudaThreadSynchronize();
+	ThrowCudaErrors();
 	AABB m_sEyeBox;
 	cudaMemcpyFromSymbol(&m_sEyeBox.minV, g_EyeHitBoxMin, 12);
 	cudaMemcpyFromSymbol(&m_sEyeBox.maxV, g_EyeHitBoxMax, 12);
 	m_sEyeBox.minV = make_float3(UIntToFloat(m_sEyeBox.minV.x), UIntToFloat(m_sEyeBox.minV.y), UIntToFloat(m_sEyeBox.minV.z));
 	m_sEyeBox.maxV = make_float3(UIntToFloat(m_sEyeBox.maxV.x), UIntToFloat(m_sEyeBox.maxV.y), UIntToFloat(m_sEyeBox.maxV.z));
 	return m_sEyeBox;
-	//throw 1;
 }
 
 CUDA_DEVICE TraceResult res;

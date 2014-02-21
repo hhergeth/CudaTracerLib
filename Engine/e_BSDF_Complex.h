@@ -33,6 +33,7 @@ struct coating : public BSDF
 	}
 	virtual void Update()
 	{
+		this->m_combinedType = EDeltaReflection | m_nested.getType();
 		m_invEta = 1.0f / m_eta;
 		float avgAbsorption = (m_sigmaA.Average()*(-2*m_thickness)).exp().average();
 		m_specularSamplingWeight = 1.0f / (avgAbsorption + 1.0f);
@@ -102,6 +103,7 @@ struct roughcoating : public BSDF
 	}
 	virtual void Update()
 	{
+		this->m_combinedType = EGlossyReflection | m_nested.getType();
 		m_invEta = 1.0f / m_eta;
 		float avgAbsorption = (m_sigmaA.Average()*(-2*m_thickness)).exp().average();
 		m_specularSamplingWeight = 1.0f / (avgAbsorption + 1.0f);

@@ -156,7 +156,7 @@ CUDA_FUNC_IN bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResu
 				unsigned int index = tex1Dfetch(t_triIndices, mesh.m_uBVHIndicesOffset + triAddr);
 #else
 				float4* dat = (float4*)g_SceneData.m_sBVHIntData.Data;
-				float4* dat2 = (float4*)g_SceneData.m_sBVHIndexData.Data;
+//				float4* dat2 = (float4*)g_SceneData.m_sBVHIndexData.Data;
 				const float4 v00 = dat[mesh.m_uBVHTriangleOffset + triAddr * 3 + 0];
 				const float4 v11 = dat[mesh.m_uBVHTriangleOffset + triAddr * 3 + 1];
 				const float4 v22 = dat[mesh.m_uBVHTriangleOffset + triAddr * 3 + 2];
@@ -307,8 +307,8 @@ bool k_TraceRay(const float3& dir, const float3& ori, TraceResult* a_Result)
 			//a_Result->m_fDist = Distance(modl2 * (o + dir * a_Result->m_fDist), modl2 * o);
 		}
 	}
-	return a_Result->hasHit();
 #endif
+	return a_Result->hasHit();
 }
 
 void k_INITIALIZE(const e_KernelDynamicScene& a_Data)

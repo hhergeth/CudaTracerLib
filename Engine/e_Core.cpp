@@ -25,3 +25,13 @@ void ThrowCudaErrors()
 		throw std::runtime_error(msg);
 	}
 }
+
+void ThrowCudaErrors(cudaError r)
+{
+	if(r)
+	{
+		const char* msg = cudaGetErrorString(r);
+		std::cout << msg;
+		throw std::runtime_error(msg);
+	}
+}

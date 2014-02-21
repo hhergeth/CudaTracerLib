@@ -38,6 +38,8 @@ CUDA_ONLY_FUNC void max3(uint3* tar, uint3& val)
 
 CUDA_FUNC_IN Spectrum trace(Ray& r, CudaRNG& rng, float3* pout)
 {
+	//return 0.5f + (rng.randomFloat() * 0.5f - 0.25f);
+
 	const bool DIRECT = 1;
 	TraceResult r2;
 	r2.Init();
@@ -78,7 +80,13 @@ CUDA_FUNC_IN Spectrum trace(Ray& r, CudaRNG& rng, float3* pout)
 		if(DIRECT)
 			L += c * UniformSampleAllLights(bRec, r2.getMat(), 1);
 		float pdf;
-		Spectrum f = r2.getMat().bsdf.sample(bRec, pdf, rng.randomFloat2()); 
+		Spectrum f = r2.getMat().bsdf.sample(bRec, pdf, rng.randomFloat2());return f;
+
+		float p = f.max();
+		if (rng.randomFloat() < p)
+			f = f / p;
+		else break;
+
 		c = c * f;
 		if((bRec.sampledType & EDiffuse) == EDiffuse)
 		{
@@ -164,7 +172,7 @@ __global__ void debugPixe2l(unsigned int width, unsigned int height, int2 p)
 {
 	Ray r = g_CameraData.GenRay(p.x, p.y);
 	CudaRNG rng = g_RNGData();
-	trace(r, rng, 0);
+	Spectrum q =  trace(r, rng, 0);
 }
 
 void k_PrimTracer::DoRender(e_Image* I)

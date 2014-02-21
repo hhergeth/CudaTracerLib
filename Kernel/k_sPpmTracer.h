@@ -8,6 +8,18 @@
 
 #define ALPHA (2.0f / 3.0f)
 
+CUDA_FUNC_IN Ray BSSRDF_Entry(const e_KernelBSSRDF* bssrdf, const Frame& sys, const float3& pos, const float3& wi)
+{
+	float3 dir = VectorMath::refract(wi, sys.n, 1.0f / bssrdf->e);
+	return Ray(pos, dir);
+}
+
+CUDA_FUNC_IN Ray BSSRDF_Exit(const e_KernelBSSRDF* bssrdf, const Frame& sys, const float3& pos, const float3& wi)
+{
+	float3 dir = VectorMath::refract(wi, sys.n, 1.0f / bssrdf->e);
+	return Ray(pos, dir);
+}
+
 struct k_AdaptiveEntry
 {
 	float r, rd;
@@ -180,7 +192,7 @@ template<typename HASH> struct k_PhotonMap
 struct k_PhotonMapCollection
 {
 	k_PhotonMap<k_HashGrid_Reg> m_sVolumeMap;
-	k_PhotonMap<k_HashGrid_Irreg> m_sSurfaceMap;
+	k_PhotonMap<k_HashGrid_Reg> m_sSurfaceMap;
 	k_pPpmPhoton* m_pPhotons;
 	unsigned int m_uPhotonBufferLength;
 	unsigned int m_uPhotonNumStored;

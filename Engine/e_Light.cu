@@ -193,6 +193,7 @@ e_SpotLight::e_SpotLight(float3 p, float3 t, Spectrum L, float width, float fall
 	m_cosCutoffAngle = cosf(m_cutoffAngle);
 	m_invTransitionWidth = 1.0f / (m_cutoffAngle - m_beamWidth);
 	Position = p;
+	Target = t;
 	ToWorld = Frame(t - p);
 }
 

@@ -5,7 +5,7 @@
 
 CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_NextRayCounter;
 
-__global__ void pathKernel(unsigned int width, unsigned int height, unsigned int a_PassIndex, e_Image g_Image)
+template<bool DIRECT> __global__ void pathKernel(unsigned int width, unsigned int height, unsigned int a_PassIndex, e_Image g_Image)
 {
 	CudaRNG rng = g_RNGData();
 	int rayidx;
@@ -35,7 +35,7 @@ __global__ void pathKernel(unsigned int width, unsigned int height, unsigned int
 		Ray r;
 		Spectrum imp = g_CameraData.sampleRay(r, make_float2(x, y), rng.randomFloat2());
 
-		Spectrum col = imp * PathTrace(r.direction, r.origin, rng);
+		Spectrum col = imp * PathTrace<DIRECT>(r.direction, r.origin, rng);
 		
 		g_Image.AddSample(x, y, col);
 	}
@@ -47,7 +47,7 @@ __global__ void debugPixel(unsigned int width, unsigned int height, int2 p)
 {
 	CudaRNG rng = g_RNGData();
 	Ray r = g_CameraData.GenRay(p.x, p.y);	
-	PathTrace(r.direction, r.origin, rng);
+	PathTrace<true>(r.direction, r.origin, rng);
 }
 
 void k_PathTracer::DoRender(e_Image* I)
@@ -58,8 +58,8 @@ void k_PathTracer::DoRender(e_Image* I)
 	k_INITIALIZE(m_pScene->getKernelSceneData());
 	k_STARTPASS(m_pScene, m_pCamera, g_sRngs);
 	if(m_Direct)
-		pathKernel<<< 180, dim3(32, MaxBlockHeight, 1)>>>(w, h, m_uPassesDone, *I);
-	else pathKernel<<< 180, dim3(32, MaxBlockHeight, 1)>>>(w, h, m_uPassesDone, *I);
+		pathKernel<true><<< 180, dim3(32, MaxBlockHeight, 1)>>>(w, h, m_uPassesDone, *I);
+	else pathKernel<false><<< 180, dim3(32, MaxBlockHeight, 1)>>>(w, h, m_uPassesDone, *I);
 	m_uPassesDone++;
 	k_TracerBase_update_TracedRays
 	I->DoUpdateDisplay(m_uPassesDone);
@@ -72,5 +72,5 @@ void k_PathTracer::Debug(int2 p)
 	//debugPixel<<<1,1>>>(w,h,p);
 	CudaRNG rng = g_RNGData();
 	Ray r = g_CameraData.GenRay(p.x, p.y);	
-	PathTrace(r.direction, r.origin, rng);
+	PathTrace<true>(r.direction, r.origin, rng);
 }

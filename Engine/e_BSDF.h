@@ -12,8 +12,12 @@
 #define STD_DIFFUSE_REFLECTANCE \
 	CUDA_FUNC_IN Spectrum getDiffuseReflectance(BSDFSamplingRecord &bRec) const \
 	{ \
+		float3 wo = bRec.wo, wi = bRec.wi; \
 		bRec.typeMask = EDiffuseReflection; \
-		return f(bRec, ESolidAngle) * PI; \
+		bRec.wo = bRec.wi = make_float3(0, 0, 1); \
+		Spectrum r = f(bRec, ESolidAngle) * PI; \
+		bRec.wo = wo; bRec.wi = wi; \
+		return r; \
 	}
 
 struct BSDF : public e_BaseType
