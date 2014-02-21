@@ -238,7 +238,7 @@ template<bool DIRECT, bool DEBUGKERNEL> CUDA_FUNC_IN void k_EyePassF(int x, int 
 		}
 		//else break;
 	}
-	/*if(!r2.hasHit())
+	if(!r2.hasHit())
 	{
 		if(g_SceneData.m_sVolume.HasVolumes())
 		{
@@ -247,7 +247,7 @@ template<bool DIRECT, bool DEBUGKERNEL> CUDA_FUNC_IN void k_EyePassF(int x, int 
 			L += throughput * g_Map2.L<true>(a_rVolume, rng, r, tmin, tmax, make_float3(0));
 		}
 		L += throughput * g_SceneData.EvalEnvironment(r);
-	}*/
+	}
 	g_Image.AddSample(x, y, importance * L);
 }
 

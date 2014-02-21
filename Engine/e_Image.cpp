@@ -15,9 +15,9 @@ e_Image::e_Image(int xRes, int yRes, unsigned int viewGLTexture)
 	: xResolution(xRes), yResolution(yRes)
 {
 	ownsTarget = false;
-	doHDR = false;
+	drawStyle = ImageDrawType::Normal;
 	setStdFilter();
-	cudaMalloc(&cudaPixels, sizeof(Pixel) * xResolution * yResolution);
+	CUDA_MALLOC(&cudaPixels, sizeof(Pixel) * xResolution * yResolution);
 	hostPixels = new Pixel[xResolution * yResolution];
 	outState = 1;
 	isMapped = 0;
@@ -26,7 +26,7 @@ e_Image::e_Image(int xRes, int yRes, unsigned int viewGLTexture)
 	if(er)
 		throw std::runtime_error(cudaGetErrorString(er));
 	//use this to clear the array
-	cudaMalloc(&viewTarget, sizeof(RGBCOL) * xRes * yRes);
+	CUDA_MALLOC(&viewTarget, sizeof(RGBCOL) * xRes * yRes);
 	ownsTarget = true;
 	cudaMemset(viewTarget, 0, sizeof(RGBCOL) * xRes * yRes);
 }
@@ -34,16 +34,16 @@ e_Image::e_Image(int xRes, int yRes, unsigned int viewGLTexture)
 e_Image::e_Image(int xRes, int yRes, RGBCOL* target)
 	: xResolution(xRes), yResolution(yRes)
 {
-	doHDR = false;
+	drawStyle = ImageDrawType::Normal;
 	setStdFilter();
-	cudaMalloc(&cudaPixels, sizeof(Pixel) * xResolution * yResolution);
+	CUDA_MALLOC(&cudaPixels, sizeof(Pixel) * xResolution * yResolution);
 	hostPixels = new Pixel[xResolution * yResolution];
 	outState = 2;
 	isMapped = 0;
 	this->viewTarget = target;
 	if(!viewTarget)
 	{
-		cudaMalloc(&viewTarget, sizeof(RGBCOL) * xRes * yRes);
+		CUDA_MALLOC(&viewTarget, sizeof(RGBCOL) * xRes * yRes);
 		ownsTarget = true;
 	}
 }
@@ -51,9 +51,9 @@ e_Image::e_Image(int xRes, int yRes, RGBCOL* target)
 void e_Image::Free()
 {
 	delete hostPixels;
-	cudaFree(cudaPixels);
+	CUDA_FREE(cudaPixels);
 	if(ownsTarget)
-		cudaFree(viewTarget);
+		CUDA_FREE(viewTarget);
 	if(outState == 1)
 		cudaGraphicsUnregisterResource(viewCudaResource);
 }
@@ -84,6 +84,8 @@ void e_Image::rebuildFilterTable()
 
 void e_Image::WriteDisplayImage(const char* fileName)
 {
+	FREE_IMAGE_FORMAT ff = FreeImage_GetFIFFromFilename(fileName);
+
 	FIBITMAP* bitmap = FreeImage_Allocate(xResolution, yResolution, 32, 0x000000ff, 0x0000ff00, 0x00ff0000);
 	if(outState == 1)
 	{
@@ -103,7 +105,7 @@ void e_Image::WriteDisplayImage(const char* fileName)
 		A[i].x = A[i].z;
 		A[i].z = c;
 	}
-	bool b = FreeImage_Save(FIF_BMP, bitmap, fileName, BMP_DEFAULT);
+	bool b = FreeImage_Save(ff, bitmap, fileName);
 	FreeImage_Unload(bitmap);
 }
 

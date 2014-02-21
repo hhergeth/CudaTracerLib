@@ -303,22 +303,22 @@ void Spectrum::fromRGBCOL(RGBCOL col)
 	fromLinearRGB(r,g,b);
 }
 
-void Spectrum::toYxy(float &Y, float &x, float &y) const
+void Spectrum::toYxy(float &_Y, float &x, float &y) const
 {
-	float a,b,c;
-	toXYZ(a,b,c);
-	float s = a + b + c;
-	Y = b;
-	x = a / s;
-	y = c / s;
+	float X,Y,Z;
+	toXYZ(X,Y,Z);
+	float s = clamp(X + Y + Z, 0.001f, 100000.0f);
+	_Y = Y;
+	x = X / s;
+	y = Y / s;
 }
 
-void Spectrum::fromYxy(float Y, float x, float y, EConversionIntent intent)
+void Spectrum::fromYxy(float _Y, float x, float y, EConversionIntent intent)
 {
-	float a = Y * x / y;
-	float b = Y;
-	float c = Y * (1.0f - x - y) / y;
-	fromXYZ(a, b, c);
+	float X = _Y / clamp(y,0.001f,100000.0f) * x;
+	float Y = _Y;
+	float Z = _Y / clamp(y,0.001f,100000.0f) * ( 1 - x - y );
+	fromXYZ(X, Y, Z, intent);
 }
 
 #include <vector>

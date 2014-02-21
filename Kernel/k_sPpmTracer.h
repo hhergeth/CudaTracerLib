@@ -115,7 +115,7 @@ template<typename HASH> struct k_PhotonMap
 		m_uGridLength = hashN;
 		m_pDevicePhotons = P;
 		m_pDeviceHashGrid = 0;
-		cudaMalloc(&m_pDeviceHashGrid, sizeof(unsigned int) * m_uGridLength);
+		CUDA_MALLOC(&m_pDeviceHashGrid, sizeof(unsigned int) * m_uGridLength);
 		cudaMemset(m_pDeviceHashGrid, -1, sizeof(unsigned int) * m_uGridLength);
 		m_uMaxPhotonCount = photonN;
 	}
@@ -140,7 +140,7 @@ template<typename HASH> struct k_PhotonMap
 
 	void Free()
 	{
-		cudaFree(m_pDeviceHashGrid);
+		CUDA_FREE(m_pDeviceHashGrid);
 	}
 
 	void StartNewPass()

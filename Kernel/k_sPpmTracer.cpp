@@ -39,11 +39,11 @@ void k_PhotonMapCollection::Resize(unsigned int a_BufferLength)
 	{
 		m_uRealBufferSize = a_BufferLength;
 		void* old = m_pPhotons;
-		cudaMalloc(&m_pPhotons, sizeof(k_pPpmPhoton) * a_BufferLength);
+		CUDA_MALLOC(&m_pPhotons, sizeof(k_pPpmPhoton) * a_BufferLength);
 		if(old)
 		{
 			cudaMemcpy(m_pPhotons, old, sizeof(k_pPpmPhoton) * m_uPhotonBufferLength, cudaMemcpyDeviceToDevice);
-			cudaFree(old);
+			CUDA_FREE(old);
 		}
 	}
 	//else cudaMemset(m_pPhotons, 0, sizeof(k_pPpmPhoton) * a_BufferLength);
@@ -68,7 +68,7 @@ void k_PhotonMapCollection::Free()
 {
 	m_sVolumeMap.Free();
 	m_sSurfaceMap.Free();
-	cudaFree(m_pPhotons);
+	CUDA_FREE(m_pPhotons);
 }
 
 k_PhotonMapCollection::k_PhotonMapCollection(unsigned int a_BufferLength, unsigned int a_HashNum)
@@ -89,8 +89,8 @@ void k_sPpmTracer::Resize(unsigned int _w, unsigned int _h)
 {
 	k_TracerBase::Resize(_w, _h);
 	if(m_pEntries)
-		cudaFree(m_pEntries);
-	cudaMalloc(&m_pEntries, sizeof(k_AdaptiveEntry) * _w * _h);
+		CUDA_FREE(m_pEntries);
+	CUDA_MALLOC(&m_pEntries, sizeof(k_AdaptiveEntry) * _w * _h);
 }
 
 void print(k_PhotonMapCollection& m_sMaps, k_PhotonMap<k_HashGrid_Reg>& m_Map, std::string name)

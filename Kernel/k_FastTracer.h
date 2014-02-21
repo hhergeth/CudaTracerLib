@@ -19,21 +19,21 @@ public:
 	{
 		for(int i = 0; i < N; i++)
 		{
-			cudaMalloc(&m_pRayBuffer[i], sizeof(traversalRay) * Length);
-			cudaMalloc(&m_pResultBuffer[i], sizeof(traversalResult) * Length);
+			CUDA_MALLOC(&m_pRayBuffer[i], sizeof(traversalRay) * Length);
+			CUDA_MALLOC(&m_pResultBuffer[i], sizeof(traversalResult) * Length);
 		}
-		cudaMalloc(&m_pPayloadBuffer, sizeof(T) * Length);
-		cudaMalloc(&m_cInsertCounter, sizeof(unsigned int));
+		CUDA_MALLOC(&m_pPayloadBuffer, sizeof(T) * Length);
+		CUDA_MALLOC(&m_cInsertCounter, sizeof(unsigned int));
 	}
 	void Free()
 	{
 		for(int i = 0; i < N; i++)
 		{
-			cudaFree(m_pRayBuffer);
-			cudaFree(m_pResultBuffer);
+			CUDA_FREE(m_pRayBuffer[i]);
+			CUDA_FREE(m_pResultBuffer[i]);
 		}
-		cudaFree(m_pPayloadBuffer);
-		cudaFree(m_cInsertCounter);
+		CUDA_FREE(m_pPayloadBuffer);
+		CUDA_FREE(m_cInsertCounter);
 	}
 	template<bool ANY_HIT> unsigned int IntersectBuffers(bool doAll = true, bool skipOuterTree = false)
 	{
@@ -128,10 +128,10 @@ public:
 	k_RayIntersectKernel(unsigned int n)
 		: Length(n)
 	{
-		cudaMalloc(&m_pRayBuffer, sizeof(traversalRay) * Length);
-		cudaMalloc(&m_pResultBuffer, sizeof(traversalResult) * Length);
-		cudaMalloc(&m_pIndexBuffer, sizeof(unsigned int) * Length);
-		cudaMalloc(&m_cInsertCounter, sizeof(unsigned int));
+		CUDA_MALLOC(&m_pRayBuffer, sizeof(traversalRay) * Length);
+		CUDA_MALLOC(&m_pResultBuffer, sizeof(traversalResult) * Length);
+		CUDA_MALLOC(&m_pIndexBuffer, sizeof(unsigned int) * Length);
+		CUDA_MALLOC(&m_cInsertCounter, sizeof(unsigned int));
 	}
 	template<bool ANY_HIT> unsigned int IntersectBuffers(bool skipOuterTree = false)
 	{
@@ -146,9 +146,9 @@ public:
 	}
 	void Free()
 	{
-		cudaFree(m_pRayBuffer);
-		cudaFree(m_pResultBuffer);
-		cudaFree(m_pIndexBuffer);
+		CUDA_FREE(m_pRayBuffer);
+		CUDA_FREE(m_pResultBuffer);
+		CUDA_FREE(m_pIndexBuffer);
 	}
 	void StartNewTraversal()
 	{
@@ -204,7 +204,7 @@ public:
 	{
 		for(int i = 0; i < N; i++)
 			buffers[i] = k_RayIntersectKernel(n);
-		cudaMalloc(&m_pPayloadBuffer, sizeof(T) * Length);
+		CUDA_MALLOC(&m_pPayloadBuffer, sizeof(T) * Length);
 	}
 	CUDA_FUNC_IN k_RayIntersectKernel& operator[](int i)
 	{
@@ -218,7 +218,7 @@ public:
 	{
 		for(int i = 0; i < N; i++)
 			buffers[i].Free();
-		cudaFree(m_pPayloadBuffer);
+		CUDA_FREE(m_pPayloadBuffer);
 	}
 	void StartNewRendering()
 	{
@@ -271,11 +271,11 @@ public:
 	{
 		k_ProgressiveTracer::Resize(w, h);
 		//if(hostRays)
-		//	cudaFreeHost(hostRays);
+		//	CUDA_FREEHost(hostRays);
 		//if(hostResults)
-		//	cudaFreeHost(hostResults);
-		//cudaMallocHost(&hostRays, sizeof(traversalRay) * w * h);
-		//cudaMallocHost(&hostResults, sizeof(traversalResult) * w * h);
+		//	CUDA_FREEHost(hostResults);
+		//CUDA_MALLOCHost(&hostRays, sizeof(traversalRay) * w * h);
+		//CUDA_MALLOCHost(&hostResults, sizeof(traversalResult) * w * h);
 		//if(intersector)
 		//	intersector->Free();
 		ThrowCudaErrors();

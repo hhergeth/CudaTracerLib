@@ -40,7 +40,7 @@ public:
 		m_uLength = a_NumElements;
 		host = (H*)::malloc(m_uHostBlockSize * a_NumElements);
 		Platform::SetMemory(host, m_uHostBlockSize * a_NumElements);
-		cudaMalloc(&device, sizeof(D) * a_NumElements);
+		CUDA_MALLOC(&device, sizeof(D) * a_NumElements);
 		cudaMemset(device, 0, sizeof(D) * a_NumElements);
 		deviceMapped = (D*)::malloc(a_NumElements * sizeof(D));
 		memset(deviceMapped, 0, sizeof(D) * a_NumElements);
@@ -50,7 +50,7 @@ public:
 		free(host);
 		if(deviceMapped)
 			free(deviceMapped);
-		cudaFree(device);
+		CUDA_FREE(device);
 	}
 	e_Buffer(InputStream& a_In)
 	{
@@ -59,7 +59,7 @@ public:
 		a_In >> m_uHostBlockSize;
 		unsigned int deN;
 		a_In >> deN;
-		if(cudaMalloc(&device, sizeof(D) * m_uLength))
+		if(CUDA_MALLOC(&device, sizeof(D) * m_uLength))
 			BAD_CUDA_ALLOC(sizeof(D) * m_uLength)
 		host = (H*)::malloc(m_uHostBlockSize * m_uLength);
 		a_In.Read(host, m_uPos * m_uHostBlockSize);
@@ -429,7 +429,7 @@ public:
 		m_uLength = N;
 		host = (T*)::malloc(m_uHostBlockSize * N);
 		Platform::SetMemory(host, m_uHostBlockSize * N);
-		cudaMalloc(&device, sizeof(T) * N);
+		CUDA_MALLOC(&device, sizeof(T) * N);
 		cudaMemset(device, 0, sizeof(T) * N);
 		deviceMapped = 0;
 	}
@@ -438,7 +438,7 @@ public:
 		free(host);
 		if(deviceMapped)
 			free(deviceMapped);
-		cudaFree(device);
+		CUDA_FREE(device);
 	}
 	e_Buffer(InputStream& a_In)
 	{
@@ -447,7 +447,7 @@ public:
 		a_In >> m_uHostBlockSize;
 		unsigned int deN;
 		a_In >> deN;
-		if(cudaMalloc(&device, sizeof(T) * m_uLength))
+		if(CUDA_MALLOC(&device, sizeof(T) * m_uLength))
 			BAD_CUDA_ALLOC(sizeof(T) * m_uLength)
 		host = (T*)::malloc(m_uHostBlockSize * m_uLength);
 		a_In.Read(host, m_uPos * m_uHostBlockSize);

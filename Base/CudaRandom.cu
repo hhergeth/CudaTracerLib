@@ -32,7 +32,7 @@ void k_TracerRNG_cuRAND::Initialize(unsigned int a_Index, unsigned int a_Spacing
 CudaRNGBuffer_cuRAND::CudaRNGBuffer_cuRAND(unsigned int a_Length, unsigned int a_Spacing, unsigned int a_Offset)
 {
 	m_uNumGenerators = a_Length;
-	cudaMalloc(&m_pDeviceGenerators, a_Length * sizeof(k_TracerRNG_cuRAND));
+	CUDA_MALLOC(&m_pDeviceGenerators, a_Length * sizeof(k_TracerRNG_cuRAND));
 	m_pHostGenerators = new k_TracerRNG_cuRAND[a_Length];
 	createGenerators(a_Spacing, a_Offset);
 }

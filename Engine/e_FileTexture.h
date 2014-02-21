@@ -84,7 +84,7 @@ public:
 	e_MIPMap(InputStream& a_In);
 	void Free()
 	{
-		cudaFree(m_pDeviceData);
+		CUDA_FREE(m_pDeviceData);
 		free(m_pHostData);
 	}
 	static void CompileToBinary(const char* a_InputFile, OutputStream& a_Out, bool a_MipMap);

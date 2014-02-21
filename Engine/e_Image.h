@@ -9,6 +9,17 @@
 
 #define FILTER_TABLE_SIZE 16
 
+enum ImageDrawType
+{
+	Normal,
+	HDR,
+	BlockVariance,
+	PixelVariance,
+	BlockPixelVariance,
+	AverageVariance,
+	BlockAverageVariance,
+};
+
 class e_Image
 {
 public:
@@ -48,11 +59,13 @@ public:
 			xyzSplat[0] = xyzSplat[1] = xyzSplat[2] = 0;
             weightSum = 0.0f;
 			I = I2 = 0.0f;
+			E = E2 = 0.0f;
         }
         float xyz[3];
         float weightSum;
         float xyzSplat[3];
 		float I, I2;
+		float E, E2;
 		CUDA_DEVICE CUDA_HOST Spectrum toSpectrum(float splat);
 		CUDA_FUNC_IN float var()
 		{
@@ -64,13 +77,15 @@ public:
 		return filter;
 	}
 	void rebuildFilterTable();
-	bool& accessHDR()
+	ImageDrawType& accessDrawStyle()
 	{
-		return doHDR;
+		return drawStyle;
 	}
 	void DoUpdateDisplay(float splat);
 	RGBCOL* getCudaPixels(){return viewTarget;}
+	void calculateBlockVariance(int block, float splatScale, float* deviceBuffer);
 private:
+	unsigned int NumFrame;
 	void InternalUpdateDisplay(float splat);
 	bool m_bDoUpdate;
 	e_KernelFilter filter;
@@ -79,7 +94,7 @@ private:
 	bool usedHostPixels;
 	float filterTable[FILTER_TABLE_SIZE][FILTER_TABLE_SIZE];
 	int xResolution, yResolution;
-	bool doHDR;
+	ImageDrawType drawStyle;
 	CUDA_FUNC_IN Pixel* getPixel(int i)
 	{
 #ifdef ISCUDA

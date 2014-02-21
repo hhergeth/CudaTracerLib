@@ -187,7 +187,7 @@ e_MIPMap::e_MIPMap(InputStream& a_In)
 	a_In.operator>>(*(int*)&m_uWrapMode);
 	a_In >> m_uLevels;
 	a_In >> m_uSize;
-	if(cudaMalloc(&m_pDeviceData, m_uSize))
+	if(CUDA_MALLOC(&m_pDeviceData, m_uSize))
 		BAD_CUDA_ALLOC(m_uSize)
 	m_pHostData = (unsigned int*)malloc(m_uSize);
 	a_In.Read(m_pHostData, m_uSize);

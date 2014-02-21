@@ -34,8 +34,8 @@ e_RoughTransmittance::e_RoughTransmittance(const char* name)
 		}
 	}
 	delete[] temp;
-	cudaMalloc(&m_transDevice, sizeof(float) * m_transSize);
-	cudaMalloc(&m_diffTransDevice, sizeof(float) * m_diffTransSize);
+	CUDA_MALLOC(&m_transDevice, sizeof(float) * m_transSize);
+	CUDA_MALLOC(&m_diffTransDevice, sizeof(float) * m_diffTransSize);
 	cudaMemcpy(m_transDevice, m_transHost, sizeof(float) * m_transSize, cudaMemcpyHostToDevice);
 	cudaMemcpy(m_diffTransDevice, m_diffTransHost, sizeof(float) * m_diffTransSize, cudaMemcpyHostToDevice);
 	if(I.getPos() != I.getFileSize())

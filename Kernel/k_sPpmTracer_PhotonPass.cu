@@ -96,7 +96,7 @@ template<bool DIRECT> CUDA_FUNC_IN bool TracePhoton(Ray& r, Spectrum Le, CudaRNG
 			//inMesh = dot(r.direction, bRec.map.sys.n) < 0;
 			ac = Le * f;
 		}
-		if(depth > 1)
+		if(depth > 2)
 		{
 			float prob = MIN(1.0f, ac.max() / Le.max());
 			if(rng.randomFloat() > prob)

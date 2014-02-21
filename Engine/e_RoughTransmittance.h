@@ -21,8 +21,8 @@ public:
 	{
 		delete [] m_transHost;
 		delete [] m_diffTransHost;
-		cudaFree(m_transDevice);
-		cudaFree(m_diffTransDevice);
+		CUDA_FREE(m_transDevice);
+		CUDA_FREE(m_diffTransDevice);
 	}
 	CUDA_DEVICE CUDA_HOST float Evaluate(float cosTheta, float alpha = 0.0f, float eta = 0.0f) const;
 	CUDA_DEVICE CUDA_HOST float EvaluateDiffuse(float alpha = 0, float eta = 0) const;

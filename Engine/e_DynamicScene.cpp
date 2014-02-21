@@ -71,7 +71,7 @@ e_DynamicScene::e_DynamicScene(e_Sensor* C, e_SceneInitData a_Data, const char* 
 	m_pVolumes = LL<e_VolumeRegion>(128);
 	m_pBVH = new e_SceneBVH(a_Data.m_uNumNodes);
 	if(a_Data.m_uSizeAnimStream > 1024)
-		cudaMalloc(&m_pDeviceTmpFloats, sizeof(e_TmpVertex) * (1 << 16));
+		CUDA_MALLOC(&m_pDeviceTmpFloats, sizeof(e_TmpVertex) * (1 << 16));
 	m_pTerrain = new e_Terrain(1, make_float2(0,0), make_float2(0,0));
 	unsigned int a = this->getCudaBufferSize() / (1024 * 1024);
 	//if(a > 900 * 1024 * 1024)
@@ -92,7 +92,7 @@ void e_DynamicScene::Free()
 	DEALLOC(m_pAnimStream)
 	DEALLOC(m_pLightStream)
 	DEALLOC(m_pVolumes)
-	cudaFree(m_pDeviceTmpFloats);
+	CUDA_FREE(m_pDeviceTmpFloats);
 #undef DEALLOC
 	delete m_pBVH;
 	delete m_pTerrain;

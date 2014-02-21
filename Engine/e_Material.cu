@@ -36,7 +36,7 @@ bool e_KernelMaterial::SampleNormalMap(const MapParameters& uv, float3* normal) 
 			{
 				MapParameters mp = uv;
 				*(float2*)&mp.uv = mp.uv + make_float2(i - 1, j - 1) * d;
-				//m[i * 4 + j] = HeightMap.tex.Evaluate(mp).average();
+				m[i * 4 + j] = HeightMap.tex.Evaluate(mp).average();
 			}
 		*normal = nor(m, 4, 1, 5, 6, 9, HeightScale); 
 		return true;

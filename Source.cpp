@@ -64,7 +64,7 @@ public:
 		m_uPos = 0;
 		m_uLength = a_NumElements;
 		host = (H*)::malloc(m_uHostBlockSize * a_NumElements);
-		cudaMalloc(&device, sizeof(D) * a_NumElements);
+		CUDA_MALLOC(&device, sizeof(D) * a_NumElements);
 		cudaMemset(device, 0, sizeof(D) * a_NumElements);
 		if(!isEqual())
 			deviceMapped = (D*)::malloc(a_NumElements * sizeof(D));
@@ -75,14 +75,14 @@ public:
 		free(host);
 		if(deviceMapped)
 			free(deviceMapped);
-		cudaFree(device);
+		CUDA_FREE(device);
 	}
 	e_Buffer(InputStream& a_In)
 	{
 		a_In >> m_uLength;
 		a_In >> m_uPos;
 		a_In >> m_uHostBlockSize;
-		if(cudaMalloc(&device, sizeof(D) * m_uLength))
+		if(CUDA_MALLOC(&device, sizeof(D) * m_uLength))
 			BAD_CUDA_ALLOC(sizeof(D) * m_uLength)
 		host = (H*)::malloc(m_uHostBlockSize * m_uLength);
 		a_In.Read(host, m_uPos * m_uHostBlockSize);

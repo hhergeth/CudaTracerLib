@@ -23,6 +23,9 @@ public:
 	///returns wether the camera has been changed
 	bool Update()
 	{
+		if(GetFocus() != H)
+			return false;
+
 		bool HASMOVED = false;
 		POINT P;
 		GetCursorPos(&P);
