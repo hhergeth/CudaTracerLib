@@ -47,6 +47,15 @@ e_Mesh::e_Mesh(InputStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_S
 	m_sIndicesInfo.Invalidate();
 }
 
+void e_Mesh::Free(e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4)
+{
+	a_Stream0->dealloc(m_sIntInfo);
+	a_Stream1->dealloc(m_sTriInfo);
+	a_Stream2->dealloc(m_sNodeInfo);
+	a_Stream3->dealloc(m_sIndicesInfo);
+	a_Stream4->dealloc(m_sMatInfo);
+}
+
 e_SceneInitData e_Mesh::ParseBinary(const char* a_InputFile)
 {
 	InputStream a_In(a_InputFile);
@@ -78,11 +87,62 @@ e_SceneInitData e_Mesh::ParseBinary(const char* a_InputFile)
 	return e_SceneInitData::CreateForSpecificMesh(m_uTriangleCount, m_uIntSize, m_uNodeSize, m_uIndicesSize, 255, 16, 16, 8);
 }
 
-void e_Mesh::Free(e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4)
+void e_Mesh::CompileMesh(const float3* vertices, unsigned int nVertices, const float2* uvs, const unsigned int* indices, unsigned int nIndices, const e_KernelMaterial& mat, const Spectrum& Le, OutputStream& a_Out)
 {
-	a_Stream0->dealloc(m_sIntInfo);
-	a_Stream1->dealloc(m_sTriInfo);
-	a_Stream2->dealloc(m_sNodeInfo);
-	a_Stream3->dealloc(m_sIndicesInfo);
-	a_Stream4->dealloc(m_sMatInfo);
+	e_MeshPartLight m_sLights[MAX_AREALIGHT_NUM];
+	Platform::SetMemory(m_sLights, sizeof(m_sLights));
+	unsigned int lightCount = 0;
+	if(!Le.isZero())
+	{
+		m_sLights[0].L = Le;
+		strcpy(m_sLights[0].MatName, mat.Name);
+		lightCount++;
+	}
+	float3 p[3];
+	float3 n[3];
+	float3 ta[3];
+	float3 bi[3];
+	float2 t[3];
+	unsigned int numTriangles = indices ? nIndices / 3 : nVertices / 3;
+	e_TriangleData* triData = new e_TriangleData[numTriangles];
+	unsigned int triIndex = 0;
+#ifdef EXT_TRI
+	float3* v_Normals = new float3[nVertices], *v_Tangents = new float3[nVertices], *v_BiTangents = new float3[nVertices];
+	Platform::SetMemory(v_Normals, sizeof(float3) * nVertices);
+	Platform::SetMemory(v_Tangents, sizeof(float3) * nVertices);
+	Platform::SetMemory(v_BiTangents, sizeof(float3) * nVertices);
+	ComputeTangentSpace(vertices, uvs, indices, nVertices, numTriangles, v_Normals, v_Tangents, v_BiTangents);
+#endif
+	AABB box = AABB::Identity();
+	for(size_t ti = 0; ti < numTriangles; ti++)
+	{
+		for(size_t j = 0; j < 3; j++)
+		{
+			const int l = indices ? indices[ti * 3 + j] : ti * 3 + j;
+			p[j] = vertices[l];
+			box.Enlarge(p[j]);
+#ifdef EXT_TRI
+			if(uvs)
+				t[j] = uvs[l];
+			ta[j] = normalize(v_Tangents[l]);
+			bi[j] = normalize(v_BiTangents[l]);
+			n[j] = normalize(v_Normals[l]);
+#endif
+		}
+		triData[triIndex++] = e_TriangleData(p, 0, t, n, ta, bi);
+	}
+	a_Out << box;
+	a_Out.Write(m_sLights, sizeof(m_sLights));
+	a_Out << lightCount;
+	a_Out << numTriangles;
+	a_Out.Write(triData, sizeof(e_TriangleData) * numTriangles);
+	a_Out << (unsigned int)1;
+	a_Out.Write(&mat, sizeof(e_KernelMaterial));
+	ConstructBVH(vertices, indices, nVertices, numTriangles * 3, a_Out);
+#ifdef EXT_TRI
+	delete [] v_Normals;
+	delete [] v_Tangents;
+	delete [] v_BiTangents;
+#endif
+	delete [] triData;
 }

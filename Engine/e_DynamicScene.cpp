@@ -111,21 +111,30 @@ e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_MeshFile2)
 	e_BufferReference<e_Mesh, e_KernelMesh> M = m_pMeshBuffer->LoadCached(strA.c_str(), &load);
 	if(load)
 	{
-		std::string t0 = std::string(m_pCompilePath) + getFileName(strA), cmpPath = t0.substr(0, t0.rfind('.')) + std::string(".xmsh");
-		CreateDirectoryRecursively(getDirName(cmpPath).c_str());
-		unsigned long long objStamp = GetTimeStamp(a_MeshFile2);
-		unsigned long long xmshStamp = GetTimeStamp(cmpPath.c_str());
-		unsigned long long si = GetFileSize(cmpPath.c_str());
-		if(si <= 4 || si == -1 || objStamp != xmshStamp)
+		std::string xmshPath;
+		if(strA.find(".xmsh") == std::string::npos)
 		{
-			std::cout << "Started compiling mesh : " << a_MeshFile2 << "\n";
-			OutputStream a_Out(cmpPath.c_str());
-			e_MeshCompileType t;
-			m_sCmpManager.Compile(a_MeshFile2, a_Out, &t);
-			a_Out.Close();
-			SetTimeStamp(cmpPath.c_str(), objStamp);
+			std::string t0 = std::string(m_pCompilePath) + getFileName(strA), cmpPath = t0.substr(0, t0.rfind('.')) + std::string(".xmsh");
+			xmshPath = cmpPath;
+			CreateDirectoryRecursively(getDirName(cmpPath).c_str());
+			unsigned long long objStamp = GetTimeStamp(a_MeshFile2);
+			unsigned long long xmshStamp = GetTimeStamp(cmpPath.c_str());
+			unsigned long long si = GetFileSize(cmpPath.c_str());
+			if(si <= 4 || si == -1 || objStamp != xmshStamp)
+			{
+				std::cout << "Started compiling mesh : " << a_MeshFile2 << "\n";
+				OutputStream a_Out(cmpPath.c_str());
+				e_MeshCompileType t;
+				m_sCmpManager.Compile(a_MeshFile2, a_Out, &t);
+				a_Out.Close();
+				SetTimeStamp(cmpPath.c_str(), objStamp);
+			}
 		}
-		InputStream I(cmpPath.c_str());
+		else
+		{
+			xmshPath = strA;
+		}
+		InputStream I(xmshPath.c_str());
 		unsigned int t;
 		I >> t;
 		if(t == (unsigned int)e_MeshCompileType::Static)
@@ -144,8 +153,8 @@ e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_MeshFile2)
 	}
 	e_StreamReference(e_Node) N = m_pNodeStream->malloc(1);
 	e_StreamReference(e_KernelMaterial) m2 = M->m_sMatInfo;
-	if(m_pMaterialBuffer->NumUsedElements() + M->m_sMatInfo.getLength() < m_pMaterialBuffer->getLength() - 1)
-		m2 = m_pMaterialBuffer->malloc(M->m_sMatInfo);
+	//if(m_pMaterialBuffer->NumUsedElements() + M->m_sMatInfo.getLength() < m_pMaterialBuffer->getLength() - 1)
+	//	m2 = m_pMaterialBuffer->malloc(M->m_sMatInfo);
 	m2.Invalidate();
 	new(N.operator->()) e_Node(M.getIndex(), M.operator->(), strA.c_str(), m2);
 	unsigned int li[MAX_AREALIGHT_NUM];

@@ -7,8 +7,8 @@ namespace bvh_helper
 {
 	class clb : public IBVHBuilderCallback
 	{
-		float3* V;
-		unsigned int* Iab;
+		const float3* V;
+		const unsigned int* Iab;
 		unsigned int v, i;
 		unsigned int _index(unsigned int i, unsigned int o) const
 		{
@@ -24,11 +24,9 @@ namespace bvh_helper
 		int startNode;
 		unsigned int L0, L1;
 	public:
-		clb(unsigned int _v, unsigned int _i, float3* _V, unsigned int* _I)
+		clb(unsigned int _v, unsigned int _i, const float3* _V, const unsigned int* _I)
 			: V(_V), Iab(_I), v(_v), i(_i)
 		{
-			std::cout << _v << "\n";
-			std::cout << _i << "\n";
 			nodeIndex = triIndex = 0;
 			const float duplicates = 0.5f, f = 1.0f + duplicates;
 			L0 = (int)(float(_i / 3) * f);
@@ -110,7 +108,7 @@ struct BVH_Construction_Result
 	}
 };
 
-inline BVH_Construction_Result ConstructBVH(float3* vertices, unsigned int* indices, unsigned int vCount, unsigned int cCount)
+inline BVH_Construction_Result ConstructBVH(const float3* vertices, const unsigned int* indices, unsigned int vCount, unsigned int cCount)
 {
 	bvh_helper::clb c(vCount, cCount, vertices, indices);
 	BVHBuilder::BuildBVH(&c, BVHBuilder::Platform());
@@ -124,4 +122,4 @@ inline BVH_Construction_Result ConstructBVH(float3* vertices, unsigned int* indi
 	return r;
 }
 
-void ConstructBVH(float3* vertices, unsigned int* indices, int vCount, int cCount, OutputStream& O, BVH_Construction_Result* out = 0);
+void ConstructBVH(const float3* vertices, const unsigned int* indices, int vCount, int cCount, OutputStream& O, BVH_Construction_Result* out = 0);

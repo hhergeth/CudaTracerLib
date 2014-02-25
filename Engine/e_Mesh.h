@@ -6,7 +6,7 @@
 #include "e_Buffer.h"
 #include "..\Base\BVHBuilder.h"
 
-#define MAX_AREALIGHT_NUM 4
+#define MAX_AREALIGHT_NUM 2
 
 struct e_KernelMesh
 {
@@ -44,7 +44,7 @@ struct e_TriIntersectorData
 private:
 	float4 a,b,c;
 public:
-	CUDA_DEVICE CUDA_HOST void setData(float3& v0, float3& v1, float3& v2);
+	CUDA_DEVICE CUDA_HOST void setData(const float3& v0, const float3& v1, const float3& v2);
 
 	CUDA_DEVICE CUDA_HOST void getData(float3& v0, float3& v1, float3& v2) const;
 
@@ -58,7 +58,7 @@ public:
 struct e_MeshPartLight
 {
 	e_String MatName;
-	float3 L;
+	Spectrum L;
 };
 
 #define MESH_STATIC_TOKEN 1
@@ -80,7 +80,6 @@ public:
 public:
 	e_Mesh(InputStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4);
 	void Free(e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4);
-	static e_SceneInitData ParseBinary(const char* a_InputFile);
 	e_KernelMesh getKernelData()
 	{
 		e_KernelMesh m_sData;
@@ -95,4 +94,6 @@ public:
 	{
 		return m_sTriInfo.getLength();
 	}
+	static void CompileMesh(const float3* vertices, unsigned int nVertices, const float2* uvs, const unsigned int* indices, unsigned int nIndices, const e_KernelMaterial& mat, const Spectrum& Le, OutputStream& out);
+	static e_SceneInitData ParseBinary(const char* a_InputFile);
 };

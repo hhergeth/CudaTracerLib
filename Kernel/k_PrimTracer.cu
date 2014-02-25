@@ -45,7 +45,7 @@ CUDA_FUNC_IN Spectrum trace(Ray& r, CudaRNG& rng, float3* pout)
 			*pout = r(r2.m_fDist);
 		BSDFSamplingRecord bRec;
 		r2.getBsdfSample(r, rng, &bRec);
-		//return Spectrum(AbsDot(bRec.map.sys.n, -r.direction));
+		//return Spectrum(clamp01(dot(bRec.ng, -r.direction)));
 		Spectrum through(1.0f);
 		if(g_SceneData.m_sVolume.HasVolumes())
 			through = (-g_SceneData.m_sVolume.tau(r, 0, r2.m_fDist)).exp();

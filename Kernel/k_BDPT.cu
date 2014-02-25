@@ -86,15 +86,13 @@ CUDA_FUNC_IN Spectrum evalPath(const Path& P, int nEye, int nLight, CudaRNG& rng
 	BSDFSamplingRecord bRec;
 	ev.r2.getBsdfSample(Ray(ev.p, -1.0f * ev.wi), rng, &bRec, dir);
 	L *= ev.r2.getMat().bsdf.f(bRec);
+	float pdf_i = ev.r2.getMat().bsdf.pdf(bRec);
 	float3 N_x = bRec.map.sys.n;
 	lv.r2.getBsdfSample(Ray(lv.p, dir), rng, &bRec, lv.wo);
 	L *= lv.r2.getMat().bsdf.f(bRec);
 	float3 N_y = bRec.map.sys.n;
 	float g = G(N_x, N_y, ev.p, lv.p);
 	L *= g;
-
-	//const float bsdfPdf = ev.r2.getMat().bsdf.pdf(bRec);
-	//const float misWeight = MonteCarlo::PowerHeuristic(1, dRec.pdf, 1, bsdfPdf);
 
 	return L;
 }

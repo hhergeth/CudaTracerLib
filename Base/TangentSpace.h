@@ -1,7 +1,7 @@
 #pragma once
 
 #ifdef TS_DEC_FRAMEWORK
-inline void ComputeTangentSpace(float3* V, float2* T, unsigned int* I, unsigned int vertexCount, unsigned int triCount, float3* a_Normals, float3* a_Tangents, float3* a_BiTangents = 0)
+inline void ComputeTangentSpace(const float3* V, const float2* T, const unsigned int* I, unsigned int vertexCount, unsigned int triCount, float3* a_Normals, float3* a_Tangents, float3* a_BiTangents = 0)
 {
 	bool hasUV = T == 0;
 	if(T)

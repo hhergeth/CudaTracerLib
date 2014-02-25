@@ -1,7 +1,7 @@
 #include "e_Mesh.h"
 #include "..\Base\StringUtils.h"
 
-void e_TriIntersectorData::setData(float3& a, float3& b, float3& c)
+void e_TriIntersectorData::setData(const float3& a, const float3& b, const float3& c)
 {
 	float3 p = a - c, q = b - c, e = -p - q;
 	float3 d = cross(a - c, b - c);
