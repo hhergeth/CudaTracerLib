@@ -6,6 +6,7 @@
 #include "e_TerrainHeader.h"
 #include "e_Volumes.h"
 #include "..\Math\Sampling.h"
+#include "e_Sensor.h"
 
 struct e_KernelLight;
 class e_Node;
@@ -40,6 +41,7 @@ struct e_KernelDynamicScene
 	unsigned int m_uEmitterIndices[MAX_LIGHT_COUNT];
 	unsigned int m_uEmitterCount;
 	AABB m_sBox;
+	e_Sensor m_Camera;
 
 	CUDA_HOST CUDA_DEVICE bool Occluded(const Ray& r, float tmin, float tmax) const;
 	CUDA_DEVICE CUDA_HOST Spectrum EvalEnvironment(const Ray& r) const;
@@ -57,6 +59,25 @@ struct e_KernelDynamicScene
 
 	CUDA_DEVICE CUDA_HOST Spectrum sampleEmitterRay(Ray& ray, const e_KernelLight*& emitter, const float2 &spatialSample, const float2 &directionalSample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum sampleSensorRay(Ray& ray, const e_Sensor*& emitter, const float2 &spatialSample, const float2 &directionalSample) const;
-private:
+
+	CUDA_FUNC_IN Spectrum sampleEmitterRay(Ray& ray, const float2 &spatialSample, const float2 &directionalSample) const
+	{
+		const e_KernelLight* emitter;
+		return sampleEmitterRay(ray, emitter, spatialSample, directionalSample);
+	}
+	CUDA_FUNC_IN Spectrum sampleSensorRay(Ray& ray, const float2 &spatialSample, const float2 &directionalSample) const
+	{
+		 const e_Sensor* emitter;
+		 return sampleSensorRay(ray, emitter, spatialSample, directionalSample);
+	}
+
+	CUDA_FUNC_IN Ray GenerateSensorRay(int x, int y)
+	{
+		Ray r;
+		sampleSensorRay(r, make_float2(x, y), make_float2(0));
+		return r;
+	}
+
 	CUDA_DEVICE CUDA_HOST const e_KernelLight* sampleLight(float& emPdf, float2& sample) const;
+	CUDA_DEVICE CUDA_HOST float pdfLight(const e_KernelLight* light);
 };

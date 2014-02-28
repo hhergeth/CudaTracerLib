@@ -185,7 +185,7 @@ template<bool DIRECT, bool DEBUGKERNEL> CUDA_FUNC_IN void k_EyePassF(int x, int 
 	CudaRNG rng = g_RNGData();
 	BSDFSamplingRecord bRec;
 	Ray r;
-	Spectrum importance = g_CameraData.sampleRay(r, make_float2(x, y), rng.randomFloat2());
+	Spectrum importance = g_SceneData.sampleSensorRay(r, make_float2(x, y), rng.randomFloat2());
 	TraceResult r2;
 	r2.Init();
 	int depth = -1;
@@ -270,8 +270,7 @@ void k_sPpmTracer::doEyePass(e_Image* I)
 {
 	k_AdaptiveStruct A(TN(r_min), TN(r_max), m_pEntries);
 	cudaMemcpyToSymbol(g_Map2, &m_sMaps, sizeof(k_PhotonMapCollection));
-	k_INITIALIZE(m_pScene->getKernelSceneData());
-	k_STARTPASS(m_pScene, m_pCamera, g_sRngs);
+	k_INITIALIZE(m_pScene, g_sRngs);
 	float s1 = float(m_uPassesDone - 1) / float(m_uPassesDone), s2 = 1.0f / float(m_uPassesDone);
 	if(m_pScene->getVolumes().getLength() || m_bLongRunning || w * h > 800 * 800)
 	{
@@ -296,8 +295,7 @@ void k_sPpmTracer::Debug(int2 pixel)
 {
 	k_AdaptiveStruct A(TN(r_min), TN(r_max), m_pEntries);
 	cudaMemcpyToSymbol(g_Map2, &m_sMaps, sizeof(k_PhotonMapCollection));
-	k_INITIALIZE(m_pScene->getKernelSceneData());
-	k_STARTPASS(m_pScene, m_pCamera, g_sRngs);
+	k_INITIALIZE(m_pScene, g_sRngs);
 	k_EyePassD<true, true><<<1, 1>>>(pixel, w, h, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3), A, 1,1, e_Image());
 	//k_EyePassF<false, true>(pixel, w, h, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3), A, 1,1, e_Image());
 }

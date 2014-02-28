@@ -89,6 +89,35 @@ namespace bvh_helper
 		{
 			this->startNode = startNode;
 		}
+		virtual bool SplitNode(unsigned int index, int dim, float pos, AABB& lBox, AABB& rBox) const
+		{
+			lBox = rBox = AABB::Identity();
+			float3 v1 = V[_index(index, 2)];
+			for (int i = 0; i < 3; i++)
+			{
+				float3 v0 = v1;
+				v1 = V[_index(index, i)];
+				float v0p = ((float*)&v0)[dim];
+				float v1p = ((float*)&v1)[dim];
+
+				// Insert vertex to the boxes it belongs to.
+
+				if (v0p <= pos)
+					lBox.Enlarge(v0);
+				if (v0p >= pos)
+					rBox.Enlarge(v0);
+
+				// Edge intersects the plane => insert intersection to both boxes.
+
+				if ((v0p < pos && v1p > pos) || (v0p > pos && v1p < pos))
+				{
+					float3 t = lerp(v0, v1, clamp((pos - v0p) / (v1p - v0p), 0.0f, 1.0f));
+					lBox.Enlarge(t);
+					rBox.Enlarge(t);
+				}
+			}
+			return true;
+		}
 	};
 }
 

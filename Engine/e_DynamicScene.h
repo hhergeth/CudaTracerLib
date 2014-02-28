@@ -41,6 +41,7 @@ public:
 	e_MeshCompilerManager m_sCmpManager;
 	e_Sensor* m_pCamera;
 	unsigned int m_uEnvMapIndex;
+	bool instanciatedMaterials;
 public:
 	e_DynamicScene(e_Sensor* C, e_SceneInitData a_Data, const char* texPath, const char* cmpPath);
 	~e_DynamicScene();
@@ -81,7 +82,7 @@ public:
 		return m2;
 	}
 	bool UpdateScene();
-	e_KernelDynamicScene getKernelSceneData(bool devicePointer = true);
+	e_KernelDynamicScene getKernelSceneData(bool devicePointer = true)  const;
 	//void UpdateMaterial(e_StreamReference(e_KernelMaterial) m);
 	e_StreamReference(e_Node) getNodes()
 	{

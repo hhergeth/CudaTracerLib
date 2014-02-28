@@ -4,7 +4,13 @@
 const e_KernelLight* e_KernelDynamicScene::sampleLight(float& emPdf, float2& sample) const
 {
 	unsigned int index = m_emitterPDF.SampleReuse(sample.x, emPdf);
-	return g_SceneData.m_sLightData.Data + g_SceneData.m_uEmitterIndices[index];
+	return m_sLightData.Data + g_SceneData.m_uEmitterIndices[index];
+}
+
+float e_KernelDynamicScene::pdfLight(const e_KernelLight* light)
+{
+	unsigned int index = light - this->m_sLightData.Data;
+	return m_emitterPDF[index];
 }
 
 bool e_KernelDynamicScene::Occluded(const Ray& r, float tmin, float tmax) const
@@ -24,7 +30,7 @@ Spectrum e_KernelDynamicScene::EvalEnvironment(const Ray& r) const
 
 float e_KernelDynamicScene::pdfEmitterDiscrete(const e_KernelLight *emitter) const
 {
-	unsigned int index = emitter - g_SceneData.m_sLightData.Data;
+	unsigned int index = emitter - m_sLightData.Data;
 	return m_emitterPDF[index];
 }
 
@@ -54,7 +60,7 @@ Spectrum e_KernelDynamicScene::sampleEmitterDirect(DirectSamplingRecord &dRec, c
 
 Spectrum e_KernelDynamicScene::sampleSensorDirect(DirectSamplingRecord &dRec, const float2 &sample) const
 {
-	Spectrum value = g_CameraData.sampleDirect(dRec, sample);
+	Spectrum value = m_Camera.sampleDirect(dRec, sample);
 	if (dRec.pdf != 0)
 	{
 		/*if (testVisibility && Occluded(Ray(dRec.ref, dRec.d), 0, dRec.dist))
@@ -79,7 +85,7 @@ float e_KernelDynamicScene::pdfEmitterDirect(const DirectSamplingRecord &dRec) c
 
 float e_KernelDynamicScene::pdfSensorDirect(const DirectSamplingRecord &dRec) const
 {
-	return g_CameraData.pdfDirect(dRec);
+	return m_Camera.pdfDirect(dRec);
 }
 
 Spectrum e_KernelDynamicScene::sampleEmitterPosition(PositionSamplingRecord &pRec, const float2 &_sample) const
@@ -98,8 +104,8 @@ Spectrum e_KernelDynamicScene::sampleEmitterPosition(PositionSamplingRecord &pRe
 
 Spectrum e_KernelDynamicScene::sampleSensorPosition(PositionSamplingRecord &pRec, const float2 &sample, const float2 *extra) const
 {
-	pRec.object = &g_CameraData;
-	return g_CameraData.samplePosition(pRec, sample, extra);
+	pRec.object = &m_Camera;
+	return m_Camera.samplePosition(pRec, sample, extra);
 }
 
 float e_KernelDynamicScene::pdfEmitterPosition(const PositionSamplingRecord &pRec) const
@@ -125,6 +131,6 @@ Spectrum e_KernelDynamicScene::sampleEmitterRay(Ray& ray, const e_KernelLight*& 
 
 Spectrum e_KernelDynamicScene::sampleSensorRay(Ray& ray, const e_Sensor*& sensor, const float2 &spatialSample, const float2 &directionalSample) const
 {
-	sensor = &g_CameraData;
+	sensor = &m_Camera;
 	return sensor->sampleRay(ray, spatialSample, directionalSample);
 }

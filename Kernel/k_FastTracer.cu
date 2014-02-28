@@ -9,7 +9,7 @@ __global__ void pathCreateKernel(unsigned int w, unsigned int h, k_RayBuffer<k_F
 		return;
 	int x = idx % w, y = idx / w;
 	Ray r;
-	g_CameraData.sampleRay(r, make_float2(x,y), make_float2(0,0));
+	g_SceneData.sampleSensorRay(r, make_float2(x,y), make_float2(0,0));
 	traversalRay& ray = g_Intersector(idx, 0);
 	ray.a = make_float4(r.origin, 0.0f);
 	ray.b = make_float4(r.direction, FLT_MAX);
@@ -149,8 +149,7 @@ static cTimer TT;
 void k_FastTracer::doDirect(e_Image* I)
 {
 	k_ProgressiveTracer::DoRender(I);
-	k_INITIALIZE(m_pScene->getKernelSceneData());
-	k_STARTPASS(m_pScene, m_pCamera, g_sRngs);
+	k_INITIALIZE(m_pScene, g_sRngs);
 	float scl = length(g_SceneData.m_sBox.Size());
 	pathCreateKernel<<< dim3((w*h)/(32*8)+1,1,1), dim3(32, 8, 1)>>>(w, h, *intersector->current());
 	intersector->current()->setGeneratedRayCount(w * h);
@@ -221,8 +220,7 @@ void k_FastTracer::doDirect(e_Image* I)
 void k_FastTracer::doPath(e_Image* I)
 {
 	k_ProgressiveTracer::DoRender(I);
-	k_INITIALIZE(m_pScene->getKernelSceneData());
-	k_STARTPASS(m_pScene, m_pCamera, g_sRngs);
+	k_INITIALIZE(m_pScene, g_sRngs);
 	pathCreateKernel<<< dim3((w*h)/(32*8)+1,1,1), dim3(32, 8, 1)>>>(w, h, *intersector->current());
 	intersector->current()->setGeneratedRayCount(w * h);
 	int pass = 0;

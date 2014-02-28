@@ -130,8 +130,7 @@ template<bool DIRECT, int SPP> __global__ void k_PhotonPass()
 void k_sPpmTracer::doPhotonPass()
 {
 	cudaMemcpyToSymbol(g_Map, &m_sMaps, sizeof(k_PhotonMapCollection));
-	k_INITIALIZE(m_pScene->getKernelSceneData());
-	k_STARTPASS(m_pScene, m_pCamera, g_sRngs);
+	k_INITIALIZE(m_pScene, g_sRngs);
 	const unsigned long long p0 = 6 * 32, spp = 1, n = 180;
 	if(m_bDirect)
 		k_PhotonPass<true, spp><<< n, p0 >>>();

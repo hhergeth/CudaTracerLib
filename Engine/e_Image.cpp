@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <iostream>
 
+
 	//filter = filt;
 	//filter.SetData(e_KernelGaussianFilter(2, 2, 0.55f));
 	//filter.SetData(e_KernelMitchellFilter(1.0f/3.0f,1.0f/3.0, 4, 4));
@@ -21,7 +22,6 @@ e_Image::e_Image(int xRes, int yRes, unsigned int viewGLTexture)
 	hostPixels = new Pixel[xResolution * yResolution];
 	outState = 1;
 	isMapped = 0;
-	this->viewGLTexture = viewGLTexture;
 	cudaError er = cudaGraphicsGLRegisterImage(&viewCudaResource, viewGLTexture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsSurfaceLoadStore);
 	if(er)
 		throw std::runtime_error(cudaGetErrorString(er));
@@ -30,6 +30,28 @@ e_Image::e_Image(int xRes, int yRes, unsigned int viewGLTexture)
 	ownsTarget = true;
 	cudaMemset(viewTarget, 0, sizeof(RGBCOL) * xRes * yRes);
 }
+
+#ifdef ISWINDOWS
+#include <cuda_d3d11_interop.h>
+e_Image::e_Image(int xRes, int yRes, ID3D11Resource *pD3DResource)
+	: xResolution(xRes), yResolution(yRes)
+{
+ownsTarget = false;
+	drawStyle = ImageDrawType::Normal;
+	setStdFilter();
+	CUDA_MALLOC(&cudaPixels, sizeof(Pixel) * xResolution * yResolution);
+	hostPixels = new Pixel[xResolution * yResolution];
+	outState = 1;
+	isMapped = 0;
+	cudaError er = cudaGraphicsD3D11RegisterResource(&viewCudaResource, pD3DResource, cudaGraphicsRegisterFlagsSurfaceLoadStore);
+	if(er)
+		throw std::runtime_error(cudaGetErrorString(er));
+	//use this to clear the array
+	CUDA_MALLOC(&viewTarget, sizeof(RGBCOL) * xRes * yRes);
+	ownsTarget = true;
+	cudaMemset(viewTarget, 0, sizeof(RGBCOL) * xRes * yRes);
+}
+#endif
 
 e_Image::e_Image(int xRes, int yRes, RGBCOL* target)
 	: xResolution(xRes), yResolution(yRes)
@@ -86,25 +108,25 @@ void e_Image::WriteDisplayImage(const char* fileName)
 {
 	FREE_IMAGE_FORMAT ff = FreeImage_GetFIFFromFilename(fileName);
 
-	FIBITMAP* bitmap = FreeImage_Allocate(xResolution, yResolution, 32, 0x000000ff, 0x0000ff00, 0x00ff0000);
+	RGBCOL* colData = new RGBCOL[xResolution * yResolution];
 	if(outState == 1)
 	{
 		cudaGraphicsMapResources(1, &viewCudaResource);
 		cudaGraphicsSubResourceGetMappedArray(&viewCudaArray, viewCudaResource, 0, 0);
-		cudaMemcpyFromArray(FreeImage_GetBits(bitmap), viewCudaArray, 0, 0, xResolution * yResolution * sizeof(RGBCOL), cudaMemcpyDeviceToHost);
+		cudaMemcpyFromArray(colData, viewCudaArray, 0, 0, xResolution * yResolution * sizeof(RGBCOL), cudaMemcpyDeviceToHost);
 		cudaGraphicsUnmapResources(1, &viewCudaResource);
 	}
 	else
 	{
-		cudaMemcpy(FreeImage_GetBits(bitmap), viewTarget, sizeof(RGBCOL) * xResolution * yResolution, cudaMemcpyDeviceToHost);
+		cudaMemcpy(colData, viewTarget, sizeof(RGBCOL) * xResolution * yResolution, cudaMemcpyDeviceToHost);
 	}
-	RGBCOL* A = (RGBCOL*)FreeImage_GetBits(bitmap);
+	FIBITMAP* bitmap = FreeImage_Allocate(xResolution, yResolution, 24, 0x000000ff, 0x0000ff00, 0x00ff0000);
+	uchar3* A = (uchar3*)FreeImage_GetBits(bitmap);
 	for(int i = 0; i < xResolution * yResolution; i++)
 	{
-		unsigned char c = A[i].x;
-		A[i].x = A[i].z;
-		A[i].z = c;
+		A[i] = make_uchar3(colData[i].z, colData[i].y, colData[i].x);
 	}
+	delete [] colData;
 	bool b = FreeImage_Save(ff, bitmap, fileName);
 	FreeImage_Unload(bitmap);
 }

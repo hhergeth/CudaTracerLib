@@ -334,9 +334,6 @@ CUDA_GLOBAL void rtm_VarBuffer(e_Image::Pixel* P, float* T, unsigned int w, unsi
 	sumI = sumI2 = 0.0f;
 	if(x < w && y < h)
 	{
-		Spectrum c = P[y * w + x].toSpectrum(splatScale);
-		float avg = c.average();
-
 		float& E = P[y * w + x].E, &E2 = P[y * w + x].E2;
 		float e = E / float(NumFrame - BASE), e2 = E2 / float(NumFrame - BASE);
 		float var = e2 - e * e;
@@ -349,5 +346,7 @@ CUDA_GLOBAL void rtm_VarBuffer(e_Image::Pixel* P, float* T, unsigned int w, unsi
 
 void e_Image::calculateBlockVariance(int block, float splatScale, float* deviceBuffer)
 {
+	if(block > 32)
+		throw new std::exception("block size <= 32");
 	rtm_VarBuffer<<<dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block)>>>(cudaPixels, deviceBuffer, xResolution, yResolution, splatScale, NumFrame);
 }

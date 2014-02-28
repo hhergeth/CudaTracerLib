@@ -12,7 +12,6 @@ void print(const __m128& v)
 
 //TODO : 
 //implement non sorting algortihm, there is a bug when using the spatial variant
-//use callback for split method
 
 //copied from Effiecent GPU Traversal
 
@@ -397,14 +396,28 @@ ObjectSplit findObjectSplit(buffer& buf, const BVHBuilder::Platform& P, float no
 	}
 	return split;
 }
-void splitReference(BBoxTmp& left, BBoxTmp& right, const BBoxTmp* ref, int dim, float pos)
+void splitReference(BBoxTmp& left, BBoxTmp& right, const BBoxTmp* ref, int dim, float pos, const IBVHBuilderCallback* clb)
 {
-	left._pNode = right._pNode = ref->_pNode;
-    left.box = right.box = __m128_box::Identity();
-	if(ref->box.b.m128_f32[dim] < pos && pos < ref->box.t.m128_f32[dim])
+	AABB lBox, rBox;
+	if(clb->SplitNode(ref->_pNode, dim, pos, lBox, rBox))
 	{
-		left.box = right.box = ref->box;
-	}/*
+		left._pNode = right._pNode = ref->_pNode;
+		left.box = __m128_box(lBox);
+		right.box = __m128_box(rBox);
+	}
+	else
+	{
+		left.box = right.box = __m128_box::Identity();
+		if(ref->box.b.m128_f32[dim] < pos && pos < ref->box.t.m128_f32[dim])
+		{
+			left.box = right.box = ref->box;
+		}
+	}
+	left.box.t.m128_f32[dim] = pos;
+	right.box.b.m128_f32[dim] = pos;
+	left.box.Intersect(ref->box);
+	right.box.Intersect(ref->box);
+	/*
 	left.box.t.m128_f32[dim] = pos;
 	right.box.b.m128_f32[dim] = pos;
 	left.box.Intersect(ref->box);
@@ -412,7 +425,7 @@ void splitReference(BBoxTmp& left, BBoxTmp& right, const BBoxTmp* ref, int dim, 
 	//no idea what whould be the correct way to do it
 	//but can one actually split a AABB further without supplementary information?
 }
-SpatialSplit findSpatialSplit(buffer& buf, __m128_box& box, const BVHBuilder::Platform& P, float nodeSAH)
+SpatialSplit findSpatialSplit(buffer& buf, __m128_box& box, const BVHBuilder::Platform& P, float nodeSAH, const IBVHBuilderCallback* clb)
 {
 	__m128 origin = box.b;
 	__m128 binSize = _mm_mul_ps(_mm_sub_ps(box.t, origin), binScale);
@@ -443,7 +456,7 @@ SpatialSplit findSpatialSplit(buffer& buf, __m128_box& box, const BVHBuilder::Pl
 			for (int i = firstBin.m128_f32[dim]; i < lastBin.m128_f32[dim]; i++)
             {
                 BBoxTmp leftRef, rightRef;
-				splitReference(leftRef, rightRef, &currRef, dim, origin.m128_f32[dim] + binSize.m128_f32[dim] * (float)(i + 1));
+				splitReference(leftRef, rightRef, &currRef, dim, origin.m128_f32[dim] + binSize.m128_f32[dim] * (float)(i + 1), clb);
 				m_bins[dim][i].bounds.Enlarge(leftRef.box);
                 currRef = rightRef;
             }
@@ -505,7 +518,7 @@ void performObjectSplit(buffer& buf, NodeSpec& left, NodeSpec& right, ObjectSpli
 	right.numRef = buf.N - split.numLeft;
     right.bounds = split.rightBounds;
 }
-void performSpatialSplit(buffer& buf, NodeSpec& left, NodeSpec& right, SpatialSplit& split, const BVHBuilder::Platform& P)
+void performSpatialSplit(buffer& buf, NodeSpec& left, NodeSpec& right, SpatialSplit& split, const BVHBuilder::Platform& P, const IBVHBuilderCallback* clb)
 {
 	int leftStart = 0;
     int leftEnd = leftStart;
@@ -538,7 +551,7 @@ void performSpatialSplit(buffer& buf, NodeSpec& left, NodeSpec& right, SpatialSp
         // Split reference.
 
         BBoxTmp lref, rref;
-        splitReference(lref, rref, buf[leftEnd], split.dim, split.pos);
+        splitReference(lref, rref, buf[leftEnd], split.dim, split.pos, clb);
 
         // Compute SAH for duplicate/unsplit candidates.
 
@@ -608,7 +621,7 @@ int buildNode(buffer& buf,  __m128_box& box, const BVHBuilder::Platform& P, floa
         overlap.Intersect(object.rightBounds);
         if (overlap.area() >= m_minOverlap)
 		{
-            spatial = findSpatialSplit(buf, box, P, nodeSAH);
+            spatial = findSpatialSplit(buf, box, P, nodeSAH, clb);
 		}
     }
 	float minSAH = MIN(leafSAH, object.sah, spatial.sah);
@@ -618,7 +631,7 @@ int buildNode(buffer& buf,  __m128_box& box, const BVHBuilder::Platform& P, floa
 	int dim;
     if (minSAH == spatial.sah)
 	{
-        performSpatialSplit(buf, left, right, spatial, P);
+		performSpatialSplit(buf, left, right, spatial, P, clb);
 		dim = spatial.dim;
 	}
     if (!left.numRef || !right.numRef)

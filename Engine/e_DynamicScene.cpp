@@ -54,6 +54,7 @@ template<typename T> e_Stream<T>* LL(int i)
 e_DynamicScene::e_DynamicScene(e_Sensor* C, e_SceneInitData a_Data, const char* texPath, const char* cmpPath)
 	: m_uEnvMapIndex(0xffffffff), m_pCamera(C)
 {
+	instanciatedMaterials = false;
 	m_pCompilePath = cmpPath;
 	m_pTexturePath = texPath;
 	int nodeC = 1 << 16, tCount = 1 << 16;
@@ -153,8 +154,8 @@ e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_MeshFile2)
 	}
 	e_StreamReference(e_Node) N = m_pNodeStream->malloc(1);
 	e_StreamReference(e_KernelMaterial) m2 = M->m_sMatInfo;
-	//if(m_pMaterialBuffer->NumUsedElements() + M->m_sMatInfo.getLength() < m_pMaterialBuffer->getLength() - 1)
-	//	m2 = m_pMaterialBuffer->malloc(M->m_sMatInfo);
+	if(instanciatedMaterials && m_pMaterialBuffer->NumUsedElements() + M->m_sMatInfo.getLength() < m_pMaterialBuffer->getLength() - 1)
+		m2 = m_pMaterialBuffer->malloc(M->m_sMatInfo);
 	m2.Invalidate();
 	new(N.operator->()) e_Node(M.getIndex(), M.operator->(), strA.c_str(), m2);
 	unsigned int li[MAX_AREALIGHT_NUM];
@@ -277,7 +278,7 @@ void e_DynamicScene::AnimateMesh(e_StreamReference(e_Node) n, float t, unsigned 
 	getMesh(n).Invalidate();
 }
 
-e_KernelDynamicScene e_DynamicScene::getKernelSceneData(bool devicePointer)
+e_KernelDynamicScene e_DynamicScene::getKernelSceneData(bool devicePointer) const
 {
 	e_KernelDynamicScene r;
 	r.m_sAnimData = m_pAnimStream->getKernelData(devicePointer);
@@ -295,6 +296,7 @@ e_KernelDynamicScene e_DynamicScene::getKernelSceneData(bool devicePointer)
 	r.m_sTerrain = m_pTerrain->getKernelData(devicePointer);
 	r.m_uEnvMapIndex = m_uEnvMapIndex;
 	r.m_sBox = m_pBVH->m_sBox;
+	r.m_Camera = *m_pCamera;
 
 	unsigned int l = m_pLightStream->NumUsedElements();
 	if(l < 20)

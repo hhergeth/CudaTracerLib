@@ -299,7 +299,7 @@ bool k_TraceRay(const float3& dir, const float3& ori, TraceResult* a_Result)
 			float4x4 modl, modl2;
 			loadInvModl(node, &modl);
 			loadModl(node, &modl2);
-			float3 d = modl.TransformNormal(dir), o = modl.TransformNormal(ori) + modl.Translation();
+			float3 d = modl.TransformNormal(dir), o = modl * ori;
 			//a_Result->m_fDist /= length(d);
 			//a_Result->m_fDist = Distance(modl * (ori + dir * a_Result->m_fDist), modl * ori);
 			k_TraceRayNode(d, o, a_Result, N);
@@ -311,8 +311,10 @@ bool k_TraceRay(const float3& dir, const float3& ori, TraceResult* a_Result)
 	return a_Result->hasHit();
 }
 
-void k_INITIALIZE(const e_KernelDynamicScene& a_Data)
+void k_INITIALIZE(const e_DynamicScene* a_Scene, const CudaRNGBuffer& a_RngBuf)
 {
+	e_KernelDynamicScene a_Data = a_Scene->getKernelSceneData();
+
 	size_t offset;
 	cudaChannelFormatDesc cd0 = cudaCreateChannelDesc<float4>(), cd1 = cudaCreateChannelDesc<unsigned int>();
 	cudaError_t
@@ -322,19 +324,13 @@ void k_INITIALIZE(const e_KernelDynamicScene& a_Data)
 	r = cudaBindTexture(&offset, &t_SceneNodes, a_Data.m_sSceneBVH.m_pNodes, &cd0, a_Data.m_sBVHNodeData.UsedCount * sizeof(e_BVHNodeData));
 	r = cudaBindTexture(&offset, &t_NodeTransforms, a_Data.m_sSceneBVH.m_pNodeTransforms, &cd0, a_Data.m_sNodeData.UsedCount * sizeof(float4x4));
 	r = cudaBindTexture(&offset, &t_NodeInvTransforms, a_Data.m_sSceneBVH.m_pInvNodeTransforms, &cd0, a_Data.m_sNodeData.UsedCount * sizeof(float4x4));
-}
 
-void k_STARTPASS(e_DynamicScene* a_Scene, e_Sensor* a_Camera, const CudaRNGBuffer& a_RngBuf)
-{
 	unsigned int b = 0;
 	cudaMemcpyToSymbol(g_RayTracedCounterDevice, &b, sizeof(unsigned int));
-	e_KernelDynamicScene d2 = a_Scene->getKernelSceneData();
-	cudaMemcpyToSymbol(g_SceneDataDevice, &d2, sizeof(e_KernelDynamicScene));
-	cudaMemcpyToSymbol(g_CameraDataDevice, a_Camera, sizeof(e_Sensor));
+	cudaMemcpyToSymbol(g_SceneDataDevice, &a_Data, sizeof(e_KernelDynamicScene));
 	cudaMemcpyToSymbol(g_RNGDataDevice, &a_RngBuf, sizeof(CudaRNGBuffer));
 
 	g_SceneDataHost = a_Scene->getKernelSceneData(false);
-	g_CameraDataHost = *a_Camera;
 	g_RNGDataHost = a_RngBuf;
 	g_RayTracedCounterHost = 0;
 }

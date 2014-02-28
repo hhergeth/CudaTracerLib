@@ -103,8 +103,7 @@ void k_PhotonTracer::DoRender(e_Image* I)
 	k_ProgressiveTracer::DoRender(I);
 	unsigned int zero = 0;
 	cudaMemcpyToSymbol(g_NextRayCounter3, &zero, sizeof(unsigned int));
-	k_INITIALIZE(m_pScene->getKernelSceneData());
-	k_STARTPASS(m_pScene, m_pCamera, g_sRngs);
+	k_INITIALIZE(m_pScene, g_sRngs);
 	pathKernel<<< 180, dim3(32, 4, 1)>>>(N, *I);
 	m_uPassesDone++;
 	k_TracerBase_update_TracedRays

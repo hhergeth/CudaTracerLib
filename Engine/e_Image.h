@@ -2,10 +2,11 @@
 
 #include "e_Filter.h"
 #include "e_Samples.h"
+
 #ifdef ISWINDOWS
 #include <windows.h>
-#endif
 #include <cuda_gl_interop.h>
+#endif
 
 #define FILTER_TABLE_SIZE 16
 
@@ -20,6 +21,8 @@ enum ImageDrawType
 	BlockAverageVariance,
 };
 
+class ID3D11Resource;
+
 class e_Image
 {
 public:
@@ -27,6 +30,9 @@ public:
 	CUDA_FUNC_IN e_Image(){}
 
 	e_Image(int xRes, int yRes, unsigned int viewGLTexture);
+#ifdef ISWINDOWS
+	e_Image(int xRes, int yRes, ID3D11Resource *pD3DResource);
+#endif
 	e_Image(int xRes, int yRes, RGBCOL* target = 0);
     void Free();
 	void getExtent(unsigned int& xRes, unsigned int &yRes)
@@ -107,13 +113,14 @@ private:
 
 	//opengl
 	int outState;
-	unsigned int viewGLTexture;
-	cudaGraphicsResource_t viewCudaResource;
 
+	cudaGraphicsResource_t viewCudaResource;
 	bool isMapped;
 	cudaArray_t viewCudaArray;
 	cudaSurfaceObject_t viewCudaSurfaceObject;
 
 	bool ownsTarget;
 	RGBCOL* viewTarget;
+
+
 };

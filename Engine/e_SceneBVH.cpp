@@ -21,7 +21,10 @@ void e_SceneBVH::Build(e_StreamReference(e_Node) a_Nodes, e_BufferReference<e_Me
 		}
 		virtual void getBox(unsigned int index, AABB* out) const
 		{
-			*out = a_Nodes(index)->getWorldBox(a_Meshes(a_Nodes(index)->m_uMeshIndex), *t->m_pTransforms[0](index));
+			unsigned int mi = a_Nodes(index)->m_uMeshIndex;
+			AABB box = a_Meshes(mi)->m_sLocalBox;
+			float4x4 mat = *t->m_pTransforms[0](index);
+			*out = box.Transform(mat);
 		}
 		virtual void HandleBoundingBox(const AABB& box)
 		{
