@@ -228,6 +228,9 @@
     <ClInclude Include="Engine\SceneBuilder\tiny_obj_loader.h">
       <Filter>Engine\SceneBuilder</Filter>
     </ClInclude>
+    <ClInclude Include="Kernel\k_BlockSampler.h">
+      <Filter>Kernel</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\e_AnimatedMesh.cpp">
@@ -394,6 +397,9 @@
       <Filter>Engine</Filter>
     </CudaCompile>
     <CudaCompile Include="Kernel\k_BDPT.cu">
+      <Filter>Kernel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Kernel\k_BlockSampler.cu">
       <Filter>Kernel</Filter>
     </CudaCompile>
   </ItemGroup>

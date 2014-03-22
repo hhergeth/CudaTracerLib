@@ -19,9 +19,10 @@ enum ImageDrawType
 	BlockPixelVariance,
 	AverageVariance,
 	BlockAverageVariance,
+	NumSamples,
 };
 
-class ID3D11Resource;
+struct ID3D11Resource;
 
 class e_Image
 {
@@ -35,7 +36,7 @@ public:
 #endif
 	e_Image(int xRes, int yRes, RGBCOL* target = 0);
     void Free();
-	void getExtent(unsigned int& xRes, unsigned int &yRes)
+	void getExtent(unsigned int& xRes, unsigned int &yRes) const
 	{
 		xRes = xResolution;
 		yRes = yResolution;
@@ -66,12 +67,14 @@ public:
             weightSum = 0.0f;
 			I = I2 = 0.0f;
 			E = E2 = 0.0f;
+			N = 0;
         }
         float xyz[3];
         float weightSum;
         float xyzSplat[3];
 		float I, I2;
 		float E, E2;
+		unsigned int N;
 		CUDA_DEVICE CUDA_HOST Spectrum toSpectrum(float splat);
 		CUDA_FUNC_IN float var()
 		{
@@ -89,7 +92,11 @@ public:
 	}
 	void DoUpdateDisplay(float splat);
 	RGBCOL* getCudaPixels(){return viewTarget;}
-	void calculateBlockVariance(int block, float splatScale, float* deviceBuffer);
+	bool calculateBlockVariance(int block, float splatScale, float* deviceBuffer) const;
+	CUDA_FUNC_IN Spectrum getPixel(float splat, int x, int y)
+	{
+		return getPixel(y * xResolution + x)->toSpectrum(splat);
+	}
 private:
 	unsigned int NumFrame;
 	void InternalUpdateDisplay(float splat);

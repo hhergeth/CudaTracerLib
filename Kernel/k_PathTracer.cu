@@ -5,6 +5,21 @@
 
 CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_NextRayCounter;
 
+CUDA_FUNC_IN Spectrum colA(Ray& r, CudaRNG& rng, unsigned int pass)
+{
+	TraceResult r2 = k_TraceRay(r);
+	if(!r2.hasHit())
+		return 0.0f;
+	//float3 P[3];
+	//r2.m_pInt->getData(P[0], P[1], P[2]);
+	float3 p = r(r2.m_fDist);//P[pass % 3]
+	Frame sys;
+	r2.lerpFrame(sys);
+	Ray sr(p, sys.toWorld(Warp::squareToCosineHemisphere(rng.randomFloat2())));
+	TraceResult sr2 = k_TraceRay(sr);
+	return sr2.m_fDist / length(g_SceneData.m_sBox.Size()) * 0.5f;
+}
+
 template<bool DIRECT> __global__ void pathKernel(unsigned int width, unsigned int height, unsigned int a_PassIndex, e_Image g_Image)
 {
 	CudaRNG rng = g_RNGData();
@@ -36,6 +51,7 @@ template<bool DIRECT> __global__ void pathKernel(unsigned int width, unsigned in
 		Spectrum imp = g_SceneData.sampleSensorRay(r, make_float2(x, y), rng.randomFloat2());
 
 		Spectrum col = imp * PathTrace<DIRECT>(r.direction, r.origin, rng);
+		//Spectrum col = colA(r, rng, a_PassIndex);
 		
 		g_Image.AddSample(x, y, col);
 	}
@@ -71,4 +87,30 @@ void k_PathTracer::Debug(int2 p)
 	CudaRNG rng = g_RNGData();
 	Ray r = g_SceneData.GenerateSensorRay(p.x, p.y);	
 	PathTrace<true>(r.direction, r.origin, rng);
+}
+
+template<bool DIRECT> __global__ void pathKernel2(unsigned int width, unsigned int height, e_Image g_Image, k_BlockSampler sampler)
+{
+	uint2 pixel = sampler.pixelCoord();
+	CudaRNG rng = g_RNGData();
+	if(pixel.x < width && pixel.y < height)
+	{
+		Ray r;
+		Spectrum imp = g_SceneData.sampleSensorRay(r, make_float2(pixel.x, pixel.y), rng.randomFloat2());
+		Spectrum col = imp * PathTrace<DIRECT>(r.direction, r.origin, rng);
+		g_Image.AddSample(pixel.x, pixel.y, col);
+	}
+	g_RNGData(rng);
+}
+
+void k_BlockPathTracer::DoRender(e_Image* I)
+{
+	k_ProgressiveTracer::DoRender(I);
+	k_INITIALIZE(m_pScene, g_sRngs);
+	if(m_Direct)
+		pathKernel2<true><<< sampler.blockDim(), sampler.threadDim()>>>(w, h, *I, sampler);
+	else pathKernel2<false><<< sampler.blockDim(), sampler.threadDim()>>>(w, h, *I, sampler);
+	k_TracerBase_update_TracedRays
+	I->DoUpdateDisplay(1);
+	sampler.AddPass(*I);
 }

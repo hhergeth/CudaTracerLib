@@ -116,8 +116,6 @@ public:
 	}
 };
 
-#define GENERATOR Xorshift_GENERATOR
-
 struct k_TracerRNG_cuRAND
 {
 	curandState state;
@@ -330,6 +328,8 @@ private:
 	void createGenerators(unsigned int a_Spacing, unsigned int a_Offset);
 };
 
+#define GENERATOR LinearCongruental_GENERATOR
+
 class k_Tracer_sobol
 {
 public:
@@ -367,3 +367,6 @@ public:
 
 typedef k_TracerRNG_cuRAND CudaRNG;
 typedef CudaRNGBuffer_cuRAND CudaRNGBuffer;
+
+//typedef k_Tracer_sobol CudaRNG;
+//typedef k_Tracer_sobol_Buffer CudaRNGBuffer;

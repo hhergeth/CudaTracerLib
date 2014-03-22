@@ -13,16 +13,11 @@ k_sPpmTracer::k_sPpmTracer()
 #ifdef DEBUG
 	m_uNewPhotonsPerRun = 0.01f;
 #else
-	m_uNewPhotonsPerRun = 5;
+	m_uNewPhotonsPerRun = 2;
 #endif
 	m_uModus = 1;
 	m_fInitialRadiusScale = 1;
 	m_sMaps = k_PhotonMapCollection((int)(1000000.0f * m_uNewPhotonsPerRun), m_uGridLength);
-
-	//deSerialize
-	//InputStream I(SER_NAME);
-	//m_sMaps.DeSerialize(I);
-	//I.Close();
 }
 
 void k_sPpmTracer::PrintStatus(std::vector<std::string>& a_Buf)

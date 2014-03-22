@@ -8,12 +8,14 @@ struct e_KernelBSDF;
 struct e_KernelMaterial;
 struct e_KernelBSSRDF;
 struct BSDFSamplingRecord;
+struct e_TriIntersectorData;
 struct TraceResult
 {
 	float m_fDist;
 	float2 m_fUV;
 	const e_TriangleData* m_pTri;
 	const e_Node* m_pNode;
+	const e_TriIntersectorData* m_pInt;
 	CUDA_DEVICE CUDA_HOST bool hasHit() const;
 	CUDA_DEVICE CUDA_HOST void Init();
 	CUDA_DEVICE CUDA_HOST operator bool() const;

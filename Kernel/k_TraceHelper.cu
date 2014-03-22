@@ -156,7 +156,6 @@ CUDA_FUNC_IN bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResu
 				unsigned int index = tex1Dfetch(t_triIndices, mesh.m_uBVHIndicesOffset + triAddr);
 #else
 				float4* dat = (float4*)g_SceneData.m_sBVHIntData.Data;
-//				float4* dat2 = (float4*)g_SceneData.m_sBVHIndexData.Data;
 				const float4 v00 = dat[mesh.m_uBVHTriangleOffset + triAddr * 3 + 0];
 				const float4 v11 = dat[mesh.m_uBVHTriangleOffset + triAddr * 3 + 1];
 				const float4 v22 = dat[mesh.m_uBVHTriangleOffset + triAddr * 3 + 2];
@@ -191,6 +190,7 @@ CUDA_FUNC_IN bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResu
 							{
 								a_Result->m_pNode = N;
 								a_Result->m_pTri = tri;
+								a_Result->m_pInt = g_SceneData.m_sBVHIntData.Data + mesh.m_uBVHTriangleOffset / 3 + triAddr;
 								a_Result->m_fUV = make_float2(u, v);
 								a_Result->m_fDist = t;
 								found = true;

@@ -102,6 +102,7 @@ void TraceResult::Init()
 	m_fDist = FLT_MAX;
 	m_pNode = 0;
 	m_pTri = 0;
+	m_pInt = 0;
 }
 
 unsigned int TraceResult::getMatIndex() const

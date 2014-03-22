@@ -1139,6 +1139,12 @@ CUDA_FUNC_IN float4 sqrtf(const float4& v)
 	return make_float4(sqrtf(v.x), sqrtf(v.y), sqrtf(v.z), sqrtf(v.w));
 }
 
+CUDA_FUNC_IN float variance(float x, float x2, float n)
+{
+	return x2 / n - x / n * x / n;
+	//return (x2 - x * x / n) / n;
+}
+
 class math
 {
 public:

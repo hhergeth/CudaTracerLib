@@ -59,6 +59,7 @@
     <ClInclude Include="Engine\SceneBuilder\MD5Parser.h" />
     <ClInclude Include="Engine\SceneBuilder\tiny_obj_loader.h" />
     <ClInclude Include="Kernel\k_BDPT.h" />
+    <ClInclude Include="Kernel\k_BlockSampler.h" />
     <ClInclude Include="Kernel\k_FastTracer.h" />
     <ClInclude Include="Kernel\k_PathTracer.h" />
     <ClInclude Include="Kernel\k_PhotonTracer.h" />
@@ -141,6 +142,7 @@
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">O3</Optimization>
       <FastMath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</FastMath>
     </CudaCompile>
+    <CudaCompile Include="Kernel\k_BlockSampler.cu" />
     <CudaCompile Include="Kernel\k_FastTracer.cu" />
     <CudaCompile Include="Kernel\k_PathTracer.cu" />
     <CudaCompile Include="Kernel\k_PhotonTracer.cu" />

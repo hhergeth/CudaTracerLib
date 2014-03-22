@@ -127,6 +127,7 @@ void e_Image::WriteDisplayImage(const char* fileName)
 		A[i] = make_uchar3(colData[i].z, colData[i].y, colData[i].x);
 	}
 	delete [] colData;
+	FreeImage_FlipVertical(bitmap);
 	bool b = FreeImage_Save(ff, bitmap, fileName);
 	FreeImage_Unload(bitmap);
 }

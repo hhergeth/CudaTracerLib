@@ -399,9 +399,9 @@ ObjectSplit findObjectSplit(buffer& buf, const BVHBuilder::Platform& P, float no
 void splitReference(BBoxTmp& left, BBoxTmp& right, const BBoxTmp* ref, int dim, float pos, const IBVHBuilderCallback* clb)
 {
 	AABB lBox, rBox;
+	left._pNode = right._pNode = ref->_pNode;
 	if(clb->SplitNode(ref->_pNode, dim, pos, lBox, rBox))
 	{
-		left._pNode = right._pNode = ref->_pNode;
 		left.box = __m128_box(lBox);
 		right.box = __m128_box(rBox);
 	}
@@ -415,15 +415,10 @@ void splitReference(BBoxTmp& left, BBoxTmp& right, const BBoxTmp* ref, int dim, 
 	}
 	left.box.t.m128_f32[dim] = pos;
 	right.box.b.m128_f32[dim] = pos;
+	//left.box = __m128_box(left.box.ToBox().Enlarge(0.01f));
+	//right.box = __m128_box(right.box.ToBox().Enlarge(0.01f));
 	left.box.Intersect(ref->box);
 	right.box.Intersect(ref->box);
-	/*
-	left.box.t.m128_f32[dim] = pos;
-	right.box.b.m128_f32[dim] = pos;
-	left.box.Intersect(ref->box);
-	right.box.Intersect(ref->box);*/
-	//no idea what whould be the correct way to do it
-	//but can one actually split a AABB further without supplementary information?
 }
 SpatialSplit findSpatialSplit(buffer& buf, __m128_box& box, const BVHBuilder::Platform& P, float nodeSAH, const IBVHBuilderCallback* clb)
 {

@@ -1,7 +1,7 @@
 #include "e_Image.h"
 #include <cuda_surface_types.h>
 
-#define BASE 5
+#define BASE 20
 
 //#define FAST_ADD_SAMPLE
 
@@ -24,6 +24,7 @@ void e_Image::AddSample(int sx, int sy, const Spectrum &_L)
 	L.clampNegative();
 	if(L.isNaN())
 		return;
+	getPixel(sy * xResolution + sx)->N++;
 	float xyz[3];
 	L.toXYZ(xyz[0], xyz[1], xyz[2]);
 	float avg = L.average();
@@ -53,7 +54,7 @@ void e_Image::AddSample(int sx, int sy, const Spectrum &_L)
 			//filterWt = filter.Evaluate(x - dimageX, y - dimageY);
 
 			// Update pixel values with filtered sample contribution
-			Pixel* pixel = getPixel((y - 0) * xResolution + (x - 0));
+			Pixel* pixel = getPixel(y * xResolution + x);
 			float wh = filterWt * avg;
 #ifdef ISCUDA
 			for(int i = 0; i < 3; i++)
@@ -77,6 +78,7 @@ void e_Image::AddSample(int x, int y, const Spectrum &L)
 	float xyz[3];
 	L.toXYZ(xyz[0], xyz[1], xyz[2]);
 	Pixel* pixel = getPixel(y * xResolution + x);
+	pixel->N++;
 	const float filterWt = 1.0f, wh = filterWt * L.average();
 #ifdef ISCUDA
 		for(int i = 0; i < 3; i++)
@@ -129,7 +131,7 @@ CUDA_ALIGN(16) CUDA_DEVICE float g_LogLum;
 CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_MaxLum;
 CUDA_ALIGN(16) CUDA_SHARED float s_LogLum;
 CUDA_ALIGN(16) CUDA_SHARED unsigned int s_MaxLum;
-CUDA_GLOBAL void rtm_SumLogLum(e_Image::Pixel* P, unsigned int w, unsigned int h, float splatScale, unsigned int NumFrame)
+CUDA_GLOBAL void rtm_SumLogLum(e_Image::Pixel* P, unsigned int w, unsigned int h, float splatScale)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x, y = blockIdx.y * blockDim.y + threadIdx.y;
 	if(x < w && y < h)
@@ -139,7 +141,7 @@ CUDA_GLOBAL void rtm_SumLogLum(e_Image::Pixel* P, unsigned int w, unsigned int h
 		Spectrum L_w = P[y * w + x].toSpectrum(splatScale);
 		float avg = L_w.average();
 		float& E = P[y * w + x].E, &E2 = P[y * w + x].E2;
-		if(NumFrame > BASE)
+		if(P[y * w + x].N > BASE)
 		{
 			E += avg;
 			E2 += avg * avg;
@@ -160,22 +162,22 @@ CUDA_GLOBAL void rtm_SumLogLum(e_Image::Pixel* P, unsigned int w, unsigned int h
 struct memTarget
 {
 	RGBCOL* viewTarget;
-	int w;
+	int w, h;
 
 	CUDA_FUNC_IN  void operator()(int x, int y, RGBCOL c)
 	{
-		viewTarget[y * w + x] = c;
+		viewTarget[(h - y - 1) * w + x] = c;
 	}
 };
 
 struct texTarget
 {
 	cudaSurfaceObject_t viewCudaSurfaceObject;
-	int w;
+	int w, h;
 
 	CUDA_ONLY_FUNC void operator()(int x, int y, RGBCOL c)
 	{
-		surf2Dwrite(c, viewCudaSurfaceObject, x * 4, y);
+		surf2Dwrite(c, viewCudaSurfaceObject, x * 4, h - y - 1);
 	}
 };
 
@@ -183,11 +185,11 @@ void e_Image::SetSample(int x, int y, RGBCOL c)
 {
 	if(outState == 1)
 #ifdef ISCUDA
-		surf2Dwrite(c, viewCudaSurfaceObject, x * 4, y);
+		surf2Dwrite(c, viewCudaSurfaceObject, x * 4, yResolution - y - 1);
 #else
 		;
 #endif
-	else viewTarget[y * xResolution + x] = c;
+	else viewTarget[(yResolution - y - 1) * xResolution + x] = c;
 }
 
 template<typename TARGET> CUDA_GLOBAL void rtm_Scale(e_Image::Pixel* P, TARGET T, unsigned int w, unsigned int h, float splatScale, float L_w, float alpha, float L_white2)
@@ -216,9 +218,10 @@ template<typename TARGET> CUDA_GLOBAL void rtm_Copy(e_Image::Pixel* P, TARGET T,
 	{
 		Spectrum c = P[y * w + x].toSpectrum(splatScale);
 		float avg = c.average();
+		unsigned int N = P[y * w + x].N;
 
 		float& E = P[y * w + x].E, &E2 = P[y * w + x].E2;
-		if(NumFrame > BASE)
+		if(N > BASE)
 		{
 			E += avg;
 			E2 += avg * avg;
@@ -233,41 +236,36 @@ template<typename TARGET> CUDA_GLOBAL void rtm_Copy(e_Image::Pixel* P, TARGET T,
 			Spectrum c = P[y * w + x].toSpectrum(splatScale);
 			atomicAdd(&sumI, avg);
 			atomicAdd(&sumI2, avg * avg);
-			float N = blockDim.x * blockDim.y;
 			__syncthreads();
-			float i = sumI / N, i2 = sumI2 / N;
-			float var = i2 - i * i;
-			T(x, y, SpectrumConverter::Float3ToCOLORREF(make_float3(abs(var))));
+			T(x, y, SpectrumConverter::Float3ToCOLORREF(make_float3(variance(sumI, sumI2, blockDim.x * blockDim.y))));
 		}
 		else if(TYPE == ImageDrawType::PixelVariance)
 		{
-			float W = P[y * w + x].weightSum, i = P[y * w + x].I / W, i2 = P[y * w + x].I2 / W;
-			float var = i2 - i * i;
-			T(x, y, SpectrumConverter::Float3ToCOLORREF(make_float3(abs(var))));
+			T(x, y, SpectrumConverter::Float3ToCOLORREF(make_float3(variance(P[y * w + x].I2, P[y * w + x].I, P[y * w + x].weightSum))));
 		}
 		else if(TYPE == ImageDrawType::BlockPixelVariance)
 		{
-			float W = P[y * w + x].weightSum, i = P[y * w + x].I / W, i2 = P[y * w + x].I2 / W;
-			float var = i2 - i * i;
+			float var = variance(P[y * w + x].I2, P[y * w + x].I, P[y * w + x].weightSum);
 			atomicAdd(&sumI, var);
 			__syncthreads();
 			float f = sumI / float(blockDim.x * blockDim.y);
-			T(x, y, SpectrumConverter::Float3ToCOLORREF(make_float3(abs(f))));
+			T(x, y, SpectrumConverter::Float3ToCOLORREF(make_float3(f)));
 		}
 		else if(TYPE == ImageDrawType::AverageVariance)
 		{
-			float e = E / float(NumFrame - BASE), e2 = E2 / float(NumFrame - BASE);
-			float var = e2 - e * e;
-			T(x, y, SpectrumConverter::Float3ToCOLORREF(make_float3(sqrtf(var))));
+			T(x, y, SpectrumConverter::Float3ToCOLORREF(make_float3(variance(E, E2, N - BASE) * 100)));
 		}
 		else if(TYPE == ImageDrawType::BlockAverageVariance)
 		{
-			float e = E / float(NumFrame - BASE), e2 = E2 / float(NumFrame - BASE);
-			float var = e2 - e * e;
-			atomicAdd(&sumI, var);
+			atomicAdd(&sumI, variance(E, E2, N - BASE));
 			__syncthreads();
-			float f = sumI / float(blockDim.x * blockDim.y);
-			T(x, y, SpectrumConverter::Float3ToCOLORREF(make_float3(sqrtf(f))));
+			float f = sumI / float(blockDim.x * blockDim.y) * 100;
+			T(x, y, SpectrumConverter::Float3ToCOLORREF(make_float3(f)));
+		}
+		else if(TYPE == ImageDrawType::NumSamples)
+		{
+			float f = float(N) / float(NumFrame);
+			T(x, y, SpectrumConverter::Float3ToCOLORREF(make_float3(f)));
 		}
 	}
 
@@ -284,6 +282,7 @@ void e_Image::InternalUpdateDisplay(float splatScale)
 	memTarget T1;
 	texTarget T2;
 	T1.w = T2.w = xResolution;
+	T1.h = T2.h = yResolution;
 	T1.viewTarget = viewTarget;
 	T2.viewCudaSurfaceObject = viewCudaSurfaceObject;
 	int block = 32;
@@ -294,7 +293,7 @@ void e_Image::InternalUpdateDisplay(float splatScale)
 		unsigned int val = FloatToUInt(0);
 		cudaError_t r = cudaMemcpyToSymbol(g_LogLum, &Lum_avg, sizeof(Lum_avg));
 		r = cudaMemcpyToSymbol(g_MaxLum, &val, sizeof(unsigned int));
-		rtm_SumLogLum<<<dim3(xResolution / 32 + 1, yResolution / 32 + 1), dim3(32, 32)>>>(cudaPixels, xResolution, yResolution, splatScale, NumFrame);
+		rtm_SumLogLum<<<dim3(xResolution / 32 + 1, yResolution / 32 + 1), dim3(32, 32)>>>(cudaPixels, xResolution, yResolution, splatScale);
 		r = cudaThreadSynchronize();
 		r = cudaMemcpyFromSymbol(&Lum_avg, g_LogLum, sizeof(Lum_avg));
 		unsigned int mLum;
@@ -327,26 +326,56 @@ void e_Image::Clear()
 		cudaMemcpyToArray(viewCudaArray, 0, 0, viewTarget, sizeof(RGBCOL) * xResolution * yResolution, cudaMemcpyDeviceToDevice);
 }
 
-CUDA_GLOBAL void rtm_VarBuffer(e_Image::Pixel* P, float* T, unsigned int w, unsigned int h, float splatScale, unsigned int NumFrame)
+CUDA_GLOBAL void rtm_VarBuffer(e_Image::Pixel* P, float* T, unsigned int w, unsigned int h, float splatScale)
 {
 	unsigned int x = threadIdx.x + blockDim.x * blockIdx.x, y = threadIdx.y + blockDim.y * blockIdx.y;
-	CUDA_SHARED float sumI, sumI2;
-	sumI = sumI2 = 0.0f;
+	CUDA_SHARED float sumI;
+	sumI = 0.0f;
 	if(x < w && y < h)
 	{
-		float& E = P[y * w + x].E, &E2 = P[y * w + x].E2;
-		float e = E / float(NumFrame - BASE), e2 = E2 / float(NumFrame - BASE);
-		float var = e2 - e * e;
+		float var = variance(P[y * w + x].E, P[y * w + x].E2, P[y * w + x].N - BASE);
 		atomicAdd(&sumI, var);
 		__syncthreads();
 		float f = sumI / float(blockDim.x * blockDim.y);
-		T[blockIdx.y * blockDim.x + blockIdx.x] = sqrt(f);
+		if(threadIdx.x == 0 && threadIdx.y == 0)
+			T[blockIdx.y * blockDim.x + blockIdx.x] = (f);
 	}
 }
 
-void e_Image::calculateBlockVariance(int block, float splatScale, float* deviceBuffer)
+static float* hostData = new float[2048 * 2048];
+void calcVar(int block, float splatScale, float* deviceBuffer, e_Image::Pixel* deviceP, e_Image::Pixel* hostP, int w, int h)
 {
+	cudaMemcpy(hostP, deviceP, w * h * sizeof(e_Image::Pixel), cudaMemcpyDeviceToHost);
+	int BlockDimX = int(ceilf(float(w) / block));
+	int blockDimY = int(ceilf(float(h) / block));
+	for(int i = 0; i < BlockDimX; i++)
+		for(int j = 0; j < blockDimY; j++)
+		{
+			float sumVar = 0;
+			for(int x = 0; x < block; x++)
+				for(int y = 0; y < block; y++)
+				{
+					int cx = i * block + x, cy = j * block + y;
+					if(cx >= w || cy >= h)
+						continue;
+					e_Image::Pixel& p = hostP[cx * w + cy];
+					float var = p.E2 - p.E * p.E / float(p.N - BASE);
+					//float e = p.E / float(p.N - BASE), e2 = p.E2 / float(p.N - BASE);
+					//float var = abs(e2 - e * e);
+					sumVar += var;
+				}
+			hostData[j * BlockDimX + i] = sumVar / float(block * block);
+		}
+		cudaMemcpy(deviceBuffer, hostData, BlockDimX * blockDimY * sizeof(float), cudaMemcpyHostToDevice);
+}
+
+bool e_Image::calculateBlockVariance(int block, float splatScale, float* deviceBuffer) const
+{
+	if(NumFrame <= BASE)
+		return false;
 	if(block > 32)
 		throw new std::exception("block size <= 32");
-	rtm_VarBuffer<<<dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block)>>>(cudaPixels, deviceBuffer, xResolution, yResolution, splatScale, NumFrame);
+	//calcVar(block, splatScale, deviceBuffer, cudaPixels, hostPixels, xResolution, yResolution); return true;
+	rtm_VarBuffer<<<dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block)>>>(cudaPixels, deviceBuffer, xResolution, yResolution, splatScale);
+	return true;
 }

@@ -82,6 +82,14 @@ void e_Md5Compiler::Compile(const char* a_InputFile, OutputStream& a_Out)
 bool e_PlyCompiler::IsApplicable(const char* a_InputFile, e_MeshCompileType* out)
 {
 	bool b = hasEnding(a_InputFile, ".ply");
+	if(b)
+	{
+		InputStream i(a_InputFile);
+		char magic[8];
+		i.Read(magic, 8);
+		b = std::string(magic) != "EPLYBNDS";
+		i.Close();
+	}
 	if(out && b)
 		*out = e_MeshCompileType::Static;
 	return b;

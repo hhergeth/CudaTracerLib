@@ -134,5 +134,4 @@ k_Tracer_sobol k_Tracer_sobol_Buffer::operator()()
 
 void k_Tracer_sobol_Buffer::operator()(k_Tracer_sobol& val)
 {
-
 }

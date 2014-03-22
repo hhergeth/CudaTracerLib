@@ -111,7 +111,7 @@ namespace bvh_helper
 
 				if ((v0p < pos && v1p > pos) || (v0p > pos && v1p < pos))
 				{
-					float3 t = lerp(v0, v1, clamp((pos - v0p) / (v1p - v0p), 0.0f, 1.0f));
+					float3 t = lerp(v0, v1, clamp01((pos - v0p) / (v1p - v0p)));
 					lBox.Enlarge(t);
 					rBox.Enlarge(t);
 				}
