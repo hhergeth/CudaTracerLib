@@ -330,6 +330,14 @@ public:
 	{
 		a_Out.Write(operator H *(), getSizeInBytes());
 	}
+	e_Variable<D> AsVar()
+	{
+		return AsVar<D>();
+	}
+	template<typename T> e_Variable<T> AsVar()
+	{
+		return e_Variable<T>((T*)getDeviceMapped(), (T*)getDevice());
+	}
 //private:
 	H* atH(unsigned int i) const 
 	{
@@ -614,6 +622,10 @@ public:
 		unsigned int i = t0 < m_uLength ? t0 : t1;
 		return e_BufferReference<T, T>(this, i, 1);
 	}
+	T* getDeviceMapped(int i) const
+	{
+		return host + i;
+	}
 };
 
 template<typename T> class e_Stream : public e_Buffer<T, T>
@@ -649,40 +661,3 @@ public:
 	} 
 };*/
 
-template<typename T> class e_Variable
-{
-	T* host, *device;
-public:
-	e_Variable()
-	{
-	}
-	template<typename U, typename V> CUDA_HOST e_Variable(e_BufferReference<U, V> r)
-	{
-		host = (T*)r.operator->();
-		device = (T*)r.getDevice();
-	}
-	CUDA_FUNC_IN T& operator[](unsigned int i) const
-	{
-#ifdef ISCUDA
-		return device[i];
-#else
-		return host[i];
-#endif
-	}
-	CUDA_FUNC_IN T* operator->() const
-	{
-#ifdef ISCUDA
-		return device;
-#else
-		return host;
-#endif
-	}
-	CUDA_FUNC_IN T* operator*() const
-	{
-#ifdef ISCUDA
-		return device;
-#else
-		return host;
-#endif
-	}
-};

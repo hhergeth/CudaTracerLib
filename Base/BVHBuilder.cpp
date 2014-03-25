@@ -30,8 +30,13 @@ struct __m128_box
 	{
 		return __m128_box(AABB::Identity());
 	}
-	__m128_box(const AABB& box)
+	__m128_box(const AABB& _box)
 	{
+		AABB box = _box;
+		if(fminf(box.Size()) < 0.05f)
+		{
+		//	box = box.Enlarge(0.5f);
+		}
 		b = TOSSE3(box.minV);
 		t = TOSSE3(box.maxV);
 	}
@@ -407,18 +412,16 @@ void splitReference(BBoxTmp& left, BBoxTmp& right, const BBoxTmp* ref, int dim, 
 	}
 	else
 	{
-		left.box = right.box = __m128_box::Identity();
-		if(ref->box.b.m128_f32[dim] < pos && pos < ref->box.t.m128_f32[dim])
+		//left.box = right.box = __m128_box::Identity();
+		//if(ref->box.b.m128_f32[dim] < pos && pos < ref->box.t.m128_f32[dim])
 		{
 			left.box = right.box = ref->box;
+			//left.box.t.m128_f32[dim] = pos;
+			//right.box.b.m128_f32[dim] = pos;
+			left.box.Intersect(ref->box);
+			right.box.Intersect(ref->box);
 		}
 	}
-	left.box.t.m128_f32[dim] = pos;
-	right.box.b.m128_f32[dim] = pos;
-	//left.box = __m128_box(left.box.ToBox().Enlarge(0.01f));
-	//right.box = __m128_box(right.box.ToBox().Enlarge(0.01f));
-	left.box.Intersect(ref->box);
-	right.box.Intersect(ref->box);
 }
 SpatialSplit findSpatialSplit(buffer& buf, __m128_box& box, const BVHBuilder::Platform& P, float nodeSAH, const IBVHBuilderCallback* clb)
 {
@@ -651,7 +654,7 @@ int buildNode(buffer& buf,  __m128_box& box, const BVHBuilder::Platform& P, floa
 void BVHBuilder::BuildBVH(IBVHBuilderCallback* clb, const BVHBuilder::Platform& P)
 {
 	unsigned int N = clb->Count();
-	__m128 bottom(_mm_set1_ps(FLT_MAX)), top(_mm_set1_ps(-FLT_MAX));
+	__m128_box sbox = __m128_box::Identity();
 	BBoxTmp* data = new BBoxTmp[N];
 	AABB box;
 	for(unsigned int i = 0; i < N; i++)
@@ -659,19 +662,16 @@ void BVHBuilder::BuildBVH(IBVHBuilderCallback* clb, const BVHBuilder::Platform& 
 		clb->getBox(i, &box);
 		//if(fmaxf(box.Size()) < 0.01f)
 		//	box.maxV += make_float3(0.01f);
-		data[i].box.b = TOSSE3(box.minV);
-		data[i].box.t = TOSSE3(box.maxV);
+		data[i].box = __m128_box(box);
 		data[i]._pNode = i;
-		bottom = _mm_min_ps(bottom, data[i].box.b);
-		top = _mm_max_ps(top, data[i].box.t);
+		sbox.Enlarge(data[i].box);
 	}
-	__m128_box sbox = __m128_box(bottom, top);
 	clb->HandleBoundingBox(sbox.ToBox());
 	if(N)
 	{
 		cTimer T;
 		T.StartTimer();
-		float mo = __m128_box(bottom, top).area() * 1.0e-5f;
+		float mo = sbox.area() * 1.0e-5f;
 		buffer B = buffer(N, data);
 		int sNode = buildNode(B,  sbox, P, mo, clb);
 		clb->HandleStartNode(sNode);

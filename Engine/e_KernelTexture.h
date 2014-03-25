@@ -139,28 +139,20 @@ struct e_KernelImageTexture : public e_KernelTextureBase
 	{
 		float2 uv = make_float2(0);
 		mapping.Map(dg, &uv.x, &uv.y);
-#ifdef __CUDACC__
-		return deviceTex->Sample(uv);
-#else
-		return hostTex->Sample(uv);
-#endif
+		return tex->Sample(uv);
 	}
 	CUDA_FUNC_IN Spectrum Average()
 	{
-#ifdef __CUDACC__
-		return deviceTex->Sample(make_float2(0));
-#else
-		return hostTex->Sample(make_float2(0));
-#endif
+		if(tex.operator*())
+			return tex->Sample(make_float2(0), 1);
+		else return 0.0f;
 	}
 	template<typename L> void LoadTextures(L callback)
 	{
-		deviceTex = callback(file, false).getDevice();
-		hostTex = callback(file, false).getDeviceMapped();
+		tex = callback(file, false).AsVar();
 	}
 	TYPE_FUNC(e_KernelImageTexture)
-	e_KernelMIPMap* deviceTex;
-	e_KernelMIPMap* hostTex;
+	e_Variable<e_KernelMIPMap> tex;
 	e_KernelTextureMapping2D mapping;
 	e_String file;
 };

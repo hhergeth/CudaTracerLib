@@ -22,6 +22,7 @@ unsigned char* IInStream::ReadToEnd()
 
 InputStream::InputStream(const char* a_Name)
 {
+	path = std::string(a_Name);
 	numBytesRead = 0;
 	H = CreateFile(a_Name, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
 	if(H == INVALID_HANDLE_VALUE)
@@ -72,6 +73,7 @@ void InputStream::Move(int off)
 
 MemInputStream::MemInputStream(const unsigned char* _buf, unsigned int length, bool canKeep)
 {
+	path = "";
 	if(canKeep)
 		this->buf = _buf;
 	else
@@ -81,12 +83,14 @@ MemInputStream::MemInputStream(const unsigned char* _buf, unsigned int length, b
 		memcpy(v, _buf, length);
 	}
 	m_uFileSize = length;
+	this->numBytesRead = 0;
 }
 
 MemInputStream::MemInputStream(InputStream& in)
 {
 	m_uFileSize = in.getFileSize() - in.getPos();
 	buf = in.ReadToEnd();
+	path = in.getFilePath();
 }
 
 MemInputStream::MemInputStream(const char* a_Name)
@@ -96,6 +100,7 @@ MemInputStream::MemInputStream(const char* a_Name)
 	m_uFileSize = in.getFileSize();
 	buf = in.ReadToEnd();
 	in.Close();
+	path = a_Name;
 }
 
 void MemInputStream::Read(void* a_Data, unsigned int a_Size)

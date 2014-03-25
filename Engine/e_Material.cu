@@ -47,8 +47,15 @@ bool e_KernelMaterial::SampleNormalMap(const MapParameters& uv, float3* normal) 
 float e_KernelMaterial::SampleAlphaMap(const MapParameters& uv) const
 {
 	if(AlphaMap.used)
-	{return 1;
-		//return AlphaMap.tex.Evaluate(uv).w;
+	{//return 1;
+		if(AlphaMap.tex.type == e_KernelImageTexture_TYPE)
+		{
+			return AlphaMap.tex.As<e_KernelImageTexture>()->tex->SampleAlpha(uv.uv) != 1 ? 0 : 1;
+		}
+		Spectrum s = AlphaMap.tex.Evaluate(uv);
+		if(s.isZero())
+			return 0.0f;
+		else return 1.0f;
 	}
 	else return 1.0f;
 }

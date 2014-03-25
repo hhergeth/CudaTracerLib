@@ -376,10 +376,9 @@ struct SubMesh
 	}
 };
 
-void compileobj(const char* a_InputFile, OutputStream& a_Out)
+void compileobj(IInStream& in, OutputStream& a_Out)
 {
-	std::string dirName = getDirName(a_InputFile);
-	IInStream* objIn = OpenFile(a_InputFile);
+	std::string dirName = getDirName(in.getFilePath());
 	ImportState* state = new ImportState();
 	ImportState& s = *state;//do not put it on the stack it is kinda big
 	int submesh = -1;
@@ -393,7 +392,7 @@ void compileobj(const char* a_InputFile, OutputStream& a_Out)
 	AABB box = AABB::Identity();
 
 	std::string line;
-	while(objIn->getline(line))
+	while(in.getline(line))
 	{
 		const char* ptr = trim(line).c_str();
         parseSpace(ptr);
@@ -533,7 +532,6 @@ void compileobj(const char* a_InputFile, OutputStream& a_Out)
             valid = true;
         }
     }
-	delete objIn;
 
 	e_MeshPartLight m_sLights[MAX_AREALIGHT_NUM];
 	Platform::SetMemory(m_sLights, sizeof(m_sLights));

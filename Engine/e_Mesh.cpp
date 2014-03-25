@@ -7,7 +7,7 @@
 #include "e_Light.h"
 #include "SceneBuilder\Importer.h"
 
-e_Mesh::e_Mesh(InputStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4)
+e_Mesh::e_Mesh(IInStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4)
 {
 	m_uType = MESH_STATIC_TOKEN;
 	int abc = sizeof(e_TriangleData), abc2 = sizeof(m_sLights);

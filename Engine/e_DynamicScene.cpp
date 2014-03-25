@@ -104,44 +104,39 @@ e_DynamicScene::~e_DynamicScene()
 	Free();
 }
 
-e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_MeshFile2)
+e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_Token, IInStream& in)
 {
 	m_uModified = 1;
-	std::string strA = toLower(a_MeshFile2);
+	std::string token = toLower(a_Token);
 	bool load;
-	e_BufferReference<e_Mesh, e_KernelMesh> M = m_pMeshBuffer->LoadCached(strA.c_str(), &load);
+	e_BufferReference<e_Mesh, e_KernelMesh> M = m_pMeshBuffer->LoadCached(token.c_str(), &load);
 	if(load)
 	{
-		std::string xmshPath;
-		if(strA.find(".xmsh") == std::string::npos)
+		IInStream* xmshStream = 0;
+		if(token.find(".xmsh") == std::string::npos)
 		{
-			std::string t0 = std::string(m_pCompilePath) + getFileName(strA), cmpPath = t0.substr(0, t0.rfind('.')) + std::string(".xmsh");
-			xmshPath = cmpPath;
+			std::string t0 = std::string(m_pCompilePath) + std::string(a_Token), cmpPath = t0.substr(0, t0.rfind('.')) + std::string(".xmsh");
 			CreateDirectoryRecursively(getDirName(cmpPath).c_str());
-			unsigned long long objStamp = GetTimeStamp(a_MeshFile2);
-			unsigned long long xmshStamp = GetTimeStamp(cmpPath.c_str());
 			unsigned long long si = GetFileSize(cmpPath.c_str());
-			if(si <= 4 || si == -1 || objStamp != xmshStamp)
+			if(si <= 4 || si == -1 )
 			{
-				std::cout << "Started compiling mesh : " << a_MeshFile2 << "\n";
+				std::cout << "Started compiling mesh : " << a_Token << "\n";
 				OutputStream a_Out(cmpPath.c_str());
 				e_MeshCompileType t;
-				m_sCmpManager.Compile(a_MeshFile2, a_Out, &t);
+				m_sCmpManager.Compile(in, token.c_str(), a_Out, &t);
 				a_Out.Close();
-				SetTimeStamp(cmpPath.c_str(), objStamp);
 			}
+			xmshStream = OpenFile(cmpPath.c_str());
 		}
-		else
-		{
-			xmshPath = strA;
-		}
-		InputStream I(xmshPath.c_str());
+		else xmshStream = &in;
+		IInStream& str = *xmshStream;
 		unsigned int t;
-		I >> t;
+		str >> t;
 		if(t == (unsigned int)e_MeshCompileType::Static)
-			new(M(0)) e_Mesh(I, m_pTriIntStream, m_pTriDataStream, m_pBVHStream, m_pBVHIndicesStream, m_pMaterialBuffer);
-		else new(M(0)) e_AnimatedMesh(I, m_pTriIntStream, m_pTriDataStream, m_pBVHStream, m_pBVHIndicesStream, m_pMaterialBuffer, m_pAnimStream);
-		I.Close();
+			new(M(0)) e_Mesh(str, m_pTriIntStream, m_pTriDataStream, m_pBVHStream, m_pBVHIndicesStream, m_pMaterialBuffer);
+		else if(t == (unsigned int)e_MeshCompileType::Animated) 
+			new(M(0)) e_AnimatedMesh(str, m_pTriIntStream, m_pTriDataStream, m_pBVHStream, m_pBVHIndicesStream, m_pMaterialBuffer, m_pAnimStream);
+		else throw std::runtime_error("Mesh file parser error.");
 		m_pMeshBuffer->Invalidate(M);
 		M->m_sMatInfo.Invalidate();
 	}
@@ -157,7 +152,7 @@ e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_MeshFile2)
 	if(instanciatedMaterials && m_pMaterialBuffer->NumUsedElements() + M->m_sMatInfo.getLength() < m_pMaterialBuffer->getLength() - 1)
 		m2 = m_pMaterialBuffer->malloc(M->m_sMatInfo);
 	m2.Invalidate();
-	new(N.operator->()) e_Node(M.getIndex(), M.operator->(), strA.c_str(), m2);
+	new(N.operator->()) e_Node(M.getIndex(), M.operator->(), token.c_str(), m2);
 	unsigned int li[MAX_AREALIGHT_NUM];
 	Platform::SetMemory(li, sizeof(li));
 	for(unsigned int i = 0; i < M->m_uUsedLights; i++)
@@ -167,7 +162,19 @@ e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_MeshFile2)
 	}
 	N->setLightData(li, M->m_uUsedLights);
 	N.Invalidate();
+
+	m_pMaterialBuffer->UpdateInvalidatedCB(matUpdater(this));
+	m_pTextureBuffer->UpdateInvalidated();
+
 	return N;
+}
+
+e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_MeshFile2)
+{
+	IInStream& in = *OpenFile(a_MeshFile2);
+	e_StreamReference(e_Node) n = CreateNode(getFileName(std::string(a_MeshFile2)).c_str(), in);
+	in.Close();
+	return n;
 }
 
 e_StreamReference(e_Node) e_DynamicScene::CreateNode(unsigned int a_TriangleCount, unsigned int a_MaterialCount)

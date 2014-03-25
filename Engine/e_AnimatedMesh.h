@@ -51,7 +51,7 @@ struct e_BVHHierarchy
 		a_Out << m_uNumLevels;
 	}
 
-	void deSerialize(InputStream& a_In, e_Stream<char>* Buf)
+	void deSerialize(IInStream& a_In, e_Stream<char>* Buf)
 	{
 		size_t l;
 		a_In >> l;
@@ -109,7 +109,7 @@ struct e_Frame
 		a_Out.Write(m_pMatrices, sizeof(float4x4) * m_uMatrixNum);
 	}
 
-	void deSerialize(InputStream& a_In, e_Stream<char>* Buf)
+	void deSerialize(IInStream& a_In, e_Stream<char>* Buf)
 	{
 		size_t A;
 		a_In >> A;
@@ -145,7 +145,7 @@ struct e_Animation
 			m_pFrames[i].serialize(a_Out);
 	}
 
-	void deSerialize(InputStream& a_In, e_Stream<char>* Buf)
+	void deSerialize(IInStream& a_In, e_Stream<char>* Buf)
 	{
 		a_In >> m_uNumFrames;
 		a_In >> m_uFrameRate;
@@ -174,7 +174,7 @@ class e_AnimatedMesh : public e_Mesh
 	e_StreamReference(char) m_sTriangles;
 	e_BVHHierarchy m_sHierchary;
 public:
-	e_AnimatedMesh(InputStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4, e_Stream<char>* a_Stream5);
+	e_AnimatedMesh(IInStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4, e_Stream<char>* a_Stream5);
 	static void CompileToBinary(const char* a_InputFile, std::vector<std::string>& a_Anims, OutputStream& a_Out);
 	void k_ComputeState(unsigned int a_Anim, unsigned int a_Frame, float a_Lerp, e_KernelDynamicScene a_Data, e_Stream<e_BVHNodeData>* a_BVHNodeStream, e_TmpVertex* a_DeviceTmp);
 	void CreateNewMesh(e_AnimatedMesh* A, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4, e_Stream<char>* a_Stream5);

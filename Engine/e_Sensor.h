@@ -18,6 +18,11 @@ public:
 public:
 	const bool isFieldOfViewSensor;
 	const bool isAppertureSensor;
+	e_SensorBase()
+		: isFieldOfViewSensor(false), isAppertureSensor(true)
+	{
+
+	}
 	e_SensorBase(bool fov, bool app)
 		: isFieldOfViewSensor(fov), isAppertureSensor(app)
 	{

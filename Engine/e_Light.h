@@ -9,6 +9,11 @@ struct e_LightBase : public e_BaseType
 {
 	bool IsDelta;
 
+	e_LightBase()
+	{
+
+	}
+
 	e_LightBase(bool d)
 		: IsDelta(d)
 	{

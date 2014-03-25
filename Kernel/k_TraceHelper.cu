@@ -185,6 +185,7 @@ CUDA_FUNC_IN bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResu
 								e_KernelMaterial* mat = g_SceneData.m_sMatData.Data + tri->getMatIndex(N->m_uMaterialOffset);
 								float a = mat->SampleAlphaMap(MapParameters(make_float3(0), tri->lerpUV(make_float2(u,v)), Frame(), make_float2(u,v),tri));
 								q = a >= mat->m_fAlphaThreshold;
+
 							}
 							if(q)
 							{

@@ -347,3 +347,54 @@ template<typename BaseType, int Size> struct e_AggregateBaseType
 #pragma warning(disable: 4996)
 #pragma warning(disable: 4305)
 #pragma warning(disable: 4204)
+
+template<typename T> class e_Variable
+{
+	T* host, *device;
+public:
+#ifdef __CUDACC__
+	e_Variable()
+	{
+	}
+#else
+	e_Variable()
+		: host(0), device(0)
+	{
+	}
+#endif
+	/*
+	template<typename U, typename V> CUDA_HOST e_Variable(e_BufferReference<U, V> r)
+	{
+		host = (T*)r.operator->();
+		device = (T*)r.getDevice();
+	}*/
+	e_Variable(T* h, T* d)
+		: host(h), device(d)
+	{
+
+	}
+	CUDA_FUNC_IN T& operator[](unsigned int i) const
+	{
+#ifdef ISCUDA
+		return device[i];
+#else
+		return host[i];
+#endif
+	}
+	CUDA_FUNC_IN T* operator->() const
+	{
+#ifdef ISCUDA
+		return device;
+#else
+		return host;
+#endif
+	}
+	CUDA_FUNC_IN T* operator*() const
+	{
+#ifdef ISCUDA
+		return device;
+#else
+		return host;
+#endif
+	}
+};

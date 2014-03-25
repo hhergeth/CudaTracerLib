@@ -47,6 +47,7 @@ public:
 	~e_DynamicScene();
 	void Free();
 	e_StreamReference(e_Node) CreateNode(const char* a_MeshFile);
+	e_StreamReference(e_Node) CreateNode(const char* a_MeshFile, IInStream& in);
 	e_StreamReference(e_Node) CreateNode(unsigned int a_TriangleCount, unsigned int a_MaterialCount);
 	void DeleteNode(e_StreamReference(e_Node) ref);
 	///Do not use this! Just invalidate and update the material

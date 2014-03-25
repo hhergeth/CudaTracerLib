@@ -128,13 +128,11 @@ struct stringHelper
 	}
 };
 
-void compileply(const char* a_InputFile, OutputStream& a_Out)
+void compileply(IInStream& istream, OutputStream& a_Out)
 {
 	format_type format;
 	std::string line;
 	int line_number_ = 0;
-	InputStream istream(a_InputFile);
-	//std::fstream istream(a_InputFile, std::ios::in);
 	char magic[3];
 	istream.Read(magic, 3);
 	istream.Move(1);

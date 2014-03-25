@@ -15,7 +15,7 @@ bool hasEnding (std::string const &fullString, std::string const &_ending)
     }
 }
 
-bool e_ObjCompiler::IsApplicable(const char* a_InputFile, e_MeshCompileType* out)
+bool e_ObjCompiler::IsApplicable(const char* a_InputFile, IInStream& in, e_MeshCompileType* out)
 {
 	bool b = hasEnding(a_InputFile, ".obj");
 	if(out && b)
@@ -23,12 +23,12 @@ bool e_ObjCompiler::IsApplicable(const char* a_InputFile, e_MeshCompileType* out
 	return b;
 }
 
-void e_ObjCompiler::Compile(const char* a_InputFile, OutputStream& a_Out)
+void e_ObjCompiler::Compile(IInStream& in, OutputStream& a_Out)
 {
-	compileobj(a_InputFile, a_Out);
+	compileobj(in, a_Out);
 }
 
-bool e_Md5Compiler::IsApplicable(const char* a_InputFile, e_MeshCompileType* out)
+bool e_Md5Compiler::IsApplicable(const char* a_InputFile, IInStream& in, e_MeshCompileType* out)
 {
 	bool b = hasEnding(a_InputFile, ".md5mesh");
 	if(out && b)
@@ -38,14 +38,14 @@ bool e_Md5Compiler::IsApplicable(const char* a_InputFile, e_MeshCompileType* out
 
 #if defined(ISWINDOWS)
 #include <Windows.h>
-void e_Md5Compiler::Compile(const char* a_InputFile, OutputStream& a_Out)
+void e_Md5Compiler::Compile(IInStream& in, OutputStream& a_Out)
 {
 	std::vector<std::string> A;
 	char dir[255];
 	ZeroMemory(dir, sizeof(dir));
 	char drive[255];
 	ZeroMemory(drive, sizeof(drive));
-	_splitpath(a_InputFile, drive, dir, 0, 0);
+	_splitpath(in.getFilePath(), drive, dir, 0, 0);
 	WIN32_FIND_DATA dat;
 	HANDLE hFind = FindFirstFile((std::string(drive) + std::string(dir) + "\\*.md5anim").c_str(), &dat);
 	while(hFind != INVALID_HANDLE_VALUE)
@@ -54,7 +54,7 @@ void e_Md5Compiler::Compile(const char* a_InputFile, OutputStream& a_Out)
 		if(!FindNextFile(hFind, &dat))
 			break;
 	}
-	e_AnimatedMesh::CompileToBinary(a_InputFile, A, a_Out);
+	e_AnimatedMesh::CompileToBinary(in.getFilePath(), A, a_Out);
 	FindClose(hFind);
 }
 #elif defined(ISUNIX)
@@ -79,37 +79,40 @@ void e_Md5Compiler::Compile(const char* a_InputFile, OutputStream& a_Out)
 
 
 
-bool e_PlyCompiler::IsApplicable(const char* a_InputFile, e_MeshCompileType* out)
+bool e_PlyCompiler::IsApplicable(const char* a_InputFile, IInStream& in, e_MeshCompileType* out)
 {
 	bool b = hasEnding(a_InputFile, ".ply");
 	if(b)
 	{
-		InputStream i(a_InputFile);
-		char magic[8];
-		i.Read(magic, 8);
+		char magic[9];
+		magic[8] = 0;
+		in.Read(magic, 8);
 		b = std::string(magic) != "EPLYBNDS";
-		i.Close();
+		in.Move(-8);
 	}
 	if(out && b)
 		*out = e_MeshCompileType::Static;
 	return b;
 }
 
-void e_PlyCompiler::Compile(const char* a_InputFile, OutputStream& a_Out)
+void e_PlyCompiler::Compile(IInStream& in, OutputStream& a_Out)
 {
-	compileply(a_InputFile, a_Out);
+	compileply(in, a_Out);
 }
 
-void e_MeshCompilerManager::Compile(const char* a_InputFile, OutputStream& a_Out, e_MeshCompileType* out)
+void e_MeshCompilerManager::Compile(IInStream& in, const char* a_InputFile, OutputStream& a_Out, e_MeshCompileType* out)
 {
 	e_MeshCompileType t;
 	for(unsigned int i = 0; i < m_sCompilers.size(); i++)
-		if(m_sCompilers[i]->IsApplicable(a_InputFile, &t))
+	{
+		bool b = m_sCompilers[i]->IsApplicable(a_InputFile, in, &t);
+		if(b)
 		{
 			if(out)
 				*out = t;
 			a_Out << (unsigned int)t;
-			m_sCompilers[i]->Compile(a_InputFile, a_Out);
+			m_sCompilers[i]->Compile(in, a_Out);
 			break;
 		}
+	}
 }

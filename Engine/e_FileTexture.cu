@@ -243,8 +243,8 @@ void e_MIPMap::CompileToBinary(const char* a_InputFile, OutputStream& a_Out, boo
 		resize(&data);
 
 	unsigned int nLevels = 1 + Log2Int(MAX(float(data.w), float(data.h)));
-	if(!a_MipMap)
-		nLevels = 1;
+	//if(!a_MipMap)
+	//	nLevels = 1;
 	unsigned int size = 0;
 	for(unsigned int i = 0, j = data.w, k = data.h; i < nLevels; i++, j =  j >> 1, k = k >> 1)
 		size += j * k * 4;

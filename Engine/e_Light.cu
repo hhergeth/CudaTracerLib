@@ -260,9 +260,9 @@ e_InfiniteLight::e_InfiniteLight(e_Stream<char>* a_Buffer, e_BufferReference<e_M
 	m_size = make_float2(radianceMap.m_uWidth, radianceMap.m_uHeight);
 	unsigned int nEntries = (unsigned int) (m_size.x + 1) * (unsigned int) m_size.y;
 	e_StreamReference(char) m1 = a_Buffer->malloc(nEntries * sizeof(float)), m2 = a_Buffer->malloc((m_size.y + 1) * sizeof(float)), m3 = a_Buffer->malloc(m_size.y * sizeof(float));
-	m_cdfCols = e_Variable<float>(m1);
-	m_cdfRows = e_Variable<float>(m2);
-	m_rowWeights = e_Variable<float>(m3);
+	m_cdfCols = m1.AsVar<float>();
+	m_cdfRows = m2.AsVar<float>();
+	m_rowWeights = m3.AsVar<float>();
 	unsigned int colPos = 0, rowPos = 0;
 	float rowSum = 0.0f;
 	m_cdfRows[rowPos++] = 0;

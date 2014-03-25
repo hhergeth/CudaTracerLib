@@ -17,6 +17,11 @@ public:
 	}
 	bool eof(){return getPos() == getFileSize();}
 	virtual void Move(int off) = 0;
+	virtual void Close() = 0;
+	void ToBegin()
+	{
+		Move((int)getPos());
+	}
 	template<typename T> void Move(int num)
 	{
 		Move(num * sizeof(T));
@@ -54,6 +59,7 @@ public:
 	{
 		Read((char*)&a, sizeof(T));
 	}
+	virtual const char* getFilePath() const = 0;
 public:
 	IInStream& operator>>(char& rhs)
 	{
@@ -152,15 +158,20 @@ class InputStream : public IInStream
 private:
 	unsigned int numBytesRead;
 	void* H;
+	std::string path;
 public:
 	InputStream(const char* a_Name);
-	void Close();
+	virtual void Close();
 	virtual unsigned long long getPos()
 	{
 		return numBytesRead;
 	}
 	virtual void Read(void* a_Data, unsigned int a_Size);
 	void Move(int off);
+	virtual const char* getFilePath() const
+	{
+		return path.c_str();
+	}
 };
 
 class MemInputStream : public IInStream
@@ -168,11 +179,12 @@ class MemInputStream : public IInStream
 private:
 	unsigned int numBytesRead;
 	const unsigned char* buf;
+	std::string path;
 public:
 	MemInputStream(const unsigned char* buf, unsigned int length, bool canKeep = false);
 	MemInputStream(InputStream& in);
 	MemInputStream(const char* a_Name);
-	void Close()
+	virtual void Close()
 	{
 		delete [] buf;
 	}
@@ -184,6 +196,10 @@ public:
 	void Move(int off)
 	{
 		numBytesRead += off;
+	}
+	virtual const char* getFilePath() const
+	{
+		return path.c_str();
 	}
 };
 

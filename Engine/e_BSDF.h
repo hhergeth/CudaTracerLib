@@ -30,6 +30,11 @@ struct BSDF : public e_BaseType
 	CUDA_FUNC_IN bool hasComponent(unsigned int type) const {
 		return (type & m_combinedType) != 0;
 	}
+	CUDA_FUNC_IN BSDF()
+		: m_combinedType(0)
+	{
+
+	}
 	CUDA_FUNC_IN BSDF(unsigned int type)
 		: m_combinedType(type)
 	{
