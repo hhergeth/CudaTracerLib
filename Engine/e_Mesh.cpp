@@ -146,3 +146,79 @@ void e_Mesh::CompileMesh(const float3* vertices, unsigned int nVertices, const f
 #endif
 	delete [] triData;
 }
+
+void e_Mesh::CompileMesh(const float3* vertices, unsigned int nVertices, const float2* uvs, const unsigned int* indices, unsigned int nIndices, const std::vector<e_KernelMaterial>& mats, const std::vector<Spectrum>& Les, const std::vector<unsigned int>& subMeshes, const unsigned char* extraData, OutputStream& a_Out)
+{
+	e_MeshPartLight m_sLights[MAX_AREALIGHT_NUM];
+	Platform::SetMemory(m_sLights, sizeof(m_sLights));
+	unsigned int lightCount = 0;
+	if(!Les[0].isZero())
+	{
+		m_sLights[lightCount].L = Les[0];
+		strcpy(m_sLights[0].MatName, mats[0].Name);
+		lightCount++;
+	}
+	float3 p[3];
+	float3 n[3];
+	float3 ta[3];
+	float3 bi[3];
+	float2 t[3];
+	unsigned int numTriangles = indices ? nIndices / 3 : nVertices / 3;
+	e_TriangleData* triData = new e_TriangleData[numTriangles];
+	unsigned int triIndex = 0;
+#ifdef EXT_TRI
+	float3* v_Normals = new float3[nVertices], *v_Tangents = new float3[nVertices], *v_BiTangents = new float3[nVertices];
+	Platform::SetMemory(v_Normals, sizeof(float3) * nVertices);
+	Platform::SetMemory(v_Tangents, sizeof(float3) * nVertices);
+	Platform::SetMemory(v_BiTangents, sizeof(float3) * nVertices);
+	ComputeTangentSpace(vertices, uvs, indices, nVertices, numTriangles, v_Normals, v_Tangents, v_BiTangents);
+#endif
+	AABB box = AABB::Identity();
+	unsigned int si = 0, pc = 0;
+	for(size_t ti = 0; ti < numTriangles; ti++)
+	{
+		for(size_t j = 0; j < 3; j++)
+		{
+			const int l = indices ? indices[ti * 3 + j] : ti * 3 + j;
+			p[j] = vertices[l];
+			box.Enlarge(p[j]);
+#ifdef EXT_TRI
+			if(uvs)
+				t[j] = uvs[l];
+			ta[j] = normalize(v_Tangents[l]);
+			bi[j] = normalize(v_BiTangents[l]);
+			n[j] = normalize(v_Normals[l]);
+#endif
+		}
+		e_TriangleData tri(p, (unsigned char)si, t, n, ta, bi);
+		if(extraData)
+			for(int j = 0; j < 3; j++)
+				tri.m_sHostData.ExtraData[j] = extraData[indices ? indices[ti * 3 + j] : ti * 3 + j];
+		triData[triIndex++] = tri;
+		if(subMeshes[si] + pc <= ti)
+		{
+			pc += subMeshes[si];
+			si++;
+			if(!Les[si].isZero())
+			{
+				m_sLights[lightCount].L = Les[si];
+				strcpy(m_sLights[lightCount].MatName, mats[si].Name);
+				lightCount++;
+			}
+		}
+	}
+	a_Out << box;
+	a_Out.Write(m_sLights, sizeof(m_sLights));
+	a_Out << lightCount;
+	a_Out << numTriangles;
+	a_Out.Write(triData, sizeof(e_TriangleData) * numTriangles);
+	a_Out << (unsigned int)mats.size();
+	a_Out.Write(&mats[0], sizeof(e_KernelMaterial) * mats.size());
+	ConstructBVH(vertices, indices, nVertices, numTriangles * 3, a_Out);
+#ifdef EXT_TRI
+	delete [] v_Normals;
+	delete [] v_Tangents;
+	delete [] v_BiTangents;
+#endif
+	delete [] triData;
+}

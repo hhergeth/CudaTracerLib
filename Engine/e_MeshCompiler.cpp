@@ -84,11 +84,11 @@ bool e_PlyCompiler::IsApplicable(const char* a_InputFile, IInStream& in, e_MeshC
 	bool b = hasEnding(a_InputFile, ".ply");
 	if(b)
 	{
-		char magic[9];
-		magic[8] = 0;
-		in.Read(magic, 8);
-		b = std::string(magic) != "EPLYBNDS";
-		in.Move(-8);
+		char magic[4];
+		magic[3] = 0;
+		in.Read(magic, 3);
+		b = std::string(magic) == "ply";
+		in.Move(-3);
 	}
 	if(out && b)
 		*out = e_MeshCompileType::Static;

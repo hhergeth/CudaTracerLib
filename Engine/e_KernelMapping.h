@@ -34,14 +34,16 @@ struct e_TriangleData;
 struct MapParameters
 {
 	float3 P;
+	float3 pLocal;
 	Frame sys;
 	float2 uv;
 	float2 bary;
 	const e_TriangleData* Shape;
+	unsigned char extraData;
 	CUDA_FUNC_IN MapParameters(){}
 	//CUDA_FUNC_IN MapParameters(): sys(Frame()), uv(float2()), P(float3()), bary(float2()){}
-	CUDA_FUNC_IN MapParameters(const float3& p, const float2& u, const Frame& s, const float2& b, const e_TriangleData* S)
-		: sys(s), uv(u), P(p), bary(b), Shape(S)
+	CUDA_FUNC_IN MapParameters(const float3& p, const float3& pLocal, const float2& u, const Frame& s, const float2& b, const e_TriangleData* S)
+		: sys(s), uv(u), P(p), bary(b), Shape(S), pLocal(pLocal)
 	{
 	}
 };
@@ -79,7 +81,7 @@ struct e_KernelSphericalMapping2D : public e_KernelMappingBase
 	}
 	CUDA_FUNC_IN void Map(const MapParameters &dg, float *s, float *t) const
 	{
-		sphere(dg.P, s, t);
+		sphere(dg.pLocal, s, t);
 	}
 	TYPE_FUNC(e_KernelSphericalMapping2D)
 	float4x4 WorldToTexture;
@@ -104,7 +106,7 @@ struct e_KernelPlanarMapping2D : public e_KernelMappingBase
 	}
 	CUDA_FUNC_IN void Map(const MapParameters &dg, float *s, float *t) const
 	{
-		float3 vec = dg.P;
+		float3 vec = dg.pLocal;
 		*s = ds + dot(vec, vs);
 		*t = dt + dot(vec, vt);
 	}
@@ -161,7 +163,7 @@ struct e_KernelIdentityMapping3D : public e_KernelMappingBase
 	}
 	CUDA_FUNC_IN float3 Map(const MapParameters &dg) const
 	{
-		return WorldToTexture * dg.P;
+		return WorldToTexture * dg.pLocal;
 	}
 	TYPE_FUNC(e_KernelIdentityMapping3D)
     float4x4 WorldToTexture;

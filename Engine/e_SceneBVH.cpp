@@ -40,12 +40,13 @@ void e_SceneBVH::Build(e_StreamReference(e_Node) a_Nodes, e_BufferReference<e_Me
 			t->startNode = startNode;
 		}
 	};
-
-	clb b(a_Nodes, a_Meshes, this);
-	BVHBuilder::Platform Pq;
-	Pq.m_maxLeafSize = 1;
-	BVHBuilder::BuildBVH(&b, Pq);
-
+	if(a_Nodes.getLength())
+	{
+		clb b(a_Nodes, a_Meshes, this);
+		BVHBuilder::Platform Pq;
+		Pq.m_maxLeafSize = 1;
+		BVHBuilder::BuildBVH(&b, Pq);
+	}
 	m_pNodes->Invalidate();
 	m_pNodes->UpdateInvalidated();
 	m_pTransforms->Invalidate();

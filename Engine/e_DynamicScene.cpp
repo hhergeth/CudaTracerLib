@@ -29,6 +29,7 @@ struct matUpdater
 	void operator()(e_StreamReference(e_KernelMaterial) m)
 	{
 		m->LoadTextures(textureLoader(S));
+		//m->bsdf.As()->Update();
 	}
 };
 
@@ -181,6 +182,11 @@ e_StreamReference(e_Node) e_DynamicScene::CreateNode(unsigned int a_TriangleCoun
 {
 	e_StreamReference(e_Node) N = m_pNodeStream->malloc(1);
 	e_StreamReference(e_KernelMaterial) m2 = m_pMaterialBuffer->malloc(a_MaterialCount);
+	for(unsigned int i = 0; i < a_MaterialCount; i++)
+	{
+		m2(i) = e_KernelMaterial("auto generated material");
+		m2(i)->bsdf.SetData(diffuse(CreateTexture(Spectrum(0.5f))));
+	}
 	e_BufferReference<e_Mesh, e_KernelMesh> M = m_pMeshBuffer->malloc(1);
 	M->m_sIndicesInfo = m_pBVHIndicesStream->malloc(1);
 	M->m_sIntInfo = m_pTriIntStream->malloc(1);
@@ -230,6 +236,7 @@ e_BufferReference<e_MIPMap, e_KernelMIPMap> e_DynamicScene::LoadTexture(const ch
 	}
 	if(!T->getKernelData().m_pDeviceData)
 		throw 1;
+	m_pTextureBuffer->UpdateInvalidated();
 	return T;
 }
 
@@ -250,6 +257,12 @@ void e_DynamicScene::SetNodeTransform(const float4x4& mat, e_StreamReference(e_N
 	recalculateAreaLights(n);
 }
 
+void e_DynamicScene::ReloadTextures()
+{
+	m_pMaterialBuffer->UpdateInvalidatedCB(matUpdater(this));
+	m_pTextureBuffer->UpdateInvalidated();
+}
+
 bool e_DynamicScene::UpdateScene()
 {
 	m_pTerrain->UpdateInvalidated();
@@ -258,12 +271,11 @@ bool e_DynamicScene::UpdateScene()
 	m_pTriDataStream->UpdateInvalidated();
 	m_pBVHStream->UpdateInvalidated();
 	m_pBVHIndicesStream->UpdateInvalidated();
-	m_pMaterialBuffer->UpdateInvalidatedCB(matUpdater(this));
-	m_pTextureBuffer->UpdateInvalidated();
 	m_pMeshBuffer->UpdateInvalidated();
 	m_pAnimStream->UpdateInvalidated();
 	m_pLightStream->UpdateInvalidated();
 	m_pVolumes->UpdateInvalidated();
+	ReloadTextures();
 	if(m_uModified)
 	{
 		m_uModified = 0;

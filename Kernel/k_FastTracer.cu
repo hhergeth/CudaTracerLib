@@ -79,14 +79,18 @@ __global__ void doDirectKernel(unsigned int w, unsigned int h, k_RayBuffer<k_Fas
 	if(idx >= w * h)
 		return;
 	traversalResult& res = g_Intersector.res(idx, 0);
+	RGBCOL col;
+	col.x = col.w = 255;
+	col.y = col.z = 0;
 	if(res.dist)
 	{
 		//tar[rayidx] = Spectrum(a_ResBuffer[rayidx].m_fDist/SCALE).toRGBCOL();
 		float f = res.dist/SCALE * 255.0f;
 		unsigned char c = (unsigned char)f;
 		unsigned int i = (255 << 24) | (c << 16) | (c << 8) | c;
-		I.SetSample(idx % w, idx / w, *(RGBCOL*)&i);
+		col = *(RGBCOL*)&i;
 	}
+	I.SetSample(idx % w, idx / w, *(RGBCOL*)&col);
 }
 
 #define MAX_PASS 5

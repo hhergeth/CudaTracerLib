@@ -17,7 +17,8 @@ public:
 		{
 			unsigned short Normals[3];//Row0.x,y
 			unsigned short Tangents[3];//Row0.y,z
-			unsigned int MatIndex;//Row0.w
+			unsigned char MatIndex;//Row0.w
+			unsigned char ExtraData[3];//Row0.w
 			ushort2 TexCoord[3];//Row1.x,y,z
 		} m_sHostData;
 		struct
@@ -33,13 +34,20 @@ public:
 	CUDA_DEVICE CUDA_HOST void lerpFrame(const float2& bCoords, const float4x4& localToWorld, Frame& sys, float3* ng = 0) const;
 	CUDA_FUNC_IN unsigned int getMatIndex(const unsigned int off) const 
 	{
-		unsigned int v = m_sDeviceData.Row0.w;
-		return unsigned int(v ) + off;
+		unsigned int v = m_sDeviceData.Row0.w & 0xff;
+		return unsigned int(v) + off;
 	}
 	CUDA_DEVICE CUDA_HOST float2 lerpUV(const float2& bCoords) const;
 	CUDA_DEVICE CUDA_HOST void getNormalDerivative(const float2& bCoords, float3& dndu, float3& dndv) const;
 	CUDA_DEVICE CUDA_HOST void setData(const float3& na, const float3& nb, const float3& nc,
 									   const float3& ta, const float3& tb, const float3& tc);
+	CUDA_FUNC_IN unsigned char lerpExtraData(const float2& bCoords) const
+	{
+		unsigned int V = m_sDeviceData.Row0.w;
+		unsigned char a = (V >> 8) & 0xff, b = (V >> 16) & 0xff, c = V >> 24;
+		float u = bCoords.y, v = 1.0f - u - bCoords.x;
+		return unsigned char(a + u * (b - a) + v * (c - a));
+	}
 	//CUDA_DEVICE CUDA_HOST void getCurvature(const float2& bCoords, float& H, float& K) const;
 };
 #else

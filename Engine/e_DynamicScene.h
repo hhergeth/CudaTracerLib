@@ -53,6 +53,7 @@ public:
 	///Do not use this! Just invalidate and update the material
 	e_BufferReference<e_MIPMap, e_KernelMIPMap> LoadTexture(const char* file, bool a_MipMap);
 	void UnLoadTexture(e_BufferReference<e_MIPMap, e_KernelMIPMap> ref);
+	void ReloadTextures();
 	float4x4 GetNodeTransform(unsigned int i)
 	{
 		return GetNodeTransform(getNodes()(i));

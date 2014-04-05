@@ -95,5 +95,6 @@ public:
 		return m_sTriInfo.getLength();
 	}
 	static void CompileMesh(const float3* vertices, unsigned int nVertices, const float2* uvs, const unsigned int* indices, unsigned int nIndices, const e_KernelMaterial& mat, const Spectrum& Le, OutputStream& out);
+	static void CompileMesh(const float3* vertices, unsigned int nVertices, const float2* uvs, const unsigned int* indices, unsigned int nIndices, const std::vector<e_KernelMaterial>& mats, const std::vector<Spectrum>& Le, const std::vector<unsigned int>& subMeshes, const unsigned char* extraData, OutputStream& out);
 	static e_SceneInitData ParseBinary(const char* a_InputFile);
 };

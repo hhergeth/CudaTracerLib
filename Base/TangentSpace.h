@@ -43,7 +43,7 @@ inline void ComputeTangentSpace(const float3* V, const float2* T, const unsigned
 		float s2 = w3.x - w1.x;
 		float t1 = w2.y - w1.y;
 		float t2 = w3.y - w1.y;
-		if(hasUV)
+		if(!hasUV)
 		{
 			s1 = x1 - x2 + 0.1f;
 			s2 = x1 + x2 + 0.1f;

@@ -324,9 +324,26 @@ struct e_KernelWireframeTexture : public e_KernelTextureBase
 	float width;
 };
 
+#define e_KernelExtraDataTexture_TYPE 14
+struct e_KernelExtraDataTexture : public e_KernelTextureBase
+{
+	CUDA_FUNC_IN Spectrum Evaluate(const MapParameters & dg) const
+	{
+		return float(dg.extraData) / 255.0f;
+	}
+	CUDA_FUNC_IN Spectrum Average()
+	{
+		return Spectrum(0.0f);
+	}
+	template<typename L> void LoadTextures(L callback)
+	{
+	}
+	TYPE_FUNC(e_KernelExtraDataTexture)
+};
+
 #define TEX_SIZE (RND_16(DMAX9(sizeof(e_KernelBiLerpTexture), sizeof(e_KernelConstantTexture), sizeof(e_KernelFbmTexture), sizeof(e_KernelImageTexture), \
 								  sizeof(e_KernelMarbleTexture), sizeof(e_KernelUVTexture), sizeof(e_KernelWindyTexture), sizeof(e_KernelWrinkledTexture), \
-								  DMAX2(sizeof(e_KernelCheckerboardTexture), sizeof(e_KernelWireframeTexture)))) + 12)
+								  DMAX3(sizeof(e_KernelCheckerboardTexture), sizeof(e_KernelWireframeTexture), sizeof(e_KernelExtraDataTexture)))) + 12)
 
 struct CUDA_ALIGN(16) e_KernelTexture : public e_AggregateBaseType<e_KernelTextureBase, TEX_SIZE>
 {
@@ -343,17 +360,17 @@ public:
 #endif
 	CUDA_FUNC_IN Spectrum Evaluate(const MapParameters & dg) const
 	{
-		CALL_FUNC10(e_KernelBiLerpTexture,e_KernelConstantTexture,e_KernelCheckerboardTexture,e_KernelFbmTexture,e_KernelImageTexture,e_KernelMarbleTexture,e_KernelUVTexture,e_KernelWindyTexture,e_KernelWrinkledTexture,e_KernelWireframeTexture, Evaluate(dg))
+		CALL_FUNC11(e_KernelBiLerpTexture,e_KernelConstantTexture,e_KernelCheckerboardTexture,e_KernelFbmTexture,e_KernelImageTexture,e_KernelMarbleTexture,e_KernelUVTexture,e_KernelWindyTexture,e_KernelWrinkledTexture,e_KernelWireframeTexture, e_KernelExtraDataTexture, Evaluate(dg))
 		return Spectrum(0.0f);
 	}
 	CUDA_FUNC_IN Spectrum Average()
 	{
-		CALL_FUNC10(e_KernelBiLerpTexture,e_KernelConstantTexture,e_KernelCheckerboardTexture,e_KernelFbmTexture,e_KernelImageTexture,e_KernelMarbleTexture,e_KernelUVTexture,e_KernelWindyTexture,e_KernelWrinkledTexture,e_KernelWireframeTexture, Average())
+		CALL_FUNC11(e_KernelBiLerpTexture,e_KernelConstantTexture,e_KernelCheckerboardTexture,e_KernelFbmTexture,e_KernelImageTexture,e_KernelMarbleTexture,e_KernelUVTexture,e_KernelWindyTexture,e_KernelWrinkledTexture,e_KernelWireframeTexture, e_KernelExtraDataTexture, Average())
 		return Spectrum(0.0f);
 	}
 	template<typename L> void LoadTextures(L callback)
 	{
-		CALL_FUNC10(e_KernelBiLerpTexture,e_KernelConstantTexture,e_KernelCheckerboardTexture,e_KernelFbmTexture,e_KernelImageTexture,e_KernelMarbleTexture,e_KernelUVTexture,e_KernelWindyTexture,e_KernelWrinkledTexture,e_KernelWireframeTexture, LoadTextures(callback))
+		CALL_FUNC11(e_KernelBiLerpTexture,e_KernelConstantTexture,e_KernelCheckerboardTexture,e_KernelFbmTexture,e_KernelImageTexture,e_KernelMarbleTexture,e_KernelUVTexture,e_KernelWindyTexture,e_KernelWrinkledTexture,e_KernelWireframeTexture, e_KernelExtraDataTexture, LoadTextures(callback))
 	}
 };
 
