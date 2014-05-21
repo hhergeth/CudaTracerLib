@@ -36,16 +36,12 @@ struct MapParameters
 	float3 P;
 	float3 pLocal;
 	Frame sys;
-	float2 uv;
+	float2 uv[NUM_UV_SETS];
 	float2 bary;
 	const e_TriangleData* Shape;
 	unsigned char extraData;
 	CUDA_FUNC_IN MapParameters(){}
 	//CUDA_FUNC_IN MapParameters(): sys(Frame()), uv(float2()), P(float3()), bary(float2()){}
-	CUDA_FUNC_IN MapParameters(const float3& p, const float3& pLocal, const float2& u, const Frame& s, const float2& b, const e_TriangleData* S)
-		: sys(s), uv(u), P(p), bary(b), Shape(S), pLocal(pLocal)
-	{
-	}
 };
 
 struct e_KernelMappingBase : public e_BaseType
@@ -55,20 +51,22 @@ struct e_KernelMappingBase : public e_BaseType
 #define e_KernelUVMapping2D_TYPE 1
 struct e_KernelUVMapping2D : public e_KernelMappingBase
 {
-	e_KernelUVMapping2D(float su = 1, float sv = 1, float du = 0, float dv = 0)
+	e_KernelUVMapping2D(float su = 1, float sv = 1, float du = 0, float dv = 0, int setId = 0)
 	{
 		this->su = su;
 		this->sv = sv;
 		this->du = du;
 		this->dv = dv;
+		this->setId = setId;
 	}
 	CUDA_FUNC_IN void Map(const MapParameters &dg, float *s, float *t) const
 	{
-		*s = su * dg.uv.x + du;
-		*t = sv * dg.uv.y + dv;
+		*s = su * dg.uv[setId].x + du;
+		*t = sv * dg.uv[setId].y + dv;
 	}
 	TYPE_FUNC(e_KernelUVMapping2D)
     float su, sv, du, dv;
+	int setId;
 };
 
 #define e_KernelSphericalMapping2D_TYPE 2

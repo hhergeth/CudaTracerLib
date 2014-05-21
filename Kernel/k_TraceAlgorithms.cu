@@ -2,7 +2,7 @@
 
 Spectrum EstimateDirect(BSDFSamplingRecord& bRec, const e_KernelMaterial& mat, const e_KernelLight* light, unsigned int li, EBSDFType flags)
 {
-	DirectSamplingRecord dRec(bRec.map.P, bRec.map.sys.n, bRec.map.uv);
+	DirectSamplingRecord dRec(bRec.map.P, bRec.map.sys.n);
 	Spectrum value = light->sampleDirect(dRec, bRec.rng->randomFloat2());
 	if(!value.isZero())
 	{

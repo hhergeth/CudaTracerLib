@@ -28,6 +28,7 @@
     <ClInclude Include="Engine\e_Core.h" />
     <ClInclude Include="Engine\e_DynamicScene.h" />
     <ClInclude Include="Engine\e_ErrorHandler.h" />
+    <ClInclude Include="Engine\e_FileTextureHelper.h" />
     <ClInclude Include="Engine\e_Filter.h" />
     <ClInclude Include="Engine\e_Grid.h" />
     <ClInclude Include="Engine\e_Image.h" />
@@ -95,6 +96,7 @@
     <ClCompile Include="Engine\e_AnimatedMesh.cpp" />
     <ClCompile Include="Engine\e_Core.cpp" />
     <ClCompile Include="Engine\e_DynamicScene.cpp" />
+    <ClCompile Include="Engine\e_FileTexture.cpp" />
     <ClCompile Include="Engine\e_Image.cpp" />
     <ClCompile Include="Engine\e_MaterialLib.cpp" />
     <ClCompile Include="Engine\e_Mesh.cpp" />

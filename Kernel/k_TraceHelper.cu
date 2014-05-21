@@ -183,7 +183,12 @@ CUDA_FUNC_IN bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResu
 							if(USE_ALPHA)
 							{
 								e_KernelMaterial* mat = g_SceneData.m_sMatData.Data + tri->getMatIndex(N->m_uMaterialOffset);
-								float a = mat->SampleAlphaMap(MapParameters(make_float3(0), make_float3(0), tri->lerpUV(make_float2(u,v)), Frame(), make_float2(u,v),tri));
+								MapParameters dg;
+								dg.bary = make_float2(u, v);
+								dg.Shape = tri;
+								for(int i = 0; i < NUM_UV_SETS; i++)
+									dg.uv[i] = tri->lerpUV(i, dg.bary);
+								float a = mat->SampleAlphaMap(dg);
 								q = a >= mat->m_fAlphaThreshold;
 
 							}
@@ -379,7 +384,8 @@ void TraceResult::getBsdfSample(const Ray& r, CudaRNG& _rng, BSDFSamplingRecord*
 		bRec->ng *= -1.0f;
 		bRec->map.sys.n *= -1.0f;
 	}*/
-	bRec->map.uv = lerpUV();
+	for(int i = 0; i < NUM_UV_SETS; i++)
+		bRec->map.uv[i] = m_pTri->lerpUV(i, m_fUV);
 	bRec->map.extraData = m_pTri->lerpExtraData(this->m_fUV);
 	bRec->map.bary = m_fUV;
 	bRec->map.Shape = m_pTri;

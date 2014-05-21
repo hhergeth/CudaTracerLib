@@ -222,11 +222,14 @@ e_BufferReference<e_MIPMap, e_KernelMIPMap> e_DynamicScene::LoadTexture(const ch
 	{
 		std::string a2 = std::string(m_pCompilePath) + "Images\\" + getFileName(a), b = a2.substr(0, a2.find('.')) + ".xtex";
 		CreateDirectoryRecursively(getDirName(b).c_str());
-		if((int)GetFileSize(b.c_str()) <= 0)
+		unsigned long long rawStamp = GetTimeStamp(a.c_str());
+		unsigned long long cmpStamp = GetTimeStamp(b.c_str());
+		if((int)GetFileSize(b.c_str()) <= 0 || rawStamp != cmpStamp)
 		{
 			OutputStream a_Out(b.c_str());
 			e_MIPMap::CompileToBinary(a.c_str(), a_Out, a_MipMap);
 			a_Out.Close();
+			SetTimeStamp(b.c_str(), rawStamp);
 		}
 		InputStream I(b.c_str());
 		new(T) e_MIPMap(I);

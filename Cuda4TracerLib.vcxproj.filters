@@ -231,6 +231,9 @@
     <ClInclude Include="Kernel\k_BlockSampler.h">
       <Filter>Kernel</Filter>
     </ClInclude>
+    <ClInclude Include="Engine\e_FileTextureHelper.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\e_AnimatedMesh.cpp">
@@ -297,6 +300,9 @@
     </ClCompile>
     <ClCompile Include="Engine\SceneBuilder\ObjParser2.cpp">
       <Filter>Engine\SceneBuilder</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\e_FileTexture.cpp">
+      <Filter>Engine</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

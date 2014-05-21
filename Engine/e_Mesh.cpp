@@ -118,7 +118,7 @@ void e_Mesh::CompileMesh(const float3* vertices, unsigned int nVertices, const f
 	{
 		for(size_t j = 0; j < 3; j++)
 		{
-			const int l = indices ? indices[ti * 3 + j] : ti * 3 + j;
+			size_t l = indices ? indices[ti * 3 + j] : ti * 3 + j;
 			p[j] = vertices[l];
 			box.Enlarge(p[j]);
 #ifdef EXT_TRI
@@ -147,7 +147,7 @@ void e_Mesh::CompileMesh(const float3* vertices, unsigned int nVertices, const f
 	delete [] triData;
 }
 
-void e_Mesh::CompileMesh(const float3* vertices, unsigned int nVertices, const float2* uvs, const unsigned int* indices, unsigned int nIndices, const std::vector<e_KernelMaterial>& mats, const std::vector<Spectrum>& Les, const std::vector<unsigned int>& subMeshes, const unsigned char* extraData, OutputStream& a_Out)
+void e_Mesh::CompileMesh(const float3* vertices, unsigned int nVertices, const float2** uvs, unsigned int nUV_Sets, const unsigned int* indices, unsigned int nIndices, const std::vector<e_KernelMaterial>& mats, const std::vector<Spectrum>& Les, const std::vector<unsigned int>& subMeshes, const unsigned char* extraData, OutputStream& a_Out)
 {
 	e_MeshPartLight m_sLights[MAX_AREALIGHT_NUM];
 	Platform::SetMemory(m_sLights, sizeof(m_sLights));
@@ -171,7 +171,8 @@ void e_Mesh::CompileMesh(const float3* vertices, unsigned int nVertices, const f
 	Platform::SetMemory(v_Normals, sizeof(float3) * nVertices);
 	Platform::SetMemory(v_Tangents, sizeof(float3) * nVertices);
 	Platform::SetMemory(v_BiTangents, sizeof(float3) * nVertices);
-	ComputeTangentSpace(vertices, uvs, indices, nVertices, numTriangles, v_Normals, v_Tangents, v_BiTangents);
+	//compute the frame for the first set and hope the rest is aligned
+	ComputeTangentSpace(vertices, uvs[0], indices, nVertices, numTriangles, v_Normals, v_Tangents, v_BiTangents);
 #endif
 	AABB box = AABB::Identity();
 	unsigned int si = 0, pc = 0;
@@ -179,18 +180,25 @@ void e_Mesh::CompileMesh(const float3* vertices, unsigned int nVertices, const f
 	{
 		for(size_t j = 0; j < 3; j++)
 		{
-			const int l = indices ? indices[ti * 3 + j] : ti * 3 + j;
+			size_t l = indices ? indices[ti * 3 + j] : ti * 3 + j;
 			p[j] = vertices[l];
 			box.Enlarge(p[j]);
 #ifdef EXT_TRI
-			if(uvs)
-				t[j] = uvs[l];
 			ta[j] = normalize(v_Tangents[l]);
 			bi[j] = normalize(v_BiTangents[l]);
 			n[j] = normalize(v_Normals[l]);
 #endif
 		}
 		e_TriangleData tri(p, (unsigned char)si, t, n, ta, bi);
+		for(unsigned int uvIdx = 0; uvIdx < nUV_Sets; uvIdx++)
+		{
+			for(int j = 0; j < 3; j++)
+			{
+				size_t l = indices ? indices[ti * 3 + j] : ti * 3 + j;
+				t[j] = uvs[uvIdx][l];
+			}
+			tri.setUvSetData(uvIdx, t[0], t[1], t[2]);
+		}
 		if(extraData)
 			for(int j = 0; j < 3; j++)
 				tri.m_sHostData.ExtraData[j] = extraData[indices ? indices[ti * 3 + j] : ti * 3 + j];
@@ -213,7 +221,7 @@ void e_Mesh::CompileMesh(const float3* vertices, unsigned int nVertices, const f
 	a_Out << numTriangles;
 	a_Out.Write(triData, sizeof(e_TriangleData) * numTriangles);
 	a_Out << (unsigned int)mats.size();
-	a_Out.Write(&mats[0], sizeof(e_KernelMaterial) * mats.size());
+	a_Out.Write(&mats[0], sizeof(e_KernelMaterial) * (unsigned int)mats.size());
 	ConstructBVH(vertices, indices, nVertices, numTriangles * 3, a_Out);
 #ifdef EXT_TRI
 	delete [] v_Normals;

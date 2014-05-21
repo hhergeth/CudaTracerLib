@@ -482,7 +482,7 @@ struct half2
 {
 	half x, y;
 	CUDA_FUNC_IN half2() {}
-	CUDA_FUNC_IN half2(float2& v)
+	CUDA_FUNC_IN half2(const float2& v)
 	{
 		x = half(v.x);
 		y = half(v.y);

@@ -4,7 +4,7 @@
 
 #ifdef EXT_TRI
 
-e_TriangleData::e_TriangleData(float3* P, unsigned char matIndex, float2* T, float3* N, float3* Tan, float3* BiTan)
+e_TriangleData::e_TriangleData(const float3* P, unsigned char matIndex, const float2* T, const float3* N, const float3* Tan, const float3* BiTan)
 {
 	//unsigned short s = NormalizedFloat3ToUchar2(make_float3(0,0,1)), t = NormalizedFloat3ToUchar2(make_float3(0,0,-1));
 	//float3 a = Uchar2ToNormalizedFloat3(s), b = Uchar2ToNormalizedFloat3(t);
@@ -14,10 +14,8 @@ e_TriangleData::e_TriangleData(float3* P, unsigned char matIndex, float2* T, flo
 	{
 		m_sHostData.Normals[i] = NormalizedFloat3ToUchar2(normalize(N[i]));
 		m_sHostData.Tangents[i] = NormalizedFloat3ToUchar2(normalize(Tan[i]));
-		half2 h2 = half2(T[i]);
-		m_sHostData.TexCoord[i] = *(ushort2*)&h2;
-		//NOR[i] = N[i];
 	}
+	setUvSetData(0, T[0], T[1], T[2]);
 }
 
 void e_TriangleData::setData(const float3& na, const float3& nb, const float3& nc,
@@ -47,14 +45,15 @@ void e_TriangleData::lerpFrame(const float2& bCoords, const float4x4& localToWor
 		//*ng = sys.n;
 }
 
-float2 e_TriangleData::lerpUV(const float2& bCoords) const
+float2 e_TriangleData::lerpUV(int setId, const float2& bCoords) const
 {
 #ifdef ISCUDA
 	#define tof2(x) make_float2(__half2float(x & 0xffff), __half2float(x >> 16))
 #else
 	#define tof2(x) make_float2(half((unsigned short)(x & 0xffff)).ToFloat(), half((unsigned short)(x & 0xffff0000)).ToFloat())
 #endif
-	float2 a = tof2(m_sDeviceData.Row1.x), b = tof2(m_sDeviceData.Row1.y), c = tof2(m_sDeviceData.Row1.z);
+	uint3 val = m_sDeviceData.RowX[setId];
+	float2 a = tof2(val.x), b = tof2(val.y), c = tof2(val.z);
 	float u = bCoords.y, v = 1.0f - u - bCoords.x;
 	return a + u * (b - a) + v * (c - a);
 #undef tof2
@@ -69,7 +68,7 @@ void e_TriangleData::getNormalDerivative(const float2& bCoords, float3& dndu, fl
 #else
 	#define tof2(x) make_float2(half((unsigned short)(x & 0xffff)).ToFloat(), half((unsigned short)(x & 0xffff0000)).ToFloat())
 #endif
-	float2 uv0 = tof2(m_sDeviceData.Row1.x), uv1 = tof2(m_sDeviceData.Row1.y), uv2 = tof2(m_sDeviceData.Row1.z);
+	float2 uv0 = tof2(m_sDeviceData.RowX[0].x), uv1 = tof2(m_sDeviceData.RowX[0].y), uv2 = tof2(m_sDeviceData.RowX[0].z);
 	float w = 1.0f - bCoords.x - bCoords.y, u = bCoords.x, v = bCoords.y;
 
 	float3 N = u * n1 + v * n2 + w * n0;
@@ -108,11 +107,6 @@ void TraceResult::Init()
 unsigned int TraceResult::getMatIndex() const
 {
 	return m_pTri->getMatIndex(m_pNode->m_uMaterialOffset);
-}
-
-float2 TraceResult::lerpUV() const
-{
-	return m_pTri->lerpUV(m_fUV);
 }
 
 void TraceResult::getBsdfSample(const Ray& r, CudaRNG& _rng, BSDFSamplingRecord* bRec, const float3& wo) const

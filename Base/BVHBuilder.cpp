@@ -409,6 +409,10 @@ void splitReference(BBoxTmp& left, BBoxTmp& right, const BBoxTmp* ref, int dim, 
 	{
 		left.box = __m128_box(lBox);
 		right.box = __m128_box(rBox);
+		left.box.t.m128_f32[dim] = pos;
+		right.box.b.m128_f32[dim] = pos;
+		left.box.Intersect(ref->box);
+		right.box.Intersect(ref->box);
 	}
 	else
 	{
@@ -677,7 +681,7 @@ void BVHBuilder::BuildBVH(IBVHBuilderCallback* clb, const BVHBuilder::Platform& 
 		clb->HandleStartNode(sNode);
 		B.Free();
 		double tSec = T.EndTimer();
-		//std::cout << "BVH Construction of " << N << " objects took " << tSec << " seconds\n";
+		std::cout << "BVH Construction of " << N << " objects took " << tSec << " seconds\n";
 	}
 	else
 	{

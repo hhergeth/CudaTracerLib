@@ -35,7 +35,8 @@ bool e_KernelMaterial::SampleNormalMap(const MapParameters& uv, float3* normal) 
 			for(int j = 0; j < 4; j++)
 			{
 				MapParameters mp = uv;
-				*(float2*)&mp.uv = mp.uv + make_float2(i - 1, j - 1) * d;
+				for(int k = 0; k < NUM_UV_SETS; k++)
+					*(float2*)&mp.uv[k] = mp.uv[k] + make_float2(i - 1, j - 1) * d;
 				m[i * 4 + j] = HeightMap.tex.Evaluate(mp).average();
 			}
 		*normal = nor(m, 4, 1, 5, 6, 9, HeightScale); 
@@ -50,7 +51,9 @@ float e_KernelMaterial::SampleAlphaMap(const MapParameters& uv) const
 	{//return 1;
 		if(AlphaMap.tex.type == e_KernelImageTexture_TYPE)
 		{
-			return AlphaMap.tex.As<e_KernelImageTexture>()->tex->SampleAlpha(uv.uv) != 1 ? 0 : 1;
+			float u, v;
+			AlphaMap.tex.As<e_KernelImageTexture>()->mapping.Map(uv, &u, &v);
+			return AlphaMap.tex.As<e_KernelImageTexture>()->tex->SampleAlpha(make_float2(u, v)) != 1 ? 0 : 1;
 		}
 		Spectrum s = AlphaMap.tex.Evaluate(uv);
 		if(s.isZero())

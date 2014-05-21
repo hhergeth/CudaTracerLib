@@ -97,8 +97,8 @@ public:
 	const void* object;
 public:
 	CUDA_FUNC_IN PositionSamplingRecord() { }
-	CUDA_FUNC_IN PositionSamplingRecord(const float3& _p, const float3& _n, const float2& _uv, const void* _obj, EMeasure m = EArea )
-		: p(_p), n(_n), measure(m), uv(_uv), object(_obj)
+	CUDA_FUNC_IN PositionSamplingRecord(const float3& _p, const float3& _n, const void* _obj, EMeasure m = EArea )
+		: p(_p), n(_n), measure(m), object(_obj)
 	{
 
 	}
@@ -134,8 +134,8 @@ struct DirectSamplingRecord : public PositionSamplingRecord
 	{
 	}
 
-	CUDA_FUNC_IN DirectSamplingRecord(const float3& _p, const float3& _n, const float2& _uvt)
-		: PositionSamplingRecord(_p, _n, _uvt, 0), ref(_p), refN(_n)
+	CUDA_FUNC_IN DirectSamplingRecord(const float3& _p, const float3& _n)
+		: PositionSamplingRecord(_p, _n, 0), ref(_p), refN(_n)
 	{
 		refN = _n;
 	}

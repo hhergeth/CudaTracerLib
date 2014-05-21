@@ -9,3 +9,5 @@ public:
 	CUDA_HOST static void SetMemory(void* dest, unsigned long long length, unsigned int val = 0);
 	CUDA_HOST static void OutputDebug(const char* msg);
 };
+
+#define ZERO_MEM(ref) Platform::SetMemory(&ref, sizeof(ref), 0)

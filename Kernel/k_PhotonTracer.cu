@@ -6,7 +6,7 @@ CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_NextRayCounter3;
 
 CUDA_FUNC_IN void handleEmission(const Spectrum& weight, const PositionSamplingRecord& pRec, e_Image& g_Image, CudaRNG& rng)
 {
-	DirectSamplingRecord dRec(pRec.p, pRec.n, pRec.uv);
+	DirectSamplingRecord dRec(pRec.p, pRec.n);
 	Spectrum value = weight * g_SceneData.sampleSensorDirect(dRec, rng.randomFloat2());
 	if(!value.isZero() && !g_SceneData.Occluded(Ray(dRec.ref, dRec.d), 0, dRec.dist))
 	{
@@ -18,7 +18,7 @@ CUDA_FUNC_IN void handleEmission(const Spectrum& weight, const PositionSamplingR
 
 CUDA_FUNC_IN void handleSurfaceInteraction(const Spectrum& weight, BSDFSamplingRecord& bRec, const TraceResult r2, e_Image& g_Image, CudaRNG& rng)
 {
-	DirectSamplingRecord dRec(bRec.map.P, bRec.map.sys.n, bRec.map.uv);
+	DirectSamplingRecord dRec(bRec.map.P, bRec.map.sys.n);
 	Spectrum value = weight * g_SceneData.sampleSensorDirect(dRec, rng.randomFloat2());
 	if(!value.isZero() && !g_SceneData.Occluded(Ray(dRec.ref, dRec.d), 0, dRec.dist))
 	{

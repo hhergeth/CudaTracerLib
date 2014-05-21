@@ -61,13 +61,13 @@ void compileobj3(const char* a_InputFile, OutputStream& a_Out)
 	float3 ta[3];
 	float3 bi[3];
 	float2 t[3];
-	unsigned int numTriangles = 0, numVertices = 0;
-	unsigned int numMaxV = 0;
+	size_t numTriangles = 0, numVertices = 0;
+	size_t numMaxV = 0;
 	for(size_t i = 0; i < shapes.size(); i++)
 	{
 		numTriangles += shapes[i].mesh.indices.size() / 3;
 		numVertices += shapes[i].mesh.positions.size() / 3;
-		numMaxV = MAX(numMaxV, (unsigned int)shapes[i].mesh.indices.size());
+		numMaxV = MAX(numMaxV, (size_t)shapes[i].mesh.indices.size());
 	}
 
 	std::vector<float3> positions;
@@ -83,7 +83,7 @@ void compileobj3(const char* a_InputFile, OutputStream& a_Out)
 #ifdef EXT_TRI
 	float3* v_Normals = new float3[numMaxV], *v_Tangents = new float3[numMaxV], *v_BiTangents = new float3[numMaxV];
 #endif
-	unsigned int posIndex = 0, indIndex = 0;
+	size_t posIndex = 0, indIndex = 0;
 	AABB box = AABB::Identity();
 	for(size_t i = 0; i < shapes.size(); i++)
 	{
@@ -96,7 +96,7 @@ void compileobj3(const char* a_InputFile, OutputStream& a_Out)
 			box.Enlarge(positions[posIndex + j]);
 		}
 		for(unsigned int j = 0; j < S.mesh.indices.size(); j++)
-			indices[indIndex + j] = posIndex + S.mesh.indices[j];
+			indices[indIndex + j] = (unsigned int)posIndex + S.mesh.indices[j];
 		float3* P = &positions[posIndex];
 		posIndex += S.mesh.positions.size() / 3;
 		indIndex += S.mesh.indices.size();
@@ -110,7 +110,7 @@ void compileobj3(const char* a_InputFile, OutputStream& a_Out)
 		Platform::SetMemory(v_Normals, sizeof(float3) * numMaxV);
 		Platform::SetMemory(v_Tangents, sizeof(float3) * numMaxV);
 		Platform::SetMemory(v_BiTangents, sizeof(float3) * numMaxV);
-		ComputeTangentSpace(P, T, &S.mesh.indices[0], S.mesh.positions.size(), S.mesh.indices.size() / 3, v_Normals, v_Tangents, v_BiTangents);
+		ComputeTangentSpace(P, T, &S.mesh.indices[0], (unsigned int)S.mesh.positions.size(), (unsigned int)S.mesh.indices.size() / 3, v_Normals, v_Tangents, v_BiTangents);
 #endif
 		for(size_t ti = 0; ti < S.mesh.indices.size() / 3; ti++)
 		{
@@ -135,10 +135,10 @@ void compileobj3(const char* a_InputFile, OutputStream& a_Out)
 	a_Out.Write(m_sLights, sizeof(m_sLights));
 	a_Out << lightCount;
 	a_Out << numTriangles;
-	a_Out.Write(triData, sizeof(e_TriangleData) * numTriangles);
+	a_Out.Write(triData, sizeof(e_TriangleData) * (unsigned int)numTriangles);
 	a_Out << (unsigned int)matData.size();
 	a_Out.Write(&matData[0], sizeof(e_KernelMaterial) * (unsigned int)matData.size());
-	ConstructBVH(&positions[0], &indices[0], numVertices, numTriangles * 3, a_Out);
+	ConstructBVH(&positions[0], &indices[0], (unsigned int)numVertices, (unsigned int)numTriangles * 3, a_Out);
 #ifdef EXT_TRI
 	delete [] v_Normals;
 	delete [] v_Tangents;

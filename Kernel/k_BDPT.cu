@@ -414,7 +414,7 @@ CUDA_FUNC_IN void BDPT(int x, int y, int w, int h, e_Image& g_Image, CudaRNG& rn
 
 		//case ii
 		ev.r2.getBsdfSample(Ray(ev.p, -1.0f * ev.wo), rng, &bRec);
-		DirectSamplingRecord dRec(ev.p, bRec.map.sys.n, bRec.map.uv);
+		DirectSamplingRecord dRec(ev.p, bRec.map.sys.n);
 		Spectrum localLe = light->sampleDirect(dRec, rng.randomFloat2());
 		bRec.wo = bRec.map.sys.toLocal(dRec.d);
 		if(V(ev.p, dRec.p))
@@ -442,7 +442,7 @@ CUDA_FUNC_IN void BDPT(int x, int y, int w, int h, e_Image& g_Image, CudaRNG& rn
 			break;//urgs wtf?
 		
 		lv.r2.getBsdfSample(Ray(lv.p, -1.0f * lv.wi), rng, &bRec);
-		DirectSamplingRecord dRec(lv.p, bRec.map.sys.n, bRec.map.uv);
+		DirectSamplingRecord dRec(lv.p, bRec.map.sys.n);
 		Spectrum localLe = Le * g_SceneData.sampleSensorDirect(dRec, rng.randomFloat2());
 		if(V(dRec.p, lv.p))
 		{
