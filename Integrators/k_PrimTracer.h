@@ -1,6 +1,6 @@
 #pragma once
 
-#include "k_Tracer.h"
+#include "..\Kernel\k_Tracer.h"
 
 class k_PrimTracer : public k_OnePassTracer
 {

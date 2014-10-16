@@ -13,7 +13,7 @@ void print(const __m128& v)
 //TODO : 
 //implement non sorting algortihm, there is a bug when using the spatial variant
 
-//copied from Effiecent GPU Traversal
+//copied from Efficient GPU Traversal
 
 #define TOVEC3(x) make_float3(x.m128_f32[0], x.m128_f32[1], x.m128_f32[2])
 #define TOSSE3(v) _mm_set_ps(0, v.z, v.y, v.x)
@@ -40,14 +40,14 @@ struct __m128_box
 		b = TOSSE3(box.minV);
 		t = TOSSE3(box.maxV);
 	}
-	float area()
+	float area() const
 	{
 		if(!isValid())
 			return 0.0f;
 		__m128 x = _mm_sub_ps(t, b);
 		return 2.0f * (x.m128_f32[2] * x.m128_f32[1] + x.m128_f32[1] * x.m128_f32[0] + x.m128_f32[2] * x.m128_f32[0]);
 	}
-	AABB ToBox()
+	AABB ToBox() const
 	{
 		return AABB(TOVEC3(b), TOVEC3(t));
 	}
@@ -61,7 +61,7 @@ struct __m128_box
 		b = _mm_max_ps(b, aabb.b);
 		t = _mm_min_ps(t, aabb.t);
 	}
-	bool isValid()
+	bool isValid() const
 	{
 		return b.m128_f32[0] <= t.m128_f32[0] && b.m128_f32[1] <= t.m128_f32[1] && b.m128_f32[2] <= t.m128_f32[2];
 	}
@@ -303,7 +303,7 @@ public:
 		memcpy(a + N, &refs[0], sizeof(BBoxTmp) * refs.size());
 		free(items);
 		items = a;
-		N += refs.size();
+		N += (int)refs.size();
 		int d = sortedDim;
 		sortedDim = -1;
 		sort(d);
@@ -405,14 +405,10 @@ void splitReference(BBoxTmp& left, BBoxTmp& right, const BBoxTmp* ref, int dim, 
 {
 	AABB lBox, rBox;
 	left._pNode = right._pNode = ref->_pNode;
-	if(clb->SplitNode(ref->_pNode, dim, pos, lBox, rBox))
+	if(clb->SplitNode(ref->_pNode, dim, pos, lBox, rBox, ref->box.ToBox()))
 	{
 		left.box = __m128_box(lBox);
 		right.box = __m128_box(rBox);
-		left.box.t.m128_f32[dim] = pos;
-		right.box.b.m128_f32[dim] = pos;
-		left.box.Intersect(ref->box);
-		right.box.Intersect(ref->box);
 	}
 	else
 	{

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "k_Tracer.h"
+#include "..\Kernel\k_Tracer.h"
 #include "..\Base\CudaRandom.h"
 
 class k_BDPT : public k_ProgressiveTracer

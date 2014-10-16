@@ -8,6 +8,7 @@
 k_sPpmTracer::k_sPpmTracer()
 	: k_ProgressiveTracer(), m_uGridLength(LNG*LNG*LNG), m_pEntries(0)
 {
+	m_uPhotonsEmitted = -1;
 	m_uPreviosCount = 0;
 	m_bLongRunning = false;
 #ifdef DEBUG
@@ -165,7 +166,7 @@ void k_sPpmTracer::initNewPass(e_Image* I)
 	k_ProgressiveTracer::StartNewTrace(I);
 	m_uPhotonsEmitted = 0;
 	//AABB m_sEyeBox = m_pCamera->m_sLastFrustum;
-	AABB m_sEyeBox = GetEyeHitPointBox(m_pScene, m_pCamera);
+	AABB m_sEyeBox = GetEyeHitPointBox(m_pScene, m_pCamera, true);
 	float r = fsumf(m_sEyeBox.maxV - m_sEyeBox.minV) / float(w) * m_fInitialRadiusScale;
 	m_sEyeBox.minV -= make_float3(r);
 	m_sEyeBox.maxV += make_float3(r);
@@ -205,7 +206,7 @@ static float GGGf0;
 static float GGGf1;
 void k_sPpmTracer::StartNewTrace(e_Image* I)
 {
-	m_bDirect = !m_pScene->getVolumes().getLength();m_bDirect=0;
+	m_bDirect = !m_pScene->getVolumes().getLength();//m_bDirect=1;
 	if(m_uModus == 1)
 	{
 		initNewPass(I);

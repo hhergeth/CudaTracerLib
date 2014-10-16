@@ -2,45 +2,9 @@
 #include "k_TraceHelper.h"
 #include "..\Engine\e_Core.h"
 
-//SHOULD NOT WORK
-CUDA_FUNC_IN unsigned int FloatToUInt(float f2)
-{
-	unsigned int f = *(unsigned int*)&f2;
-	unsigned int mask = -int(f >> 31) | 0x80000000;
-	return f ^ mask;
-}
-
-CUDA_FUNC_IN float UIntToFloat(float f2)
-{
-	unsigned int f = *(unsigned int*)&f2;
-	unsigned int mask = ((f >> 31) - 1) | 0x80000000;
-	unsigned int i = f ^ mask;
-	return *(float*)&i;
-}
-
-/*
-CUDA_FUNC_IN unsigned int FloatToUInt(float f)
-{
-	unsigned int mask = -unsigned int(*(unsigned int*)&f >> 31) | 0x80000000;
-	return (*(unsigned int*)&f) ^ mask;
-}
-
-CUDA_FUNC_IN float UIntToFloat(unsigned int f)
-{
-	unsigned int mask = ((f >> 31) - 1) | 0x80000000, q = f ^ mask;
-	return *(float*)&q;
-}
-*/
-
-__global__ void ABCQQ()
-{
-	e_KernelMaterial& mat = g_SceneData.m_sMatData.Data[0];
-	mat.AlphaMap.used = true;
-}
-
 CUDA_DEVICE uint3 g_EyeHitBoxMin;
 CUDA_DEVICE uint3 g_EyeHitBoxMax;
-__global__ void k_GuessPass(int w, int h, float scx, float scy)
+template<bool RECURSIVE> __global__ void k_GuessPass(int w, int h, float scx, float scy)
 {
 	int x = threadId % w, y = threadId / w;
 	CudaRNG rng = g_RNGData();
@@ -57,36 +21,50 @@ __global__ void k_GuessPass(int w, int h, float scx, float scy)
 			r2.getBsdfSample(r, rng, &bRec);
 			r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
 			r = Ray(r(r2.m_fDist), bRec.getOutgoing());
-			uint3 pu = make_uint3(FloatToUInt(p.x), FloatToUInt(p.y), FloatToUInt(p.z));
-			atomicMin(&g_EyeHitBoxMin.x, pu.x);
-			atomicMin(&g_EyeHitBoxMin.y, pu.y);
-			atomicMin(&g_EyeHitBoxMin.z, pu.z);
-			atomicMax(&g_EyeHitBoxMax.x, pu.x);
-			atomicMax(&g_EyeHitBoxMax.y, pu.y);
-			atomicMax(&g_EyeHitBoxMax.z, pu.z);
+			float3 per = clamp01((p - g_SceneData.m_sBox.minV) / (g_SceneData.m_sBox.maxV - g_SceneData.m_sBox.minV)) * float(UINT_MAX);
+			uint3 q = make_uint3(unsigned int(per.x), unsigned int(per.y), unsigned int(per.z));
+			atomicMin(&g_EyeHitBoxMin.x, q.x);
+			atomicMin(&g_EyeHitBoxMin.y, q.y);
+			atomicMin(&g_EyeHitBoxMin.z, q.z);
+			atomicMax(&g_EyeHitBoxMax.x, q.x);
+			atomicMax(&g_EyeHitBoxMax.y, q.y);
+			atomicMax(&g_EyeHitBoxMax.z, q.z);
 			r2.Init();
+			if(!RECURSIVE)
+				break;
 		}
 	}
 	g_RNGData(rng);
 }
 
-AABB k_Tracer::GetEyeHitPointBox(e_DynamicScene* m_pScene, e_Sensor* m_pCamera)
+CUDA_FUNC_IN float3 lerp(const float3& a, const float3& b, const float3& t)
+{
+	return make_float3(lerp(a.x, b.x, t.x), lerp(a.y, b.y, t.y), lerp(a.z, b.z, t.z));
+}
+
+AABB k_Tracer::GetEyeHitPointBox(e_DynamicScene* m_pScene, e_Sensor* m_pCamera, bool recursive)
 {
 	ThrowCudaErrors();
-	uint3 ma = make_uint3(FloatToUInt(-FLT_MAX)), mi = make_uint3(FloatToUInt(FLT_MAX));
+	uint3 ma = make_uint3(0), mi = make_uint3(UINT_MAX);
 	cudaMemcpyToSymbol(g_EyeHitBoxMin, &mi, 12);
 	cudaMemcpyToSymbol(g_EyeHitBoxMax, &ma, 12);
 	k_INITIALIZE(m_pScene, g_sRngs);
 	int qw = 128, qh = 128, p0 = 16;
 	float a = (float)m_pCamera->As()->m_resolution.x / qw, b = (float)m_pCamera->As()->m_resolution.y / qh;
-	k_GuessPass<<<dim3( qw/p0, qh/p0, 1), dim3(p0, p0, 1)>>>(qw, qh, a, b);
+	if(recursive)
+		k_GuessPass<true> <<<dim3( qw/p0, qh/p0, 1), dim3(p0, p0, 1)>>>(qw, qh, a, b);
+	else k_GuessPass<false> <<<dim3( qw/p0, qh/p0, 1), dim3(p0, p0, 1)>>>(qw, qh, a, b);
 	cudaThreadSynchronize();
 	ThrowCudaErrors();
+	uint3 minU, maxU;
+	cudaMemcpyFromSymbol(&minU, g_EyeHitBoxMin, 12);
+	cudaMemcpyFromSymbol(&maxU, g_EyeHitBoxMax, 12);
 	AABB m_sEyeBox;
-	cudaMemcpyFromSymbol(&m_sEyeBox.minV, g_EyeHitBoxMin, 12);
-	cudaMemcpyFromSymbol(&m_sEyeBox.maxV, g_EyeHitBoxMax, 12);
-	m_sEyeBox.minV = make_float3(UIntToFloat(m_sEyeBox.minV.x), UIntToFloat(m_sEyeBox.minV.y), UIntToFloat(m_sEyeBox.minV.z));
-	m_sEyeBox.maxV = make_float3(UIntToFloat(m_sEyeBox.maxV.x), UIntToFloat(m_sEyeBox.maxV.y), UIntToFloat(m_sEyeBox.maxV.z));
+	m_sEyeBox.minV = make_float3(float(minU.x), float(minU.y), float(minU.z)) / float(UINT_MAX);
+	m_sEyeBox.maxV = make_float3(float(maxU.x), float(maxU.y), float(maxU.z)) / float(UINT_MAX);
+	AABB box = m_pScene->getSceneBVH()->m_sBox;
+	m_sEyeBox.maxV = lerp(box.minV, box.maxV, m_sEyeBox.maxV);
+	m_sEyeBox.minV = lerp(box.minV, box.maxV, m_sEyeBox.minV);
 	return m_sEyeBox;
 }
 

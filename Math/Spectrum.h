@@ -425,6 +425,10 @@ public:
 
 	CUDA_HOST CUDA_DEVICE void fromYxy(float Y, float x, float y, EConversionIntent intent = EReflectance);
 
+	CUDA_HOST CUDA_DEVICE void fromHSL(float h, float s, float l);
+
+	CUDA_HOST CUDA_DEVICE void toHSL(float& h, float& s, float& l) const;
+
 	void fromContinuousSpectrum(const float* wls, const float* vals, unsigned int N);
 };
 

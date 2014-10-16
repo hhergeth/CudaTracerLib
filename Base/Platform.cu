@@ -23,13 +23,26 @@ unsigned int Platform::Increment(unsigned int* add)
 unsigned int Platform::Add(unsigned int* add, unsigned int val)
 {
 #if defined(ISCUDA)
-return atomicAdd(add, val);
+	return atomicAdd(add, val);
 #elif defined(ISWINDOWS)
-return InterlockedAdd((long*)add, val);	
+	return InterlockedAdd((long*)add, val);	
 #elif defined(ISUNIX)
 	unsigned int v = *add;
 	*add += val;
 	return v;
+#endif
+}
+
+unsigned int Platform::Exchange(unsigned int* add, unsigned int val)
+{
+#if defined(ISCUDA)
+	return atomicExch(add, val);
+#elif defined(ISWINDOWS)
+	return InterlockedExchange(add, val);	
+#elif defined(ISUNIX)
+	unsigned int old = *add;
+	*add = val;
+	return old;
 #endif
 }
 

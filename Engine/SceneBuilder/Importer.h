@@ -89,7 +89,7 @@ namespace bvh_helper
 		{
 			this->startNode = startNode;
 		}
-		virtual bool SplitNode(unsigned int index, int dim, float pos, AABB& lBox, AABB& rBox) const
+		virtual bool SplitNode(unsigned int index, int dim, float pos, AABB& lBox, AABB& rBox, const AABB& refBox) const
 		{
 			lBox = rBox = AABB::Identity();
 			float3 v1 = V[_index(index, 2)];
@@ -116,6 +116,9 @@ namespace bvh_helper
 					rBox.Enlarge(t);
 				}
 			}
+			lBox.max[dim] = pos;
+			rBox.min[dim] = pos;
+			lBox.intersect(refBox);
 			return true;
 		}
 	};

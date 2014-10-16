@@ -356,9 +356,13 @@ inline __host__ __device__ void operator*=(int2 &a, int s)
 {
     a.x *= s; a.y *= s;
 }
-inline __host__ __device__ bool operator==(int2 &a, int2 &b)
+inline __host__ __device__ bool operator==(const int2 &a, const int2 &b)
 {
     return a.x == b.x && a.y == b.y;
+}
+inline __host__ __device__ bool operator!=(const int2 &a, const int2 &b)
+{
+	return !(a == b);
 }
 
 // float2 functions
@@ -375,7 +379,7 @@ inline __host__ __device__ float2 make_float2(int2 a)
 }
 
 // negate
-inline __host__ __device__ float2 operator-(float2 &a)
+inline __host__ __device__ float2 operator-(const float2 &a)
 {
     return make_float2(-a.x, -a.y);
 }
@@ -482,9 +486,13 @@ inline __host__ __device__ float2 floor(const float2 v)
 }
 
 
-inline __host__ __device__ bool operator==(float2 &a, float2 &b)
+inline __host__ __device__ bool operator==(const float2 &a, const float2 &b)
 {
     return a.x == b.x && a.y == b.y;
+}
+inline __host__ __device__ bool operator!=(const float2 &a, const float2 &b)
+{
+	return !(a == b);
 }
 
 // float3 functions
@@ -513,7 +521,7 @@ inline __host__ __device__ float3 make_float3(int3 a)
 }
 
 // negate
-inline __host__ __device__ float3 operator-(float3 &a)
+inline __host__ __device__ float3 operator-(const float3 &a)
 {
     return make_float3(-a.x, -a.y, -a.z);
 }
@@ -646,15 +654,19 @@ inline __host__ __device__ float3 floor(const float3 v)
 }
 
 
-inline __host__ __device__ bool operator==(float3 &a, float3 &b)
+inline __host__ __device__ bool operator==(const float3 &a, const float3 &b)
 {
 	return a.x == b.x && a.y == b.y && a.z == b.z;
+}
+inline __host__ __device__ bool operator!=(const float3 &a, const float3 &b)
+{
+	return !(a == b);
 }
 inline __host__ __device__ float2 operator!( const float3 &a)
 {
 	return make_float2(a.x, a.y);
 }
-inline __host__ __device__ unsigned int operator~(float3 &a)
+inline __host__ __device__ unsigned int operator~(const float3 &a)
 {
 	return a.x != 0 || a.y != 0 || a.z != 0;
 }
@@ -682,7 +694,7 @@ inline __host__ __device__ float4 make_float4(int4 a)
 }
 
 // negate
-inline __host__ __device__ float4 operator-(float4 &a)
+inline __host__ __device__ float4 operator-(const float4 &a)
 {
     return make_float4(-a.x, -a.y, -a.z, -a.w);
 }
@@ -799,15 +811,19 @@ inline __host__ __device__ float4 floor(const float4 v)
 {
     return make_float4(floor(v.x), floor(v.y), floor(v.z), floor(v.w));
 }
-inline __host__ __device__ bool operator==(float4 &a, float4 &b)
+inline __host__ __device__ bool operator==(const float4 &a, const float4 &b)
 {
 	return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
+}
+inline __host__ __device__ bool operator!=(const float4 &a, const float4 &b)
+{
+	return !(a == b);
 }
 inline __host__ __device__ float3 operator!( const float4 &a)
 {
 	return make_float3(a.x, a.y, a.z);
 }
-inline __host__ __device__ unsigned int operator~(float4 &a)
+inline __host__ __device__ unsigned int operator~(const float4 &a)
 {
 	return a.x != 0 || a.y != 0 || a.z != 0 || a.w != 0;
 }
@@ -826,7 +842,7 @@ inline __host__ __device__ int3 make_int3(float3 a)
 }
 
 // negate
-inline __host__ __device__ int3 operator-(int3 &a)
+inline __host__ __device__ int3 operator-(const int3 &a)
 {
     return make_int3(-a.x, -a.y, -a.z);
 }
@@ -903,9 +919,13 @@ inline __device__ __host__ int3 clamp(int3 v, int3 a, int3 b)
 {
     return make_int3(clamp(v.x, a.x, b.x), clamp(v.y, a.y, b.y), clamp(v.z, a.z, b.z));
 }
-inline __host__ __device__ bool operator==(int3 &a, int3 &b)
+inline __host__ __device__ bool operator==(const int3 &a, const int3 &b)
 {
 	return a.x == b.x && a.y == b.y && a.z == b.z;
+}
+inline __host__ __device__ bool operator!=(const int3 &a, const int3 &b)
+{
+	return !(a == b);
 }
 
 inline __device__ __host__ int2 clamp(int2 v, int a, int b)
@@ -1008,9 +1028,13 @@ inline __device__ __host__ uint3 clamp(uint3 v, uint3 a, uint3 b)
 {
     return make_uint3(clamp(v.x, a.x, b.x), clamp(v.y, a.y, b.y), clamp(v.z, a.z, b.z));
 }
-inline __host__ __device__ bool operator==(uint3 &a, uint3 &b)
+inline __host__ __device__ bool operator==(const uint3 &a, const uint3 &b)
 {
 	return a.x == b.x && a.y == b.y && a.z == b.z;
+}
+inline __host__ __device__ bool operator!=(const uint3 &a, const uint3 &b)
+{
+	return !(a == b);
 }
 
 CUDA_FUNC_IN float2 saturate(const float2& v)

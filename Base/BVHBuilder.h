@@ -75,7 +75,7 @@ public:
 	}
 	virtual e_BVHNodeData* HandleNodeAllocation(int* index) = 0;
 	virtual void HandleStartNode(int startNode) = 0;
-	virtual bool SplitNode(unsigned int index, int dim, float pos, AABB& lBox, AABB& rBox) const
+	virtual bool SplitNode(unsigned int index, int dim, float pos, AABB& lBox, AABB& rBox, const AABB& refBox) const
 	{
 		return false;
 	}

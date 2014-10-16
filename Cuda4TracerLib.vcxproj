@@ -49,6 +49,7 @@
     <ClInclude Include="Engine\e_SceneInitData.h" />
     <ClInclude Include="Engine\e_Sensor.h" />
     <ClInclude Include="Engine\e_ShapeSet.h" />
+    <ClInclude Include="Engine\e_SpatialGrid.h" />
     <ClInclude Include="Engine\e_Terrain.h" />
     <ClInclude Include="Engine\e_TerrainHeader.h" />
     <ClInclude Include="Engine\e_FileTexture.h" />
@@ -59,13 +60,15 @@
     <ClInclude Include="Engine\SceneBuilder\Importer.h" />
     <ClInclude Include="Engine\SceneBuilder\MD5Parser.h" />
     <ClInclude Include="Engine\SceneBuilder\tiny_obj_loader.h" />
-    <ClInclude Include="Kernel\k_BDPT.h" />
+    <ClInclude Include="Integrators\k_BDPT.h" />
+    <ClInclude Include="Integrators\k_FastTracer.h" />
+    <ClInclude Include="Integrators\k_PathTracer.h" />
+    <ClInclude Include="Integrators\k_PhotonTracer.h" />
+    <ClInclude Include="Integrators\k_PmmHelper.h" />
+    <ClInclude Include="Integrators\k_PmmTracer.h" />
+    <ClInclude Include="Integrators\k_PrimTracer.h" />
+    <ClInclude Include="Integrators\k_sPpmTracer.h" />
     <ClInclude Include="Kernel\k_BlockSampler.h" />
-    <ClInclude Include="Kernel\k_FastTracer.h" />
-    <ClInclude Include="Kernel\k_PathTracer.h" />
-    <ClInclude Include="Kernel\k_PhotonTracer.h" />
-    <ClInclude Include="Kernel\k_PrimTracer.h" />
-    <ClInclude Include="Kernel\k_sPpmTracer.h" />
     <ClInclude Include="Kernel\k_TraceAlgorithms.h" />
     <ClInclude Include="Kernel\k_TraceHelper.h" />
     <ClInclude Include="Kernel\k_Tracer.h" />
@@ -113,7 +116,8 @@
     <ClCompile Include="Engine\SceneBuilder\ObjParser2.cpp" />
     <ClCompile Include="Engine\SceneBuilder\PlyParser.cpp" />
     <ClCompile Include="Engine\SceneBuilder\tiny_obj_loader.cpp" />
-    <ClCompile Include="Kernel\k_sPpmTracer.cpp" />
+    <ClCompile Include="Integrators\k_PmmTracer.cpp" />
+    <ClCompile Include="Integrators\k_sPpmTracer.cpp" />
     <ClCompile Include="Kernel\k_Tracer.cpp" />
     <ClCompile Include="Source.cpp" />
     <ClCompile Include="stdafx.cpp">
@@ -140,15 +144,15 @@
     <CudaCompile Include="Engine\e_ShapeSet.cu" />
     <CudaCompile Include="Engine\e_TriangleData.cu" />
     <CudaCompile Include="Engine\e_Volumes.cu" />
-    <CudaCompile Include="Kernel\k_BDPT.cu">
-      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">O3</Optimization>
-      <FastMath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</FastMath>
-    </CudaCompile>
+    <CudaCompile Include="Integrators\k_BDPT.cu" />
+    <CudaCompile Include="Integrators\k_FastTracer.cu" />
+    <CudaCompile Include="Integrators\k_PathTracer.cu" />
+    <CudaCompile Include="Integrators\k_PhotonTracer.cu" />
+    <CudaCompile Include="Integrators\k_PmmTracer.cu" />
+    <CudaCompile Include="Integrators\k_PrimTracer.cu" />
+    <CudaCompile Include="Integrators\k_sPpmTracer_EyePass.cu" />
+    <CudaCompile Include="Integrators\k_sPpmTracer_PhotonPass.cu" />
     <CudaCompile Include="Kernel\k_BlockSampler.cu" />
-    <CudaCompile Include="Kernel\k_FastTracer.cu" />
-    <CudaCompile Include="Kernel\k_PathTracer.cu" />
-    <CudaCompile Include="Kernel\k_PhotonTracer.cu" />
-    <CudaCompile Include="Kernel\k_PrimTracer.cu" />
     <CudaCompile Include="Kernel\k_TraceAlgorithms.cu" />
     <CudaCompile Include="Kernel\k_TraceHelper.cu">
       <FastMath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</FastMath>
@@ -156,8 +160,6 @@
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">InheritFromHost</Optimization>
     </CudaCompile>
     <CudaCompile Include="Kernel\k_Tracer.cu" />
-    <CudaCompile Include="Kernel\k_sPpmTracer_EyePass.cu" />
-    <CudaCompile Include="Kernel\k_sPpmTracer_PhotonPass.cu" />
     <CudaCompile Include="Math\Integrator.cu" />
     <CudaCompile Include="Math\Spectrum.cu" />
     <CudaCompile Include="Math\Spline.cu" />
@@ -212,7 +214,7 @@
       <PreprocessorDefinitions>DEBUG;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <MinimalRebuild>false</MinimalRebuild>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
       <ShowIncludes>false</ShowIncludes>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions</EnableEnhancedInstructionSet>
     </ClCompile>
@@ -250,7 +252,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <PreprocessorDefinitions>NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <MinimalRebuild>false</MinimalRebuild>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
       <ShowIncludes>false</ShowIncludes>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions</EnableEnhancedInstructionSet>
       <FloatingPointModel>Precise</FloatingPointModel>

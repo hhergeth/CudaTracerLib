@@ -29,6 +29,17 @@ struct k_HashGrid_Irreg
 		return make_uint3(fabsf(p - m_vMin) * HashScale);
 	}
 
+	CUDA_FUNC_IN float3 InverseTransform(const uint3& i) const
+	{
+		return make_float3(i.x, i.y, i.z) / HashScale + m_vMin;
+	}
+
+	//small helper function which does Hash(Transform(p))
+	CUDA_FUNC_IN unsigned int Hash(const float3& p) const
+	{
+		return Hash(Transform(p));
+	}
+
 	CUDA_FUNC_IN bool IsValidHash(const float3& p) const
 	{
 		return m_sBox.Contains(p);
@@ -103,6 +114,11 @@ struct k_HashGrid_Reg
 	CUDA_FUNC_IN  uint3 Transform(const float3& p) const
 	{
 		return clamp(make_uint3((p - m_vMin) * m_vInvSize), 0, m_fGridSize);
+	}
+
+	CUDA_FUNC_IN float3 InverseTransform(const uint3& i) const
+	{
+		return make_float3(i.x, i.y, i.z) / m_vInvSize + m_vMin;
 	}
 
 	CUDA_FUNC_IN bool IsValidHash(const float3& p) const

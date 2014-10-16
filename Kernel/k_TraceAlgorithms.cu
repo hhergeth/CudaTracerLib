@@ -1,11 +1,16 @@
 #include "k_TraceAlgorithms.h"
 
-Spectrum EstimateDirect(BSDFSamplingRecord& bRec, const e_KernelMaterial& mat, const e_KernelLight* light, unsigned int li, EBSDFType flags)
+//#define EXT_EST
+
+CUDA_FUNC_IN Spectrum EstimateDirect(BSDFSamplingRecord bRec, const e_KernelMaterial& mat, const e_KernelLight* light, unsigned int li, EBSDFType flags)
 {
+#ifndef EXT_EST
 	DirectSamplingRecord dRec(bRec.map.P, bRec.map.sys.n);
 	Spectrum value = light->sampleDirect(dRec, bRec.rng->randomFloat2());
+	Spectrum retVal(0.0f);
 	if(!value.isZero())
 	{
+		float3 oldWo = bRec.wo;
 		bRec.wo = bRec.map.sys.toLocal(dRec.d);
 		bRec.typeMask = flags;
 		Spectrum bsdfVal = mat.bsdf.f(bRec);
@@ -13,15 +18,16 @@ Spectrum EstimateDirect(BSDFSamplingRecord& bRec, const e_KernelMaterial& mat, c
 		{
 			const float bsdfPdf = mat.bsdf.pdf(bRec);
 			const float weight = MonteCarlo::PowerHeuristic(1, dRec.pdf, 1, bsdfPdf);
-			return value * bsdfVal * weight;
+			retVal = value * bsdfVal * weight;
 		}
+		bRec.typeMask = EAll;
+		bRec.wo = oldWo;
 	}
-	bRec.typeMask = EAll;
-	return 0.0f;
-	/*
+	return retVal;
+#else	
 	Spectrum Ld = make_float3(0.0f);
 	float lightPdf, bsdfPdf;
-	DirectSamplingRecord dRec(bRec.map.P, bRec.map.sys.n, bRec.map.uv);
+	DirectSamplingRecord dRec(bRec.map.P, bRec.map.sys.n);
 	Spectrum Li = light->sampleDirect(dRec, bRec.rng->randomFloat2());
 	lightPdf = dRec.pdf;
 	if(lightPdf > 0.0f && !Li.isZero())
@@ -29,7 +35,7 @@ Spectrum EstimateDirect(BSDFSamplingRecord& bRec, const e_KernelMaterial& mat, c
 		bRec.wo = bRec.map.sys.toLocal(dRec.d);
 		Spectrum f = mat.bsdf.f(bRec);
 		Ray r(dRec.ref, dRec.d);
-		if(!f.isZero() && !Occluded(r, 0, dRec.dist))
+		if(!f.isZero() && !g_SceneData.Occluded(r, 0, dRec.dist))
 		{
 			Li = Li * Transmittance(r, 0, dRec.dist);
 			if(light->IsDeltaLight())
@@ -73,10 +79,11 @@ Spectrum EstimateDirect(BSDFSamplingRecord& bRec, const e_KernelMaterial& mat, c
 		}
 	}
 
-	return Ld;*/
+	return Ld;
+#endif
 }
 
-Spectrum UniformSampleAllLights(BSDFSamplingRecord& bRec, const e_KernelMaterial& mat, int nSamples)
+Spectrum UniformSampleAllLights(const BSDFSamplingRecord& bRec, const e_KernelMaterial& mat, int nSamples)
 {
 	//only sample the relevant lights and assume the others emit the same
 	Spectrum L = Spectrum(0.0f);
@@ -84,21 +91,23 @@ Spectrum UniformSampleAllLights(BSDFSamplingRecord& bRec, const e_KernelMaterial
 	{
 		unsigned int l = g_SceneData.m_uEmitterIndices[i];
 		e_KernelLight* light = g_SceneData.m_sLightData.Data + l;
+		if(light->As()->IsRemoved)
+			continue;
 		Spectrum Ld = Spectrum(0.0f);
 		for(int j = 0; j < nSamples; j++)
 		{
-			Ld += EstimateDirect(bRec, mat, light, l, EBSDFType(EAll & ~EDelta));
+			Ld += EstimateDirect((BSDFSamplingRecord&)bRec, mat, light, l, EBSDFType(EAll & ~EDelta));
 		}
 		L += Ld / float(nSamples);
 	}
 	return L * float(g_SceneData.m_sLightData.UsedCount) / float(g_SceneData.m_uEmitterCount);
 }
 
-Spectrum UniformSampleOneLight(BSDFSamplingRecord& bRec, const e_KernelMaterial& mat)
+Spectrum UniformSampleOneLight(const BSDFSamplingRecord& bRec, const e_KernelMaterial& mat)
 {
 	if(!g_SceneData.m_uEmitterCount)
 		return 0.0f;
 	float emitpdf;
 	unsigned int index = g_SceneData.m_uEmitterIndices[g_SceneData.m_emitterPDF.SampleDiscrete(bRec.rng->randomFloat(), &emitpdf)];
-	return float(g_SceneData.m_sLightData.UsedCount) * EstimateDirect(bRec, mat, g_SceneData.m_sLightData.Data + index, index, EBSDFType(EAll & ~EDelta));
+	return float(g_SceneData.m_sLightData.UsedCount) * EstimateDirect((BSDFSamplingRecord&)bRec, mat, g_SceneData.m_sLightData.Data + index, index, EBSDFType(EAll & ~EDelta));
 }

@@ -1,88 +1,84 @@
 #include "k_sPpmTracer.h"
-#include "k_TraceHelper.h"
-#include "k_TraceAlgorithms.h"
+#include "..\Kernel\k_TraceHelper.h"
+#include "..\Kernel\k_TraceAlgorithms.h"
 /*
-					//Adaptive Progressive Photon Mapping Implementation
-					k_AdaptiveEntry ent = A.E[y * w + x];
-					float rSqr = ent.r * ent.r, maxr = MAX(ent.r, ent.rd), rd2 = ent.rd * ent.rd, rd = ent.rd;
-					Frame sys = bRec.map.sys;
-					sys.t *= maxr / length(sys.t);
-					sys.s *= maxr / length(sys.s);
-					sys.n *= maxr / length(sys.n);
-					float3 ur = normalize(bRec.map.sys.t) * rd, vr = normalize(bRec.map.sys.s) * rd;
-					float3 a = -1.0f * sys.t - sys.s, b = sys.t - sys.s, c = -1.0f * sys.t + sys.s, d = sys.t + sys.s;
-					float3 low = fminf(fminf(a, b), fminf(c, d)) + p, high = fmaxf(fmaxf(a, b), fmaxf(c, d)) + p;
-					uint3 lo = g_Map2.m_sSurfaceMap.m_sHash.Transform(low), hi = g_Map2.m_sSurfaceMap.m_sHash.Transform(high);
-					Spectrum Lp = make_float3(0);
-					float I_tmp = 0, psi_tmp = 0, pl_tmp = 0;
-					for(int a = lo.x; a <= hi.x; a++)
-						for(int b = lo.y; b <= hi.y; b++)
-							for(int c = lo.z; c <= hi.z; c++)
+
+//Adaptive Progressive Photon Mapping Implementation
+			k_AdaptiveEntry ent = A.E[y * w + x];
+			float rSqr = ent.r * ent.r, maxr = MAX(ent.r, ent.rd), rd2 = ent.rd * ent.rd, rd = ent.rd;
+			Frame sys = bRec.map.sys;
+			sys.t *= maxr / length(sys.t);
+			sys.s *= maxr / length(sys.s);
+			sys.n *= maxr / length(sys.n);
+			float3 ur = normalize(bRec.map.sys.t) * rd, vr = normalize(bRec.map.sys.s) * rd;
+			float3 a = -1.0f * sys.t - sys.s, b = sys.t - sys.s, c = -1.0f * sys.t + sys.s, d = sys.t + sys.s;
+			float3 low = fminf(fminf(a, b), fminf(c, d)) + p, high = fmaxf(fmaxf(a, b), fmaxf(c, d)) + p;
+			uint3 lo = g_Map2.m_sSurfaceMap.m_sHash.Transform(low), hi = g_Map2.m_sSurfaceMap.m_sHash.Transform(high);
+			Spectrum Lp = make_float3(0), gamma = dif * PI*PI;//only diffuse
+			float I_tmp = 0, psi_tmp = 0, pl_tmp = 0;
+			for(int a = lo.x; a <= hi.x; a++)
+				for(int b = lo.y; b <= hi.y; b++)
+					for(int c = lo.z; c <= hi.z; c++)
+					{
+						unsigned int i0 = g_Map2.m_sSurfaceMap.m_sHash.Hash(make_uint3(a,b,c)), i = g_Map2.m_sSurfaceMap.m_pDeviceHashGrid[i0];
+						while(i != 0xffffffff)
+						{
+							k_pPpmPhoton e = g_Map2.m_pPhotons[i];
+							float3 nor = e.getNormal(), wi = e.getWi(), P = e.Pos;
+							Spectrum l = e.getL();
+							float dist2 = dot(P - p, P - p);
+							if(dot(nor, bRec.map.sys.n) > 0.95f)
 							{
-								unsigned int i0 = g_Map2.m_sSurfaceMap.m_sHash.Hash(make_uint3(a,b,c)), i = g_Map2.m_sSurfaceMap.m_pDeviceHashGrid[i0];
-								while(i != 0xffffffff)
+								bRec.wo = bRec.map.sys.toLocal(wi);
+								float psi = Spectrum(throughput * gamma * l).getLuminance();
+								if(dist2 < rd2)
 								{
-									k_pPpmPhoton e = g_Map2.m_pPhotons[i];
-									float3 nor = e.getNormal(), wi = e.getWi(), P = e.Pos;
-									Spectrum l = e.getL();
-									float dist2 = dot(P - p, P - p);
-									if(dot(nor, bRec.map.sys.n) > 0.95f)
-									{
-										bRec.wo = bRec.map.sys.toLocal(wi);
-										Spectrum gamma = r2.getMat().bsdf.f(bRec);
-										float psi = Spectrum(throughput * gamma * l).getLuminance();
-										if(dist2 < rd2)
-										{
-											const float3 e_l = p - P;
-											float aa = k_tr(rd, e_l + ur), ab = k_tr(rd, e_l - ur);
-											float ba = k_tr(rd, e_l + vr), bb = k_tr(rd, e_l - vr);
-											float cc = k_tr(rd, e_l);
-											float laplu = psi / rd2 * (aa + ab - 2.0f * cc);
-											float laplv = psi / rd2 * (ba + bb - 2.0f * cc);
-											I_tmp += laplu + laplv;
-										}
-										if(dist2 < rSqr)
-										{
-											float kri = k_tr(ent.r, sqrtf(dist2));
-											Lp += kri * gamma * l;
-											psi_tmp += kri * psi;
-											pl_tmp += kri;
-										}
-									}
-									i = e.next;
+									const float3 e_l = p - P;
+									float aa = k_tr(rd, e_l + ur), ab = k_tr(rd, e_l - ur);
+									float ba = k_tr(rd, e_l + vr), bb = k_tr(rd, e_l - vr);
+									float cc = k_tr(rd, e_l);
+									float laplu = psi / rd2 * (aa + ab - 2.0f * cc);
+									float laplv = psi / rd2 * (ba + bb - 2.0f * cc);
+									I_tmp += laplu + laplv;
+								}
+								if(dist2 < rSqr)
+								{
+									float kri = k_tr(ent.r, sqrtf(dist2));
+									Lp += kri * gamma * l;
+									psi_tmp += kri * psi;
+									pl_tmp += kri;
 								}
 							}
+							i = e.next;
+						}
+					}
 #define UPD(tar, val, pow) tar = scale0 * tar + scale1 * powf(val, pow);
-					UPD(ent.I, I_tmp / float(g_Map2.m_uPhotonNumEmitted), 1)
-					UPD(ent.I2, I_tmp / float(g_Map2.m_uPhotonNumEmitted), 2)
-					UPD(ent.psi, psi_tmp / float(g_Map2.m_uPhotonNumEmitted), 1)
-					UPD(ent.psi2, psi_tmp / float(g_Map2.m_uPhotonNumEmitted), 2)
-					UPD(ent.pl, pl_tmp / float(g_Map2.m_uPhotonNumEmitted), 1)
+			UPD(ent.I, I_tmp / float(g_Map2.m_uPhotonNumEmitted), 1)
+			UPD(ent.I2, I_tmp / float(g_Map2.m_uPhotonNumEmitted), 2)
+			UPD(ent.psi, psi_tmp / float(g_Map2.m_uPhotonNumEmitted), 1)
+			UPD(ent.psi2, psi_tmp / float(g_Map2.m_uPhotonNumEmitted), 2)
+			UPD(ent.pl, pl_tmp / float(g_Map2.m_uPhotonNumEmitted), 1)
 #undef UPD
-					float VAR_Lapl = ent.I2 - ent.I * ent.I;
-					float VAR_Phi = ent.psi2 - ent.psi * ent.psi;
+			float VAR_Lapl = ent.I2 - ent.I * ent.I;
+			float VAR_Phi = ent.psi2 - ent.psi * ent.psi;
 
-					if(VAR_Lapl)
-					{
-						ent.rd = 1.9635f * sqrtf(VAR_Lapl) * powf(a_PassIndex, -1.0f / 8.0f);
-						ent.rd = clamp(ent.rd, A.r_min, A.r_max);
-					}
+			if(VAR_Lapl)
+			{
+				ent.rd = 1.9635f * sqrtf(VAR_Lapl) * powf(a_PassIndex, -1.0f / 8.0f);
+				ent.rd = clamp(ent.rd, A.r_min, A.r_max);
+			}
 
-					float k_2 = 10.0f * PI / 168.0f, k_22 = k_2 * k_2;
-					float ta = (2.0f * sqrtf(VAR_Phi)) / (PI * float(g_Map2.m_uPhotonNumEmitted) * ent.pl * k_22 * ent.I * ent.I);
+			float k_2 = 10.0f * PI / 168.0f, k_22 = k_2 * k_2;
+			float ta = (2.0f * sqrtf(VAR_Phi)) / (PI * float(g_Map2.m_uPhotonNumEmitted) * ent.pl * k_22 * ent.I * ent.I);
 
-					if(VAR_Lapl && VAR_Phi)
-					{
-						ent.r = powf(ta, 1.0f / 6.0f) * powf(a_PassIndex, -1.0f / 6.0f);
-						ent.r = clamp(ent.r, A.r_min, A.r_max);
-					}
-					A.E[y * w + x] = ent;
-					//L = Spectrum((ent.r - A.r_min) / (A.r_max - A.r_min));break;
-					//L = Spectrum(ent.r / a_rSurfaceUNUSED);break;
+			if(VAR_Lapl && VAR_Phi)
+			{
+				ent.r = powf(ta, 1.0f / 6.0f) * powf(a_PassIndex, -1.0f / 6.0f);
+				ent.r = clamp(ent.r, A.r_min, A.r_max);
+			}
+			A.E[y * w + x] = ent;
 
-					L += throughput * Lp / float(g_Map2.m_uPhotonNumEmitted);
-					break;
-
+			L += throughput * Lp / float(g_Map2.m_uPhotonNumEmitted) * dif;
 
 */
 
@@ -90,14 +86,14 @@ CUDA_DEVICE k_PhotonMapCollection g_Map2;
 
 CUDA_FUNC_IN float k(float t)
 {
-	float t2 = t * t;
-	return 1.0f + t2 * t * (-6.0f * t2 + 15.0f * t - 10.0f);
+	//float t2 = t * t;
+	//return 1.0f + t2 * t * (-6.0f * t2 + 15.0f * t - 10.0f);
+	return 1.0f + t * t * t * (-6.0f * t * t + 15.0f * t - 10.0f);
 }
 
 CUDA_FUNC_IN float k_tr(float r , float t)
 {
-	//float ny = 1.0f / (PI * r * r);
-	//return ny * k(t / r);
+	//return k(t / r) / (PI * r * r);
 	float a = 1.0f - t * t / (r * r);
 	return a * a * 3.0f / (r * r * PI);
 }
@@ -107,7 +103,7 @@ CUDA_FUNC_IN float k_tr(float r, const float3& t)
 	return k_tr(r, length(t));
 }
 
-template<typename HASH> template<bool VOL> Spectrum k_PhotonMap<HASH>::L_Volume(float a_r, float a_NumPhotonEmitted, CudaRNG& rng, const Ray& r, float tmin, float tmax, const Spectrum& sigt) const
+template<typename HASH> template<bool VOL> CUDA_ONLY_FUNC Spectrum k_PhotonMap<HASH>::L_Volume(float a_r, float a_NumPhotonEmitted, CudaRNG& rng, const Ray& r, float tmin, float tmax, const Spectrum& sigt) const
 {
 	float Vs = 1.0f / ((4.0f / 3.0f) * PI * a_r * a_r * a_r * a_NumPhotonEmitted), r2 = a_r * a_r;
 	Spectrum L_n = Spectrum(0.0f);
@@ -116,8 +112,8 @@ template<typename HASH> template<bool VOL> Spectrum k_PhotonMap<HASH>::L_Volume(
 		return L_n;//that would be dumb
 	a = clamp(a, tmin, tmax);
 	b = clamp(b, tmin, tmax);
-	float d = 4.0f * a_r; int II = 0;
-	while(b > a && II++ < 50)
+	float d = 2.0f * a_r;
+	while(b > a)
 	{
 		Spectrum L = Spectrum(0.0f);
 		float3 x = r(b);
@@ -134,7 +130,7 @@ template<typename HASH> template<bool VOL> Spectrum k_PhotonMap<HASH>::L_Volume(
 						Spectrum l = e.getL();
 						if(dot(P - x, P - x) < r2)
 						{
-							float p = VOL ? g_SceneData.m_sVolume.p(x, -1.0f * r.direction, r.direction, rng) : 1.f / (4.f * PI);
+							float p = VOL ? g_SceneData.m_sVolume.p(x, r.direction, wi, rng) : 1.f / (4.f * PI);
 							L += p * l * Vs;
 						}
 						i = e.next;
@@ -148,7 +144,7 @@ template<typename HASH> template<bool VOL> Spectrum k_PhotonMap<HASH>::L_Volume(
 	return L_n;
 }
 
-CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED, const float3& p, const float3& wo, const e_KernelMaterial* mat)
+CUDA_ONLY_FUNC Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED, const float3& p, const float3& wo, const e_KernelMaterial* mat)
 {
 	Frame sys = bRec.map.sys;
 	sys.t *= a_rSurfaceUNUSED;
@@ -180,7 +176,7 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED
 	return Lp / float(g_Map2.m_uPhotonNumEmitted);
 }
 
-template<bool DIRECT, bool DEBUGKERNEL> CUDA_FUNC_IN void k_EyePassF(int x, int y, float a_PassIndex, float a_rSurfaceUNUSED, float a_rVolume, k_AdaptiveStruct A, float scale0, float scale1, e_Image g_Image)
+template<bool DIRECT, bool DEBUGKERNEL> CUDA_ONLY_FUNC void k_EyePassF(int x, int y, int w, int h, float a_PassIndex, float a_rSurfaceUNUSED, float a_rVolume, k_AdaptiveStruct A, float scale0, float scale1, e_Image g_Image)
 {
 	CudaRNG rng = g_RNGData();
 	BSDFSamplingRecord bRec;
@@ -249,11 +245,12 @@ template<bool DIRECT, bool DEBUGKERNEL> CUDA_FUNC_IN void k_EyePassF(int x, int 
 		L += throughput * g_SceneData.EvalEnvironment(r);
 	}
 	g_Image.AddSample(x, y, importance * L);
-}
-
-template<bool DIRECT, bool DEBUGKERNEL> __global__ void k_EyePassD(int2 off, int w, int h, float a_PassIndex, float a_rSurfaceUNUSED, float a_rVolume, k_AdaptiveStruct A, float scale0, float scale1, e_Image g_Image)
-{
-	k_EyePassF<DIRECT, DEBUGKERNEL>(off.x, off.y, a_PassIndex, a_rSurfaceUNUSED, a_rVolume, A, scale0, scale1, g_Image);
+	//Spectrum qs;
+	//float t = A.E[y * w + x].r / a_rSurfaceUNUSED;
+	//t = (A.E[y * w + x].r - A.r_min) / (A.r_max - A.r_min);
+	//qs.fromHSL(1.0f / 3.0f - t / 3.0f, 1, 0.5f);
+	//g_Image.SetSample(x, y, qs.toRGBCOL());
+	g_RNGData(rng);
 }
 
 template<bool DIRECT, bool DEBUGKERNEL> __global__ void k_EyePass(int2 off, int w, int h, float a_PassIndex, float a_rSurfaceUNUSED, float a_rVolume, k_AdaptiveStruct A, float scale0, float scale1, e_Image g_Image)
@@ -262,7 +259,7 @@ template<bool DIRECT, bool DEBUGKERNEL> __global__ void k_EyePass(int2 off, int 
 	x += off.x;
 	y += off.y;
 	if(x < w && y < h)
-		k_EyePassF<DIRECT, DEBUGKERNEL>(x, y, a_PassIndex, a_rSurfaceUNUSED, a_rVolume, A, scale0, scale1, g_Image);
+		k_EyePassF<DIRECT, DEBUGKERNEL>(x, y, w, h, a_PassIndex, a_rSurfaceUNUSED, a_rVolume, A, scale0, scale1, g_Image);
 }
 
 #define TN(r) (r * powf(float(m_uPassesDone), -1.0f/6.0f))
@@ -293,11 +290,12 @@ void k_sPpmTracer::doEyePass(e_Image* I)
 
 void k_sPpmTracer::Debug(int2 pixel)
 {
+	if(m_uPhotonsEmitted == (unsigned long long)-1)
+		return;
 	k_AdaptiveStruct A(TN(r_min), TN(r_max), m_pEntries);
 	cudaMemcpyToSymbol(g_Map2, &m_sMaps, sizeof(k_PhotonMapCollection));
 	k_INITIALIZE(m_pScene, g_sRngs);
-	k_EyePassD<true, true><<<1, 1>>>(pixel, w, h, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3), A, 1,1, e_Image());
-	//k_EyePassF<false, true>(pixel, w, h, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3), A, 1,1, e_Image());
+	//k_EyePassF<false, true>(pixel.x, pixel.y, w, h, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3), A, 1,1, e_Image());
 }
 
 __global__ void k_StartPass(int w, int h, float r, float rd, k_AdaptiveEntry* E)

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "k_Tracer.h"
+#include "..\Kernel\k_Tracer.h"
 #include "..\Base\CudaRandom.h"
-#include "k_TraceHelper.h"
+#include "..\Kernel\k_TraceHelper.h"
 #include "..\Engine\e_Core.h"
 
 template<typename T, int N> struct k_RayBuffer
@@ -35,7 +35,7 @@ public:
 		CUDA_FREE(m_pPayloadBuffer);
 		CUDA_FREE(m_cInsertCounter);
 	}
-	template<bool ANY_HIT> unsigned int IntersectBuffers(bool doAll = true, bool skipOuterTree = false)
+	template<bool ANY_HIT> unsigned int IntersectBuffers(bool skipOuterTree = false)
 	{
 		unsigned int n = getCreatedRayCount();
 		if(n > Length)
@@ -43,14 +43,9 @@ public:
 			//I'd worry cause you ve written to invalid memory
 			throw 1;
 		}
-		int a = doAll ? N : 1;
-		for(int i = 0; i < a; i++)
+		for(int i = 0; i < N; i++)
 			__internal__IntersectBuffers(n, m_pRayBuffer[i], m_pResultBuffer[i], skipOuterTree, ANY_HIT);
-		return a * n;
-	}
-	void StartNewTraversal()
-	{
-		setGeneratedRayCount(0);
+		return N * n;
 	}
 	unsigned int getCreatedRayCount()
 	{
@@ -253,17 +248,18 @@ class k_FastTracer : public k_ProgressiveTracer
 public:
 	struct rayData
 	{
-		Spectrum D;
-		float dDist;
+		//Spectrum D;
+		//float dDist;
 		Spectrum L;
 		Spectrum throughput;
-		unsigned int dIndex;
+		//unsigned int dIndex;
 		short x,y;
 	};
 	//traversalRay* hostRays;
 	//traversalResult* hostResults;
 	k_FastTracer()
-		: intersector(0)//, hostRays(0), hostResults(0)
+		//: intersector(0)//, hostRays(0), hostResults(0)
+		: bufA(0), bufB(0)
 	{
 		
 	}
@@ -279,19 +275,29 @@ public:
 		//if(intersector)
 		//	intersector->Free();
 		ThrowCudaErrors();
-		if(intersector)
+		/*if(intersector)
 		{
 			intersector->Free();
 			delete intersector;
 		}
-		intersector = new k_RayBufferManager<rayData, 2, 2>(w * h);
+		intersector = new k_RayBufferManager<rayData, 2, 2>(w * h);*/
+		if(bufA)
+		{
+			bufA->Free();
+			bufB->Free();
+			delete bufA;
+			delete bufB;
+		}
+		bufA = new k_RayBuffer<rayData, 1>(w * h);
+		bufB = new k_RayBuffer<rayData, 1>(w * h);
 		ThrowCudaErrors();
 	}
 	virtual void Debug(int2 pixel);
 protected:
 	virtual void DoRender(e_Image* I);
 private:
-	k_RayBufferManager<rayData, 2, 2>* intersector;
+	//k_RayBufferManager<rayData, 2, 2>* intersector;
+	k_RayBuffer<rayData, 1>* bufA, *bufB;
 	void doDirect(e_Image* I);
 	void doPath(e_Image* I);
 };

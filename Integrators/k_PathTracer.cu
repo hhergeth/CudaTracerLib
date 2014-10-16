@@ -1,24 +1,9 @@
 #include "k_PathTracer.h"
-#include "k_TraceHelper.h"
+#include "..\Kernel\k_TraceHelper.h"
 #include <time.h>
-#include "k_TraceAlgorithms.h"
+#include "..\Kernel\k_TraceAlgorithms.h"
 
 CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_NextRayCounter;
-
-CUDA_FUNC_IN Spectrum colA(Ray& r, CudaRNG& rng, unsigned int pass)
-{
-	TraceResult r2 = k_TraceRay(r);
-	if(!r2.hasHit())
-		return 0.0f;
-	//float3 P[3];
-	//r2.m_pInt->getData(P[0], P[1], P[2]);
-	float3 p = r(r2.m_fDist);//P[pass % 3]
-	Frame sys;
-	r2.lerpFrame(sys);
-	Ray sr(p, sys.toWorld(Warp::squareToCosineHemisphere(rng.randomFloat2())));
-	TraceResult sr2 = k_TraceRay(sr);
-	return sr2.m_fDist / length(g_SceneData.m_sBox.Size()) * 0.5f;
-}
 
 template<bool DIRECT> __global__ void pathKernel(unsigned int width, unsigned int height, unsigned int a_PassIndex, e_Image g_Image)
 {
@@ -51,7 +36,6 @@ template<bool DIRECT> __global__ void pathKernel(unsigned int width, unsigned in
 		Spectrum imp = g_SceneData.sampleSensorRay(r, make_float2(x, y), rng.randomFloat2());
 
 		Spectrum col = imp * PathTrace<DIRECT>(r.direction, r.origin, rng);
-		//Spectrum col = colA(r, rng, a_PassIndex);
 		
 		g_Image.AddSample(x, y, col);
 	}
@@ -69,8 +53,7 @@ __global__ void debugPixel(unsigned int width, unsigned int height, int2 p)
 void k_PathTracer::DoRender(e_Image* I)
 {
 	k_ProgressiveTracer::DoRender(I);
-	unsigned int zero = 0;
-	cudaMemcpyToSymbol(g_NextRayCounter, &zero, sizeof(unsigned int));
+	ZeroSymbol(g_NextRayCounter);
 	k_INITIALIZE(m_pScene, g_sRngs);
 	if(m_Direct)
 		pathKernel<true><<< 180, dim3(32, MaxBlockHeight, 1)>>>(w, h, m_uPassesDone, *I);

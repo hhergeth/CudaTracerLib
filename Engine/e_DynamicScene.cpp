@@ -326,7 +326,7 @@ e_KernelDynamicScene e_DynamicScene::getKernelSceneData(bool devicePointer) cons
 		float* vals = (float*)alloca(sizeof(float) * l);
 		for(unsigned int i = 0; i < l; i++)
 		{
-			vals[i] = 1.0f;
+			vals[i] = m_pLightStream->operator()(i)->As()->IsRemoved ? 0.0f : 1.0f;
 			r.m_uEmitterIndices[i] = i;
 		}
 		r.m_emitterPDF = Distribution1D<MAX_LIGHT_COUNT>(vals, l);
@@ -450,7 +450,8 @@ void e_DynamicScene::removeLight(e_StreamReference(e_Node) Node, unsigned int mi
 	if(a == -1)
 		return;
 	unsigned int* b = Node->m_uLightIndices + a;
-	m_pLightStream->dealloc(m_pLightStream->operator()(*b));
+	//m_pLightStream->dealloc(m_pLightStream->operator()(*b));
+	m_pLightStream->operator()(*b)->As()->IsRemoved = true;
 	*b = -1;
 }
 
@@ -462,7 +463,8 @@ void e_DynamicScene::removeAllLights(e_StreamReference(e_Node) Node)
 	int i = 0;
 	while(i < MAX_AREALIGHT_NUM && Node->m_uLightIndices[i] != -1)
 	{
-		m_pLightStream->dealloc(m_pLightStream->operator()(Node->m_uLightIndices[i]));
+		//m_pLightStream->dealloc(m_pLightStream->operator()(Node->m_uLightIndices[i]));
+		m_pLightStream->operator()(Node->m_uLightIndices[i])->As()->IsRemoved = true;
 		Node->m_uLightIndices[i++] = -1;
 	}
 }

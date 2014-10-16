@@ -18,7 +18,7 @@ inline std::string vformat (const char *fmt, va_list ap)
 
     while (1) {
         // Try to vsnprintf into our buffer.
-        int needed = vsnprintf (buf, size, fmt, ap);
+        int needed = vsnprintf(buf, size, fmt, ap);
         // NB. C99 (which modern Linux and OS X follow) says vsnprintf
         // failure returns the length it would have needed.  But older
         // glibc and current Windows return -1 for failure, i.e., not
@@ -53,7 +53,7 @@ inline std::string getFileName(const std::string& s)
 	char dir[_MAX_DIR]; 
 	char fname[_MAX_FNAME]; 
 	char ext[_MAX_EXT];
-	_splitpath(s.c_str(), drive, dir, fname, ext); 
+	_splitpath_s(s.c_str(), drive, dir, fname, ext); 
 	return std::string(fname);
 }
 
@@ -63,7 +63,7 @@ inline std::string getDirName(const std::string& s)
 	char dir[_MAX_DIR]; 
 	char fname[_MAX_FNAME]; 
 	char ext[_MAX_EXT];
-	_splitpath(s.c_str(), drive, dir, fname, ext); 
+	_splitpath_s(s.c_str(), drive, dir, fname, ext); 
 	return std::string(drive) + std::string(dir);
 }
 
@@ -103,7 +103,31 @@ inline std::string &rtrim(std::string &s) {
         return s;
 }
 
-std::string &trim(std::string &s);
+inline std::string& trim(std::string &s)
+{/*
+	int n = 0, e = s.size() - 1;
+	while(n < s.size() && (s[n] == ' ' || s[n] == '\t'))
+		n++;
+	while(e >= n && (s[e] == ' ' || s[e] == '\t'))
+		e--;
+	if(n < e)
+		return s.substr(n, e - n);
+	else return std::string();*/
+	
+	return ltrim(rtrim(s));
+	/*
+	std::string str = s;
+	std::string::size_type pos = std::min(str.find_last_not_of(' '), str.find_last_not_of('\t'));
+	if(pos != std::string::npos)
+	{
+		str.erase(pos + 1);
+		pos = std::max(str.find_first_not_of(' '), str.find_first_not_of('\t'));
+		if(pos != std::string::npos)
+			str.erase(0, pos);
+	}
+	else str.erase(str.begin(), str.end());
+	return str;*/
+}
 
 inline bool parseSpace(const char*& ptr)
 {
@@ -215,26 +239,22 @@ inline bool parseFloat(const char*& ptr, float& value)
     ptr = tmp;
     if (*ptr == '#')
     {
-        if (parseLiteral(ptr, "#INF"))
-        {
-            value = bitsToFloat((neg) ? 0xFF800000 : 0x7F800000);
-            return true;
-        }
-        if (parseLiteral(ptr, "#SNAN"))
-        {
-            value = bitsToFloat((neg) ? 0xFF800001 : 0x7F800001);
-            return true;
-        }
-        if (parseLiteral(ptr, "#QNAN"))
-        {
-            value = bitsToFloat((neg) ? 0xFFC00001 : 0x7FC00001);
-            return true;
-        }
-        if (parseLiteral(ptr, "#IND"))
-        {
-            value = bitsToFloat((neg) ? 0xFFC00000 : 0x7FC00000);
-            return true;
-        }
+		unsigned int v = 0;
+		if(parseLiteral(ptr, "#INF"))
+			v = 0x7F800000;
+		else if(parseLiteral(ptr, "#SNAN"))
+			v = 0xFF800001;
+		else if(parseLiteral(ptr, "#QNAN"))
+			v = 0xFFC00001;
+		else if(parseLiteral(ptr, "#IND"))
+			v = 0xFFC00000;
+		if(v)
+		{
+			v |= neg << 31;
+			value = *(float*)&v;
+			return true;
+		}
+		else return false;
     }
 
     int e = 0;

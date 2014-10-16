@@ -29,7 +29,6 @@ InputStream::InputStream(const char* a_Name)
 	{
 		std::cout << a_Name << "\n";
 		LPVOID lpMsgBuf;
-		LPVOID lpDisplayBuf;
 		DWORD dw = GetLastError(); 
 
 		FormatMessage(

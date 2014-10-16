@@ -1,6 +1,6 @@
 #include "k_PhotonTracer.h"
-#include "k_TraceHelper.h"
-#include "k_TraceAlgorithms.h"
+#include "..\Kernel\k_TraceHelper.h"
+#include "..\Kernel\k_TraceAlgorithms.h"
 
 CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_NextRayCounter3;
 

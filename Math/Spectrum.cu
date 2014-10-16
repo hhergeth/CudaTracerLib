@@ -321,6 +321,71 @@ void Spectrum::fromYxy(float _Y, float x, float y, EConversionIntent intent)
 	fromXYZ(X, Y, Z, intent);
 }
 
+CUDA_FUNC_IN float hue2rgb(float p, float q, float t)
+{
+    if(t < 0) t += 1;
+    if(t > 1) t -= 1;
+    if(t < 1/6) return p + (q - p) * 6 * t;
+    if(t < 1/2) return q;
+    if(t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+    return p;
+}
+
+void Spectrum::fromHSL(float h, float s, float l)
+{
+	/*float r,g,b;
+	if(s == 0)
+		r = g = b = l;
+	else
+	{
+		float q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        float p = 2 * l - q;
+        r = hue2rgb(p, q, h + 1/3);
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - 1/3);
+	}*/
+	//fromLinearRGB(r,g,b);
+	float3 color;
+	float c = (1.0 - fabsf(2 * l - 1.0)) * s;
+	float Hd = h * 6;
+	float x = c * (1.0 - fabsf(fmodf(Hd, 2) - 1.0));
+	if(0 <= Hd && Hd < 1)
+		color = make_float3(c,x,0);
+	else if(1 <= Hd && Hd < 2)
+		color = make_float3(x,c,0);
+	else if(2 <= Hd && Hd < 3)
+		color = make_float3(0,c,x);
+	else if(3 <= Hd && Hd < 4)
+		color = make_float3(0,x,c);
+	else if(4 <= Hd && Hd < 5)
+		color = make_float3(x,0,c);
+	else if(5 <= Hd && Hd < 6)
+		color = make_float3(c,0,x);
+	float m = l - 0.5f * c;
+	color += make_float3(m);
+	fromLinearRGB(color.x, color.y, color.z);
+}
+
+void Spectrum::toHSL(float& h, float& s, float& l) const
+{
+	float r,g,b;
+	toLinearRGB(r,g,b);
+	float max = MAX(r, g, b), min = MIN(r, g, b);
+    l = (max + min) / 2;
+	h = s = 0;
+	if(max != min)
+	{
+		float d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+		if(max == r)
+			h = (g - b) / d + (g < b ? 6 : 0);
+		else if(max == g)
+			h = (b - r) / d + 2;
+		else h = (r - g) / d + 4;
+        h /= 6;
+	}
+}
+
 #include <vector>
 #include <algorithm>
 struct InterpolatedSpectrum

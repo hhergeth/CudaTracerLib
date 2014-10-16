@@ -1,5 +1,8 @@
 #pragma once
 
+#include <malloc.h>
+#include <stdlib.h>
+
 #define EXT_TRI
 #define NUM_UV_SETS 2
 
@@ -96,8 +99,43 @@ CUDA_FUNC_IN int getGlobalIdx_3D_3D()
 #define DMAX8(A, B, C, D, E, F, G, H) DMAX2(DMAX7(A, B, C, D, E, F, G), H)
 #define DMAX9(A, B, C, D, E, F, G, H, I) DMAX2(DMAX8(A, B, C, D, E, F, G, H), I)
 
+#define DMIN2(A, B) ((A) < (B) ? (A) : (B))
+#define DMIN3(A, B, C) DMIN2(DMIN2(A, B), C)
+#define DMIN4(A, B, C, D) DMIN2(DMIN3(A, B, C), D)
+#define DMIN5(A, B, C, D, E) DMIN2(DMIN4(A, B, C, D), E)
+#define DMIN6(A, B, C, D, E, F) DMIN2(DMIN5(A, B, C, D, E), F)
+#define DMIN7(A, B, C, D, E, F, G) DMIN2(DMIN6(A, B, C, D, E, F), G)
+#define DMIN8(A, B, C, D, E, F, G, H) DMIN2(DMIN7(A, B, C, D, E, F, G), H)
+#define DMIN9(A, B, C, D, E, F, G, H, I) DMIN2(DMIN8(A, B, C, D, E, F, G, H), I)
+
 #define RND_UP(VAL, MOD) (VAL + (((VAL) % (MOD)) != 0 ? ((MOD) - ((VAL) % (MOD))) : (0)))
 #define RND_16(VAL) RND_UP(VAL, 16)
+
+inline void CudaSetToZero(void* dest, size_t length)
+{
+	static void* zeroBuf = 0;
+	static size_t zeroBufLength = 0;
+	if(!zeroBuf || zeroBufLength < length)
+	{
+		if(zeroBuf)
+			free(zeroBuf);
+		zeroBufLength = RND_16(DMAX2(length, zeroBufLength));
+		zeroBuf = malloc(zeroBufLength);
+		for(int i = 0; i < zeroBufLength / 8; i++)
+			*((unsigned long long*)zeroBuf + i) = 0;
+	}
+	cudaMemcpy(dest, zeroBuf, length, cudaMemcpyHostToDevice);
+}
+template<typename T> inline void ZeroMemoryCuda(T* cudaVar)
+{
+	CudaSetToZero(cudaVar, sizeof(T));
+}
+#define ZeroSymbol(SYMBOL) \
+	{ \
+		void* tar = 0; \
+		cudaError_t r = cudaGetSymbolAddress(&tar, SYMBOL); \
+		CudaSetToZero(tar, sizeof(SYMBOL)); \
+	}
 
 #define CALL_TYPE(t,func) \
 	case t##_TYPE : \

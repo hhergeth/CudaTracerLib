@@ -121,13 +121,22 @@ void e_Image::WriteDisplayImage(const char* fileName)
 		cudaMemcpy(colData, viewTarget, sizeof(RGBCOL) * xResolution * yResolution, cudaMemcpyDeviceToHost);
 	}
 	FIBITMAP* bitmap = FreeImage_Allocate(xResolution, yResolution, 24, 0x000000ff, 0x0000ff00, 0x00ff0000);
-	uchar3* A = (uchar3*)FreeImage_GetBits(bitmap);
-	for(int i = 0; i < xResolution * yResolution; i++)
+	BYTE* A = FreeImage_GetBits(bitmap);
+	unsigned int pitch = FreeImage_GetPitch(bitmap);
+	int off = 0;
+	for(int y = 0; y < yResolution; y++)
 	{
-		A[i] = make_uchar3(colData[i].z, colData[i].y, colData[i].x);
+		for(int x = 0; x < xResolution; x++)
+		{
+			int i = (yResolution - 1 - y) * xResolution + x;
+			uchar3 p = make_uchar3(colData[i].z, colData[i].y, colData[i].x);
+			A[off + x * 3 + 0] = p.x;
+			A[off + x * 3 + 1] = p.y;
+			A[off + x * 3 + 2] = p.z;
+		}
+		off += pitch;
 	}
 	delete [] colData;
-	FreeImage_FlipVertical(bitmap);
 	bool b = FreeImage_Save(ff, bitmap, fileName);
 	FreeImage_Unload(bitmap);
 }

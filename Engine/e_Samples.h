@@ -192,6 +192,6 @@ struct BSDFSamplingRecord
 	}
 	CUDA_FUNC_IN float3 getOutgoing()
 	{
-		return map.sys.toWorld(wo);
+		return normalize(map.sys.toWorld(wo));
 	}
 };

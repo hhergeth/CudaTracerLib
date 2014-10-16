@@ -1,6 +1,6 @@
 #pragma once
 
-#include "k_Tracer.h"
+#include "..\Kernel\k_Tracer.h"
 #include "..\Base\CudaRandom.h"
 #include "..\Base\Timer.h"
 #include <time.h>
@@ -185,7 +185,7 @@ template<typename HASH> struct k_PhotonMap
 		return k_StoreResult::Full;
 	}
 
-	template<bool VOL> CUDA_FUNC_IN Spectrum L_Volume(float a_r, float a_NumPhotonEmitted, CudaRNG& rng, const Ray& r, float tmin, float tmax, const Spectrum& sigt) const;
+	template<bool VOL> CUDA_ONLY_FUNC Spectrum L_Volume(float a_r, float a_NumPhotonEmitted, CudaRNG& rng, const Ray& r, float tmin, float tmax, const Spectrum& sigt) const;
 #endif
 };
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "k_Tracer.h"
+#include "..\Kernel\k_Tracer.h"
 #include "..\Base\CudaRandom.h"
 
 class k_PathTracer : public k_ProgressiveTracer
@@ -16,7 +16,7 @@ protected:
 	virtual void DoRender(e_Image* I);
 };
 
-#include "k_BlockSampler.h"
+#include "..\Kernel\k_BlockSampler.h"
 
 class k_BlockPathTracer : public k_ProgressiveTracer
 {

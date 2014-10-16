@@ -8,14 +8,16 @@
 struct e_LightBase : public e_BaseType
 {
 	bool IsDelta;
+	bool IsRemoved;
 
 	e_LightBase()
+		: IsRemoved(false)
 	{
 
 	}
 
 	e_LightBase(bool d)
-		: IsDelta(d)
+		: IsDelta(d), IsRemoved(false)
 	{
 	}
 };

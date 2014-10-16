@@ -16,6 +16,9 @@
     <Filter Include="Math">
       <UniqueIdentifier>{bcc32243-a9df-44b0-a940-7d3f174d5601}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Integrators">
+      <UniqueIdentifier>{ff564f3f-39f9-46ba-940b-6482f9e6d2d7}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Base\CudaRandom.h">
@@ -86,9 +89,6 @@
     <ClInclude Include="Kernel\k_TraceHelper.h">
       <Filter>Kernel</Filter>
     </ClInclude>
-    <ClInclude Include="Kernel\k_PrimTracer.h">
-      <Filter>Kernel</Filter>
-    </ClInclude>
     <ClInclude Include="Engine\e_Volumes.h">
       <Filter>Engine</Filter>
     </ClInclude>
@@ -130,12 +130,6 @@
     </ClInclude>
     <ClInclude Include="Engine\e_MeshCompiler.h">
       <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Kernel\k_PathTracer.h">
-      <Filter>Kernel</Filter>
-    </ClInclude>
-    <ClInclude Include="Kernel\k_sPpmTracer.h">
-      <Filter>Kernel</Filter>
     </ClInclude>
     <ClInclude Include="Engine\e_PhaseFunction.h">
       <Filter>Engine</Filter>
@@ -201,14 +195,8 @@
     <ClInclude Include="Engine\e_CameraController.h">
       <Filter>Engine</Filter>
     </ClInclude>
-    <ClInclude Include="Kernel\k_PhotonTracer.h">
-      <Filter>Kernel</Filter>
-    </ClInclude>
     <ClInclude Include="Engine\e_Core.h">
       <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Kernel\k_FastTracer.h">
-      <Filter>Kernel</Filter>
     </ClInclude>
     <ClInclude Include="Base\BVHBuilder.h">
       <Filter>Base</Filter>
@@ -222,9 +210,6 @@
     <ClInclude Include="Base\Platform.h">
       <Filter>Base</Filter>
     </ClInclude>
-    <ClInclude Include="Kernel\k_BDPT.h">
-      <Filter>Kernel</Filter>
-    </ClInclude>
     <ClInclude Include="Engine\SceneBuilder\tiny_obj_loader.h">
       <Filter>Engine\SceneBuilder</Filter>
     </ClInclude>
@@ -233,6 +218,33 @@
     </ClInclude>
     <ClInclude Include="Engine\e_FileTextureHelper.h">
       <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\k_BDPT.h">
+      <Filter>Integrators</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\k_FastTracer.h">
+      <Filter>Integrators</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\k_PathTracer.h">
+      <Filter>Integrators</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\k_PhotonTracer.h">
+      <Filter>Integrators</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\k_PrimTracer.h">
+      <Filter>Integrators</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\k_sPpmTracer.h">
+      <Filter>Integrators</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\k_PmmTracer.h">
+      <Filter>Integrators</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_SpatialGrid.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\k_PmmHelper.h">
+      <Filter>Integrators</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -263,9 +275,6 @@
     </ClCompile>
     <ClCompile Include="Engine\e_MeshCompiler.cpp">
       <Filter>Engine</Filter>
-    </ClCompile>
-    <ClCompile Include="Kernel\k_sPpmTracer.cpp">
-      <Filter>Kernel</Filter>
     </ClCompile>
     <ClCompile Include="Kernel\k_Tracer.cpp">
       <Filter>Kernel</Filter>
@@ -304,25 +313,19 @@
     <ClCompile Include="Engine\e_FileTexture.cpp">
       <Filter>Engine</Filter>
     </ClCompile>
+    <ClCompile Include="Integrators\k_sPpmTracer.cpp">
+      <Filter>Integrators</Filter>
+    </ClCompile>
+    <ClCompile Include="Integrators\k_PmmTracer.cpp">
+      <Filter>Integrators</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="Kernel\k_PrimTracer.cu">
-      <Filter>Kernel</Filter>
-    </CudaCompile>
     <CudaCompile Include="Engine\e_AnimatedMesh.cu">
       <Filter>Engine</Filter>
     </CudaCompile>
     <CudaCompile Include="Engine\e_Image.cu">
       <Filter>Engine</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Kernel\k_PathTracer.cu">
-      <Filter>Kernel</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Kernel\k_sPpmTracer_EyePass.cu">
-      <Filter>Kernel</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Kernel\k_sPpmTracer_PhotonPass.cu">
-      <Filter>Kernel</Filter>
     </CudaCompile>
     <CudaCompile Include="Kernel\k_Tracer.cu">
       <Filter>Kernel</Filter>
@@ -384,17 +387,11 @@
     <CudaCompile Include="Engine\e_Sensor.cu">
       <Filter>Engine</Filter>
     </CudaCompile>
-    <CudaCompile Include="Kernel\k_PhotonTracer.cu">
-      <Filter>Kernel</Filter>
-    </CudaCompile>
     <CudaCompile Include="Engine\e_KernelDynamicScene.cu">
       <Filter>Engine</Filter>
     </CudaCompile>
     <CudaCompile Include="Engine\e_ShapeSet.cu">
       <Filter>Engine</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Kernel\k_FastTracer.cu">
-      <Filter>Kernel</Filter>
     </CudaCompile>
     <CudaCompile Include="Base\Platform.cu">
       <Filter>Base</Filter>
@@ -402,11 +399,32 @@
     <CudaCompile Include="Engine\e_Mesh.cu">
       <Filter>Engine</Filter>
     </CudaCompile>
-    <CudaCompile Include="Kernel\k_BDPT.cu">
-      <Filter>Kernel</Filter>
-    </CudaCompile>
     <CudaCompile Include="Kernel\k_BlockSampler.cu">
       <Filter>Kernel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Integrators\k_BDPT.cu">
+      <Filter>Integrators</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Integrators\k_FastTracer.cu">
+      <Filter>Integrators</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Integrators\k_PathTracer.cu">
+      <Filter>Integrators</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Integrators\k_PhotonTracer.cu">
+      <Filter>Integrators</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Integrators\k_PrimTracer.cu">
+      <Filter>Integrators</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Integrators\k_sPpmTracer_EyePass.cu">
+      <Filter>Integrators</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Integrators\k_sPpmTracer_PhotonPass.cu">
+      <Filter>Integrators</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Integrators\k_PmmTracer.cu">
+      <Filter>Integrators</Filter>
     </CudaCompile>
   </ItemGroup>
 </Project>

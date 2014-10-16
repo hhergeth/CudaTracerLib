@@ -1,6 +1,6 @@
 #include "k_PrimTracer.h"
-#include "k_TraceHelper.h"
-#include "k_TraceAlgorithms.h"
+#include "..\Kernel\k_TraceHelper.h"
+#include "..\Kernel\k_TraceAlgorithms.h"
 #include "..\Engine\e_Core.h"
 
 CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_NextRayCounter2;
@@ -51,8 +51,21 @@ CUDA_FUNC_IN Spectrum trace(Ray& r, CudaRNG& rng, float3* pout)
 			through = (-g_SceneData.m_sVolume.tau(r, 0, r2.m_fDist)).exp();
 		Spectrum L = r2.Le(r(r2.m_fDist), bRec.map.sys, -r.direction);
 		//return L + r2.getMat().bsdf.getDiffuseReflectance(bRec);
-		float2 s = rng.randomFloat2();
-		return L + r2.getMat().bsdf.sample(bRec, s) * through;
+		Spectrum f = L + r2.getMat().bsdf.sample(bRec, rng.randomFloat2()) * through;
+		int depth = 0;
+		while(r2.getMat().bsdf.hasComponent(EDelta) && depth < 5)
+		{
+			depth++;
+			r = Ray(r(r2.m_fDist), bRec.getOutgoing());
+			r2 = k_TraceRay(r);
+			if(r2.hasHit())
+			{
+				r2.getBsdfSample(r, rng, &bRec);
+				f *= r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
+			}
+			else break;
+		}
+		return f;
 	}
 	else return g_SceneData.EvalEnvironment(r);
 }
