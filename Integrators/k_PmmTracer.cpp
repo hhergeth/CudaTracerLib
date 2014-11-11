@@ -4,7 +4,7 @@
 #include "k_PmmHelper.h"
 
 k_PmmTracer::k_PmmTracer()
-	: sMap(100, 10000), doTrace(false), dMap(10)
+	: sMap(100, 10000), dMap(20)
 {
 }
 

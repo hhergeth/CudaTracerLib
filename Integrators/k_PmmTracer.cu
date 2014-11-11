@@ -33,18 +33,18 @@ __global__ void tracePhotons()
 
 template<int MAX_SAMPLES> __global__ void updateCache(float ny)
 {
-	unsigned int tIdx = getGlobalIdx_3D_3D(), x = blockIdx.x * gridDim.x + threadIdx.x, 
-											  y = blockIdx.y * gridDim.y + threadIdx.y, 
-											  z = blockIdx.z * gridDim.z + threadIdx.z;
-	if(tIdx < g_dMap.NumEntries())
+	uint3 i = make_uint3(blockIdx.x * blockDim.x + threadIdx.x,
+						 blockIdx.y * blockDim.y + threadIdx.y,
+						 blockIdx.z * blockDim.z + threadIdx.z);
+	if(i.x < g_dMap.gridSize && i.y < g_dMap.gridSize && i.z < g_dMap.gridSize)
 	{
-		uint3 i = make_uint3(x,y,z);
 		float3 mi = g_dMap.hashMap.InverseTransform(i), ma = g_dMap.hashMap.InverseTransform(i + make_uint3(1));
-		g_dMap(tIdx).Update<MAX_SAMPLES>(g_sMap, mi, ma, ny);
+		unsigned int idx = g_dMap.hashMap.Hash(i);
+		g_dMap(idx).Update<MAX_SAMPLES>(g_sMap, mi, ma, ny);
 	}
 }
 
-__global__ void visualize(e_Image I, int w, int h)
+__global__ void visualize(e_Image I, int w, int h, float scale)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x, y = blockIdx.y * blockDim.y + threadIdx.y;
 	if(x < w && y < h)
@@ -56,44 +56,69 @@ __global__ void visualize(e_Image I, int w, int h)
 		{
 			float3 p = r(r2.m_fDist);
 			num = g_dMap(p).numSamples;
+			//uint3 i = g_dMap.hashMap.Transform(p);
+			//float3 mi = g_dMap.hashMap.InverseTransform(i), ma = g_dMap.hashMap.InverseTransform(i + make_uint3(1));
+			//for(e_SpatialLinkedMap<SpatialEntry>::iterator it = g_sMap.begin(mi, ma); it != g_sMap.end(mi, ma); ++it)
+			//	num++;
 		}
-		I.AddSample(x, y, Spectrum(num / 50.0f));
+		I.AddSample(x, y, Spectrum(num / scale));
 	}
 }
+
+__global__ void visualizePdf(e_Image I, int w, int h, int xoff, int yoff, DirectionModel model)
+{
+	int x = blockIdx.x * blockDim.x + threadIdx.x, y = blockIdx.y * blockDim.y + threadIdx.y;
+	if(x < w && y < h)
+	{
+		float a = float(x) / float(w), b = float(y) / float(h);
+		float pdf = model.gmm.p(VEC<float, 2>() % a % b);
+		Spectrum c(pdf);
+		I.ClearSample(x + xoff, y + yoff);
+		I.AddSample(x + xoff, y + yoff, c);
+	}
+}
+
+static unsigned int* modelToShow = 0;
 
 void k_PmmTracer::DoRender(e_Image* I)
 {
 	k_ProgressiveTracer::DoRender(I);
 	I->Clear();
 	k_INITIALIZE(m_pScene, g_sRngs);
-	unsigned int p = 16, w, h;
-	I->getExtent(w, h);
-	visualize<<<dim3( w / p + 1, h / p + 1, 1), dim3(p, p, 1)>>>(*I, w, h);
-	cudaError_t r = cudaThreadSynchronize();
-	k_TracerBase_update_TracedRays
-	I->DoUpdateDisplay(1.0f);
-}
-
-float ny(int i)
-{
-	const float alpha = 0.75f;
-	return std::pow(float(i), -alpha);
-}
-
-void k_PmmTracer::StartNewTrace(e_Image* I)
-{
+	
 	sMap.ResetBuffer();
-	AABB box = this->GetEyeHitPointBox(m_pScene, m_pCamera, true);
-	//AABB box = m_pScene->getBox(m_pScene->getNodes());
-	sMap.SetSceneDimensions(box, length(box.Size()) / 100.0f);
 	cudaMemcpyToSymbol(g_sMap, &sMap, sizeof(sMap));
-	ThrowCudaErrors();
-	k_INITIALIZE(m_pScene, g_sRngs);
 	while(sMap.deviceDataIdx < sMap.numData)
 	{
 		tracePhotons<<< 20, 256>>>();
 		cudaMemcpyFromSymbol(&sMap, g_sMap, sizeof(sMap));
 	}
+	cudaMemcpyToSymbol(g_dMap, &dMap, sizeof(dMap));
+	int l = 6, L = dMap.gridSize / l + 1;
+	updateCache<16><<<dim3(L,L,L), dim3(l,l,l)>>>(ny(passIteration++));
+	
+	unsigned int p = 16, w, h;
+	I->getExtent(w, h);
+	visualize<<<dim3( w / p + 1, h / p + 1, 1), dim3(p, p, 1)>>>(*I, w, h, 20 * passIteration);
+	int rectWidth = 64;
+	if(modelToShow)
+	{
+		DirectionModel model;
+		cudaMemcpy(&model, dMap.deviceData + *modelToShow, sizeof(model), cudaMemcpyDeviceToHost);
+		visualizePdf<<<dim3(8,8,1), dim3(8,8,1)>>>(*I, rectWidth, rectWidth, w - rectWidth, h - rectWidth, model);
+	}
+
+	cudaError_t r = cudaThreadSynchronize();
+	k_TracerBase_update_TracedRays
+	I->DoUpdateDisplay(1.0f);
+}
+
+void k_PmmTracer::StartNewTrace(e_Image* I)
+{
+	passIteration = 1;
+	AABB box = this->GetEyeHitPointBox(m_pScene, m_pCamera, true);
+	//AABB box = m_pScene->getBox(m_pScene->getNodes());
+	sMap.SetSceneDimensions(box, length(box.Size()) / 100.0f);
 	dMap.ResetBuffer();
 	dMap.SetSceneDimensions(box, length(box.Size()) / 100.0f);
 	CudaRNG rng = g_RNGData();
@@ -103,9 +128,6 @@ void k_PmmTracer::StartNewTrace(e_Image* I)
 	cudaMemcpy(dMap.deviceData, models, dMap.NumEntries() * sizeof(DirectionModel), cudaMemcpyHostToDevice);
 	delete [] models;
 	g_RNGData(rng);
-	cudaMemcpyToSymbol(g_dMap, &dMap, sizeof(dMap));
-	int l = 6, L = dMap.gridSize / l + 1;
-	updateCache<8><<<dim3(L,L,L), dim3(l,l,l)>>>(ny(1));
 }
 
 void k_PmmTracer::Debug(int2 p)
@@ -129,7 +151,6 @@ void k_PmmTracer::Debug(int2 p)
 	TraceResult r2 = k_TraceRay(r);
 	float3 pa = r(r2.m_fDist);
 	unsigned int idx = dMap.hashMap.Hash(pa);
-	DirectionModel model;
-	cudaMemcpy(&model, dMap.deviceData + idx, sizeof(model), cudaMemcpyDeviceToHost);
-	plotModel(model);
+	modelToShow = new unsigned int(idx);
+	//plotModel(model);
 }

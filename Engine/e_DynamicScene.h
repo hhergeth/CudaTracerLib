@@ -65,7 +65,7 @@ public:
 	void SetNodeTransform(const float4x4& mat, e_StreamReference(e_Node) n);
 	void TransformNode(const float4x4& mat, e_StreamReference(e_Node) n)
 	{
-		SetNodeTransform(GetNodeTransform(n) * mat, n);
+		SetNodeTransform(mat % GetNodeTransform(n), n);
 	}
 	void MoveNode(float3 p, e_StreamReference(e_Node) n)
 	{

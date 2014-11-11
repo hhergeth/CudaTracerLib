@@ -10,6 +10,12 @@ CUDA_FUNC_IN bool V(const float3& a, const float3& b)
 	return !g_SceneData.Occluded(Ray(a, d / l), 0, l);
 }
 
+CUDA_FUNC_IN float G(const float3& N_x, const float3& N_y, const float3& x, const float3& y)
+{
+	float3 theta = normalize(y - x);
+	return AbsDot(N_x, theta) * AbsDot(N_y, -theta) / DistanceSquared(x, y);
+}
+
 #define MAX_SUBPATH_LENGTH 5
 struct PathVertex
 {
@@ -30,19 +36,76 @@ struct Path
 		s = 0;
 		t = 0;
 	}
-	CUDA_FUNC_IN PathVertex& vertex(int a, int b, int i)
+};
+struct BDPT_Path
+{
+	Path& P;
+	int i, j;
+
+	CUDA_FUNC_IN BDPT_Path(Path& p, int i, int j)
+		: P(p), i(i), j(j)
 	{
-		if(i < a)
-			return EyePath[i];
-		else return LightPath[t - i - a - 1];
+
+	}
+
+	CUDA_FUNC_IN int N()
+	{
+		return i + j;
+	}
+
+	CUDA_FUNC_IN PathVertex& operator()(int k)
+	{
+		if (k < j)
+			return P.LightPath[k];
+		else return P.EyePath[i - 1 - (k - j)];
+	}
+
+	CUDA_FUNC_IN float p_forward(int i)
+	{
+		if (i == -1)
+			return 1;
+		else if (i == 0)
+			return 1;
+		else
+		{
+			PathVertex& x_m = operator()(i - 1), &x = operator()(i), &x_p = operator()(i + 1);
+			BSDFSamplingRecord bRec;
+			x.r2.getBsdfSample(Ray(x_m.p, normalize(x.p - x_m.p)), g_RNGData(), &bRec, normalize(x_p.p - x.p));
+			float pdf = x.r2.getMat().bsdf.pdf(bRec);
+			Frame sys;
+			x_p.r2.lerpFrame(sys);
+			return pdf * ::G(bRec.map.sys.n, sys.n, x.p, x_p.p);
+		}
+	}
+
+	CUDA_FUNC_IN float p_backward(int i)
+	{
+		if (i == N() + 1)
+			return 1;
+		else if (i == N())
+			return 1;
+		else
+		{
+			PathVertex& x_m = operator()(i - 1), &x = operator()(i), &x_p = operator()(i + 1);
+			BSDFSamplingRecord bRec;
+			x.r2.getBsdfSample(Ray(x_m.p, normalize(x.p - x_p.p)), g_RNGData(), &bRec, normalize(x_m.p - x.p));
+			float pdf = x.r2.getMat().bsdf.pdf(bRec);
+			Frame sys;
+			x_m.r2.lerpFrame(sys);
+			return pdf * ::G(bRec.map.sys.n, sys.n, x.p, x_m.p);
+		}
+	}
+
+	CUDA_FUNC_IN float p(int s)
+	{
+		float r = 1;
+		for (int i = -1; i < s; i++)
+			r *= p_forward(i);
+		for (int i = s + 2; i <= N() + 1; i++)
+			r *= p_backward(i);
+		return r;
 	}
 };
-
-CUDA_FUNC_IN float G(const float3& N_x, const float3& N_y, const float3& x, const float3& y)
-{
-	float3 theta = normalize(y - x);
-	return AbsDot(N_x, theta) * AbsDot(N_y, -theta) / DistanceSquared(x, y);
-}
 
 CUDA_FUNC_IN void randomWalk(PathVertex* vertices, unsigned int* N, Ray r, CudaRNG& rng, bool eye)
 {
@@ -107,9 +170,12 @@ CUDA_FUNC_IN float pathWeight(int i, int j)
 	return 1;
 }
 
-CUDA_FUNC_IN float misWeight(Path& P, int i, int j)
+CUDA_FUNC_IN float misWeight(BDPT_Path& P, int s)
 {
-
+	float div = 0;
+	for (int i = 0; i < P.N(); i++)
+		div += P.p(i);
+	return P.p(s) / div;
 }
 
 CUDA_FUNC_IN void BDPT(int x, int y, int w, int h, e_Image& g_Image, CudaRNG& rng)
@@ -148,8 +214,12 @@ CUDA_FUNC_IN void BDPT(int x, int y, int w, int h, e_Image& g_Image, CudaRNG& rn
 		for(unsigned int j = 1; j < P.t + 1; j++)
 		{
 			const PathVertex& lv = P.LightPath[j - 1];
-			if(V(ev.p, lv.p))
-				L += Le * evalPath(P, i, j, rng) * pathWeight(i, j);
+			if (V(ev.p, lv.p))
+			{
+				BDPT_Path P2(P, i, j);
+				float mis = misWeight(P2, i + j - 2);
+				L += Le * evalPath(P, i, j, rng) * pathWeight(i, j) * mis;
+			}
 		}
 	}
 	
@@ -174,6 +244,17 @@ CUDA_FUNC_IN void BDPT(int x, int y, int w, int h, e_Image& g_Image, CudaRNG& rn
 	}
 
 	g_Image.AddSample(x, y, L);
+}
+
+CUDA_FUNC_IN void SBDP(int x, int y, int w, int h, e_Image& g_Image, CudaRNG& rng)
+{
+	Ray rEye, rLight;
+	Spectrum imp = g_SceneData.sampleSensorRay(rEye, make_float2(x, y), rng.randomFloat2());
+
+	const e_KernelLight* light;
+	Spectrum Le = g_SceneData.sampleEmitterRay(rLight, light, rng.randomFloat2(), rng.randomFloat2());
+
+
 }
 
 __global__ void pathKernel(unsigned int w, unsigned int h, int xoff, int yoff, e_Image g_Image)

@@ -83,7 +83,7 @@ void e_SceneBVH::UpdateInvalidated()
 void e_SceneBVH::setTransform(unsigned int nodeIdx, const float4x4& mat)
 {
 	*m_pTransforms[0](nodeIdx).operator->() = mat;
-	*m_pInvTransforms[0](nodeIdx).operator->() = mat.Inverse();
+	*m_pInvTransforms[0](nodeIdx).operator->() = mat.inverse();
 	m_pTransforms->Invalidate(nodeIdx, 1);
 	m_pInvTransforms->Invalidate(nodeIdx, 1);
 }

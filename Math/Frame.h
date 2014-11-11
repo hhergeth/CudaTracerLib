@@ -59,10 +59,10 @@ struct Frame
 	CUDA_FUNC_IN float4x4 ToMatrix()
 	{
 		float4x4 r;
-		r.X = make_float4(t, 0);
-		r.Y = make_float4(s, 0);
-		r.Z = make_float4(n, 0);
-		r.W = make_float4(0, 0, 0, 1);
+		r.col(0, make_float4(t, 0));
+		r.col(1, make_float4(s, 0));
+		r.col(2, make_float4(n, 0));
+		r.col(3, make_float4(0, 0, 0, 1));
 		return r;
 	}
 
@@ -146,9 +146,9 @@ struct Frame
 	CUDA_FUNC_IN Frame operator *(const float4x4& m) const
 	{
 		Frame r;
-		r.s = normalize(m.TransformNormal(s));
-		r.t = normalize(m.TransformNormal(t));
-		r.n = normalize(m.TransformNormal(n));
+		r.s = normalize(m.TransformDirection(s));
+		r.t = normalize(m.TransformDirection(t));
+		r.n = normalize(cross(r.t, r.s));
 		return r;
 	}
 

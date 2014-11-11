@@ -17,7 +17,7 @@ template<typename T> struct e_SpatialLinkedMap
 	linkedEntry* deviceData;
 	unsigned int* deviceMap;
 	unsigned int deviceDataIdx;
-	k_HashGrid_Irreg hashMap;
+	k_HashGrid_Reg hashMap;
 public:
 	typedef e_SpatialLinkedMap_volume_iterator<T> iterator;
 
@@ -31,7 +31,7 @@ public:
 
 	void SetSceneDimensions(const AABB& box, float initialRadius)
 	{
-		hashMap = k_HashGrid_Irreg(box, initialRadius, gridSize * gridSize * gridSize);
+		hashMap = k_HashGrid_Reg(box, initialRadius, gridSize * gridSize * gridSize);
 	}
 
 	void ResetBuffer()
@@ -158,7 +158,7 @@ template<typename T> struct e_SpatialSet
 {
 	unsigned int gridSize;
 	T* deviceData;
-	k_HashGrid_Irreg hashMap;
+	k_HashGrid_Reg hashMap;
 public:
 	e_SpatialSet(){}
 	e_SpatialSet(unsigned int gridSize)
@@ -169,7 +169,7 @@ public:
 
 	void SetSceneDimensions(const AABB& box, float initialRadius)
 	{
-		hashMap = k_HashGrid_Irreg(box, initialRadius, gridSize * gridSize * gridSize);
+		hashMap = k_HashGrid_Reg(box, initialRadius, gridSize * gridSize * gridSize);
 	}
 
 	void ResetBuffer()

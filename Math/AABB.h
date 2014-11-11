@@ -76,7 +76,7 @@ struct AABB
 		float3 mi = make_float3(FLT_MAX), ma = make_float3(-FLT_MAX);
 		for(int i = 0; i < 8; i++)
 		{
-			float3 q = mat * v[i];
+			float3 q = mat.TransformPoint(v[i]);
 			mi = fminf(q, mi);
 			ma = fmaxf(q, ma);
 		}

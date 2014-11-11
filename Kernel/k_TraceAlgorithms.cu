@@ -2,6 +2,12 @@
 
 //#define EXT_EST
 
+CUDA_FUNC_IN float G(const float3& N_x, const float3& N_y, const float3& x, const float3& y)
+{
+	float3 theta = normalize(y - x);
+	return AbsDot(N_x, theta) * AbsDot(N_y, -theta) / DistanceSquared(x, y);
+}
+
 CUDA_FUNC_IN Spectrum EstimateDirect(BSDFSamplingRecord bRec, const e_KernelMaterial& mat, const e_KernelLight* light, unsigned int li, EBSDFType flags)
 {
 #ifndef EXT_EST
@@ -11,7 +17,7 @@ CUDA_FUNC_IN Spectrum EstimateDirect(BSDFSamplingRecord bRec, const e_KernelMate
 	if(!value.isZero())
 	{
 		float3 oldWo = bRec.wo;
-		bRec.wo = bRec.map.sys.toLocal(dRec.d);
+		bRec.wo = normalize(bRec.map.sys.toLocal(dRec.d));
 		bRec.typeMask = flags;
 		Spectrum bsdfVal = mat.bsdf.f(bRec);
 		if (!bsdfVal.isZero() && !g_SceneData.Occluded(Ray(dRec.ref, dRec.d), 0, dRec.dist))

@@ -11,6 +11,25 @@ CUDA_FUNC_IN float randomNormal(CudaRNG& rng)
 	return sqrtf(-2.0f * logf(rng.randomFloat())) * cosf(2.0f * PI * rng.randomFloat());
 }
 
+CUDA_FUNC_IN float ny(int i)
+{
+	const float alpha = 0.75f;
+	return powf(float(i), -alpha);
+}
+
+CUDA_FUNC_IN qMatrix<float, 2, 1> HemishphereToSquare(const float3& d)
+{
+	float3 q = normalize(d);
+	float2 a = Warp::uniformDiskToSquareConcentric(make_float2(d.x, d.y));
+	return VEC<float, 2>() % a.x % a.y;
+}
+
+CUDA_FUNC_IN float3 SquareToHemisphere(const qMatrix<float, 2, 1>& s)
+{
+	float2 a = Warp::squareToUniformDiskConcentric(make_float2(s(0, 0), s(1, 0)));
+	return make_float3(a.x, a.y, 1.0f - a.x * a.x - a.y * a.y);
+}
+
 template<int D, int K> struct GaussianMixtureModel
 {
 	typedef qMatrix<float, D, 1> vec;
@@ -270,19 +289,6 @@ struct SpatialEntry
 	}
 };
 
-CUDA_FUNC_IN qMatrix<float, 2, 1> HemishphereToSquare(const float3& d)
-{
-	float3 q = normalize(d);
-	float2 a = Warp::uniformDiskToSquareConcentric(make_float2(d.x, d.y));
-	return VEC<float, 2>() % a.x % a.y;
-}
-
-CUDA_FUNC_IN float3 SquareToHemisphere(const qMatrix<float, 2, 1>& s)
-{
-	float2 a = Warp::squareToUniformDiskConcentric(make_float2(s(0, 0), s(1, 0)));
-	return make_float3(a.x, a.y, 1.0f - a.x * a.x - a.y * a.y);
-}
-
 struct DirectionModel
 {
 	static const int K = 4;
@@ -312,10 +318,11 @@ struct DirectionModel
 				break;
 		}
 		numSamples += N;
-		gmm.OnlineEM<MAX_SAMPLES>(stats, samples, N, ny, numSamples, 1);
+		if(N)
+			gmm.OnlineEM<MAX_SAMPLES>(stats, samples, N, ny, numSamples, 1);
 	}
 
-	float3 Sample(CudaRNG& rng)
+	CUDA_FUNC_IN float3 Sample(CudaRNG& rng)
 	{
 		qMatrix<float, 2, 1> s = gmm.sample(rng);
 		return SquareToHemisphere(s);

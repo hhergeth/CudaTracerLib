@@ -51,8 +51,8 @@ namespace bvh_helper
 			*out = AABB::Identity();
 			for(int i = 0; i < 3; i++)
 				out->Enlarge(V[_index(index, i)]);
-			if(fminf(out->Size()) < 0.01f)
-				out->maxV += make_float3(0.01f);
+			//if(fminf(out->Size()) < 0.01f)
+			//	out->maxV += make_float3(0.01f);
 		}
 		virtual void HandleBoundingBox(const AABB& box)
 		{
@@ -97,8 +97,10 @@ namespace bvh_helper
 			{
 				float3 v0 = v1;
 				v1 = V[_index(index, i)];
-				float v0p = ((float*)&v0)[dim];
-				float v1p = ((float*)&v1)[dim];
+				float V0[] = { v0.x, v0.y, v0.z };
+				float V1[] = { v1.x, v1.y, v1.z };
+				float v0p = V0[dim];
+				float v1p = V1[dim];
 
 				// Insert vertex to the boxes it belongs to.
 
@@ -119,6 +121,7 @@ namespace bvh_helper
 			lBox.max[dim] = pos;
 			rBox.min[dim] = pos;
 			lBox.intersect(refBox);
+			rBox.intersect(refBox);
 			return true;
 		}
 	};

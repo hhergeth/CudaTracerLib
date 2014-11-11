@@ -166,7 +166,7 @@ struct memTarget
 
 	CUDA_FUNC_IN  void operator()(int x, int y, RGBCOL c)
 	{
-		viewTarget[(h - y - 1) * w + x] = c;
+		viewTarget[y * w + x] = c;
 	}
 };
 
@@ -177,7 +177,7 @@ struct texTarget
 
 	CUDA_ONLY_FUNC void operator()(int x, int y, RGBCOL c)
 	{
-		surf2Dwrite(c, viewCudaSurfaceObject, x * 4, h - y - 1);
+		surf2Dwrite(c, viewCudaSurfaceObject, x * 4, y);
 	}
 };
 
@@ -189,7 +189,7 @@ void e_Image::SetSample(int x, int y, RGBCOL c)
 #else
 		;
 #endif
-	else viewTarget[(yResolution - y - 1) * xResolution + x] = c;
+	else viewTarget[y * xResolution + x] = c;
 }
 
 template<typename TARGET> CUDA_GLOBAL void rtm_Scale(e_Image::Pixel* P, TARGET T, unsigned int w, unsigned int h, float splatScale, float L_w, float alpha, float L_white2)

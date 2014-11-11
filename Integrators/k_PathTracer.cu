@@ -5,6 +5,42 @@
 
 CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_NextRayCounter;
 
+CUDA_FUNC_IN float G(const float3& N_x, const float3& N_y, const float3& x, const float3& y)
+{
+	float3 theta = normalize(y - x);
+	return AbsDot(N_x, theta) * AbsDot(N_y, -theta) / DistanceSquared(x, y);
+}
+
+template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTraceTTT(float3& a_Dir, float3& a_Ori, CudaRNG& rnd, float* distTravalled = 0)
+{
+	Ray r0 = Ray(a_Ori, a_Dir);
+	TraceResult r;
+	r.Init();
+	Spectrum cl = Spectrum(0.0f);   // accumulated color
+	Spectrum cf = Spectrum(1.0f);  // accumulated reflectance
+	int depth = 0;
+	BSDFSamplingRecord bRec;
+	while (k_TraceRay(r0.direction, r0.origin, &r) && depth++ < 7)
+	{
+		r.getBsdfSample(r0, rnd, &bRec); //return (Spectrum(bRec.map.sys.n) + Spectrum(1)) / 2.0f; //return bRec.map.sys.n;
+		cl += cf * r.Le(r0(r.m_fDist), bRec.map.sys, -r0.direction);
+		Spectrum f;
+		if (DIRECT)
+		{
+			DirectSamplingRecord dRec(bRec.map.P, bRec.map.sys.n);
+			Spectrum value = g_SceneData.m_sLightData[0].sampleDirect(dRec, rnd.randomFloat2());
+			bRec.wo = normalize(bRec.map.sys.toLocal(dRec.d));
+			f = r.getMat().bsdf.f(bRec) / g_SceneData.m_sLightData[0].As<e_DiffuseLight>()->shapeSet.Pdf(dRec) * G(bRec.map.sys.n, dRec.n, bRec.map.P, dRec.p);
+		}
+		else f = r.getMat().bsdf.sample(bRec, rnd.randomFloat2());
+
+		cf = cf * f;
+		r0 = Ray(r0(r.m_fDist), bRec.getOutgoing());
+		r.Init();
+	}
+	return cl;
+}
+
 template<bool DIRECT> __global__ void pathKernel(unsigned int width, unsigned int height, unsigned int a_PassIndex, e_Image g_Image)
 {
 	CudaRNG rng = g_RNGData();

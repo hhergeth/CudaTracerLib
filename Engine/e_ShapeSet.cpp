@@ -13,7 +13,7 @@ void ShapeSet::triData::Recalculate(const float4x4& mat)
 {
 	datRef->getData(p[0], p[1], p[2]);
 	for(int i = 0; i < 3; i++)
-		p[i] = mat * p[i];
+		p[i] = mat.TransformPoint(p[i]);
 	n = -cross(p[2] - p[0], p[1] - p[0]);
 	area = 0.5f * length(n);
 	n = normalize(n);

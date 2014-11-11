@@ -59,7 +59,7 @@ cudaError_t CudaMemoryManager::Cuda_free_managed(void* v, const char* callig_fun
 	if(alloced_entries.count(v))
 	{
 		CudaMemoryEntry e = alloced_entries[v];
-		alloced_entries.erase(v);
+		//alloced_entries.erase(v);
 		e.free_func = callig_func;
 		freed_entries.push_back(e);
 	}

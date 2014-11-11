@@ -9,7 +9,7 @@
 
 float4x4 mul(float4x4& a, float4x4& b)
 {
-	return a * b;
+	return b % a;
 }
 
 struct c_bFrame
@@ -49,7 +49,7 @@ struct c_Animation
 
 		float4x4* inverseJoints = new float4x4[A->baseJoints.size()];
 		for(unsigned int i = 0; i < A->baseJoints.size(); i++)
-			inverseJoints[i] = mul(M->joints[i].quat.toMatrix(), float4x4::Translate(*(float3*)&M->joints[i].pos)).Inverse();
+			inverseJoints[i] = mul(M->joints[i].quat.toMatrix(), float4x4::Translate(*(float3*)&M->joints[i].pos)).inverse();
 		data = new c_bFrame[m_uNumbFrames];
 		for(unsigned int i = 0; i < m_uNumbFrames; i++)
 			data[i] = c_bFrame(&A->bFrames[i], inverseJoints);

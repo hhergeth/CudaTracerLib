@@ -176,12 +176,32 @@ CUDA_ONLY_FUNC Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUS
 	return Lp / float(g_Map2.m_uPhotonNumEmitted);
 }
 
+CUDA_ONLY_FUNC Spectrum L_FinalGathering(TraceResult& r2, BSDFSamplingRecord& bRec, CudaRNG& rng, float a_rSurfaceUNUSED)
+{
+	Spectrum L(0.0f);
+	const int N = 3;
+	for (int i = 0; i < N; i++)
+	{
+		Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
+		Ray r(bRec.map.P, bRec.getOutgoing());
+		TraceResult r3 = k_TraceRay(r);
+		if (r3.hasHit())
+		{
+			BSDFSamplingRecord bRec2;
+			r3.getBsdfSample(r, rng, &bRec2);
+			Spectrum dif = r3.getMat().bsdf.getDiffuseReflectance(bRec2) / PI;
+			L += f * L_Surface(bRec, a_rSurfaceUNUSED, bRec2.map.P, -r.direction, &r3.getMat()) * dif;
+		}
+	}
+	return L / float(N);
+}
+
 template<bool DIRECT, bool DEBUGKERNEL> CUDA_ONLY_FUNC void k_EyePassF(int x, int y, int w, int h, float a_PassIndex, float a_rSurfaceUNUSED, float a_rVolume, k_AdaptiveStruct A, float scale0, float scale1, e_Image g_Image)
 {
 	CudaRNG rng = g_RNGData();
 	BSDFSamplingRecord bRec;
 	Ray r;
-	Spectrum importance = g_SceneData.sampleSensorRay(r, make_float2(x, y), rng.randomFloat2());
+	Spectrum importance = g_SceneData.sampleSensorRay(r, make_float2(x, y) + rng.randomFloat2() - make_float2(0.5f), rng.randomFloat2());
 	TraceResult r2;
 	r2.Init();
 	int depth = -1;
@@ -218,6 +238,7 @@ template<bool DIRECT, bool DEBUGKERNEL> CUDA_ONLY_FUNC void k_EyePassF(int x, in
 		{
 			Spectrum dif = r2.getMat().bsdf.getDiffuseReflectance(bRec) / PI;
 			L += throughput * L_Surface(bRec, a_rSurfaceUNUSED, p, -r.direction, &r2.getMat()) * dif;
+			//L += throughput * L_FinalGathering(r2, bRec, rng, a_rSurfaceUNUSED);
 			if(!hasSpecGlossy)
 				break;
 		}

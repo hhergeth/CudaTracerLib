@@ -8,10 +8,8 @@
 
 CUDA_ONLY_FUNC float4x4 d_Compute(float4x4* a_Matrices, e_AnimatedVertex& v)
 {
-	float4x4 mat(0,0,0,0,
-				0,0,0,0,
-				0,0,0,0,
-				0,0,0,0);
+	float4x4 mat;
+	mat.zeros();
 	for(int i = 0; i < g_uMaxWeights; i++)
 	{
 		if(v.m_fBoneWeights[i] == 0)
@@ -31,16 +29,16 @@ __global__ void g_ComputeVertices(e_TmpVertex* a_Dest, e_AnimatedVertex* a_Sourc
 		e_AnimatedVertex v = a_Source[N];
 		float4x4 mat0 = d_Compute(a_Matrices, v);
 		float4x4 mat1 = d_Compute(a_Matrices2, v);
-		float3 v0 = mat0 * v.m_fVertexPos, v1 = mat1 * v.m_fVertexPos;
+		float3 v0 = mat0.TransformPoint(v.m_fVertexPos), v1 = mat1.TransformPoint(v.m_fVertexPos);
 		a_Dest[N].m_fPos = lerp(v0, v1, a_Lerp);
 
-		float3 n0 = mat0.TransformNormal(v.m_fNormal), n1 = mat1.TransformNormal(v.m_fNormal);
-		a_Dest[N].m_fNormal = -normalize(lerp(n0, n1, a_Lerp));
+		float3 n0 = mat0.TransformDirection(v.m_fNormal), n1 = mat1.TransformDirection(v.m_fNormal);
+		a_Dest[N].m_fNormal = normalize(lerp(n0, n1, a_Lerp));
 
-		float3 t0 = mat0.TransformNormal(v.m_fTangent), t1 = mat1.TransformNormal(v.m_fTangent);
+		float3 t0 = mat0.TransformDirection(v.m_fTangent), t1 = mat1.TransformDirection(v.m_fTangent);
 		a_Dest[N].m_fTangent = normalize(lerp(t0, t1, a_Lerp));
 
-		float3 b0 = mat0.TransformNormal(v.m_fBitangent), b1 = mat1.TransformNormal(v.m_fBitangent);
+		float3 b0 = mat0.TransformDirection(v.m_fBitangent), b1 = mat1.TransformDirection(v.m_fBitangent);
 		a_Dest[N].m_fBiTangent = normalize(lerp(b0, b1, a_Lerp));
 	}
 }
@@ -51,10 +49,9 @@ __global__ void g_ComputeTriangles(e_TmpVertex* a_Tmp, uint3* a_TriData, e_Trian
 	if(N < a_TCount)
 	{
 		uint3 t = a_TriData[N];
-		float3 n = normalize(cross(a_Tmp[t.y].m_fPos - a_Tmp[t.x].m_fPos, a_Tmp[t.z].m_fPos - a_Tmp[t.x].m_fPos));
 #ifdef EXT_TRI
-		a_TriData2[N].setData(a_Tmp[t.x].m_fNormal, a_Tmp[t.y].m_fNormal, a_Tmp[t.z].m_fNormal,
-							  a_Tmp[t.x].m_fTangent, a_Tmp[t.y].m_fTangent, a_Tmp[t.z].m_fTangent);
+		a_TriData2[N].setData(a_Tmp[t.x].m_fPos, a_Tmp[t.y].m_fPos, a_Tmp[t.z].m_fPos,
+							  a_Tmp[t.x].m_fNormal, a_Tmp[t.y].m_fNormal, a_Tmp[t.z].m_fNormal);
 #else
 		//a_TriData2[N].m_sDeviceData.Row0.
 #endif

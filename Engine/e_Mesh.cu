@@ -3,8 +3,6 @@
 
 void e_TriIntersectorData::setData(const float3& a, const float3& b, const float3& c)
 {
-	float3 p = a - c, q = b - c, e = -p - q;
-	float3 d = cross(a - c, b - c);
 	//if(AbsDot(normalize(cross(a - c, b - c)), make_float3(1, 0, 0)) < 0.05f)
 	/*{
 		float l = length((a + b + c) / 3.0f - a) / 200.0f;
@@ -16,18 +14,17 @@ void e_TriIntersectorData::setData(const float3& a, const float3& b, const float
 		e = -p - q;
 		e = e + make_float3(0,l,-l)/200.0f;
 	}*/
-	e = d - make_float3(1,0,0);
-	float4x4 m( p.x, q.x, e.x + 1, c.x,
-				p.y, q.y, e.y + 0, c.y,
-				p.z, q.z, e.z + 0, c.z,
-					0,   0,   0,   1  );
-	//printm(m);
-	m = m.Inverse();
-	//Platform::OutputDebug("\n\n");
-	//printm(m);
-	this->a = make_float4(m[2].x, m[2].y, m[2].z, -m[2].w);
-	this->b = make_float4(m[0].x, m[0].y, m[0].z, m[0].w);
-	this->c = make_float4(m[1].x, m[1].y, m[1].z, m[1].w);
+	float4x4 m;
+	m.col(0, make_float4(a - c, 0));
+	m.col(1, make_float4(b - c, 0));
+	m.col(2, make_float4(cross(a - c, b - c), 0));
+	m.col(3, make_float4(c, 1));
+	m = m.inverse();
+	this->a = make_float4(m(2, 0), m(2, 1), m(2, 2), -m(2, 3));
+	this->b = m.row(0);
+	this->c = m.row(1);
+	float3 v1, v2, v3;
+	getData(v1, v2, v3);
 	//*(float2*)t2 = make_float2(m[0].x, m[0].y);
 	//*(half2*)(((int*)t2) + 2) = half2(m[0].z, m[0].w);
 	//this->b = make_float4(m[1].x, m[1].y, m[1].z, m[1].w);
@@ -41,10 +38,14 @@ void e_TriIntersectorData::setData(const float3& a, const float3& b, const float
 
 void e_TriIntersectorData::getData(float3& v0, float3& v1, float3& v2) const
 {
-	float4x4 m(b.x, b.y, b.z, b.w, c.x, c.y, c.z, c.w, a.x, a.y, a.z, -a.w, 0, 0, 0, 1);
-	m = m.Inverse();
-	float3 e02 = make_float3(m.X.x, m.Y.x, m.Z.x), e12 = make_float3(m.X.y, m.Y.y, m.Z.y);
-	v2 = make_float3(m.X.w, m.Y.w, m.Z.w);
+	float4x4 m = float4x4::Identity();
+	m.row(0, b);
+	m.row(1, c);
+	m.row(2, a);
+	m(2, 3) *= -1.0f;
+	m = m.inverse();
+	float3 e02 = !m.col(0), e12 = !m.col(1);
+	v2 = !m.col(3);
 	v0 = v2 + e02;
 	v1 = v2 + e12;
 }

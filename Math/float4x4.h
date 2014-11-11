@@ -2,6 +2,526 @@
 
 #include "cutil_math.h"
 
+class CUDA_ALIGN(16) float4x4
+{
+	float data[16];
+	CUDA_FUNC_IN int idx(int i, int j) const
+	{
+		return i * 4 + j;
+	}
+public:
+	CUDA_FUNC_IN float4x4()
+	{
+	}
+
+	CUDA_FUNC_IN static float4x4 As(float xx, float yx, float zx, float wx,
+									float xy, float yy, float zy, float wy,
+									float xz, float yz, float zz, float wz,
+									float xw, float yw, float zw, float ww)
+	{
+		float4x4 r;
+		r.row(0, make_float4(xx, yx, zx, wx));
+		r.row(1, make_float4(xy, yy, zy, wy));
+		r.row(2, make_float4(xz, yz, zz, wz));
+		r.row(3, make_float4(xw, yw, zw, ww));
+		return r;
+	}
+
+	CUDA_FUNC_IN void zeros()
+	{
+		for (int i = 0; i < 4; i++)
+			for (int j = 0; j < 4; j++)
+				operator()(i, j) = 0;
+	}
+
+	//access
+	CUDA_FUNC_IN float operator()(int i, int j) const
+	{
+		return data[idx(i, j)];
+	}
+	CUDA_FUNC_IN float& operator()(int i, int j)
+	{
+		return data[idx(i, j)];
+	}
+	CUDA_FUNC_IN float4 row(int i) const
+	{
+		return make_float4(operator()(i, 0), operator()(i, 1), operator()(i, 2), operator()(i, 3));
+	}
+	CUDA_FUNC_IN void row(int i, const float4& r)
+	{
+		operator()(i, 0) = r.x;
+		operator()(i, 1) = r.y;
+		operator()(i, 2) = r.z;
+		operator()(i, 3) = r.w;
+	}
+	CUDA_FUNC_IN float4 col(int i) const
+	{
+		return make_float4(operator()(0, i), operator()(1, i), operator()(2, i), operator()(3, i));
+	}
+	CUDA_FUNC_IN void col(int i, const float4& r)
+	{
+		operator()(0, i) = r.x;
+		operator()(1, i) = r.y;
+		operator()(2, i) = r.z;
+		operator()(3, i) = r.w;
+	}
+
+	//operators
+	/*CUDA_FUNC_IN void operator *= (const float4x4& b)
+	{
+		float4x4 a = *this;
+		*this = a * b;
+	}*/
+
+	CUDA_FUNC_IN float4x4 operator + (const float4x4& a) const
+	{
+		float4x4 r;
+		for (int i = 0; i < 4; i++)
+			for (int j = 0; j < 4; j++)
+				r(i, j) = operator()(i, j) + a(i, j);
+		return r;
+	}
+	
+	CUDA_FUNC_IN float4x4 operator % (const float4x4& a) const
+	{
+		float4x4 r;
+		for (int i = 0; i < 4; i++)
+			for (int j = 0; j < 4; j++)
+				r(i, j) = dot(row(i), a.col(j));
+		return r;
+	}
+
+	CUDA_FUNC_IN float4 operator * (const float4& a) const
+	{
+		return make_float4(
+			dot(row(0), a),
+			dot(row(1), a),
+			dot(row(2), a),
+			dot(row(3), a)
+			);
+	}
+
+	CUDA_FUNC_IN float4x4 operator * (const float a) const
+	{
+		float4x4 r;
+		for (int i = 0; i < 4; i++)
+			for (int j = 0; j < 4; j++)
+				r(i, j) = operator()(i, j) + a;
+		return r;
+	}
+
+	CUDA_FUNC_IN float3 TransformPoint(const float3& p) const
+	{
+		float4 f = *this * make_float4(p, 1.0f);
+		return !f;
+	}
+
+	CUDA_FUNC_IN float3 TransformDirection(const float3& d) const
+	{
+		float4 f = *this * make_float4(d, 0.0f);
+		return !f;
+	}
+
+	CUDA_FUNC_IN float4 TransformTranspose(const float4& a) const
+	{
+		return make_float4(
+			dot(col(0), a),
+			dot(col(1), a),
+			dot(col(2), a),
+			dot(col(3), a)
+			);
+	}
+
+	CUDA_FUNC_IN float4x4 transpose()
+	{
+		float4x4 r;
+		for (int i = 0; i < 4; i++)
+			for (int j = 0; j < 4; j++)
+				r(i, j) = operator()(j, i);
+		return r;
+	}
+
+	CUDA_FUNC_IN float4x4 inverse() const
+	{
+		float4x4 r;
+		float* inv = r.data;
+		const float* m = data;
+		inv[0] = m[5] * m[10] * m[15] -
+			m[5] * m[11] * m[14] -
+			m[9] * m[6] * m[15] +
+			m[9] * m[7] * m[14] +
+			m[13] * m[6] * m[11] -
+			m[13] * m[7] * m[10];
+
+		inv[4] = -m[4] * m[10] * m[15] +
+			m[4] * m[11] * m[14] +
+			m[8] * m[6] * m[15] -
+			m[8] * m[7] * m[14] -
+			m[12] * m[6] * m[11] +
+			m[12] * m[7] * m[10];
+
+		inv[8] = m[4] * m[9] * m[15] -
+			m[4] * m[11] * m[13] -
+			m[8] * m[5] * m[15] +
+			m[8] * m[7] * m[13] +
+			m[12] * m[5] * m[11] -
+			m[12] * m[7] * m[9];
+
+		inv[12] = -m[4] * m[9] * m[14] +
+			m[4] * m[10] * m[13] +
+			m[8] * m[5] * m[14] -
+			m[8] * m[6] * m[13] -
+			m[12] * m[5] * m[10] +
+			m[12] * m[6] * m[9];
+
+		inv[1] = -m[1] * m[10] * m[15] +
+			m[1] * m[11] * m[14] +
+			m[9] * m[2] * m[15] -
+			m[9] * m[3] * m[14] -
+			m[13] * m[2] * m[11] +
+			m[13] * m[3] * m[10];
+
+		inv[5] = m[0] * m[10] * m[15] -
+			m[0] * m[11] * m[14] -
+			m[8] * m[2] * m[15] +
+			m[8] * m[3] * m[14] +
+			m[12] * m[2] * m[11] -
+			m[12] * m[3] * m[10];
+
+		inv[9] = -m[0] * m[9] * m[15] +
+			m[0] * m[11] * m[13] +
+			m[8] * m[1] * m[15] -
+			m[8] * m[3] * m[13] -
+			m[12] * m[1] * m[11] +
+			m[12] * m[3] * m[9];
+
+		inv[13] = m[0] * m[9] * m[14] -
+			m[0] * m[10] * m[13] -
+			m[8] * m[1] * m[14] +
+			m[8] * m[2] * m[13] +
+			m[12] * m[1] * m[10] -
+			m[12] * m[2] * m[9];
+
+		inv[2] = m[1] * m[6] * m[15] -
+			m[1] * m[7] * m[14] -
+			m[5] * m[2] * m[15] +
+			m[5] * m[3] * m[14] +
+			m[13] * m[2] * m[7] -
+			m[13] * m[3] * m[6];
+
+		inv[6] = -m[0] * m[6] * m[15] +
+			m[0] * m[7] * m[14] +
+			m[4] * m[2] * m[15] -
+			m[4] * m[3] * m[14] -
+			m[12] * m[2] * m[7] +
+			m[12] * m[3] * m[6];
+
+		inv[10] = m[0] * m[5] * m[15] -
+			m[0] * m[7] * m[13] -
+			m[4] * m[1] * m[15] +
+			m[4] * m[3] * m[13] +
+			m[12] * m[1] * m[7] -
+			m[12] * m[3] * m[5];
+
+		inv[14] = -m[0] * m[5] * m[14] +
+			m[0] * m[6] * m[13] +
+			m[4] * m[1] * m[14] -
+			m[4] * m[2] * m[13] -
+			m[12] * m[1] * m[6] +
+			m[12] * m[2] * m[5];
+
+		inv[3] = -m[1] * m[6] * m[11] +
+			m[1] * m[7] * m[10] +
+			m[5] * m[2] * m[11] -
+			m[5] * m[3] * m[10] -
+			m[9] * m[2] * m[7] +
+			m[9] * m[3] * m[6];
+
+		inv[7] = m[0] * m[6] * m[11] -
+			m[0] * m[7] * m[10] -
+			m[4] * m[2] * m[11] +
+			m[4] * m[3] * m[10] +
+			m[8] * m[2] * m[7] -
+			m[8] * m[3] * m[6];
+
+		inv[11] = -m[0] * m[5] * m[11] +
+			m[0] * m[7] * m[9] +
+			m[4] * m[1] * m[11] -
+			m[4] * m[3] * m[9] -
+			m[8] * m[1] * m[7] +
+			m[8] * m[3] * m[5];
+
+		inv[15] = m[0] * m[5] * m[10] -
+			m[0] * m[6] * m[9] -
+			m[4] * m[1] * m[10] +
+			m[4] * m[2] * m[9] +
+			m[8] * m[1] * m[6] -
+			m[8] * m[2] * m[5];
+
+		float det = m[0] * inv[0] + m[1] * inv[4] + m[2] * inv[8] + m[3] * inv[12];
+
+		if (det == 0)
+			return float4x4::Identity();
+
+		det = 1.0 / det;
+
+		for (int i = 0; i < 16; i++)
+			inv[i] = inv[i] * det;
+		return r;
+	}
+
+	CUDA_FUNC_IN static float4x4 RotateX(float a)
+	{
+		float4x4 r = float4x4::Identity();
+		float cosa = cosf(a), sina = sin(a);
+		r(1, 1) = cosa;
+		r(1, 2) = -sina;
+		r(2, 1) = sina;
+		r(2, 2) = cosa;
+		return r;
+	}
+
+	CUDA_FUNC_IN static float4x4 RotateY(float a)
+	{
+		float4x4 r = float4x4::Identity();
+		float cosa = cosf(a), sina = sin(a);
+		r(0, 0) = cosa;
+		r(0, 2) = sina;
+		r(2, 0) = -sina;
+		r(2, 2) = cosa;
+		return r;
+	}
+
+	CUDA_FUNC_IN static float4x4 RotateZ(float a)
+	{
+		float4x4 r = float4x4::Identity();
+		float cosa = cosf(a), sina = sin(a);
+		r(0, 0) = cosa;
+		r(0, 1) = -sina;
+		r(1, 0) = sina;
+		r(1, 1) = cosa;
+		return r;
+	}
+
+	CUDA_FUNC_IN static float4x4 OuterProduct(const float4& v)
+	{
+		float d[] = {v.x, v.y, v.z, v.w};
+		float4x4 r;
+		for (int i = 0; i < 4; i++)
+			for (int j = 0; j < 4; j++)
+				r(i, j) = d[i] * d[j];
+		return r;
+	}
+
+	CUDA_FUNC_IN static float4x4 RotationAxis(const float3& _axis, const float angle)
+	{
+		float3 naxis = normalize(_axis);
+		float sinTheta, cosTheta;
+		sincos(angle, &sinTheta, &cosTheta);
+		float4x4 result;
+		result(0, 0) = naxis.x * naxis.x + (1.0f - naxis.x * naxis.x) * cosTheta;
+		result(0, 1) = naxis.x * naxis.y * (1.0f - cosTheta) - naxis.z * sinTheta;
+		result(0, 2) = naxis.x * naxis.z * (1.0f - cosTheta) + naxis.y * sinTheta;
+		result(0, 3) = 0;
+
+		result(1, 0) = naxis.x * naxis.y * (1.0f - cosTheta) + naxis.z * sinTheta;
+		result(1, 1) = naxis.y * naxis.y + (1.0f - naxis.y * naxis.y) * cosTheta;
+		result(1, 2) = naxis.y * naxis.z * (1.0f - cosTheta) - naxis.x * sinTheta;
+		result(1, 3) = 0;
+
+		result(2, 0) = naxis.x * naxis.z * (1.0f - cosTheta) - naxis.y * sinTheta;
+		result(2, 1) = naxis.y * naxis.z * (1.0f - cosTheta) + naxis.x * sinTheta;
+		result(2, 2) = naxis.z * naxis.z + (1.0f - naxis.z * naxis.z) * cosTheta;
+		result(2, 3) = 0;
+
+		result(3, 0) = 0;
+		result(3, 1) = 0;
+		result(3, 2) = 0;
+		result(3, 3) = 1;
+
+		return result;
+	}
+
+	CUDA_FUNC_IN static const float4x4 Identity()
+	{
+		float4x4 r;
+		r.zeros();
+		r(0, 0) = r(1, 1) = r(2, 2) = r(3, 3) = 1.0f;
+		return r;
+	}
+
+	CUDA_FUNC_IN static float4x4 Translate(float3 t)
+	{
+		return Translate(t.x, t.y, t.z);
+	}
+
+	CUDA_FUNC_IN static float4x4 Translate(float x, float y, float z)
+	{
+		float4x4 r = float4x4::Identity();
+		r(0, 3) = x;
+		r(1, 3) = y;
+		r(2, 3) = z;
+		return r;
+	}
+
+	CUDA_FUNC_IN static float4x4 Scale(float3 s)
+	{
+		return Scale(s.x, s.y, s.z);
+	}
+
+	CUDA_FUNC_IN static float4x4 Scale(float x, float y, float z)
+	{
+		float4x4 r = float4x4::Identity();
+		r(0, 0) = x;
+		r(1, 1) = y;
+		r(2, 2) = z;
+		return r;
+	}
+
+	CUDA_FUNC_IN static float4x4 Perspective(float fov, float clipNear, float clipFar)
+	{
+		float recip = 1.0f / (clipFar - clipNear);
+
+		/* Perform a scale so that the field of view is mapped
+		* to the interval [-1, 1] */
+		float cot = 1.0f / tanf(fov / 2.0f);
+
+		float4x4 trafo = float4x4::As(
+			cot, 0, 0, 0,
+			0, cot, 0, 0,
+			0, 0, clipFar * recip, -clipNear * clipFar * recip,
+			0, 0, 1, 0
+			);
+		return trafo;
+	}
+
+	CUDA_FUNC_IN static float4x4 glPerspective(float fov, float clipNear, float clipFar)
+	{
+		float recip = 1.0f / (clipNear - clipFar);
+		float cot = 1.0f / tanf(fov / 2.0f);
+
+		float4x4 trafo = float4x4::As(
+			cot, 0, 0, 0,
+			0, cot, 0, 0,
+			0, 0, (clipFar + clipNear) * recip, 2 * clipFar * clipNear * recip,
+			0, 0, -1, 0
+			);
+
+		return trafo;
+	}
+
+	CUDA_FUNC_IN static float4x4 glFrustum(float left, float right, float bottom, float top, float nearVal, float farVal)
+	{
+		float invFMN = 1 / (farVal - nearVal);
+		float invTMB = 1 / (top - bottom);
+		float invRML = 1 / (right - left);
+
+		float4x4 trafo = float4x4::As(
+			2 * nearVal*invRML, 0, (right + left)*invRML, 0,
+			0, 2 * nearVal*invTMB, (top + bottom)*invTMB, 0,
+			0, 0, -(farVal + nearVal) * invFMN, -2 * farVal*nearVal*invFMN,
+			0, 0, -1, 0
+			);
+
+		return trafo;
+	}
+
+	CUDA_FUNC_IN static float4x4 orthographic(float clipNear, float clipFar)
+	{
+		return Scale(make_float3(1.0f, 1.0f, 1.0f / (clipFar - clipNear))) %
+			Translate(make_float3(0.0f, 0.0f, -clipNear));
+	}
+
+	CUDA_FUNC_IN static float4x4 glOrthographic(float clipNear, float clipFar)
+	{
+		float a = -2.0f / (clipFar - clipNear),
+			b = -(clipFar + clipNear) / (clipFar - clipNear);
+
+		float4x4 trafo = float4x4::As(
+			1, 0, 0, 0,
+			0, 1, 0, 0,
+			0, 0, a, b,
+			0, 0, 0, 1
+			);
+		return trafo;
+	}
+
+	CUDA_FUNC_IN static float4x4 glOrthographic(float clipLeft, float clipRight,
+		float clipBottom, float clipTop, float clipNear, float clipFar)
+	{
+		float fx = 2.0f / (clipRight - clipLeft),
+			fy = 2.0f / (clipTop - clipBottom),
+			fz = -2.0f / (clipFar - clipNear),
+			tx = -(clipRight + clipLeft) / (clipRight - clipLeft),
+			ty = -(clipTop + clipBottom) / (clipTop - clipBottom),
+			tz = -(clipFar + clipNear) / (clipFar - clipNear);
+
+		float4x4 trafo = float4x4::As(
+			fx, 0, 0, tx,
+			0, fy, 0, ty,
+			0, 0, fz, tz,
+			0, 0, 0, 1
+			);
+
+		return trafo;
+	}
+
+	CUDA_FUNC_IN static float4x4 lookAt(const float3 &p, const float3 &t, const float3 &up)
+	{
+		float3 dir = normalize(t - p);
+		float3 left = normalize(cross(up, dir));
+		float3 newUp = cross(dir, left);
+		float4x4 result;
+		result(0, 0) = left.x;  result(1, 0) = left.y;  result(2, 0) = left.z;  result(3, 0) = 0;
+		result(0, 1) = newUp.x; result(1, 1) = newUp.y; result(2, 1) = newUp.z; result(3, 1) = 0;
+		result(0, 2) = dir.x;   result(1, 2) = dir.y;   result(2, 2) = dir.z;   result(3, 2) = 0;
+		result(0, 3) = p.x;     result(1, 3) = p.y;     result(2, 3) = p.z;     result(3, 3) = 1;
+		return result;
+	}
+
+	CUDA_FUNC_IN static float4x4 Orthographic(float w, float h, float n, float f)
+	{
+		float4x4 mat = float4x4::Identity();
+		mat.col(0, make_float4(2.0f / w, 0, 0, 0));
+		mat.col(1, make_float4(0, 2.0f / h, 0, 0));
+		mat.col(2, make_float4(0, 0, 1.0f / (f - n), 0));
+		mat.col(3, make_float4(0, 0, n / (n - f), 1));
+		return mat;
+	}
+
+	CUDA_FUNC_IN static float4x4 Perspective(float fov, float asp, float n, float f)
+	{
+		float cosfov = cosf(0.5f * fov), sinfov = sinf(0.5f * fov), h = cosfov / sinfov, w = h / asp;
+		float4x4 mat = float4x4::Identity();
+		mat.col(0, make_float4(w, 0, 0, 0));
+		mat.col(1, make_float4(0, h, 0, 0));
+		mat.col(2, make_float4(0, 0, -(f + n) / (f - n), 1));
+		mat.col(3, make_float4(0, 0, -(n * f) / (f - n), 0));
+		return mat;
+	}
+
+	CUDA_FUNC_IN float3 Translation() const
+	{
+		return TransformPoint(make_float3(0.0f));
+	}
+	CUDA_FUNC_IN float3 Scale() const
+	{
+		return make_float3(length(!col(0)), length(!col(1)), length(!col(2)));
+	}
+	CUDA_FUNC_IN float3 Forward() const
+	{
+		return TransformDirection(make_float3(0, 0, 1));
+	}
+	CUDA_FUNC_IN float3 Right() const
+	{
+		return TransformDirection(make_float3(1, 0, 0));
+	}
+	CUDA_FUNC_IN float3 Up() const
+	{
+		return TransformDirection(make_float3(0, 1, 0));
+	}
+};
+/*
 class float4x4
 	{
 	public:
@@ -367,4 +887,4 @@ class float4x4
 		{
 			return make_float3(Y.x, Y.y, Y.z);
 		}
-	};
+	};*/

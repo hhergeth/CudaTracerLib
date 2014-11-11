@@ -7,14 +7,14 @@ Spectrum e_SphericalCamera::sampleRay(Ray &ray, const float2 &pixelSample, const
 	sincos((1.0f - pixelSample.y * m_invResolution.y) * PI, &sinTheta, &cosTheta);
 
 	float3 d = make_float3(sinPhi*sinTheta, cosTheta, -cosPhi*sinTheta);
-	ray = Ray(toWorld.Translation(), toWorld.TransformNormal(d));
+	ray = Ray(toWorld.Translation(), toWorld.TransformDirection(d));
 
 	return Spectrum(1.0f);
 }
 
 Spectrum e_SphericalCamera::sampleDirect(DirectSamplingRecord &dRec, const float2 &sample) const
 {
-	float3 refP = toWorldInverse * dRec.ref;
+	float3 refP = toWorldInverse.TransformPoint(dRec.ref);
 	float3 d(refP);
 	float dist = length(d), invDist = 1.0f / dist;
 	d *= invDist;
@@ -41,7 +41,7 @@ float e_SphericalCamera::pdfDirection(const DirectionSamplingRecord &dRec, const
 	if (dRec.measure != ESolidAngle)
 		return 0.0f;
 
-	float3 d = toWorldInverse.TransformNormal(dRec.d);
+	float3 d = toWorldInverse.TransformDirection(dRec.d);
 	float sinTheta = math::safe_sqrt(1-d.y*d.y);
 
 	return 1 / (2 * PI * PI * MAX(sinTheta, EPSILON));
@@ -52,7 +52,7 @@ Spectrum e_SphericalCamera::evalDirection(const DirectionSamplingRecord &dRec, c
 	if (dRec.measure != ESolidAngle)
 		return Spectrum(0.0f);
 
-	float3 d = toWorldInverse.TransformNormal(dRec.d);
+	float3 d = toWorldInverse.TransformDirection(dRec.d);
 	float sinTheta = math::safe_sqrt(1-d.y*d.y);
 
 	return Spectrum(1 / (2 * PI * PI * MAX(sinTheta, EPSILON)));
@@ -60,7 +60,7 @@ Spectrum e_SphericalCamera::evalDirection(const DirectionSamplingRecord &dRec, c
 
 bool e_SphericalCamera::getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, float2 &samplePosition) const
 {
-	float3 d = normalize(toWorldInverse.TransformNormal(dRec.d));
+	float3 d = normalize(toWorldInverse.TransformDirection(dRec.d));
 
 	samplePosition = make_float2(
 		math::modulo(atan2(d.x, -d.z) * INV_TWOPI, (float) 1) * m_resolution.x,
@@ -70,53 +70,29 @@ bool e_SphericalCamera::getSamplePosition(const PositionSamplingRecord &pRec, co
 	return true;
 }
 
-float4x4 persp(float fov, float clipNear, float clipFar)
-{
-	float recip = 1.0f / (clipFar - clipNear);
-
-	/* Perform a scale so that the field of view is mapped
-	 * to the interval [-1, 1] */
-	float cot = 1.0f / tanf(fov/2.0f);
-
-	float4x4 trafo(
-		cot,  0,    0,   0,
-		0,    cot,  0,   0,
-		0,    0,    clipFar * recip, -clipNear * clipFar * recip,
-		0,    0,    1,   0
-	);
-	return trafo.Transpose();
-}
 void e_PerspectiveCamera::Update()
 {
 	e_SensorBase::Update();
-	float2 relSize = make_float2(1), relOffset = make_float2(0);
 	m_cameraToSample =
-			  persp(fov, m_fNearFarDepths.x, m_fNearFarDepths.y)
-			* float4x4::Translate(make_float3(1.0f, 1.0f/aspect, 0.0f))
-			* float4x4::Scale(make_float3(0.5f, 0.5f*aspect, 1.0f))
-			* float4x4::Translate(make_float3(-relOffset.x, -relOffset.y, 0.0f))
-			* float4x4::Scale(make_float3(1.0f / relSize.x, 1.0f / relSize.y, 1.0f));
-	m_sampleToCamera = m_cameraToSample.Inverse();
+		float4x4::Scale(make_float3(-0.5f, -0.5f*aspect, 1.0f))
+		% float4x4::Translate(make_float3(-1.0f, -1.0f / aspect, 0.0f))
+		% float4x4::Perspective(fov, m_fNearFarDepths.x, m_fNearFarDepths.y);
 
-	m_dx = m_sampleToCamera * make_float3(m_invResolution.x, 0.0f, 0.0f)
-			- m_sampleToCamera * make_float3(0.0f);
-	m_dy = m_sampleToCamera * make_float3(0.0f, m_invResolution.y, 0.0f)
-			- m_sampleToCamera * make_float3(0.0f);
+	m_sampleToCamera = m_cameraToSample.inverse();
 
-	float3 min = m_sampleToCamera * make_float3(0, 0, 0),
-		   max = m_sampleToCamera * make_float3(1, 1, 0);
+	m_dx = m_sampleToCamera.TransformPoint(make_float3(m_invResolution.x, 0.0f, 0.0f))
+		- m_sampleToCamera.TransformPoint(make_float3(0.0f));
+	m_dy = m_sampleToCamera.TransformPoint(make_float3(0.0f, m_invResolution.y, 0.0f))
+		- m_sampleToCamera.TransformPoint(make_float3(0.0f));
+
+	float3 min = m_sampleToCamera.TransformPoint(make_float3(0, 0, 0)),
+		max = m_sampleToCamera.TransformPoint(make_float3(1, 1, 0));
 	m_imageRect = AABB(min / min.z, max / max.z);
 	m_imageRect.minV.z = -FLT_MAX; m_imageRect.maxV.z = FLT_MAX;
 	m_normalization = 1.0f / (m_imageRect.Size().x * m_imageRect.Size().y);
 
 //	DirectSamplingRecord dRec(make_float3(301.48853f,398.27206f,559.20007f),make_float3(0),make_float2(0));
 	//sampleDirect(dRec, make_float2(0));
-}
-
-float4x4 e_PerspectiveCamera::getProjectionMatrix() const
-{
-	return m_cameraToSample * float4x4::Scale(make_float3(2,2,1)) * float4x4::Translate(-1,-1,0);
-	//return float4x4::Perspective(fov, aspect, m_fNearFarDepths.x, m_fNearFarDepths.y);
 }
 
 float e_PerspectiveCamera::importance(const float3 &d) const
@@ -139,21 +115,21 @@ float e_PerspectiveCamera::importance(const float3 &d) const
 
 Spectrum e_PerspectiveCamera::sampleRay(Ray &ray, const float2 &pixelSample, const float2 &apertureSample) const
 {
-	float3 nearP = m_sampleToCamera * make_float3(
+	float3 nearP = m_sampleToCamera.TransformPoint(make_float3(
 		pixelSample.x * m_invResolution.x,
-		pixelSample.y * m_invResolution.y, 0.0f);
+		pixelSample.y * m_invResolution.y, 0.0f));
 
 	/* Turn that into a normalized ray direction, and
 		adjust the ray interval accordingly */
 	float3 d = normalize(nearP);
-	ray = Ray(toWorld.Translation(), toWorld.TransformNormal(d));
+	ray = Ray(toWorld.Translation(), toWorld.TransformDirection(d));
 
 	return Spectrum(1.0f);
 }
 
 Spectrum e_PerspectiveCamera::sampleDirect(DirectSamplingRecord &dRec, const float2 &sample) const
 {
-	float3 refP = toWorldInverse * dRec.ref;
+	float3 refP = toWorldInverse.TransformPoint(dRec.ref);
 
 	/* Check if it is outside of the clip range */
 	if (refP.z < m_fNearFarDepths.x || refP.z > m_fNearFarDepths.y) {
@@ -161,7 +137,7 @@ Spectrum e_PerspectiveCamera::sampleDirect(DirectSamplingRecord &dRec, const flo
 		return Spectrum(0.0f);
 	}
 
-	float3 screenSample = m_cameraToSample * refP;
+	float3 screenSample = m_cameraToSample.TransformPoint(refP);
 	dRec.uv = make_float2(screenSample.x, screenSample.y);
 	if (dRec.uv.x < 0 || dRec.uv.x  > 1 ||
 		dRec.uv.y < 0 || dRec.uv.y > 1) {
@@ -202,11 +178,11 @@ Spectrum e_PerspectiveCamera::sampleDirection(DirectionSamplingRecord &dRec, Pos
 
 	/* Compute the corresponding position on the
 		near plane (in local camera space) */
-	float3 nearP = m_sampleToCamera * samplePos;
+	float3 nearP = m_sampleToCamera.TransformPoint(samplePos);
 
 	/* Turn that into a normalized ray direction */
 	float3 d = normalize(nearP);
-	dRec.d = toWorld.TransformNormal(d);
+	dRec.d = toWorld.TransformDirection(d);
 	dRec.measure = ESolidAngle;
 	dRec.pdf = m_normalization / (d.z * d.z * d.z);
 
@@ -215,12 +191,12 @@ Spectrum e_PerspectiveCamera::sampleDirection(DirectionSamplingRecord &dRec, Pos
 
 bool e_PerspectiveCamera::getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, float2 &samplePosition) const
 {
-	float3 local = toWorldInverse.TransformNormal(dRec.d);
+	float3 local = toWorldInverse.TransformDirection(dRec.d);
 
 	if (local.z <= 0)
 		return false;
 
-	float3 screenSample = m_cameraToSample * local;
+	float3 screenSample = m_cameraToSample.TransformPoint(local);
 	if (screenSample.x < 0 || screenSample.x > 1 ||
 		screenSample.y < 0 || screenSample.y > 1)
 		return false;
@@ -235,18 +211,21 @@ bool e_PerspectiveCamera::getSamplePosition(const PositionSamplingRecord &pRec, 
 void e_ThinLensCamera::Update()
 {
 	e_SensorBase::Update();
-	m_sampleToCamera = float4x4::Scale(make_float3(2, 2, 1)) * float4x4::Translate(make_float3(-1.0f, -1.0f, 0.0f)) * float4x4::Perspective(fov, aspect, m_fNearFarDepths.x, m_fNearFarDepths.y).Inverse();
-	m_cameraToSample = m_sampleToCamera.Inverse();
+	m_cameraToSample =
+		float4x4::Scale(make_float3(-0.5f, -0.5f*aspect, 1.0f))
+		% float4x4::Translate(make_float3(-1.0f, -1.0f / aspect, 0.0f))
+		% float4x4::Perspective(fov, m_fNearFarDepths.x, m_fNearFarDepths.y);
+	m_sampleToCamera = m_cameraToSample.inverse();
 
-	m_dx = m_sampleToCamera * make_float3(m_invResolution.x, 0.0f, 0.0f)
-			- m_sampleToCamera * make_float3(0.0f);
-	m_dy = m_sampleToCamera * make_float3(0.0f, m_invResolution.y, 0.0f)
-			- m_sampleToCamera * make_float3(0.0f);
+	m_dx = m_sampleToCamera.TransformPoint(make_float3(m_invResolution.x, 0.0f, 0.0f))
+		- m_sampleToCamera.TransformPoint(make_float3(0.0f));
+	m_dy = m_sampleToCamera.TransformPoint(make_float3(0.0f, m_invResolution.y, 0.0f))
+		- m_sampleToCamera.TransformPoint(make_float3(0.0f));
 
 	m_aperturePdf = 1 / (PI * m_apertureRadius * m_apertureRadius);
 
-	float3 min = m_sampleToCamera * make_float3(0, 0, 0),
-		   max = m_sampleToCamera * make_float3(1, 1, 0);
+	float3 min = m_sampleToCamera.TransformPoint(make_float3(0, 0, 0)),
+		max = m_sampleToCamera.TransformPoint(make_float3(1, 1, 0));
 	AABB m_imageRect = AABB(min / min.z, max / max.z);
 	m_normalization = 1.0f / (m_imageRect.Size().x * m_imageRect.Size().y);
 }
@@ -257,7 +236,7 @@ float e_ThinLensCamera::importance(const float3 &p, const float3 &d, float2* sam
 	if (cosTheta <= 0)
 		return 0.0f;
 	float invCosTheta = 1.0f / cosTheta;
-	float3 scr = m_cameraToSample * (p + d * (m_focusDistance*invCosTheta));
+	float3 scr = m_cameraToSample.TransformPoint(p + d * (m_focusDistance*invCosTheta));
 	if (scr.x < 0 || scr.x > 1 ||
 		scr.y < 0 || scr.y > 1)
 		return 0.0f;
@@ -276,9 +255,9 @@ Spectrum e_ThinLensCamera::sampleRay(Ray &ray, const float2 &pixelSample, const 
 
 	/* Compute the corresponding position on the
 		near plane (in local camera space) */
-	float3 nearP = m_sampleToCamera * make_float3(
+	float3 nearP = m_sampleToCamera.TransformPoint(make_float3(
 		pixelSample.x * m_invResolution.x,
-		pixelSample.y * m_invResolution.y, 0.0f);
+		pixelSample.y * m_invResolution.y, 0.0f));
 
 	/* Aperture position */
 	float3 apertureP = make_float3(tmp.x, tmp.y, 0.0f);
@@ -290,14 +269,14 @@ Spectrum e_ThinLensCamera::sampleRay(Ray &ray, const float2 &pixelSample, const 
 		adjust the ray interval accordingly */
 	float3 d = normalize(focusP - apertureP);
 		
-	ray = Ray(toWorld * apertureP, toWorld.TransformNormal(d));
+	ray = Ray(toWorld.TransformPoint(apertureP), toWorld.TransformDirection(d));
 
 	return Spectrum(1.0f);
 }
 
 Spectrum e_ThinLensCamera::sampleDirect(DirectSamplingRecord &dRec, const float2 &sample) const
 {
-	float3 refP = toWorldInverse * dRec.ref;
+	float3 refP = toWorldInverse.TransformPoint(dRec.ref);
 
 	/* Check if it is outside of the clip range */
 	if (refP.z < m_fNearFarDepths.x || refP.z > m_fNearFarDepths.y) {
@@ -322,7 +301,7 @@ Spectrum e_ThinLensCamera::sampleDirect(DirectSamplingRecord &dRec, const float2
 		return Spectrum(0.0f);
 	}
 
-	dRec.p = toWorld * apertureP;
+	dRec.p = toWorld.TransformPoint(apertureP);
 	dRec.d = (dRec.p - dRec.ref) * invDist;
 	dRec.dist = dist;
 	dRec.n = toWorld.Forward();
@@ -363,16 +342,16 @@ Spectrum e_ThinLensCamera::sampleDirection(DirectionSamplingRecord &dRec, Positi
 
 	/* Compute the corresponding position on the
 		near plane (in local camera space) */
-	float3 nearP = m_sampleToCamera * samplePos;
+	float3 nearP = m_sampleToCamera.TransformPoint(samplePos);
 	nearP.x = nearP.x * (m_focusDistance / nearP.z);
 	nearP.y = nearP.y * (m_focusDistance / nearP.z);
 	nearP.z = m_focusDistance;
 
-	float3 apertureP = toWorldInverse * pRec.p;
+	float3 apertureP = toWorldInverse.TransformPoint(pRec.p);
 
 	/* Turn that into a normalized ray direction */
 	float3 d = normalize(nearP - apertureP);
-	dRec.d = toWorld.TransformNormal(d);
+	dRec.d = toWorld.TransformDirection(d);
 	dRec.measure = ESolidAngle;
 	dRec.pdf = m_normalization / (d.z * d.z * d.z);
 
@@ -382,22 +361,26 @@ Spectrum e_ThinLensCamera::sampleDirection(DirectionSamplingRecord &dRec, Positi
 void e_OrthographicCamera::Update()
 {
 	e_SensorBase::Update();
-	m_sampleToCamera = float4x4::Scale(make_float3(2, 2, 1)) * float4x4::Translate(make_float3(-1.0f, -1.0f, 0.0f)) * float4x4::Orthographic(screenScale.x, screenScale.y, m_fNearFarDepths.x, m_fNearFarDepths.y).Inverse();
-	m_cameraToSample = m_sampleToCamera.Inverse();
+	m_cameraToSample =
+		float4x4::Scale(make_float3(-0.5f, -0.5f*aspect, 1.0f))
+		% float4x4::Translate(make_float3(-1.0f, -1.0f / aspect, 0.0f))
+		% float4x4::orthographic(m_fNearFarDepths.x, m_fNearFarDepths.y);
+
+	m_sampleToCamera = m_cameraToSample.inverse();
 
 	m_invSurfaceArea = 1.0f / (
-		length(toWorld * m_sampleToCamera.Right()) *
-		length(toWorld * m_sampleToCamera.Up()) );
+		length(toWorld.TransformPoint(m_sampleToCamera.Right())) *
+		length(toWorld.TransformPoint(m_sampleToCamera.Up())));
 	m_scale = length(toWorld.Forward());
 }
 
 Spectrum e_OrthographicCamera::sampleRay(Ray &ray, const float2 &pixelSample, const float2 &apertureSample) const
 {
-	float3 nearP = m_sampleToCamera * make_float3(
+	float3 nearP = m_sampleToCamera.TransformPoint(make_float3(
 		pixelSample.x * m_invResolution.x,
-		pixelSample.y * m_invResolution.y, 0.0f);
+		pixelSample.y * m_invResolution.y, 0.0f));
 
-	ray = Ray(toWorld * make_float3(nearP.x, nearP.y, 0.0f), toWorld.Forward());
+	ray = Ray(toWorld.TransformPoint(make_float3(nearP.x, nearP.y, 0.0f)), toWorld.Forward());
 
 	return Spectrum(1.0f);
 }
@@ -407,10 +390,10 @@ Spectrum e_OrthographicCamera::sampleDirect(DirectSamplingRecord &dRec, const fl
 	dRec.n = toWorld.Forward();
 	float scale = length(dRec.n);
 
-	float3 localP = toWorldInverse * dRec.ref;
+	float3 localP = toWorldInverse.TransformPoint(dRec.ref);
 	localP.z *= scale;
 
-	float3 sample = m_cameraToSample * localP;
+	float3 sample = m_cameraToSample.TransformPoint(localP);
 
 	if (sample.x < 0 || sample.x > 1 || sample.y < 0 ||
 		sample.y > 1 || sample.z < 0 || sample.z > 1) {
@@ -418,7 +401,7 @@ Spectrum e_OrthographicCamera::sampleDirect(DirectSamplingRecord &dRec, const fl
 		return Spectrum(0.0f);
 	}
 
-	dRec.p = toWorld * make_float3(localP.x, localP.y, 0.0f);
+	dRec.p = toWorld.TransformPoint(make_float3(localP.x, localP.y, 0.0f));
 	dRec.n /= scale;
 	dRec.d = -dRec.n;
 	dRec.dist = localP.z;
@@ -442,10 +425,10 @@ Spectrum e_OrthographicCamera::samplePosition(PositionSamplingRecord &pRec, cons
 
 	pRec.uv = make_float2(samplePos.x * m_resolution.x,	samplePos.y * m_resolution.y);
 
-	float3 nearP = m_sampleToCamera * samplePos;
+	float3 nearP = m_sampleToCamera.TransformPoint(samplePos);
 
 	nearP.z = 0.0f;
-	pRec.p = toWorld * nearP;
+	pRec.p = toWorld.TransformPoint(nearP);
 	pRec.n = toWorld.Forward();
 	pRec.pdf = m_invSurfaceArea;
 	pRec.measure = EArea;
@@ -454,8 +437,8 @@ Spectrum e_OrthographicCamera::samplePosition(PositionSamplingRecord &pRec, cons
 
 bool e_OrthographicCamera::getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, float2 &samplePosition) const
 {
-	float3 localP = toWorldInverse * pRec.p;
-	float3 sample = m_cameraToSample * localP;
+	float3 localP = toWorldInverse.TransformPoint(pRec.p);
+	float3 sample = m_cameraToSample.TransformPoint(localP);
 
 	if (sample.x < 0 || sample.x > 1 || sample.y < 0 || sample.y > 1)
 		return false;
@@ -468,12 +451,16 @@ bool e_OrthographicCamera::getSamplePosition(const PositionSamplingRecord &pRec,
 void e_TelecentricCamera::Update()
 {
 	e_SensorBase::Update();
-	m_sampleToCamera = float4x4::Scale(make_float3(2, 2, 1)) * float4x4::Translate(make_float3(-1.0f, -1.0f, 0.0f)) * float4x4::Orthographic(screenScale.x, screenScale.y, m_fNearFarDepths.x, m_fNearFarDepths.y).Inverse();
-	m_cameraToSample = m_sampleToCamera.Inverse();
+	m_cameraToSample =
+		float4x4::Scale(make_float3(-0.5f, -0.5f*aspect, 1.0f))
+		% float4x4::Translate(make_float3(-1.0f, -1.0f / aspect, 0.0f))
+		% float4x4::orthographic(m_fNearFarDepths.x, m_fNearFarDepths.y);
+
+	m_sampleToCamera = m_cameraToSample.inverse();
 
 	m_normalization = 1.0f / (
-		length(toWorld * m_sampleToCamera.Right()) *
-		length(toWorld * m_sampleToCamera.Up()) );
+		length(toWorld.TransformPoint(m_sampleToCamera.Right())) *
+		length(toWorld.TransformPoint(m_sampleToCamera.Up())));
 
 	m_aperturePdf = 1.0f / (PI * m_apertureRadius * m_apertureRadius);
 }
@@ -485,16 +472,16 @@ Spectrum e_TelecentricCamera::sampleRay(Ray &ray, const float2 &pixelSample, con
 
 	/* Compute the corresponding position on the
 		near plane (in local camera space) */
-	float3 focusP = m_sampleToCamera * make_float3(
+	float3 focusP = m_sampleToCamera.TransformPoint(make_float3(
 		pixelSample.x * m_invResolution.x,
-		pixelSample.y * m_invResolution.y, 0.0f);
+		pixelSample.y * m_invResolution.y, 0.0f));
 	focusP.z = m_focusDistance;
 
 	/* Compute the ray origin */
 	float3 orig = make_float3(diskSample.x+focusP.x,
 		diskSample.y+focusP.y, 0.0f);
 
-	ray = Ray(toWorld * orig, toWorld.TransformNormal(focusP - orig));
+	ray = Ray(toWorld.TransformPoint(orig), toWorld.TransformDirection(focusP - orig));
 
 	return Spectrum(1.0f);
 }
@@ -503,7 +490,7 @@ Spectrum e_TelecentricCamera::sampleDirect(DirectSamplingRecord &dRec, const flo
 {
 	float f = m_focusDistance, apertureRadius = m_apertureRadius / screenScale.x;
 
-	float3 localP = toWorldInverse * dRec.ref;
+	float3 localP = toWorldInverse.TransformPoint(dRec.ref);
 
 	float dist = localP.z;
 	if (dist < m_fNearFarDepths.x || dist > m_fNearFarDepths.y) {
@@ -524,14 +511,14 @@ Spectrum e_TelecentricCamera::sampleDirect(DirectSamplingRecord &dRec, const flo
 	float3 intersection = diskP + localD * (f/localD.z);
 
 	/* Determine the associated sample coordinates */
-	float3 uv = m_cameraToSample * intersection;
+	float3 uv = m_cameraToSample.TransformPoint(intersection);
 	if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1) {
 		dRec.pdf = 0.0f;
 		return Spectrum(0.0f);
 	}
 
 	dRec.uv = make_float2(uv.x, uv.y);
-	dRec.p = toWorld * diskP;
+	dRec.p = toWorld.TransformPoint(diskP);
 	dRec.n = toWorld.Forward();
 	dRec.d = dRec.p - dRec.ref;
 	dRec.dist = length(dRec.d);
@@ -565,10 +552,10 @@ Spectrum e_TelecentricCamera::samplePosition(PositionSamplingRecord &pRec, const
 		samplePos.y = pRec.uv.y * m_invResolution.y;
 	}
 
-	float3 p = m_sampleToCamera * make_float3(
-		aperturePos.x + samplePos.x, aperturePos.y + samplePos.y, 0.0f);
+	float3 p = m_sampleToCamera.TransformPoint(make_float3(
+		aperturePos.x + samplePos.x, aperturePos.y + samplePos.y, 0.0f));
 
-	pRec.p = toWorld * make_float3(p.x, p.y, 0.0f);
+	pRec.p = toWorld.TransformPoint(make_float3(p.x, p.y, 0.0f));
 	pRec.n = toWorld.Forward();
 	pRec.pdf = m_aperturePdf;
 	pRec.measure = EArea;
@@ -577,11 +564,11 @@ Spectrum e_TelecentricCamera::samplePosition(PositionSamplingRecord &pRec, const
 
 Spectrum e_TelecentricCamera::sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const float2 &sample, const float2 *extra) const
 {
-	float3 nearP = m_sampleToCamera * make_float3(sample.x, sample.y, 0.0f);
+	float3 nearP = m_sampleToCamera.TransformPoint(make_float3(sample.x, sample.y, 0.0f));
 
 	/* Turn that into a normalized ray direction */
 	float3 d = normalize(nearP);
-	dRec.d = toWorld.TransformNormal(d);
+	dRec.d = toWorld.TransformDirection(d);
 	dRec.measure = ESolidAngle;
 	dRec.pdf = m_normalization / (d.z * d.z * d.z);
 
@@ -590,10 +577,7 @@ Spectrum e_TelecentricCamera::sampleDirection(DirectionSamplingRecord &dRec, Pos
 
 float4x4 e_Sensor::View() const
 {
-	float4x4 m_mView = As<e_SensorBase>()->getWorld();
-	float3 pos = m_mView.Translation();
-	m_mView = m_mView * float4x4::Translate(-pos);
-	return m_mView;
+	return As<e_SensorBase>()->getWorld();
 }
 
 float3 e_Sensor::Position() const
@@ -601,9 +585,12 @@ float3 e_Sensor::Position() const
 	return As<e_SensorBase>()->getWorld().Translation();
 }
 
-void e_Sensor::SetToWorld(const float3& pos, const float4x4& rot)
+void e_Sensor::SetToWorld(const float3& pos, const float4x4& _rot)
 {
-	SetToWorld(rot * float4x4::Translate(pos));
+	float4x4 rot = _rot;
+	rot.col(3, make_float4(0, 0, 0, 1));
+	rot.row(3, make_float4(0, 0, 0, 1));
+	SetToWorld(float4x4::Translate(pos) % rot);
 }
 
 void e_Sensor::SetToWorld(const float3& pos, const float3& _f)
@@ -611,10 +598,17 @@ void e_Sensor::SetToWorld(const float3& pos, const float3& _f)
 	float3 f = normalize(_f);
 	float3 r = normalize(cross(f, make_float3(0,1,0)));
 	float3 u = normalize(cross(r, f));
+	SetToWorld(pos, pos + f, u);
+}
+
+void e_Sensor::SetToWorld(const float3& pos, const float3& tar, const float3& u)
+{
+	float3 f = normalize(tar - pos);
+	float3 r = normalize(cross(f, u));
 	float4x4 m_mView = float4x4::Identity();
-	m_mView.X = make_float4(r.x, r.y, r.z, 0.0f);
-	m_mView.Y = make_float4(u.x, u.y, u.z, 0.0f);
-	m_mView.Z = make_float4(f.x, f.y, f.z, 0.0f);
+	m_mView.col(0, make_float4(r, 0));
+	m_mView.col(1, make_float4(u, 0));
+	m_mView.col(2, make_float4(f, 0));
 	SetToWorld(pos, m_mView);
 }
 
@@ -628,8 +622,8 @@ void e_Sensor::SetToWorld(const float4x4& w)
 	As()->SetToWorld(w);
 }
 
-float4x4 e_Sensor::getGLViewProjection() const
+float4x4 e_Sensor::getProjectionMatrix() const
 {
-	float4x4 proj = getProjectionMatrix();
-	return (float4x4::Translate(-1.0f * Position()) * (View().Inverse() )) * proj;
+	float4x4 q = float4x4::Translate(-1, -1, 0) % float4x4::Scale(make_float3(2, 2, 1)) % As()->m_cameraToSample;
+	return q;
 }

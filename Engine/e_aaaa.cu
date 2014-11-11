@@ -1,63 +1,54 @@
 #include "e_BSDF.h"
 
-Spectrum blend::sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &_sample) const
+Spectrum dielectric::sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &sample) const
 {
-	float weights[2];
-	weights[1] = clamp(this->weight.Evaluate(bRec.map).average(), 0.0f, 1.0f);
-	weights[0] = 1.0f - weights[1];
+	bool sampleReflection = (bRec.typeMask & EDeltaReflection);
+	bool sampleTransmission = (bRec.typeMask & EDeltaTransmission);
 
-	float2 sample = _sample;
-	unsigned int entry;
-	if (sample.x < weights[0])
-		{entry = 0; sample.x /= weights[0]; }
-	else { entry = 1; sample.x = (sample.x - weights[0]) / weights[1]; }
-	Spectrum result = bsdfs[entry].sample(bRec, pdf, sample);
-	if (result.isZero()) // sampling failed
-		return result;
+	float cosThetaT;
+	float F = MonteCarlo::fresnelDielectricExt(Frame::cosTheta(bRec.wi), cosThetaT, m_eta);
 
-	result *= weights[entry] * pdf;
-	pdf *= weights[entry];
+	if (sampleTransmission && sampleReflection) {
+		//float f0 = m_specularReflectance.Evaluate(bRec.map).average(), f1 = m_specularTransmittance.Evaluate(bRec.map).average(), f = F*f0/(f0+f1);
+		if (sample.x <= F) {
+			bRec.sampledType = EDeltaReflection;
+			bRec.wo = reflect(bRec.wi);
+			bRec.eta = 1.0f;
+			pdf = F;
 
-	EMeasure measure = BSDF::getMeasure(bRec.sampledType);
-	for (size_t i=0; i<2; ++i) {
-		if (entry == i)
-			continue;
-		pdf += bsdfs[i].pdf(bRec, measure) * weights[i];
-		result += bsdfs[i].f(bRec, measure) * weights[i];
+			return m_specularReflectance.Evaluate(bRec.map);// / f * F;
+		}
+		else {
+			bRec.sampledType = EDeltaTransmission;
+			bRec.wo = refract(bRec.wi, cosThetaT);
+			bRec.eta = cosThetaT < 0 ? m_eta : m_invEta;
+			pdf = 1 - F;
+
+			float factor = (bRec.mode == ERadiance)
+				? (cosThetaT < 0 ? m_invEta : m_eta) : 1.0f;
+
+			return m_specularTransmittance.Evaluate(bRec.map) * (factor * factor);// / (1 - f) * (1 - F);
+		}
 	}
-	return result/pdf;
+	else if (sampleReflection) {
+		bRec.sampledType = EDeltaReflection;
+		bRec.wo = reflect(bRec.wi);
+		bRec.eta = 1.0f;
+		pdf = 1.0f;
+
+		return m_specularReflectance.Evaluate(bRec.map);
+	}
+	else if (sampleTransmission) {
+		bRec.sampledType = EDeltaTransmission;
+		bRec.wo = refract(bRec.wi, cosThetaT);
+		bRec.eta = cosThetaT < 0 ? m_eta : m_invEta;
+		pdf = 1.0f;
+
+		float factor = (bRec.mode == ERadiance)
+			? (cosThetaT < 0 ? m_invEta : m_eta) : 1.0f;
+
+		return m_specularTransmittance.Evaluate(bRec.map) * (factor * factor * (1 - F));
+	}
+
+	return Spectrum(0.0f);
 }
-
-CUDA_FUNC_IN Spectrum FrDiel(float cosi, float cost, const Spectrum &etai,
-                const Spectrum &etat) {
-    Spectrum Rparl = ((etat * cosi) - (etai * cost)) /
-                     ((etat * cosi) + (etai * cost));
-    Spectrum Rperp = ((etai * cosi) - (etat * cost)) /
-                     ((etai * cosi) + (etat * cost));
-    return (Rparl*Rparl + Rperp*Rperp) / 2.f;
-}
-
-CUDA_FUNC_IN Spectrum Evaluate(float cosi, float eta_i, float eta_t)
-{
-    // Compute Fresnel reflectance for dielectric
-    cosi = clamp(cosi, -1.f, 1.f);
-
-    // Compute indices of refraction for dielectric
-    bool entering = cosi > 0.;
-    float ei = eta_i, et = eta_t;
-    if (!entering)
-        swapk(ei, et);
-
-    // Compute _sint_ using Snell's law
-    float sint = ei/et * sqrtf(MAX(0.f, 1.f - cosi*cosi));
-    if (sint >= 1.) {
-        // Handle total internal reflection
-        return 1.;
-    }
-    else {
-        float cost = sqrtf(MAX(0.f, 1.f - sint*sint));
-        return FrDiel(fabsf(cosi), cost, Spectrum(ei), Spectrum(et));
-    }
-}
-
-

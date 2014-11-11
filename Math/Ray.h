@@ -25,7 +25,7 @@ public:  // Methods
 	CUDA_FUNC_IN float3 getDirection() const{return direction;}
 	CUDA_FUNC_IN Ray operator *(const float4x4& m) const
 	{
-		return Ray(m * origin, m.TransformNormal(direction));
+		return Ray(m.TransformPoint(origin), m.TransformDirection(direction));
 	}
 	CUDA_FUNC_IN float3 operator()(float d) const
 	{

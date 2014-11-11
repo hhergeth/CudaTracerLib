@@ -11,6 +11,7 @@ public:
 	float aspect;
 	float2 m_resolution, m_invResolution;
 	float4x4 toWorld, toWorldInverse;
+	float4x4 m_cameraToSample, m_sampleToCamera;
 	float2 m_fNearFarDepths;
 	float fov;
 	float m_apertureRadius;
@@ -30,14 +31,14 @@ public:
 	}
 	virtual void Update()
 	{
-		toWorldInverse = toWorld.Inverse();
+		toWorldInverse = toWorld.inverse();
 		m_invResolution = make_float2(1) / m_resolution;
 		aspect = m_resolution.x / m_resolution.y;
 	}
 	virtual void SetToWorld(const float4x4& w)
 	{
 		toWorld = w;
-		toWorldInverse = w.Inverse();
+		toWorldInverse = w.inverse();
 		Update();
 	}
 	///_fov in degrees
@@ -136,7 +137,7 @@ struct e_SphericalCamera : public e_SensorBase
 		sincos(samplePos.x * 2 * PI, &sinPhi, &cosPhi);
 		sincos(samplePos.y * PI, &sinTheta, &cosTheta);
 
-		dRec.d = toWorld * make_float3(sinPhi*sinTheta, cosTheta, -cosPhi*sinTheta);
+		dRec.d = toWorld.TransformPoint(make_float3(sinPhi*sinTheta, cosTheta, -cosPhi*sinTheta));
 		dRec.measure = ESolidAngle;
 		dRec.pdf = 1 / (2 * PI * PI * MAX(sinTheta, EPSILON));
 
@@ -149,18 +150,12 @@ struct e_SphericalCamera : public e_SensorBase
 
 	CUDA_DEVICE CUDA_HOST bool getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, float2 &samplePosition) const;
 
-	float4x4 getProjectionMatrix() const
-	{
-		return float4x4::Identity();
-	}
-
 	TYPE_FUNC(e_SphericalCamera)
 };
 
 #define e_PerspectiveCamera_TYPE 2
 struct e_PerspectiveCamera : public e_SensorBase
 {
-	float4x4 m_cameraToSample, m_sampleToCamera;
 	float3 m_dx, m_dy;
 	float m_normalization;
 	AABB m_imageRect;
@@ -221,7 +216,7 @@ public:
 		if (dRec.measure != ESolidAngle)
 			return 0.0f;
 
-		return importance(toWorldInverse.TransformNormal(dRec.d));
+		return importance(toWorldInverse.TransformDirection(dRec.d));
 	}
 
 	CUDA_FUNC_IN Spectrum evalDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
@@ -229,12 +224,10 @@ public:
 		if (dRec.measure != ESolidAngle)
 			return Spectrum(0.0f);
 
-		return Spectrum(importance(toWorldInverse.TransformNormal(dRec.d)));
+		return Spectrum(importance(toWorldInverse.TransformDirection(dRec.d)));
 	}
 
 	CUDA_DEVICE CUDA_HOST bool getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, float2 &samplePosition) const;
-
-	float4x4 getProjectionMatrix() const;
 
 	TYPE_FUNC(e_PerspectiveCamera)
 };
@@ -242,7 +235,6 @@ public:
 #define e_ThinLensCamera_TYPE 3
 struct e_ThinLensCamera : public e_SensorBase
 {
-	float4x4 m_cameraToSample, m_sampleToCamera;
 	float3 m_dx, m_dy;
 	float m_aperturePdf;
 	float m_normalization;
@@ -279,7 +271,7 @@ public:
 	{
 		float2 aperturePos = Warp::squareToUniformDiskConcentric(sample) * m_apertureRadius;
 
-		pRec.p = toWorld * make_float3(aperturePos.x, aperturePos.y, 0.0f);
+		pRec.p = toWorld.TransformPoint(make_float3(aperturePos.x, aperturePos.y, 0.0f));
 		pRec.n = toWorld.Forward();
 		pRec.pdf = m_aperturePdf;
 		pRec.measure = EArea;
@@ -303,7 +295,7 @@ public:
 		if (dRec.measure != ESolidAngle)
 			return 0.0f;
 
-		return importance(toWorldInverse * pRec.p, toWorldInverse.TransformNormal(dRec.d));
+		return importance(toWorldInverse.TransformPoint(pRec.p), toWorldInverse.TransformDirection(dRec.d));
 	}
 
 	CUDA_FUNC_IN Spectrum evalDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
@@ -311,20 +303,20 @@ public:
 		if (dRec.measure != ESolidAngle)
 			return Spectrum(0.0f);
 
-		return Spectrum(importance(toWorldInverse * pRec.p, toWorldInverse.TransformNormal(dRec.d)));
+		return Spectrum(importance(toWorldInverse.TransformPoint(pRec.p), toWorldInverse.TransformDirection(dRec.d)));
 	}
 
 	CUDA_FUNC_IN bool getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, float2 &samplePosition) const
 	{
-		float3 localP(toWorldInverse * pRec.p);
-		float3 localD(toWorldInverse.TransformNormal(dRec.d));
+		float3 localP(toWorldInverse.TransformPoint(pRec.p));
+		float3 localD(toWorldInverse.TransformDirection(dRec.d));
 
 		if (localD.z <= 0)
 			return false;
 
 		float3 intersection = localP + localD * (m_focusDistance / localD.z);
 
-		float3 screenSample = m_cameraToSample * intersection;
+		float3 screenSample = m_cameraToSample.TransformPoint(intersection);
 		if (screenSample.x < 0 || screenSample.x > 1 ||
 			screenSample.y < 0 || screenSample.y > 1)
 			return false;
@@ -336,11 +328,6 @@ public:
 		return true;
 	}
 
-	float4x4 getProjectionMatrix() const
-	{
-		return float4x4::Perspective(fov, aspect, m_fNearFarDepths.x, m_fNearFarDepths.y);
-	}
-
 	TYPE_FUNC(e_ThinLensCamera)
 };
 
@@ -350,8 +337,6 @@ struct e_OrthographicCamera : public e_SensorBase
 public:
 	float2 screenScale;
 private:
-	float4x4 m_cameraToSample;
-	float4x4 m_sampleToCamera;
 	float m_invSurfaceArea, m_scale;
 public:
 	e_OrthographicCamera()
@@ -420,11 +405,6 @@ public:
 
 	CUDA_DEVICE CUDA_HOST bool getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, float2 &samplePosition) const;
 
-	float4x4 getProjectionMatrix() const
-	{
-		return float4x4::Orthographic(screenScale.x, screenScale.y, m_fNearFarDepths.x, m_fNearFarDepths.y);
-	}
-
 	TYPE_FUNC(e_OrthographicCamera)
 };
 
@@ -434,8 +414,6 @@ struct e_TelecentricCamera : public e_SensorBase
 public:
 	float2 screenScale;
 protected:
-	float4x4 m_cameraToSample;
-	float4x4 m_sampleToCamera;
 	float m_normalization;
 	float m_aperturePdf;
 public:
@@ -507,11 +485,6 @@ public:
 		return false;
 	}
 
-	float4x4 getProjectionMatrix() const
-	{
-		return float4x4::Orthographic(screenScale.x, screenScale.y, m_fNearFarDepths.x, m_fNearFarDepths.y);
-	}
-
 	TYPE_FUNC(e_TelecentricCamera)
 };
 
@@ -531,17 +504,13 @@ public:
 
 	void SetToWorld(const float3& pos, const float3& f);
 
+	void SetToWorld(const float3& pos, const float3& tar, const float3& up);
+
 	void SetFilmData(int w, int h);
 
 	void SetToWorld(const float4x4& w);
 
-	float4x4 getGLViewProjection() const;
-
-	float4x4 getProjectionMatrix() const
-	{
-		CALL_FUNC5(e_SphericalCamera,e_PerspectiveCamera,e_ThinLensCamera,e_OrthographicCamera,e_TelecentricCamera, getProjectionMatrix())
-		return float4x4::Identity();
-	}
+	float4x4 getProjectionMatrix() const;
 
 	CUDA_FUNC_IN Ray GenRay(int x, int y)
 	{

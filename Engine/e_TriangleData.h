@@ -20,7 +20,7 @@ public:
 		struct
 		{
 			unsigned short Normals[3];//Row0.x,y
-			unsigned short Tangents[3];//Row0.y,z
+			unsigned short dpdu, dpdv, faceN;//Row0.y,z
 			unsigned char MatIndex;//Row0.w
 			unsigned char ExtraData[3];//Row0.w
 			UV_Set UV_Sets[NUM_UV_SETS];
@@ -31,11 +31,10 @@ public:
 			uint3 RowX[NUM_UV_SETS];
 		} m_sDeviceData;
 	};
-	//float3 NOR[3];
 public:
 	e_TriangleData(){}
 	e_TriangleData(const float3* P, unsigned char matIndex, const float2* T, const float3* N, const float3* Tan, const float3* BiTan);
-	CUDA_DEVICE CUDA_HOST void lerpFrame(const float2& bCoords, const float4x4& localToWorld, Frame& sys, float3* ng = 0) const;
+	CUDA_DEVICE CUDA_HOST void lerpFrame(const float2& bCoords, const float4x4& localToWorld, const float4x4& worldToLocal, Frame& sys, float3* ng = 0) const;
 	CUDA_FUNC_IN unsigned int getMatIndex(const unsigned int off) const 
 	{
 		unsigned int v = m_sDeviceData.Row0.w & 0xff;
@@ -43,8 +42,8 @@ public:
 	}
 	CUDA_DEVICE CUDA_HOST float2 lerpUV(int setId, const float2& bCoords) const;
 	CUDA_DEVICE CUDA_HOST void getNormalDerivative(const float2& bCoords, float3& dndu, float3& dndv) const;
-	CUDA_DEVICE CUDA_HOST void setData(const float3& na, const float3& nb, const float3& nc,
-									   const float3& ta, const float3& tb, const float3& tc);
+	CUDA_DEVICE CUDA_HOST void setData(const float3& v0, const float3& v1, const float3& v2,
+									   const float3& n0, const float3& n1, const float3& n3);
 	CUDA_FUNC_IN unsigned char lerpExtraData(const float2& bCoords) const
 	{
 		unsigned int V = m_sDeviceData.Row0.w;

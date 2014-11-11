@@ -42,6 +42,10 @@ public:
 		yRes = yResolution;
 	}
 	CUDA_DEVICE CUDA_HOST void AddSample(int sx, int sy, const Spectrum &L);
+	CUDA_FUNC_IN void ClearSample(int sx, int sy)
+	{
+		*getPixel(sy * xResolution + sx) = Pixel();
+	}
 	void setStdFilter()
 	{
 		e_KernelFilter flt;
@@ -61,7 +65,7 @@ public:
 	void EndRendering();
 	void Clear();
 	struct Pixel {
-        Pixel() {
+        CUDA_FUNC_IN Pixel() {
             xyz[0] = xyz[1] = xyz[2] = 0;
 			xyzSplat[0] = xyzSplat[1] = xyzSplat[2] = 0;
             weightSum = 0.0f;

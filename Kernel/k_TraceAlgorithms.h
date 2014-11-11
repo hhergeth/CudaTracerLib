@@ -27,18 +27,16 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(float3& a_Dir, float3& a_O
 	int depth = 0;
 	bool specularBounce = false;
 	BSDFSamplingRecord bRec;
-	float accPdf = 1;
 	while (k_TraceRay(r0.direction, r0.origin, &r) && depth++ < 7)
 	{
 		if(distTravalled && depth == 1)
 			*distTravalled = r.m_fDist;
-		r.getBsdfSample(r0, rnd, &bRec); //return (Spectrum(bRec.map.sys.n) + Spectrum(1)) / 2.0f; //return bRec.map.sys.n;
+		r.getBsdfSample(r0, rnd, &bRec);// return (Spectrum(bRec.map.sys.n) + Spectrum(1)) / 2.0f; //return bRec.map.sys.n;
 		if(!DIRECT || (depth == 1 || specularBounce))
 			cl += cf * r.Le(r0(r.m_fDist), bRec.map.sys, -r0.direction);
 		Spectrum f = r.getMat().bsdf.sample(bRec, rnd.randomFloat2());
 		if(DIRECT)
 			cl += cf * UniformSampleAllLights(bRec, r.getMat(), 1);
-		accPdf *= r.getMat().bsdf.pdf(bRec);
 		specularBounce = (bRec.sampledType & EDelta) != 0;
 		float p = f.max(); 
 		if (depth > 5)
@@ -53,6 +51,5 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(float3& a_Dir, float3& a_O
 	}
 	if(!r.hasHit())
 		cl += cf * g_SceneData.EvalEnvironment(r0);
-	//return accPdf;
 	return cl;
 }

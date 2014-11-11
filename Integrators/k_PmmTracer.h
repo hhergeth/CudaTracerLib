@@ -22,7 +22,7 @@ protected:
 	virtual void DoRender(e_Image* I);
 	virtual void StartNewTrace(e_Image* I);
 private:
-	bool doTrace;
+	int passIteration;
 	e_SpatialLinkedMap<SpatialEntry> sMap;
 	e_SpatialSet<DirectionModel> dMap;
 };

@@ -108,12 +108,12 @@ public:
         float yw = val.y * val.w;
         float yz = val.y * val.z;
         float xw = val.x * val.w;
-		return float4x4(
-			1.0f - (2.0f * (yy + zz)), 2.0f * (xy + zw), 2.0f * (zx - yw), 0,
-			2.0f * (xy - zw), 1.0f - (2.0f * (zz + xx)), 2.0f * (yz + xw), 0,
-			2.0f * (zx + yw), 2.0f * (yz - xw), 1.0f - (2.0f * (yy + xx)), 0,
-			0, 0, 0, 1
-			);
+		float4x4 r;
+		r.row(0, make_float4(1.0f - (2.0f * (yy + zz)), 2.0f * (xy + zw), 2.0f * (zx - yw), 0));
+		r.row(1, make_float4(2.0f * (xy - zw), 1.0f - (2.0f * (zz + xx)), 2.0f * (yz + xw), 0));
+		r.row(2, make_float4(2.0f * (zx + yw), 2.0f * (yz - xw), 1.0f - (2.0f * (yy + xx)), 0));
+		r.row(3, make_float4(0, 0, 0, 1));
+		return r;
 	}
 	CUDA_FUNC_IN Quaternion slerp(const Quaternion &q1, const Quaternion &q2, float t)
 	{

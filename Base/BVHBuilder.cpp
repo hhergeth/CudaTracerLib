@@ -605,7 +605,7 @@ void performSpatialSplit(buffer& buf, NodeSpec& left, NodeSpec& right, SpatialSp
 }
 int buildNode(buffer& buf,  __m128_box& box, const BVHBuilder::Platform& P, float m_minOverlap, IBVHBuilderCallback* clb, int level=0)
 {
-	//buf.removeDegenerates();
+	buf.removeDegenerates();
 	if ((buf.N <= P.getMinLeafSize() && level > 0) || level >= MaxDepth)
 		return createLeaf(buf, clb);
 	float area = box.area();

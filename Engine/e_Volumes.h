@@ -34,7 +34,7 @@ public:
 	{
 		e_BaseVolumeRegion::Box = box;
 		e_BaseVolumeRegion::Func = func;
-        WorldToVolume = v2w.Inverse();
+        WorldToVolume = v2w.inverse();
         sig_a = sa;
         sig_s = ss;
         le = emit;

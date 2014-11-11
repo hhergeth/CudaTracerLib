@@ -3,12 +3,12 @@
 #ifdef TS_DEC_FRAMEWORK
 inline void ComputeTangentSpace(const float3* V, const float2* T, const unsigned int* I, unsigned int vertexCount, unsigned int triCount, float3* a_Normals, float3* a_Tangents, float3* a_BiTangents = 0)
 {
-	bool hasUV = T == 0;
+	bool hasUV = false;
 	if(T)
 		for(unsigned int i = 0; i < MIN(12u, vertexCount); i++)
 			if(length(T[i]) != 0)
 			{
-				hasUV = false;
+				hasUV = true;
 				break;
 			}
 
@@ -122,7 +122,7 @@ inline void ComputeTangentSpace(MD5Model* a_Mesh, e_AnimatedVertex** a_Vertices,
 			{
 				Weight &w = a_Mesh->meshes[i]->weights[V.weightIndex + k];
 				Joint &joint = a_Mesh->joints[w.joint];
-				float3 r = joint.quat.toMatrix() * *(float3*)&w.pos;
+				float3 r = joint.quat.toMatrix().TransformPoint(*(float3*)&w.pos);
 				pos += (*(float3*)&joint.pos + r) * w.w;
 				av.m_cBoneIndices[k] = (unsigned char)w.joint;
 				av.m_fBoneWeights[k] = (unsigned char)(w.w * 255.0f);

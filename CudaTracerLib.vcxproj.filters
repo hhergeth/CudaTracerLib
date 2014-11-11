@@ -1,0 +1,435 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Base">
+      <UniqueIdentifier>{d21d44d6-ec43-4d35-9f45-b7665c89b6ac}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Math">
+      <UniqueIdentifier>{66d249d4-9fb4-4701-a148-eb57a4201f05}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Kernel">
+      <UniqueIdentifier>{5f83392b-e900-405e-8515-3ec63ddf4478}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine">
+      <UniqueIdentifier>{da259ccd-e8eb-403b-8a87-e0204e13d519}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Integrators">
+      <UniqueIdentifier>{841c729f-c869-426e-b42f-8bff9fcae7b7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\SceneBuilder">
+      <UniqueIdentifier>{3bb70ff5-b556-42db-9042-9985093f213c}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Defines.h" />
+    <ClInclude Include="MathTypes.h" />
+    <ClInclude Include="Base\BVHBuilder.h">
+      <Filter>Base</Filter>
+    </ClInclude>
+    <ClInclude Include="Base\CudaRandom.h">
+      <Filter>Base</Filter>
+    </ClInclude>
+    <ClInclude Include="Base\FileStream.h">
+      <Filter>Base</Filter>
+    </ClInclude>
+    <ClInclude Include="Base\Platform.h">
+      <Filter>Base</Filter>
+    </ClInclude>
+    <ClInclude Include="Base\STL.h">
+      <Filter>Base</Filter>
+    </ClInclude>
+    <ClInclude Include="Base\StringUtils.h">
+      <Filter>Base</Filter>
+    </ClInclude>
+    <ClInclude Include="Base\TangentSpace.h">
+      <Filter>Base</Filter>
+    </ClInclude>
+    <ClInclude Include="Base\Timer.h">
+      <Filter>Base</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\AABB.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\Compression.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\cutil_math.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\float4x4.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\Frame.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\half.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\Int24.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\Integrator.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\Quaternion.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\Ray.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\Sampling.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\Spectrum.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\Spline.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\Warp.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Kernel\k_BlockSampler.h">
+      <Filter>Kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="Kernel\k_TraceAlgorithms.h">
+      <Filter>Kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="Kernel\k_TraceHelper.h">
+      <Filter>Kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="Kernel\k_Tracer.h">
+      <Filter>Kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\SceneBuilder\Importer.h">
+      <Filter>Engine\SceneBuilder</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\SceneBuilder\MD5Parser.h">
+      <Filter>Engine\SceneBuilder</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\SceneBuilder\tiny_obj_loader.h">
+      <Filter>Engine\SceneBuilder</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_Volumes.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_AnimatedMesh.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_BSDF.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_BSDF_Complex.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_BSDF_Simple.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_Buffer.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_CameraController.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_Core.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_DynamicScene.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_EnvironmentMap.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_ErrorHandler.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_FileTexture.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_FileTextureHelper.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_Filter.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_Grid.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_Image.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_KernelDynamicScene.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_KernelMapping.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_KernelTexture.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_Light.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_Material.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_MaterialLib.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_Mesh.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_MeshCompiler.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_MicrofacetDistribution.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_Node.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_PhaseFunction.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_RoughTransmittance.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_Samples.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_SceneBVH.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_SceneInitData.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_Sensor.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_ShapeSet.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_SpatialGrid.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_Terrain.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_TerrainHeader.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_TraceResult.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_TriangleData.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\k_BDPT.h">
+      <Filter>Integrators</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\k_FastTracer.h">
+      <Filter>Integrators</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\k_PathTracer.h">
+      <Filter>Integrators</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\k_PhotonTracer.h">
+      <Filter>Integrators</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\k_PmmHelper.h">
+      <Filter>Integrators</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\k_PmmTracer.h">
+      <Filter>Integrators</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\k_PrimTracer.h">
+      <Filter>Integrators</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\k_sPpmTracer.h">
+      <Filter>Integrators</Filter>
+    </ClInclude>
+    <ClInclude Include="StdAfx.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Base\BVHBuilder.cpp">
+      <Filter>Base</Filter>
+    </ClCompile>
+    <ClCompile Include="Base\FileStream.cpp">
+      <Filter>Base</Filter>
+    </ClCompile>
+    <ClCompile Include="Base\StringUtils.cpp">
+      <Filter>Base</Filter>
+    </ClCompile>
+    <ClCompile Include="Kernel\k_Tracer.cpp">
+      <Filter>Kernel</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\SceneBuilder\Importer.cpp">
+      <Filter>Engine\SceneBuilder</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\SceneBuilder\MD5Parser.cpp">
+      <Filter>Engine\SceneBuilder</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\SceneBuilder\ObjParser.cpp">
+      <Filter>Engine\SceneBuilder</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\SceneBuilder\ObjParser2.cpp">
+      <Filter>Engine\SceneBuilder</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\SceneBuilder\PlyParser.cpp">
+      <Filter>Engine\SceneBuilder</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\SceneBuilder\tiny_obj_loader.cpp">
+      <Filter>Engine\SceneBuilder</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\e_AnimatedMesh.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\e_Core.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\e_DynamicScene.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\e_FileTexture.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\e_Image.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\e_MaterialLib.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\e_Mesh.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\e_MeshCompiler.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\e_SceneBVH.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\e_ShapeSet.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\e_Terrain.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Integrators\k_PmmTracer.cpp">
+      <Filter>Integrators</Filter>
+    </ClCompile>
+    <ClCompile Include="Integrators\k_sPpmTracer.cpp">
+      <Filter>Integrators</Filter>
+    </ClCompile>
+    <ClCompile Include="stdafx.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="Base\CudaRandom.cu">
+      <Filter>Base</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Base\Platform.cu">
+      <Filter>Base</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Math\Integrator.cu">
+      <Filter>Math</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Math\Spectrum.cu">
+      <Filter>Math</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Math\Spline.cu">
+      <Filter>Math</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Kernel\k_BlockSampler.cu">
+      <Filter>Kernel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Kernel\k_TraceAlgorithms.cu">
+      <Filter>Kernel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Kernel\k_TraceHelper.cu">
+      <Filter>Kernel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Kernel\k_Tracer.cu">
+      <Filter>Kernel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\e_aaaa.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\e_AnimatedMesh.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\e_BSDF_Complex.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\e_BSDF_Simple.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\e_FileTexture.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\e_Image.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\e_KernelDynamicScene.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\e_KernelMapping.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\e_Light.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\e_Material.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\e_Mesh.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\e_MicrofacetDistribution.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\e_PhaseFunction.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\e_RoughTransmittance.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\e_Sensor.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\e_ShapeSet.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\e_TriangleData.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\e_Volumes.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Integrators\k_BDPT.cu">
+      <Filter>Integrators</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Integrators\k_FastTracer.cu">
+      <Filter>Integrators</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Integrators\k_PathTracer.cu">
+      <Filter>Integrators</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Integrators\k_PhotonTracer.cu">
+      <Filter>Integrators</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Integrators\k_PmmTracer.cu">
+      <Filter>Integrators</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Integrators\k_PrimTracer.cu">
+      <Filter>Integrators</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Integrators\k_sPpmTracer_EyePass.cu">
+      <Filter>Integrators</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Integrators\k_sPpmTracer_PhotonPass.cu">
+      <Filter>Integrators</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\e_TraceResult.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+  </ItemGroup>
+</Project>

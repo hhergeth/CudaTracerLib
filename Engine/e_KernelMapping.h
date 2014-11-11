@@ -86,7 +86,7 @@ struct e_KernelSphericalMapping2D : public e_KernelMappingBase
 private:
 	CUDA_FUNC_IN void sphere(const float3 &P, float *s, float *t) const
 	{
-		float3 vec = normalize((WorldToTexture * P));
+		float3 vec = normalize((WorldToTexture.TransformPoint(P)));
 		float theta = MonteCarlo::SphericalTheta(vec);
 		float phi = MonteCarlo::SphericalPhi(vec);
 		*s = theta * INV_PI;
@@ -130,7 +130,7 @@ struct e_KernelCylindricalMapping2D : public e_KernelMappingBase
 private:
 	CUDA_FUNC_IN void cylinder(const float3 &p, float *s, float *t) const
 	{
-        float3 vec = normalize(WorldToTexture * p);
+        float3 vec = normalize(WorldToTexture.TransformPoint(p));
         *s = (PI + atan2f(vec.y, vec.x)) / (2.f * PI);
         *t = vec.z;
     }
@@ -161,7 +161,7 @@ struct e_KernelIdentityMapping3D : public e_KernelMappingBase
 	}
 	CUDA_FUNC_IN float3 Map(const MapParameters &dg) const
 	{
-		return WorldToTexture * dg.pLocal;
+		return WorldToTexture.TransformPoint(dg.pLocal);
 	}
 	TYPE_FUNC(e_KernelIdentityMapping3D)
     float4x4 WorldToTexture;
