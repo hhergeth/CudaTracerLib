@@ -89,6 +89,11 @@ struct e_SphericalCamera : public e_SensorBase
 
 	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const float2 &pixelSample, const float2 &apertureSample) const;
 
+	CUDA_FUNC_IN Spectrum sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const float2 &pixelSample, const float2 &apertureSample) const
+	{
+		return sampleRay(ray, pixelSample, apertureSample);
+	}
+
 	CUDA_FUNC_IN Spectrum eval(const float3& p, const Frame& sys, const float3 &d) const
 	{
 		return Spectrum(0.0f);
@@ -178,6 +183,8 @@ public:
 
 	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const float2 &pixelSample, const float2 &apertureSample) const;
 
+	CUDA_DEVICE CUDA_HOST Spectrum sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const float2 &pixelSample, const float2 &apertureSample) const;
+
 	CUDA_FUNC_IN Spectrum eval(const float3& p, const Frame& sys, const float3 &d) const
 	{
 		return Spectrum(0.0f);
@@ -257,6 +264,8 @@ public:
 	virtual void Update();
 
 	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const float2 &pixelSample, const float2 &apertureSample) const;
+
+	CUDA_DEVICE CUDA_HOST Spectrum sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const float2 &pixelSample, const float2 &apertureSample) const;
 
 	CUDA_FUNC_IN Spectrum eval(const float3& p, const Frame& sys, const float3 &d) const
 	{
@@ -338,6 +347,7 @@ public:
 	float2 screenScale;
 private:
 	float m_invSurfaceArea, m_scale;
+	float3 m_dx, m_dy;
 public:
 	e_OrthographicCamera()
 		: e_SensorBase(false, false)
@@ -359,6 +369,8 @@ public:
 	virtual void Update();
 
 	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const float2 &pixelSample, const float2 &apertureSample) const;
+
+	CUDA_DEVICE CUDA_HOST Spectrum sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const float2 &pixelSample, const float2 &apertureSample) const;
 
 	CUDA_FUNC_IN Spectrum eval(const float3& p, const Frame& sys, const float3 &d) const
 	{
@@ -416,6 +428,7 @@ public:
 protected:
 	float m_normalization;
 	float m_aperturePdf;
+	float3 m_dx, m_dy;
 public:
 	e_TelecentricCamera()
 		: e_SensorBase(false, true)
@@ -439,6 +452,8 @@ public:
 	virtual void Update();
 
 	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const float2 &pixelSample, const float2 &apertureSample) const;
+
+	CUDA_DEVICE CUDA_HOST Spectrum sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const float2 &pixelSample, const float2 &apertureSample) const;
 
 	CUDA_FUNC_IN Spectrum eval(const float3& p, const Frame& sys, const float3 &d) const
 	{
@@ -523,6 +538,12 @@ public:
 	{
 		CALL_FUNC5(e_SphericalCamera,e_PerspectiveCamera,e_ThinLensCamera,e_OrthographicCamera,e_TelecentricCamera, sampleRay(ray, pixelSample, apertureSample))
 		return Spectrum(1.0f);
+	}
+
+	CUDA_FUNC_IN Spectrum sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const float2 &pixelSample, const float2 &apertureSample) const
+	{
+		CALL_FUNC5(e_SphericalCamera, e_PerspectiveCamera, e_ThinLensCamera, e_OrthographicCamera, e_TelecentricCamera, sampleRayDifferential(ray, rayX, rayY, pixelSample, apertureSample))
+			return Spectrum(1.0f);
 	}
 
 	CUDA_FUNC_IN Spectrum eval(const float3& p, const Frame& sys, const float3 &d) const

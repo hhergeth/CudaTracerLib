@@ -32,7 +32,7 @@ Spectrum coating::sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &_sa
 		bRec.wo = reflect(bRec.wi);
 		bRec.eta = 1.0f;
 		pdf = sampleNested ? probSpecular : 1.0f;
-		return m_specularReflectance.Evaluate(bRec.map) * (R12/pdf);
+		return m_specularReflectance.Evaluate(bRec.dg) * (R12/pdf);
 	} else {
 		if (R12 == 1.0f) 
 			return Spectrum(0.0f);
@@ -46,7 +46,7 @@ Spectrum coating::sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &_sa
 
 		float3 woPrime = bRec.wo;
 
-		Spectrum sigmaA = m_sigmaA.Evaluate(bRec.map) * m_thickness;
+		Spectrum sigmaA = m_sigmaA.Evaluate(bRec.dg) * m_thickness;
 		if (!sigmaA.isZero())
 			result *= (-sigmaA *
 				(1/std::abs(Frame::cosTheta(wiPrime)) +
@@ -80,7 +80,7 @@ Spectrum coating::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 
 	if (measure == EDiscrete && sampleSpecular &&
 			std::abs(dot(reflect(bRec.wi), bRec.wo)-1) < DeltaEpsilon) {
-		return m_specularReflectance.Evaluate(bRec.map) *
+		return m_specularReflectance.Evaluate(bRec.dg) *
 			MonteCarlo::fresnelDielectricExt(abs(Frame::cosTheta(bRec.wi)), m_eta);
 	} else if (sampleNested) {
 		float R12, R21;
@@ -94,7 +94,7 @@ Spectrum coating::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 		Spectrum result = m_nested.f(bRecInt, measure)
 			* (1-R12) * (1-R21);
 
-		Spectrum sigmaA = m_sigmaA.Evaluate(bRec.map) * m_thickness;
+		Spectrum sigmaA = m_sigmaA.Evaluate(bRec.dg) * m_thickness;
 		if (!sigmaA.isZero())
 			result *= (-sigmaA *
 				(1/std::abs(Frame::cosTheta(bRecInt.wi)) +
@@ -157,7 +157,7 @@ Spectrum roughcoating::sample(BSDFSamplingRecord &bRec, float &_pdf, const float
 	float2 sample = _sample;
 
 	/* Evaluate the roughness texture */
-	float alpha = m_alpha.Evaluate(bRec.map).average();
+	float alpha = m_alpha.Evaluate(bRec.dg).average();
 	float alphaT = m_distribution.transformRoughness(alpha);
 
 	float probSpecular;
@@ -216,7 +216,7 @@ Spectrum roughcoating::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 	bool hasSpecular = (bRec.typeMask & EGlossyReflection) && measure == ESolidAngle;
 
 	/* Evaluate the roughness texture */
-	float alpha = m_alpha.Evaluate(bRec.map).average();
+	float alpha = m_alpha.Evaluate(bRec.dg).average();
 	float alphaT = m_distribution.transformRoughness(alpha);
 
 	Spectrum result(0.0f);
@@ -238,7 +238,7 @@ Spectrum roughcoating::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 		float value = F * D * G /
 			(4.0f * abs(Frame::cosTheta(bRec.wi)));
 
-		result += m_specularReflectance.Evaluate(bRec.map) * value;
+		result += m_specularReflectance.Evaluate(bRec.dg) * value;
 	}
 
 	if (hasNested) {
@@ -250,7 +250,7 @@ Spectrum roughcoating::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 			e_RoughTransmittanceManager::Evaluate(m_distribution.m_type, Frame::cosTheta(bRec.wi), alpha, m_eta) *
 			e_RoughTransmittanceManager::Evaluate(m_distribution.m_type, Frame::cosTheta(bRec.wo), alpha, m_eta);
 
-		Spectrum sigmaA = m_sigmaA.Evaluate(bRec.map) * m_thickness;
+		Spectrum sigmaA = m_sigmaA.Evaluate(bRec.dg) * m_thickness;
 		if (!sigmaA.isZero())
 			nestedResult *= (-sigmaA *
 				(1/abs(Frame::cosTheta(bRecInt.wi)) +
@@ -279,7 +279,7 @@ float roughcoating::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 			* math::signum(Frame::cosTheta(bRec.wo));
 
 	/* Evaluate the roughness texture */
-	float alpha = m_alpha.Evaluate(bRec.map).average();
+	float alpha = m_alpha.Evaluate(bRec.dg).average();
 	float alphaT = m_distribution.transformRoughness(alpha);
 
 	float probNested, probSpecular;
@@ -329,7 +329,7 @@ float roughcoating::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 Spectrum blend::sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &_sample) const
 {
 	float weights[2];
-	weights[1] = clamp(this->weight.Evaluate(bRec.map).average(), 0.0f, 1.0f);
+	weights[1] = clamp(this->weight.Evaluate(bRec.dg).average(), 0.0f, 1.0f);
 	weights[0] = 1.0f - weights[1];
 
 	float2 sample = _sample;
@@ -358,12 +358,12 @@ Spectrum blend::sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &_samp
 
 Spectrum blend::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 {
-	float weight = clamp(this->weight.Evaluate(bRec.map).average(), 0.0f, 1.0f);
+	float weight = clamp(this->weight.Evaluate(bRec.dg).average(), 0.0f, 1.0f);
 	return bsdfs[0].f(bRec, measure) * (1-weight) + bsdfs[1].f(bRec, measure) * weight;
 }
 
 float blend::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 {
-	float weight = clamp(this->weight.Evaluate(bRec.map).average(), 0.0f, 1.0f);
+	float weight = clamp(this->weight.Evaluate(bRec.dg).average(), 0.0f, 1.0f);
 	return bsdfs[0].pdf(bRec, measure) * (1-weight) + bsdfs[1].pdf(bRec, measure) * weight;
 }

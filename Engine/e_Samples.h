@@ -1,8 +1,7 @@
 #pragma once
 
 #include <MathTypes.h>
-#include "e_KernelMapping.h"
-#include "e_TraceResult.h"
+#include "e_DifferentialGeometry.h"
 
 enum EMeasure {
 	/// Invalid measure
@@ -116,11 +115,6 @@ public:
 		: d(d), measure(m)
 	{
 	}
-	CUDA_FUNC_IN DirectionSamplingRecord(const Ray& r, const TraceResult& r2, EMeasure m = EArea)
-	{
-		d = r.direction;
-		measure = m;
-	}
 };
 
 struct DirectSamplingRecord : public PositionSamplingRecord
@@ -170,7 +164,7 @@ struct PhaseFunctionSamplingRecord
 struct BSDFSamplingRecord
 {
 	CudaRNG* rng;
-	MapParameters map;
+	DifferentialGeometry& dg;
 	float3 ng;
 	/// Normalized incident direction in local coordinates
 	float3 wi;
@@ -181,7 +175,7 @@ struct BSDFSamplingRecord
 	ETransportMode mode;
 	unsigned int typeMask;
 	unsigned int sampledType;
-	CUDA_FUNC_IN BSDFSamplingRecord(){}
+	CUDA_FUNC_IN BSDFSamplingRecord(DifferentialGeometry& dg) : dg(dg) {}
 	CUDA_FUNC_IN void Clear(CudaRNG& _rng)
 	{
 		rng = &_rng;
@@ -192,6 +186,6 @@ struct BSDFSamplingRecord
 	}
 	CUDA_FUNC_IN float3 getOutgoing()
 	{
-		return normalize(map.sys.toWorld(wo));
+		return normalize(dg.toWorld(wo));
 	}
 };

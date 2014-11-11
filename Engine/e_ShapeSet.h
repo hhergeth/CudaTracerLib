@@ -1,7 +1,8 @@
 #pragma once
 
 #include <MathTypes.h>
-#include "..\Engine\e_Mesh.h"
+#include "e_IntersectorData.h"
+#include "e_Buffer.h"
 #include "..\Math\Sampling.h"
 #include "e_Samples.h"
 

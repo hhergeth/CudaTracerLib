@@ -31,10 +31,11 @@ public:
 			uint3 RowX[NUM_UV_SETS];
 		} m_sDeviceData;
 	};
+	float3 dpdu, dpdv;
 public:
 	e_TriangleData(){}
 	e_TriangleData(const float3* P, unsigned char matIndex, const float2* T, const float3* N, const float3* Tan, const float3* BiTan);
-	CUDA_DEVICE CUDA_HOST void lerpFrame(const float2& bCoords, const float4x4& localToWorld, const float4x4& worldToLocal, Frame& sys, float3* ng = 0) const;
+	CUDA_DEVICE CUDA_HOST void fillDG(const float4x4& localToWorld, const float4x4& worldToLocal, DifferentialGeometry& dg) const;
 	CUDA_FUNC_IN unsigned int getMatIndex(const unsigned int off) const 
 	{
 		unsigned int v = m_sDeviceData.Row0.w & 0xff;

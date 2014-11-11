@@ -14,15 +14,16 @@ e_MIPMap::e_MIPMap(InputStream& a_In)
 	a_In >> m_uSize;
 	if(CUDA_MALLOC(&m_pDeviceData, m_uSize))
 	{
-		cudaError_t r= cudaGetLastError();
+		cudaError_t r = cudaGetLastError();
 		std::cout << cudaGetErrorString(r) << "\n";
 		BAD_CUDA_ALLOC(m_uSize)
 	}
 	m_pHostData = (unsigned int*)malloc(m_uSize);
 	a_In.Read(m_pHostData, m_uSize);
 	if(cudaMemcpy(m_pDeviceData, m_pHostData, m_uSize, cudaMemcpyHostToDevice))
-			BAD_HOST_DEVICE_COPY(m_pDeviceData, m_uSize)
+		BAD_HOST_DEVICE_COPY(m_pDeviceData, m_uSize)
 	a_In.Read(m_sOffsets, sizeof(m_sOffsets));
+	a_In.Read(m_weightLut, sizeof(m_weightLut));
 }
 
 struct sampleHelper
@@ -108,6 +109,12 @@ void e_MIPMap::CompileToBinary(const char* a_InputFile, OutputStream& a_Out, boo
 		a_Out.Write(H.dest, j * k * sizeof(RGBCOL));
 	}
 	a_Out.Write(m_sOffsets, sizeof(m_sOffsets));
+	for (int i = 0; i<MTS_MIPMAP_LUT_SIZE; ++i)
+	{
+		float r2 = (float)i / (float)(MTS_MIPMAP_LUT_SIZE - 1);
+		float val = expf(-2.0f * r2) - expf(-2.0f);
+		a_Out << val;
+	}
 	free(data.data);
 	free(buf);
 }
@@ -121,9 +128,11 @@ e_KernelMIPMap e_MIPMap::CreateKernelTexture()
 	r.m_uWrapMode = m_uWrapMode;
 	r.m_uWidth = m_uWidth;
 	r.m_uHeight = m_uHeight;
-	r.m_uHeight = m_uHeight;
+	r.m_fDim = make_float2(m_uWidth - 1, m_uHeight - 1);
 	for(int i = 0; i < MAX_MIPS; i++)
 		r.m_sOffsets[i] = m_sOffsets[i];
+	for (int i = 0; i < MTS_MIPMAP_LUT_SIZE; i++)
+		r.m_weightLut[i] = m_weightLut[i];
 	r.m_uLevels = m_uLevels;
 	m_sKernelData = r;
 	return r;

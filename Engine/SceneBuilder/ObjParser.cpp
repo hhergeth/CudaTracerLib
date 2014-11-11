@@ -328,8 +328,10 @@ void loadMtl(ImportState& s, IInStream& mtlIn, const std::string& dirName)
         }
         else if (parseLiteral(ptr, "bump ") || parseLiteral(ptr, "map_bump ") || parseLiteral(ptr, "map_Bump ")) // bump map
         {
-            TextureSpec tex;
-			mat->textures[TextureType_Normal] = std::string(ptr);
+			TextureSpec tex;
+			mat->displacementCoef = tex.gain;
+			mat->displacementBias = tex.base * tex.gain;
+			mat->textures[TextureType_Displacement] = std::string(ptr);
             valid = parseTexture(ptr, tex, dirName);
         }
         else if (parseLiteral(ptr, "refl ")) // environment map
@@ -575,7 +577,12 @@ void compileobj(IInStream& in, OutputStream& a_Out)
 			d.m_specularReflectance = CreateTexture(0, Spectrum(0.0f));
 			d.m_specularTransmittance = CreateTexture(0, Spectrum(M.Tf));
 			mat.bsdf.SetData(d);
-		}/*
+		}
+		if (M.textures[TextureType_Displacement].size())
+		{
+			mat.SetHeightMap(M.textures[TextureType_Displacement].c_str());
+		}
+		/*
 		if(0&&M.textures[3].c_str().size())
 		{
 			char* c = new char[M.textures[3].getID().getLength()+1];

@@ -1,5 +1,6 @@
 #include "e_Mesh.h"
 #include "..\Base\StringUtils.h"
+#include "e_TraceResult.h"
 
 void e_TriIntersectorData::setData(const float3& a, const float3& b, const float3& c)
 {

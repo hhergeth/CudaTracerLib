@@ -70,6 +70,10 @@ struct e_KernelDynamicScene
 		 const e_Sensor* emitter;
 		 return sampleSensorRay(ray, emitter, spatialSample, directionalSample);
 	}
+	CUDA_FUNC_IN Spectrum sampleSensorRay(Ray& ray, Ray& rX, Ray& rY, const float2 &spatialSample, const float2 &directionalSample, const float2 &antiAliasingSample) const
+	{
+		return m_Camera.sampleRayDifferential(ray, rX, rY, spatialSample + antiAliasingSample - make_float2(0.5f), directionalSample);
+	}
 
 	CUDA_FUNC_IN Ray GenerateSensorRay(int x, int y)
 	{

@@ -12,7 +12,8 @@ template<bool DIRECT, int SPP> __global__ void k_PhotonPass()
 	local_Counter = 0;
 	unsigned int local_Todo = SPP * blockDim.x * blockDim.y;
 
-	BSDFSamplingRecord bRec;
+	DifferentialGeometry dg;
+	BSDFSamplingRecord bRec(dg);
 	e_KernelAggregateVolume& V = g_SceneData.m_sVolume;
 	TraceResult r2;
 	Ray r;
@@ -68,11 +69,11 @@ template<bool DIRECT, int SPP> __global__ void k_PhotonPass()
 			r2.getBsdfSample(r, rng, &bRec);
 			const e_KernelBSSRDF* bssrdf;
 			Spectrum ac;
-			if(r2.getMat().GetBSSRDF(bRec.map, &bssrdf))
+			if(r2.getMat().GetBSSRDF(bRec.dg, &bssrdf))
 			{
 				//inMesh = false;
 				ac = Le;
-				Ray br = BSSRDF_Entry(bssrdf, bRec.map.sys, x, r.direction);
+				Ray br = BSSRDF_Entry(bssrdf, bRec.dg.sys, x, r.direction);
 				while(true)
 				{
 					TraceResult r3 = k_TraceRay(br);
@@ -84,11 +85,11 @@ template<bool DIRECT, int SPP> __global__ void k_PhotonPass()
 						return;
 					if(cancel)
 					{
-						Frame sys;
-						r3.lerpFrame(sys);
+						DifferentialGeometry dg2;
+						r3.fillDG(dg2);
 						x = br(r3.m_fDist);//point on a surface
-						Ray out = BSSRDF_Exit(bssrdf, sys, x, br.direction);
-						bRec.wo = bRec.map.sys.toLocal(out.direction);//ugly
+						Ray out = BSSRDF_Exit(bssrdf, dg2.sys, x, br.direction);
+						bRec.wo = bRec.dg.toLocal(out.direction);//ugly
 						break;
 					}
 					float A = (sigma_s / sigma_t).average();

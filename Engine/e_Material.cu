@@ -18,42 +18,51 @@ CUDA_FUNC_IN float3 nor(float* D, int l, int t, int m, int r, int b, float Heigh
 	return normalize(make_float3(D[m]-D[l], D[m]-D[t], HeightScale));
 }
 
-bool e_KernelMaterial::SampleNormalMap(const MapParameters& uv, float3* normal) const
+bool e_KernelMaterial::SampleNormalMap(DifferentialGeometry& dg) const
 {
 	if(NormalMap.used)
 	{
 		float3 n;
-		NormalMap.tex.Evaluate(uv).toLinearRGB(n.x,n.y,n.z);
-		*normal = n * 2.0f - make_float3(1);
+		NormalMap.tex.Evaluate(dg).toLinearRGB(n.x, n.y, n.z);
+		float3 nWorld = dg.toWorld(n - make_float3(0.5f));
+		dg.sys.n = normalize(nWorld);
+		dg.sys.t = normalize(cross(nWorld, dg.sys.s));
+		dg.sys.s = normalize(cross(nWorld, dg.sys.t));
 		return true;
 	}
-	else if(HeightMap.used)
+	else if (HeightMap.used && HeightMap.tex.Is<e_KernelImageTexture>())
 	{
-		float d = 1.0f / 256;//fucked up guess
-		float m[16];
-		for(int i = 0; i < 4; i++)
-			for(int j = 0; j < 4; j++)
-			{
-				MapParameters mp = uv;
-				for(int k = 0; k < NUM_UV_SETS; k++)
-					*(float2*)&mp.uv[k] = mp.uv[k] + make_float2(i - 1, j - 1) * d;
-				m[i * 4 + j] = HeightMap.tex.Evaluate(mp).average();
-			}
-		*normal = nor(m, 4, 1, 5, 6, 9, HeightScale); 
+		Spectrum grad[2];
+		float2 uv = HeightMap.tex.As<e_KernelImageTexture>()->mapping.Map(dg);
+		HeightMap.tex.As<e_KernelImageTexture>()->tex->evalGradient(uv, grad);
+		float dDispDu = grad[0].getLuminance();
+		float dDispDv = grad[1].getLuminance();
+		float3 dpdu = dg.dpdu + dg.sys.n * (
+			dDispDu - dot(dg.sys.n, dg.dpdu));
+		float3 dpdv = dg.dpdv + dg.sys.n * (
+			dDispDv - dot(dg.sys.n, dg.dpdv));
+
+		dg.sys.n = normalize(cross(dpdu, dpdv));
+		dg.sys.s = normalize(dpdu - dg.sys.n
+			* dot(dg.sys.n, dpdu));
+		dg.sys.t = cross(dg.sys.n, dg.sys.s);
+
+		if (dot(dg.sys.n, dg.n) < 0)
+			dg.sys.n *= -1;
+
 		return true;
 	}
 	else return false;
 }
 
-float e_KernelMaterial::SampleAlphaMap(const MapParameters& uv) const
+float e_KernelMaterial::SampleAlphaMap(const DifferentialGeometry& uv) const
 {
 	if(AlphaMap.used)
 	{//return 1;
 		if(AlphaMap.tex.type == e_KernelImageTexture_TYPE)
 		{
-			float u, v;
-			AlphaMap.tex.As<e_KernelImageTexture>()->mapping.Map(uv, &u, &v);
-			return AlphaMap.tex.As<e_KernelImageTexture>()->tex->SampleAlpha(make_float2(u, v)) != 1 ? 0 : 1;
+			float2 uv2 = AlphaMap.tex.As<e_KernelImageTexture>()->mapping.Map(uv);
+			return AlphaMap.tex.As<e_KernelImageTexture>()->tex->SampleAlpha(uv2) != 1 ? 0 : 1;
 		}
 		Spectrum s = AlphaMap.tex.Evaluate(uv);
 		if(s.isZero())
@@ -63,7 +72,7 @@ float e_KernelMaterial::SampleAlphaMap(const MapParameters& uv) const
 	else return 1.0f;
 }
 
-bool e_KernelMaterial::GetBSSRDF(const MapParameters& uv, const e_KernelBSSRDF** res) const
+bool e_KernelMaterial::GetBSSRDF(const DifferentialGeometry& uv, const e_KernelBSSRDF** res) const
 {
 	*res = &bssrdf;
 	return usedBssrdf;

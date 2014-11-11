@@ -3,6 +3,17 @@
 #include "e_ErrorHandler.h"
 #include "e_FileTextureHelper.h"
 
+/// Integer floor function (single precision)
+template <typename Scalar> CUDA_FUNC_IN int floorToInt(Scalar value) { return (int)floor(value); }
+
+/// Integer ceil function (single precision)
+template <typename Scalar> CUDA_FUNC_IN int ceilToInt(Scalar value) { return (int)ceil(value); }
+
+CUDA_FUNC_IN float hypot2(float a, float b)
+{
+	return sqrtf(a * a + b * b);
+}
+
 Spectrum e_KernelMIPMap::Texel(unsigned int level, const float2& a_UV) const
 {
 	float2 l;
@@ -35,6 +46,66 @@ Spectrum e_KernelMIPMap::triangle(unsigned int level, const float2& a_UV) const
 			(1.f-ds) * dt       * Texel(level, a_UV + make_float2(0, is.y)) +
 			ds       * (1.f-dt) * Texel(level, a_UV + make_float2(is.x, 0)) +
 			ds       * dt       * Texel(level, a_UV + make_float2(is.x, is.y));
+}
+
+Spectrum e_KernelMIPMap::evalEWA(unsigned int level, const float2 &uv, float A, float B, float C) const
+{
+	if (level >= m_uLevels)
+		return Texel(m_uLevels - 1, make_float2(0));
+
+	float2 size = make_float2(m_uWidth >> level, m_uHeight >> level);
+	float u = uv.x * size.x - 0.5f;
+	float v = uv.y * size.y - 0.5f;
+
+	/* Do the same to the ellipse coefficients */
+	float2 ratio = size / m_fDim;
+	A /= ratio.x * ratio.x;
+	B /= ratio.x * ratio.y;
+	C /= ratio.y * ratio.y;
+
+	float invDet = 1.0f / (-B*B + 4.0f*A*C),
+		deltaU = 2.0f * sqrtf(C * invDet),
+		deltaV = 2.0f * sqrtf(A * invDet);
+	int u0 = ceilToInt(u - deltaU), u1 = floorToInt(u + deltaU);
+	int v0 = ceilToInt(v - deltaV), v1 = floorToInt(v + deltaV);
+
+	float As = A * MTS_MIPMAP_LUT_SIZE,
+		  Bs = B * MTS_MIPMAP_LUT_SIZE,
+		  Cs = C * MTS_MIPMAP_LUT_SIZE;
+
+	Spectrum result(0.0f);
+	float denominator = 0.0f;
+	float ddq = 2 * As, uu0 = u0 - u;
+	int nSamples = 0;
+
+	for (int vt = v0; vt <= v1; ++vt)
+	{
+		const float vv = vt - v;
+
+		float q = As*uu0*uu0 + (Bs*uu0 + Cs*vv)*vv;
+		float dq = As*(2 * uu0 + 1) + Bs*vv;
+
+		for (int ut = u0; ut <= u1; ++ut)
+		{
+			if (q < MTS_MIPMAP_LUT_SIZE)
+			{
+				unsigned int qi = (unsigned int)q;
+				if (qi < MTS_MIPMAP_LUT_SIZE)
+				{
+					const float weight = m_weightLut[(int)q];
+					result += Texel(level, make_float2(ut, vt) / size) * weight;
+					denominator += weight;
+					++nSamples;
+				}
+			}
+			q += dq;
+			dq += ddq;
+		}
+	}
+
+	if (denominator == 0)
+		return triangle(level, uv);
+	return result / denominator;
 }
 
 Spectrum e_KernelMIPMap::Sample(const float2& uv) const
@@ -89,6 +160,94 @@ Spectrum e_KernelMIPMap::Sample(float width, int x, int y) const
 		s.fromRGBE(*(RGBE*)data);
 	else s.fromRGBCOL(*(RGBCOL*)data);
 	return s;	
+}
+
+void e_KernelMIPMap::evalGradient(const float2& uv, Spectrum* gradient) const
+{
+	const int level = 0;
+
+	float u = uv.x * m_fDim.x - 0.5f, v = uv.y * m_fDim.y - 0.5f;
+
+	int xPos = Float2Int(u), yPos = Float2Int(v);
+	float dx = u - xPos, dy = v - yPos;
+
+	const Spectrum p00 = Texel(level, make_float2(xPos, yPos) / m_fDim);
+	const Spectrum p10 = Texel(level, make_float2(xPos + 1, yPos) / m_fDim);
+	const Spectrum p01 = Texel(level, make_float2(xPos, yPos + 1) / m_fDim);
+	const Spectrum p11 = Texel(level, make_float2(xPos + 1, yPos + 1) / m_fDim);
+	Spectrum tmp = p01 + p10 - p11;
+
+	gradient[0] = (p10 + p00*(dy - 1) - tmp*dy) * m_fDim.x;
+	gradient[1] = (p01 + p00*(dx - 1) - tmp*dx) * m_fDim.y;
+}
+
+Spectrum e_KernelMIPMap::eval(const float2& uv, const float2& d0, const float2& d1) const
+{
+	/* Convert into texel coordinates */
+	float du0 = d0.x * m_fDim.x, dv0 = d0.y * m_fDim.y,
+		  du1 = d1.x * m_fDim.x, dv1 = d1.y * m_fDim.y;
+
+	/* Turn the texture-space Jacobian into the coefficients of an
+	implicitly defined ellipse. */
+	float A = dv0*dv0 + dv1*dv1,
+		B = -2.0f * (du0*dv0 + du1*dv1),
+		C = du0*du0 + du1*du1,
+		F = A*C - B*B*0.25f;
+
+	float root = hypot2(A - C, B),
+		Aprime = 0.5f * (A + C - root),
+		Cprime = 0.5f * (A + C + root),
+		majorRadius = Aprime != 0 ? sqrtf(F / Aprime) : 0,
+		minorRadius = Cprime != 0 ? sqrtf(F / Cprime) : 0;
+
+	if (!(minorRadius > 0) || !(majorRadius > 0) || F < 0)
+	{
+		float level = log2f(MAX(majorRadius, 1e-4f));
+		int ilevel = Floor2Int(level);
+		if (ilevel < 0)
+			return triangle(0, uv);
+		else
+		{
+			float a = level - ilevel;
+			return triangle(ilevel, uv) * (1.0f - a)
+				 + triangle(ilevel + 1, uv) * a;
+		}
+	}
+	else
+	{
+		const float m_maxAnisotropy = 16;
+		if (minorRadius * m_maxAnisotropy < majorRadius)
+		{
+			minorRadius = majorRadius / m_maxAnisotropy;
+			float theta = 0.5f * std::atan(B / (A - C)), sinTheta, cosTheta;
+			sincos(theta, &sinTheta, &cosTheta);
+			float a2 = majorRadius*majorRadius,
+				b2 = minorRadius*minorRadius,
+				sinTheta2 = sinTheta*sinTheta,
+				cosTheta2 = cosTheta*cosTheta,
+				sin2Theta = 2 * sinTheta*cosTheta;
+
+			A = a2*cosTheta2 + b2*sinTheta2;
+			B = (a2 - b2) * sin2Theta;
+			C = a2*sinTheta2 + b2*cosTheta2;
+			F = a2*b2;
+		}
+		/* Switch to normalized coefficients */
+		float scale = 1.0f / F;
+		A *= scale; B *= scale; C *= scale;
+		/* Determine a suitable MIP map level, such that the filter
+		covers a reasonable amount of pixels */
+		float level = MAX(0.0f, log2f(minorRadius));
+		int ilevel = (int)level;
+		float a = level - ilevel;
+
+		/* Switch to bilinear interpolation, be wary of round-off errors */
+		if (majorRadius < 1 || !(A > 0 && C > 0))
+			return triangle(ilevel, uv);
+		else
+			return evalEWA(ilevel, uv, A, B, C) * (1.0f - a) +
+				   evalEWA(ilevel + 1, uv, A, B, C) * a;
+	}
 }
 
 struct MapPoint

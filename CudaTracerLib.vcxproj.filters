@@ -161,9 +161,6 @@
     <ClInclude Include="Engine\e_KernelDynamicScene.h">
       <Filter>Engine</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\e_KernelMapping.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
     <ClInclude Include="Engine\e_KernelTexture.h">
       <Filter>Engine</Filter>
     </ClInclude>
@@ -249,6 +246,12 @@
       <Filter>Integrators</Filter>
     </ClInclude>
     <ClInclude Include="StdAfx.h" />
+    <ClInclude Include="Engine\e_DifferentialGeometry.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_IntersectorData.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Base\BVHBuilder.cpp">
@@ -321,6 +324,9 @@
       <Filter>Integrators</Filter>
     </ClCompile>
     <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="Engine\e_Node.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="Base\CudaRandom.cu">
@@ -369,9 +375,6 @@
       <Filter>Engine</Filter>
     </CudaCompile>
     <CudaCompile Include="Engine\e_KernelDynamicScene.cu">
-      <Filter>Engine</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Engine\e_KernelMapping.cu">
       <Filter>Engine</Filter>
     </CudaCompile>
     <CudaCompile Include="Engine\e_Light.cu">
@@ -429,6 +432,9 @@
       <Filter>Integrators</Filter>
     </CudaCompile>
     <CudaCompile Include="Engine\e_TraceResult.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\e_DifferentialGeometry.cu">
       <Filter>Engine</Filter>
     </CudaCompile>
   </ItemGroup>

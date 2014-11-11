@@ -1,8 +1,11 @@
 #pragma once
 
 #include <MathTypes.h>
-#include "e_Mesh.h"
+#include "e_Material.h"
+#include "e_Buffer.h"
+#include "e_IntersectorData.h"
 
+class e_Mesh;
 class e_Node
 {
 public:
@@ -15,17 +18,7 @@ public:
 #endif
 public:
 	e_Node() {}
-	e_Node(unsigned int MeshIndex, e_Mesh* mesh, const char* file, e_StreamReference(e_KernelMaterial) mat)
-	{
-		m_uMeshIndex = MeshIndex;
-#ifdef _DEBUG
-		Platform::SetMemory(m_cFile, sizeof(m_cFile));
-		strcpy(m_cFile, file);
-#endif
-		m_uMaterialOffset = mat.getIndex();
-		for(unsigned int i = 0; i< mesh->m_sMatInfo.getLength(); i++)
-			mat(i) = *mesh->m_sMatInfo(i);
-	}
+	e_Node(unsigned int MeshIndex, e_Mesh* mesh, const char* file, e_StreamReference(e_KernelMaterial) mat);
 	void setLightData( unsigned int* li, unsigned int lic)
 	{
 		for(unsigned int i = 0; i < lic; i++)
@@ -33,10 +26,7 @@ public:
 		for(unsigned int i = lic; i < sizeof(m_uLightIndices) / sizeof(unsigned int); i++)
 			m_uLightIndices[i] = 0xffffffff;
 	}
-	AABB getWorldBox(e_Mesh* mesh, const float4x4& mat) const
-	{
-		return mesh->m_sLocalBox.Transform(mat);
-	}
+	AABB getWorldBox(e_Mesh* mesh, const float4x4& mat) const;
 	unsigned int getNextFreeLightIndex()
 	{
 		for(int i = 0; i < sizeof(m_uLightIndices) / sizeof(unsigned int); i++)

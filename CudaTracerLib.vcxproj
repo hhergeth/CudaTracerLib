@@ -116,6 +116,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClCompile Include="Engine\e_MaterialLib.cpp" />
     <ClCompile Include="Engine\e_Mesh.cpp" />
     <ClCompile Include="Engine\e_MeshCompiler.cpp" />
+    <ClCompile Include="Engine\e_Node.cpp" />
     <ClCompile Include="Engine\e_SceneBVH.cpp" />
     <ClCompile Include="Engine\e_ShapeSet.cpp" />
     <ClCompile Include="Engine\e_Terrain.cpp" />
@@ -150,6 +151,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="Engine\e_Buffer.h" />
     <ClInclude Include="Engine\e_CameraController.h" />
     <ClInclude Include="Engine\e_Core.h" />
+    <ClInclude Include="Engine\e_DifferentialGeometry.h" />
     <ClInclude Include="Engine\e_DynamicScene.h" />
     <ClInclude Include="Engine\e_EnvironmentMap.h" />
     <ClInclude Include="Engine\e_ErrorHandler.h" />
@@ -158,8 +160,8 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="Engine\e_Filter.h" />
     <ClInclude Include="Engine\e_Grid.h" />
     <ClInclude Include="Engine\e_Image.h" />
+    <ClInclude Include="Engine\e_IntersectorData.h" />
     <ClInclude Include="Engine\e_KernelDynamicScene.h" />
-    <ClInclude Include="Engine\e_KernelMapping.h" />
     <ClInclude Include="Engine\e_KernelTexture.h" />
     <ClInclude Include="Engine\e_Light.h" />
     <ClInclude Include="Engine\e_Material.h" />
@@ -220,10 +222,10 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <CudaCompile Include="Engine\e_AnimatedMesh.cu" />
     <CudaCompile Include="Engine\e_BSDF_Complex.cu" />
     <CudaCompile Include="Engine\e_BSDF_Simple.cu" />
+    <CudaCompile Include="Engine\e_DifferentialGeometry.cu" />
     <CudaCompile Include="Engine\e_FileTexture.cu" />
     <CudaCompile Include="Engine\e_Image.cu" />
     <CudaCompile Include="Engine\e_KernelDynamicScene.cu" />
-    <CudaCompile Include="Engine\e_KernelMapping.cu" />
     <CudaCompile Include="Engine\e_Light.cu" />
     <CudaCompile Include="Engine\e_Material.cu" />
     <CudaCompile Include="Engine\e_Mesh.cu" />

@@ -3,19 +3,6 @@
 #include <time.h>
 #include "..\Kernel\k_TraceAlgorithms.h"
 
-CUDA_FUNC_IN bool V(const float3& a, const float3& b)
-{
-	float3 d = b - a;
-	float l = length(d);
-	return !g_SceneData.Occluded(Ray(a, d / l), 0, l);
-}
-
-CUDA_FUNC_IN float G(const float3& N_x, const float3& N_y, const float3& x, const float3& y)
-{
-	float3 theta = normalize(y - x);
-	return AbsDot(N_x, theta) * AbsDot(N_y, -theta) / DistanceSquared(x, y);
-}
-
 #define MAX_SUBPATH_LENGTH 5
 struct PathVertex
 {
@@ -69,12 +56,12 @@ struct BDPT_Path
 		else
 		{
 			PathVertex& x_m = operator()(i - 1), &x = operator()(i), &x_p = operator()(i + 1);
-			BSDFSamplingRecord bRec;
+			DifferentialGeometry dg, dg2;
+			BSDFSamplingRecord bRec(dg);
 			x.r2.getBsdfSample(Ray(x_m.p, normalize(x.p - x_m.p)), g_RNGData(), &bRec, normalize(x_p.p - x.p));
 			float pdf = x.r2.getMat().bsdf.pdf(bRec);
-			Frame sys;
-			x_p.r2.lerpFrame(sys);
-			return pdf * ::G(bRec.map.sys.n, sys.n, x.p, x_p.p);
+			x_p.r2.fillDG(dg2);
+			return pdf * ::G(bRec.dg.sys.n, dg2.sys.n, x.p, x_p.p);
 		}
 	}
 
@@ -87,12 +74,12 @@ struct BDPT_Path
 		else
 		{
 			PathVertex& x_m = operator()(i - 1), &x = operator()(i), &x_p = operator()(i + 1);
-			BSDFSamplingRecord bRec;
+			DifferentialGeometry dg, dg2;
+			BSDFSamplingRecord bRec(dg);
 			x.r2.getBsdfSample(Ray(x_m.p, normalize(x.p - x_p.p)), g_RNGData(), &bRec, normalize(x_m.p - x.p));
 			float pdf = x.r2.getMat().bsdf.pdf(bRec);
-			Frame sys;
-			x_m.r2.lerpFrame(sys);
-			return pdf * ::G(bRec.map.sys.n, sys.n, x.p, x_m.p);
+			x_m.r2.fillDG(dg2);
+			return pdf * ::G(bRec.dg.sys.n, dg2.sys.n, x.p, x_m.p);
 		}
 	}
 
@@ -109,7 +96,8 @@ struct BDPT_Path
 
 CUDA_FUNC_IN void randomWalk(PathVertex* vertices, unsigned int* N, Ray r, CudaRNG& rng, bool eye)
 {
-	Spectrum cumulative(1.0f); 
+	Spectrum cumulative(1.0f);
+	DifferentialGeometry dg;
 	while(*N < MAX_SUBPATH_LENGTH)
 	{
 		TraceResult r2 = k_TraceRay(r);
@@ -119,7 +107,7 @@ CUDA_FUNC_IN void randomWalk(PathVertex* vertices, unsigned int* N, Ray r, CudaR
 		(*N)++;
 		v.r2 = r2;
 		v.p = r(r2.m_fDist);
-		BSDFSamplingRecord bRec;
+		BSDFSamplingRecord bRec(dg);
 		r2.getBsdfSample(r, rng, &bRec);
 		Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
 		if(eye)
@@ -152,14 +140,15 @@ CUDA_FUNC_IN Spectrum evalPath(const Path& P, int nEye, int nLight, CudaRNG& rng
 		L *= P.LightPath[nLight - 2].cumulative;
 
 	float3 dir = normalize(lv.p - ev.p);
-	BSDFSamplingRecord bRec;
+	DifferentialGeometry dg;
+	BSDFSamplingRecord bRec(dg);
 	ev.r2.getBsdfSample(Ray(ev.p, -1.0f * ev.wi), rng, &bRec, dir);
 	L *= ev.r2.getMat().bsdf.f(bRec);
 	float pdf_i = ev.r2.getMat().bsdf.pdf(bRec);
-	float3 N_x = bRec.map.sys.n;
+	float3 N_x = bRec.dg.sys.n;
 	lv.r2.getBsdfSample(Ray(lv.p, dir), rng, &bRec, lv.wo);
 	L *= lv.r2.getMat().bsdf.f(bRec);
-	float3 N_y = bRec.map.sys.n;
+	float3 N_y = bRec.dg.sys.n;
 	float g = G(N_x, N_y, ev.p, lv.p);
 	L *= g;
 	return L;
@@ -189,7 +178,8 @@ CUDA_FUNC_IN void BDPT(int x, int y, int w, int h, e_Image& g_Image, CudaRNG& rn
 	randomWalk(P.LightPath, &P.t, r, rng, false);
 	
 	Spectrum L(0.0f);
-	BSDFSamplingRecord bRec;
+	DifferentialGeometry dg;
+	BSDFSamplingRecord bRec(dg);
 	for(unsigned int i = 1; i < P.s + 1; i++)
 	{
 		const PathVertex& ev = P.EyePath[i - 1];
@@ -198,9 +188,9 @@ CUDA_FUNC_IN void BDPT(int x, int y, int w, int h, e_Image& g_Image, CudaRNG& rn
 
 		//case ii
 		ev.r2.getBsdfSample(Ray(ev.p, -1.0f * ev.wo), rng, &bRec);
-		DirectSamplingRecord dRec(ev.p, bRec.map.sys.n);
+		DirectSamplingRecord dRec(ev.p, bRec.dg.sys.n);
 		Spectrum localLe = light->sampleDirect(dRec, rng.randomFloat2());
-		bRec.wo = bRec.map.sys.toLocal(dRec.d);
+		bRec.wo = bRec.dg.toLocal(dRec.d);
 		if(V(ev.p, dRec.p))
 		{
 			if(i > 1)
@@ -230,13 +220,13 @@ CUDA_FUNC_IN void BDPT(int x, int y, int w, int h, e_Image& g_Image, CudaRNG& rn
 			break;//urgs wtf?
 		
 		lv.r2.getBsdfSample(Ray(lv.p, -1.0f * lv.wi), rng, &bRec);
-		DirectSamplingRecord dRec(lv.p, bRec.map.sys.n);
+		DirectSamplingRecord dRec(lv.p, bRec.dg.sys.n);
 		Spectrum localLe = Le * g_SceneData.sampleSensorDirect(dRec, rng.randomFloat2());
 		if(V(dRec.p, lv.p))
 		{
 			if(j > 1)
 				localLe *= P.LightPath[j - 2].cumulative;
-			bRec.wo = bRec.map.sys.toLocal(dRec.d);
+			bRec.wo = bRec.dg.toLocal(dRec.d);
 			localLe *= lv.r2.getMat().bsdf.f(bRec);
 			if(dRec.uv.x >= 0 && dRec.uv.x < w && dRec.uv.y >= 0 && dRec.uv.y < h)
 				g_Image.Splat((int)dRec.uv.x, (int)dRec.uv.y, localLe * pathWeight(0, j) / float(P.t));

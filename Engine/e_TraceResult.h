@@ -9,6 +9,7 @@ struct e_KernelMaterial;
 struct e_KernelBSSRDF;
 struct BSDFSamplingRecord;
 struct e_TriIntersectorData;
+struct DifferentialGeometry;
 struct TraceResult
 {
 	float m_fDist;
@@ -19,7 +20,7 @@ struct TraceResult
 	CUDA_DEVICE CUDA_HOST bool hasHit() const;
 	CUDA_DEVICE CUDA_HOST void Init();
 	CUDA_DEVICE CUDA_HOST operator bool() const;
-	CUDA_DEVICE CUDA_HOST void lerpFrame(Frame& sys) const;
+	CUDA_DEVICE CUDA_HOST void fillDG(DifferentialGeometry& dg) const;
 	CUDA_DEVICE CUDA_HOST unsigned int getMatIndex() const;
 	CUDA_DEVICE CUDA_HOST Spectrum Le(const float3& p, const Frame& sys, const float3& w) const;
 	CUDA_DEVICE CUDA_HOST unsigned int LightIndex() const;

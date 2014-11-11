@@ -35,13 +35,6 @@ struct Frame
 		coordinateSystem(n, s, t);
 	}
 
-	CUDA_FUNC_IN void RecalculateFromNormal(const float3& nor)
-	{
-		n = normalize(nor);
-		t = normalize(cross(nor, s));
-		s = normalize(cross(nor, t));
-	}
-
 	/// Convert from world coordinates to local coordinates
 	CUDA_FUNC_IN float3 toLocal(const float3 &v) const {
 		return make_float3(

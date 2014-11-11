@@ -43,9 +43,9 @@ public:
 	float m_fAlphaThreshold;
 public:
 	e_KernelMaterial(const char* name = 0);
-	CUDA_DEVICE CUDA_HOST bool SampleNormalMap(const MapParameters& uv, float3* normal) const;
-	CUDA_DEVICE CUDA_HOST float SampleAlphaMap(const MapParameters& uv) const;
-	CUDA_DEVICE CUDA_HOST bool GetBSSRDF(const MapParameters& uv, const e_KernelBSSRDF** res) const;
+	CUDA_DEVICE CUDA_HOST bool SampleNormalMap(DifferentialGeometry& uv) const;
+	CUDA_DEVICE CUDA_HOST float SampleAlphaMap(const DifferentialGeometry& uv) const;
+	CUDA_DEVICE CUDA_HOST bool GetBSSRDF(const DifferentialGeometry& uv, const e_KernelBSSRDF** res) const;
 	template<typename L> void LoadTextures(L callback)
 	{
 		if(NormalMap.used)

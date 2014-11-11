@@ -19,6 +19,9 @@ texture<float4, 1>		t_SceneNodes;
 texture<float4, 1>		t_NodeTransforms;
 texture<float4, 1>		t_NodeInvTransforms;
 
+texture<int2, 1> t_TriDataA;
+texture<float4, 1> t_TriDataB;
+
 CUDA_FUNC_IN void loadModl(int i, float4x4* o)
 {
 #ifdef ISCUDA
@@ -187,9 +190,8 @@ CUDA_FUNC_IN bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResu
 								if (USE_ALPHA)
 								{
 									e_KernelMaterial* mat = g_SceneData.m_sMatData.Data + tri->getMatIndex(N->m_uMaterialOffset);
-									MapParameters dg;
+									DifferentialGeometry dg;
 									dg.bary = make_float2(u, v);
-									dg.Shape = tri;
 									for (int i = 0; i < NUM_UV_SETS; i++)
 										dg.uv[i] = tri->lerpUV(i, dg.bary);
 									float a = mat->SampleAlphaMap(dg);
@@ -327,14 +329,20 @@ void k_INITIALIZE(const e_DynamicScene* a_Scene, const CudaRNGBuffer& a_RngBuf)
 	e_KernelDynamicScene a_Data = a_Scene->getKernelSceneData();
 
 	size_t offset;
-	cudaChannelFormatDesc cd0 = cudaCreateChannelDesc<float4>(), cd1 = cudaCreateChannelDesc<unsigned int>();
+	cudaChannelFormatDesc	cdf4 = cudaCreateChannelDesc<float4>(),
+							cdu1 = cudaCreateChannelDesc<unsigned int>(),
+							cdi2 = cudaCreateChannelDesc<int2>(),
+							cdh4 = cudaCreateChannelDescHalf4();
 	cudaError_t
-	r = cudaBindTexture(&offset, &t_nodesA, a_Data.m_sBVHNodeData.Data, &cd0, a_Data.m_sBVHNodeData.UsedCount * sizeof(e_BVHNodeData));
-	r = cudaBindTexture(&offset, &t_tris, a_Data.m_sBVHIntData.Data, &cd0, a_Data.m_sBVHIntData.UsedCount * sizeof(e_TriIntersectorData));
-	r = cudaBindTexture(&offset, &t_triIndices, a_Data.m_sBVHIndexData.Data, &cd1, a_Data.m_sBVHIndexData.UsedCount * sizeof(e_TriIntersectorData2));
-	r = cudaBindTexture(&offset, &t_SceneNodes, a_Data.m_sSceneBVH.m_pNodes, &cd0, a_Data.m_sBVHNodeData.UsedCount * sizeof(e_BVHNodeData));
-	r = cudaBindTexture(&offset, &t_NodeTransforms, a_Data.m_sSceneBVH.m_pNodeTransforms, &cd0, a_Data.m_sNodeData.UsedCount * sizeof(float4x4));
-	r = cudaBindTexture(&offset, &t_NodeInvTransforms, a_Data.m_sSceneBVH.m_pInvNodeTransforms, &cd0, a_Data.m_sNodeData.UsedCount * sizeof(float4x4));
+	r = cudaBindTexture(&offset, &t_nodesA, a_Data.m_sBVHNodeData.Data, &cdf4, a_Data.m_sBVHNodeData.UsedCount * sizeof(e_BVHNodeData));
+	r = cudaBindTexture(&offset, &t_tris, a_Data.m_sBVHIntData.Data, &cdf4, a_Data.m_sBVHIntData.UsedCount * sizeof(e_TriIntersectorData));
+	r = cudaBindTexture(&offset, &t_triIndices, a_Data.m_sBVHIndexData.Data, &cdu1, a_Data.m_sBVHIndexData.UsedCount * sizeof(e_TriIntersectorData2));
+	r = cudaBindTexture(&offset, &t_SceneNodes, a_Data.m_sSceneBVH.m_pNodes, &cdf4, a_Data.m_sBVHNodeData.UsedCount * sizeof(e_BVHNodeData));
+	r = cudaBindTexture(&offset, &t_NodeTransforms, a_Data.m_sSceneBVH.m_pNodeTransforms, &cdf4, a_Data.m_sNodeData.UsedCount * sizeof(float4x4));
+	r = cudaBindTexture(&offset, &t_NodeInvTransforms, a_Data.m_sSceneBVH.m_pInvNodeTransforms, &cdf4, a_Data.m_sNodeData.UsedCount * sizeof(float4x4));
+
+	r = cudaBindTexture(&offset, &t_TriDataA, a_Data.m_sTriData.Data, &cdi2, a_Data.m_sTriData.UsedCount * sizeof(e_TriangleData));
+	r = cudaBindTexture(&offset, &t_TriDataB, a_Data.m_sTriData.Data, &cdh4, a_Data.m_sTriData.UsedCount * sizeof(e_TriangleData));
 
 	unsigned int b = 0;
 	cudaMemcpyToSymbol(g_RayTracedCounterDevice, &b, sizeof(unsigned int));
@@ -368,39 +376,23 @@ const e_KernelMaterial& TraceResult::getMat() const
 	return g_SceneData.m_sMatData[getMatIndex()];
 }
 
-void TraceResult::lerpFrame(Frame& sys) const
+void TraceResult::fillDG(DifferentialGeometry& dg) const
 {
 	float4x4 m, m2;
 	loadModl(m_pNode - g_SceneData.m_sNodeData.Data, &m);
 	loadInvModl(m_pNode - g_SceneData.m_sNodeData.Data, &m2);
-	m_pTri->lerpFrame(m_fUV, m, m2, sys);
+	dg.bary = m_fUV;
+	dg.hasUVPartials = false;
+	m_pTri->fillDG(m, m2, dg);
 }
 
 void TraceResult::getBsdfSample(const Ray& r, CudaRNG& _rng, BSDFSamplingRecord* bRec) const
 {
-	float4x4 m, m2;
-	loadModl(m_pNode - g_SceneData.m_sNodeData.Data, &m);
-	loadInvModl(m_pNode - g_SceneData.m_sNodeData.Data, &m2);
 	bRec->Clear(_rng);
-	bRec->map.P = r(m_fDist);
-	bRec->map.pLocal = m2.TransformPoint(bRec->map.P);
-	m_pTri->lerpFrame(m_fUV, m, m2, bRec->map.sys, &bRec->ng);
-	if (dot(bRec->ng, bRec->map.sys.n) < 0.0f)
-		bRec->ng = -bRec->ng;
-	/*if(dot(r.direction, bRec->ng) > 0.0f)
-	{
-		bRec->ng *= -1.0f;
-		bRec->map.sys.n *= -1.0f;
-	}*/
-	for(int i = 0; i < NUM_UV_SETS; i++)
-		bRec->map.uv[i] = m_pTri->lerpUV(i, m_fUV);
-	bRec->map.extraData = m_pTri->lerpExtraData(this->m_fUV);
-	bRec->map.bary = m_fUV;
-	bRec->map.Shape = m_pTri;
-	bRec->wi = normalize(bRec->map.sys.toLocal(-1.0f * r.direction));
-	float3 nor;
-	if(getMat().SampleNormalMap(bRec->map, &nor))
-		bRec->map.sys.RecalculateFromNormal(normalize(bRec->map.sys.toWorld(nor)));
+	bRec->dg.P = r(m_fDist);
+	fillDG(bRec->dg);
+	bRec->wi = normalize(bRec->dg.toLocal(-1.0f * r.direction));
+	getMat().SampleNormalMap(bRec->dg);
 }
 
 const int DYNAMIC_FETCH_THRESHOLD = 20;

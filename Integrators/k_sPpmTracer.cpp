@@ -181,7 +181,7 @@ void k_sPpmTracer::initNewPass(e_Image* I)
 		{
 			e_StreamReference(e_KernelMaterial) mat = m_pScene->m_pMaterialBuffer->operator()(s + j, 1);
 			const e_KernelBSSRDF* bssrdf;
-			MapParameters dg;
+			DifferentialGeometry dg;
 			ZERO_MEM(dg);
 			if(mat->GetBSSRDF(dg, &bssrdf))
 			{

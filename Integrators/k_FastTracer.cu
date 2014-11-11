@@ -109,7 +109,8 @@ __global__ void pathIterateKernel(unsigned int N, e_Image I, int pass, k_RayBuff
 		Ray r(!ray.a, !ray.b);
 		TraceResult r2;
 		res.toResult(&r2, g_SceneData);
-		BSDFSamplingRecord bRec;
+		DifferentialGeometry dg;
+		BSDFSamplingRecord bRec(dg);
 		r2.getBsdfSample(r, rng, &bRec);
 		
 		//traversalResult* tr;
@@ -118,12 +119,12 @@ __global__ void pathIterateKernel(unsigned int N, e_Image I, int pass, k_RayBuff
 		//	d.L += d.D;
 		//d.D = Spectrum(0.0f);
 		
-		dat.L += r2.Le(bRec.map.P, bRec.map.sys, -r.direction) * dat.throughput;
+		dat.L += r2.Le(bRec.dg.P, bRec.dg.sys, -r.direction) * dat.throughput;
 		Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
 		dat.throughput *= f;
 		unsigned int idx2 = g_Intersector2.insertRay();
 		traversalRay& ray2 = g_Intersector2(idx2, 0);
-		ray.a = make_float4(bRec.map.P, 1e-2f);
+		ray.a = make_float4(bRec.dg.P, 1e-2f);
 		ray.b = make_float4(bRec.getOutgoing(), FLT_MAX);
 		g_Intersector2(idx2) = dat;
 		if(pass + 1 == MAX_PASS)

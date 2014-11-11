@@ -127,6 +127,22 @@ Spectrum e_PerspectiveCamera::sampleRay(Ray &ray, const float2 &pixelSample, con
 	return Spectrum(1.0f);
 }
 
+Spectrum e_PerspectiveCamera::sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const float2 &pixelSample, const float2 &apertureSample) const
+{
+	float3 nearP = m_sampleToCamera.TransformPoint(make_float3(
+		pixelSample.x * m_invResolution.x,
+		pixelSample.y * m_invResolution.y, 0.0f));
+
+	float3 d = normalize(nearP);
+	ray = Ray(toWorld.Translation(), toWorld.TransformDirection(d));
+
+	rayX.origin = rayY.origin = ray.origin;
+
+	rayX.direction = toWorld.TransformDirection(normalize(nearP + m_dx));
+	rayY.direction = toWorld.TransformDirection(normalize(nearP + m_dy));
+	return Spectrum(1.0f);
+}
+
 Spectrum e_PerspectiveCamera::sampleDirect(DirectSamplingRecord &dRec, const float2 &sample) const
 {
 	float3 refP = toWorldInverse.TransformPoint(dRec.ref);
@@ -274,6 +290,27 @@ Spectrum e_ThinLensCamera::sampleRay(Ray &ray, const float2 &pixelSample, const 
 	return Spectrum(1.0f);
 }
 
+Spectrum e_ThinLensCamera::sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const float2 &pixelSample, const float2 &apertureSample) const
+{
+	float2 tmp = Warp::squareToUniformDiskConcentric(apertureSample) * m_apertureRadius;
+	float3 nearP = m_sampleToCamera.TransformPoint(make_float3(
+		pixelSample.x * m_invResolution.x,
+		pixelSample.y * m_invResolution.y, 0.0f));
+	float3 apertureP = make_float3(tmp.x, tmp.y, 0.0f);
+
+	float fDist = m_focusDistance / nearP.z;
+	float3 focusP = nearP       * fDist;
+	float3 focusPx = (nearP + m_dx) * fDist;
+	float3 focusPy = (nearP + m_dy) * fDist;
+
+	float3 d = normalize(focusP - apertureP);
+	ray = Ray(toWorld.TransformPoint(apertureP), toWorld.TransformDirection(d));
+	rayX.origin = rayY.origin = ray.origin;
+	rayX.direction = toWorld.TransformDirection(normalize(focusPx - apertureP));
+	rayY.direction = toWorld.TransformDirection(normalize(focusPy - apertureP));
+	return Spectrum(1.0f);
+}
+
 Spectrum e_ThinLensCamera::sampleDirect(DirectSamplingRecord &dRec, const float2 &sample) const
 {
 	float3 refP = toWorldInverse.TransformPoint(dRec.ref);
@@ -368,6 +405,11 @@ void e_OrthographicCamera::Update()
 
 	m_sampleToCamera = m_cameraToSample.inverse();
 
+	m_dx = m_sampleToCamera.TransformPoint(make_float3(m_invResolution.x, 0.0f, 0.0f))
+		- m_sampleToCamera.TransformPoint(make_float3(0.0f));
+	m_dy = m_sampleToCamera.TransformPoint(make_float3(0.0f, m_invResolution.y, 0.0f))
+		- m_sampleToCamera.TransformPoint(make_float3(0.0f));
+
 	m_invSurfaceArea = 1.0f / (
 		length(toWorld.TransformPoint(m_sampleToCamera.Right())) *
 		length(toWorld.TransformPoint(m_sampleToCamera.Up())));
@@ -382,6 +424,18 @@ Spectrum e_OrthographicCamera::sampleRay(Ray &ray, const float2 &pixelSample, co
 
 	ray = Ray(toWorld.TransformPoint(make_float3(nearP.x, nearP.y, 0.0f)), toWorld.Forward());
 
+	return Spectrum(1.0f);
+}
+
+Spectrum e_OrthographicCamera::sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const float2 &pixelSample, const float2 &apertureSample) const
+{
+	float3 nearP = m_sampleToCamera.TransformPoint(make_float3(
+		pixelSample.x * m_invResolution.x,
+		pixelSample.y * m_invResolution.y, 0.0f));
+	ray = Ray(toWorld.TransformPoint(nearP), toWorld.Forward());
+	rayX.origin = toWorld.TransformPoint(nearP + m_dx);
+	rayY.origin = toWorld.TransformPoint(nearP + m_dy);
+	rayX.direction = rayY.direction = ray.direction;
 	return Spectrum(1.0f);
 }
 
@@ -458,6 +512,11 @@ void e_TelecentricCamera::Update()
 
 	m_sampleToCamera = m_cameraToSample.inverse();
 
+	m_dx = m_sampleToCamera.TransformPoint(make_float3(m_invResolution.x, 0.0f, 0.0f))
+		- m_sampleToCamera.TransformPoint(make_float3(0.0f));
+	m_dy = m_sampleToCamera.TransformPoint(make_float3(0.0f, m_invResolution.y, 0.0f))
+		- m_sampleToCamera.TransformPoint(make_float3(0.0f));
+
 	m_normalization = 1.0f / (
 		length(toWorld.TransformPoint(m_sampleToCamera.Right())) *
 		length(toWorld.TransformPoint(m_sampleToCamera.Up())));
@@ -483,6 +542,23 @@ Spectrum e_TelecentricCamera::sampleRay(Ray &ray, const float2 &pixelSample, con
 
 	ray = Ray(toWorld.TransformPoint(orig), toWorld.TransformDirection(focusP - orig));
 
+	return Spectrum(1.0f);
+}
+
+Spectrum e_TelecentricCamera::sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const float2 &pixelSample, const float2 &apertureSample) const
+{
+	float2 diskSample = Warp::squareToUniformDiskConcentric(apertureSample) * (m_apertureRadius / screenScale.x);
+	float3 focusP = m_sampleToCamera.TransformPoint(make_float3(
+		pixelSample.x * m_invResolution.x,
+		pixelSample.y * m_invResolution.y, 0.0f));
+	focusP.z = m_focusDistance;
+	/* Compute the ray origin */
+	float3 orig = make_float3(diskSample.x + focusP.x,
+		diskSample.y + focusP.y, 0.0f);
+	ray = Ray(toWorld.TransformPoint(orig), toWorld.TransformDirection(focusP - orig));
+	rayX.origin = toWorld.TransformPoint(orig + m_dx);
+	rayY.origin = toWorld.TransformPoint(orig + m_dy);
+	rayX.direction = rayY.direction = ray.direction;
 	return Spectrum(1.0f);
 }
 

@@ -146,7 +146,7 @@ template<typename HASH> template<bool VOL> CUDA_ONLY_FUNC Spectrum k_PhotonMap<H
 
 CUDA_ONLY_FUNC Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED, const float3& p, const float3& wo, const e_KernelMaterial* mat)
 {
-	Frame sys = bRec.map.sys;
+	Frame sys = bRec.dg.sys;
 	sys.t *= a_rSurfaceUNUSED;
 	sys.s *= a_rSurfaceUNUSED;
 	sys.n *= a_rSurfaceUNUSED;
@@ -183,14 +183,15 @@ CUDA_ONLY_FUNC Spectrum L_FinalGathering(TraceResult& r2, BSDFSamplingRecord& bR
 	for (int i = 0; i < N; i++)
 	{
 		Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
-		Ray r(bRec.map.P, bRec.getOutgoing());
+		Ray r(bRec.dg.P, bRec.getOutgoing());
 		TraceResult r3 = k_TraceRay(r);
 		if (r3.hasHit())
 		{
-			BSDFSamplingRecord bRec2;
+			DifferentialGeometry dg;
+			BSDFSamplingRecord bRec2(dg);
 			r3.getBsdfSample(r, rng, &bRec2);
 			Spectrum dif = r3.getMat().bsdf.getDiffuseReflectance(bRec2) / PI;
-			L += f * L_Surface(bRec, a_rSurfaceUNUSED, bRec2.map.P, -r.direction, &r3.getMat()) * dif;
+			L += f * L_Surface(bRec, a_rSurfaceUNUSED, bRec2.dg.P, -r.direction, &r3.getMat()) * dif;
 		}
 	}
 	return L / float(N);
@@ -199,7 +200,8 @@ CUDA_ONLY_FUNC Spectrum L_FinalGathering(TraceResult& r2, BSDFSamplingRecord& bR
 template<bool DIRECT, bool DEBUGKERNEL> CUDA_ONLY_FUNC void k_EyePassF(int x, int y, int w, int h, float a_PassIndex, float a_rSurfaceUNUSED, float a_rVolume, k_AdaptiveStruct A, float scale0, float scale1, e_Image g_Image)
 {
 	CudaRNG rng = g_RNGData();
-	BSDFSamplingRecord bRec;
+	DifferentialGeometry dg;
+	BSDFSamplingRecord bRec(dg);
 	Ray r;
 	Spectrum importance = g_SceneData.sampleSensorRay(r, make_float2(x, y) + rng.randomFloat2() - make_float2(0.5f), rng.randomFloat2());
 	TraceResult r2;
@@ -219,11 +221,11 @@ template<bool DIRECT, bool DEBUGKERNEL> CUDA_ONLY_FUNC void k_EyePassF(int x, in
 		}
 		if(DIRECT)
 			L += throughput * UniformSampleAllLights(bRec, r2.getMat(), 1);
-		L += throughput * r2.Le(p, bRec.map.sys, -r.direction);//either it's the first bounce -> account or it's a specular reflection -> ...
+		L += throughput * r2.Le(p, bRec.dg.sys, -r.direction);//either it's the first bounce -> account or it's a specular reflection -> ...
 		const e_KernelBSSRDF* bssrdf;
-		if(r2.getMat().GetBSSRDF(bRec.map, &bssrdf))
+		if(r2.getMat().GetBSSRDF(bRec.dg, &bssrdf))
 		{
-			r = BSSRDF_Entry(bssrdf, bRec.map.sys, p, r.direction);
+			r = BSSRDF_Entry(bssrdf, bRec.dg.sys, p, r.direction);
 			TraceResult r3 = k_TraceRay(r);
 			L += throughput * g_Map2.L<false>(a_rVolume, rng, r, 0, r3.m_fDist, bssrdf->sigp_s + bssrdf->sig_a);
 			//normally one would go to the other side but due to photon mapping the path is terminated

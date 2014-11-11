@@ -14,7 +14,7 @@ Spectrum roughdiffuse::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 		the match is not as good anymore */
 	const float conversionFactor = 1 / sqrtf((float) 2);
 
-	float sigma = m_alpha.Evaluate(bRec.map).average() * conversionFactor;
+	float sigma = m_alpha.Evaluate(bRec.dg).average() * conversionFactor;
 
 	const float sigma2 = sigma*sigma;
 
@@ -44,7 +44,7 @@ Spectrum roughdiffuse::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 			tanBeta = sinThetaO / Frame::cosTheta(bRec.wo);
 		}
 
-		return m_reflectance.Evaluate(bRec.map)
+		return m_reflectance.Evaluate(bRec.dg)
 			* (INV_PI * Frame::cosTheta(bRec.wo) * (A + B
 			* MAX(cosPhiDiff, (float) 0.0f) * sinAlpha * tanBeta));
 	} else {
@@ -83,7 +83,7 @@ Spectrum roughdiffuse::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 				math::safe_sqrt(1.0f - sinAlpha * sinAlpha) +
 				math::safe_sqrt(1.0f - sinBeta  * sinBeta));
 
-		Spectrum rho = m_reflectance.Evaluate(bRec.map),
+		Spectrum rho = m_reflectance.Evaluate(bRec.dg),
 					snglScat = rho * (C1 + cosPhiDiff * C2 * tanBeta +
 					(1.0f - abs(cosPhiDiff)) * C3 * tanHalf),
 					dblScat = rho * rho * (C4 * (1.0f - cosPhiDiff*tmp3*tmp3));
@@ -104,7 +104,7 @@ Spectrum dielectric::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 		if (!sampleReflection || abs(dot(reflect(bRec.wi), bRec.wo)-1) > DeltaEpsilon)
 			return Spectrum(0.0f);
 
-		return m_specularReflectance.Evaluate(bRec.map) * F;
+		return m_specularReflectance.Evaluate(bRec.dg) * F;
 	} else {
 		if (!sampleTransmission || abs(dot(refract(bRec.wi, cosThetaT), bRec.wo)-1) > DeltaEpsilon)
 			return Spectrum(0.0f);
@@ -114,7 +114,7 @@ Spectrum dielectric::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 		float factor = (bRec.mode == ERadiance)
 			? (cosThetaT < 0 ? m_invEta : m_eta) : 1.0f;
 
-		return m_specularTransmittance.Evaluate(bRec.map)  * factor * factor * (1 - F);
+		return m_specularTransmittance.Evaluate(bRec.dg)  * factor * factor * (1 - F);
 	}
 }
 
@@ -178,12 +178,12 @@ Spectrum thindielectric::f(const BSDFSamplingRecord &bRec, EMeasure measure) con
 		if (!sampleReflection || abs(dot(reflect(bRec.wi), bRec.wo)-1) > DeltaEpsilon)
 			return make_float3(0.0f);
 
-		return m_specularReflectance.Evaluate(bRec.map) * R;
+		return m_specularReflectance.Evaluate(bRec.dg) * R;
 	} else {
 		if (!sampleTransmission || abs(dot(transmit(bRec.wi), bRec.wo)-1) > DeltaEpsilon)
 			return make_float3(0.0f);
 
-		return m_specularTransmittance.Evaluate(bRec.map) * (1 - R);
+		return m_specularTransmittance.Evaluate(bRec.dg) * (1 - R);
 	}
 }
 
@@ -205,14 +205,14 @@ Spectrum thindielectric::sample(BSDFSamplingRecord &bRec, float &pdf, const floa
 			bRec.eta = 1.0f;
 			pdf = R;
 
-			return m_specularReflectance.Evaluate(bRec.map);
+			return m_specularReflectance.Evaluate(bRec.dg);
 		} else {
 			bRec.sampledType = ENull;
 			bRec.wo = transmit(bRec.wi);
 			bRec.eta = 1.0f;
 			pdf = 1-R;
 
-			return m_specularTransmittance.Evaluate(bRec.map);
+			return m_specularTransmittance.Evaluate(bRec.dg);
 		}
 	} else if (sampleReflection) {
 		bRec.sampledType = EDeltaReflection;
@@ -220,14 +220,14 @@ Spectrum thindielectric::sample(BSDFSamplingRecord &bRec, float &pdf, const floa
 		bRec.eta = 1.0f;
 		pdf = 1.0f;
 
-		return m_specularReflectance.Evaluate(bRec.map) * R;
+		return m_specularReflectance.Evaluate(bRec.dg) * R;
 	} else if (sampleTransmission) {
 		bRec.sampledType = ENull;
 		bRec.wo = transmit(bRec.wi);
 		bRec.eta = 1.0f;
 		pdf = 1.0f;
 
-		return m_specularTransmittance.Evaluate(bRec.map) * (1-R);
+		return m_specularTransmittance.Evaluate(bRec.dg) * (1-R);
 	}
 
 	return Spectrum(0.0f);
@@ -278,9 +278,9 @@ float roughdielectric::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) con
 
 	/* Evaluate the roughness */
 	float alphaU = m_distribution.transformRoughness(
-				m_alphaU.Evaluate(bRec.map).average()),
+				m_alphaU.Evaluate(bRec.dg).average()),
 			alphaV = m_distribution.transformRoughness(
-				m_alphaV.Evaluate(bRec.map).average());
+				m_alphaV.Evaluate(bRec.dg).average());
 
 #if ENLARGE_LOBE_TRICK == 1
 	Float factor = (1.2f - 0.2f * std::sqrt(
@@ -334,9 +334,9 @@ Spectrum roughdielectric::f(const BSDFSamplingRecord &bRec, EMeasure measure) co
 
 	/* Evaluate the roughness */
 	float alphaU = m_distribution.transformRoughness(
-				m_alphaU.Evaluate(bRec.map).average()),
+				m_alphaU.Evaluate(bRec.dg).average()),
 		  alphaV = m_distribution.transformRoughness(
-				m_alphaV.Evaluate(bRec.map).average());
+				m_alphaV.Evaluate(bRec.dg).average());
 
 	/* Evaluate the microsurface normal distribution */
 	const float D = m_distribution.eval(H, alphaU, alphaV);
@@ -354,7 +354,7 @@ Spectrum roughdielectric::f(const BSDFSamplingRecord &bRec, EMeasure measure) co
 		float value = F * D * G /
 			(4.0f * abs(Frame::cosTheta(bRec.wi)));
 
-		return m_specularReflectance.Evaluate(bRec.map) * value;
+		return m_specularReflectance.Evaluate(bRec.dg) * value;
 	} else {
 		float eta = Frame::cosTheta(bRec.wi) > 0.0f ? m_eta : m_invEta;
 
@@ -370,7 +370,7 @@ Spectrum roughdielectric::f(const BSDFSamplingRecord &bRec, EMeasure measure) co
 		float factor = (bRec.mode == ERadiance)
 			? (Frame::cosTheta(bRec.wi) > 0 ? m_invEta : m_eta) : 1.0f;
 
-		return m_specularTransmittance.Evaluate(bRec.map)
+		return m_specularTransmittance.Evaluate(bRec.dg)
 			* abs(value * factor * factor);
 	}
 }
@@ -388,9 +388,9 @@ Spectrum roughdielectric::sample(BSDFSamplingRecord &bRec, float &pdf, const flo
 
 	/* Evaluate the roughness */
 	float alphaU = m_distribution.transformRoughness(
-				m_alphaU.Evaluate(bRec.map).average()),
+				m_alphaU.Evaluate(bRec.dg).average()),
 		  alphaV = m_distribution.transformRoughness(
-				m_alphaV.Evaluate(bRec.map).average());
+				m_alphaV.Evaluate(bRec.dg).average());
 
 #if ENLARGE_LOBE_TRICK == 1
 	Float factor = (1.2f - 0.2f * std::sqrt(
@@ -439,7 +439,7 @@ Spectrum roughdielectric::sample(BSDFSamplingRecord &bRec, float &pdf, const flo
 		if (Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) <= 0)
 			return Spectrum(0.0f);
 
-		result = m_specularReflectance.Evaluate(bRec.map);
+		result = m_specularReflectance.Evaluate(bRec.dg);
 
 		/* Jacobian of the half-direction mapping */
 		dwh_dwo = 1.0f / (4.0f * dot(bRec.wo, m));
@@ -461,7 +461,7 @@ Spectrum roughdielectric::sample(BSDFSamplingRecord &bRec, float &pdf, const flo
 		float factor = (bRec.mode == ERadiance)
 			? (cosThetaT < 0 ? m_invEta : m_eta) : (1.0f);
 
-		result = m_specularTransmittance.Evaluate(bRec.map) * (factor * factor);
+		result = m_specularTransmittance.Evaluate(bRec.dg) * (factor * factor);
 
 		/* Jacobian of the half-direction mapping */
 		float sqrtDenom = dot(bRec.wi, m) + bRec.eta * dot(bRec.wo, m);
@@ -491,7 +491,7 @@ Spectrum conductor::sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &s
 	bRec.eta = 1.0f;
 	pdf = 1;
 
-	return m_specularReflectance.Evaluate(bRec.map) * MonteCarlo::fresnelConductorExact(Frame::cosTheta(bRec.wi), m_eta, m_k);
+	return m_specularReflectance.Evaluate(bRec.dg) * MonteCarlo::fresnelConductorExact(Frame::cosTheta(bRec.wi), m_eta, m_k);
 }
 
 Spectrum conductor::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
@@ -506,7 +506,7 @@ Spectrum conductor::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 		abs(dot(reflect(bRec.wi), bRec.wo)-1) > DeltaEpsilon)
 		return Spectrum(0.0f);
 
-	return m_specularReflectance.Evaluate(bRec.map) * MonteCarlo::fresnelConductorExact(Frame::cosTheta(bRec.wi), m_eta, m_k);
+	return m_specularReflectance.Evaluate(bRec.dg) * MonteCarlo::fresnelConductorExact(Frame::cosTheta(bRec.wi), m_eta, m_k);
 }
 
 float conductor::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
@@ -531,9 +531,9 @@ Spectrum roughconductor::sample(BSDFSamplingRecord &bRec, float &pdf, const floa
 
 	/* Evaluate the roughness */
 	float alphaU = m_distribution.transformRoughness(
-				m_alphaU.Evaluate(bRec.map).average()),
+				m_alphaU.Evaluate(bRec.dg).average()),
 		  alphaV = m_distribution.transformRoughness(
-				m_alphaV.Evaluate(bRec.map).average());
+				m_alphaV.Evaluate(bRec.dg).average());
 
 	/* Sample M, the microsurface normal */
 	const float3 m = m_distribution.sample(sample,
@@ -563,7 +563,7 @@ Spectrum roughconductor::sample(BSDFSamplingRecord &bRec, float &pdf, const floa
 	/* Jacobian of the half-direction mapping */
 	pdf /= 4.0f * dot(bRec.wo, m);
 
-	return m_specularReflectance.Evaluate(bRec.map) * F	* (numerator / denominator);
+	return m_specularReflectance.Evaluate(bRec.dg) * F	* (numerator / denominator);
 }
 
 Spectrum roughconductor::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
@@ -578,8 +578,8 @@ Spectrum roughconductor::f(const BSDFSamplingRecord &bRec, EMeasure measure) con
 	float3 H = normalize(bRec.wo+bRec.wi);
 
 	/* Evaluate the roughness */
-	float alphaU = m_distribution.transformRoughness(m_alphaU.Evaluate(bRec.map).average()),
-		  alphaV = m_distribution.transformRoughness(m_alphaV.Evaluate(bRec.map).average());
+	float alphaU = m_distribution.transformRoughness(m_alphaU.Evaluate(bRec.dg).average()),
+		  alphaV = m_distribution.transformRoughness(m_alphaV.Evaluate(bRec.dg).average());
 
 	/* Evaluate the microsurface normal distribution */
 	const float D = m_distribution.eval(H, alphaU, alphaV);
@@ -595,7 +595,7 @@ Spectrum roughconductor::f(const BSDFSamplingRecord &bRec, EMeasure measure) con
 	/* Calculate the total amount of reflection */
 	float value = D * G / (4.0f * Frame::cosTheta(bRec.wi));
 
-	return m_specularReflectance.Evaluate(bRec.map) * F * value;
+	return m_specularReflectance.Evaluate(bRec.dg) * F * value;
 }
 
 float roughconductor::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
@@ -610,8 +610,8 @@ float roughconductor::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) cons
 	float3 H = normalize(bRec.wo+bRec.wi);
 
 	/* Evaluate the roughness */
-	float alphaU = m_distribution.transformRoughness(m_alphaU.Evaluate(bRec.map).average()),
-			alphaV = m_distribution.transformRoughness(m_alphaV.Evaluate(bRec.map).average());
+	float alphaU = m_distribution.transformRoughness(m_alphaU.Evaluate(bRec.dg).average()),
+			alphaV = m_distribution.transformRoughness(m_alphaV.Evaluate(bRec.dg).average());
 
 	return m_distribution.pdf(H, alphaU, alphaV) / (4 * AbsDot(bRec.wo, H));
 }
@@ -638,7 +638,7 @@ Spectrum plastic::sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &sam
 			bRec.wo = reflect(bRec.wi);
 
 			pdf = probSpecular;
-			return m_specularReflectance.Evaluate(bRec.map)
+			return m_specularReflectance.Evaluate(bRec.dg)
 				* Fi / probSpecular;
 		} else {
 			bRec.sampledType = EDiffuseReflection;
@@ -648,7 +648,7 @@ Spectrum plastic::sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &sam
 			));
 			float Fo = MonteCarlo::fresnelDielectricExt(Frame::cosTheta(bRec.wo), m_eta);
 
-			Spectrum diff = m_diffuseReflectance.Evaluate(bRec.map);
+			Spectrum diff = m_diffuseReflectance.Evaluate(bRec.dg);
 			if (m_nonlinear)
 				diff = diff / (Spectrum(1.0f) - diff*m_fdrInt);
 			else
@@ -663,13 +663,13 @@ Spectrum plastic::sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &sam
 		bRec.sampledType = EDeltaReflection;
 		bRec.wo = reflect(bRec.wi);
 		pdf = 1;
-		return m_specularReflectance.Evaluate(bRec.map) * Fi;
+		return m_specularReflectance.Evaluate(bRec.dg) * Fi;
 	} else {
 		bRec.sampledType = EDiffuseReflection;
 		bRec.wo = Warp::squareToCosineHemisphere(sample);
 		float Fo = MonteCarlo::fresnelDielectricExt(Frame::cosTheta(bRec.wo), m_eta);
 
-		Spectrum diff = m_diffuseReflectance.Evaluate(bRec.map);
+		Spectrum diff = m_diffuseReflectance.Evaluate(bRec.dg);
 		if (m_nonlinear)
 			diff = diff / (Spectrum(1.0f) - diff*m_fdrInt);
 		else
@@ -695,11 +695,11 @@ Spectrum plastic::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 		/* Check if the provided direction pair matches an ideal
 			specular reflection; tolerate some roundoff errors */
 		if (abs(dot(reflect(bRec.wi), bRec.wo)-1) < DeltaEpsilon)
-			return m_specularReflectance.Evaluate(bRec.map) * Fi;
+			return m_specularReflectance.Evaluate(bRec.dg) * Fi;
 	} else if (hasDiffuse) {
 		float Fo = MonteCarlo::fresnelDielectricExt(Frame::cosTheta(bRec.wo), m_eta);
 
-		Spectrum diff = m_diffuseReflectance.Evaluate(bRec.map);
+		Spectrum diff = m_diffuseReflectance.Evaluate(bRec.dg);
 
 		if (m_nonlinear)
 			diff = diff / (Spectrum(1.0f) - diff * m_fdrInt);
@@ -753,7 +753,7 @@ Spectrum roughplastic::sample(BSDFSamplingRecord &bRec, float &_pdf, const float
 	float2 sample = _sample;
 
 	/* Evaluate the roughness texture */
-	float alpha = m_alpha.Evaluate(bRec.map).average();
+	float alpha = m_alpha.Evaluate(bRec.dg).average();
 	float alphaT = m_distribution.transformRoughness(alpha);
 
 	float probSpecular;
@@ -809,7 +809,7 @@ Spectrum roughplastic::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 			return Spectrum(0.0f);
 
 	/* Evaluate the roughness texture */
-	float alpha = m_alpha.Evaluate(bRec.map).average();
+	float alpha = m_alpha.Evaluate(bRec.dg).average();
 	float alphaT = m_distribution.transformRoughness(alpha);
 
 	Spectrum result(0.0f);
@@ -831,11 +831,11 @@ Spectrum roughplastic::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 		float value = F * D * G /
 			(4.0f * Frame::cosTheta(bRec.wi));
 
-		result += m_specularReflectance.Evaluate(bRec.map) * value;
+		result += m_specularReflectance.Evaluate(bRec.dg) * value;
 	}
 
 	if (hasDiffuse) {
-		Spectrum diff = m_diffuseReflectance.Evaluate(bRec.map);
+		Spectrum diff = m_diffuseReflectance.Evaluate(bRec.dg);
 		//Float T12 = m_externalRoughTransmittance->eval(Frame::cosTheta(bRec.wi), alpha);
 		//Float T21 = m_externalRoughTransmittance->eval(Frame::cosTheta(bRec.wo), alpha);
 		//Float Fdr = 1-m_internalRoughTransmittance->evalDiffuse(alpha);
@@ -866,7 +866,7 @@ float roughplastic::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 		return 0.0f;
 
 	/* Evaluate the roughness texture */
-	float alpha = m_alpha.Evaluate(bRec.map).average();
+	float alpha = m_alpha.Evaluate(bRec.dg).average();
 	float alphaT = m_distribution.transformRoughness(alpha);
 
 	/* Calculate the reflection half-vector */
@@ -927,7 +927,7 @@ Spectrum phong::sample(BSDFSamplingRecord &bRec, float &_pdf, const float2& _sam
 
 	if (choseSpecular) {
 		float3 R = reflect(bRec.wi);
-		float exponent = m_exponent.Evaluate(bRec.map).average();
+		float exponent = m_exponent.Evaluate(bRec.dg).average();
 
 		/* Sample from a Phong lobe centered around (0, 0, 1) */
 		float sinAlpha = sqrtf(1-std::pow(sample.y, 2/(exponent + 1)));
@@ -971,16 +971,16 @@ Spectrum phong::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 	Spectrum result = make_float3(0.0f);
 	if (hasSpecular) {
 		float alpha    = dot(bRec.wo, reflect(bRec.wi)),
-			exponent = m_exponent.Evaluate(bRec.map).average();
+			exponent = m_exponent.Evaluate(bRec.dg).average();
 
 		if (alpha > 0.0f) {
-			result += m_specularReflectance.Evaluate(bRec.map) *
+			result += m_specularReflectance.Evaluate(bRec.dg) *
 				((exponent + 2) * INV_TWOPI * std::pow(alpha, exponent));
 		}
 	}
 
 	if (hasDiffuse)
-		result += m_diffuseReflectance.Evaluate(bRec.map) * INV_PI;
+		result += m_diffuseReflectance.Evaluate(bRec.dg) * INV_PI;
 
 	return result * Frame::cosTheta(bRec.wo);
 }
@@ -1001,7 +1001,7 @@ float phong::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 
 	if (hasSpecular) {
 		float alpha    = dot(bRec.wo, reflect(bRec.wi)),
-			exponent = m_exponent.Evaluate(bRec.map).average();
+			exponent = m_exponent.Evaluate(bRec.dg).average();
 		if (alpha > 0)
 			specProb = std::pow(alpha, exponent) *
 				(exponent + 1.0f) / (2.0f * PI);
@@ -1041,8 +1041,8 @@ Spectrum ward::sample(BSDFSamplingRecord &bRec, float &_pdf, const float2 &_samp
 	}
 
 	if (choseSpecular) {
-		float alphaU = m_alphaU.Evaluate(bRec.map).average();
-		float alphaV = m_alphaV.Evaluate(bRec.map).average();
+		float alphaU = m_alphaU.Evaluate(bRec.dg).average();
+		float alphaV = m_alphaV.Evaluate(bRec.dg).average();
 			
 		float phiH = std::atan(alphaV/alphaU
 			* std::tan(2.0f * PI * sample.y));
@@ -1089,8 +1089,8 @@ Spectrum ward::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 	Spectrum result = Spectrum(0.0f);
 	if (hasSpecular) {
 		float3 H = bRec.wi+bRec.wo;
-		float alphaU = m_alphaU.Evaluate(bRec.map).average();
-		float alphaV = m_alphaV.Evaluate(bRec.map).average();
+		float alphaU = m_alphaU.Evaluate(bRec.dg).average();
+		float alphaV = m_alphaV.Evaluate(bRec.dg).average();
 		float factor1 = 0.0f;
 		switch (m_modelVariant) {
 			case EWard:
@@ -1114,11 +1114,11 @@ Spectrum ward::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 			sampling density of the Ward model in places where it takes
 			on miniscule values (Veach-MLT does this for instance) */
 		if (specRef > 1e-10f)
-			result += m_specularReflectance.Evaluate(bRec.map) * specRef;
+			result += m_specularReflectance.Evaluate(bRec.dg) * specRef;
 	}
 
 	if (hasDiffuse)
-		result += m_diffuseReflectance.Evaluate(bRec.map) * INV_PI;
+		result += m_diffuseReflectance.Evaluate(bRec.dg) * INV_PI;
 
 	return result * Frame::cosTheta(bRec.wo);
 }
@@ -1135,8 +1135,8 @@ float ward::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 	float diffuseProb = 0.0f, specProb = 0.0f;
 
 	if (hasSpecular) {
-		float alphaU = m_alphaU.Evaluate(bRec.map).average();
-		float alphaV = m_alphaV.Evaluate(bRec.map).average();
+		float alphaU = m_alphaU.Evaluate(bRec.dg).average();
+		float alphaV = m_alphaV.Evaluate(bRec.dg).average();
 		float3 H = normalize(bRec.wi+bRec.wo);
 		float factor1 = 1.0f / (4.0f * PI * alphaU * alphaV *
 			dot(H, bRec.wi) * powf(Frame::cosTheta(H), 3));
@@ -1165,8 +1165,8 @@ Spectrum hk::sample(BSDFSamplingRecord &bRec, float &_pdf, const float2 &_sample
 	bool hasSpecularTransmission = (bRec.typeMask & EDeltaTransmission);
 	bool hasSingleScattering = (bRec.typeMask & EGlossy);
 
-	const Spectrum sigmaA = m_sigmaA.Evaluate(bRec.map),
-				sigmaS = m_sigmaS.Evaluate(bRec.map),
+	const Spectrum sigmaA = m_sigmaA.Evaluate(bRec.dg),
+				sigmaS = m_sigmaS.Evaluate(bRec.dg),
 				sigmaT = sigmaA + sigmaS,
 				tauD = sigmaT * m_thickness;
 
@@ -1226,8 +1226,8 @@ Spectrum hk::sample(BSDFSamplingRecord &bRec, float &_pdf, const float2 &_sample
 
 Spectrum hk::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 {
-	Spectrum sigmaA = m_sigmaA.Evaluate(bRec.map),
-				sigmaS = m_sigmaS.Evaluate(bRec.map),
+	Spectrum sigmaA = m_sigmaA.Evaluate(bRec.dg),
+				sigmaS = m_sigmaS.Evaluate(bRec.dg),
 				sigmaT = sigmaA + sigmaS,
 				tauD = sigmaT * m_thickness,
 				result = Spectrum(0.0f);
@@ -1297,8 +1297,8 @@ float hk::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 	bool hasSingleScattering = (bRec.typeMask & EGlossy);
 	bool hasSpecularTransmission = (bRec.typeMask & EDeltaTransmission);
 
-	const Spectrum sigmaA = m_sigmaA.Evaluate(bRec.map),
-				sigmaS = m_sigmaS.Evaluate(bRec.map),
+	const Spectrum sigmaA = m_sigmaA.Evaluate(bRec.dg),
+				sigmaS = m_sigmaS.Evaluate(bRec.dg),
 				sigmaT = sigmaA + sigmaS,
 				tauD = sigmaT * m_thickness;
 

@@ -4,6 +4,7 @@
 #include <MathTypes.h>
 #include "e_ShapeSet.h"
 #include "e_KernelDynamicScene.h"
+#include "e_FileTexture.h"
 
 struct e_LightBase : public e_BaseType
 {

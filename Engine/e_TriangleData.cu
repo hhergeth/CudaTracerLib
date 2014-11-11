@@ -18,14 +18,14 @@ void e_TriangleData::setData(const float3& v0, const float3& v1, const float3& v
 #ifdef ISCUDA
 	#define tof2(x) make_float2(__half2float(x & 0xffff), __half2float(x >> 16))
 #else
-	#define tof2(x) make_float2(half((unsigned short)(x & 0xffff)).ToFloat(), half((unsigned short)(x & 0xffff0000)).ToFloat())
+#define tof2(x) make_float2(half((unsigned short)(x & 0xffff)).ToFloat(), half((unsigned short)(x >> 16)).ToFloat())
 #endif
 	uint3 val = m_sDeviceData.RowX[0];
 	float2 t0 = tof2(val.x), t1 = tof2(val.y), t2 = tof2(val.z);
 	float2 dUV1 = t1 - t0, dUV2 = t2 - t0;
 	float3 n = normalize(cross(dP1, dP2));
 	float determinant = dUV1.x * dUV2.y - dUV1.y * dUV2.x;
-	float3 dpdu, dpdv;
+	//float3 dpdu, dpdv;
 	if (determinant == 0)
 	{
 		coordinateSystem(n, dpdu, dpdv);
@@ -33,45 +33,33 @@ void e_TriangleData::setData(const float3& v0, const float3& v1, const float3& v
 	else
 	{
 		float invDet = 1.0f / determinant;
-		dpdu = normalize((dUV2.y * dP1 - dUV1.y * dP2) * invDet);
-		dpdv = normalize((-dUV2.x * dP1 + dUV1.x * dP2) * invDet);
+		dpdu = (( dUV2.y * dP1 - dUV1.y * dP2) * invDet);
+		dpdv = ((-dUV2.x * dP1 + dUV1.x * dP2) * invDet);
 	}
 	m_sDeviceData.Row0.x = NormalizedFloat3ToUchar2(n0) | (NormalizedFloat3ToUchar2(n1) << 16);
 	m_sDeviceData.Row0.y = NormalizedFloat3ToUchar2(n2) | (NormalizedFloat3ToUchar2(dpdu) << 16);
 	m_sDeviceData.Row0.z = NormalizedFloat3ToUchar2(dpdv) | (NormalizedFloat3ToUchar2(n) << 16);
 }
 
-void e_TriangleData::lerpFrame(const float2& bCoords, const float4x4& localToWorld, const float4x4& worldToLocal, Frame& sys, float3* ng) const
-{/*
+void e_TriangleData::fillDG(const float4x4& localToWorld, const float4x4& worldToLocal, DifferentialGeometry& dg) const
+{
 	uint4 q = m_sDeviceData.Row0;
 	float3 na = Uchar2ToNormalizedFloat3(q.x), nb = Uchar2ToNormalizedFloat3(q.x >> 16), nc = Uchar2ToNormalizedFloat3(q.y);
-	float3 ta = Uchar2ToNormalizedFloat3(q.y >> 16), tb = Uchar2ToNormalizedFloat3(q.z), tc = Uchar2ToNormalizedFloat3(q.z >> 16);
-	float w = 1.0f - bCoords.x - bCoords.y, u = bCoords.x, v = bCoords.y;
-	sys.n = (u * na + v * nb + w * nc);//no normalize required, sys * mat will do so
-	sys.t = (u * ta + v * tb + w * tc);
-	sys.s = (cross(sys.n, sys.t));
+	float3 /*dpdu = Uchar2ToNormalizedFloat3(q.y >> 16), dpdv = Uchar2ToNormalizedFloat3(q.z),*/ faceN = Uchar2ToNormalizedFloat3(q.z >> 16);
+	float w = 1.0f - dg.bary.x - dg.bary.y, u = dg.bary.x, v = dg.bary.y;
+	dg.sys.n = u * na + v * nb + w * nc;
+	dg.sys.s = dpdu - dg.sys.n * dot(dg.sys.n, dpdu);
+	dg.sys.t = cross(dg.sys.s, dg.sys.n);
+	dg.sys = dg.sys * localToWorld;
+	dg.n = normalize(!worldToLocal.TransformTranspose(make_float4(faceN, 0.0f)));
+	dg.dpdu = (localToWorld.TransformDirection(dpdu));
+	dg.dpdv = (localToWorld.TransformDirection(dpdv));
+	for (int i = 0; i < NUM_UV_SETS; i++)
+		dg.uv[i] = lerpUV(i, dg.bary);
+	dg.extraData = lerpExtraData(dg.bary);
 
-	sys = sys * localToWorld;
-	if (ng)
-	{
-		float4 v = make_float4(na + nb + nc, 0.0f);
-		v = worldToLocal.TransformTranspose(v);
-		*ng = normalize(!v);
-	}*/
-	uint4 q = m_sDeviceData.Row0;
-	float3 na = Uchar2ToNormalizedFloat3(q.x), nb = Uchar2ToNormalizedFloat3(q.x >> 16), nc = Uchar2ToNormalizedFloat3(q.y);
-	float3 dpdu = Uchar2ToNormalizedFloat3(q.y >> 16), dpdv = Uchar2ToNormalizedFloat3(q.z), faceN = Uchar2ToNormalizedFloat3(q.z >> 16);
-	float w = 1.0f - bCoords.x - bCoords.y, u = bCoords.x, v = bCoords.y;
-	sys.n = u * na + v * nb + w * nc;
-	sys.s = dpdu - sys.n * dot(sys.n, dpdu);
-	sys.t = cross(sys.s, sys.n);
-	sys = sys * localToWorld;
-	if(ng)
-	{
-		float4 v = make_float4(faceN, 0.0f);
-		v = worldToLocal.TransformTranspose(v);
-		*ng = normalize(!v);
-	}
+	if (dot(dg.n, dg.sys.n) < 0.0f)
+		dg.n = -dg.n;
 }
 
 float2 e_TriangleData::lerpUV(int setId, const float2& bCoords) const
@@ -79,12 +67,14 @@ float2 e_TriangleData::lerpUV(int setId, const float2& bCoords) const
 #ifdef ISCUDA
 	#define tof2(x) make_float2(__half2float(x & 0xffff), __half2float(x >> 16))
 #else
-	#define tof2(x) make_float2(half((unsigned short)(x & 0xffff)).ToFloat(), half((unsigned short)(x & 0xffff0000)).ToFloat())
+	#define tof2(x) make_float2(half((unsigned short)(x & 0xffff)).ToFloat(), half((unsigned short)(x >> 16)).ToFloat())
 #endif
 	uint3 val = m_sDeviceData.RowX[setId];
 	float2 a = tof2(val.x), b = tof2(val.y), c = tof2(val.z);
-	float u = bCoords.y, v = 1.0f - u - bCoords.x;
-	return a + u * (b - a) + v * (c - a);
+	//float u = bCoords.y, v = 1.0f - u - bCoords.x;
+	//return a + u * (b - a) + v * (c - a);
+	float w = 1.0f - bCoords.x - bCoords.y, u = bCoords.x, v = bCoords.y;
+	return u * a + v * b + w * c;
 #undef tof2
 }
 

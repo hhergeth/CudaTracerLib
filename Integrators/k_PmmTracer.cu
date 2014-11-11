@@ -15,7 +15,8 @@ __global__ void tracePhotons()
 	int depth = 0;
 	while((r2 = k_TraceRay(r)).hasHit() && depth++ < 7)
 	{
-		BSDFSamplingRecord bRec;
+		DifferentialGeometry dg;
+		BSDFSamplingRecord bRec(dg);
 		r2.getBsdfSample(r, rng, &bRec);
 		Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
 		if(f.isZero())

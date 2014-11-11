@@ -36,20 +36,23 @@ CUDA_ONLY_FUNC void max3(uint3* tar, uint3& val)
 	atomicMax(&tar->z, val.z);
 }
 
-CUDA_FUNC_IN Spectrum trace(Ray& r, CudaRNG& rng, float3* pout)
+CUDA_FUNC_IN Spectrum trace(Ray& r, const Ray& rX, const Ray& rY, CudaRNG& rng, float3* pout)
 {
 	TraceResult r2 = k_TraceRay(r);
 	if(r2.hasHit())
 	{
 		if(pout)
 			*pout = r(r2.m_fDist);
-		BSDFSamplingRecord bRec;
+		DifferentialGeometry dg;
+		BSDFSamplingRecord bRec(dg);
 		r2.getBsdfSample(r, rng, &bRec);
-		//return Spectrum(clamp01(dot(bRec.map.sys.n, -r.direction)));
+		dg.computePartials(r, rX, rY);
+		//return Spectrum(dg.dvdx, dg.dvdy, 0);
+		//return Spectrum(clamp01(dot(bRec.dg.sys.n, -normalize(r.direction))));
 		Spectrum through(1.0f);
 		if(g_SceneData.m_sVolume.HasVolumes())
 			through = (-g_SceneData.m_sVolume.tau(r, 0, r2.m_fDist)).exp();
-		Spectrum L = r2.Le(r(r2.m_fDist), bRec.map.sys, -r.direction);
+		Spectrum L = r2.Le(r(r2.m_fDist), bRec.dg.sys, -r.direction);
 		//return L + r2.getMat().bsdf.getDiffuseReflectance(bRec);
 		Spectrum f = L + r2.getMat().bsdf.sample(bRec, rng.randomFloat2()) * through;
 		int depth = 0;
@@ -80,7 +83,8 @@ CUDA_FUNC_IN Spectrum traceR(Ray& r, CudaRNG& rng, float3* pout)
 	Spectrum c = Spectrum(1.0f), L = Spectrum(0.0f);
 	unsigned int depth = 0;
 	bool specBounce = false;
-	BSDFSamplingRecord bRec;
+	DifferentialGeometry dg;
+	BSDFSamplingRecord bRec(dg);
 	while(k_TraceRay(r.direction, r.origin, &r2) && depth++ < 5)
 	{
 		if(pout && depth == 1)
@@ -110,7 +114,7 @@ CUDA_FUNC_IN Spectrum traceR(Ray& r, CudaRNG& rng, float3* pout)
 		else return 0.0f;*/
 		//return Spectrum(dot(bRec.ng, -r.direction));
 		if(depth == 1 || specBounce || !DIRECT)
-			L += r2.Le(r(r2.m_fDist), bRec.map.sys, -r.direction);
+			L += r2.Le(r(r2.m_fDist), bRec.dg.sys, -r.direction);
 		if(DIRECT)
 			L += c * UniformSampleAllLights(bRec, r2.getMat(), 1);
 		float pdf;
@@ -176,10 +180,11 @@ __global__ void primaryKernel(long long width, long long height, e_Image g_Image
 		float N2 = 1;
 		for(float f = 0; f < N2; f++)
 		{
-			Ray r;
-			Spectrum imp = g_SceneData.sampleSensorRay(r, pixelSample, rng.randomFloat2());
+			Ray r, rX, rY;
+//			Spectrum imp = g_SceneData.sampleSensorRay(r, pixelSample, rng.randomFloat2());
+			Spectrum imp = g_SceneData.m_Camera.sampleRayDifferential(r, rX, rY, pixelSample, rng.randomFloat2());
 			float3 p = make_float3(0);
-			c += imp * trace(r, rng, &p);
+			c += imp * trace(r, rX, rY, rng, &p);
 			if(fsumf(p))
 			{
 				uint3 pu = make_uint3(FloatToUInt(p.x), FloatToUInt(p.y), FloatToUInt(p.z));
@@ -206,7 +211,7 @@ __global__ void debugPixe2l(unsigned int width, unsigned int height, int2 p)
 {
 	Ray r = g_SceneData.GenerateSensorRay(p.x, p.y);
 	CudaRNG rng = g_RNGData();
-	Spectrum q =  trace(r, rng, 0);
+	Spectrum q =  trace(r, r, r, rng, 0);
 }
 
 void k_PrimTracer::DoRender(e_Image* I)
@@ -236,9 +241,10 @@ void k_PrimTracer::Debug(int2 pixel)
 	//FW::printf("%f,%f",pixel.x/float(w),pixel.y/float(h));
 	k_INITIALIZE(m_pScene, g_sRngs);
 	//debugPixe2l<<<1,1>>>(w,h,pixel);
-	Ray r = g_SceneData.GenerateSensorRay(pixel.x, pixel.y);
 	CudaRNG rng = g_RNGData();
-	trace(r, rng, 0);
+	Ray r, rX, rY;
+	g_SceneData.sampleSensorRay(r, rX, rY, make_float2(pixel.x, pixel.y), rng.randomFloat2(), make_float2(0));
+	trace(r, rX, rY, rng, 0);
 }
 
 void k_PrimTracer::CreateSliders(SliderCreateCallback a_Callback)

@@ -17,7 +17,8 @@ template<bool RECURSIVE> __global__ void k_GuessPass(int w, int h, float scx, fl
 		while(k_TraceRay(r.direction, r.origin, &r2) && ++d < 5)
 		{
 			float3 p = r(r2.m_fDist);
-			BSDFSamplingRecord bRec;
+			DifferentialGeometry dg;
+			BSDFSamplingRecord bRec(dg);
 			r2.getBsdfSample(r, rng, &bRec);
 			r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
 			r = Ray(r(r2.m_fDist), bRec.getOutgoing());

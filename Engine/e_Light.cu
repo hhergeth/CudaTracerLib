@@ -1,4 +1,5 @@
 #include "e_Light.h"
+#include "e_Mesh.h"
 
 Spectrum e_PointLight::sampleRay(Ray &ray, const float2 &spatialSample, const float2 &directionalSample) const
 {

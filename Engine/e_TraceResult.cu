@@ -28,5 +28,5 @@ unsigned int TraceResult::getMatIndex() const
 void TraceResult::getBsdfSample(const Ray& r, CudaRNG& _rng, BSDFSamplingRecord* bRec, const float3& wo) const
 {
 	getBsdfSample(r, _rng, bRec);
-	bRec->wo = bRec->map.sys.toLocal(wo);
+	bRec->wo = bRec->dg.toLocal(wo);
 }

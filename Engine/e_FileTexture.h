@@ -4,6 +4,7 @@
 #include "..\Base\FileStream.h"
 
 #define MAX_MIPS 16
+#define MTS_MIPMAP_LUT_SIZE 64
 
 enum e_ImageWrap
 {
@@ -54,16 +55,20 @@ struct e_KernelMIPMap
 	e_ImageWrap m_uWrapMode;
 	unsigned int m_sOffsets[MAX_MIPS];
 	unsigned int m_uLevels;
+	float m_weightLut[MTS_MIPMAP_LUT_SIZE];
 
 	//Texture functions
 	CUDA_DEVICE CUDA_HOST Spectrum Sample(const float2& uv) const;
 	CUDA_DEVICE CUDA_HOST float SampleAlpha(const float2& uv) const;
+	CUDA_DEVICE CUDA_HOST void evalGradient(const float2& uv, Spectrum* gradient) const;
 	//MipMap functions
 	CUDA_DEVICE CUDA_HOST Spectrum Sample(const float2& a_UV, float width) const;
 	CUDA_DEVICE CUDA_HOST Spectrum Sample(float width, int x, int y) const;
+	CUDA_DEVICE CUDA_HOST Spectrum eval(const float2& uv, const float2& d0, const float2& d1) const;
 private:
 	CUDA_DEVICE CUDA_HOST Spectrum Texel(unsigned int level, const float2& a_UV) const;
 	CUDA_DEVICE CUDA_HOST Spectrum triangle(unsigned int level, const float2& a_UV) const;
+	CUDA_DEVICE CUDA_HOST Spectrum evalEWA(unsigned int level, const float2 &uv, float A, float B, float C) const;
 };
 
 class e_MIPMap
@@ -79,6 +84,7 @@ class e_MIPMap
 	e_ImageWrap m_uWrapMode;
 	e_KernelMIPMap m_sKernelData;
 	unsigned int m_sOffsets[MAX_MIPS];
+	float m_weightLut[MTS_MIPMAP_LUT_SIZE];
 public:
 	e_MIPMap() {m_pDeviceData = 0; m_uWidth = m_uHeight = m_uBpp = 0xffffffff;}
 	e_MIPMap(InputStream& a_In);
