@@ -22,6 +22,7 @@ CUDA_FUNC_IN void handleSurfaceInteraction(const Spectrum& weight, BSDFSamplingR
 	Spectrum value = weight * g_SceneData.sampleSensorDirect(dRec, rng.randomFloat2());
 	if(!value.isZero() && !g_SceneData.Occluded(Ray(dRec.ref, dRec.d), 0, dRec.dist))
 	{
+		bRec.mode = EImportance;
 		bRec.wo = bRec.dg.toLocal(dRec.d);
 		value *= r2.getMat().bsdf.f(bRec);
 		g_Image.Splat(int(dRec.uv.x), int(dRec.uv.y),  value);
@@ -46,7 +47,6 @@ CUDA_FUNC_IN void doWork(e_Image& g_Image, CudaRNG& rng)
 	while(++depth < 12 && k_TraceRay(r.direction, r.origin, &r2))
 	{
 		r2.getBsdfSample(r, rng, &bRec);
-		bRec.mode = EImportance;
 		
 		handleSurfaceInteraction(power * throughput, bRec, r2, g_Image, rng);
 		

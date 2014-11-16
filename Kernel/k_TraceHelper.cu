@@ -1,4 +1,5 @@
 #include "k_TraceHelper.h"
+#include "../Math/Compression.h"
 
 //#define SKIP_OUTER_TREE
 
@@ -187,7 +188,7 @@ CUDA_FUNC_IN bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResu
 								unsigned int ti = index >> 1;
 								e_TriangleData* tri = g_SceneData.m_sTriData.Data + ti + mesh.m_uTriangleOffset;
 								int q = 1;
-								if (USE_ALPHA)
+								/*if (USE_ALPHA)
 								{
 									e_KernelMaterial* mat = g_SceneData.m_sMatData.Data + tri->getMatIndex(N->m_uMaterialOffset);
 									DifferentialGeometry dg;
@@ -197,7 +198,7 @@ CUDA_FUNC_IN bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResu
 									float a = mat->SampleAlphaMap(dg);
 									q = a >= mat->m_fAlphaThreshold;
 
-								}
+								}*/
 								if (q)
 								{
 									a_Result->m_pNode = N;
@@ -378,12 +379,37 @@ const e_KernelMaterial& TraceResult::getMat() const
 
 void TraceResult::fillDG(DifferentialGeometry& dg) const
 {
-	float4x4 m, m2;
-	loadModl(m_pNode - g_SceneData.m_sNodeData.Data, &m);
-	loadInvModl(m_pNode - g_SceneData.m_sNodeData.Data, &m2);
+	float4x4 localToWorld, worldToLocal;
+	loadModl(m_pNode - g_SceneData.m_sNodeData.Data, &localToWorld);
+	loadInvModl(m_pNode - g_SceneData.m_sNodeData.Data, &worldToLocal);
 	dg.bary = m_fUV;
 	dg.hasUVPartials = false;
-	m_pTri->fillDG(m, m2, dg);
+#if defined(ISCUDA) && NUM_UV_SETS == 1
+	unsigned int i = m_pTri - g_SceneData.m_sTriData.Data;
+	int2 nme = tex1Dfetch(t_TriDataA, i * 4 + 0);
+	float4 rowB = tex1Dfetch(t_TriDataB, i * 4 + 1);
+	float4 rowC = tex1Dfetch(t_TriDataB, i * 4 + 2);
+	float4 rowD = tex1Dfetch(t_TriDataB, i * 4 + 3);
+	float3 na = Uchar2ToNormalizedFloat3(nme.x), nb = Uchar2ToNormalizedFloat3(nme.x >> 16), nc = Uchar2ToNormalizedFloat3(nme.y);
+	float w = 1.0f - dg.bary.x - dg.bary.y, u = dg.bary.x, v = dg.bary.y;
+	dg.extraData = nme.y >> 24;
+	dg.sys.n = u * na + v * nb + w * nc;
+	float3 dpdu = !rowB;
+	float3 dpdv = make_float3(rowB.z, rowC.x, rowC.y);
+	dg.sys.s = dpdu - dg.sys.n * dot(dg.sys.n, dpdu);
+	dg.sys.t = cross(dg.sys.s, dg.sys.n);
+	dg.sys = dg.sys * localToWorld;
+	dg.n = normalize(!worldToLocal.TransformTranspose(make_float4(na + nb + nc, 0.0f)));
+	dg.dpdu = (localToWorld.TransformDirection(dpdu));
+	dg.dpdv = (localToWorld.TransformDirection(dpdv));
+	float2 ta = make_float2(rowC.z, rowC.w), tb = make_float2(rowD.x, rowD.y), tc = make_float2(rowD.z, rowD.w);
+	dg.uv[0] = u * ta + v * tb + w * tc;
+
+	if (dot(dg.n, dg.sys.n) < 0.0f)
+		dg.n = -dg.n;
+#else
+	m_pTri->fillDG(localToWorld, worldToLocal, dg);
+#endif
 }
 
 void TraceResult::getBsdfSample(const Ray& r, CudaRNG& _rng, BSDFSamplingRecord* bRec) const

@@ -45,6 +45,7 @@ struct e_KernelDynamicScene
 
 	CUDA_HOST CUDA_DEVICE bool Occluded(const Ray& r, float tmin, float tmax) const;
 	CUDA_DEVICE CUDA_HOST Spectrum EvalEnvironment(const Ray& r) const;
+	CUDA_DEVICE CUDA_HOST Spectrum EvalEnvironment(const Ray& r, const Ray& rX, const Ray& rY) const;
 	CUDA_DEVICE CUDA_HOST float pdfEmitterDiscrete(const e_KernelLight *emitter) const;
 
 	CUDA_DEVICE CUDA_HOST Spectrum sampleEmitterDirect(DirectSamplingRecord &dRec, const float2 &sample) const;

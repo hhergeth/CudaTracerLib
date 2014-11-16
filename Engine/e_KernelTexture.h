@@ -2,6 +2,7 @@
 
 #include "e_FileTexture.h"
 #include "e_DifferentialGeometry.h"
+#include "e_Buffer.h"
 
 struct e_KernelTextureMapping2D
 {
@@ -140,9 +141,11 @@ struct e_KernelImageTexture : public e_KernelTextureBase
 	}
 	template<typename L> void LoadTextures(L callback)
 	{
-		tex = callback(file, true).AsVar();
+		texRef = callback(file, true);
+		tex = texRef.AsVar();
 	}
 	TYPE_FUNC(e_KernelImageTexture)
+	e_BufferReference<e_MIPMap, e_KernelMIPMap> texRef;
 	e_Variable<e_KernelMIPMap> tex;
 	e_KernelTextureMapping2D mapping;
 	e_String file;

@@ -26,11 +26,25 @@ template<bool REGULAR> struct k_HashGrid
 		m_vCellSize = m_sBox.Size() / m_fGridSize;
 	}
 
+	CUDA_FUNC_IN unsigned int hash6432shift(unsigned long long key) const
+	{
+		key = (~key) + (key << 18); // key = (key << 18) - key - 1;
+		key = key ^ (key >>  31);
+		key = key * 21; // key = (key + (key << 2)) + (key << 4);
+		key = key ^ (key >> 11);
+		key = key + (key << 6);
+		return unsigned int(key) ^ unsigned int(key >> 2);
+	}
+
 	CUDA_FUNC_IN unsigned int Hash(const uint3& p) const
 	{
 		if(REGULAR)
 		{
 			return clamp((unsigned int)(p.z * m_fGridSize * m_fGridSize + p.y * m_fGridSize + p.x), 0u, N);
+			unsigned long long  l = (unsigned long long((p.x)) << 32) | 
+									(unsigned long long((p.y)) << 16) | 
+									unsigned long long((p.z));
+			return hash6432shift(l) % N;
 		}
 		else
 		{

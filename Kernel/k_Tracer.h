@@ -12,6 +12,7 @@ class k_Tracer
 public:
 	static CudaRNGBuffer g_sRngs;
 	static AABB GetEyeHitPointBox(e_DynamicScene* s, e_Sensor* c, bool recursive);
+	static float GetLightVisibility(e_DynamicScene* s, e_Sensor* c, int recursion_depth);
 	static TraceResult TraceSingleRay(Ray r, e_DynamicScene* s, e_Sensor* c);
 	static void InitRngs(unsigned int N = 1 << 16);
 public:

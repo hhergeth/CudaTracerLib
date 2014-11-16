@@ -19,47 +19,31 @@ public:
 	{
 		struct
 		{
-			unsigned short Normals[3];//Row0.x,y
-			unsigned short dpdu, dpdv, faceN;//Row0.y,z
-			unsigned char MatIndex;//Row0.w
-			unsigned char ExtraData[3];//Row0.w
+			unsigned short Normals[3];
+			unsigned char MatIndex;
+			unsigned char ExtraData;
+			ushort3 dpdu, dpdv;
 			UV_Set UV_Sets[NUM_UV_SETS];
 		} m_sHostData;
 		struct
 		{
-			uint4 Row0;
-			uint3 RowX[NUM_UV_SETS];
+			uint2 NorMatExtra;
+			uint3 DpduDpdv;
+			uint3 UVSets[NUM_UV_SETS];
 		} m_sDeviceData;
 	};
-	float3 dpdu, dpdv;
 public:
 	e_TriangleData(){}
 	e_TriangleData(const float3* P, unsigned char matIndex, const float2* T, const float3* N, const float3* Tan, const float3* BiTan);
 	CUDA_DEVICE CUDA_HOST void fillDG(const float4x4& localToWorld, const float4x4& worldToLocal, DifferentialGeometry& dg) const;
 	CUDA_FUNC_IN unsigned int getMatIndex(const unsigned int off) const 
 	{
-		unsigned int v = m_sDeviceData.Row0.w & 0xff;
+		unsigned int v = (m_sDeviceData.NorMatExtra.y >> 16) & 0xff;
 		return unsigned int(v) + off;
 	}
-	CUDA_DEVICE CUDA_HOST float2 lerpUV(int setId, const float2& bCoords) const;
-	CUDA_DEVICE CUDA_HOST void getNormalDerivative(const float2& bCoords, float3& dndu, float3& dndv) const;
 	CUDA_DEVICE CUDA_HOST void setData(const float3& v0, const float3& v1, const float3& v2,
 									   const float3& n0, const float3& n1, const float3& n3);
-	CUDA_FUNC_IN unsigned char lerpExtraData(const float2& bCoords) const
-	{
-		unsigned int V = m_sDeviceData.Row0.w;
-		unsigned char a = (V >> 8) & 0xff, b = (V >> 16) & 0xff, c = V >> 24;
-		float u = bCoords.y, v = 1.0f - u - bCoords.x;
-		return unsigned char(a + u * (b - a) + v * (c - a));
-	}
-	void setUvSetData(int setId, const float2& a, const float2& b, const float2& c)
-	{
-		half2 a1 = half2(a), b1 = half2(b), c1 = half2(c);
-		m_sHostData.UV_Sets[setId].TexCoord[0] = *(ushort2*)&a1;
-		m_sHostData.UV_Sets[setId].TexCoord[1] = *(ushort2*)&b1;
-		m_sHostData.UV_Sets[setId].TexCoord[2] = *(ushort2*)&c1;
-	}
-	//CUDA_DEVICE CUDA_HOST void getCurvature(const float2& bCoords, float& H, float& K) const;
+	void setUvSetData(int setId, const float2& a, const float2& b, const float2& c);
 };
 #else
 struct e_TriangleData

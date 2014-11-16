@@ -28,6 +28,13 @@ Spectrum e_KernelDynamicScene::EvalEnvironment(const Ray& r) const
 	else return Spectrum(0.0f);
 }
 
+Spectrum e_KernelDynamicScene::EvalEnvironment(const Ray& r, const Ray& rX, const Ray& rY) const
+{
+	if (m_uEnvMapIndex != 0xffffffff)
+		return m_sLightData[m_uEnvMapIndex].As<e_InfiniteLight>()->evalEnvironment(r, rX, rY);
+	else return Spectrum(0.0f);
+}
+
 float e_KernelDynamicScene::pdfEmitterDiscrete(const e_KernelLight *emitter) const
 {
 	unsigned int index = emitter - m_sLightData.Data;

@@ -12,12 +12,6 @@ e_KernelMaterial::e_KernelMaterial(const char* name)
 	usedBssrdf = false;
 }
 
-CUDA_FUNC_IN float3 nor(float* D, int l, int t, int m, int r, int b, float HeightScale)
-{
-	//return normalize(cross(make_float3(0, -1, D[t] - D[m]), make_float3(-1, 0, D[l] - D[m])) + cross(make_float3(0, 1, D[b] - D[m]), make_float3(1, 0, D[r] - D[m])));
-	return normalize(make_float3(D[m]-D[l], D[m]-D[t], HeightScale));
-}
-
 bool e_KernelMaterial::SampleNormalMap(DifferentialGeometry& dg) const
 {
 	if(NormalMap.used)

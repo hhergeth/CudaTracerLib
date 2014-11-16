@@ -387,18 +387,18 @@ Spectrum e_InfiniteLight::evalDirection(const DirectionSamplingRecord &dRec, con
 
 void e_InfiniteLight::internalSampleDirection(float2 sample, float3 &d, Spectrum &value, float &pdf) const
 {
-	unsigned int row = sampleReuse(m_cdfRows.operator->(), m_size.y, sample.y),
+	unsigned int	row = sampleReuse(m_cdfRows.operator->(), m_size.y, sample.y),
 					col = sampleReuse(m_cdfCols.operator->() + row * unsigned int(m_size.x+1), m_size.x, sample.x);
 
 	/* Using the remaining bits of precision to shift the sample by an offset
 		drawn from a tent function. This effectively creates a sampling strategy
 		for a linearly interpolated environment map */
-	float2 pos = make_float2( col, row) + Warp::squareToTent(sample);
+	float2 pos = make_float2(col, row) + Warp::squareToTent(sample);
 
 	/* Bilinearly interpolate colors from the adjacent four neighbors */
-	int xPos = Floor2Int(pos.x), yPos = Floor2Int(pos.y);
+	int xPos = clamp(Floor2Int(pos.x), 0, int(m_size.x - 1)), yPos = clamp(Floor2Int(pos.y), 0, int(m_size.y - 1));
 	float dx1 = pos.x - xPos, dx2 = 1.0f - dx1,
-		    dy1 = pos.y - yPos, dy2 = 1.0f - dy1;
+		  dy1 = pos.y - yPos, dy2 = 1.0f - dy1;
 
 	Spectrum value1 = radianceMap.Sample(0, xPos, yPos) * dx2 * dy2
 		            + radianceMap.Sample(0, xPos + 1, yPos) * dx1 * dy2;
@@ -442,7 +442,8 @@ float e_InfiniteLight::internalPdfDirection(const float3 &d) const
 unsigned int e_InfiniteLight::sampleReuse(float *cdf, unsigned int size, float &sample) const
 {
 	const float *entry = STL_lower_bound(cdf, cdf+size, sample);
-	unsigned int index = MIN(MAX( 0U, unsigned int(entry - cdf - 1)), unsigned int(size-1));
+	//unsigned int index = MIN(unsigned int(size - 2U), MAX(0U, unsigned int(entry - cdf - 1)));
+	unsigned int index = MIN(MAX(0u, unsigned int(entry - cdf - 1)), unsigned int(size - 1));
 	sample = (sample - cdf[index]) / (cdf[index+1] - cdf[index]);
 	return index;
 }
@@ -458,6 +459,30 @@ Spectrum e_InfiniteLight::evalEnvironment(const Ray &ray) const
 	);
 
 	Spectrum value = radianceMap.Sample(uv, 0);
+
+	return value * m_scale;
+}
+
+Spectrum e_InfiniteLight::evalEnvironment(const Ray &ray, const Ray& rX, const Ray& rY) const
+{
+	float3 v = normalize(ray.direction);
+
+	/* Convert to latitude-longitude texture coordinates */
+	float2 uv = make_float2(
+		atan2f(v.x, -v.z) * INV_TWOPI,
+		math::safe_acos(v.y) * INV_PI
+		);
+
+	float3  dvdx = rX.direction - v,
+			dvdy = rY.direction - v;
+
+	float	t1 = INV_TWOPI / (v.x*v.x + v.z*v.z),
+			t2 = -INV_PI / MAX(math::safe_sqrt(1.0f - v.y*v.y), 1e-4f);
+
+	float2	dudx = make_float2(t1 * (dvdx.z*v.x - dvdx.x*v.z), t2 * dvdx.y),
+			dudy = make_float2(t1 * (dvdy.z*v.x - dvdy.x*v.z), t2 * dvdy.y);
+
+	Spectrum value = radianceMap.eval(uv, dudx, dudy);
 
 	return value * m_scale;
 }

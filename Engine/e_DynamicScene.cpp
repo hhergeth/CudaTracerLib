@@ -234,7 +234,6 @@ e_BufferReference<e_MIPMap, e_KernelMIPMap> e_DynamicScene::LoadTexture(const ch
 		InputStream I(b.c_str());
 		new(T) e_MIPMap(I);
 		I.Close();
-		T->CreateKernelTexture();
 		T.Invalidate();
 	}
 	if(!T->getKernelData().m_pDeviceData)

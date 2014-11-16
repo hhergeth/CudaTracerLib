@@ -201,7 +201,7 @@ void e_Mesh::CompileMesh(const float3* vertices, unsigned int nVertices, const f
 		}
 		if(extraData)
 			for(int j = 0; j < 3; j++)
-				tri.m_sHostData.ExtraData[j] = extraData[indices ? indices[ti * 3 + j] : ti * 3 + j];
+				tri.m_sHostData.ExtraData = extraData[indices ? indices[ti * 3 + j] : ti * 3 + j];
 		triData[triIndex++] = tri;
 		if(subMeshes[si] + pc <= ti)
 		{

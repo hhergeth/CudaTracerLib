@@ -126,7 +126,7 @@ template<typename HASH> template<bool VOL> CUDA_ONLY_FUNC Spectrum k_PhotonMap<H
 					while(i != 0xffffffff)
 					{
 						k_pPpmPhoton e = m_pDevicePhotons[i];
-						float3 wi = e.getWi(), P = e.Pos;
+						float3 wi = e.getWi(), P = e.getPos();
 						Spectrum l = e.getL();
 						if(dot(P - x, P - x) < r2)
 						{
@@ -144,14 +144,14 @@ template<typename HASH> template<bool VOL> CUDA_ONLY_FUNC Spectrum k_PhotonMap<H
 	return L_n;
 }
 
-CUDA_ONLY_FUNC Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED, const float3& p, const float3& wo, const e_KernelMaterial* mat)
+CUDA_ONLY_FUNC Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED, const float3& wo, const e_KernelMaterial* mat)
 {
 	Frame sys = bRec.dg.sys;
 	sys.t *= a_rSurfaceUNUSED;
 	sys.s *= a_rSurfaceUNUSED;
 	sys.n *= a_rSurfaceUNUSED;
 	float3 a = -1.0f * sys.t - sys.s, b = sys.t - sys.s, c = -1.0f * sys.t + sys.s, d = sys.t + sys.s;
-	float3 low = fminf(fminf(a, b), fminf(c, d)) + p, high = fmaxf(fmaxf(a, b), fmaxf(c, d)) + p;
+	float3 low = fminf(fminf(a, b), fminf(c, d)) + bRec.dg.P, high = fmaxf(fmaxf(a, b), fmaxf(c, d)) + bRec.dg.P;
 	Spectrum Lp = Spectrum(0.0f);
 	uint3 lo = g_Map2.m_sSurfaceMap.m_sHash.Transform(low), hi = g_Map2.m_sSurfaceMap.m_sHash.Transform(high);
 	for(unsigned int a = lo.x; a <= hi.x; a++)
@@ -159,13 +159,13 @@ CUDA_ONLY_FUNC Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUS
 			for(unsigned int c = lo.z; c <= hi.z; c++)
 			{
 				unsigned int i0 = g_Map2.m_sSurfaceMap.m_sHash.Hash(make_uint3(a,b,c)), i = g_Map2.m_sSurfaceMap.m_pDeviceHashGrid[i0];
-				while(i != 0xffffffff)
+				while (i != 0xffffffff)
 				{
 					k_pPpmPhoton e = g_Map2.m_sSurfaceMap.m_pDevicePhotons[i];
-					float3 n = e.getNormal(), wi = e.getWi(), P = e.Pos;
+					float3 n = e.getNormal(), wi = e.getWi(), P = e.getPos();
 					Spectrum l = e.getL();
-					float dist2 = dot(P - p, P - p);
-					if(dist2 < a_rSurfaceUNUSED * a_rSurfaceUNUSED )//&& AbsDot(n, bRec.map.sys.n) > 0.95f
+					float dist2 = dot(P - bRec.dg.P, P - bRec.dg.P);
+					if (dist2 < a_rSurfaceUNUSED * a_rSurfaceUNUSED)//&& AbsDot(n, bRec.map.sys.n) > 0.95f
 					{
 						float ke = k_tr(a_rSurfaceUNUSED, sqrtf(dist2));
 						Lp += ke * l;
@@ -191,7 +191,7 @@ CUDA_ONLY_FUNC Spectrum L_FinalGathering(TraceResult& r2, BSDFSamplingRecord& bR
 			BSDFSamplingRecord bRec2(dg);
 			r3.getBsdfSample(r, rng, &bRec2);
 			Spectrum dif = r3.getMat().bsdf.getDiffuseReflectance(bRec2) / PI;
-			L += f * L_Surface(bRec, a_rSurfaceUNUSED, bRec2.dg.P, -r.direction, &r3.getMat()) * dif;
+			L += f * L_Surface(bRec, a_rSurfaceUNUSED, -r.direction, &r3.getMat()) * dif;
 		}
 	}
 	return L / float(N);
@@ -202,16 +202,17 @@ template<bool DIRECT, bool DEBUGKERNEL> CUDA_ONLY_FUNC void k_EyePassF(int x, in
 	CudaRNG rng = g_RNGData();
 	DifferentialGeometry dg;
 	BSDFSamplingRecord bRec(dg);
-	Ray r;
-	Spectrum importance = g_SceneData.sampleSensorRay(r, make_float2(x, y) + rng.randomFloat2() - make_float2(0.5f), rng.randomFloat2());
+	Ray r, rX, rY;
+	Spectrum importance = g_SceneData.sampleSensorRay(r, make_float2(x, y), rng.randomFloat2());
 	TraceResult r2;
 	r2.Init();
 	int depth = -1;
 	Spectrum L(0.0f), throughput(1.0f);
 	while(k_TraceRay(r.direction, r.origin, &r2) && depth++ < 5)
 	{
-		float3 p = r(r2.m_fDist);
 		r2.getBsdfSample(r, rng, &bRec);
+		if (depth == 0)
+			dg.computePartials(r, rX, rY);
 		if(g_SceneData.m_sVolume.HasVolumes())
 		{
 			float tmin, tmax;
@@ -221,11 +222,11 @@ template<bool DIRECT, bool DEBUGKERNEL> CUDA_ONLY_FUNC void k_EyePassF(int x, in
 		}
 		if(DIRECT)
 			L += throughput * UniformSampleAllLights(bRec, r2.getMat(), 1);
-		L += throughput * r2.Le(p, bRec.dg.sys, -r.direction);//either it's the first bounce -> account or it's a specular reflection -> ...
+		L += throughput * r2.Le(bRec.dg.P, bRec.dg.sys, -r.direction);//either it's the first bounce -> account or it's a specular reflection -> ...
 		const e_KernelBSSRDF* bssrdf;
 		if(r2.getMat().GetBSSRDF(bRec.dg, &bssrdf))
 		{
-			r = BSSRDF_Entry(bssrdf, bRec.dg.sys, p, r.direction);
+			r = BSSRDF_Entry(bssrdf, bRec.dg.sys, bRec.dg.P, r.direction);
 			TraceResult r3 = k_TraceRay(r);
 			L += throughput * g_Map2.L<false>(a_rVolume, rng, r, 0, r3.m_fDist, bssrdf->sigp_s + bssrdf->sig_a);
 			//normally one would go to the other side but due to photon mapping the path is terminated
@@ -239,7 +240,7 @@ template<bool DIRECT, bool DEBUGKERNEL> CUDA_ONLY_FUNC void k_EyePassF(int x, in
 		if(hasDiffuse && !DEBUGKERNEL)
 		{
 			Spectrum dif = r2.getMat().bsdf.getDiffuseReflectance(bRec) / PI;
-			L += throughput * L_Surface(bRec, a_rSurfaceUNUSED, p, -r.direction, &r2.getMat()) * dif;
+			L += throughput * L_Surface(bRec, a_rSurfaceUNUSED, -r.direction, &r2.getMat()) * dif;
 			//L += throughput * L_FinalGathering(r2, bRec, rng, a_rSurfaceUNUSED);
 			if(!hasSpecGlossy)
 				break;
@@ -252,7 +253,7 @@ template<bool DIRECT, bool DEBUGKERNEL> CUDA_ONLY_FUNC void k_EyePassF(int x, in
 			if(!bRec.sampledType)
 				break;
 			throughput = throughput * t_f;
-			r = Ray(p, bRec.getOutgoing());
+			r = Ray(bRec.dg.P, bRec.getOutgoing());
 			r2.Init();
 		}
 		//else break;
@@ -276,13 +277,56 @@ template<bool DIRECT, bool DEBUGKERNEL> CUDA_ONLY_FUNC void k_EyePassF(int x, in
 	g_RNGData(rng);
 }
 
+CUDA_ONLY_FUNC void visualizeDensity(int x, int y, int w, int h, float a_rSurfaceUNUSED, e_Image g_Image)
+{
+	CudaRNG rng = g_RNGData();
+	Ray r;
+	g_SceneData.sampleSensorRay(r, make_float2(x, y), rng.randomFloat2());
+	TraceResult r2 = k_TraceRay(r);
+	if (r2.hasHit())
+	{
+		DifferentialGeometry dg;
+		BSDFSamplingRecord bRec(dg);
+		r2.getBsdfSample(r, rng, &bRec);
+		Frame sys = bRec.dg.sys;
+		sys.t *= a_rSurfaceUNUSED;
+		sys.s *= a_rSurfaceUNUSED;
+		sys.n *= a_rSurfaceUNUSED;
+		float3 a = -1.0f * sys.t - sys.s, b = sys.t - sys.s, c = -1.0f * sys.t + sys.s, d = sys.t + sys.s;
+		float3 low = fminf(fminf(a, b), fminf(c, d)) + dg.P, high = fmaxf(fmaxf(a, b), fmaxf(c, d)) + dg.P;
+		int N = 0;
+		uint3 lo = g_Map2.m_sSurfaceMap.m_sHash.Transform(low), hi = g_Map2.m_sSurfaceMap.m_sHash.Transform(high);
+		for (unsigned int a = lo.x; a <= hi.x; a++)
+		for (unsigned int b = lo.y; b <= hi.y; b++)
+		for (unsigned int c = lo.z; c <= hi.z; c++)
+		{
+			unsigned int i0 = g_Map2.m_sSurfaceMap.m_sHash.Hash(make_uint3(a, b, c)), i = g_Map2.m_sSurfaceMap.m_pDeviceHashGrid[i0];
+			while (i != 0xffffffff)
+			{
+				k_pPpmPhoton e = g_Map2.m_sSurfaceMap.m_pDevicePhotons[i];
+				float3 n = e.getNormal(), wi = e.getWi(), P = e.getPos();
+				Spectrum l = e.getL();
+				float dist2 = dot(P - dg.P, P - dg.P);
+				if (dist2 < a_rSurfaceUNUSED * a_rSurfaceUNUSED)//&& AbsDot(n, bRec.map.sys.n) > 0.95f
+				{
+					N++;
+				}
+				i = e.next;
+			}
+		}
+		g_Image.SetSample(x, y, Spectrum(N / 150.0f).toRGBCOL());
+	}
+	g_RNGData(rng);
+}
+
 template<bool DIRECT, bool DEBUGKERNEL> __global__ void k_EyePass(int2 off, int w, int h, float a_PassIndex, float a_rSurfaceUNUSED, float a_rVolume, k_AdaptiveStruct A, float scale0, float scale1, e_Image g_Image)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x, y = blockIdx.y * blockDim.y + threadIdx.y;
 	x += off.x;
 	y += off.y;
-	if(x < w && y < h)
+	if (x < w && y < h)
 		k_EyePassF<DIRECT, DEBUGKERNEL>(x, y, w, h, a_PassIndex, a_rSurfaceUNUSED, a_rVolume, A, scale0, scale1, g_Image);
+		//visualizeDensity(x, y, w, h, a_rSurfaceUNUSED, g_Image);
 }
 
 #define TN(r) (r * powf(float(m_uPassesDone), -1.0f/6.0f))
@@ -309,6 +353,7 @@ void k_sPpmTracer::doEyePass(e_Image* I)
 			k_EyePass<true, false><<<dim3( w / p + 1, h / p + 1, 1), dim3(p, p, 1)>>>(make_int2(0,0), w, h, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3), A, s1,s2, *I);
 		else k_EyePass<false, false><<<dim3( w / p + 1, h / p + 1, 1), dim3(p, p, 1)>>>(make_int2(0,0), w, h, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3), A, s1,s2, *I);
 	}
+	I->DoUpdateDisplay(1.0f);
 }
 
 void k_sPpmTracer::Debug(int2 pixel)

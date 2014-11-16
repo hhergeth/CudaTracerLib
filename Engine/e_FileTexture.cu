@@ -110,7 +110,9 @@ Spectrum e_KernelMIPMap::evalEWA(unsigned int level, const float2 &uv, float A, 
 
 Spectrum e_KernelMIPMap::Sample(const float2& uv) const
 {
-	return triangle(0, uv);
+	if (m_uFilterMode == TEXTURE_Point)
+		return Texel(0, uv);
+	else return triangle(0, uv);
 }
 
 float e_KernelMIPMap::SampleAlpha(const float2& uv) const
@@ -183,6 +185,11 @@ void e_KernelMIPMap::evalGradient(const float2& uv, Spectrum* gradient) const
 
 Spectrum e_KernelMIPMap::eval(const float2& uv, const float2& d0, const float2& d1) const
 {
+	if (m_uFilterMode == TEXTURE_Point)
+		return Texel(0, uv);
+	else if (m_uFilterMode == TEXTURE_Bilinear)
+		return triangle(0, uv);
+
 	/* Convert into texel coordinates */
 	float du0 = d0.x * m_fDim.x, dv0 = d0.y * m_fDim.y,
 		  du1 = d1.x * m_fDim.x, dv1 = d1.y * m_fDim.y;

@@ -32,8 +32,8 @@ struct AABB
 	}
 	CUDA_FUNC_IN AABB(const float3& min, const float3& max)
 	{
-		minV = min;
-		maxV = max;
+		minV = fminf(min, max);
+		maxV = fmaxf(min, max);
 	}
 	CUDA_FUNC_IN void Enlarge(const AABB& a)
 	{

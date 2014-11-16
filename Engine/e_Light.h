@@ -356,6 +356,8 @@ struct e_InfiniteLight : public e_LightBase
 	CUDA_DEVICE CUDA_HOST Spectrum evalDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const;
 
 	CUDA_DEVICE CUDA_HOST Spectrum evalEnvironment(const Ray &ray) const;
+
+	CUDA_DEVICE CUDA_HOST Spectrum evalEnvironment(const Ray &ray, const Ray& rX, const Ray& rY) const;
 	
 	AABB getBox(float eps) const
 	{

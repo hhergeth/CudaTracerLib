@@ -14,6 +14,13 @@ enum e_ImageWrap
 	TEXTURE_BLACK,
 };
 
+enum e_ImageFilter
+{
+	TEXTURE_Point,
+	TEXTURE_Bilinear,
+	TEXTURE_Anisotropic
+};
+
 enum e_KernelTexture_DataType
 {
 	vtRGBE,
@@ -49,10 +56,10 @@ struct e_KernelMIPMap
 	CUDA_ALIGN(16) unsigned int* m_pDeviceData;
 	CUDA_ALIGN(16) unsigned int* m_pHostData;
 	CUDA_ALIGN(16) float2 m_fDim;
-	CUDA_ALIGN(16) int2 m_uDim;
 	unsigned int m_uWidth, m_uHeight;
 	e_KernelTexture_DataType m_uType;
 	e_ImageWrap m_uWrapMode;
+	e_ImageFilter m_uFilterMode;
 	unsigned int m_sOffsets[MAX_MIPS];
 	unsigned int m_uLevels;
 	float m_weightLut[MTS_MIPMAP_LUT_SIZE];
@@ -82,10 +89,10 @@ class e_MIPMap
 	unsigned int m_uSize;
 	e_KernelTexture_DataType m_uType;
 	e_ImageWrap m_uWrapMode;
-	e_KernelMIPMap m_sKernelData;
 	unsigned int m_sOffsets[MAX_MIPS];
 	float m_weightLut[MTS_MIPMAP_LUT_SIZE];
 public:
+	e_ImageFilter m_uFilterMode;
 	e_MIPMap() {m_pDeviceData = 0; m_uWidth = m_uHeight = m_uBpp = 0xffffffff;}
 	e_MIPMap(InputStream& a_In);
 	void Free()
@@ -101,11 +108,7 @@ public:
 		o.Close();
 	}
 	static void CreateSphericalSkydomeTexture(const char* front, const char* back, const char* left, const char* right, const char* top, const char* bottom, const char* outFile);
-	e_KernelMIPMap CreateKernelTexture();
-	e_KernelMIPMap getKernelData()
-	{
-		return m_sKernelData;
-	}
+	e_KernelMIPMap getKernelData();
 	unsigned int getNumMips()
 	{
 		return m_uLevels;

@@ -5,6 +5,7 @@
 #include "..\Base\Timer.h"
 #include <time.h>
 #include "..\Engine\e_Grid.h"
+#include "../Math//Compression.h"
 
 #define ALPHA (2.0f / 3.0f)
 
@@ -44,33 +45,40 @@ struct k_AdaptiveStruct
 
 struct k_pPpmPhoton
 {
+private:
 	float3 Pos;
-	Spectrum L;
-	float3 Wi;
-	float3 Nor;
+	//Spectrum L;
+	//float3 Wi;
+	//float3 Nor;
+	RGBE L;
+	unsigned short Wi;
+	unsigned short Nor;
+public:
 	unsigned int next;
 	CUDA_FUNC_IN k_pPpmPhoton(){}
 	CUDA_FUNC_IN k_pPpmPhoton(const float3& p, const Spectrum& l, const float3& wi, const float3& n, unsigned int ne)
 	{
 		Pos = p;
-		Nor = n;
-		L = (l);
-		Wi = wi;
+		Nor = NormalizedFloat3ToUchar2(n);
+		L = (l).toRGBE();
+		Wi = NormalizedFloat3ToUchar2(wi);
 		next = ne;
 	}
 	CUDA_FUNC_IN float3 getNormal()
 	{
-		return (Nor);
+		return Uchar2ToNormalizedFloat3(Nor);
 	}
 	CUDA_FUNC_IN float3 getWi()
 	{
-		return (Wi);
+		return Uchar2ToNormalizedFloat3(Wi);
 	}
 	CUDA_FUNC_IN Spectrum getL()
 	{
-		return (L);
+		Spectrum s;
+		s.fromRGBE(L);
+		return s;
 	}
-	CUDA_FUNC_IN uint4 toUint4()
+	CUDA_FUNC_IN float3 getPos()
 	{/*
 		uint4 r;
 		r.x = Pos;
@@ -78,7 +86,7 @@ struct k_pPpmPhoton
 		r.z = (L.x << 24) | (L.y << 16) | (L.z << 8) | L.w;
 		r.w = next;
 		return r;*/
-		return *(uint4*)this;
+		return Pos;
 	}/*
 	CUDA_FUNC_IN k_pPpmPhoton(const uint4& v)
 	{
@@ -161,29 +169,7 @@ template<typename HASH> struct k_PhotonMap
 	}
 
 #ifdef __CUDACC__
-	CUDA_FUNC_IN k_StoreResult StorePhoton(const float3& p, const Spectrum& l, const float3& wi, const float3& n, unsigned int* a_PhotonCounter) const
-	{
-		if(!m_sHash.IsValidHash(p))
-			return k_StoreResult::NotValid;
-		uint3 i0 = m_sHash.Transform(p);
-		unsigned int i = m_sHash.Hash(i0);
-#ifdef ISCUDA
-		unsigned int j = atomicInc(a_PhotonCounter, 0xffffffff);
-#else
-		unsigned int j = InterlockedIncrement(a_PhotonCounter);
-#endif
-		if(j < m_uMaxPhotonCount)
-		{
-#ifdef ISCUDA
-			unsigned int k = atomicExch(m_pDeviceHashGrid + i, j);
-#else
-			unsigned int k = InterlockedExchange(m_pDeviceHashGrid + i, j);
-#endif
-			m_pDevicePhotons[j] = k_pPpmPhoton(p, l, wi, n, k);//m_sHash.EncodePos(p, i0)
-			return k_StoreResult::Success;
-		}
-		return k_StoreResult::Full;
-	}
+	CUDA_FUNC_IN k_StoreResult StorePhoton(const float3& p, const Spectrum& l, const float3& wi, const float3& n, unsigned int* a_PhotonCounter) const;
 
 	template<bool VOL> CUDA_ONLY_FUNC Spectrum L_Volume(float a_r, float a_NumPhotonEmitted, CudaRNG& rng, const Ray& r, float tmin, float tmax, const Spectrum& sigt) const;
 #endif
@@ -264,11 +250,24 @@ struct k_PhotonMapCollection
 #endif
 };
 
+enum
+{
+	PPM_Photons_Per_Thread = 12,
+	PPM_BlockX = 32,
+	PPM_BlockY = 6,
+	PPM_MaxRecursion = 6,
+
+	PPM_photons_per_block = PPM_Photons_Per_Thread * PPM_BlockX * PPM_BlockY,
+	PPM_slots_per_thread = PPM_Photons_Per_Thread * PPM_MaxRecursion,
+	PPM_slots_per_block = PPM_photons_per_block * PPM_MaxRecursion,
+};
+
 class k_sPpmTracer : public k_ProgressiveTracer
 {
 private:
 	k_PhotonMapCollection m_sMaps;
 	bool m_bDirect;
+	float m_fLightVisibility;
 
 	float m_fInitialRadius;
 	unsigned long long m_uPhotonsEmitted;
@@ -276,6 +275,8 @@ private:
 
 	float m_fInitialRadiusScale;
 	const unsigned int m_uGridLength;
+
+	unsigned int m_uBlocksPerLaunch;
 
 	float m_uNewPhotonsPerRun;
 	int m_uModus;

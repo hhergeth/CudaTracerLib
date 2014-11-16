@@ -85,8 +85,8 @@ void e_PerspectiveCamera::Update()
 	m_dy = m_sampleToCamera.TransformPoint(make_float3(0.0f, m_invResolution.y, 0.0f))
 		- m_sampleToCamera.TransformPoint(make_float3(0.0f));
 
-	float3 min = m_sampleToCamera.TransformPoint(make_float3(0, 0, 0)),
-		max = m_sampleToCamera.TransformPoint(make_float3(1, 1, 0));
+	float3	min = m_sampleToCamera.TransformPoint(make_float3(0, 0, 0)),
+			max = m_sampleToCamera.TransformPoint(make_float3(1, 1, 0));
 	m_imageRect = AABB(min / min.z, max / max.z);
 	m_imageRect.minV.z = -FLT_MAX; m_imageRect.maxV.z = FLT_MAX;
 	m_normalization = 1.0f / (m_imageRect.Size().x * m_imageRect.Size().y);
@@ -240,8 +240,8 @@ void e_ThinLensCamera::Update()
 
 	m_aperturePdf = 1 / (PI * m_apertureRadius * m_apertureRadius);
 
-	float3 min = m_sampleToCamera.TransformPoint(make_float3(0, 0, 0)),
-		max = m_sampleToCamera.TransformPoint(make_float3(1, 1, 0));
+	float3	min = m_sampleToCamera.TransformPoint(make_float3(0, 0, 0)),
+			max = m_sampleToCamera.TransformPoint(make_float3(1, 1, 0));
 	AABB m_imageRect = AABB(min / min.z, max / max.z);
 	m_normalization = 1.0f / (m_imageRect.Size().x * m_imageRect.Size().y);
 }

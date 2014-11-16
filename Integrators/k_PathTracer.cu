@@ -54,7 +54,7 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(Ray& r, const Ray& rX, con
 		if (depth == 1)
 			dg.computePartials(r, rX, rY);
 		if (!DIRECT || (depth == 1 || specularBounce))
-			cl += cf * r2.Le(r(r2.m_fDist), bRec.dg.sys, -r.direction);
+			cl += cf * r2.Le(bRec.dg.P, bRec.dg.sys, -r.direction);
 		Spectrum f = r2.getMat().bsdf.sample(bRec, rnd.randomFloat2());
 		if (DIRECT)
 			cl += cf * UniformSampleAllLights(bRec, r2.getMat(), 1);
@@ -70,8 +70,9 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(Ray& r, const Ray& rX, con
 		r = Ray(dg.P, bRec.getOutgoing());
 		r2.Init();
 	}
-	if (!r2.hasHit())
-		cl += cf * g_SceneData.EvalEnvironment(r);
+	if (!r2.hasHit() && depth == 0)
+		cl = cf * g_SceneData.EvalEnvironment(r, rX, rY);
+	else cl += cf * g_SceneData.EvalEnvironment(r);
 	return cl;
 }
 

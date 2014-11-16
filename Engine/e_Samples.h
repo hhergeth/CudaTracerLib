@@ -165,7 +165,6 @@ struct BSDFSamplingRecord
 {
 	CudaRNG* rng;
 	DifferentialGeometry& dg;
-	float3 ng;
 	/// Normalized incident direction in local coordinates
 	float3 wi;
 	/// Normalized outgoing direction in local coordinates

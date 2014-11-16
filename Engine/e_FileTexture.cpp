@@ -10,6 +10,7 @@ e_MIPMap::e_MIPMap(InputStream& a_In)
 	a_In >> m_uBpp;
 	a_In.operator>>(*(int*)&m_uType);
 	a_In.operator>>(*(int*)&m_uWrapMode);
+	a_In.operator>>(*(int*)&m_uFilterMode);
 	a_In >> m_uLevels;
 	a_In >> m_uSize;
 	if(CUDA_MALLOC(&m_pDeviceData, m_uSize))
@@ -85,6 +86,7 @@ void e_MIPMap::CompileToBinary(const char* a_InputFile, OutputStream& a_Out, boo
 	a_Out << unsigned int(4);
 	a_Out << (int)data.type;
 	a_Out << (int)TEXTURE_REPEAT;
+	a_Out << (int)TEXTURE_Anisotropic;
 	a_Out << nLevels;
 	a_Out << size;
 	a_Out.Write(data.data, data.w * data.h * sizeof(RGBCOL));
@@ -119,21 +121,19 @@ void e_MIPMap::CompileToBinary(const char* a_InputFile, OutputStream& a_Out, boo
 	free(buf);
 }
 
-e_KernelMIPMap e_MIPMap::CreateKernelTexture()
+e_KernelMIPMap e_MIPMap::getKernelData()
 {
 	e_KernelMIPMap r;
 	r.m_pDeviceData = m_pDeviceData;
 	r.m_pHostData = m_pHostData;
 	r.m_uType = m_uType;
 	r.m_uWrapMode = m_uWrapMode;
+	r.m_uFilterMode = m_uFilterMode;
 	r.m_uWidth = m_uWidth;
 	r.m_uHeight = m_uHeight;
 	r.m_fDim = make_float2(m_uWidth - 1, m_uHeight - 1);
-	for(int i = 0; i < MAX_MIPS; i++)
-		r.m_sOffsets[i] = m_sOffsets[i];
-	for (int i = 0; i < MTS_MIPMAP_LUT_SIZE; i++)
-		r.m_weightLut[i] = m_weightLut[i];
 	r.m_uLevels = m_uLevels;
-	m_sKernelData = r;
+	memcpy(r.m_sOffsets, m_sOffsets, sizeof(m_sOffsets));
+	memcpy(r.m_weightLut, m_weightLut, sizeof(m_weightLut));
 	return r;
 }

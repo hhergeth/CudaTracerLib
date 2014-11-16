@@ -47,28 +47,28 @@ class s10e5
   // bits will be zero.
   //---------------------------------------------------------
 
-  s10e5		round (unsigned int n) const;
+  CUDA_FUNC_IN s10e5		round(unsigned int n) const;
 
   // ------------------------------ predicates ------------------------------
   // Use these with the syntax "if (x.isZero()) { ... }"
-  bool	isFinite () const;       // true iff normal, subnormal or zero
-  bool	isNormalized () const;	 // true iff normal
-  bool	isDenormalized () const; // true iff subnormal
-  bool	isZero () const;         // true iff zero or negative-zero
-  bool	isNan () const;          // true iff NAN
-  bool	isInfinity () const;     // true iff infinite
-  bool	isNegative () const;     // true iff negative (includes negative NANs)
+  CUDA_FUNC_IN bool	isFinite() const;       // true iff normal, subnormal or zero
+  CUDA_FUNC_IN bool	isNormalized() const;	 // true iff normal
+  CUDA_FUNC_IN bool	isDenormalized() const; // true iff subnormal
+  CUDA_FUNC_IN bool	isZero() const;         // true iff zero or negative-zero
+  CUDA_FUNC_IN bool	isNan() const;          // true iff NAN
+  CUDA_FUNC_IN bool	isInfinity() const;     // true iff infinite
+  CUDA_FUNC_IN bool	isNegative() const;     // true iff negative (includes negative NANs)
 
   // ---------------------------- special values ----------------------------
-  static s10e5		posInf (); // returns +infinity
-  static s10e5		negInf (); // returns -infinity
-  static s10e5		qNan ();   // returns a quiet NAN (0.11111.1111111111)
-  static s10e5		Indet ();  // "indeterminate" NAN (0.11111.1000000000)
-  static s10e5		sNan ();   // signaling NAN (0.11111.0111111111)
+  CUDA_FUNC_IN static s10e5		posInf(); // returns +infinity
+  CUDA_FUNC_IN static s10e5		negInf(); // returns -infinity
+  CUDA_FUNC_IN static s10e5		qNan();   // returns a quiet NAN (0.11111.1111111111)
+  CUDA_FUNC_IN static s10e5		Indet();  // "indeterminate" NAN (0.11111.1000000000)
+  CUDA_FUNC_IN static s10e5		sNan();   // signaling NAN (0.11111.0111111111)
 
   // --------------------- access to raw representation ---------------------
-  unsigned short	bits () const;
-  void			setBits (unsigned short bits);
+  CUDA_FUNC_IN unsigned short	bits() const;
+  CUDA_FUNC_IN void			setBits(unsigned short bits);
 
  public:
   // This union gives us an easy way to examine and/or set the individual
@@ -295,6 +295,9 @@ inline s10e5::s10e5 (unsigned short s)
 
 inline s10e5::operator float () const
 {
+#ifdef ISCUDA
+	return __half2float(_h);
+#else
   register int s = _h & 0x8000;
   register int e = (_h & 0x7c00) >> 10;
   register int m = _h & 0x03ff;
@@ -321,6 +324,7 @@ inline s10e5::operator float () const
     x.i = s | (x.i - (24 << 23));
   }
   return(x.f);
+#endif
 }
 
 
@@ -501,7 +505,7 @@ struct half2
 struct half3
 {
 	half x, y, z;
-	half3() {}
+	CUDA_FUNC_IN half3() {}
 	CUDA_FUNC_IN half3(float3& v)
 	{
 		x = half(v.x);
@@ -523,7 +527,7 @@ struct half3
 struct half4
 {
 	half x, y, z, w;
-	half4() {}
+	CUDA_FUNC_IN half4() {}
 	CUDA_FUNC_IN half4(float4& v)
 	{
 		x = half(v.x);
