@@ -102,13 +102,13 @@ template<bool DIRECT> __global__ void pathKernel(unsigned int width, unsigned in
                 break;
 		}
 
-		unsigned int x = rayidx % width, y = rayidx / width;
+		float2 screenPos = make_float2(rayidx % width, rayidx / width) + rng.randomFloat2();
 		Ray r, rX, rY;
-		Spectrum imp = g_SceneData.sampleSensorRay(r, rX, rY, make_float2(x, y), rng.randomFloat2(), rng.randomFloat2());
+		Spectrum imp = g_SceneData.sampleSensorRay(r, rX, rY, screenPos, rng.randomFloat2());
 
 		Spectrum col = imp * PathTrace<DIRECT>(r, rX, rY, rng);
 		
-		g_Image.AddSample(x, y, col);
+		g_Image.AddSample(screenPos.x, screenPos.y, col);
 	}
 	while(true);
 	g_RNGData(rng);

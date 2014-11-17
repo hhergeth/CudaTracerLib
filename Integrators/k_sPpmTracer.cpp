@@ -213,7 +213,6 @@ void k_sPpmTracer::StartNewTrace(e_Image* I)
 	m_fLightVisibility = k_Tracer::GetLightVisibility(m_pScene, m_pCamera, 1);
 	if (m_bDirect)
 		m_bDirect = m_fLightVisibility > 0.5f;
-	m_bDirect=0;
 	if(m_uModus == 1)
 	{
 		initNewPass(I);

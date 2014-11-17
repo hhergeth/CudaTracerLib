@@ -202,8 +202,9 @@ template<bool DIRECT, bool DEBUGKERNEL> CUDA_ONLY_FUNC void k_EyePassF(int x, in
 	CudaRNG rng = g_RNGData();
 	DifferentialGeometry dg;
 	BSDFSamplingRecord bRec(dg);
+	float2 screenPos = make_float2(x, y) + rng.randomFloat2();
 	Ray r, rX, rY;
-	Spectrum importance = g_SceneData.sampleSensorRay(r, make_float2(x, y), rng.randomFloat2());
+	Spectrum importance = g_SceneData.sampleSensorRay(r, rX, rY, screenPos, rng.randomFloat2());
 	TraceResult r2;
 	r2.Init();
 	int depth = -1;
@@ -213,17 +214,17 @@ template<bool DIRECT, bool DEBUGKERNEL> CUDA_ONLY_FUNC void k_EyePassF(int x, in
 		r2.getBsdfSample(r, rng, &bRec);
 		if (depth == 0)
 			dg.computePartials(r, rX, rY);
-		if(g_SceneData.m_sVolume.HasVolumes())
+		/*if(g_SceneData.m_sVolume.HasVolumes())
 		{
 			float tmin, tmax;
 			g_SceneData.m_sVolume.IntersectP(r, 0, r2.m_fDist, &tmin, &tmax);
 			L += throughput * g_Map2.L<true>(a_rVolume, rng, r, tmin, tmax, make_float3(0));
 			throughput = throughput * (-g_SceneData.m_sVolume.tau(r, tmin, tmax)).exp();
-		}
+		}*/
 		if(DIRECT)
 			L += throughput * UniformSampleAllLights(bRec, r2.getMat(), 1);
 		L += throughput * r2.Le(bRec.dg.P, bRec.dg.sys, -r.direction);//either it's the first bounce -> account or it's a specular reflection -> ...
-		const e_KernelBSSRDF* bssrdf;
+		/*const e_KernelBSSRDF* bssrdf;
 		if(r2.getMat().GetBSSRDF(bRec.dg, &bssrdf))
 		{
 			r = BSSRDF_Entry(bssrdf, bRec.dg.sys, bRec.dg.P, r.direction);
@@ -235,7 +236,7 @@ template<bool DIRECT, bool DEBUGKERNEL> CUDA_ONLY_FUNC void k_EyePassF(int x, in
 			//r3.lerpFrame(sys);
 			//r = BSSRDF_Exit(bssrdf, sys, r(r3), r.direction);
 			//r2.Init();
-		}
+		}*/
 		bool hasDiffuse = r2.getMat().bsdf.hasComponent(EDiffuse), hasSpecGlossy = r2.getMat().bsdf.hasComponent(EDelta | EGlossy);
 		if(hasDiffuse && !DEBUGKERNEL)
 		{
@@ -260,15 +261,15 @@ template<bool DIRECT, bool DEBUGKERNEL> CUDA_ONLY_FUNC void k_EyePassF(int x, in
 	}
 	if(!r2.hasHit())
 	{
-		if(g_SceneData.m_sVolume.HasVolumes())
+		/*if(g_SceneData.m_sVolume.HasVolumes())
 		{
 			float tmin, tmax;
 			g_SceneData.m_sVolume.IntersectP(r, 0, r2.m_fDist, &tmin, &tmax);
 			L += throughput * g_Map2.L<true>(a_rVolume, rng, r, tmin, tmax, make_float3(0));
-		}
+		}*/
 		L += throughput * g_SceneData.EvalEnvironment(r);
 	}
-	g_Image.AddSample(x, y, importance * L);
+	g_Image.AddSample(screenPos.x, screenPos.y, importance * L);
 	//Spectrum qs;
 	//float t = A.E[y * w + x].r / a_rSurfaceUNUSED;
 	//t = (A.E[y * w + x].r - A.r_min) / (A.r_max - A.r_min);

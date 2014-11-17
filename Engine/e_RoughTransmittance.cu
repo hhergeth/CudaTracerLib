@@ -1,11 +1,9 @@
 #include "e_RoughTransmittance.h"
 #include "..\Math\Spline.h"
 
-e_RoughTransmittance::e_RoughTransmittance(const char* name)
+e_RoughTransmittance::e_RoughTransmittance(const std::string& name)
 {
-	char path[255];
-	sprintf(path, "data/microfacet/%s.dat", name);
-	InputStream I(path);
+	InputStream I(name.c_str());
 	const char header[] = "MTS_TRANSMITTANCE";
 	char *fileHeader = (char *) alloca(strlen(header));
 	I.Read(fileHeader, (unsigned int)strlen(header));
@@ -113,11 +111,11 @@ float e_RoughTransmittance::EvaluateDiffuse(float alpha, float eta) const
 static e_RoughTransmittance m_sObjectsHost[3];
 CUDA_CONST e_RoughTransmittance m_sObjectsDevice[3];
 
-void e_RoughTransmittanceManager::StaticInitialize()
+void e_RoughTransmittanceManager::StaticInitialize(const std::string& a_Path)
 {
-	m_sObjectsHost[0] = e_RoughTransmittance("beckmann");
-	m_sObjectsHost[1] = e_RoughTransmittance("phong");
-	m_sObjectsHost[2] = e_RoughTransmittance("ggx");
+	m_sObjectsHost[0] = e_RoughTransmittance(a_Path + "/microfacet/beckmann.dat");
+	m_sObjectsHost[1] = e_RoughTransmittance(a_Path + "microfacet/phong.dat");
+	m_sObjectsHost[2] = e_RoughTransmittance(a_Path + "microfacet/ggx.dat");
 	cudaMemcpyToSymbol(m_sObjectsDevice, m_sObjectsHost, sizeof(e_RoughTransmittance) * 3);
 }
 

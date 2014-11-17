@@ -5,11 +5,11 @@ struct diffuse : public BSDF
 {
 	e_KernelTexture	m_reflectance;
 	diffuse()
-		: BSDF(EDiffuseReflection)
+		: BSDF(EDiffuseReflection, 0, &m_reflectance)
 	{
 	}
 	diffuse(const e_KernelTexture& d)
-		: m_reflectance(d), BSDF(EDiffuseReflection)
+		: m_reflectance(d), BSDF(EDiffuseReflection, 0, &m_reflectance)
 	{
 	}
 	CUDA_FUNC_IN Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &sample) const
@@ -45,10 +45,6 @@ struct diffuse : public BSDF
 	{
 		return m_reflectance.Evaluate(bRec.dg);
 	}
-	template<typename T> void LoadTextures(T callback)
-	{
-		m_reflectance.LoadTextures(callback);
-	}
 	TYPE_FUNC(diffuse)
 };
 
@@ -59,11 +55,11 @@ struct roughdiffuse : public BSDF
 	e_KernelTexture	m_alpha;
 	bool m_useFastApprox;
 	roughdiffuse()
-		: BSDF(EDiffuseReflection)
+		: BSDF(EDiffuseReflection, 0, &m_reflectance, &m_alpha)
 	{
 	}
 	roughdiffuse(const e_KernelTexture& r, const e_KernelTexture& a)
-		: m_reflectance(r), m_alpha(a), BSDF(EDiffuseReflection)
+		: m_reflectance(r), m_alpha(a), BSDF(EDiffuseReflection, 0, &m_reflectance, &m_alpha)
 	{
 	}
 	CUDA_FUNC_IN Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &sample) const
@@ -88,11 +84,6 @@ struct roughdiffuse : public BSDF
 	{
 		return m_reflectance.Evaluate(bRec.dg);
 	}
-	template<typename T> void LoadTextures(T callback)
-	{
-		m_reflectance.LoadTextures(callback);
-		m_alpha.LoadTextures(callback);
-	}
 	TYPE_FUNC(roughdiffuse)
 };
 
@@ -103,11 +94,11 @@ struct dielectric : public BSDF
 	e_KernelTexture m_specularTransmittance;
 	e_KernelTexture m_specularReflectance;
 	dielectric()
-		: BSDF(EDeltaReflection | EDeltaTransmission)
+		: BSDF(EBSDFType(EDeltaReflection | EDeltaTransmission), 0, &m_specularTransmittance, &m_specularReflectance)
 	{
 	}
 	dielectric(float e)
-		: BSDF(EDeltaReflection | EDeltaTransmission)
+		: BSDF(EBSDFType(EDeltaReflection | EDeltaTransmission), 0, &m_specularTransmittance, &m_specularReflectance)
 	{
 		m_eta = e;
 		m_invEta = 1.0f / e;
@@ -115,7 +106,7 @@ struct dielectric : public BSDF
 		m_specularReflectance = CreateTexture(0, Spectrum(1.0f));
 	}
 	dielectric(float e, const Spectrum& r, const Spectrum& t)
-		: BSDF(EDeltaReflection | EDeltaTransmission)
+		: BSDF(EBSDFType(EDeltaReflection | EDeltaTransmission), 0, &m_specularTransmittance, &m_specularReflectance)
 	{
 		m_eta = e;
 		m_invEta = 1.0f / e;
@@ -123,7 +114,7 @@ struct dielectric : public BSDF
 		m_specularReflectance = CreateTexture(0, r);
 	}
 	dielectric(float e, const e_KernelTexture& r, const e_KernelTexture& t)
-		: BSDF(EDeltaReflection | EDeltaTransmission)
+		: BSDF(EBSDFType(EDeltaReflection | EDeltaTransmission), 0, &m_specularTransmittance, &m_specularReflectance)
 	{
 		m_eta = e;
 		m_invEta = 1.0f / e;
@@ -147,11 +138,6 @@ struct dielectric : public BSDF
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	STD_DIFFUSE_REFLECTANCE
-	template<typename T> void LoadTextures(T callback)
-	{
-		m_specularTransmittance.LoadTextures(callback);
-		m_specularReflectance.LoadTextures(callback);
-	}
 	TYPE_FUNC(dielectric)
 };
 
@@ -162,18 +148,18 @@ struct thindielectric : public BSDF
 	e_KernelTexture m_specularTransmittance;
 	e_KernelTexture m_specularReflectance;
 	thindielectric()
-		: BSDF(EDeltaReflection | EDeltaTransmission)
+		: BSDF(EBSDFType(EDeltaReflection | EDeltaTransmission), 0, &m_specularTransmittance, &m_specularReflectance)
 	{
 	}
 	thindielectric(float e)
-		: BSDF(EDeltaReflection | EDeltaTransmission)
+		: BSDF(EBSDFType(EDeltaReflection | EDeltaTransmission), 0, &m_specularTransmittance, &m_specularReflectance)
 	{
 		m_eta = e;
 		m_specularTransmittance = CreateTexture(0, Spectrum(1.0f));
 		m_specularReflectance = CreateTexture(0, Spectrum(1.0f));
 	}
 	thindielectric(float e, const e_KernelTexture& r, const e_KernelTexture& t)
-		: BSDF(EDeltaReflection | EDeltaTransmission)
+		: BSDF(EBSDFType(EDeltaReflection | EDeltaTransmission), 0, &m_specularTransmittance, &m_specularReflectance)
 	{
 		m_eta = e;
 		m_specularTransmittance = t;
@@ -190,11 +176,6 @@ struct thindielectric : public BSDF
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	STD_DIFFUSE_REFLECTANCE
-	template<typename T> void LoadTextures(T callback)
-	{
-		m_specularTransmittance.LoadTextures(callback);
-		m_specularReflectance.LoadTextures(callback);
-	}
 	TYPE_FUNC(thindielectric)
 };
 
@@ -207,11 +188,11 @@ struct roughdielectric : public BSDF
 	e_KernelTexture m_alphaU, m_alphaV;
 	float m_eta, m_invEta;
 	roughdielectric()
-		: BSDF(EGlossyReflection | EGlossyTransmission)
+		: BSDF(EBSDFType(EGlossyReflection | EGlossyTransmission), 0, &m_specularTransmittance, &m_specularReflectance, &m_alphaU, &m_alphaV)
 	{
 	}
 	roughdielectric(MicrofacetDistribution::EType type, float eta, const e_KernelTexture& u, const e_KernelTexture& v)
-		: m_alphaU(u), m_alphaV(v), BSDF(EGlossyReflection | EGlossyTransmission)
+		: m_alphaU(u), m_alphaV(v), BSDF(EBSDFType(EGlossyReflection | EGlossyTransmission), 0, &m_specularTransmittance, &m_specularReflectance, &m_alphaU, &m_alphaV)
 	{
 		m_distribution.m_type = type;
 		m_specularTransmittance = CreateTexture(0, Spectrum(1.0f));
@@ -220,7 +201,7 @@ struct roughdielectric : public BSDF
 		m_invEta = 1.0f / eta;
 	}
 	roughdielectric(MicrofacetDistribution::EType type, float eta, const e_KernelTexture& u, const e_KernelTexture& v, const e_KernelTexture& r, const e_KernelTexture& t)
-		: m_alphaU(u), m_alphaV(v), BSDF(EGlossyReflection | EGlossyTransmission)
+		: m_alphaU(u), m_alphaV(v), BSDF(EBSDFType(EGlossyReflection | EGlossyTransmission), 0, &m_specularTransmittance, &m_specularReflectance, &m_alphaU, &m_alphaV)
 	{
 		m_distribution.m_type = type;
 		m_specularTransmittance = t;
@@ -236,13 +217,6 @@ struct roughdielectric : public BSDF
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	STD_DIFFUSE_REFLECTANCE
-	template<typename T> void LoadTextures(T callback)
-	{
-		m_specularTransmittance.LoadTextures(callback);
-		m_specularReflectance.LoadTextures(callback);
-		m_alphaU.LoadTextures(callback);
-		m_alphaV.LoadTextures(callback);
-	}
 	TYPE_FUNC(roughdielectric)
 };
 
@@ -253,18 +227,18 @@ struct conductor : public BSDF
 	Spectrum m_eta;
 	Spectrum m_k;
 	conductor()
-		: BSDF(EDeltaReflection)
+		: BSDF(EDeltaReflection, 0, &m_specularReflectance)
 	{
 	}
 	conductor(const Spectrum& eta, const Spectrum& k)
-		: BSDF(EDeltaReflection)
+		: BSDF(EDeltaReflection, 0, &m_specularReflectance)
 	{
 		m_specularReflectance = CreateTexture(0, Spectrum(1.0f));
 		m_eta = eta;
 		m_k = k;
 	}
 	conductor(const Spectrum& eta, const Spectrum& k, const e_KernelTexture& r)
-		: BSDF(EDeltaReflection)
+		: BSDF(EDeltaReflection, 0, &m_specularReflectance)
 	{
 		m_specularReflectance = r;
 		m_eta = eta;
@@ -278,10 +252,6 @@ struct conductor : public BSDF
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	STD_DIFFUSE_REFLECTANCE
-	template<typename T> void LoadTextures(T callback)
-	{
-		m_specularReflectance.LoadTextures(callback);
-	}
 	TYPE_FUNC(conductor)
 };
 
@@ -293,11 +263,11 @@ struct roughconductor : public BSDF
 	e_KernelTexture m_alphaU, m_alphaV;
 	Spectrum m_eta, m_k;
 	roughconductor()
-		: BSDF(EGlossyReflection)
+		: BSDF(EGlossyReflection, 0, &m_specularReflectance, &m_alphaU, &m_alphaV)
 	{
 	}
 	roughconductor(MicrofacetDistribution::EType type, const Spectrum& eta, const Spectrum& k, const e_KernelTexture& u, const e_KernelTexture& v)
-		: m_alphaU(u), m_alphaV(v), BSDF(EGlossyReflection)
+		: m_alphaU(u), m_alphaV(v), BSDF(EGlossyReflection, 0, &m_specularReflectance, &m_alphaU, &m_alphaV)
 	{
 		m_specularReflectance = CreateTexture(0, Spectrum(1.0f));
 		m_eta = eta;
@@ -305,7 +275,7 @@ struct roughconductor : public BSDF
 		m_distribution.m_type = type;
 	}
 	roughconductor(MicrofacetDistribution::EType type, const Spectrum& eta, const Spectrum& k, const e_KernelTexture& u, const e_KernelTexture& v, const e_KernelTexture& r)
-		: m_alphaU(u), m_alphaV(v), BSDF(EGlossyReflection)
+		: m_alphaU(u), m_alphaV(v), BSDF(EGlossyReflection, 0, &m_specularReflectance, &m_alphaU, &m_alphaV)
 	{
 		m_specularReflectance = r;
 		m_eta = eta;
@@ -316,12 +286,6 @@ struct roughconductor : public BSDF
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	STD_DIFFUSE_REFLECTANCE
-	template<typename T> void LoadTextures(T callback)
-	{
-		m_specularReflectance.LoadTextures(callback);
-		m_alphaU.LoadTextures(callback);
-		m_alphaV.LoadTextures(callback);
-	}
 	TYPE_FUNC(roughconductor)
 };
 
@@ -334,11 +298,11 @@ struct plastic : public BSDF
 	float m_specularSamplingWeight;
 	bool m_nonlinear;
 	plastic()
-		: BSDF(EDeltaReflection | EDiffuseReflection)
+		: BSDF(EBSDFType(EDeltaReflection | EDiffuseReflection), 0, &m_diffuseReflectance, &m_specularReflectance)
 	{
 	}
 	plastic(float eta, const e_KernelTexture& d, bool nonlinear = false)
-		: m_diffuseReflectance(d), m_nonlinear(nonlinear), BSDF(EDeltaReflection | EDiffuseReflection)
+		: m_diffuseReflectance(d), m_nonlinear(nonlinear), BSDF(EBSDFType(EDeltaReflection | EDiffuseReflection), 0, &m_diffuseReflectance, &m_specularReflectance)
 	{
 		m_specularReflectance = CreateTexture(0, Spectrum(1.0f));
 		m_eta = eta;
@@ -349,7 +313,7 @@ struct plastic : public BSDF
 		m_specularSamplingWeight = sAvg / (dAvg + sAvg);
 	}
 	plastic(float eta, const e_KernelTexture& d, const e_KernelTexture& r, bool nonlinear = false)
-		: m_diffuseReflectance(d), m_nonlinear(nonlinear), BSDF(EDeltaReflection | EDiffuseReflection)
+		: m_diffuseReflectance(d), m_nonlinear(nonlinear), BSDF(EBSDFType(EDeltaReflection | EDiffuseReflection), 0, &m_diffuseReflectance, &m_specularReflectance)
 	{
 		m_specularReflectance = r;
 		m_eta = eta;
@@ -376,11 +340,6 @@ struct plastic : public BSDF
 	CUDA_FUNC_IN Spectrum getDiffuseReflectance(BSDFSamplingRecord &bRec) const
 	{
 		return m_diffuseReflectance.Evaluate(bRec.dg) * (1.0f - m_fdrExt);
-	}
-	template<typename T> void LoadTextures(T callback)
-	{
-		m_diffuseReflectance.LoadTextures(callback);
-		m_specularReflectance.LoadTextures(callback);
 	}
 	TYPE_FUNC(plastic)
 private:
@@ -438,11 +397,11 @@ struct roughplastic : public BSDF
 	float m_specularSamplingWeight;
 	bool m_nonlinear;
 	roughplastic()
-		: BSDF(EGlossyReflection | EDiffuseReflection)
+		: BSDF(EBSDFType(EGlossyReflection | EDiffuseReflection), 0, &m_diffuseReflectance, &m_specularReflectance, &m_alpha)
 	{
 	}
 	roughplastic(MicrofacetDistribution::EType type, float eta, e_KernelTexture& alpha, e_KernelTexture& diffuse, bool nonlinear = false)
-		: BSDF(EGlossyReflection | EDiffuseReflection), m_eta(eta), m_invEta2(1.0f / (eta * eta)), m_alpha(alpha), m_diffuseReflectance(diffuse), m_nonlinear(nonlinear)
+		: BSDF(EBSDFType(EGlossyReflection | EDiffuseReflection), 0, &m_diffuseReflectance, &m_specularReflectance, &m_alpha), m_eta(eta), m_invEta2(1.0f / (eta * eta)), m_alpha(alpha), m_diffuseReflectance(diffuse), m_nonlinear(nonlinear)
 	{
 		m_distribution.m_type = type;
 		m_specularReflectance = CreateTexture(0, Spectrum(1.0f));
@@ -450,7 +409,7 @@ struct roughplastic : public BSDF
 		m_specularSamplingWeight = sAvg / (dAvg + sAvg);
 	}
 	roughplastic(MicrofacetDistribution::EType type, float eta, e_KernelTexture& alpha, e_KernelTexture& diffuse, e_KernelTexture& specular, bool nonlinear = false)
-		: BSDF(EGlossyReflection | EDiffuseReflection), m_eta(eta), m_invEta2(1.0f / (eta * eta)), m_alpha(alpha), m_diffuseReflectance(diffuse), m_nonlinear(nonlinear)
+		: BSDF(EBSDFType(EGlossyReflection | EDiffuseReflection), 0, &m_diffuseReflectance, &m_specularReflectance, &m_alpha), m_eta(eta), m_invEta2(1.0f / (eta * eta)), m_alpha(alpha), m_diffuseReflectance(diffuse), m_nonlinear(nonlinear)
 	{
 		m_distribution.m_type = type;
 		m_specularReflectance = specular;
@@ -477,12 +436,6 @@ struct roughplastic : public BSDF
 
 		return m_diffuseReflectance.Evaluate(bRec.dg) * Ftr;
 	}
-	template<typename T> void LoadTextures(T callback)
-	{
-		m_diffuseReflectance.LoadTextures(callback);
-		m_specularReflectance.LoadTextures(callback);
-		m_alpha.LoadTextures(callback);
-	}
 	TYPE_FUNC(roughplastic)
 };
 
@@ -494,11 +447,11 @@ struct phong : public BSDF
 	e_KernelTexture m_exponent;
 	float m_specularSamplingWeight;
 	phong()
-		: BSDF(EGlossyReflection | EDiffuseReflection)
+		: BSDF(EBSDFType(EGlossyReflection | EDiffuseReflection), 0, &m_diffuseReflectance, &m_specularReflectance, &m_exponent)
 	{
 	}
 	phong(const e_KernelTexture& d, const e_KernelTexture& s, const e_KernelTexture& e)
-		: m_diffuseReflectance(d), m_specularReflectance(s), m_exponent(e), BSDF(EGlossyReflection | EDiffuseReflection)
+		: m_diffuseReflectance(d), m_specularReflectance(s), m_exponent(e), BSDF(EBSDFType(EGlossyReflection | EDiffuseReflection), 0, &m_diffuseReflectance, &m_specularReflectance, &m_exponent)
 	{
 		float dAvg = m_diffuseReflectance.Average().getLuminance(), sAvg = m_specularReflectance.Average().getLuminance();
 		m_specularSamplingWeight = sAvg / (dAvg + sAvg);
@@ -517,12 +470,6 @@ struct phong : public BSDF
 	CUDA_FUNC_IN Spectrum getDiffuseReflectance(BSDFSamplingRecord &bRec) const
 	{
 		return m_diffuseReflectance.Evaluate(bRec.dg);
-	}
-	template<typename T> void LoadTextures(T callback)
-	{
-		m_diffuseReflectance.LoadTextures(callback);
-		m_specularReflectance.LoadTextures(callback);
-		m_exponent.LoadTextures(callback);
 	}
 	TYPE_FUNC(phong)
 };
@@ -545,11 +492,11 @@ struct ward : public BSDF
 	e_KernelTexture m_alphaU;
 	e_KernelTexture m_alphaV;
 	ward()
-		: BSDF(EGlossyReflection | EDiffuseReflection)
+		: BSDF(EBSDFType(EGlossyReflection | EDiffuseReflection), 0, &m_diffuseReflectance, &m_specularReflectance, &m_alphaU, &m_alphaV)
 	{
 	}
 	ward(EModelVariant type, const e_KernelTexture& d, const e_KernelTexture& s, const e_KernelTexture& u, const e_KernelTexture& v)
-		: m_modelVariant(type), m_diffuseReflectance(d), m_specularReflectance(s), m_alphaU(u), m_alphaV(v), BSDF(EGlossyReflection | EDiffuseReflection)
+		: m_modelVariant(type), m_diffuseReflectance(d), m_specularReflectance(s), m_alphaU(u), m_alphaV(v), BSDF(EBSDFType(EGlossyReflection | EDiffuseReflection), 0, &m_diffuseReflectance, &m_specularReflectance, &m_alphaU, &m_alphaV)
 	{
 		float dAvg = m_diffuseReflectance.Average().getLuminance(), sAvg = m_specularReflectance.Average().getLuminance();
 		m_specularSamplingWeight = sAvg / (dAvg + sAvg);
@@ -566,13 +513,6 @@ struct ward : public BSDF
 	{
 		return m_diffuseReflectance.Evaluate(bRec.dg);
 	}
-	template<typename T> void LoadTextures(T callback)
-	{
-		m_diffuseReflectance.LoadTextures(callback);
-		m_specularReflectance.LoadTextures(callback);
-		m_alphaU.LoadTextures(callback);
-		m_alphaV.LoadTextures(callback);
-	}
 	TYPE_FUNC(ward)
 };
 
@@ -584,11 +524,11 @@ struct hk : public BSDF
 	e_PhaseFunction m_phase;
 	float m_thickness;
 	hk()
-		: BSDF(EGlossyReflection | EGlossyTransmission | EDeltaTransmission)
+		: BSDF(EBSDFType(EGlossyReflection | EGlossyTransmission | EDeltaTransmission), 0, &m_sigmaS, &m_sigmaA)
 	{
 	}
 	hk(const e_KernelTexture& ss, const e_KernelTexture& sa, e_PhaseFunction& phase, float thickness)
-		: m_sigmaS(ss), m_sigmaA(sa), m_phase(phase), m_thickness(thickness), BSDF(EGlossyReflection | EGlossyTransmission | EDeltaTransmission)
+		: m_sigmaS(ss), m_sigmaA(sa), m_phase(phase), m_thickness(thickness), BSDF(EBSDFType(EGlossyReflection | EGlossyTransmission | EDeltaTransmission), 0, &m_sigmaS, &m_sigmaA)
 	{
 	}
 	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &_pdf, const float2 &_sample) const;
@@ -603,11 +543,6 @@ struct hk : public BSDF
 		for (int i = 0; i < SPECTRUM_SAMPLES; i++)
 			albedo[i] = sigmaT[i] > 0 ? (sigmaS[i]/sigmaT[i]) : (float) 0;
 		return albedo;
-	}
-	template<typename T> void LoadTextures(T callback)
-	{
-		m_sigmaS.LoadTextures(callback);
-		m_sigmaA.LoadTextures(callback);
 	}
 	TYPE_FUNC(hk)
 };

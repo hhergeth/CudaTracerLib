@@ -52,7 +52,7 @@ template<typename T> e_Stream<T>* LL(int i)
 	return r;
 }
 
-e_DynamicScene::e_DynamicScene(e_Sensor* C, e_SceneInitData a_Data, const char* texPath, const char* cmpPath)
+e_DynamicScene::e_DynamicScene(e_Sensor* C, e_SceneInitData a_Data, const char* texPath, const char* cmpPath, const char* dataPath)
 	: m_uEnvMapIndex(0xffffffff), m_pCamera(C)
 {
 	instanciatedMaterials = false;
@@ -78,6 +78,7 @@ e_DynamicScene::e_DynamicScene(e_Sensor* C, e_SceneInitData a_Data, const char* 
 	unsigned int a = this->getCudaBufferSize() / (1024 * 1024);
 	//if(a > 900 * 1024 * 1024)
 	//	throw 1;
+	e_RoughTransmittanceManager::StaticInitialize(std::string(dataPath));
 }
 
 void e_DynamicScene::Free()
@@ -220,7 +221,7 @@ e_BufferReference<e_MIPMap, e_KernelMIPMap> e_DynamicScene::LoadTexture(const ch
 	e_BufferReference<e_MIPMap, e_KernelMIPMap> T = m_pTextureBuffer->LoadCached(a.c_str(), &load);
 	if(load)
 	{
-		std::string a2 = std::string(m_pCompilePath) + "Images\\" + getFileName(a), b = a2.substr(0, a2.find('.')) + ".xtex";
+		std::string a2 = std::string(m_pCompilePath) + "Images\\" + getFileName(a), b = a2 + ".xtex";
 		CreateDirectoryRecursively(getDirName(b).c_str());
 		unsigned long long rawStamp = GetTimeStamp(a.c_str());
 		unsigned long long cmpStamp = GetTimeStamp(b.c_str());

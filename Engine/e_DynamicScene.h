@@ -43,7 +43,7 @@ public:
 	unsigned int m_uEnvMapIndex;
 	bool instanciatedMaterials;
 public:
-	e_DynamicScene(e_Sensor* C, e_SceneInitData a_Data, const char* texPath, const char* cmpPath);
+	e_DynamicScene(e_Sensor* C, e_SceneInitData a_Data, const char* texPath, const char* cmpPath, const char* dataPath);
 	~e_DynamicScene();
 	void Free();
 	e_StreamReference(e_Node) CreateNode(const char* a_MeshFile);

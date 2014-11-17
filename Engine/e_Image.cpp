@@ -83,16 +83,16 @@ void e_Image::Free()
 void e_Image::rebuildFilterTable()
 {
 	float w = filter.As<e_KernelFilterBase>()->xWidth, h = filter.As<e_KernelFilterBase>()->yWidth;
-	for (int y = 0; y < FILTER_TABLE_SIZE; ++y)
+	/*for (int y = 0; y < FILTER_TABLE_SIZE; ++y)
 		for (int x = 0; x < FILTER_TABLE_SIZE; ++x)
 		{
 			float a = float(x) / FILTER_TABLE_SIZE * 2.0f - 1.0f, b = float(y) / FILTER_TABLE_SIZE * 2.0f - 1.0f;
 			float _x = x + 0.5f, _y = y + 0.5f, s = FILTER_TABLE_SIZE;
 //			filterTable[x][y] = filter.Evaluate(_x / s * w, _y / s * h);
 			filterTable[x][y] = filter.Evaluate(a * w/2.0f, b * h/2.0f);
-		}
-	/*
-	float* ftp = filterTable[0];
+		}*/
+	
+	float* ftp = filterTable;
 	for (int y = 0; y < FILTER_TABLE_SIZE; ++y)
 	{
 		float fy = ((float)y + .5f) * h / FILTER_TABLE_SIZE;
@@ -101,7 +101,7 @@ void e_Image::rebuildFilterTable()
 			float fx = ((float)x + .5f) * w / FILTER_TABLE_SIZE;
 			*ftp++ = filter.Evaluate(fx, fy);
 		}
-	}*/
+	}
 }
 
 void e_Image::WriteDisplayImage(const char* fileName)

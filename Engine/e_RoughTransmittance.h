@@ -16,7 +16,7 @@ class e_RoughTransmittance
 	float *m_transHost, *m_diffTransHost;
 public:
 	e_RoughTransmittance(){}
-	e_RoughTransmittance(const char* name);
+	e_RoughTransmittance(const std::string& name);
 	void Free()
 	{
 		delete [] m_transHost;
@@ -31,7 +31,7 @@ public:
 class e_RoughTransmittanceManager
 {
 public:
-	void static StaticInitialize();
+	void static StaticInitialize(const std::string& a_Path);
 	void static StaticDeinitialize();
 	CUDA_DEVICE CUDA_HOST static float Evaluate(MicrofacetDistribution::EType type, float cosTheta, float alpha = 0.0f, float eta = 0.0f);
 	CUDA_DEVICE CUDA_HOST static float EvaluateDiffuse(MicrofacetDistribution::EType type, float alpha = 0, float eta = 0);

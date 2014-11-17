@@ -131,12 +131,13 @@ template<bool DIRECT> __global__ void k_PhotonPass()
 					//if (g_Map.StorePhoton<true>(dg.P, Le, wo, bRec.dg.sys.n) == k_StoreResult::Full)
 					//		return;
 				{
-					uint3 i0 = g_Map.m_sSurfaceMap.m_sHash.Transform(dg.P);//PPM_photons_per_block
+					//uint3 i0 = g_Map.m_sSurfaceMap.m_sHash.Transform(dg.P);//PPM_photons_per_block
 					unsigned int j = blockIdx.x * PPM_slots_per_block + local_idx * PPM_MaxRecursion + depth;
-					unsigned int i = g_Map.m_sSurfaceMap.m_sHash.Hash(i0);
-					unsigned int k = atomicExch(g_Map.m_sSurfaceMap.m_pDeviceHashGrid + i, j);
-					if (k == j)
-						printf("Fucked up hash grid, created loop, enjoy ! k : %d", k);
+					//unsigned int i = g_Map.m_sSurfaceMap.m_sHash.Hash(i0);
+					//unsigned int k = atomicExch(g_Map.m_sSurfaceMap.m_pDeviceHashGrid + i, j);
+					//if (k == j)
+					//	printf("Fucked up hash grid, created loop, enjoy ! k : %d", k);
+					unsigned int k = -1;
 					g_Map.m_pPhotons[j] = k_pPpmPhoton(dg.P, Le, wo, bRec.dg.sys.n, k);
 				}
 				Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
@@ -161,13 +162,27 @@ template<bool DIRECT> __global__ void k_PhotonPass()
 	g_RNGData(rng);
 }
 
+__global__ void buildHashGrid()
+{
+	unsigned int idx = blockIdx.x * blockDim.x * blockDim.y + threadIdx.y * blockDim.x + threadIdx.x;
+	if (idx < g_Map.m_uPhotonBufferLength && !g_Map.m_pPhotons[idx].getL().isZero())
+	{
+		uint3 i0 = g_Map.m_sSurfaceMap.m_sHash.Transform(g_Map.m_pPhotons[idx].getPos());
+		unsigned int i = g_Map.m_sSurfaceMap.m_sHash.Hash(i0);
+		unsigned int k = atomicExch(g_Map.m_sSurfaceMap.m_pDeviceHashGrid + i, idx);
+		g_Map.m_pPhotons[idx].next = k;
+	}
+}
+
 void k_sPpmTracer::doPhotonPass()
 {
+	cudaMemset(m_sMaps.m_pPhotons, 0, sizeof(k_pPpmPhoton)* m_sMaps.m_uPhotonBufferLength);
 	cudaMemcpyToSymbol(g_Map, &m_sMaps, sizeof(k_PhotonMapCollection));
 	k_INITIALIZE(m_pScene, g_sRngs);
 	if(m_bDirect)
 		k_PhotonPass<true> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >();
 	else k_PhotonPass<false> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >();
+	buildHashGrid << <m_sMaps.m_uPhotonBufferLength / (32 * 6) + 1, dim3(32, 6, 1) >> >();
 	cudaThreadSynchronize();
 	cudaMemcpyFromSymbol(&m_sMaps, g_Map, sizeof(k_PhotonMapCollection));
 	m_sMaps.m_uPhotonNumStored = m_sMaps.m_uPhotonBufferLength;

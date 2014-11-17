@@ -243,7 +243,7 @@ void k_PrimTracer::Debug(int2 pixel)
 	//debugPixe2l<<<1,1>>>(w,h,pixel);
 	CudaRNG rng = g_RNGData();
 	Ray r, rX, rY;
-	g_SceneData.sampleSensorRay(r, rX, rY, make_float2(pixel.x, pixel.y), rng.randomFloat2(), make_float2(0));
+	g_SceneData.sampleSensorRay(r, rX, rY, make_float2(pixel.x, pixel.y), rng.randomFloat2());
 	trace(r, rX, rY, rng, 0);
 }
 

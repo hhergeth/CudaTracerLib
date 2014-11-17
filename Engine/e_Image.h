@@ -41,7 +41,7 @@ public:
 		xRes = xResolution;
 		yRes = yResolution;
 	}
-	CUDA_DEVICE CUDA_HOST void AddSample(int sx, int sy, const Spectrum &L);
+	CUDA_DEVICE CUDA_HOST void AddSample(float sx, float sy, const Spectrum &L);
 	CUDA_FUNC_IN void ClearSample(int sx, int sy)
 	{
 		*getPixel(sy * xResolution + sx) = Pixel();
@@ -58,7 +58,7 @@ public:
 		rebuildFilterTable();
 	}
 	CUDA_DEVICE CUDA_HOST void SetSample(int sx, int sy, RGBCOL c);
-    CUDA_DEVICE CUDA_HOST void Splat(int sx, int sy, const Spectrum &L);
+	CUDA_DEVICE CUDA_HOST void Splat(float sx, float sy, const Spectrum &L);
     void WriteDisplayImage(const char* fileName);
 	void WriteImage(const char* fileName, float splat);
 	void StartRendering();
@@ -109,7 +109,7 @@ private:
     Pixel *cudaPixels;
 	Pixel *hostPixels;
 	bool usedHostPixels;
-	float filterTable[FILTER_TABLE_SIZE][FILTER_TABLE_SIZE];
+	float filterTable[FILTER_TABLE_SIZE * FILTER_TABLE_SIZE];
 	int xResolution, yResolution;
 	ImageDrawType drawStyle;
 	CUDA_FUNC_IN Pixel* getPixel(int i)

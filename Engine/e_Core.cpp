@@ -11,7 +11,6 @@ void InitializeCuda4Tracer()
 {
 	cudaError er = CUDA_FREE(0);
 	SpectrumHelper::StaticInitialize();
-	e_RoughTransmittanceManager::StaticInitialize();
 	FreeImage_Initialise();
 }
 
