@@ -357,7 +357,7 @@ void k_sPpmTracer::doEyePass(e_Image* I)
 	I->DoUpdateDisplay(1.0f);
 }
 
-void k_sPpmTracer::Debug(int2 pixel)
+void k_sPpmTracer::Debug(e_Image* I, int2 pixel)
 {
 	if(m_uPhotonsEmitted == (unsigned long long)-1)
 		return;

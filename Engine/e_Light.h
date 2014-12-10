@@ -131,10 +131,7 @@ struct e_DiffuseLight : public e_LightBase
 		return m_power;
 	}
 
-	CUDA_FUNC_IN Spectrum evalPosition(const PositionSamplingRecord &pRec) const
-	{
-		return m_radiance * PI;
-	}
+	CUDA_DEVICE CUDA_HOST Spectrum evalPosition(const PositionSamplingRecord &pRec) const;
 
 	CUDA_FUNC_IN float pdfPosition(const PositionSamplingRecord &pRec) const
 	{

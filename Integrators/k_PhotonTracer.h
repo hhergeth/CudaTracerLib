@@ -11,7 +11,7 @@ public:
 		:N (256 * 256 * 4)
 	{
 	}
-	virtual void Debug(int2 pixel);
+	virtual void Debug(e_Image* I, int2 pixel);
 	void PrintStatus(std::vector<std::string>& a_Buf)
 	{
 		double pC = floor((double)(m_uPassesDone * N) / 1000000.0);

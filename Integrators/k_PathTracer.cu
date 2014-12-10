@@ -134,7 +134,7 @@ void k_PathTracer::DoRender(e_Image* I)
 	I->DoUpdateDisplay(m_uPassesDone);
 }
 
-void k_PathTracer::Debug(int2 p)
+void k_PathTracer::Debug(e_Image* I, int2 p)
 {
 	k_INITIALIZE(m_pScene, g_sRngs);
 	//debugPixel<<<1,1>>>(w,h,p);

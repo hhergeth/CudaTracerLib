@@ -10,7 +10,7 @@ public:
 		: m_bDirect(false)
 	{
 	}
-	virtual void Debug(int2 pixel);
+	virtual void Debug(e_Image* I, int2 pixel);
 	virtual void CreateSliders(SliderCreateCallback a_Callback);
 protected:
 	virtual void DoRender(e_Image* I);

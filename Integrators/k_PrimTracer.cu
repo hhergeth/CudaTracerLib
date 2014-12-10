@@ -236,7 +236,7 @@ void k_PrimTracer::DoRender(e_Image* I)
 	m_pCamera->m_sLastFrustum = m_sEyeBox;
 }
 
-void k_PrimTracer::Debug(int2 pixel)
+void k_PrimTracer::Debug(e_Image* I, int2 pixel)
 {
 	//FW::printf("%f,%f",pixel.x/float(w),pixel.y/float(h));
 	k_INITIALIZE(m_pScene, g_sRngs);

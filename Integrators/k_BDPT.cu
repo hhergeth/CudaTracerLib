@@ -3,248 +3,336 @@
 #include <time.h>
 #include "..\Kernel\k_TraceAlgorithms.h"
 
-#define MAX_SUBPATH_LENGTH 5
-struct PathVertex
+struct BidirVertex
 {
 	float3 p;
-	float3 wi;
-	float3 wo;
-	TraceResult r2;
+	float3 n;
 	Spectrum cumulative;
-};
-struct Path
-{
-	PathVertex EyePath[MAX_SUBPATH_LENGTH];
-	PathVertex LightPath[MAX_SUBPATH_LENGTH];
-	unsigned int s;
-	unsigned int t;
-	CUDA_FUNC_IN Path()
+	float cumulativePdf;
+	int type;
+	union
 	{
-		s = 0;
-		t = 0;
-	}
-};
-struct BDPT_Path
-{
-	Path& P;
-	int i, j;
+		TraceResult r2;
+		const e_Sensor* s;
+		const e_KernelLight* l;
+	};
 
-	CUDA_FUNC_IN BDPT_Path(Path& p, int i, int j)
-		: P(p), i(i), j(j)
+	CUDA_FUNC_IN BidirVertex()
 	{
 
 	}
 
-	CUDA_FUNC_IN int N()
+	CUDA_FUNC_IN BidirVertex(TraceResult r2, const float3& p, const float3& n, const Spectrum& c, float pdf)
+		: p(p), n(normalize(n)), r2(r2), cumulativePdf(pdf)
 	{
-		return i + j;
+		cumulative = c;
+		type = 1;
 	}
 
-	CUDA_FUNC_IN PathVertex& operator()(int k)
+	CUDA_FUNC_IN BidirVertex(const e_Sensor* s, const float3& p, const float3& n, float pdf)
+		: p(p), n(normalize(n)), s(s), cumulativePdf(pdf)
 	{
-		if (k < j)
-			return P.LightPath[k];
-		else return P.EyePath[i - 1 - (k - j)];
+		cumulative = Spectrum(1);
+		type = 2;
 	}
 
-	CUDA_FUNC_IN float p_forward(int i)
+	CUDA_FUNC_IN BidirVertex(const e_KernelLight* l, const float3& p, const float3& n, float pdf)
+		: p(p), n(normalize(n)), l(l), cumulativePdf(pdf)
 	{
-		if (i == -1)
-			return 1;
-		else if (i == 0)
-			return 1;
-		else
+		cumulative = Spectrum(1);
+		type = 3;
+	}
+
+	CUDA_FUNC_IN bool isDelta() const
+	{
+		if (type == 1)
+			return r2.getMat().bsdf.hasComponent(EDeltaReflection) || r2.getMat().bsdf.hasComponent(EDeltaTransmission);
+		else return false;
+	}
+
+	CUDA_FUNC_IN Spectrum f(const BidirVertex* prev, const BidirVertex* next, CudaRNG& rng) const
+	{
+		if (type == 1)
 		{
-			PathVertex& x_m = operator()(i - 1), &x = operator()(i), &x_p = operator()(i + 1);
-			DifferentialGeometry dg, dg2;
+			DifferentialGeometry dg;
 			BSDFSamplingRecord bRec(dg);
-			x.r2.getBsdfSample(Ray(x_m.p, normalize(x.p - x_m.p)), g_RNGData(), &bRec, normalize(x_p.p - x.p));
-			float pdf = x.r2.getMat().bsdf.pdf(bRec);
-			x_p.r2.fillDG(dg2);
-			return pdf * ::G(bRec.dg.sys.n, dg2.sys.n, x.p, x_p.p);
+			r2.getBsdfSample(normalize(p - prev->p), p, rng, &bRec);
+			bRec.wo = dg.toLocal(normalize(next->p - p));
+			return r2.getMat().bsdf.f(bRec, isDelta() ? EDiscrete : ESolidAngle) / (isDelta() ? 1.0f : Frame::cosTheta(bRec.wo) != 0 ? abs(Frame::cosTheta(bRec.wo)) : 1);
 		}
-	}
-
-	CUDA_FUNC_IN float p_backward(int i)
-	{
-		if (i == N() + 1)
-			return 1;
-		else if (i == N())
-			return 1;
-		else
+		else if (type == 2 || type == 3)
 		{
-			PathVertex& x_m = operator()(i - 1), &x = operator()(i), &x_p = operator()(i + 1);
-			DifferentialGeometry dg, dg2;
-			BSDFSamplingRecord bRec(dg);
-			x.r2.getBsdfSample(Ray(x_m.p, normalize(x.p - x_p.p)), g_RNGData(), &bRec, normalize(x_m.p - x.p));
-			float pdf = x.r2.getMat().bsdf.pdf(bRec);
-			x_m.r2.fillDG(dg2);
-			return pdf * ::G(bRec.dg.sys.n, dg2.sys.n, x.p, x_m.p);
+			PositionSamplingRecord pRec;
+			pRec.p = p;
+			pRec.n = n;
+			pRec.measure = EDiscrete;
+			DirectionSamplingRecord dRec;
+			dRec.d = normalize(next->p - p);
+			dRec.measure = ESolidAngle;
+			Spectrum eval(0.0f);
+			if (type == 2)
+				eval = s->evalPosition(pRec) * s->evalDirection(dRec, pRec);
+			else if (type == 3)
+				eval = l->evalPosition(pRec) * l->evalDirection(dRec, pRec);
+			float dp = AbsDot(pRec.n, dRec.d);
+			return eval / (dp != 0 ? dp : 1);
 		}
+		else printf("Invalid vertex type : %d\n.", type);
+		return Spectrum(0.0f);
 	}
 
-	CUDA_FUNC_IN float p(int s)
+	CUDA_FUNC_IN float pdf(const BidirVertex* prev, const BidirVertex* next, bool superSample, CudaRNG& rng) const
 	{
+		if (superSample)
+		{
+			PositionSamplingRecord pRec;
+			pRec.p = p;
+			pRec.n = n;
+			pRec.measure = EDiscrete;
+			if (type == 1)
+				return g_SceneData.m_sLightData[r2.LightIndex()].pdfPosition(pRec);
+			return type == 2 ? s->pdfPosition(pRec) : l->pdfPosition(pRec);
+		}
+		const e_KernelLight* l = this->l;
+		bool isLight = false;
+		if (type == 1 && (prev == 0 || next == 0) && r2.LightIndex() != 0xffffffff)
+		{
+			isLight = true;
+			l = &g_SceneData.m_sLightData[r2.LightIndex()];
+		}
+		if (type == 1 && !isLight)
+		{
+			DifferentialGeometry dg;
+			BSDFSamplingRecord bRec(dg);
+			r2.getBsdfSample(normalize(p - prev->p), p, rng, &bRec);
+			bRec.wo = dg.toLocal(normalize(next->p - p));
+			return r2.getMat().bsdf.pdf(bRec, isDelta() ? EDiscrete : ESolidAngle) * (isDelta() ? 1.0f : ::G(n, next->n, p, next->p));
+		}
+		else if (type == 2 || type == 3 || isLight)
+		{
+			PositionSamplingRecord pRec;
+			pRec.p = p;
+			pRec.n = n;
+			DirectionSamplingRecord dRec;
+			dRec.d = normalize(next->p - p);
+			dRec.measure = ESolidAngle;
+			return (type == 2 ? s->pdfDirection(dRec, pRec) : l->pdfDirection(dRec, pRec)) * ::G(n, next->n, p, next->p);
+		}
+		else printf("Invalid vertex type : %d\n.", type);
+		return 0.0f;
+	}
+
+	CUDA_FUNC_IN Spectrum Le(const BidirVertex* next, CudaRNG& rng) const
+	{
+		if (type == 1)
+		{
+			DifferentialGeometry dg;
+			BSDFSamplingRecord bRec(dg);
+			r2.getBsdfSample(make_float3(0), p, rng, &bRec);
+			return r2.Le(p, dg.sys, normalize(next->p - p));
+		}
+		else return 0.0f;
+	}
+};
+
+template<int NUM_V_PER_PATH> struct BidirSampleT
+{
+	BidirVertex eyePath[NUM_V_PER_PATH];
+	BidirVertex lightPath[NUM_V_PER_PATH];
+	int n_E;
+	int n_L;
+};
+
+typedef BidirSampleT<5> BidirSample;
+
+struct BidirPath
+{
+	int t;//eye length
+	int s;//light length
+	const BidirSample& sample;
+
+	CUDA_FUNC_IN BidirPath(const BidirSample& sample, int t, int s)
+		: t(t), s(s), sample(sample)
+	{
+
+	}
+
+	CUDA_FUNC_IN int k() const
+	{
+		return s + t - 1;
+	}
+
+	CUDA_FUNC_IN const BidirVertex& operator[](int i) const
+	{
+		return i < t ? sample.eyePath[i] : sample.lightPath[s - 1 - (i - t)];
+	}
+
+	CUDA_FUNC_IN const BidirVertex* vertexOrNull(int i) const
+	{
+		if (i >= 0 && i <= k())
+			return &operator[](i);
+		else return 0;
+	}
+
+	CUDA_FUNC_IN float p_forward(int i, CudaRNG& rng) const
+	{
+		return operator[](MAX(i, 0)).pdf(vertexOrNull(i - 1), vertexOrNull(i + 1), i == -1, rng);
+	}
+
+	CUDA_FUNC_IN float p_backward(int i, CudaRNG& rng) const
+	{
+		return operator[](MIN(k(), i)).pdf(vertexOrNull(i + 1), vertexOrNull(i - 1), i == k() + 1, rng);
+	}
+
+	CUDA_FUNC_IN float p_L(int i, CudaRNG& rng) const
+	{
+		if (i == 0)
+			return 1;
+		else if (i == 1)
+			return operator[](k()).pdf(0, 0, true, rng);
+		else return operator[](k() - (i - 1)).pdf(vertexOrNull(k() - (i - 2)), vertexOrNull(k() - i), false, rng);
+	}
+
+	CUDA_FUNC_IN float p_E(int i, CudaRNG& rng) const
+	{
+		if (i == 0)
+			return 1;
+		else if (i == 1)
+			return operator[](0).pdf(0, 0, true, rng);
+		else return operator[](i - 1).pdf(vertexOrNull(i - 2), vertexOrNull(i), false, rng);
+	}
+
+	CUDA_FUNC_IN float pdf(int k, CudaRNG& rng) const
+	{
+		//int s = k, t = this->k() - s;
+		//return p_E(s, rng) * p_L(t, rng);
 		float r = 1;
-		for (int i = -1; i < s; i++)
-			r *= p_forward(i);
-		for (int i = s + 2; i <= N() + 1; i++)
-			r *= p_backward(i);
+		for (int i = -1; i <= k - 1; i++)
+			r *= p_forward(i, rng);
+		for (int i = k + 2; i <= this->k() + 1; i++)
+			r *= p_backward(i, rng);
 		return r;
 	}
+
+	CUDA_FUNC_IN float G(int i, int j) const
+	{
+		const BidirVertex& v_i = operator[](i), &v_j = operator[](j);
+		float g = ::G(v_i.n, v_j.n, v_i.p, v_j.p), f = ::V(v_i.p, v_j.p);
+		return g * f;
+	}
+
+	CUDA_FUNC_IN Spectrum f(CudaRNG& rng) const
+	{
+		const BidirVertex& ev = sample.eyePath[t - 1], &lv = sample.lightPath[s - 1];
+		Spectrum f_ev = ev.f(t > 1 ? &sample.eyePath[t - 2] : 0, &lv, rng);
+		Spectrum f_lv = lv.f(s > 1 ? &sample.lightPath[s - 2] : 0, &ev, rng);
+		return ev.cumulative * f_ev * ::V(ev.p, lv.p) * ::G(ev.n, lv.n, ev.p, lv.p) * f_lv * lv.cumulative;//(1.0f / DistanceSquared(ev.p, lv.p))
+		/*Spectrum W_t = operator[](0).f(0, vertexOrNull(1), rng), L_t = operator[](k()).f(0, vertexOrNull(k() - 1), rng);
+		Spectrum F_t(1.0f);
+		float G_t = 1;
+		for (int j = 0; j <= k() - 1; j++)
+			G_t *= G(j, j + 1);
+		for (int j = 1; j <= k() - 1; j++)
+			F_t *= operator[](j).f(vertexOrNull(j - 1), vertexOrNull(j + 1), rng);
+		return  W_t * G_t * F_t * L_t / pdf(t - 1, rng);*/
+	}
 };
 
-CUDA_FUNC_IN void randomWalk(PathVertex* vertices, unsigned int* N, Ray r, CudaRNG& rng, bool eye)
+CUDA_FUNC_IN void sampleSubPath(BidirVertex* vertices, int* N, Spectrum cumulative, float cumulativePdf, Ray r, CudaRNG& rng)
 {
-	Spectrum cumulative(1.0f);
+	Spectrum initialCumulative = cumulative;
 	DifferentialGeometry dg;
-	while(*N < MAX_SUBPATH_LENGTH)
+	BSDFSamplingRecord bRec(dg);
+	while (*N < 5)
 	{
 		TraceResult r2 = k_TraceRay(r);
-		if(!r2.hasHit())
+		if (!r2.hasHit())
 			return;
-		PathVertex& v = vertices[*N];
-		(*N)++;
-		v.r2 = r2;
-		v.p = r(r2.m_fDist);
-		BSDFSamplingRecord bRec(dg);
 		r2.getBsdfSample(r, rng, &bRec);
-		Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
-		if(eye)
-		{
-			v.wo = -r.direction;
-			r.direction = v.wi = normalize(bRec.getOutgoing());
-			cumulative *= f;
-		}
-		else
-		{
-			v.wi = -r.direction;
-			r.direction = v.wo = normalize(bRec.getOutgoing());
-			cumulative *= f;
-		}
-		v.cumulative = cumulative;
-		if(cumulative.isZero())
-			return;
-		r.origin = v.p;
+		vertices[*N] = BidirVertex(r2, dg.P, dg.sys.n, cumulative, cumulativePdf);
+		*N = *N + 1;
+		float pdf;
+		Spectrum f = r2.getMat().bsdf.sample(bRec, pdf, rng.randomFloat2());
+		cumulativePdf *= pdf;
+		cumulative *= f;
+		float p = (cumulative / initialCumulative).max();
+		if (rng.randomFloat() < p)
+			cumulative /= p;
+		else break;
+		r = Ray(dg.P, bRec.getOutgoing());
+		r2.Init();
 	}
 }
 
-CUDA_FUNC_IN Spectrum evalPath(const Path& P, int nEye, int nLight, CudaRNG& rng)
+CUDA_FUNC_IN float misWeight(BidirPath& P, CudaRNG& rng)
 {
-	const PathVertex& ev = P.EyePath[nEye - 1];
-	const PathVertex& lv = P.LightPath[nLight - 1];
-	Spectrum L(1.0f);
-	if(nEye > 1)
-		L *= P.EyePath[nEye - 2].cumulative;
-	if(nLight > 1)
-		L *= P.LightPath[nLight - 2].cumulative;
-
-	float3 dir = normalize(lv.p - ev.p);
-	DifferentialGeometry dg;
-	BSDFSamplingRecord bRec(dg);
-	ev.r2.getBsdfSample(Ray(ev.p, -1.0f * ev.wi), rng, &bRec, dir);
-	L *= ev.r2.getMat().bsdf.f(bRec);
-	float pdf_i = ev.r2.getMat().bsdf.pdf(bRec);
-	float3 N_x = bRec.dg.sys.n;
-	lv.r2.getBsdfSample(Ray(lv.p, dir), rng, &bRec, lv.wo);
-	L *= lv.r2.getMat().bsdf.f(bRec);
-	float3 N_y = bRec.dg.sys.n;
-	float g = G(N_x, N_y, ev.p, lv.p);
-	L *= g;
-	return L;
-}
-
-CUDA_FUNC_IN float pathWeight(int i, int j)
-{
-	return 1;
-}
-
-CUDA_FUNC_IN float misWeight(BDPT_Path& P, int s)
-{
-	float div = 0;
-	for (int i = 0; i < P.N(); i++)
-		div += P.p(i);
-	return P.p(s) / div;
-}
-
-CUDA_FUNC_IN void BDPT(int x, int y, int w, int h, e_Image& g_Image, CudaRNG& rng)
-{
-	Path P;
-	Ray r;
-	Spectrum imp = g_SceneData.sampleSensorRay(r, make_float2(x, y), rng.randomFloat2());
-	randomWalk(P.EyePath, &P.s, r, rng, true);
-	const e_KernelLight* light;
-	Spectrum Le  = g_SceneData.sampleEmitterRay(r, light, rng.randomFloat2(), rng.randomFloat2());
-	randomWalk(P.LightPath, &P.t, r, rng, false);
-	
-	Spectrum L(0.0f);
-	DifferentialGeometry dg;
-	BSDFSamplingRecord bRec(dg);
-	for(unsigned int i = 1; i < P.s + 1; i++)
+	//return 1;
+	/*float div = 0;
+	for (int i = 0; i <= P.k(); i++)
+		div += P.pdf(i, rng);
+	return P.pdf(P.t - 1, rng) / div;*/
+	int s = P.t - 1;
+	float pdf_s = P.pdf(s, rng);
+	float div = pdf_s;
+	float pdf_i = pdf_s;
+	for (int i = s; i < P.k(); i++)
 	{
-		const PathVertex& ev = P.EyePath[i - 1];
-		if(!ev.r2.hasHit())
-			break;//urgs wtf?
-
-		//case ii
-		ev.r2.getBsdfSample(Ray(ev.p, -1.0f * ev.wo), rng, &bRec);
-		DirectSamplingRecord dRec(ev.p, bRec.dg.sys.n);
-		Spectrum localLe = light->sampleDirect(dRec, rng.randomFloat2());
-		bRec.wo = bRec.dg.toLocal(dRec.d);
-		if(V(ev.p, dRec.p))
-		{
-			if(i > 1)
-				localLe *= P.EyePath[i - 2].cumulative;
-			const float bsdfPdf = ev.r2.getMat().bsdf.pdf(bRec);
-			const float misWeight = MonteCarlo::PowerHeuristic(1, dRec.pdf, 1, bsdfPdf);
-			L += localLe * ev.r2.getMat().bsdf.f(bRec) * pathWeight(i, 0);
-		}
-
-		//case iv
-		for(unsigned int j = 1; j < P.t + 1; j++)
-		{
-			const PathVertex& lv = P.LightPath[j - 1];
-			if (V(ev.p, lv.p))
-			{
-				BDPT_Path P2(P, i, j);
-				float mis = misWeight(P2, i + j - 2);
-				L += Le * evalPath(P, i, j, rng) * pathWeight(i, j) * mis;
-			}
-		}
+		pdf_i = pdf_i * P.p_forward(i, rng) / P.p_backward(i + 2, rng);
+		div += pdf_i;
 	}
-	
-	for(unsigned int j = 1; j < P.t + 1; j++)
+	pdf_i = pdf_s;
+	for (int i = s; i > 0; i--)
 	{
-		const PathVertex& lv = P.LightPath[j - 1];
-		if(!lv.r2.hasHit())
-			break;//urgs wtf?
-		
-		lv.r2.getBsdfSample(Ray(lv.p, -1.0f * lv.wi), rng, &bRec);
-		DirectSamplingRecord dRec(lv.p, bRec.dg.sys.n);
-		Spectrum localLe = Le * g_SceneData.sampleSensorDirect(dRec, rng.randomFloat2());
-		if(V(dRec.p, lv.p))
-		{
-			if(j > 1)
-				localLe *= P.LightPath[j - 2].cumulative;
-			bRec.wo = bRec.dg.toLocal(dRec.d);
-			localLe *= lv.r2.getMat().bsdf.f(bRec);
-			if(dRec.uv.x >= 0 && dRec.uv.x < w && dRec.uv.y >= 0 && dRec.uv.y < h)
-				g_Image.Splat((int)dRec.uv.x, (int)dRec.uv.y, localLe * pathWeight(0, j) / float(P.t));
-		}
+		pdf_i = pdf_i * P.p_backward(i + 1, rng) / P.p_forward(i - 1, rng);//attention the indices shifted! i -> i - 1
+		div += pdf_i;
 	}
-
-	g_Image.AddSample(x, y, L);
+	return pdf_s / div;
 }
 
-CUDA_FUNC_IN void SBDP(int x, int y, int w, int h, e_Image& g_Image, CudaRNG& rng)
+CUDA_FUNC_IN void SBDPT(const float2& pixelPosition, e_Image& g_Image, CudaRNG& rng)
 {
-	Ray rEye, rLight;
-	Spectrum imp = g_SceneData.sampleSensorRay(rEye, make_float2(x, y), rng.randomFloat2());
+	BidirSample bSample;
+	PositionSamplingRecord pRec;
+	DirectionSamplingRecord dRec;
+	float2 sample = rng.randomFloat2();
+	Spectrum imp = g_SceneData.m_Camera.samplePosition(pRec, sample, &pixelPosition);
+	imp *= g_SceneData.m_Camera.sampleDirection(dRec, pRec, sample, &pixelPosition);
+	float pdfEye = pRec.pdf * dRec.pdf;
+	bSample.eyePath[0] = BidirVertex(&g_SceneData.m_Camera, pRec.p, pRec.n, 1);
+	Ray rEye(pRec.p, dRec.d);
 
-	const e_KernelLight* light;
-	Spectrum Le = g_SceneData.sampleEmitterRay(rLight, light, rng.randomFloat2(), rng.randomFloat2());
+	sample = rng.randomFloat2();
+	Spectrum Le = g_SceneData.sampleEmitterPosition(pRec, sample);
+	Le *= ((const e_KernelLight*)pRec.object)->sampleDirection(dRec, pRec, sample);
+	float pdfLight = pRec.pdf * dRec.pdf;
+	bSample.lightPath[0] = BidirVertex((const e_KernelLight*)pRec.object, pRec.p, pRec.n, 1);
+	Ray rLight(pRec.p, dRec.d);
 
+	bSample.n_E = bSample.n_L = 1;
+	sampleSubPath(bSample.eyePath, &bSample.n_E, imp, pdfEye, rEye, rng);
+	sampleSubPath(bSample.lightPath, &bSample.n_L, Le, pdfLight, rLight, rng);
 
+	Spectrum acc(0.0f), accLight(0.0f);
+	for (int t = 2; t <= bSample.n_E; t++)
+	{
+		for (int s = 1; s <= bSample.n_L; s++)
+		{
+			BidirPath path(bSample, t, s);
+			float miWeight = misWeight(path, rng);
+			if (t >= 2)
+				acc += path.f(rng) * miWeight;
+			else accLight += path.f(rng) * miWeight;
+		}
+
+		//edge case with s = 0 -> eye path hit a light source
+		if (bSample.eyePath[t - 1].r2.LightIndex() != 0xffffffff)
+		{
+			BidirPath path(bSample, t, 0);
+			acc += bSample.eyePath[t - 1].Le(&bSample.eyePath[t - 2], rng) * bSample.eyePath[t - 1].cumulative * misWeight(path, rng);
+		}
+	}
+	g_Image.Splat(pixelPosition.x, pixelPosition.y, accLight);
+	g_Image.AddSample(pixelPosition.x, pixelPosition.y, acc);
 }
 
 __global__ void pathKernel(unsigned int w, unsigned int h, int xoff, int yoff, e_Image g_Image)
@@ -253,14 +341,12 @@ __global__ void pathKernel(unsigned int w, unsigned int h, int xoff, int yoff, e
 	CudaRNG rng = g_RNGData();
 	if(x < w && y < h)
 		//Li(g_Image, rng, x, y);
-		BDPT(x,y,w,h,g_Image, rng);
+		SBDPT(make_float2(x, y),g_Image, rng);
 	g_RNGData(rng);
 }
 
-static e_Image* gI;
 void k_BDPT::DoRender(e_Image* I)
 {
-	gI = I;
 	k_ProgressiveTracer::DoRender(I);
 	k_INITIALIZE(m_pScene, g_sRngs);
 	int p = 16;
@@ -279,10 +365,10 @@ void k_BDPT::DoRender(e_Image* I)
 	I->DoUpdateDisplay(float(w*h) / float(m_uPassesDone * w * h));
 }
 
-void k_BDPT::Debug(int2 pixel)
+void k_BDPT::Debug(e_Image* I, int2 pixel)
 {
 	k_INITIALIZE(m_pScene, g_sRngs);
 	//Li(*gI, g_RNGData(), pixel.x, pixel.y);
 	CudaRNG rng = g_RNGData();
-	BDPT(pixel.x,pixel.y,w,h,*gI, rng);
+	SBDPT(make_float2(pixel),*I, rng);
 }

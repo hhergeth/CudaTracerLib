@@ -13,7 +13,7 @@ class k_PmmTracer : public k_ProgressiveTracer
 {
 public:
 	k_PmmTracer();
-	virtual void Debug(int2 pixel);
+	virtual void Debug(e_Image* I, int2 pixel);
 	virtual void Resize(unsigned int _w, unsigned int _h)
 	{
 

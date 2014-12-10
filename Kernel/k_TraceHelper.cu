@@ -421,6 +421,15 @@ void TraceResult::getBsdfSample(const Ray& r, CudaRNG& _rng, BSDFSamplingRecord*
 	getMat().SampleNormalMap(bRec->dg);
 }
 
+void TraceResult::getBsdfSample(const float3& wi, const float3& p, CudaRNG& _rng, BSDFSamplingRecord* bRec) const
+{
+	bRec->Clear(_rng);
+	bRec->dg.P = p;
+	fillDG(bRec->dg);
+	bRec->wi = normalize(bRec->dg.toLocal(-1.0f * wi));
+	getMat().SampleNormalMap(bRec->dg);
+}
+
 const int DYNAMIC_FETCH_THRESHOLD = 20;
 const int STACK_SIZE = 32;
 __device__ int g_warpCounter;

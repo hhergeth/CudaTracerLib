@@ -291,7 +291,7 @@ public:
 		m_sMaps.Free();
 	}
 	virtual void Resize(unsigned int _w, unsigned int _h);
-	virtual void Debug(int2 pixel);
+	virtual void Debug(e_Image* I, int2 pixel);
 	virtual void PrintStatus(std::vector<std::string>& a_Buf);
 	virtual void CreateSliders(SliderCreateCallback a_Callback);
 protected:

@@ -251,6 +251,6 @@ void k_FastTracer::DoRender(e_Image* I)
 	doDirect(I);
 }
 
-void k_FastTracer::Debug(int2 pixel)
+void k_FastTracer::Debug(e_Image* I, int2 pixel)
 {
 }

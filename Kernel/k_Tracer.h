@@ -24,7 +24,7 @@ public:
 	virtual void InitializeScene(e_DynamicScene* a_Scene, e_Sensor* a_Camera) = 0;
 	virtual void Resize(unsigned int x, unsigned int y) = 0;
 	virtual void DoPass(e_Image* I, bool a_NewTrace) = 0;
-	virtual void Debug(int2 pixel){}
+	virtual void Debug(e_Image* I, int2 pixel){}
 	virtual void PrintStatus(std::vector<std::string>& a_Buf)
 	{
 	}

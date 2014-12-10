@@ -292,7 +292,7 @@ public:
 		bufB = new k_RayBuffer<rayData, 1>(w * h);
 		ThrowCudaErrors();
 	}
-	virtual void Debug(int2 pixel);
+	virtual void Debug(e_Image* I, int2 pixel);
 protected:
 	virtual void DoRender(e_Image* I);
 private:

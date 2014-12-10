@@ -187,7 +187,7 @@ void e_Image::SetSample(int x, int y, RGBCOL c)
 {
 	if(outState == 1)
 #ifdef ISCUDA
-		surf2Dwrite(c, viewCudaSurfaceObject, x * 4, yResolution - y - 1);
+		surf2Dwrite(c, viewCudaSurfaceObject, x * 4, y);
 #else
 		;
 #endif

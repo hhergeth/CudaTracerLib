@@ -27,4 +27,6 @@ struct TraceResult
 	CUDA_DEVICE CUDA_HOST const e_KernelMaterial& getMat() const;
 	CUDA_DEVICE CUDA_HOST void getBsdfSample(const Ray& r, CudaRNG& _rng, BSDFSamplingRecord* bRec) const;
 	CUDA_DEVICE CUDA_HOST void getBsdfSample(const Ray& r, CudaRNG& _rng, BSDFSamplingRecord* bRec, const float3& wo) const;
+	//wi points towards p
+	CUDA_DEVICE CUDA_HOST void getBsdfSample(const float3& wi, const float3& p, CudaRNG& _rng, BSDFSamplingRecord* bRec) const;
 };

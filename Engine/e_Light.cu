@@ -127,6 +127,11 @@ Spectrum e_DiffuseLight::evalDirection(const DirectionSamplingRecord &dRec, cons
 	return Spectrum(INV_PI * dp);
 }
 
+Spectrum e_DiffuseLight::evalPosition(const PositionSamplingRecord &pRec) const
+{
+	return m_radiance * PI;
+}
+
 void e_DistantLight::setEmit(const Spectrum& L)
 {
 	m_normalIrradiance = L;
