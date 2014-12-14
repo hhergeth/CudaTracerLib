@@ -144,6 +144,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="Base\TangentSpace.h" />
     <ClInclude Include="Base\Timer.h" />
     <ClInclude Include="Defines.h" />
+    <ClInclude Include="Engine\e_AbstractEmitter.h" />
     <ClInclude Include="Engine\e_AnimatedMesh.h" />
     <ClInclude Include="Engine\e_BSDF.h" />
     <ClInclude Include="Engine\e_BSDF_Complex.h" />

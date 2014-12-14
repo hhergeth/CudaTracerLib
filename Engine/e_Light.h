@@ -5,20 +5,20 @@
 #include "e_ShapeSet.h"
 #include "e_KernelDynamicScene.h"
 #include "e_FileTexture.h"
+#include "e_AbstractEmitter.h"
 
-struct e_LightBase : public e_BaseType
+struct e_LightBase : public e_AbstractEmitter
 {
-	bool IsDelta;
 	bool IsRemoved;
 
 	e_LightBase()
-		: IsRemoved(false)
+		: e_AbstractEmitter(0), IsRemoved(false)
 	{
 
 	}
 
-	e_LightBase(bool d)
-		: IsDelta(d), IsRemoved(false)
+	e_LightBase(unsigned int type)
+		: e_AbstractEmitter(type), IsRemoved(false)
 	{
 	}
 };
@@ -30,10 +30,10 @@ struct e_PointLight : public e_LightBase
     Spectrum m_intensity;
 	
 	e_PointLight()
-		: e_LightBase(true)
+		: e_LightBase(EDeltaPosition)
 	{}
 	e_PointLight(float3 p, Spectrum L, float r = 0)
-		: e_LightBase(true), lightPos(p), m_intensity(L)
+		: e_LightBase(EDeltaPosition), lightPos(p), m_intensity(L)
 	{
 
 	}
@@ -91,10 +91,10 @@ struct e_DiffuseLight : public e_LightBase
     ShapeSet shapeSet;
 	
 	e_DiffuseLight()
-		: e_LightBase(false)
+		: e_LightBase(EOnSurface)
 	{}
 	e_DiffuseLight(const Spectrum& L, ShapeSet& s)
-		: e_LightBase(false), shapeSet(s)
+		: e_LightBase(EOnSurface), shapeSet(s)
 	{
 		setEmit(L);
 	}
@@ -160,11 +160,11 @@ struct e_DistantLight : public e_LightBase
 	float m_invSurfaceArea, radius;
 	
 	e_DistantLight()
-		: e_LightBase(true)
+		: e_LightBase(EDeltaDirection)
 	{}
 	///r is the radius of the scene's bounding sphere
 	e_DistantLight(const Spectrum& L, float3 d, float r)
-		: e_LightBase(true), ToWorld(d), radius(r * 1.1f)
+		: e_LightBase(EDeltaDirection), ToWorld(d), radius(r * 1.1f)
 	{
 		float surfaceArea = PI * radius * radius;
 		m_invSurfaceArea = 1.0f / surfaceArea;
@@ -242,7 +242,7 @@ struct e_SpotLight : public e_LightBase
 	float3 Position, Target;
 	
 	e_SpotLight()
-		: e_LightBase(true)
+		: e_LightBase(EDeltaPosition)
 	{}
 	e_SpotLight(float3 p, float3 t, Spectrum L, float width, float fall);
 
@@ -316,7 +316,7 @@ struct e_InfiniteLight : public e_LightBase
 	Spectrum m_scale;
 	
 	e_InfiniteLight()
-		: e_LightBase(false)
+		: e_LightBase(EOnSurface | EEnvironmentEmitter)
 	{}
 	CUDA_HOST e_InfiniteLight(e_Stream<char>* a_Buffer, e_BufferReference<e_MIPMap, e_KernelMIPMap>& mip, const Spectrum& scale, const AABB& scenBox);
 
@@ -431,11 +431,6 @@ public:
 	{
 		CALL_FUNC5(e_PointLight,e_DiffuseLight,e_DistantLight,e_SpotLight,e_InfiniteLight, evalDirection(dRec, pRec))
 		return 0.0f;
-	}
-
-	CUDA_FUNC_IN bool IsDeltaLight() const
-	{
-		return ((e_LightBase*)Data)->IsDelta;
 	}
 
 	AABB getBox(float eps) const

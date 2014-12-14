@@ -100,7 +100,7 @@ void e_Image::AddSample(float sx, float sy, const Spectrum &L)
 void e_Image::Splat(float sx, float sy, const Spectrum &L)
 {
 	int x = Floor2Int(sx), y = Floor2Int(sy);
-	if (x >= xResolution || y >= yResolution)
+	if (x < 0 || x >= xResolution || y < 0 || y >= yResolution)
 		return;
 	Pixel* pixel = getPixel(y * xResolution + x);
 	float xyz[3];

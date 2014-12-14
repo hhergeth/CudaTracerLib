@@ -2,10 +2,33 @@
 
 #include "..\MathTypes.h"
 #include "e_Samples.h"
+#include "e_AbstractEmitter.h"
 
-//this architecture and the implementations are completly copied from mitsuba!
+enum ESensorFlags
+{
+	/// Sensor response contains a Dirac delta term with respect to time
+	EDeltaTime = 0x010,
 
-struct e_SensorBase : public e_BaseType
+	/// Does the \ref sampleRay() function need an aperture sample?
+	ENeedsApertureSample = 0x020,
+
+	/// Is the sensor a projective camera?
+	EProjectiveCamera = 0x100,
+
+	/// Is the sensor a perspective camera?
+	EPerspectiveCamera = 0x200,
+
+	/// Is the sensor an orthographic camera?
+	EOrthographicCamera = 0x400,
+
+	/// Does the sample given to \ref samplePosition() determine the pixel coordinates
+	EPositionSampleMapsToPixels = 0x1000,
+
+	/// Does the sample given to \ref sampleDirection() determine the pixel coordinates
+	EDirectionSampleMapsToPixels = 0x2000
+};
+
+struct e_SensorBase : public e_AbstractEmitter
 {
 public:
 	float aspect;
@@ -17,15 +40,13 @@ public:
 	float m_apertureRadius;
 	float m_focusDistance;
 public:
-	const bool isFieldOfViewSensor;
-	const bool isAppertureSensor;
 	e_SensorBase()
-		: isFieldOfViewSensor(false), isAppertureSensor(true)
+		: e_AbstractEmitter(0)
 	{
 
 	}
-	e_SensorBase(bool fov, bool app)
-		: isFieldOfViewSensor(fov), isAppertureSensor(app)
+	e_SensorBase(unsigned int type)
+		: e_AbstractEmitter(type)
 	{
 		toWorld = float4x4::Identity();
 	}
@@ -79,10 +100,10 @@ public:
 struct e_SphericalCamera : public e_SensorBase
 {
 	e_SphericalCamera()
-		: e_SensorBase(false, false)
+	: e_SensorBase(EDeltaPosition | EDirectionSampleMapsToPixels)
 	{}
 	e_SphericalCamera(int w, int h)
-		: e_SensorBase(false, false)
+		: e_SensorBase(EDeltaPosition | EDirectionSampleMapsToPixels)
 	{
 		SetFilmData(w, h);
 	}
@@ -166,11 +187,11 @@ struct e_PerspectiveCamera : public e_SensorBase
 	AABB m_imageRect;
 public:
 	e_PerspectiveCamera()
-		: e_SensorBase(true, false)
+		: e_SensorBase(EDeltaPosition | EPerspectiveCamera | EOnSurface | EDirectionSampleMapsToPixels | EProjectiveCamera)
 	{}
 	///_fov in degrees
 	e_PerspectiveCamera(int w, int h, float _fov)
-		: e_SensorBase(true, false)
+		: e_SensorBase(EDeltaPosition | EPerspectiveCamera | EOnSurface | EDirectionSampleMapsToPixels | EProjectiveCamera)
 	{
 		m_fNearFarDepths = make_float2(1, 100000);
 		SetFilmData(w, h);
@@ -248,11 +269,11 @@ struct e_ThinLensCamera : public e_SensorBase
 	CUDA_DEVICE CUDA_HOST float importance(const float3 &p, const float3 &d, float2* sample = 0) const;
 public:
 	e_ThinLensCamera()
-		: e_SensorBase(true, true)
+		: e_SensorBase(ENeedsApertureSample | EPerspectiveCamera | EOnSurface | EDirectionSampleMapsToPixels | EProjectiveCamera)
 	{}
 	///_fov in degrees
 	e_ThinLensCamera(int w, int h, float _fov, float a, float dist)
-		: e_SensorBase(true, true)
+		: e_SensorBase(ENeedsApertureSample | EPerspectiveCamera | EOnSurface | EDirectionSampleMapsToPixels | EProjectiveCamera)
 	{
 		m_fNearFarDepths = make_float2(1, 100000);
 		SetFilmData(w, h);
@@ -350,10 +371,10 @@ private:
 	float3 m_dx, m_dy;
 public:
 	e_OrthographicCamera()
-		: e_SensorBase(false, false)
+		: e_SensorBase(EDeltaDirection | EOrthographicCamera | EPositionSampleMapsToPixels | EProjectiveCamera)
 	{}
 	e_OrthographicCamera(int w, int h, float sx = 1, float sy = 1)
-		: e_SensorBase(false, false)
+		: e_SensorBase(EDeltaDirection | EOrthographicCamera | EPositionSampleMapsToPixels | EProjectiveCamera)
 	{
 		m_fNearFarDepths = make_float2(0.00001f, 100000);
 		SetFilmData(w, h);
@@ -431,10 +452,10 @@ protected:
 	float3 m_dx, m_dy;
 public:
 	e_TelecentricCamera()
-		: e_SensorBase(false, true)
+		: e_SensorBase(ENeedsApertureSample | EOrthographicCamera | EPositionSampleMapsToPixels | EProjectiveCamera)
 	{}
 	e_TelecentricCamera(int w, int h, float a, float dist, float sx = 1, float sy = 1)
-		: e_SensorBase(false, true)
+		: e_SensorBase(ENeedsApertureSample | EOrthographicCamera | EPositionSampleMapsToPixels | EProjectiveCamera)
 	{
 		m_fNearFarDepths = make_float2(0.00001f, 100000);
 		SetFilmData(w, h);

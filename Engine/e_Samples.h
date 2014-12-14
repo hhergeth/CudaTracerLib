@@ -175,9 +175,9 @@ struct BSDFSamplingRecord
 	unsigned int typeMask;
 	unsigned int sampledType;
 	CUDA_FUNC_IN BSDFSamplingRecord(DifferentialGeometry& dg) : dg(dg) {}
-	CUDA_FUNC_IN void Clear(CudaRNG& _rng)
+	CUDA_FUNC_IN void Clear(CudaRNG* _rng)
 	{
-		rng = &_rng;
+		rng = _rng;
 		typeMask = ETypeCombinations::EAll;
 		sampledType = 0;
 		eta = 1.0f;

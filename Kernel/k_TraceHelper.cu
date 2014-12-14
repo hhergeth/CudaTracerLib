@@ -412,16 +412,7 @@ void TraceResult::fillDG(DifferentialGeometry& dg) const
 #endif
 }
 
-void TraceResult::getBsdfSample(const Ray& r, CudaRNG& _rng, BSDFSamplingRecord* bRec) const
-{
-	bRec->Clear(_rng);
-	bRec->dg.P = r(m_fDist);
-	fillDG(bRec->dg);
-	bRec->wi = normalize(bRec->dg.toLocal(-1.0f * r.direction));
-	getMat().SampleNormalMap(bRec->dg);
-}
-
-void TraceResult::getBsdfSample(const float3& wi, const float3& p, CudaRNG& _rng, BSDFSamplingRecord* bRec) const
+void TraceResult::getBsdfSample(const float3& wi, const float3& p, BSDFSamplingRecord* bRec, CudaRNG* _rng) const
 {
 	bRec->Clear(_rng);
 	bRec->dg.P = p;

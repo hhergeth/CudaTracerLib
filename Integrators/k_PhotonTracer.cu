@@ -8,7 +8,7 @@ CUDA_FUNC_IN void handleEmission(const Spectrum& weight, const PositionSamplingR
 {
 	DirectSamplingRecord dRec(pRec.p, pRec.n);
 	Spectrum value = weight * g_SceneData.sampleSensorDirect(dRec, rng.randomFloat2());
-	if(!value.isZero() && !g_SceneData.Occluded(Ray(dRec.ref, dRec.d), 0, dRec.dist))
+	if (!value.isZero() && ::V(dRec.p, dRec.ref))
 	{
 		const e_KernelLight* emitter = (const e_KernelLight*)pRec.object;
 		value *= emitter->evalDirection(DirectionSamplingRecord(dRec.d), pRec);
@@ -20,7 +20,7 @@ CUDA_FUNC_IN void handleSurfaceInteraction(const Spectrum& weight, BSDFSamplingR
 {
 	DirectSamplingRecord dRec(bRec.dg.P, bRec.dg.sys.n);
 	Spectrum value = weight * g_SceneData.sampleSensorDirect(dRec, rng.randomFloat2());
-	if(!value.isZero() && !g_SceneData.Occluded(Ray(dRec.ref, dRec.d), 0, dRec.dist))
+	if(!value.isZero() && ::V(dRec.p, dRec.ref))
 	{
 		bRec.wo = bRec.dg.toLocal(dRec.d);
 		value *= r2.getMat().bsdf.f(bRec);

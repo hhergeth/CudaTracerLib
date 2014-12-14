@@ -30,3 +30,8 @@ void TraceResult::getBsdfSample(const Ray& r, CudaRNG& _rng, BSDFSamplingRecord*
 	getBsdfSample(r, _rng, bRec);
 	bRec->wo = bRec->dg.toLocal(wo);
 }
+
+void TraceResult::getBsdfSample(const Ray& r, CudaRNG& _rng, BSDFSamplingRecord* bRec) const
+{
+	getBsdfSample(r.direction, r(m_fDist), bRec, &_rng);
+}

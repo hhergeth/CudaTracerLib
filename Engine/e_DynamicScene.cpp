@@ -407,7 +407,8 @@ ShapeSet e_DynamicScene::CreateShape(e_StreamReference(e_Node) Node, const char*
 	e_BufferReference<e_Mesh, e_KernelMesh> m = getMesh(Node);
 	unsigned int c = 0, mi = -1;
 		
-	for(unsigned int j = 0; j < m->m_sMatInfo.getLength(); j++)
+	e_StreamReference(e_KernelMaterial) mInfo = m->m_sMatInfo;
+	for(unsigned int j = 0; j < mInfo.getLength(); j++)
 		if(strstr(m->m_sMatInfo(j)->Name, name))
 		{
 			mi = j;
