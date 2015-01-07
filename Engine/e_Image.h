@@ -13,13 +13,7 @@
 enum ImageDrawType
 {
 	Normal,
-	HDR,
-	BlockVariance,
-	PixelVariance,
-	BlockPixelVariance,
-	AverageVariance,
-	BlockAverageVariance,
-	NumSamples,
+	HDR
 };
 
 struct ID3D11Resource;
@@ -60,7 +54,7 @@ public:
 	CUDA_DEVICE CUDA_HOST void SetSample(int sx, int sy, RGBCOL c);
 	CUDA_DEVICE CUDA_HOST void Splat(float sx, float sy, const Spectrum &L);
     void WriteDisplayImage(const char* fileName);
-	void WriteImage(const char* fileName, float splat);
+	void WriteImage(const char* fileName);
 	void StartRendering();
 	void EndRendering();
 	void Clear();
@@ -69,21 +63,11 @@ public:
             xyz[0] = xyz[1] = xyz[2] = 0;
 			xyzSplat[0] = xyzSplat[1] = xyzSplat[2] = 0;
             weightSum = 0.0f;
-			I = I2 = 0.0f;
-			E = E2 = 0.0f;
-			N = 0;
         }
         float xyz[3];
         float weightSum;
         float xyzSplat[3];
-		float I, I2;
-		float E, E2;
-		unsigned int N;
 		CUDA_DEVICE CUDA_HOST Spectrum toSpectrum(float splat);
-		CUDA_FUNC_IN float var()
-		{
-			return I2 - I * I;
-		}
     };
 	e_KernelFilter& accessFilter()
 	{
@@ -96,7 +80,6 @@ public:
 	}
 	void DoUpdateDisplay(float splat);
 	RGBCOL* getCudaPixels(){return viewTarget;}
-	bool calculateBlockVariance(int block, float splatScale, float* deviceBuffer) const;
 	CUDA_FUNC_IN Spectrum getPixel(float splat, int x, int y)
 	{
 		return getPixel(y * xResolution + x)->toSpectrum(splat);

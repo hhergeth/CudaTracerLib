@@ -56,6 +56,7 @@ void k_PhotonMapCollection::StartNewPass()
 	m_uPhotonNumEmitted = m_uPhotonNumStored = 0;
 	m_sVolumeMap.StartNewPass();
 	m_sSurfaceMap.StartNewPass();
+	cudaMemset(m_pPhotons, 0, sizeof(k_pPpmPhoton) * m_uPhotonBufferLength);
 }
 
 bool k_PhotonMapCollection::PassFinished()
@@ -210,7 +211,9 @@ static float GGGf1;
 void k_sPpmTracer::StartNewTrace(e_Image* I)
 {
 	m_bDirect = !m_pScene->getVolumes().getLength();
+#ifndef _DEBUG
 	m_fLightVisibility = k_Tracer::GetLightVisibility(m_pScene, m_pCamera, 1);
+#endif
 	if (m_bDirect)
 		m_bDirect = m_fLightVisibility > 0.5f;
 	if(m_uModus == 1)

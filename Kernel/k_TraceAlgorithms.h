@@ -2,11 +2,11 @@
 
 #include "k_TraceHelper.h"
 
-CUDA_FUNC_IN bool V(const float3& a, const float3& b)
+CUDA_FUNC_IN bool V(const float3& a, const float3& b, TraceResult* res = 0)
 {
 	float3 d = b - a;
 	float l = length(d);
-	return !g_SceneData.Occluded(Ray(a, d / l), 0, l);
+	return !g_SceneData.Occluded(Ray(a, d / l), 0, l, res);
 }
 
 CUDA_FUNC_IN float G(const float3& N_x, const float3& N_y, const float3& x, const float3& y)

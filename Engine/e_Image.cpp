@@ -141,8 +141,9 @@ void e_Image::WriteDisplayImage(const char* fileName)
 	FreeImage_Unload(bitmap);
 }
 
-void e_Image::WriteImage(const char* fileName, float splatScale)
+void e_Image::WriteImage(const char* fileName)
 {
+	const float splatScale = 0; throw std::runtime_error("Not Implemented!");
 	cudaMemcpy(hostPixels, cudaPixels, xResolution * yResolution * sizeof(Pixel), cudaMemcpyDeviceToHost);
 	FIBITMAP* bitmap = FreeImage_Allocate(xResolution, yResolution, 96);
 	BYTE *bits = (BYTE *)FreeImage_GetBits(bitmap);

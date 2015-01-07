@@ -418,7 +418,7 @@ void TraceResult::getBsdfSample(const float3& wi, const float3& p, BSDFSamplingR
 	bRec->dg.P = p;
 	fillDG(bRec->dg);
 	bRec->wi = normalize(bRec->dg.toLocal(-1.0f * wi));
-	getMat().SampleNormalMap(bRec->dg);
+	getMat().SampleNormalMap(bRec->dg, wi * m_fDist);
 }
 
 const int DYNAMIC_FETCH_THRESHOLD = 20;

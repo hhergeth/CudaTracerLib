@@ -1,5 +1,6 @@
 #include "k_sPpmTracer.h"
 #include "..\Kernel\k_TraceHelper.h"
+#include "..\Kernel\k_TraceAlgorithms.h"
 
 CUDA_DEVICE k_PhotonMapCollection g_Map;
 
@@ -21,10 +22,21 @@ template<typename HASH> k_StoreResult k_PhotonMap<HASH>::StorePhoton(const float
 #else
 		unsigned int k = InterlockedExchange(m_pDeviceHashGrid + i, j);
 #endif
-		m_pDevicePhotons[j] = k_pPpmPhoton(p, l, wi, n, k);//m_sHash.EncodePos(p, i0)
+		m_pDevicePhotons[j] = k_pPpmPhoton(p, l, wi, n, k, 0);//m_sHash.EncodePos(p, i0)
 		return k_StoreResult::Success;
 	}
 	return k_StoreResult::Full;
+}
+
+CUDA_ONLY_FUNC bool storePhoton(const float3& p, const Spectrum& phi, const float3& wi, const float3& n, unsigned int type)
+{
+	unsigned int p_idx = atomicInc(&g_Map.m_uPhotonNumStored, 0xffffffff);
+	if (p_idx < g_Map.m_uPhotonBufferLength)
+	{
+		g_Map.m_pPhotons[p_idx] = k_pPpmPhoton(p, phi, wi, n, 0xffffffff, type);
+		return true;
+	}
+	else return false;
 }
 
 template<bool DIRECT> __global__ void k_PhotonPass()
@@ -32,130 +44,72 @@ template<bool DIRECT> __global__ void k_PhotonPass()
 	CudaRNG rng = g_RNGData();
 	CUDA_SHARED unsigned int local_Counter;
 	local_Counter = 0;
-	__syncthreads();
+	unsigned int local_Todo = PPM_Photons_Per_Thread * blockDim.x * blockDim.y;
 
 	DifferentialGeometry dg;
 	BSDFSamplingRecord bRec(dg);
 	e_KernelAggregateVolume& V = g_SceneData.m_sVolume;
-	TraceResult r2;
-	Ray r;
-	const e_KernelLight* light;
-	Spectrum Le;
 
-	unsigned int local_idx;
-	while ((local_idx = atomicInc(&local_Counter, (unsigned int)-1)) < PPM_photons_per_block)
+	while (local_Counter < local_Todo && g_Map.m_uPhotonNumStored < g_Map.m_uPhotonBufferLength)
 	{
-		Le = g_SceneData.sampleEmitterRay(r, light, rng.randomFloat2(), rng.randomFloat2());
-		r2.Init();
+		Ray r;
+		const e_KernelLight* light;
+		Spectrum Le = g_SceneData.sampleEmitterRay(r, light, rng.randomFloat2(), rng.randomFloat2()),
+				 throughput(1.0f);
 		int depth = -1;
-		//bool inMesh = false;
+		atomicInc(&local_Counter, (unsigned int)-1);
+		bool wasStored = false;
+		bool delta = false;
+		MediumSamplingRecord mRec;
+		bool medium = false;
+		e_KernelBSSRDF* bssrdf = 0;
 
-		//__syncthreads();
-
-		while (++depth < PPM_MaxRecursion && k_TraceRay(r.direction, r.origin, &r2))
+		while (++depth < PPM_MaxRecursion && g_Map.m_uPhotonNumStored < g_Map.m_uPhotonBufferLength && !Le.isZero())
 		{
-			/*if (V.HasVolumes())
+			TraceResult r2 = k_TraceRay(r);
+			float minT, maxT;
+			if ((!bssrdf && V.HasVolumes() && V.IntersectP(r, 0, r2.m_fDist, &minT, &maxT) && V.sampleDistance(r, 0, r2.m_fDist, rng, mRec))
+				|| (bssrdf && sampleDistanceHomogenous(r, 0, r2.m_fDist, rng.randomFloat(), mRec, bssrdf->sig_a, bssrdf->sigp_s)))
 			{
-				float minT, maxT;
-				while(V.IntersectP(r, 0, r2.m_fDist, &minT, &maxT))
-				{
-					float3 x = r(minT), w = -r.direction;
-					Spectrum sigma_s = V.sigma_s(x, w), sigma_t = V.sigma_t(x, w);
-					float d = -logf(rng.randomFloat()) / sigma_t.average();
-					bool cancel = d >= (maxT - minT) || d >= r2.m_fDist;
-					d = clamp(d, minT, maxT);
-					Le += V.Lve(x, w) * d;
-					if(g_Map.StorePhoton<false>(r(minT + d * rng.randomFloat()), Le, w, make_float3(0,0,0)) == k_StoreResult::Full)
-						return;
-					if(cancel)
-						break;
-					float A = (sigma_s / sigma_t).average();
-					if(rng.randomFloat() <= A)
-					{
-						float3 wi;
-						float pf = V.Sample(x, -r.direction, rng, &wi);
-						Le /= A;
-						Le *= pf;
-						r.origin = r(minT + d);
-						r.direction = wi;
-						r2.Init();
-						if(!k_TraceRay(r.direction, r.origin, &r2))
-							goto restart_loop;
-					}
-					else break;//Absorption
-				}
-			}*/
-			r2.getBsdfSample(r, rng, &bRec);
-			Spectrum ac;
-			/*const e_KernelBSSRDF* bssrdf;
-			if(r2.getMat().GetBSSRDF(bRec.dg, &bssrdf))
-			{
-				//inMesh = false;
-				ac = Le;
-				Ray br = BSSRDF_Entry(bssrdf, bRec.dg.sys, dg.P, r.direction);
-				while(true)
-				{
-					TraceResult r3 = k_TraceRay(br);
-					Spectrum sigma_s = bssrdf->sigp_s, sigma_t = bssrdf->sigp_s + bssrdf->sig_a;
-					float d = -logf(rng.randomFloat()) / sigma_t.average();
-					bool cancel = d >= (r3.m_fDist);
-					d = clamp(d, 0.0f, r3.m_fDist);
-					if (g_Map.StorePhoton<false>(br(d * rng.randomFloat()), ac, -br.direction, make_float3(0, 0, 0)) == k_StoreResult::Full)
-						return;
-					if(cancel)
-					{
-						DifferentialGeometry dg2;
-						r3.fillDG(dg2);
-						dg.P = br(r3.m_fDist);//point on a surface
-						Ray out = BSSRDF_Exit(bssrdf, dg2.sys, dg.P, br.direction);
-						bRec.wo = bRec.dg.toLocal(out.direction);//ugly
-						break;
-					}
-					float A = (sigma_s / sigma_t).average();
-					if(rng.randomFloat() <= A)
-					{
-						ac /= A;
-						float3 wo = Warp::squareToUniformSphere(rng.randomFloat2());
-						ac *= 1.f / (4.f * PI);
-						br = Ray(br(d), wo);
-					}
-					else goto restart_loop;
-				}
-				dg.P = r(r2.m_fDist);
+				throughput *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
+				wasStored |= storePhoton(mRec.p, throughput * Le, -r.direction, make_float3(0, 0, 0), 2);
+				if (bssrdf)
+					r.direction = Warp::squareToUniformSphere(rng.randomFloat2());
+				else throughput *= V.Sample(mRec.p, -r.direction, rng, &r.direction);
+				r.origin = mRec.p;
+				delta = false;
+				medium = true;
 			}
-			else*/
+			else if (!r2.hasHit())
+				break;
+			else
 			{
-				float3 wo = -r.direction;
-				if((DIRECT && depth > 0) || !DIRECT)
-				if (r2.getMat().bsdf.hasComponent(EDiffuse) && dot(bRec.dg.sys.n, wo) > 0.0f)
-					//if (g_Map.StorePhoton<true>(dg.P, Le, wo, bRec.dg.sys.n) == k_StoreResult::Full)
-					//		return;
-				{
-					//uint3 i0 = g_Map.m_sSurfaceMap.m_sHash.Transform(dg.P);//PPM_photons_per_block
-					unsigned int j = blockIdx.x * PPM_slots_per_block + local_idx * PPM_MaxRecursion + depth;
-					//unsigned int i = g_Map.m_sSurfaceMap.m_sHash.Hash(i0);
-					//unsigned int k = atomicExch(g_Map.m_sSurfaceMap.m_pDeviceHashGrid + i, j);
-					//if (k == j)
-					//	printf("Fucked up hash grid, created loop, enjoy ! k : %d", k);
-					unsigned int k = -1;
-					g_Map.m_pPhotons[j] = k_pPpmPhoton(dg.P, Le, wo, bRec.dg.sys.n, k);
-				}
+				if (medium)
+					throughput *= mRec.transmittance / mRec.pdfFailure;
+				float3 wo = bssrdf ? r.direction : -r.direction;
+				r2.getBsdfSample(-wo, r(r2.m_fDist), &bRec, &rng);
+				if ((DIRECT && depth > 0) || !DIRECT)
+					if (r2.getMat().bsdf.hasComponent(EDiffuse) && dot(bRec.dg.sys.n, wo) > 0.0f)
+						wasStored |= storePhoton(dg.P, throughput * Le, wo, bRec.dg.sys.n, 1);
 				Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
-				//inMesh = dot(r.direction, bRec.map.sys.n) < 0;
-				ac = Le * f;
+				throughput *= f;
+				delta = bRec.sampledType & ETypeCombinations::EDelta;
+				
+				if (!bssrdf && r2.getMat().GetBSSRDF(bRec.dg, &bssrdf))
+					bRec.wo.z *= -1.0f;
+				else bssrdf = 0;
+				r = Ray(bRec.dg.P, bRec.getOutgoing());
 			}
-			/*if(depth > 5)
+			if (depth > 3)
 			{
-				float prob = MIN(1.0f, ac.max() / Le.max());
-				if(rng.randomFloat() > prob)
+				float q = MIN(throughput.max(), 0.95f);
+				if (rng.randomFloat() >= q)
 					break;
-				Le = ac / prob;
+				throughput /= q;
 			}
-			else */Le = ac;
-			r = Ray(dg.P, bRec.getOutgoing());
-			r2.Init();
 		}
-		atomicInc(&g_Map.m_uPhotonNumEmitted, 0xffffffff);
+		if (wasStored)
+			atomicInc(&g_Map.m_uPhotonNumEmitted, 0xffffffff);
 	restart_loop:;
 	}
 
@@ -164,26 +118,26 @@ template<bool DIRECT> __global__ void k_PhotonPass()
 
 __global__ void buildHashGrid()
 {
-	unsigned int idx = blockIdx.x * blockDim.x * blockDim.y + threadIdx.y * blockDim.x + threadIdx.x;
-	if (idx < g_Map.m_uPhotonBufferLength && !g_Map.m_pPhotons[idx].getL().isZero())
+	unsigned int idx = threadId;
+	if (idx < g_Map.m_uPhotonBufferLength)
 	{
-		uint3 i0 = g_Map.m_sSurfaceMap.m_sHash.Transform(g_Map.m_pPhotons[idx].getPos());
-		unsigned int i = g_Map.m_sSurfaceMap.m_sHash.Hash(i0);
-		unsigned int k = atomicExch(g_Map.m_sSurfaceMap.m_pDeviceHashGrid + i, idx);
-		g_Map.m_pPhotons[idx].next = k;
+		k_pPpmPhoton& e = g_Map.m_pPhotons[idx];
+		k_PhotonMap<k_HashGrid_Reg>& map = e.typeFlag == 1 ? g_Map.m_sSurfaceMap : g_Map.m_sVolumeMap;
+		unsigned int i = map.m_sHash.Hash(e.getPos());
+		unsigned int k = atomicExch(map.m_pDeviceHashGrid + i, idx);
+		e.next = k;
 	}
 }
 
 void k_sPpmTracer::doPhotonPass()
 {
-	cudaMemset(m_sMaps.m_pPhotons, 0, sizeof(k_pPpmPhoton)* m_sMaps.m_uPhotonBufferLength);
 	cudaMemcpyToSymbol(g_Map, &m_sMaps, sizeof(k_PhotonMapCollection));
 	k_INITIALIZE(m_pScene, g_sRngs);
 	if(m_bDirect)
 		k_PhotonPass<true> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >();
 	else k_PhotonPass<false> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >();
-	buildHashGrid << <m_sMaps.m_uPhotonBufferLength / (32 * 6) + 1, dim3(32, 6, 1) >> >();
 	cudaThreadSynchronize();
 	cudaMemcpyFromSymbol(&m_sMaps, g_Map, sizeof(k_PhotonMapCollection));
-	m_sMaps.m_uPhotonNumStored = m_sMaps.m_uPhotonBufferLength;
+	if (m_sMaps.PassFinished())
+		buildHashGrid << <m_sMaps.m_uPhotonBufferLength / (32 * 6) + 1, dim3(32, 6, 1) >> >();
 }

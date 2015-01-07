@@ -19,6 +19,7 @@ struct e_Sensor;
 struct e_BVHNodeData;
 struct e_KernelMaterial;
 struct e_KernelMIPMap;
+struct TraceResult;
 
 #define MAX_LIGHT_COUNT 32
 struct e_KernelDynamicScene
@@ -43,7 +44,7 @@ struct e_KernelDynamicScene
 	AABB m_sBox;
 	e_Sensor m_Camera;
 
-	CUDA_HOST CUDA_DEVICE bool Occluded(const Ray& r, float tmin, float tmax) const;
+	CUDA_HOST CUDA_DEVICE bool Occluded(const Ray& r, float tmin, float tmax, TraceResult* res = 0) const;
 	CUDA_DEVICE CUDA_HOST Spectrum EvalEnvironment(const Ray& r) const;
 	CUDA_DEVICE CUDA_HOST Spectrum EvalEnvironment(const Ray& r, const Ray& rX, const Ray& rY) const;
 	CUDA_DEVICE CUDA_HOST float pdfEmitterDiscrete(const e_KernelLight *emitter) const;

@@ -227,7 +227,7 @@ void k_PrimTracer::DoRender(e_Image* I)
 	primaryKernel<<< 180, dim3(32, MaxBlockHeight, 1)>>>(w, h, *I);
 	cudaError_t r = cudaThreadSynchronize();
 	k_TracerBase_update_TracedRays
-	I->DoUpdateDisplay(1.0f);
+	I->DoUpdateDisplay(0);
 	AABB m_sEyeBox;
 	cudaMemcpyFromSymbol(&m_sEyeBox.minV, g_EyeHitBoxMin2, 12);
 	cudaMemcpyFromSymbol(&m_sEyeBox.maxV, g_EyeHitBoxMax2, 12);
@@ -245,6 +245,8 @@ void k_PrimTracer::Debug(e_Image* I, int2 pixel)
 	Ray r, rX, rY;
 	g_SceneData.sampleSensorRay(r, rX, rY, make_float2(pixel.x, pixel.y), rng.randomFloat2());
 	trace(r, rX, rY, rng, 0);
+	MediumSamplingRecord mRec;
+	g_SceneData.m_sVolume.sampleDistance(r, 0, FLT_MAX, rng, mRec);
 }
 
 void k_PrimTracer::CreateSliders(SliderCreateCallback a_Callback)

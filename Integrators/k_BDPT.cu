@@ -10,6 +10,7 @@ struct BidirVertex
 	Spectrum cumulative;
 	int type;
 	float d_i;
+	float2 pixelCoords;
 	union
 	{
 		TraceResult r2;
@@ -29,8 +30,8 @@ struct BidirVertex
 		type = 1;
 	}
 
-	CUDA_FUNC_IN BidirVertex(const e_Sensor* s, const float3& p, const float3& n)
-		: p(p), n(normalize(n)), s(s)
+	CUDA_FUNC_IN BidirVertex(const e_Sensor* s, const float3& p, const float3& n, const float2& pCoords)
+		: p(p), n(normalize(n)), s(s), pixelCoords(pCoords)
 	{
 		cumulative = Spectrum(1);
 		type = 2;
@@ -90,6 +91,10 @@ struct BidirVertex
 				eval = l->evalPosition(pRec) * l->evalDirection(dRec, pRec);
 				pdf = l->pdfPosition(pRec) * l->pdfDirection(dRec, pRec);
 			}
+			float2 pCoords;
+			if (type == 2)
+				if (!s->getSamplePosition(pRec, dRec, pCoords) || fabsf(fmaxf(pixelCoords - pCoords)) >= 0.5f)
+					return Spectrum(0.0f);
 			float dp = AbsDot(pRec.n, dRec.d);
 			e_AbstractEmitter* emitter = type == 2 ? (e_AbstractEmitter*)s->As() : (e_AbstractEmitter*)l->As();
 			if (emitter->IsOnSurface() && dp != 0)
@@ -127,7 +132,7 @@ struct BidirVertex
 			BSDFSamplingRecord bRec(dg);
 			r2.getBsdfSample(normalize(p - prev->p), p, &bRec);
 			bRec.wo = dg.toLocal(normalize(next->p - p));
-			return r2.getMat().bsdf.pdf(bRec, isDelta() ? EDiscrete : ESolidAngle) * (isDelta() ? 1.0f : 1.0f / DistanceSquared(p, next->p));
+			return r2.getMat().bsdf.pdf(bRec, isDelta() ? EDiscrete : ESolidAngle) * (isDelta() ? 1.0f : G(this, next));
 		}
 		else if (type == 2 || type == 3)
 		{
@@ -137,7 +142,11 @@ struct BidirVertex
 			DirectionSamplingRecord dRec;
 			dRec.d = normalize(next->p - p);
 			dRec.measure = ESolidAngle;
-			return (type == 2 ? s->pdfDirection(dRec, pRec) : l->pdfDirection(dRec, pRec)) / DistanceSquared(p, next->p);
+			float2 pCoords;
+			if (type == 2)
+				if (!s->getSamplePosition(pRec, dRec, pCoords) || fabsf(fmaxf(pixelCoords - pCoords)) >= 0.5f)
+						return 0.0f;
+			return (type == 2 ? s->pdfDirection(dRec, pRec) : l->pdfDirection(dRec, pRec)) * G(this, next);
 		}
 		else printf("Invalid vertex type : %d\n.", type);
 		return 0.0f;
@@ -169,12 +178,12 @@ typedef BidirSampleT<5> BidirSample;
 
 struct BidirPath
 {
-	int t;//eye length
-	int s;//light length
+	int s;//eye length
+	int t;//light length
 	BidirSample& sample;
 
-	CUDA_FUNC_IN BidirPath(BidirSample& sample, int t, int s)
-		: t(t), s(s), sample(sample)
+	CUDA_FUNC_IN BidirPath(BidirSample& sample, int s, int t)
+		: s(s), t(t), sample(sample)
 	{
 
 	}
@@ -183,15 +192,15 @@ struct BidirPath
 	{
 		return s + t - 1;
 	}
-
+	
 	CUDA_FUNC_IN const BidirVertex& operator[](int i) const
 	{
-		return i < t ? sample.eyePath[i] : sample.lightPath[s - 1 - (i - t)];
+		return i < s ? sample.eyePath[i] : sample.lightPath[t - 1 - (i - s)];
 	}
 
 	CUDA_FUNC_IN BidirVertex& operator[](int i)
 	{
-		return i < t ? sample.eyePath[i] : sample.lightPath[s - 1 - (i - t)];
+		return i < s ? sample.eyePath[i] : sample.lightPath[t - 1 - (i - s)];
 	}
 
 	CUDA_FUNC_IN const BidirVertex* vertexOrNull(int i) const
@@ -223,12 +232,13 @@ struct BidirPath
 
 	CUDA_FUNC_IN Spectrum f() const
 	{
-		const BidirVertex& ev = sample.eyePath[t - 1], &lv = sample.lightPath[s - 1];
-		Spectrum f_ev = ev.f(t > 1 ? &sample.eyePath[t - 2] : 0, &lv);
-		Spectrum f_lv = lv.f(s > 1 ? &sample.lightPath[s - 2] : 0, &ev);
+		const BidirVertex& ev = sample.eyePath[s - 1], &lv = sample.lightPath[t - 1];
+		Spectrum f_ev = ev.f(s > 1 ? &sample.eyePath[s - 2] : 0, &lv);
+		Spectrum f_lv = lv.f(t > 1 ? &sample.lightPath[t - 2] : 0, &ev);
 		if (f_ev.isZero() || f_lv.isZero())
 			return 0.0f;
-		return ev.cumulative * f_ev * ::V(ev.p, lv.p) * BidirVertex::G(&ev, &lv) * f_lv * lv.cumulative;//(1.0f / DistanceSquared(ev.p, lv.p))
+		float g = ev.isDelta() ? 1 : BidirVertex::G(&ev, &lv);
+		return ev.cumulative * f_ev * ::V(ev.p, lv.p) * g * f_lv * lv.cumulative;//(1.0f / DistanceSquared(ev.p, lv.p))
 		/*Spectrum W_t = operator[](0).f(0, vertexOrNull(1), rng), L_t = operator[](k()).f(0, vertexOrNull(k() - 1), rng);
 		Spectrum F_t(1.0f);
 		float G_t = 1;
@@ -241,12 +251,12 @@ struct BidirPath
 
 	CUDA_FUNC_IN float misWeight(bool use_mis, int force_s, int force_t)
 	{
-		if (force_s != -1 && force_t != -1 && (this->t != force_t || this->s != force_s))
+		if (force_s != -1 && force_t != -1 && (this->s != force_s || this->t != force_t))
 			return 0;
 		if (!use_mis)
 			return 1;
 
-		int s = t - 1;
+		int s = this->s - 1;
 		float inv_w_s = 1;
 		if (s == 0)
 		{
@@ -265,9 +275,7 @@ struct BidirPath
 			inv_w_s = dE_s * p_backward(s + 1) + 1 + dL_s1 * p_forward(s);
 		}
 		return 1.0f / inv_w_s;
-
-		/*if (this->t == 0 || this->s == 0)
-			return 1;
+		/*
 		float pdf_s = pdf(s);
 		float div = pdf_s;
 		float pdf_i = pdf_s;
@@ -300,7 +308,7 @@ CUDA_FUNC_IN void sampleSubPath(BidirVertex* vertices, int* N, Spectrum cumulati
 		r2.getBsdfSample(r, rng, &bRec);
 
 		vertices[*N] = BidirVertex(r2, dg.P, dg.sys.n, cumulative);
-		float g = vertices[*N - 1].isDelta() ? 1 : 1.0f / DistanceSquared(vertices[*N - 1].p, vertices[*N].p);
+		float g = vertices[*N - 1].isDelta() ? 1 : BidirVertex::G(&vertices[*N - 1], &vertices[*N]);
 		d_i1 = vertices[*N - 1].d_i = (1.0f + lastPdf_bwd * d_i1) / (lastPdf_fwd * g);//the probability was with respect to solid angle
 		*N = *N + 1;
 
@@ -336,8 +344,8 @@ CUDA_FUNC_IN void SBDPT(const float2& pixelPosition, e_Image& g_Image, CudaRNG& 
 
 	Spectrum imp = g_SceneData.m_Camera.samplePosition(pRec, rng.randomFloat2(), &pixelPosition);
 	imp *= g_SceneData.m_Camera.sampleDirection(dRec, pRec, rng.randomFloat2(), &pixelPosition);
-	bSample.eyePath[0] = BidirVertex(&g_SceneData.m_Camera, pRec.p, pRec.n);
-	float pdf_0 = dRec.pdf;
+	bSample.eyePath[0] = BidirVertex(&g_SceneData.m_Camera, pRec.p, pRec.n, pixelPosition);
+	float pdf_0 = 1;
 	Ray rEye(pRec.p, dRec.d);
 
 	Spectrum Le = g_SceneData.sampleEmitterPosition(pRec, rng.randomFloat2());
@@ -351,49 +359,49 @@ CUDA_FUNC_IN void SBDPT(const float2& pixelPosition, e_Image& g_Image, CudaRNG& 
 	sampleSubPath(bSample.lightPath, &bSample.n_L, Le, rLight, rng, pdf_k);
 
 	Spectrum acc(0.0f);
-	for (int t = 1; t <= bSample.n_E; t++)
+	for (int s = 1; s <= bSample.n_E; s++)
 	{
-		for (int s = 1; s <= bSample.n_L; s++)
+		for (int t = 1; t <= bSample.n_L; t++)
 		{
-			BidirPath path(bSample, t, s);
-			if (t == 1)
+			BidirPath path(bSample, s, t);
+			if (s == 1)
 			{
 				DirectSamplingRecord dRec(path[1].p, path[1].n);
 				Spectrum value = path[1].cumulative * g_SceneData.m_Camera.sampleDirect(dRec, rng.randomFloat2());
-				Spectrum f = path[1].f(path.vertexOrNull(2), &path[0], true);
+				Spectrum f = path[1].f(path.vertexOrNull(2), &path[0]);
 				float miWeight = path.misWeight(use_mis, force_s, force_t);
 				if (!value.isZero() && ::V(dRec.p, dRec.ref))
 					g_Image.Splat(dRec.uv.x, dRec.uv.y, value * f * miWeight * LScale);
 			}
-			else if (s == 1)
+			else if (t == 1)
 			{
 				int q = path.k() - 1;
 				DirectSamplingRecord dRec(path[q].p, path[q].n);
 				Spectrum value = path[q].cumulative * path[path.k()].l->sampleDirect(dRec, rng.randomFloat2());
 				BidirVertex tmp = path[path.k()];
 				path[path.k()] = BidirVertex(tmp.l, dRec.p, dRec.n);
-				value *= path[q].f(path.vertexOrNull(q - 1), &path[path.k()], true);
+				value *= path[q].f(path.vertexOrNull(q - 1), &path[path.k()]);
 				float miWeight = path.misWeight(use_mis, force_s, force_t);
 				path[path.k()] = tmp;
-				if (!value.isZero() && ::V(dRec.p, dRec.ref))
-					acc += value * miWeight;
+				//if (!value.isZero() && ::V(dRec.p, dRec.ref))
+				//	acc += value * miWeight;
 			}
 			else
 			{
-				acc += path.f() * path.misWeight(use_mis, force_s, force_t);
+				//acc += path.f() * path.misWeight(use_mis, force_s, force_t);
 			}
 		}
 		
 		//edge case with s = 0 -> eye path hit a light source
-		if (t >= 2 && bSample.eyePath[t - 1].r2.LightIndex() != 0xffffffff)
+		if (s > 1 && bSample.eyePath[s - 1].r2.LightIndex() != 0xffffffff)//the first vertex is the camera
 		{
-			BidirPath path(bSample, t, 0);
-			BidirVertex tmp = bSample.eyePath[t - 1];
-			bSample.eyePath[t - 1] = BidirVertex(&g_SceneData.m_sLightData[tmp.r2.LightIndex()], tmp.p, tmp.n);
+			BidirPath path(bSample, s, 0);
+			BidirVertex tmp = bSample.eyePath[s - 1];
+			bSample.eyePath[s - 1] = BidirVertex(&g_SceneData.m_sLightData[tmp.r2.LightIndex()], tmp.p, tmp.n);
 			float miWeight = path.misWeight(use_mis, force_s, force_t);
-			Spectrum le = bSample.eyePath[t - 1].f(0, &bSample.lightPath[t - 2]);
+			Spectrum le = bSample.eyePath[s - 1].f(0, &bSample.lightPath[s - 2]);
 			//acc += le * tmp.cumulative * miWeight;
-			bSample.eyePath[t - 1] = tmp;
+			bSample.eyePath[s - 1] = tmp;
 		}
 	}
 	g_Image.AddSample(pixelPosition.x, pixelPosition.y, acc * LScale);
@@ -426,7 +434,7 @@ void k_BDPT::DoRender(e_Image* I)
 	}
 	m_uPassesDone++;
 	k_TracerBase_update_TracedRays
-	I->DoUpdateDisplay(1.0f / float(m_uPassesDone * 3));
+	I->DoUpdateDisplay(1.0f / float(m_uPassesDone));
 }
 
 void k_BDPT::Debug(e_Image* I, int2 pixel)

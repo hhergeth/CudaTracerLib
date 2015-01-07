@@ -314,6 +314,7 @@ struct e_InfiniteLight : public e_LightBase
 	float m_invSurfaceArea;
 	float2 m_size, m_pixelSize;
 	Spectrum m_scale;
+	float4x4 m_worldTransform, m_worldTransformInverse;
 	
 	e_InfiniteLight()
 		: e_LightBase(EOnSurface | EEnvironmentEmitter)
@@ -347,7 +348,7 @@ struct e_InfiniteLight : public e_LightBase
 
 	CUDA_FUNC_IN float pdfDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
 	{
-		return internalPdfDirection(-1.0f * dRec.d);
+		return internalPdfDirection(m_worldTransformInverse.TransformDirection(-1.0f * dRec.d));
 	}
 
 	CUDA_DEVICE CUDA_HOST Spectrum evalDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const;

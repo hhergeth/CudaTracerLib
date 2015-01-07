@@ -131,6 +131,10 @@ public:
 	}
 	e_Terrain* getTerrain();
 	e_StreamReference(e_VolumeRegion) AddVolume(e_VolumeRegion& r);
+	e_StreamReference(e_VolumeRegion) AddVolume(int w, int h, int d, const float4x4& worldToVol, const e_PhaseFunction& p);
+	e_StreamReference(e_VolumeRegion) AddVolume(int wA, int hA, int dA,
+												int wS, int hS, int dS,
+												int wL, int hL, int dL, const float4x4& worldToVol, const e_PhaseFunction& p);
 	e_StreamReference(e_VolumeRegion) getVolumes();
 	AABB getAABB(e_StreamReference(e_Node) Node, const char* name, unsigned int* a_Mi = 0);
 	e_BufferReference<e_Mesh, e_KernelMesh> getMesh(e_StreamReference(e_Node) n);

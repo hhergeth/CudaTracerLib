@@ -253,4 +253,5 @@ void k_FastTracer::DoRender(e_Image* I)
 
 void k_FastTracer::Debug(e_Image* I, int2 pixel)
 {
+	std::cout << "x : " << pixel.x << ", y : " << pixel.y << "\n";
 }

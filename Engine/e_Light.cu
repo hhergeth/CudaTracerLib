@@ -307,13 +307,15 @@ e_InfiniteLight::e_InfiniteLight(e_Stream<char>* a_Buffer, e_BufferReference<e_M
 	unsigned int INDEX = sampleReuse(m_cdfRows.operator->(), m_size.y, lvl);
 
 	m_power = (surfaceArea * m_scale / m_normalization).average();
+
+	m_worldTransform = m_worldTransformInverse = float4x4::Identity();
 }
 
 Spectrum e_InfiniteLight::sampleRay(Ray &ray, const float2 &spatialSample, const float2 &directionalSample) const
 {
 	float3 d; Spectrum value; float pdf;
 	internalSampleDirection(directionalSample, d, value, pdf);
-	d = -d;
+	d = m_worldTransform.TransformDirection(-d);
 	float2 offset = Warp::squareToUniformDiskConcentric(spatialSample);
 	float3 perpOffset = Frame(d).toWorld(make_float3(offset.x, offset.y, 0));
 	ray = Ray(m_SceneCenter + (perpOffset - d) * m_SceneRadius, d);
@@ -326,6 +328,7 @@ Spectrum e_InfiniteLight::sampleDirect(DirectSamplingRecord &dRec, const float2 
 	/* Sample a direction from the environment map */
 	Spectrum value; float3 d; float pdf;
 	internalSampleDirection(sample, d, value, pdf);
+	d = m_worldTransform.TransformDirection(d);
 
 	dRec.pdf = pdf;
 	dRec.p = m_SceneCenter + d * m_SceneRadius;
@@ -339,7 +342,7 @@ Spectrum e_InfiniteLight::sampleDirect(DirectSamplingRecord &dRec, const float2 
 
 float e_InfiniteLight::pdfDirect(const DirectSamplingRecord &dRec) const
 {
-	float pdfSA = internalPdfDirection(dRec.d);
+	float pdfSA = internalPdfDirection(m_worldTransformInverse.TransformDirection(dRec.d));
 
 	if (dRec.measure == ESolidAngle)
 		return pdfSA;
@@ -368,7 +371,7 @@ Spectrum e_InfiniteLight::sampleDirection(DirectionSamplingRecord &dRec, Positio
 
 	dRec.measure = ESolidAngle;
 	dRec.pdf = pdf;
-	dRec.d = -d;
+	dRec.d = m_worldTransform .TransformDirection(-d);
 
 	/* Be wary of roundoff errors */
 	if (value.isZero() || pdf == 0)
@@ -379,7 +382,7 @@ Spectrum e_InfiniteLight::sampleDirection(DirectionSamplingRecord &dRec, Positio
 
 Spectrum e_InfiniteLight::evalDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
 {
-	float3 v = -1.0f * dRec.d;
+	float3 v = m_worldTransformInverse.TransformDirection(-1.0f * dRec.d);
 
 	/* Convert to latitude-longitude texture coordinates */
 	float2 uv = make_float2(
@@ -455,7 +458,7 @@ unsigned int e_InfiniteLight::sampleReuse(float *cdf, unsigned int size, float &
 
 Spectrum e_InfiniteLight::evalEnvironment(const Ray &ray) const
 {
-	float3 v = normalize(ray.direction);
+	float3 v = normalize(m_worldTransformInverse.TransformDirection(ray.direction));
 
 	/* Convert to latitude-longitude texture coordinates */
 	float2 uv = make_float2(
@@ -470,7 +473,7 @@ Spectrum e_InfiniteLight::evalEnvironment(const Ray &ray) const
 
 Spectrum e_InfiniteLight::evalEnvironment(const Ray &ray, const Ray& rX, const Ray& rY) const
 {
-	float3 v = normalize(ray.direction);
+	float3 v = normalize(m_worldTransformInverse.TransformDirection(ray.direction));
 
 	/* Convert to latitude-longitude texture coordinates */
 	float2 uv = make_float2(

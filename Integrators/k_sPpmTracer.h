@@ -55,14 +55,16 @@ private:
 	unsigned short Nor;
 public:
 	unsigned int next;
+	unsigned int typeFlag;
 	CUDA_FUNC_IN k_pPpmPhoton(){}
-	CUDA_FUNC_IN k_pPpmPhoton(const float3& p, const Spectrum& l, const float3& wi, const float3& n, unsigned int ne)
+	CUDA_FUNC_IN k_pPpmPhoton(const float3& p, const Spectrum& l, const float3& wi, const float3& n, unsigned int ne, unsigned int type)
 	{
 		Pos = p;
 		Nor = NormalizedFloat3ToUchar2(n);
 		L = (l).toRGBE();
 		Wi = NormalizedFloat3ToUchar2(wi);
 		next = ne;
+		typeFlag = type;
 	}
 	CUDA_FUNC_IN float3 getNormal()
 	{
@@ -170,8 +172,6 @@ template<typename HASH> struct k_PhotonMap
 
 #ifdef __CUDACC__
 	CUDA_FUNC_IN k_StoreResult StorePhoton(const float3& p, const Spectrum& l, const float3& wi, const float3& n, unsigned int* a_PhotonCounter) const;
-
-	template<bool VOL> CUDA_ONLY_FUNC Spectrum L_Volume(float a_r, float a_NumPhotonEmitted, CudaRNG& rng, const Ray& r, float tmin, float tmax, const Spectrum& sigt) const;
 #endif
 };
 
@@ -241,11 +241,6 @@ struct k_PhotonMapCollection
 		if(SURFACE)
 			return m_sSurfaceMap.StorePhoton(p, l, wi, n, &m_uPhotonNumStored);
 		else return m_sVolumeMap.StorePhoton(p, l, wi, n, &m_uPhotonNumStored);
-	}
-
-	template<bool VOL> CUDA_FUNC_IN Spectrum L(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const Spectrum& sigt) const
-	{
-		return m_sVolumeMap.L_Volume<VOL>(a_r, m_uPhotonNumEmitted, rng, r, tmin, tmax, sigt);
 	}
 #endif
 };

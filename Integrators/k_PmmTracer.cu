@@ -111,7 +111,7 @@ void k_PmmTracer::DoRender(e_Image* I)
 
 	cudaError_t r = cudaThreadSynchronize();
 	k_TracerBase_update_TracedRays
-	I->DoUpdateDisplay(1.0f);
+	I->DoUpdateDisplay(0);
 }
 
 void k_PmmTracer::StartNewTrace(e_Image* I)

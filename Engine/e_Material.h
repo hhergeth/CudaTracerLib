@@ -41,9 +41,11 @@ public:
 	unsigned int NodeLightIndex;
 	float HeightScale;
 	float m_fAlphaThreshold;
+	bool enableParallaxOcclusion;
+	int parallaxMinSamples, parallaxMaxSamples;
 public:
 	e_KernelMaterial(const char* name = 0);
-	CUDA_DEVICE CUDA_HOST bool SampleNormalMap(DifferentialGeometry& uv) const;
+	CUDA_DEVICE CUDA_HOST bool SampleNormalMap(DifferentialGeometry& uv, const float3& wi) const;
 	CUDA_DEVICE CUDA_HOST float SampleAlphaMap(const DifferentialGeometry& uv) const;
 	CUDA_DEVICE CUDA_HOST bool GetBSSRDF(const DifferentialGeometry& uv, const e_KernelBSSRDF** res) const;
 	template<typename L> void LoadTextures(L callback)

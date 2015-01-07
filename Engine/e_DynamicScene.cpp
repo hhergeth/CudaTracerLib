@@ -378,6 +378,8 @@ e_StreamReference(e_KernelLight) e_DynamicScene::createLight(e_StreamReference(e
 {
 	unsigned int mi;
 	ShapeSet s = CreateShape(Node, materialName, &mi);
+	e_Node* np = Node.operator e_Node *();
+	e_KernelMaterial* mp = m_pMaterialBuffer->operator()(Node->m_uMaterialOffset + mi).operator e_KernelMaterial *();
 	unsigned int* a = &m_pMaterialBuffer->operator()(Node->m_uMaterialOffset + mi)->NodeLightIndex;
 	if(*a != -1)
 	{
@@ -500,6 +502,26 @@ e_Terrain* e_DynamicScene::getTerrain()
 e_StreamReference(e_VolumeRegion) e_DynamicScene::AddVolume(e_VolumeRegion& r)
 {
 	e_StreamReference(e_VolumeRegion) r2 = m_pVolumes->malloc(1);
+	*r2.operator->() = r;
+	return r2;
+}
+
+e_StreamReference(e_VolumeRegion) e_DynamicScene::AddVolume(int w, int h, int d, const float4x4& worldToVol, const e_PhaseFunction& p)
+{
+	e_StreamReference(e_VolumeRegion) r2 = m_pVolumes->malloc(1);
+	e_VolumeRegion r;
+	r.SetData(e_VolumeGrid(p, worldToVol, m_pAnimStream, make_uint3(w, h, d)));
+	*r2.operator->() = r;
+	return r2;
+}
+
+e_StreamReference(e_VolumeRegion) e_DynamicScene::AddVolume(int wA, int hA, int dA,
+															int wS, int hS, int dS,
+															int wL, int hL, int dL, const float4x4& worldToVol, const e_PhaseFunction& p)
+{
+	e_StreamReference(e_VolumeRegion) r2 = m_pVolumes->malloc(1);
+	e_VolumeRegion r;
+	r.SetData(e_VolumeGrid(p, worldToVol, m_pAnimStream, make_uint3(wA, hA, dA), make_uint3(wS, hS, dS), make_uint3(wL, hL, dL)));
 	*r2.operator->() = r;
 	return r2;
 }

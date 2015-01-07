@@ -391,8 +391,8 @@ template<typename BaseType, int Size> struct e_AggregateBaseType
 
 template<typename T> class e_Variable
 {
-	T* host, *device;
 public:
+	T* host, *device;
 #ifdef __CUDACC__
 	e_Variable()
 	{

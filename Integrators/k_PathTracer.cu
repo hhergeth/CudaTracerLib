@@ -131,7 +131,7 @@ void k_PathTracer::DoRender(e_Image* I)
 	else pathKernel<false><<< 180, dim3(32, MaxBlockHeight, 1)>>>(w, h, m_uPassesDone, *I);
 	m_uPassesDone++;
 	k_TracerBase_update_TracedRays
-	I->DoUpdateDisplay(m_uPassesDone);
+	I->DoUpdateDisplay(0);
 }
 
 void k_PathTracer::Debug(e_Image* I, int2 p)
@@ -165,6 +165,6 @@ void k_BlockPathTracer::DoRender(e_Image* I)
 		pathKernel2<true><<< sampler.blockDim(), sampler.threadDim()>>>(w, h, *I, sampler);
 	else pathKernel2<false><<< sampler.blockDim(), sampler.threadDim()>>>(w, h, *I, sampler);
 	k_TracerBase_update_TracedRays
-	I->DoUpdateDisplay(1);
+	I->DoUpdateDisplay(0);
 	sampler.AddPass(*I);
 }
