@@ -6,20 +6,20 @@
 #define SER_NAME "photonMapBuf.dat"
 
 k_sPpmTracer::k_sPpmTracer()
-	: k_ProgressiveTracer(), m_uGridLength(LNG*LNG*LNG), m_pEntries(0)
+: k_ProgressiveTracer(), m_uGridLength(LNG*LNG*LNG), m_pEntries(0), m_bFinalGather(false)
 {
+#ifdef NDEBUG
 	m_uBlocksPerLaunch = 180;
+#else
+	m_uBlocksPerLaunch = 1;
+#endif
 	m_uPhotonsEmitted = -1;
 	m_uPreviosCount = 0;
 	m_bLongRunning = false;
-#ifdef DEBUG
-	m_uNewPhotonsPerRun = 0.01f;
-#else
-	m_uNewPhotonsPerRun = 2;
-#endif
 	m_uModus = 1;
-	m_fInitialRadiusScale = 1;
-	m_sMaps = k_PhotonMapCollection((m_uBlocksPerLaunch + 2) * PPM_slots_per_block, m_uGridLength);//(int)(1000000.0f * m_uNewPhotonsPerRun)
+	unsigned int numPhotons = (m_uBlocksPerLaunch + 2) * PPM_slots_per_block;
+	unsigned int linkedListLength = numPhotons * 10;
+	m_sMaps = k_PhotonMapCollection(numPhotons, m_uGridLength, linkedListLength);
 }
 
 void k_sPpmTracer::PrintStatus(std::vector<std::string>& a_Buf)
@@ -29,60 +29,13 @@ void k_sPpmTracer::PrintStatus(std::vector<std::string>& a_Buf)
 	double pCs = getValuePerSecond(m_uPhotonsEmitted, 1000000.0);
 	a_Buf.push_back(format("Photons/Sec : %f", (float)pCs));
 	a_Buf.push_back(format("Light Visibility : %f", m_fLightVisibility));
-}
-
-void k_PhotonMapCollection::Resize(unsigned int a_BufferLength)
-{
-	//if(a_BufferLength > m_uRealBufferSize)
-	{
-		m_uRealBufferSize = a_BufferLength;
-		void* old = m_pPhotons;
-		CUDA_MALLOC(&m_pPhotons, sizeof(k_pPpmPhoton) * a_BufferLength);
-		cudaMemset(m_pPhotons, 0, sizeof(k_pPpmPhoton)* a_BufferLength);
-		if(old)
-		{
-			cudaMemcpy(m_pPhotons, old, sizeof(k_pPpmPhoton) * m_uPhotonBufferLength, cudaMemcpyDeviceToDevice);
-			CUDA_FREE(old);
-		}
-	}
-	//else cudaMemset(m_pPhotons, 0, sizeof(k_pPpmPhoton) * a_BufferLength);
-	m_uPhotonBufferLength = a_BufferLength;
-	m_sVolumeMap.Resize(a_BufferLength, m_pPhotons);
-	m_sSurfaceMap.Resize(a_BufferLength, m_pPhotons);
-}
-
-void k_PhotonMapCollection::StartNewPass()
-{
-	m_uPhotonNumEmitted = m_uPhotonNumStored = 0;
-	m_sVolumeMap.StartNewPass();
-	m_sSurfaceMap.StartNewPass();
-	cudaMemset(m_pPhotons, 0, sizeof(k_pPpmPhoton) * m_uPhotonBufferLength);
-}
-
-bool k_PhotonMapCollection::PassFinished()
-{
-	return m_uPhotonNumStored >= m_uPhotonBufferLength;
-}
-
-void k_PhotonMapCollection::Free()
-{
-	m_sVolumeMap.Free();
-	m_sSurfaceMap.Free();
-	CUDA_FREE(m_pPhotons);
-}
-
-k_PhotonMapCollection::k_PhotonMapCollection(unsigned int a_BufferLength, unsigned int a_HashNum)
-	: m_pPhotons(0), m_sVolumeMap(a_BufferLength, a_HashNum, m_pPhotons), m_sSurfaceMap(a_BufferLength, a_HashNum, m_pPhotons)
-{
-	m_uRealBufferSize = m_uPhotonBufferLength = 0;
-	m_uPhotonNumStored = m_uPhotonNumEmitted = 0;
-	Resize(a_BufferLength);
+	a_Buf.push_back(format("Photons per pass : %d*100,000", m_sMaps.m_uPhotonBufferLength / 100000));
 }
 
 void k_sPpmTracer::CreateSliders(SliderCreateCallback a_Callback)
 {
-	a_Callback(0.1f, 10.0f, true, &m_fInitialRadiusScale, "Initial radius = %g units");
-	a_Callback(0.1f, 100.0f, true, &m_uNewPhotonsPerRun, "Number of photons per pass = %g [M]");
+	//a_Callback(0.1f, 10.0f, true, &m_fInitialRadiusScale, "Initial radius = %g units");
+	//a_Callback(0.1f, 100.0f, true, &m_uNewPhotonsPerRun, "Number of photons per pass = %g [M]");
 }
 
 void k_sPpmTracer::Resize(unsigned int _w, unsigned int _h)
@@ -92,7 +45,7 @@ void k_sPpmTracer::Resize(unsigned int _w, unsigned int _h)
 		CUDA_FREE(m_pEntries);
 	CUDA_MALLOC(&m_pEntries, sizeof(k_AdaptiveEntry) * _w * _h);
 }
-
+/*
 void print(k_PhotonMapCollection& m_sMaps, k_PhotonMap<k_HashGrid_Reg>& m_Map, std::string name)
 {
 	k_pPpmPhoton* photons = new k_pPpmPhoton[m_sMaps.m_uPhotonBufferLength];
@@ -133,7 +86,7 @@ void print(k_PhotonMapCollection& m_sMaps, k_PhotonMap<k_HashGrid_Reg>& m_Map, s
 	std::string s = format("max : %d, avg : %f, used cells : %f, var : %f\n", maxCount, avgNum, f1, sqrtf(var));
 	std::cout << s;
 	OutputDebugString(s.c_str());
-}
+}*/
 
 void k_sPpmTracer::DoRender(e_Image* I)
 {
@@ -171,7 +124,7 @@ void k_sPpmTracer::initNewPass(e_Image* I)
 	//AABB m_sEyeBox = m_pCamera->m_sLastFrustum;
 	AABB m_sEyeBox = GetEyeHitPointBox(m_pScene, m_pCamera, true);
 	m_sEyeBox.Enlarge(0.1f);
-	float r = fsumf(m_sEyeBox.maxV - m_sEyeBox.minV) / float(w) * m_fInitialRadiusScale;
+	float r = fsumf(m_sEyeBox.maxV - m_sEyeBox.minV) / float(w);
 	m_sEyeBox.minV -= make_float3(r);
 	m_sEyeBox.maxV += make_float3(r);
 	m_fInitialRadius = r;
@@ -206,8 +159,6 @@ void k_sPpmTracer::initNewPass(e_Image* I)
 }
 
 static bool GGG = false;
-static float GGGf0;
-static float GGGf1;
 void k_sPpmTracer::StartNewTrace(e_Image* I)
 {
 	m_bDirect = !m_pScene->getVolumes().getLength();
@@ -216,17 +167,15 @@ void k_sPpmTracer::StartNewTrace(e_Image* I)
 #endif
 	if (m_bDirect)
 		m_bDirect = m_fLightVisibility > 0.5f;
+	//m_bDirect = 0;
 	if(m_uModus == 1)
 	{
 		initNewPass(I);
 	}
-	else if(!GGG || GGGf0 != m_fInitialRadiusScale || GGGf1 != m_uNewPhotonsPerRun)
+	else if(!GGG)
 	{
 		initNewPass(I);
-		GGGf1 = m_uNewPhotonsPerRun;
-		GGGf0 = m_fInitialRadiusScale;
 		GGG = true;
-		updateBuffer();
 		while(!m_sMaps.PassFinished())
 			doPhotonPass();
 		m_uPassesDone = 1;

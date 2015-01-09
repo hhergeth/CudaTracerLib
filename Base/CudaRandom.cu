@@ -48,12 +48,19 @@ void CudaRNGBuffer_cuRAND::createGenerators(unsigned int a_Spacing, unsigned int
 
 k_TracerRNG_cuRAND CudaRNGBuffer_cuRAND::operator()()
 {
-	unsigned int i = threadId % m_uNumGenerators;
+	unsigned int idx = threadId;
+	unsigned int i = idx % m_uNumGenerators;
+	k_TracerRNG_cuRAND rng;
 #ifdef ISCUDA
-	return m_pDeviceGenerators[i];
+	rng = m_pDeviceGenerators[i];
+	if (idx >= m_uNumGenerators)
+	{
+		skipahead_sequence(idx / m_uNumGenerators, &rng.state);
+	}
 #else
-	return m_pHostGenerators[i];
+	rng = m_pHostGenerators[i];
 #endif
+	return rng;
 }
 
 void CudaRNGBuffer_cuRAND::operator()(k_TracerRNG_cuRAND& val)

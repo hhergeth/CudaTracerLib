@@ -9,18 +9,6 @@
 
 #define ALPHA (2.0f / 3.0f)
 
-CUDA_FUNC_IN Ray BSSRDF_Entry(const e_KernelBSSRDF* bssrdf, const Frame& sys, const float3& pos, const float3& wi)
-{
-	float3 dir = VectorMath::refract(wi, sys.n, 1.0f / bssrdf->e);
-	return Ray(pos, dir);
-}
-
-CUDA_FUNC_IN Ray BSSRDF_Exit(const e_KernelBSSRDF* bssrdf, const Frame& sys, const float3& pos, const float3& wi)
-{
-	float3 dir = VectorMath::refract(wi, sys.n, 1.0f / bssrdf->e);
-	return Ray(pos, dir);
-}
-
 struct k_AdaptiveEntry
 {
 	float r, rd;
@@ -43,6 +31,13 @@ struct k_AdaptiveStruct
 	}
 };
 
+enum PhotonType
+{
+	pt_Diffuse = 0,
+	pt_Volume = 1,
+	pt_Caustic = 2,
+};
+
 struct k_pPpmPhoton
 {
 private:
@@ -53,18 +48,32 @@ private:
 	RGBE L;
 	unsigned short Wi;
 	unsigned short Nor;
+	unsigned int typeNextField;
 public:
-	unsigned int next;
-	unsigned int typeFlag;
 	CUDA_FUNC_IN k_pPpmPhoton(){}
-	CUDA_FUNC_IN k_pPpmPhoton(const float3& p, const Spectrum& l, const float3& wi, const float3& n, unsigned int ne, unsigned int type)
+	CUDA_FUNC_IN k_pPpmPhoton(const float3& p, const Spectrum& l, const float3& wi, const float3& n, PhotonType type)
 	{
 		Pos = p;
 		Nor = NormalizedFloat3ToUchar2(n);
 		L = (l).toRGBE();
 		Wi = NormalizedFloat3ToUchar2(wi);
-		next = ne;
-		typeFlag = type;
+		typeNextField = (unsigned char(type) << 24) | 0xffffff;
+	}
+	CUDA_FUNC_IN bool hasNext()
+	{
+		return (typeNextField & 0xffffff) != 0xffffff;
+	}
+	CUDA_FUNC_IN PhotonType getType()
+	{
+		return PhotonType(typeNextField >> 24);
+	}
+	CUDA_FUNC_IN unsigned int getNext()
+	{
+		return typeNextField & 0xffffff;
+	}
+	CUDA_FUNC_IN void setNext(unsigned int next)
+	{
+		typeNextField = (typeNextField & 0xff000000) | (next & 0xffffff);
 	}
 	CUDA_FUNC_IN float3 getNormal()
 	{
@@ -100,39 +109,41 @@ public:
 	}*/
 };
 
-enum k_StoreResult
-{
-	Success = 1,
-	NotValid = 2,
-	Full = 3,
-};
-
 template<typename HASH> struct k_PhotonMap
 {
-	k_pPpmPhoton* m_pDevicePhotons;
 	unsigned int* m_pDeviceHashGrid;
+	//uint2* m_pDeviceLinkedList;
 	HASH m_sHash;
-	unsigned int m_uMaxPhotonCount;
 	unsigned int m_uGridLength;
+	//unsigned int m_uLinkedListLength;
+	//unsigned int m_uLinkedListUsed;
 
 	CUDA_FUNC_IN k_PhotonMap()
 	{
 
 	}
 
-	CUDA_FUNC_IN k_PhotonMap(unsigned int photonN, unsigned int hashN, k_pPpmPhoton* P)
+	CUDA_FUNC_IN k_PhotonMap(unsigned int hashN)
 	{
 		m_uGridLength = hashN;
-		m_pDevicePhotons = P;
 		m_pDeviceHashGrid = 0;
-		CUDA_MALLOC(&m_pDeviceHashGrid, sizeof(unsigned int) * m_uGridLength);
-		cudaMemset(m_pDeviceHashGrid, -1, sizeof(unsigned int) * m_uGridLength);
-		m_uMaxPhotonCount = photonN;
+		//m_pDeviceLinkedList = 0;
+		CUDA_MALLOC(&m_pDeviceHashGrid, sizeof(unsigned int)* m_uGridLength);
+		ThrowCudaErrors(cudaMemset(m_pDeviceHashGrid, -1, sizeof(unsigned int)* m_uGridLength));
+	}
+
+	void Resize(unsigned int linkedListLength)
+	{
+		//m_uLinkedListUsed = 0;
+		//m_uLinkedListLength = linkedListLength;
+		//if (m_pDeviceLinkedList)
+		//	CUDA_FREE(m_pDeviceLinkedList);
+		//CUDA_MALLOC(&m_pDeviceLinkedList, sizeof(uint2) * linkedListLength);
+		//ThrowCudaErrors(cudaMemset(m_pDeviceLinkedList, -1, sizeof(uint2) * linkedListLength));
 	}
 
 	void Serialize(OutputStream& O, void* hostbuf)
 	{
-		O << m_uMaxPhotonCount;
 		O << m_uGridLength;
 		cudaMemcpy(hostbuf, m_pDeviceHashGrid, sizeof(unsigned int) * m_uGridLength, cudaMemcpyDeviceToHost);
 		O.Write(hostbuf, sizeof(unsigned int) * m_uGridLength);
@@ -141,7 +152,6 @@ template<typename HASH> struct k_PhotonMap
 
 	void DeSerialize(IInStream& I, void* hostbuf)
 	{
-		I >> m_uMaxPhotonCount;
 		I >> m_uGridLength;
 		I.Read(hostbuf, sizeof(unsigned int) * m_uGridLength);
 		cudaMemcpy(m_pDeviceHashGrid, hostbuf, sizeof(unsigned int) * m_uGridLength, cudaMemcpyHostToDevice);
@@ -151,43 +161,49 @@ template<typename HASH> struct k_PhotonMap
 	void Free()
 	{
 		CUDA_FREE(m_pDeviceHashGrid);
+		//CUDA_FREE(m_pDeviceLinkedList);
 	}
 
 	void StartNewPass()
 	{
-		cudaMemset(m_pDeviceHashGrid, -1, sizeof(unsigned int) * m_uGridLength);
-	}
-
-	void Resize(unsigned int N, k_pPpmPhoton* P)
-	{
-		m_pDevicePhotons = P;
-		m_uMaxPhotonCount = N;
+		ThrowCudaErrors(cudaMemset(m_pDeviceHashGrid, -1, sizeof(unsigned int)* m_uGridLength));
+		//ThrowCudaErrors(cudaMemset(m_pDeviceLinkedList, -1, sizeof(uint2)* m_uLinkedListLength));
+		//m_uLinkedListUsed = 0;
 	}
 
 	void StartNewRendering(const AABB& box, float a_InitRadius)
 	{
 		m_sHash = HASH(box, a_InitRadius, m_uGridLength);
-		cudaMemset(m_pDeviceHashGrid, -1, sizeof(unsigned int) * m_uGridLength);
+		ThrowCudaErrors(cudaMemset(m_pDeviceHashGrid, -1, sizeof(unsigned int)* m_uGridLength));
+		//ThrowCudaErrors(cudaMemset(m_pDeviceLinkedList, -1, sizeof(uint2)* m_uLinkedListLength));
+		//m_uLinkedListUsed = 0;
 	}
-
-#ifdef __CUDACC__
-	CUDA_FUNC_IN k_StoreResult StorePhoton(const float3& p, const Spectrum& l, const float3& wi, const float3& n, unsigned int* a_PhotonCounter) const;
-#endif
 };
 
 struct k_PhotonMapCollection
 {
-	k_PhotonMap<k_HashGrid_Reg> m_sVolumeMap;
 	k_PhotonMap<k_HashGrid_Reg> m_sSurfaceMap;
+	k_PhotonMap<k_HashGrid_Reg> m_sVolumeMap;
+	k_PhotonMap<k_HashGrid_Reg> m_sCausticMap;
 	k_pPpmPhoton* m_pPhotons;
 	unsigned int m_uPhotonBufferLength;
 	unsigned int m_uPhotonNumStored;
 	unsigned int m_uPhotonNumEmitted;
-	unsigned int m_uRealBufferSize;
 
 	CUDA_FUNC_IN k_PhotonMapCollection()
 	{
 
+	}
+
+	k_PhotonMapCollection(unsigned int a_BufferLength, unsigned int a_HashNum, unsigned int linkedListLength)
+		: m_pPhotons(0)
+	{
+		m_sSurfaceMap = k_PhotonMap<k_HashGrid_Reg>(a_HashNum);
+		m_sVolumeMap = k_PhotonMap<k_HashGrid_Reg>(a_HashNum);
+		m_sCausticMap = k_PhotonMap<k_HashGrid_Reg>(a_HashNum);
+		m_uPhotonBufferLength = 0;
+		m_uPhotonNumStored = m_uPhotonNumEmitted = 0;
+		Resize(a_BufferLength, linkedListLength);
 	}
 
 	void Serialize(OutputStream& O)
@@ -196,11 +212,11 @@ struct k_PhotonMapCollection
 		O << m_uPhotonBufferLength;
 		O << m_uPhotonNumStored;
 		O << m_uPhotonNumEmitted;
-		O << m_uRealBufferSize;
 		cudaMemcpy(hostbuf, m_pPhotons, m_uPhotonBufferLength * sizeof(k_pPpmPhoton), cudaMemcpyDeviceToHost);
 		O.Write(hostbuf, m_uPhotonBufferLength * sizeof(k_pPpmPhoton));
-		m_sVolumeMap.Serialize(O, hostbuf);
 		m_sSurfaceMap.Serialize(O, hostbuf);
+		m_sVolumeMap.Serialize(O, hostbuf);
+		m_sCausticMap.Serialize(O, hostbuf);
 		free(hostbuf);
 	}
 
@@ -210,40 +226,55 @@ struct k_PhotonMapCollection
 		I >> m_uPhotonBufferLength;
 		I >> m_uPhotonNumStored;
 		I >> m_uPhotonNumEmitted;
-		I >> m_uRealBufferSize;
 		I.Read(hostbuf, m_uPhotonBufferLength * sizeof(k_pPpmPhoton));
 		cudaMemcpy(m_pPhotons, hostbuf, m_uPhotonBufferLength * sizeof(k_pPpmPhoton), cudaMemcpyHostToDevice);
-		m_sVolumeMap.DeSerialize(I, hostbuf);
 		m_sSurfaceMap.DeSerialize(I, hostbuf);
+		m_sVolumeMap.DeSerialize(I, hostbuf);
+		m_sCausticMap.DeSerialize(I, hostbuf);
 		free(hostbuf);
 	}
 
-	k_PhotonMapCollection(unsigned int a_BufferLength, unsigned int a_HashNum);
-
-	void Free();
-
-	void Resize(unsigned int a_BufferLength);
-
-	void StartNewPass();
-
-	bool PassFinished();
-
-	void StartNewRendering(const AABB& sbox, const AABB& vbox, float a_R)
+	void Free()
 	{
-		m_sVolumeMap.StartNewRendering(vbox, a_R);
-		m_sSurfaceMap.StartNewRendering(sbox, a_R);
+		m_sSurfaceMap.Free();
+		m_sVolumeMap.Free();
+		m_sCausticMap.Free();
+		CUDA_FREE(m_pPhotons);
 	}
 
-#ifdef __CUDACC__
-
-	template<bool SURFACE> CUDA_FUNC_IN k_StoreResult StorePhoton(const float3& p, const Spectrum& l, const float3& wi, const float3& n)
+	void Resize(unsigned int a_BufferLength, unsigned int linkedListLength)
 	{
-		if(SURFACE)
-			return m_sSurfaceMap.StorePhoton(p, l, wi, n, &m_uPhotonNumStored);
-		else return m_sVolumeMap.StorePhoton(p, l, wi, n, &m_uPhotonNumStored);
+		CUDA_MALLOC(&m_pPhotons, sizeof(k_pPpmPhoton)* a_BufferLength);
+		cudaMemset(m_pPhotons, 0, sizeof(k_pPpmPhoton)* a_BufferLength);
+		m_uPhotonBufferLength = a_BufferLength;
+		m_sSurfaceMap.Resize(linkedListLength);
+		m_sVolumeMap.Resize(linkedListLength);
+		m_sCausticMap.Resize(linkedListLength);
 	}
-#endif
+
+	void StartNewPass()
+	{
+		m_uPhotonNumEmitted = m_uPhotonNumStored = 0;
+		m_sSurfaceMap.StartNewPass();
+		m_sVolumeMap.StartNewPass();
+		m_sCausticMap.StartNewPass();
+		cudaMemset(m_pPhotons, 0, sizeof(k_pPpmPhoton)* m_uPhotonBufferLength);
+	}
+
+	bool PassFinished()
+	{
+		return m_uPhotonNumStored >= m_uPhotonBufferLength;
+	}
+
+	void StartNewRendering(const AABB& surfaceBox, const AABB& volBox, float a_R)
+	{
+		m_sSurfaceMap.StartNewRendering(surfaceBox, a_R);
+		m_sVolumeMap.StartNewRendering(volBox, a_R);
+		m_sCausticMap.StartNewRendering(surfaceBox, a_R);
+	}
 };
+
+typedef k_PhotonMap<k_HashGrid_Reg> k_PhotonMapReg;
 
 enum
 {
@@ -268,18 +299,17 @@ private:
 	unsigned long long m_uPhotonsEmitted;
 	unsigned long long m_uPreviosCount;
 
-	float m_fInitialRadiusScale;
 	const unsigned int m_uGridLength;
 
 	unsigned int m_uBlocksPerLaunch;
 
-	float m_uNewPhotonsPerRun;
 	int m_uModus;
 	bool m_bLongRunning;
 
 	k_AdaptiveEntry* m_pEntries;
 	float r_min, r_max;
 public:
+	bool m_bFinalGather;
 	k_sPpmTracer();
 	virtual ~k_sPpmTracer()
 	{
@@ -297,12 +327,6 @@ private:
 	void doPhotonPass();
 	void doEyePass(e_Image* I);
 	void doStartPass(float r, float rd);
-	void updateBuffer()
-	{
-		unsigned int N = unsigned int(m_uNewPhotonsPerRun * 1000000.0f);
-		if(N != m_sMaps.m_uPhotonBufferLength)
-			m_sMaps.Resize(N);
-	}
 	float getCurrentRadius(int exp)
 	{
 		float f = 1;

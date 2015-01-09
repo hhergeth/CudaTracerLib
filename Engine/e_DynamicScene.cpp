@@ -215,6 +215,8 @@ void e_DynamicScene::DeleteNode(e_StreamReference(e_Node) ref)
 e_BufferReference<e_MIPMap, e_KernelMIPMap> e_DynamicScene::LoadTexture(const char* file, bool a_MipMap)
 {
 	std::string a = GetFileSize(file) != -1 ? std::string(file) : std::string(m_pTexturePath) + std::string(file);
+	if ((int)GetFileSize(a.c_str()) <= 0)
+		return LoadTexture((std::string(m_pTexturePath) + "404.jpg").c_str(), a_MipMap);
 	if(a[a.size() - 1] == '\n')
 		a = a.substr(0, a.size() - 1);
 	bool load;

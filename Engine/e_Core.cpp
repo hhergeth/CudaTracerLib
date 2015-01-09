@@ -50,6 +50,7 @@ cudaError_t CudaMemoryManager::Cuda_malloc_managed(void** v, size_t i, const cha
 		e.malloc_func = callig_func;
 		alloced_entries[*v] = e;
 	}
+	else ThrowCudaErrors(r);
 	return r;
 }
 
@@ -62,5 +63,7 @@ cudaError_t CudaMemoryManager::Cuda_free_managed(void* v, const char* callig_fun
 		e.free_func = callig_func;
 		freed_entries.push_back(e);
 	}
-	return cudaFree(v);
+	cudaError_t r = cudaFree(v);
+	ThrowCudaErrors(r);
+	return r;
 }
