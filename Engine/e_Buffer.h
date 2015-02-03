@@ -104,8 +104,22 @@ public:
 		}
 		else
 		{
-			BAD_EXCEPTION("Cuda data stream malloc failure, %d elements requested, %d available.", a_Count, m_uLength - m_uPos)
+			//BAD_EXCEPTION("Cuda data stream malloc failure, %d elements requested, %d available.", a_Count, m_uLength - m_uPos)
 			//return e_BufferReference<H, D>();
+			unsigned int newLength = m_uPos + a_Count;
+			cudaFree(device);
+			free(deviceMapped);
+			H* newHost = (H*)::malloc(m_uHostBlockSize * newLength);
+			::memcpy(newHost, host, m_uPos * m_uHostBlockSize);
+			free(host);
+			host = newHost;
+			m_uLength = newLength;
+			CUDA_MALLOC(&device, sizeof(D) * newLength);
+			cudaMemset(device, 0, sizeof(D) * newLength);
+			deviceMapped = (D*)::malloc(newLength * sizeof(D));
+			memset(deviceMapped, 0, sizeof(D) * newLength);
+			Invalidate(0, m_uPos);
+			return malloc(a_Count);
 		}
 	}
 	e_BufferReference<H, D> malloc(e_BufferReference<H, D> r, bool copyToNew = true)
@@ -502,8 +516,19 @@ public:
 		}
 		else
 		{
-			BAD_EXCEPTION("Cuda data stream malloc failure, %d elements requested, %d available.", a_Count, m_uLength - m_uPos)
+			//BAD_EXCEPTION("Cuda data stream malloc failure, %d elements requested, %d available.", a_Count, m_uLength - m_uPos)
 			//return e_BufferReference<T, T>();
+			unsigned int newLength = m_uPos + a_Count;
+			cudaFree(device);
+			T* newHost = (T*)::malloc(m_uHostBlockSize * newLength);
+			::memcpy(newHost, host, m_uPos * m_uHostBlockSize);
+			free(host);
+			host = newHost;
+			m_uLength = newLength;
+			CUDA_MALLOC(&device, sizeof(T) * newLength);
+			cudaMemset(device, 0, sizeof(T) * newLength);
+			Invalidate(0, m_uPos);
+			return malloc(a_Count);
 		}
 		Invalidate(r);
 		return r;

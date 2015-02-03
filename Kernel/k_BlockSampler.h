@@ -4,6 +4,29 @@
 #include "..\MathTypes.h"
 #include "..\Engine\e_Image.h"
 
+struct k_BlockSampleImage
+{
+	e_Image img;
+	float2* m_pLumData;
+	unsigned int w;
+
+	k_BlockSampleImage(e_Image& img, float2* lumData)
+		: img(img), m_pLumData(lumData)
+	{
+		unsigned int y;
+		img.getExtent(w, y);
+	}
+
+	CUDA_FUNC_IN void Add(int x, int y, const Spectrum& c)
+	{
+		img.AddSample(x, y, c);
+		float l = c.getLuminance();
+		unsigned int i = y * w + x;
+		Platform::Add(&m_pLumData[i].x, l);
+		Platform::Add(&m_pLumData[i].y, l * l);
+	}
+};
+
 class k_BlockSampler
 {
 public:

@@ -2,26 +2,7 @@
 #include "..\Kernel\k_TraceHelper.h"
 #include "..\Kernel\k_TraceAlgorithms.h"
 
-CUDA_FUNC_IN float k(float t)
-{
-	//float t2 = t * t;
-	//return 1.0f + t2 * t * (-6.0f * t2 + 15.0f * t - 10.0f);
-	return clamp01(1.0f + t * t * t * (-6.0f * t * t + 15.0f * t - 10.0f));
-}
-
-CUDA_FUNC_IN float k_tr(float r , float t)
-{
-	//if (t > r)
-	//	printf("t : %f, r : %f", t, r);
-	return k(t / r) / (PI * r * r);
-}
-
-CUDA_FUNC_IN float k_tr(float r, const float3& t)
-{
-	return k_tr(r, length(t));
-}
-
-template<bool VOL> CUDA_FUNC_IN Spectrum L_Volume(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const Spectrum& sigt, const Spectrum& sigs, Spectrum& Tr, const k_PhotonMapCollection& photonMap)
+template<bool VOL> CUDA_FUNC_IN Spectrum L_Volume(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, unsigned int a_NodeIndex, const Spectrum& sigt, const Spectrum& sigs, Spectrum& Tr, const k_PhotonMapCollection<true>& photonMap)
 {
 	const k_PhotonMapReg& map = photonMap.m_sVolumeMap;
 	Spectrum Tau = Spectrum(0.0f);
@@ -51,23 +32,23 @@ template<bool VOL> CUDA_FUNC_IN Spectrum L_Volume(float a_r, CudaRNG& rng, const
 						Spectrum l = e.getL();
 						if(DistanceSquared(P, x) < r2)
 						{
-							float p = VOL ? g_SceneData.m_sVolume.p(x, r.direction, wi, rng) : Warp::squareToUniformSpherePdf();
+							float p = VOL ? g_SceneData.m_sVolume.p(x, r.direction, wi, a_NodeIndex, rng) : Warp::squareToUniformSpherePdf();
 							L += p * l * Vs;
 						}
 						i = e.getNext();
 					}
 				}
-		Spectrum tauDelta = VOL ? g_SceneData.m_sVolume.tau(r, b - d, b) : sigt * d;
+		Spectrum tauDelta = VOL ? g_SceneData.m_sVolume.tau(r, b - d, b, a_NodeIndex) : sigt * d;
 		Tau += tauDelta;
-		Spectrum o_s = VOL ? g_SceneData.m_sVolume.sigma_s(x, -r.direction) : sigs;
-		L_n = L * d + L_n * (-tauDelta).exp() + (VOL ? g_SceneData.m_sVolume.Lve(x, -1.0f * r.direction) * d : Spectrum(0.0f));
+		Spectrum o_s = VOL ? g_SceneData.m_sVolume.sigma_s(x, -r.direction, a_NodeIndex) : sigs;
+		L_n = L * d + L_n * (-tauDelta).exp() + (VOL ? g_SceneData.m_sVolume.Lve(x, -1.0f * r.direction, a_NodeIndex) * d : Spectrum(0.0f));
 		b -= d;
 	}
 	Tr = (-Tau).exp();
 	return L_n;
 }
 
-CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED, const e_KernelMaterial* mat, const k_PhotonMapCollection& photonMap, const k_PhotonMapReg& map)
+CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED, const e_KernelMaterial* mat, const k_PhotonMapCollection<true>& photonMap, const k_PhotonMapReg& map)
 {
 	Spectrum Lp = Spectrum(0.0f);
 	const float r2 = a_rSurfaceUNUSED * a_rSurfaceUNUSED;
@@ -89,10 +70,12 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED
 					float3 n = e.getNormal(), wi = e.getWi(), P = e.getPos();
 					Spectrum l = e.getL();
 					float dist2 = DistanceSquared(P, bRec.dg.P);
-					if (dist2 < r2 && dot(n, bRec.dg.sys.n) > 0.8f)
+					if (dist2 < r2 )//&& dot(n, bRec.dg.sys.n) > 0.8f
 					{
+						bRec.wo = bRec.dg.toLocal(wi);
+						Spectrum bsdfFactor = mat->bsdf.f(bRec);
 						float ke = k_tr(a_rSurfaceUNUSED, sqrtf(dist2));
-						Lp += PI * ke * l;
+						Lp += PI * ke * l * bsdfFactor / Frame::cosTheta(bRec.wo);
 					}
 					i = e.getNext();
 				}
@@ -115,11 +98,11 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED
 			Lp += PI * ke * l / dA;
 		}
 	}*/
-	return Lp / float(photonMap.m_uPhotonNumEmitted) * mat->bsdf.getDiffuseReflectance(bRec) * INV_PI;
+	return Lp / float(photonMap.m_uPhotonNumEmitted);
 }
 
 CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED, const e_KernelMaterial* mat, k_AdaptiveStruct& A, int idx,
-	const Spectrum& importance, int a_PassIndex, float scale0, float scale1, const k_PhotonMapCollection& photonMap)
+	const Spectrum& importance, int a_PassIndex, float scale0, float scale1, const k_PhotonMapCollection<true>& photonMap)
 {
 	//Adaptive Progressive Photon Mapping Implementation
 	k_AdaptiveEntry ent = A.E[idx];
@@ -207,7 +190,7 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED
 	return L_Surface(bRec, ent.r, mat, photonMap, photonMap.m_sSurfaceMap);
 }
 
-template<bool DIRECT> CUDA_FUNC_IN Spectrum L_FinalGathering(TraceResult& r2, BSDFSamplingRecord& bRec, CudaRNG& rng, float a_rSurfaceUNUSED, const k_PhotonMapCollection& photonMap)
+template<bool DIRECT> CUDA_FUNC_IN Spectrum L_FinalGathering(TraceResult& r2, BSDFSamplingRecord& bRec, CudaRNG& rng, float a_rSurfaceUNUSED, const k_PhotonMapCollection<true>& photonMap)
 {
 	Spectrum LCaustic = L_Surface(bRec, a_rSurfaceUNUSED, &r2.getMat(), photonMap, photonMap.m_sCausticMap);
 	Spectrum L(0.0f);
@@ -231,18 +214,18 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum L_FinalGathering(TraceResult& r2, BS
 	return L / float(N) + LCaustic;
 }
 
-template<bool DIRECT, bool FINAL_GATHER> CUDA_FUNC_IN void k_EyePassF(int x, int y, int w, int h, float a_PassIndex, float a_rSurfaceUNUSED, float a_rVolume, k_AdaptiveStruct A, float scale0, float scale1, e_Image g_Image, const k_PhotonMapCollection& photonMap)
+template<bool DIRECT, bool FINAL_GATHER> CUDA_FUNC_IN void k_EyePassF(int x, int y, int w, int h, float a_PassIndex, float a_rSurfaceUNUSED, float a_rVolume, k_AdaptiveStruct A, float scale0, float scale1, e_Image g_Image, const k_PhotonMapCollection<true>& photonMap)
 {
 	CudaRNG rng = g_RNGData();
 	DifferentialGeometry dg;
 	BSDFSamplingRecord bRec(dg);
 	float2 screenPos = make_float2(x, y) + rng.randomFloat2();
 	Ray r, rX, rY;
-	Spectrum importance = g_SceneData.sampleSensorRay(r, rX, rY, screenPos, rng.randomFloat2());
+	Spectrum throughput = g_SceneData.sampleSensorRay(r, rX, rY, screenPos, rng.randomFloat2());
 	TraceResult r2;
 	r2.Init();
 	int depth = -1;
-	Spectrum L(0.0f), throughput(1.0f);
+	Spectrum L(0.0f);
 	while(k_TraceRay(r.direction, r.origin, &r2) && depth++ < 5)
 	{
 		r2.getBsdfSample(r, rng, &bRec);
@@ -251,10 +234,10 @@ template<bool DIRECT, bool FINAL_GATHER> CUDA_FUNC_IN void k_EyePassF(int x, int
 		if(g_SceneData.m_sVolume.HasVolumes())
 		{
 			float tmin, tmax;
-			if (g_SceneData.m_sVolume.IntersectP(r, 0, r2.m_fDist, &tmin, &tmax))
+			if (g_SceneData.m_sVolume.IntersectP(r, 0, r2.m_fDist, -1, &tmin, &tmax))
 			{
 				Spectrum Tr;
-				L += throughput * L_Volume<true>(a_rVolume, rng, r, tmin, tmax, Spectrum(0.0f), Spectrum(0.0f), Tr, photonMap);
+				L += throughput * L_Volume<true>(a_rVolume, rng, r, tmin, tmax, -1, Spectrum(0.0f), Spectrum(0.0f), Tr, photonMap);
 				throughput = throughput * Tr;
 			}
 		}
@@ -262,51 +245,55 @@ template<bool DIRECT, bool FINAL_GATHER> CUDA_FUNC_IN void k_EyePassF(int x, int
 			L += throughput * UniformSampleAllLights(bRec, r2.getMat(), 1);
 		L += throughput * r2.Le(bRec.dg.P, bRec.dg.sys, -r.direction);//either it's the first bounce -> account or it's a specular reflection -> ...
 		const e_KernelBSSRDF* bssrdf;
-		if(r2.getMat().GetBSSRDF(bRec.dg, &bssrdf))
+		if (r2.getMat().GetBSSRDF(bRec.dg, &bssrdf))
 		{
 			Spectrum t_f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
 			bRec.wo.z *= -1.0f;
 			Ray rTrans = Ray(bRec.dg.P, bRec.getOutgoing());
 			TraceResult r3 = k_TraceRay(rTrans);
 			Spectrum Tr;
-			L += throughput * L_Volume<false>(a_rVolume, rng, rTrans, 0, r3.m_fDist, bssrdf->sigp_s + bssrdf->sig_a, bssrdf->sigp_s, Tr, photonMap);
-			break;
+			/*if (r2.getMat().bsdf.m_bReflectDirAtSurface)
+				L += throughput * L_Volume<true>(a_rVolume, rng, rTrans, 0, r3.m_fDist, r2.getNodeIndex(), Spectrum(0.0f), Spectrum(0.0f), Tr, photonMap);
+			else */L += throughput * L_Volume<false>(a_rVolume, rng, rTrans, 0, r3.m_fDist, r2.getNodeIndex(), bssrdf->sigp_s + bssrdf->sig_a, bssrdf->sigp_s, Tr, photonMap);
+			//break;
 		}
-		bool hasDiffuse = r2.getMat().bsdf.hasComponent(EDiffuse), hasSpecGlossy = r2.getMat().bsdf.hasComponent(EDelta | EGlossy);
-		if(hasDiffuse)
+		bool hasSmooth = r2.getMat().bsdf.hasComponent(ESmooth),
+			 hasSpecGlossy = r2.getMat().bsdf.hasComponent(EDelta | EGlossy),
+			 hasGlossy = r2.getMat().bsdf.hasComponent(EGlossy);
+		if (hasSmooth)
 		{
 			if (FINAL_GATHER)
-				L += throughput * L_FinalGathering<DIRECT>(r2, bRec, rng, a_rSurfaceUNUSED, photonMap);
-			else L += throughput * L_Surface(bRec, a_rSurfaceUNUSED, &r2.getMat(), photonMap, photonMap.m_sSurfaceMap);
+				L += throughput * (hasGlossy ? 0.5f : 1) * L_FinalGathering<DIRECT>(r2, bRec, rng, a_rSurfaceUNUSED, photonMap);
+			else L += throughput * (hasGlossy ? 0.5f : 1) * L_Surface(bRec, a_rSurfaceUNUSED, &r2.getMat(), photonMap, photonMap.m_sSurfaceMap);
 			//L += throughput * L_Surface(bRec, a_rSurfaceUNUSED, &r2.getMat(), A, y * w + x, throughput, a_PassIndex, scale0, scale1, photonMap);
 			if(!hasSpecGlossy)
 				break;
 		}
-		if(hasSpecGlossy)
+		if (hasSpecGlossy)
 		{
 			bRec.sampledType = 0;
 			bRec.typeMask = EDelta | EGlossy;
 			Spectrum t_f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
 			if(!bRec.sampledType)
 				break;
-			throughput = throughput * t_f;
+			throughput = throughput * t_f * (hasGlossy ? 0.5f : 1);
 			r = Ray(bRec.dg.P, bRec.getOutgoing());
 			r2.Init();
 		}
-		//else break;
+		else break;
 	}
 	if(!r2.hasHit())
 	{
 		if(g_SceneData.m_sVolume.HasVolumes())
 		{
 			float tmin, tmax;
-			g_SceneData.m_sVolume.IntersectP(r, 0, r2.m_fDist, &tmin, &tmax);
+			g_SceneData.m_sVolume.IntersectP(r, 0, r2.m_fDist, -1, &tmin, &tmax);
 			Spectrum Tr;
-			L += throughput * L_Volume<true>(a_rVolume, rng, r, tmin, tmax, Spectrum(0.0f), Spectrum(0.0f), Tr, photonMap);
+			L += throughput * L_Volume<true>(a_rVolume, rng, r, tmin, tmax, -1, Spectrum(0.0f), Spectrum(0.0f), Tr, photonMap);
 		}
 		L += throughput * g_SceneData.EvalEnvironment(r);
 	}
-	g_Image.AddSample(screenPos.x, screenPos.y, importance * L);
+	g_Image.AddSample(screenPos.x, screenPos.y, L);
 	//Spectrum qs;
 	//float t = A.E[y * w + x].r / a_rSurfaceUNUSED;
 	//t = (A.E[y * w + x].r - A.r_min) / (A.r_max - A.r_min);
@@ -322,7 +309,7 @@ template<bool DIRECT, bool FINAL_GATHER> CUDA_FUNC_IN void k_EyePassF(int x, int
 	g_RNGData(rng);
 }
 
-template<bool DIRECT, bool FINAL_GATHER> __global__ void k_EyePass(int2 off, int w, int h, float a_PassIndex, float a_rSurfaceUNUSED, float a_rVolume, k_AdaptiveStruct A, float scale0, float scale1, e_Image g_Image, k_PhotonMapCollection photonMap)
+template<bool DIRECT, bool FINAL_GATHER> __global__ void k_EyePass(int2 off, int w, int h, float a_PassIndex, float a_rSurfaceUNUSED, float a_rVolume, k_AdaptiveStruct A, float scale0, float scale1, e_Image g_Image, k_PhotonMapCollection<true> photonMap)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x, y = blockIdx.y * blockDim.y + threadIdx.y;
 	x += off.x;
@@ -334,6 +321,8 @@ template<bool DIRECT, bool FINAL_GATHER> __global__ void k_EyePass(int2 off, int
 #define TN(r) (r * powf(float(m_uPassesDone), -1.0f/6.0f))
 void k_sPpmTracer::doEyePass(e_Image* I)
 {
+	float radius2 = powf(powf(m_fInitialRadius, float(2)) / std::pow(float(m_uPassesDone), 0.5f * (1 - ALPHA)), 1.0f / 2.0f);
+	float radius3 = powf(powf(m_fInitialRadius, float(3)) / std::pow(float(m_uPassesDone), 0.5f * (1 - ALPHA)), 1.0f / 3.0f);
 	//I->Clear();
 	k_INITIALIZE(m_pScene, g_sRngs);
 	float s1 = float(m_uPassesDone - 1) / float(m_uPassesDone), s2 = 1.0f / float(m_uPassesDone);
@@ -349,14 +338,14 @@ void k_sPpmTracer::doEyePass(e_Image* I)
 		if (m_bDirect)
 		{
 			if (m_bFinalGather)
-				k_EyePass<true, true> << <bls, dim3(p, p, 1) >> >(off, w, h, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3), A, s1, s2, *I, m_sMaps);
-			else k_EyePass<true, false> << <bls, dim3(p, p, 1) >> >(off, w, h, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3), A, s1, s2, *I, m_sMaps);
+				k_EyePass<true, true> << <bls, dim3(p, p, 1) >> >(off, w, h, m_uPassesDone, radius2, radius3, A, s1, s2, *I, m_sMaps);
+			else k_EyePass<true, false> << <bls, dim3(p, p, 1) >> >(off, w, h, m_uPassesDone, radius2, radius3, A, s1, s2, *I, m_sMaps);
 		}
 		else
 		{
 			if (m_bFinalGather)
-				k_EyePass<false, true> << <bls, dim3(p, p, 1) >> >(off, w, h, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3), A, s1, s2, *I, m_sMaps);
-			else k_EyePass<false, false> << <bls, dim3(p, p, 1) >> >(off, w, h, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3), A, s1, s2, *I, m_sMaps);
+				k_EyePass<false, true> << <bls, dim3(p, p, 1) >> >(off, w, h, m_uPassesDone, radius2, radius3, A, s1, s2, *I, m_sMaps);
+			else k_EyePass<false, false> << <bls, dim3(p, p, 1) >> >(off, w, h, m_uPassesDone, radius2, radius3, A, s1, s2, *I, m_sMaps);
 		}
 	}
 	//Debug(I, make_int2(269, 158));
@@ -374,11 +363,11 @@ void k_sPpmTracer::Debug(e_Image* I, int2 pixel)
 	k_AdaptiveStruct A(TN(r_min), TN(r_max), hostEntries);
 	float s1 = float(m_uPassesDone - 1) / float(m_uPassesDone), s2 = 1.0f / float(m_uPassesDone);
 	k_INITIALIZE(m_pScene, g_sRngs);
-	k_PhotonMapCollection map = m_sMaps;
+	k_PhotonMapCollection<true> map = m_sMaps;
 	k_PhotonMapReg& map2 = map.m_sSurfaceMap;
 	static k_pPpmPhoton* hostPhotons = 0;
 	static unsigned int* hostGrid = 0;
-	if (hostPhotons == 0)
+	/*if (hostPhotons == 0)
 	{
 		hostPhotons = new k_pPpmPhoton[map.m_uPhotonBufferLength];
 		hostGrid = new unsigned int[map2.m_uGridLength];
@@ -398,7 +387,7 @@ void k_sPpmTracer::Debug(e_Image* I, int2 pixel)
 		if (m_bFinalGather)
 			k_EyePassF<false, true>(pixel.x, pixel.y, w, h, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3), A, s1, s2, *I, map);
 		else k_EyePassF<false, false>(pixel.x, pixel.y, w, h, m_uPassesDone, getCurrentRadius(2), getCurrentRadius(3), A, s1, s2, *I, map);
-	}
+	}*/
 }
 
 __global__ void k_StartPass(int w, int h, float r, float rd, k_AdaptiveEntry* E)

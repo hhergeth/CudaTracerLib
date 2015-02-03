@@ -11,9 +11,11 @@ private:
 	traversalRay* m_pRayBuffer[N];
 	traversalResult* m_pResultBuffer[N];
 	T* m_pPayloadBuffer;
-	unsigned int* m_cInsertCounter;
+	unsigned int m_cInsertCounters[N];
 	unsigned int Length;
 public:
+	CUDA_FUNC_IN k_RayBuffer(){};
+
 	k_RayBuffer(unsigned int Length)
 		: Length(Length)
 	{
@@ -23,7 +25,6 @@ public:
 			CUDA_MALLOC(&m_pResultBuffer[i], sizeof(traversalResult) * Length);
 		}
 		CUDA_MALLOC(&m_pPayloadBuffer, sizeof(T) * Length);
-		CUDA_MALLOC(&m_cInsertCounter, sizeof(unsigned int));
 	}
 	void Free()
 	{
@@ -33,81 +34,76 @@ public:
 			CUDA_FREE(m_pResultBuffer[i]);
 		}
 		CUDA_FREE(m_pPayloadBuffer);
-		CUDA_FREE(m_cInsertCounter);
 	}
 	template<bool ANY_HIT> unsigned int IntersectBuffers(bool skipOuterTree = false)
 	{
-		unsigned int n = getCreatedRayCount();
-		if(n > Length)
+		unsigned int S = 0;
+		for (int i = 0; i < N; i++)
 		{
-			//I'd worry cause you ve written to invalid memory
-			throw 1;
+			S += m_cInsertCounters[i];
+			__internal__IntersectBuffers(m_cInsertCounters[i], m_pRayBuffer[i], m_pResultBuffer[i], skipOuterTree, ANY_HIT);
 		}
-		for(int i = 0; i < N; i++)
-			__internal__IntersectBuffers(n, m_pRayBuffer[i], m_pResultBuffer[i], skipOuterTree, ANY_HIT);
-		return N * n;
+		return S;
 	}
-	unsigned int getCreatedRayCount()
+	void Clear()
 	{
-		unsigned int r;
-		cudaMemcpy(&r, m_cInsertCounter, 4, cudaMemcpyDeviceToHost);
-		return r;
+		for (int i = 0; i < N; i++)
+		{
+			cudaMemset(m_pRayBuffer[i], 0, sizeof(traversalRay) * Length);
+			cudaMemset(m_pResultBuffer[i], 0, sizeof(traversalResult) * Length);
+		}
+		cudaMemset(m_pPayloadBuffer, 0, sizeof(T) * Length);
+		for (int i = 0; i < N; i++)
+			m_cInsertCounters[i] = 0;
 	}
-	void setGeneratedRayCount(unsigned int N)
+	void setNumRays(unsigned int num, unsigned int bufIdx = -1)
 	{
-		cudaMemcpy(m_cInsertCounter, &N, 4, cudaMemcpyHostToDevice);
+		if (bufIdx == -1)
+			for (int i = 0; i < N; i++)
+				m_cInsertCounters[i] = num;
+		else m_cInsertCounters[bufIdx] = num;
 	}
-	CUDA_FUNC_IN CUDA_HOST unsigned int insertRay()
+	unsigned int getNumRays(unsigned int bufIdx = -1)
 	{
-		unsigned int i = Platform::Increment(m_cInsertCounter);
+		if (bufIdx == -1)
+		{
+			unsigned int s = 0;
+			for (int i = 0; i < N; i++)
+				s += m_cInsertCounters[i];
+			return s;
+		}
+		else return m_cInsertCounters[bufIdx];
+	}
+	CUDA_FUNC_IN unsigned int insertRay(unsigned int bufIdx)
+	{
+		unsigned int i = Platform::Increment(m_cInsertCounters + bufIdx);
 		return i;
 	}
-	CUDA_FUNC_IN CUDA_HOST traversalRay& operator()(unsigned int i, unsigned int j)
+	CUDA_FUNC_IN traversalRay& operator()(unsigned int i, unsigned int j)
 	{
 		return m_pRayBuffer[j][i];
 	}
-	CUDA_FUNC_IN CUDA_HOST traversalResult& res(unsigned int i, unsigned int j)
+	CUDA_FUNC_IN traversalResult& res(unsigned int i, unsigned int j)
 	{
 		return m_pResultBuffer[j][i];
 	}
-	CUDA_FUNC_IN CUDA_HOST T& operator()(unsigned int i)
+	CUDA_FUNC_IN T& operator()(unsigned int i)
 	{
 		return m_pPayloadBuffer[i];
 	}
 };
 
-template<typename T, int N, int M> struct k_RayBufferManager
+struct rayData
 {
-	k_RayBuffer<T, N>* buffers[M];
-	unsigned int idx;
-
-	k_RayBufferManager(unsigned int Length)
-		: idx(0)
-	{
-		for(int i = 0; i < M; i++)
-			buffers[i] = new k_RayBuffer<T, N>(Length);
-	}
-
-	void Free()
-	{
-		for(int i = 0; i < M; i++)
-		{
-			buffers[i]->Free();
-			delete buffers[i];
-		}
-	}
-
-	k_RayBuffer<T, N>* current()
-	{
-		return buffers[idx];
-	}
-
-	k_RayBuffer<T, N>* next()
-	{
-		idx = (idx + 1) % M;
-		return buffers[idx];
-	}
+	Spectrum throughput;
+	short x, y;
+	Spectrum L;
+	Spectrum directF;
+	float dDist;
+	unsigned int dIdx;
 };
+
+typedef k_RayBuffer<rayData, 2> k_PTDBuffer;
 
 /*
 class k_RayIntersectKernel
@@ -246,19 +242,7 @@ public:
 class k_FastTracer : public k_ProgressiveTracer
 {
 public:
-	struct rayData
-	{
-		//Spectrum D;
-		//float dDist;
-		Spectrum L;
-		Spectrum throughput;
-		//unsigned int dIndex;
-		short x,y;
-	};
-	//traversalRay* hostRays;
-	//traversalResult* hostResults;
 	k_FastTracer()
-		//: intersector(0)//, hostRays(0), hostResults(0)
 		: bufA(0), bufB(0)
 	{
 		
@@ -266,21 +250,7 @@ public:
 	virtual void Resize(unsigned int w, unsigned int h)
 	{
 		k_ProgressiveTracer::Resize(w, h);
-		//if(hostRays)
-		//	CUDA_FREEHost(hostRays);
-		//if(hostResults)
-		//	CUDA_FREEHost(hostResults);
-		//CUDA_MALLOCHost(&hostRays, sizeof(traversalRay) * w * h);
-		//CUDA_MALLOCHost(&hostResults, sizeof(traversalResult) * w * h);
-		//if(intersector)
-		//	intersector->Free();
 		ThrowCudaErrors();
-		/*if(intersector)
-		{
-			intersector->Free();
-			delete intersector;
-		}
-		intersector = new k_RayBufferManager<rayData, 2, 2>(w * h);*/
 		if(bufA)
 		{
 			bufA->Free();
@@ -288,16 +258,15 @@ public:
 			delete bufA;
 			delete bufB;
 		}
-		bufA = new k_RayBuffer<rayData, 1>(w * h);
-		bufB = new k_RayBuffer<rayData, 1>(w * h);
+		bufA = new k_PTDBuffer(w * h);
+		bufB = new k_PTDBuffer(w * h);
 		ThrowCudaErrors();
 	}
 	virtual void Debug(e_Image* I, int2 pixel);
 protected:
 	virtual void DoRender(e_Image* I);
 private:
-	//k_RayBufferManager<rayData, 2, 2>* intersector;
-	k_RayBuffer<rayData, 1>* bufA, *bufB;
+	k_PTDBuffer* bufA, *bufB;
 	void doDirect(e_Image* I);
 	void doPath(e_Image* I);
 };

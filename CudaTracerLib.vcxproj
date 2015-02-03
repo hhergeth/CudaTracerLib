@@ -190,12 +190,16 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="Integrators\k_BDPT.h" />
     <ClInclude Include="Integrators\k_FastTracer.h" />
     <ClInclude Include="Integrators\k_PathTracer.h" />
+    <ClInclude Include="Integrators\k_PhotonMapHelper.h" />
     <ClInclude Include="Integrators\k_PhotonTracer.h" />
     <ClInclude Include="Integrators\k_PmmHelper.h" />
     <ClInclude Include="Integrators\k_PmmTracer.h" />
     <ClInclude Include="Integrators\k_PrimTracer.h" />
     <ClInclude Include="Integrators\k_sPpmTracer.h" />
+    <ClInclude Include="Integrators\k_VCM.h" />
+    <ClInclude Include="Integrators\k_VCMHelper.h" />
     <ClInclude Include="Kernel\k_BlockSampler.h" />
+    <ClInclude Include="Kernel\k_BSDFVisualizer.h" />
     <ClInclude Include="Kernel\k_TraceAlgorithms.h" />
     <ClInclude Include="Kernel\k_TraceHelper.h" />
     <ClInclude Include="Kernel\k_Tracer.h" />
@@ -219,7 +223,6 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
   <ItemGroup>
     <CudaCompile Include="Base\CudaRandom.cu" />
     <CudaCompile Include="Base\Platform.cu" />
-    <CudaCompile Include="Engine\e_aaaa.cu" />
     <CudaCompile Include="Engine\e_AnimatedMesh.cu" />
     <CudaCompile Include="Engine\e_BSDF_Complex.cu" />
     <CudaCompile Include="Engine\e_BSDF_Simple.cu" />
@@ -246,7 +249,9 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <CudaCompile Include="Integrators\k_PrimTracer.cu" />
     <CudaCompile Include="Integrators\k_sPpmTracer_EyePass.cu" />
     <CudaCompile Include="Integrators\k_sPpmTracer_PhotonPass.cu" />
+    <CudaCompile Include="Integrators\k_VCM.cu" />
     <CudaCompile Include="Kernel\k_BlockSampler.cu" />
+    <CudaCompile Include="Kernel\k_BSDFVisualizer.cu" />
     <CudaCompile Include="Kernel\k_TraceAlgorithms.cu" />
     <CudaCompile Include="Kernel\k_TraceHelper.cu" />
     <CudaCompile Include="Kernel\k_Tracer.cu" />

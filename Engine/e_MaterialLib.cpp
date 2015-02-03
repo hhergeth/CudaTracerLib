@@ -67,3 +67,13 @@ MaterialEntry* e_MaterialLibrary::getMat(const char* name)
 	}
 	return 0;
 }
+
+size_t e_MaterialLibrary::getNumMats()
+{
+	return sizeof(materialData) / sizeof(materialData[0]);
+}
+
+const char* e_MaterialLibrary::getMatName(size_t idx)
+{
+	return materialData[idx].name;
+}

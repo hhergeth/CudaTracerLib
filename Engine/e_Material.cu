@@ -26,7 +26,6 @@ CUDA_FUNC_IN float2 parallaxOcclusion(const float2& texCoord, e_KernelMIPMap* te
 	float CurrHeight = 0.0f;
 	float StepSize = 1.0 / (float)nNumSteps;
 	float PrevHeight = 1.0;
-	float NextHeight = 0.0;
 	int    StepIndex = 0;
 	float2 TexOffsetPerStep = StepSize * vParallaxOffsetTS;
 	float2 TexCurrentOffset = texCoord;
@@ -143,7 +142,8 @@ float e_KernelMaterial::SampleAlphaMap(const DifferentialGeometry& uv) const
 
 bool e_KernelMaterial::GetBSSRDF(const DifferentialGeometry& uv, const e_KernelBSSRDF** res) const
 {
-	*res = &bssrdf;
+	if (usedBssrdf)
+		*res = &bssrdf;
 	return usedBssrdf;
 }
 

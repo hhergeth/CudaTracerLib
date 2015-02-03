@@ -128,6 +128,33 @@ struct stringHelper
 	}
 };
 
+unsigned int LongSwap(unsigned int i)
+{
+	unsigned char b1, b2, b3, b4;
+
+	b1 = i & 255;
+	b2 = (i >> 8) & 255;
+	b3 = (i >> 16) & 255;
+	b4 = (i >> 24) & 255;
+
+	return ((unsigned int)b1 << 24) + ((unsigned int)b2 << 16) + ((unsigned int)b3 << 8) + b4;
+}
+
+float LongSwap(const float inFloat)
+{
+	float retVal;
+	char *floatToConvert = (char*)& inFloat;
+	char *returnFloat = (char*)& retVal;
+
+	// swap the bytes into a temporary buffer
+	returnFloat[0] = floatToConvert[3];
+	returnFloat[1] = floatToConvert[2];
+	returnFloat[2] = floatToConvert[1];
+	returnFloat[3] = floatToConvert[0];
+
+	return retVal;
+}
+
 void compileply(IInStream& istream, OutputStream& a_Out)
 {
 	format_type format;
@@ -281,22 +308,26 @@ void compileply(IInStream& istream, OutputStream& a_Out)
 		unsigned int file_pos = 0;
 
 		memcpy(Vertices, FILE_BUF + file_pos, sizeof(float3) * vertexCount);
+		float* fData = (float*)Vertices;
+		if (format == binary_big_endian_format)
+			for (int i = 0; i < vertexCount * 3; i++)
+				fData[i] = LongSwap(fData[i]);
+
 		file_pos += sizeof(float3) * vertexCount;
 		for(int f = 0; f < faceCount; f++)
 		{
 			unsigned int* dat = (unsigned int*)(FILE_BUF + file_pos + 1);
 			if(FILE_BUF[file_pos] == 3)
 			{
-				Indices[indexCount++] = dat[0];
-				Indices[indexCount++] = dat[1];
-				Indices[indexCount++] = dat[2];
+				for (int idx = 0; idx < 3; idx++)
+					Indices[indexCount++] = format == binary_little_endian_format ? dat[idx] : LongSwap(dat[idx]);
 			}
 			else if(FILE_BUF[file_pos] == 4)
 			{
 				for(unsigned int i = 2; i < 5; i++)
-					Indices[indexCount++] = dat[i % 4];
+					Indices[indexCount++] = format == binary_little_endian_format ? dat[i % 4] : LongSwap(dat[i % 4]);
 				for(unsigned int i = 0; i < 3; i++)
-					Indices[indexCount++] = dat[i];
+					Indices[indexCount++] = format == binary_little_endian_format ? dat[i] : LongSwap(dat[i]);
 			}
 			else throw 1;
 			file_pos += 4 * FILE_BUF[file_pos] + 1;

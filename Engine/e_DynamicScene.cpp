@@ -78,7 +78,6 @@ e_DynamicScene::e_DynamicScene(e_Sensor* C, e_SceneInitData a_Data, const char* 
 	unsigned int a = this->getCudaBufferSize() / (1024 * 1024);
 	//if(a > 900 * 1024 * 1024)
 	//	throw 1;
-	e_RoughTransmittanceManager::StaticInitialize(std::string(dataPath));
 }
 
 void e_DynamicScene::Free()

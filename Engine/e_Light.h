@@ -316,9 +316,8 @@ struct e_InfiniteLight : public e_LightBase
 	Spectrum m_scale;
 	float4x4 m_worldTransform, m_worldTransformInverse;
 	
-	e_InfiniteLight()
-		: e_LightBase(EOnSurface | EEnvironmentEmitter)
-	{}
+	CUDA_FUNC_IN e_InfiniteLight() {}
+
 	CUDA_HOST e_InfiniteLight(e_Stream<char>* a_Buffer, e_BufferReference<e_MIPMap, e_KernelMIPMap>& mip, const Spectrum& scale, const AABB& scenBox);
 
 	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const float2 &spatialSample, const float2 &directionalSample) const;

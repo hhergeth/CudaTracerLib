@@ -84,7 +84,9 @@ public:
 	{
 		return getPixel(y * xResolution + x)->toSpectrum(splat);
 	}
+	static void ComputeDiff(const e_Image& A, const e_Image& B, e_Image& dest, float scale);
 private:
+	float lastSplatScale;
 	unsigned int NumFrame;
 	void InternalUpdateDisplay(float splat);
 	bool m_bDoUpdate;

@@ -47,4 +47,6 @@ public:
 			return m->eta;
 		return 0.0f;
 	}
+	static size_t getNumMats();
+	static const char* getMatName(size_t idx);
 };

@@ -2,25 +2,26 @@
 #include "..\Kernel\k_TraceHelper.h"
 #include "..\Kernel\k_TraceAlgorithms.h"
 
-__global__ void pathCreateKernel(unsigned int w, unsigned int h, k_RayBuffer<k_FastTracer::rayData, 1> g_Intersector)
+__global__ void pathCreateKernel(unsigned int w, unsigned int h, k_PTDBuffer g_Intersector)
 {
 	int idx = threadId;
 	if(idx >= w * h)
 		return;
 	int x = idx % w, y = idx / w;
 	Ray r;
-	g_SceneData.sampleSensorRay(r, make_float2(x,y), make_float2(0,0));
+	Spectrum W = g_SceneData.sampleSensorRay(r, make_float2(x,y), make_float2(0,0));
 	traversalRay& ray = g_Intersector(idx, 0);
 	ray.a = make_float4(r.origin, 0.0f);
 	ray.b = make_float4(r.direction, FLT_MAX);
-	k_FastTracer::rayData& dat = g_Intersector(idx);
+	rayData& dat = g_Intersector(idx);
 	dat.x = x;
 	dat.y = y;
-	dat.throughput = Spectrum(1.0f);
+	dat.throughput = W;
 	dat.L = Spectrum(0.0f);
+	dat.dIdx = -1;
 }
 
-__global__ void doDirectKernel(unsigned int w, unsigned int h, k_RayBuffer<k_FastTracer::rayData, 1> g_Intersector, e_Image I, float SCALE)
+__global__ void doDirectKernel(unsigned int w, unsigned int h, k_PTDBuffer g_Intersector, e_Image I, float SCALE)
 {/*
 	CudaRNG rng = g_RNGData();
 	int rayidx;
@@ -45,7 +46,7 @@ __global__ void doDirectKernel(unsigned int w, unsigned int h, k_RayBuffer<k_Fas
                 break;
 		}
 
-		k_FastTracer::rayData r = a_RayBuffer[rayidx];
+		rayData r = a_RayBuffer[rayidx];
 		TraceResult r2 = a_ResBuffer[rayidx];
 		if(r2.hasHit())
 		{
@@ -94,58 +95,99 @@ __global__ void doDirectKernel(unsigned int w, unsigned int h, k_RayBuffer<k_Fas
 	I.SetSample(idx % w, idx / w, *(RGBCOL*)&col);
 }
 
-#define MAX_PASS 5
-__global__ void pathIterateKernel(unsigned int N, e_Image I, int pass, k_RayBuffer<k_FastTracer::rayData, 1> g_Intersector, k_RayBuffer<k_FastTracer::rayData, 1> g_Intersector2)//template
+__device__ CUDA_INLINE float2 stratifiedSample(const float2& f, int pass)
 {
-    unsigned int idx = threadId;
-	if(idx >= N)
-		return;
-		CudaRNG rng = g_RNGData();
-	traversalResult& res = g_Intersector.res(idx, 0);
-	traversalRay& ray = g_Intersector(idx, 0);
-	k_FastTracer::rayData dat = g_Intersector(idx);
-	if(res.dist)
+	return f;
+	int i = pass % 64;
+	int x = i % 8, y = i / 8;
+	return make_float2(x, y) / 8.0f + f / 8.0f;
+}
+
+#define MAX_PASS 5
+CUDA_DEVICE k_PTDBuffer g_Intersector;
+CUDA_DEVICE k_PTDBuffer g_Intersector2;
+CUDA_DEVICE int g_NextRayCounterFT;
+__global__ void pathIterateKernel(unsigned int N, e_Image I, int pass, int iterationIdx)//template
+{
+	CudaRNG rng = g_RNGData();
+	int rayidx;
+	__shared__ volatile int nextRayArray[MaxBlockHeight];
+	do
 	{
-		Ray r(!ray.a, !ray.b);
-		TraceResult r2;
-		res.toResult(&r2, g_SceneData);
-		DifferentialGeometry dg;
-		BSDFSamplingRecord bRec(dg);
-		r2.getBsdfSample(r, rng, &bRec);
-		
-		//traversalResult* tr;
-	//	g_Intersector[1].FetchRay(d.dIndex, &tr);
-		//if(pass && ((tr->dist >= d.dDist) || (tr->dist == 0.0f)))
-		//	d.L += d.D;
-		//d.D = Spectrum(0.0f);
-		
-		dat.L += r2.Le(bRec.dg.P, bRec.dg.sys, -r.direction) * dat.throughput;
-		Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
-		dat.throughput *= f;
-		unsigned int idx2 = g_Intersector2.insertRay();
-		traversalRay& ray2 = g_Intersector2(idx2, 0);
-		ray.a = make_float4(bRec.dg.P, 1e-2f);
-		ray.b = make_float4(bRec.getOutgoing(), FLT_MAX);
-		g_Intersector2(idx2) = dat;
-		if(pass + 1 == MAX_PASS)
-			I.AddSample(dat.x, dat.y, dat.L);
-		/*
-		if(pass != MAX_PASS)
+		const int tidx = threadIdx.x;
+		volatile int& rayBase = nextRayArray[threadIdx.y];
+
+		const bool          terminated = 1;//nodeAddr == EntrypointSentinel;
+		const unsigned int  maskTerminated = __ballot(terminated);
+		const int           numTerminated = __popc(maskTerminated);
+		const int           idxTerminated = __popc(maskTerminated & ((1u << tidx) - 1));
+
+		if (terminated)
 		{
-			DirectSamplingRecord dRec(bRec.map.P, bRec.map.sys.n, bRec.map.uv);
-			Spectrum value = g_SceneData.sampleEmitterDirect(dRec, rng.randomFloat2());
-			bRec.wo = bRec.map.sys.toLocal(dRec.d);
-			Spectrum bsdfVal = r2.getMat().bsdf.f(bRec);
-			const float bsdfPdf = r2.getMat().bsdf.pdf(bRec);
-			const float weight = MonteCarlo::PowerHeuristic(1, dRec.pdf, 1, bsdfPdf);
-			d.D = value * weight * bsdfVal * d.throughput;
-			traversalRay* ray2 = g_Intersector[1].InsertRay(payloadIdx, &d.dIndex);
-			ray2->a = make_float4(dRec.ref, 0);
-			ray2->b = make_float4(dRec.d, FLT_MAX);
-			d.dDist = dRec.dist;
-		}*/
-	}
-	else I.AddSample(dat.x, dat.y, dat.L);
+			if (idxTerminated == 0)
+				rayBase = atomicAdd(&g_NextRayCounterFT, numTerminated);
+
+			rayidx = rayBase + idxTerminated;
+			if (rayidx >= N)
+				break;
+		}
+
+
+		rayData dat = g_Intersector(rayidx);
+		if (pass > 0 && dat.dIdx != -1)
+		{
+			traversalResult& res = g_Intersector.res(dat.dIdx, 1);
+			traversalRay& ray = g_Intersector(dat.dIdx, 1);
+			if (res.dist >= dat.dDist * 0.95f)
+				dat.L += dat.throughput * dat.directF;
+		}
+
+		traversalResult& res = g_Intersector.res(rayidx, 0);
+		traversalRay& ray = g_Intersector(rayidx, 0);
+
+		if (res.dist)
+		{
+			Ray r(!ray.a, !ray.b);
+			TraceResult r2;
+			res.toResult(&r2, g_SceneData);
+			DifferentialGeometry dg;
+			BSDFSamplingRecord bRec(dg);
+			r2.getBsdfSample(r, rng, &bRec);
+			if (pass == 0 || dat.dIdx == -1)
+				dat.L += r2.Le(bRec.dg.P, bRec.dg.sys, -r.direction) * dat.throughput;
+			if (pass + 1 != MAX_PASS)
+			{
+				Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
+				dat.throughput *= f;
+				unsigned int idx2 = g_Intersector2.insertRay(0);
+				traversalRay& ray2 = g_Intersector2(idx2, 0);
+				ray2.a = make_float4(bRec.dg.P, 1e-2f);
+				ray2.b = make_float4(bRec.getOutgoing(), FLT_MAX);
+
+				DirectSamplingRecord dRec(bRec.dg.P, bRec.dg.sys.n);
+				Spectrum value = g_SceneData.sampleEmitterDirect(dRec, rng.randomFloat2());
+				if (r2.getMat().bsdf.hasComponent(ESmooth) && !value.isZero())
+				{
+					bRec.wo = normalize(bRec.dg.toLocal(dRec.d));
+					Spectrum bsdfVal = r2.getMat().bsdf.f(bRec);
+					const float bsdfPdf = r2.getMat().bsdf.pdf(bRec);
+					const float weight = MonteCarlo::PowerHeuristic(1, dRec.pdf, 1, bsdfPdf);
+					dat.directF = value * bsdfVal * weight;
+					dat.dDist = dRec.dist;
+					dat.dIdx = g_Intersector2.insertRay(1);
+					traversalRay& ray3 = g_Intersector2(dat.dIdx, 1);
+					ray3.a = make_float4(bRec.dg.P, 1e-2f);
+					ray3.b = make_float4(dRec.d, FLT_MAX);
+				}
+				else dat.dIdx = -1;
+				g_Intersector2(idx2) = dat;
+			}
+		}
+		else dat.L += dat.throughput * g_SceneData.EvalEnvironment(Ray(!ray.a, !ray.b));
+
+		if (!res.dist || pass + 1 == MAX_PASS)
+			I.AddSample(dat.x, dat.y, dat.L);
+	} while (true);
 	g_RNGData(rng);
 }
 
@@ -153,12 +195,12 @@ __global__ void pathIterateKernel(unsigned int N, e_Image I, int pass, k_RayBuff
 static cTimer TT;
 void k_FastTracer::doDirect(e_Image* I)
 {
-	k_RayBuffer<rayData, 1>* buf = bufA;
+	k_PTDBuffer* buf = bufA;
 	k_ProgressiveTracer::DoRender(I);
 	k_INITIALIZE(m_pScene, g_sRngs);
 	float scl = length(g_SceneData.m_sBox.Size());
 	pathCreateKernel<<< dim3((w*h)/(32*8)+1,1,1), dim3(32, 8, 1)>>>(w, h, *buf);
-	buf->setGeneratedRayCount(w * h);
+	buf->setNumRays(w * h, 0);
 	/*
 	TT.StartTimer();
 	Ray r;
@@ -227,28 +269,33 @@ void k_FastTracer::doPath(e_Image* I)
 {
 	k_ProgressiveTracer::DoRender(I);
 	k_INITIALIZE(m_pScene, g_sRngs);
+	bufA->Clear();
 	pathCreateKernel<<< dim3((w*h)/(32*8)+1,1,1), dim3(32, 8, 1)>>>(w, h, *bufA);
-	bufA->setGeneratedRayCount(w * h);
-	int pass = 0;
-	k_RayBuffer<rayData, 1>* srcBuf = bufA, *destBuf = bufB;
+	bufA->setNumRays(w * h, 0);
+	int pass = 0, zero = 0;
+	k_PTDBuffer* srcBuf = bufA, *destBuf = bufB;
 	m_uNumRaysTraced = 0;
 	do
 	{
+		destBuf->Clear();
 		m_uNumRaysTraced += srcBuf->IntersectBuffers<false>(m_pScene->getNodeCount() == 1);
-		unsigned int n = srcBuf->getCreatedRayCount();
-		destBuf->setGeneratedRayCount(0);
-		pathIterateKernel<<< dim3(n/(32*8)+1,1,1), dim3(32, 8, 1)>>>(n, *I, pass, *srcBuf, *destBuf);
+		cudaMemcpyToSymbol(g_Intersector, srcBuf, sizeof(*srcBuf));
+		cudaMemcpyToSymbol(g_Intersector2, destBuf, sizeof(*destBuf));
+		cudaMemcpyToSymbol(g_NextRayCounterFT, &zero, sizeof(zero));
+		pathIterateKernel << < dim3(180, 1, 1), dim3(32, 6, 1) >> >(srcBuf->getNumRays(0), *I, pass, m_uPassesDone);
+		cudaMemcpyFromSymbol(srcBuf, g_Intersector, sizeof(*srcBuf));
+		cudaMemcpyFromSymbol(destBuf, g_Intersector2, sizeof(*destBuf));
 		swapk(srcBuf, destBuf);
 	}
-	while(srcBuf->getCreatedRayCount() && ++pass < MAX_PASS);
+	while (srcBuf->getNumRays(0) && ++pass < MAX_PASS);
 	m_uPassesDone++;
-	I->DoUpdateDisplay(m_uPassesDone);
+	I->DoUpdateDisplay(0);
 }
 
 void k_FastTracer::DoRender(e_Image* I)
 {
-	//doPath(I);
-	doDirect(I);
+	doPath(I);
+	//doDirect(I);
 }
 
 void k_FastTracer::Debug(e_Image* I, int2 pixel)

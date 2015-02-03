@@ -401,7 +401,9 @@ void e_InfiniteLight::internalSampleDirection(float2 sample, float3 &d, Spectrum
 	/* Using the remaining bits of precision to shift the sample by an offset
 		drawn from a tent function. This effectively creates a sampling strategy
 		for a linearly interpolated environment map */
+		
 	float2 pos = make_float2(col, row) + Warp::squareToTent(sample);
+	//float2 pos = sample * m_size;
 
 	/* Bilinearly interpolate colors from the adjacent four neighbors */
 	int xPos = clamp(Floor2Int(pos.x), 0, int(m_size.x - 1)), yPos = clamp(Floor2Int(pos.y), 0, int(m_size.y - 1));

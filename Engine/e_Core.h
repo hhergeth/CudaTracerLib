@@ -2,7 +2,7 @@
 
 #include "cuda_runtime.h"
 
-void InitializeCuda4Tracer();
+void InitializeCuda4Tracer(const char* dataPath);
 
 void ThrowCudaErrors();
 

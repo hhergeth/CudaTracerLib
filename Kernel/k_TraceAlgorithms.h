@@ -15,15 +15,15 @@ CUDA_FUNC_IN float G(const float3& N_x, const float3& N_y, const float3& x, cons
 	return AbsDot(N_x, theta) * AbsDot(N_y, -theta) / DistanceSquared(x, y);
 }
 
-CUDA_FUNC_IN Spectrum Transmittance(const Ray& r, float tmin, float tmax)
+CUDA_FUNC_IN Spectrum Transmittance(const Ray& r, float tmin, float tmax, unsigned int a_NodeIndex)
 {
 	if(g_SceneData.m_sVolume.HasVolumes())
 	{
 		float a, b;
-		g_SceneData.m_sVolume.IntersectP(r, tmin, tmax, &a, &b);
-		return g_SceneData.m_sVolume.tau(r, a, b).exp();
+		g_SceneData.m_sVolume.IntersectP(r, tmin, tmax, a_NodeIndex, &a, &b);
+		return (-g_SceneData.m_sVolume.tau(r, a, b, a_NodeIndex)).exp();
 	}
-	return make_float3(1);
+	return Spectrum(1.0f);
 }
 
 CUDA_HOST CUDA_DEVICE Spectrum UniformSampleAllLights(const BSDFSamplingRecord& bRec, const e_KernelMaterial& mat, int nSamples);

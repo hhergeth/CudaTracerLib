@@ -372,6 +372,11 @@ unsigned int TraceResult::LightIndex() const
 	return j;
 }
 
+unsigned int TraceResult::getNodeIndex() const
+{
+	return m_pNode - g_SceneData.m_sNodeData.Data;
+}
+
 const e_KernelMaterial& TraceResult::getMat() const
 {
 	return g_SceneData.m_sMatData[getMatIndex()];
@@ -788,8 +793,20 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
         }
 
         // Traversal loop.
+		TraceResult r2 = k_TraceRay(Ray(!a_RayBuffer[rayidx].a, !a_RayBuffer[rayidx].b));
+		int4 res = make_int4(0, 0, 0, 0);
+		if (r2.hasHit())
+		{
+			res.x = __float_as_int(r2.m_fDist);
+			res.y = r2.getNodeIndex();
+			res.z = r2.m_pTri - g_SceneData.m_sTriData.Data;
+			half2 h(r2.m_fUV);
+			res.w = *(int*)&h;
+		}
+		((int4*)a_ResBuffer)[rayidx] = res;
+		nodeAddr = EntrypointSentinel;
 
-        while(nodeAddr != EntrypointSentinel)
+        /*while(nodeAddr != EntrypointSentinel)
         {
 			nodeAddr = nodeAddr == EntrypointSentinel - 1 ? EntrypointSentinel : nodeAddr;
             // Traverse internal nodes until all SIMD lanes have found a leaf.
@@ -1083,7 +1100,7 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 			half2 h(bCorrds);
 			res.w = *(int*)&h;
 		}
-		((int4*)a_ResBuffer)[rayidx] = res;
+		((int4*)a_ResBuffer)[rayidx] = res;*/
 //outerlabel: ;
     } while(true);
 }
@@ -1093,11 +1110,11 @@ void __internal__IntersectBuffers(int N, traversalRay* a_RayBuffer, traversalRes
 	cudaDeviceSetCacheConfig (cudaFuncCachePreferL1);
 	unsigned int zero = 0;
 	cudaMemcpyToSymbol(g_warpCounter, &zero, sizeof(unsigned int));
-	if(SKIP_OUTER)
+	/*if(SKIP_OUTER)
 		if(ANY_HIT)
 			intersectKernel_SKIPOUTER<true><<< 180, dim3(32, 4, 1)>>>(N, a_RayBuffer, a_ResBuffer);
 		else intersectKernel_SKIPOUTER<false><<< 180, dim3(32, 4, 1)>>>(N, a_RayBuffer, a_ResBuffer);
-	else
+	else*/
 	{
 		if(ANY_HIT)
 			intersectKernel<true><<< 180, dim3(32, 4, 1)>>>(N, a_RayBuffer, a_ResBuffer);

@@ -255,6 +255,18 @@
     <ClInclude Include="Engine\e_AbstractEmitter.h">
       <Filter>Engine</Filter>
     </ClInclude>
+    <ClInclude Include="Integrators\k_VCMHelper.h">
+      <Filter>Integrators</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\k_VCM.h">
+      <Filter>Integrators</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\k_PhotonMapHelper.h">
+      <Filter>Integrators</Filter>
+    </ClInclude>
+    <ClInclude Include="Kernel\k_BSDFVisualizer.h">
+      <Filter>Kernel</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Base\BVHBuilder.cpp">
@@ -359,9 +371,6 @@
     <CudaCompile Include="Kernel\k_Tracer.cu">
       <Filter>Kernel</Filter>
     </CudaCompile>
-    <CudaCompile Include="Engine\e_aaaa.cu">
-      <Filter>Engine</Filter>
-    </CudaCompile>
     <CudaCompile Include="Engine\e_AnimatedMesh.cu">
       <Filter>Engine</Filter>
     </CudaCompile>
@@ -439,6 +448,12 @@
     </CudaCompile>
     <CudaCompile Include="Engine\e_DifferentialGeometry.cu">
       <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Integrators\k_VCM.cu">
+      <Filter>Integrators</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Kernel\k_BSDFVisualizer.cu">
+      <Filter>Kernel</Filter>
     </CudaCompile>
   </ItemGroup>
 </Project>

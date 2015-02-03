@@ -15,6 +15,7 @@
 e_Image::e_Image(int xRes, int yRes, unsigned int viewGLTexture)
 	: xResolution(xRes), yResolution(yRes)
 {
+	lastSplatScale = 1;
 	ownsTarget = false;
 	drawStyle = ImageDrawType::Normal;
 	setStdFilter();
@@ -36,6 +37,7 @@ e_Image::e_Image(int xRes, int yRes, unsigned int viewGLTexture)
 e_Image::e_Image(int xRes, int yRes, ID3D11Resource *pD3DResource)
 	: xResolution(xRes), yResolution(yRes)
 {
+	lastSplatScale = 1;
 ownsTarget = false;
 	drawStyle = ImageDrawType::Normal;
 	setStdFilter();
@@ -56,6 +58,7 @@ ownsTarget = false;
 e_Image::e_Image(int xRes, int yRes, RGBCOL* target)
 	: xResolution(xRes), yResolution(yRes)
 {
+	lastSplatScale = 1;
 	drawStyle = ImageDrawType::Normal;
 	setStdFilter();
 	CUDA_MALLOC(&cudaPixels, sizeof(Pixel) * xResolution * yResolution);
@@ -129,7 +132,12 @@ void e_Image::WriteDisplayImage(const char* fileName)
 		for(int x = 0; x < xResolution; x++)
 		{
 			int i = (yResolution - 1 - y) * xResolution + x;
-			uchar3 p = make_uchar3(colData[i].z, colData[i].y, colData[i].x);
+			Spectrum rgb = Spectrum(colData[i].z, colData[i].y, colData[i].x) / 255;
+			//Spectrum srgb;
+			//rgb.toSRGB(srgb[0], srgb[1], srgb[2]);
+			//RGBCOL p = srgb.toRGBCOL();
+			RGBCOL p = make_uchar4(colData[i].z, colData[i].y, colData[i].x, 255);
+			//RGBCOL p = Spectrum(rgb.pow(1.0f / 2.2f)).toRGBCOL();
 			A[off + x * 3 + 0] = p.x;
 			A[off + x * 3 + 1] = p.y;
 			A[off + x * 3 + 2] = p.z;

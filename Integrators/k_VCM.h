@@ -1,0 +1,27 @@
+#pragma once
+
+#include "..\Kernel\k_Tracer.h"
+#include "..\Base\CudaRandom.h"
+#include "k_PhotonMapHelper.h"
+
+class k_VCM : public k_ProgressiveTracer
+{
+public:
+	k_VCM();
+protected:
+	virtual void DoRender(e_Image* I);
+	virtual void StartNewTrace(e_Image* I);
+private:
+	//current will be used for lookup, next will be stored in
+	k_PhotonMapCollection<false> m_sPhotonMapsCurrent, m_sPhotonMapsNext;
+	float m_fInitialRadius;
+	unsigned long long m_uPhotonsEmitted;
+	float getCurrentRadius(int exp)
+	{
+		float f = 1;
+		for (unsigned int k = 1; k < m_uPassesDone; k++)
+			f *= (k + ALPHA) / k;
+		f = powf(m_fInitialRadius, float(exp)) * f * 1.0f / float(m_uPassesDone);
+		return powf(f, 1.0f / float(exp));
+	}
+};

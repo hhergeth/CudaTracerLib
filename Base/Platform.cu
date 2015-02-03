@@ -46,6 +46,17 @@ unsigned int Platform::Exchange(unsigned int* add, unsigned int val)
 #endif
 }
 
+float Platform::Add(float* add, float val)
+{
+#if defined(ISCUDA)
+	return atomicAdd(add, val);
+#else
+	float f = *add;
+	*add = f + val;
+	return f;
+#endif
+}
+
 void Platform::SetMemory(void* dest, unsigned long long length, unsigned int val)
 {
 #if defined(ISWINDOWS)

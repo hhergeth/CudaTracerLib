@@ -2,25 +2,7 @@
 #include "..\Kernel\k_TraceHelper.h"
 #include "..\Kernel\k_TraceAlgorithms.h"
 
-CUDA_DEVICE k_PhotonMapCollection g_Map;
-
-CUDA_ONLY_FUNC bool storePhoton(const float3& p, const Spectrum& phi, const float3& wi, const float3& n, PhotonType type)
-{
-	unsigned int p_idx = atomicInc(&g_Map.m_uPhotonNumStored, 0xffffffff);
-	if (p_idx < g_Map.m_uPhotonBufferLength)
-	{
-		g_Map.m_pPhotons[p_idx] = k_pPpmPhoton(p, phi, wi, n, type);
-		//if this photon is caustic we will also have to store it in the diffuse map
-		if (type == PhotonType::pt_Caustic)
-		{
-			p_idx = atomicInc(&g_Map.m_uPhotonNumStored, 0xffffffff);
-			if (p_idx < g_Map.m_uPhotonBufferLength)
-				g_Map.m_pPhotons[p_idx] = k_pPpmPhoton(p, phi, wi, n, PhotonType::pt_Diffuse);
-		}
-		return true;
-	}
-	else return false;
-}
+CUDA_DEVICE k_PhotonMapCollection<true> g_Map;
 
 template<bool DIRECT> __global__ void k_PhotonPass()
 { 
@@ -37,7 +19,8 @@ template<bool DIRECT> __global__ void k_PhotonPass()
 	{
 		Ray r;
 		const e_KernelLight* light;
-		Spectrum Le = g_SceneData.sampleEmitterRay(r, light, rng.randomFloat2(), rng.randomFloat2()),
+		float2 sps = rng.randomFloat2(), sds = rng.randomFloat2();
+		Spectrum Le = g_SceneData.sampleEmitterRay(r, light, sps, sds),
 				 throughput(1.0f);
 		int depth = -1;
 		atomicInc(&local_Counter, (unsigned int)-1);
@@ -51,14 +34,14 @@ template<bool DIRECT> __global__ void k_PhotonPass()
 		{
 			TraceResult r2 = k_TraceRay(r);
 			float minT, maxT;
-			if ((!bssrdf && V.HasVolumes() && V.IntersectP(r, 0, r2.m_fDist, &minT, &maxT) && V.sampleDistance(r, 0, r2.m_fDist, rng, mRec))
+			if ((!bssrdf && V.HasVolumes() && V.IntersectP(r, 0, r2.m_fDist, -1, &minT, &maxT) && V.sampleDistance(r, 0, r2.m_fDist, -1, rng, mRec))
 				|| (bssrdf && sampleDistanceHomogenous(r, 0, r2.m_fDist, rng.randomFloat(), mRec, bssrdf->sig_a, bssrdf->sigp_s)))
 			{
 				throughput *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
-				wasStored |= storePhoton(mRec.p, throughput * Le, -r.direction, make_float3(0, 0, 0), PhotonType::pt_Volume);
+				wasStored |= storePhoton(mRec.p, throughput * Le, -r.direction, make_float3(0, 0, 0), PhotonType::pt_Volume, g_Map);
 				if (bssrdf)
 					r.direction = Warp::squareToUniformSphere(rng.randomFloat2());
-				else throughput *= V.Sample(mRec.p, -r.direction, rng, &r.direction);
+				else throughput *= V.Sample(mRec.p, -r.direction, r2.getNodeIndex(), rng, &r.direction);
 				r.origin = mRec.p;
 				delta = false;
 				medium = true;
@@ -71,24 +54,23 @@ template<bool DIRECT> __global__ void k_PhotonPass()
 					throughput *= mRec.transmittance / mRec.pdfFailure;
 				float3 wo = bssrdf ? r.direction : -r.direction;
 				r2.getBsdfSample(-wo, r(r2.m_fDist), &bRec, &rng);
+				bRec.mode = EImportance;
 				if ((DIRECT && depth > 0) || !DIRECT)
-					if (r2.getMat().bsdf.hasComponent(EDiffuse) && dot(bRec.dg.sys.n, wo) > 0.0f)
-						wasStored |= storePhoton(dg.P, throughput * Le, wo, bRec.dg.sys.n, delta ? PhotonType::pt_Caustic : PhotonType::pt_Diffuse);
+					if (r2.getMat().bsdf.hasComponent(ESmooth) && dot(bRec.dg.sys.n, wo) > 0.0f)
+						wasStored |= storePhoton(dg.P, throughput * Le, wo, bRec.dg.sys.n, delta ? PhotonType::pt_Caustic : PhotonType::pt_Diffuse, g_Map);
 				Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
-				throughput *= f;
 				delta = bRec.sampledType & ETypeCombinations::EDelta;
-				
 				if (!bssrdf && r2.getMat().GetBSSRDF(bRec.dg, &bssrdf))
 					bRec.wo.z *= -1.0f;
-				else bssrdf = 0;
+				else
+				{
+					if (!bssrdf)
+						throughput *= f;
+					bssrdf = 0;
+					medium = false;
+				}
+
 				r = Ray(bRec.dg.P, bRec.getOutgoing());
-			}
-			if (depth > 3)
-			{
-				float q = MIN(throughput.max(), 0.95f);
-				if (rng.randomFloat() >= q)
-					break;
-				throughput /= q;
 			}
 		}
 		if (wasStored)
@@ -147,16 +129,15 @@ __global__ void buildHashGrid()
 
 void k_sPpmTracer::doPhotonPass()
 {
-	cudaMemcpyToSymbol(g_Map, &m_sMaps, sizeof(k_PhotonMapCollection));
+	cudaMemcpyToSymbol(g_Map, &m_sMaps, sizeof(k_PhotonMapCollection<true>));
 	k_INITIALIZE(m_pScene, g_sRngs);
-	if(m_bDirect)
-		k_PhotonPass<true> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >();
-	else k_PhotonPass<false> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >();
-	cudaThreadSynchronize();
-	cudaMemcpyFromSymbol(&m_sMaps, g_Map, sizeof(k_PhotonMapCollection));
-	if (m_sMaps.PassFinished())
+	while (!m_sMaps.PassFinished())
 	{
-		buildHashGrid<< <m_sMaps.m_uPhotonBufferLength / (32 * 6) + 1, dim3(32, 6, 1) >> >();
-		cudaMemcpyFromSymbol(&m_sMaps, g_Map, sizeof(k_PhotonMapCollection));
+		if (m_bDirect)
+			k_PhotonPass<true> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >();
+		else k_PhotonPass<false> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >();
+		cudaMemcpyFromSymbol(&m_sMaps, g_Map, sizeof(k_PhotonMapCollection<true>));
 	}
+	buildHashGrid<< <m_sMaps.m_uPhotonBufferLength / (32 * 6) + 1, dim3(32, 6, 1) >> >();
+	cudaMemcpyFromSymbol(&m_sMaps, g_Map, sizeof(k_PhotonMapCollection<true>));
 }

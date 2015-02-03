@@ -6,7 +6,7 @@
 #define SER_NAME "photonMapBuf.dat"
 
 k_sPpmTracer::k_sPpmTracer()
-: k_ProgressiveTracer(), m_uGridLength(LNG*LNG*LNG), m_pEntries(0), m_bFinalGather(false)
+: k_ProgressiveTracer(), m_pEntries(0), m_bFinalGather(false)
 {
 #ifdef NDEBUG
 	m_uBlocksPerLaunch = 180;
@@ -14,12 +14,10 @@ k_sPpmTracer::k_sPpmTracer()
 	m_uBlocksPerLaunch = 1;
 #endif
 	m_uPhotonsEmitted = -1;
-	m_uPreviosCount = 0;
 	m_bLongRunning = false;
-	m_uModus = 1;
 	unsigned int numPhotons = (m_uBlocksPerLaunch + 2) * PPM_slots_per_block;
 	unsigned int linkedListLength = numPhotons * 10;
-	m_sMaps = k_PhotonMapCollection(numPhotons, m_uGridLength, linkedListLength);
+	m_sMaps = k_PhotonMapCollection<true>(numPhotons, LNG*LNG*LNG, linkedListLength);
 }
 
 void k_sPpmTracer::PrintStatus(std::vector<std::string>& a_Buf)
@@ -91,37 +89,17 @@ void print(k_PhotonMapCollection& m_sMaps, k_PhotonMap<k_HashGrid_Reg>& m_Map, s
 void k_sPpmTracer::DoRender(e_Image* I)
 {
 	k_ProgressiveTracer::DoRender(I);
-	if(m_uModus == 1)
-	{
-		//updateBuffer();
-		//if(!m_uPhotonsEmitted)
-		doPhotonPass();
-		cudaThreadSynchronize();
-		if(m_sMaps.PassFinished())
-		{
-			m_uPassesDone++;
-			
-			//print(m_sMaps, m_sMaps.m_sSurfaceMap, "s_map.bin"); print(m_sMaps, m_sMaps.m_sVolumeMap, "v_map.bin");
-
-			m_uPhotonsEmitted += m_sMaps.m_uPhotonNumEmitted;
-			doEyePass(I);
-			m_sMaps.StartNewPass();
-			m_uPreviosCount = m_uPhotonsEmitted;
-		}
-	}
-	else if(m_uModus == 2)
-	{
-		m_uPassesDone = 1;
-		I->Clear();
-		doEyePass(I);
-	}
+	m_uPassesDone++;
+	doPhotonPass();
+	m_uPhotonsEmitted += m_sMaps.m_uPhotonNumEmitted;
+	doEyePass(I);
+	m_sMaps.StartNewPass();
 }
 
 void k_sPpmTracer::initNewPass(e_Image* I)
 {
 	k_ProgressiveTracer::StartNewTrace(I);
 	m_uPhotonsEmitted = 0;
-	//AABB m_sEyeBox = m_pCamera->m_sLastFrustum;
 	AABB m_sEyeBox = GetEyeHitPointBox(m_pScene, m_pCamera, true);
 	m_sEyeBox.Enlarge(0.1f);
 	float r = fsumf(m_sEyeBox.maxV - m_sEyeBox.minV) / float(w);
@@ -158,7 +136,6 @@ void k_sPpmTracer::initNewPass(e_Image* I)
 	doStartPass(r1, r1);
 }
 
-static bool GGG = false;
 void k_sPpmTracer::StartNewTrace(e_Image* I)
 {
 	m_bDirect = !m_pScene->getVolumes().getLength();
@@ -168,16 +145,5 @@ void k_sPpmTracer::StartNewTrace(e_Image* I)
 	if (m_bDirect)
 		m_bDirect = m_fLightVisibility > 0.5f;
 	//m_bDirect = 0;
-	if(m_uModus == 1)
-	{
-		initNewPass(I);
-	}
-	else if(!GGG)
-	{
-		initNewPass(I);
-		GGG = true;
-		while(!m_sMaps.PassFinished())
-			doPhotonPass();
-		m_uPassesDone = 1;
-	}
+	initNewPass(I);
 }

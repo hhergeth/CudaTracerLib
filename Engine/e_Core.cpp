@@ -7,11 +7,12 @@
 
 #include <FreeImage.h>
 
-void InitializeCuda4Tracer()
+void InitializeCuda4Tracer(const char* dataPath)
 {
 	cudaError er = CUDA_FREE(0);
 	SpectrumHelper::StaticInitialize();
 	FreeImage_Initialise();
+	e_RoughTransmittanceManager::StaticInitialize(std::string(dataPath));
 }
 
 void ThrowCudaErrors()

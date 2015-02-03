@@ -6,7 +6,7 @@
 class k_BDPT : public k_ProgressiveTracer
 {
 public:
-	k_BDPT(bool direct = false)
+	k_BDPT()
 		: force_s(-1), force_t(-1), use_mis(true), LScale(1)
 	{
 	}

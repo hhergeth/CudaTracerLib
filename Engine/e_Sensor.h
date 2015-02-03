@@ -530,8 +530,6 @@ struct e_Sensor : public e_AggregateBaseType<e_SensorBase, CAM_SIZE>
 {
 public:
 	//storage for the last viewing frustum, might(!) be computed, don't depend on it
-	AABB m_sLastFrustum;
-
 	float4x4 View() const;
 
 	float3 Position() const;
