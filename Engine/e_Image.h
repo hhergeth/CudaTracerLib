@@ -30,10 +30,18 @@ public:
 #endif
 	e_Image(int xRes, int yRes, RGBCOL* target = 0);
     void Free();
-	void getExtent(unsigned int& xRes, unsigned int &yRes) const
+	CUDA_FUNC_IN void getExtent(unsigned int& xRes, unsigned int &yRes) const
 	{
 		xRes = xResolution;
 		yRes = yResolution;
+	}
+	CUDA_FUNC_IN unsigned int getWidth()
+	{
+		return xResolution;
+	}
+	CUDA_FUNC_IN unsigned int getHeight()
+	{
+		return yResolution;
 	}
 	CUDA_DEVICE CUDA_HOST void AddSample(float sx, float sy, const Spectrum &L);
 	CUDA_FUNC_IN void ClearSample(int sx, int sy)
@@ -49,31 +57,35 @@ public:
 	void setFilter(const e_KernelFilter& filt)
 	{
 		filter = filt;
-		rebuildFilterTable();
 	}
 	CUDA_DEVICE CUDA_HOST void SetSample(int sx, int sy, RGBCOL c);
 	CUDA_DEVICE CUDA_HOST void Splat(float sx, float sy, const Spectrum &L);
     void WriteDisplayImage(const char* fileName);
-	void WriteImage(const char* fileName);
 	void StartRendering();
 	void EndRendering();
 	void Clear();
 	struct Pixel {
         CUDA_FUNC_IN Pixel() {
-            xyz[0] = xyz[1] = xyz[2] = 0;
-			xyzSplat[0] = xyzSplat[1] = xyzSplat[2] = 0;
+			rgb[0] = rgb[1] = rgb[2] = 0;
+			rgbSplat[0] = rgbSplat[1] = rgbSplat[2] = 0;
             weightSum = 0.0f;
         }
-        float xyz[3];
+        float rgb[3];
         float weightSum;
-        float xyzSplat[3];
-		CUDA_DEVICE CUDA_HOST Spectrum toSpectrum(float splat);
+		float rgbSplat[3];
+		CUDA_FUNC_IN Spectrum toSpectrum(float splatScale)
+		{
+			float weight = weightSum != 0 ? weightSum : 1;
+			Spectrum s, s2;
+			s.fromLinearRGB(rgb[0], rgb[1], rgb[2]);
+			s2.fromLinearRGB(rgbSplat[0], rgbSplat[1], rgbSplat[2]);
+			return (s / weight + s2 * splatScale);
+		}
     };
 	e_KernelFilter& accessFilter()
 	{
 		return filter;
 	}
-	void rebuildFilterTable();
 	ImageDrawType& accessDrawStyle()
 	{
 		return drawStyle;
@@ -86,15 +98,12 @@ public:
 	}
 	static void ComputeDiff(const e_Image& A, const e_Image& B, e_Image& dest, float scale);
 private:
-	float lastSplatScale;
-	unsigned int NumFrame;
 	void InternalUpdateDisplay(float splat);
 	bool m_bDoUpdate;
 	e_KernelFilter filter;
     Pixel *cudaPixels;
 	Pixel *hostPixels;
 	bool usedHostPixels;
-	float filterTable[FILTER_TABLE_SIZE * FILTER_TABLE_SIZE];
 	int xResolution, yResolution;
 	ImageDrawType drawStyle;
 	CUDA_FUNC_IN Pixel* getPixel(int i)

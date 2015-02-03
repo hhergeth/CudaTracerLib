@@ -41,10 +41,6 @@ template<bool REGULAR> struct k_HashGrid
 		if(REGULAR)
 		{
 			return clamp((unsigned int)(p.z * m_fGridSize * m_fGridSize + p.y * m_fGridSize + p.x), 0u, N);
-			unsigned long long  l = (unsigned long long((p.x)) << 32) | 
-									(unsigned long long((p.y)) << 16) | 
-									unsigned long long((p.z));
-			return hash6432shift(l) % N;
 		}
 		else
 		{

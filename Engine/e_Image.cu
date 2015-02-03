@@ -1,15 +1,6 @@
 #include "e_Image.h"
 #include <cuda_surface_types.h>
 
-Spectrum e_Image::Pixel::toSpectrum(float splat)
-{
-	float w = weightSum != 0 ? weightSum : 1;
-	Spectrum s, s2;
-	s.fromLinearRGB(xyz[0], xyz[1], xyz[2]);
-	s2.fromLinearRGB(xyzSplat[0], xyzSplat[1], xyzSplat[2]);
-	return fmaxf(Spectrum(0.0f), s / w + s2 * splat);
-}
-
 void e_Image::AddSample(float sx, float sy, const Spectrum &_L)
 {
 	Spectrum L = _L;
@@ -22,11 +13,11 @@ void e_Image::AddSample(float sx, float sy, const Spectrum &_L)
 	Pixel* pixel = getPixel(y * xResolution + x);
 #ifdef ISCUDA
 	for(int i = 0; i < 3; i++)
-		atomicAdd(pixel->xyz + i, rgb[i]);
+		atomicAdd(pixel->rgb + i, rgb[i]);
 	atomicAdd(&pixel->weightSum, 1.0f);
 #else
 	for(int i = 0; i < 3; i++)
-		pixel->xyz[i] += rgb[i];
+		pixel->rgb[i] += rgb[i];
 	pixel->weightSum += 1.0f;
 #endif
 }
@@ -41,10 +32,10 @@ void e_Image::Splat(float sx, float sy, const Spectrum &L)
 	L.toLinearRGB(rgb[0], rgb[1], rgb[2]);
 #ifdef ISCUDA
 	for(int i = 0; i < 3; i++)
-		atomicAdd(pixel->xyzSplat + i, rgb[i]);
+		atomicAdd(pixel->rgbSplat + i, rgb[i]);
 #else
 	for(int i = 0; i < 3; i++)
-		pixel->xyzSplat[i] += rgb[i];
+		pixel->rgbSplat[i] += rgb[i];
 #endif
 }
 
@@ -144,12 +135,7 @@ CUDA_FUNC_IN Spectrum evalFilter(e_KernelFilter filter, e_Image::Pixel* P, float
 		for (int x = x0; x <= x1; ++x)
 		{
 			float filterWt = filter.Evaluate(fabsf(x - dimageX), fabsf(y - dimageY));
-			e_Image::Pixel& p = P[y * w + x];
-			float weight = p.weightSum != 0 ? p.weightSum : 1;
-			Spectrum s, s2;
-			s.fromLinearRGB(p.xyz[0], p.xyz[1], p.xyz[2]);
-			s2.fromLinearRGB(p.xyzSplat[0], p.xyzSplat[1], p.xyzSplat[2]);
-			acc += (s / weight + s2 * splatScale) * filterWt;
+			acc += P[y * w + x].toSpectrum(splatScale) * filterWt;
 			accFilter += filterWt;
 		}
 	}
@@ -177,7 +163,7 @@ template<typename TARGET> CUDA_GLOBAL void rtm_Scale(e_Image::Pixel* P, TARGET T
 		yxy.x = L_d;
 		Spectrum c;
 		c.fromYxy(yxy.x, yxy.y, yxy.z);	
-		T(x, y, gammaCorrecture(c));
+		T(x, y, c.toRGBCOL());
 	}
 }
 
@@ -193,7 +179,6 @@ template<typename TARGET> CUDA_GLOBAL void rtm_Copy(e_Image::Pixel* P, TARGET T,
 
 void e_Image::InternalUpdateDisplay(float splatScale)
 {
-	lastSplatScale = splatScale;
 	if(outState > 2)
 		return;
 	if(usedHostPixels)
@@ -207,7 +192,6 @@ void e_Image::InternalUpdateDisplay(float splatScale)
 	T1.viewTarget = viewTarget;
 	T2.viewCudaSurfaceObject = viewCudaSurfaceObject;
 	int block = 32;
-	NumFrame++;
 	if(drawStyle == ImageDrawType::HDR)
 	{
 		CUDA_ALIGN(16) float Lum_avg = 0;
@@ -258,13 +242,12 @@ void e_Image::ComputeDiff(const e_Image& A, const e_Image& B, e_Image& dest, flo
 	int block = 32;
 	unsigned int w = dest.xResolution, h = dest.yResolution;
 	if (dest.outState == 1)
-		rtm_Copy << <dim3(w / block + 1, h / block + 1), dim3(block, block) >> >(A.cudaPixels, B.cudaPixels, T2, w, h, A.lastSplatScale, B.lastSplatScale, A.filter, B.filter, scale);
-	else rtm_Copy << <dim3(w / block + 1, h / block + 1), dim3(block, block) >> >(A.cudaPixels, B.cudaPixels, T1, w, h, A.lastSplatScale, B.lastSplatScale, A.filter, B.filter, scale);
+		rtm_Copy << <dim3(w / block + 1, h / block + 1), dim3(block, block) >> >(A.cudaPixels, B.cudaPixels, T2, w, h, 1, 1, A.filter, B.filter, scale);
+	else rtm_Copy << <dim3(w / block + 1, h / block + 1), dim3(block, block) >> >(A.cudaPixels, B.cudaPixels, T1, w, h, 1, 1, A.filter, B.filter, scale);
 }
 
 void e_Image::Clear()
 {
-	NumFrame = 0;
 	usedHostPixels = false;
 	Platform::SetMemory(hostPixels, sizeof(Pixel) * xResolution * yResolution);
 	cudaMemset(cudaPixels, 0, sizeof(Pixel) * xResolution * yResolution);

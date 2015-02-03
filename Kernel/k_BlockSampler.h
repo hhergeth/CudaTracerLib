@@ -29,6 +29,12 @@ struct k_BlockSampleImage
 
 class k_BlockSampler
 {
+	float2* m_pLumData;
+
+};
+
+class k_BlockSampler
+{
 public:
 	struct pixelData
 	{
