@@ -256,3 +256,29 @@ void e_Image::Clear()
 	else if(outState == 1)
 		cudaMemcpyToArray(viewCudaArray, 0, 0, viewTarget, sizeof(RGBCOL) * xResolution * yResolution, cudaMemcpyDeviceToDevice);
 }
+
+template<typename TARGET> CUDA_GLOBAL void rtm_NumSamples(e_Image::Pixel* P, TARGET T, unsigned int w, unsigned int h, float numPasses)
+{
+	unsigned int x = threadIdx.x + blockDim.x * blockIdx.x, y = threadIdx.y + blockDim.y * blockIdx.y;
+	if (x < w && y < h)
+	{
+		Spectrum c = P[y * w + x].weightSum / numPasses;
+		T(x, y, c.toRGBCOL());
+	}
+}
+
+
+void e_Image::DrawSamplePlacement(int numPasses)
+{
+	int block = 32;
+	memTarget T1;
+	texTarget T2;
+	T1.w = T2.w = xResolution;
+	T1.h = T2.h = yResolution;
+	T1.viewTarget = viewTarget;
+	T2.viewCudaSurfaceObject = viewCudaSurfaceObject;
+	if (outState == 1)
+		rtm_NumSamples << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(cudaPixels, T2, xResolution, yResolution, numPasses);
+	else rtm_NumSamples << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(cudaPixels, T1, xResolution, yResolution, numPasses);
+	disableUpdate();
+}

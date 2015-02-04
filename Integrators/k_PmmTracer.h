@@ -9,15 +9,11 @@ void plotPoints(float3* dirs, unsigned int N);
 struct SpatialEntry;
 struct DirectionModel;
 
-class k_PmmTracer : public k_ProgressiveTracer
+class k_PmmTracer : public k_Tracer<false, true>
 {
 public:
 	k_PmmTracer();
-	virtual void Debug(e_Image* I, int2 pixel);
-	virtual void Resize(unsigned int _w, unsigned int _h)
-	{
-
-	}
+	virtual void Debug(e_Image* I, const int2& pixel);
 protected:
 	virtual void DoRender(e_Image* I);
 	virtual void StartNewTrace(e_Image* I);

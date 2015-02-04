@@ -100,11 +100,11 @@ void k_BSDFVisualizer::DrawRegion(e_Image* I, int2 off, int2 size)
 
 void k_BSDFVisualizer::DoRender(e_Image* I)
 {
-	k_ProgressiveTracer::DoRender(I);
+	I->Clear();
 	DrawRegion(I, make_int2(0, 0), make_int2(w, h));
 }
 
-void k_BSDFVisualizer::Debug(const int2& p)
+void k_BSDFVisualizer::Debug(e_Image* I, const int2& p)
 {
 	g_RNGDataHost = k_Tracer::g_sRngs;
 	if (drawEnvMap)

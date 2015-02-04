@@ -11,7 +11,7 @@ CUDA_FUNC_IN float pathWeight(int force_s, int force_t, int s, int t)
 	else return 1;
 }
 
-CUDA_FUNC_IN void BPT(const float2& pixelPosition, e_Image& g_Image, CudaRNG& rng, unsigned int w, unsigned int h,
+CUDA_FUNC_IN void BPT(const float2& pixelPosition, k_BlockSampleImage& img, CudaRNG& rng, unsigned int w, unsigned int h,
 					  bool use_mis, int force_s, int force_t, float LScale)
 {
 	float mLightSubPathCount = 1 * 1;
@@ -51,7 +51,7 @@ CUDA_FUNC_IN void BPT(const float2& pixelPosition, e_Image& g_Image, CudaRNG& rn
 
 		//connect to camera
 		if (r2.getMat().bsdf.hasComponent(ESmooth))
-			connectToCamera(lightPathState, v.bRec, r2.getMat(), g_Image, rng, mLightSubPathCount, mMisVmWeightFactor, LScale * pathWeight(force_s, force_t, emitterPathLength, 1), use_mis);
+			connectToCamera(lightPathState, v.bRec, r2.getMat(), img.img, rng, mLightSubPathCount, mMisVmWeightFactor, LScale * pathWeight(force_s, force_t, emitterPathLength, 1), use_mis);
 
 		if (!sampleScattering(lightPathState, v.bRec, r2.getMat(), rng, mMisVcWeightFactor, mMisVmWeightFactor))
 			break;
@@ -98,44 +98,29 @@ CUDA_FUNC_IN void BPT(const float2& pixelPosition, e_Image& g_Image, CudaRNG& rn
 			break;
 	}
 
-	g_Image.AddSample(pixelPosition.x, pixelPosition.y, acc * LScale);
+	img.Add(pixelPosition.x, pixelPosition.y, acc * LScale);
 }
 
-__global__ void pathKernel(unsigned int w, unsigned int h, int xoff, int yoff, e_Image g_Image,
+__global__ void pathKernel(unsigned int w, unsigned int h, int xoff, int yoff, k_BlockSampleImage img,
 		bool use_mis, int force_s, int force_t, float LScale)
 {
-	int x = blockIdx.x * blockDim.x + threadIdx.x + xoff, y = blockIdx.y * blockDim.y + threadIdx.y + yoff;
+	int2 pixel = k_TracerBase::getPixelPos(xoff, yoff);
 	CudaRNG rng = g_RNGData();
-	if(x < w && y < h)
-		BPT(make_float2(x, y), g_Image, rng, w, h, use_mis, force_s, force_t, LScale);
+	if (pixel.x < w && pixel.y < h)
+		BPT(make_float2(pixel.x, pixel.y), img, rng, w, h, use_mis, force_s, force_t, LScale);
 	g_RNGData(rng);
 }
 
-void k_BDPT::DoRender(e_Image* I)
+void k_BDPT::RenderBlock(e_Image* I, int x, int y, int blockW, int blockH)
 {
-	k_ProgressiveTracer::DoRender(I);
-	k_INITIALIZE(m_pScene, g_sRngs);
-	int p = 16;
-	if(w < 200 && h < 200)
-		pathKernel << < dim3((w + p - 1) / p, (h + p - 1) / p, 1), dim3(p, p, 1) >> >(w, h, 0, 0, *I, use_mis, force_s, force_t, LScale);
-	else
-	{
-		unsigned int q = 8, pq = p * q;
-		int nx = w / pq + 1, ny = h / pq + 1;
-		for(int i = 0; i < nx; i++)
-			for(int j = 0; j < ny; j++)
-				pathKernel << < dim3(q, q, 1), dim3(p, p, 1) >> >(w, h, pq * i, pq * j, *I, use_mis, force_s, force_t, LScale);
-	}
-	m_uPassesDone++;
-	k_TracerBase_update_TracedRays
-	I->DoUpdateDisplay(1.0f / float(m_uPassesDone));
+	pathKernel << < numBlocks, threadsPerBlock >> >(w, h, x, y, m_pBlockSampler->getBlockImage(), use_mis, force_s, force_t, LScale);
 }
 
-void k_BDPT::Debug(e_Image* I, int2 pixel)
+void k_BDPT::Debug(e_Image* I, const int2& pixel)
 {
 	k_INITIALIZE(m_pScene, g_sRngs);
 	//Li(*gI, g_RNGData(), pixel.x, pixel.y);
 	CudaRNG rng = g_RNGData();
-	BPT(make_float2(pixel), *I, rng, w, h, use_mis, force_s, force_t, LScale);
+	BPT(make_float2(pixel), m_pBlockSampler->getBlockImage(), rng, w, h, use_mis, force_s, force_t, LScale);
 	g_RNGData(rng);
 }

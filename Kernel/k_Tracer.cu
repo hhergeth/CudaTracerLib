@@ -44,7 +44,7 @@ CUDA_FUNC_IN float3 lerp(const float3& a, const float3& b, const float3& t)
 	return make_float3(lerp(a.x, b.x, t.x), lerp(a.y, b.y, t.y), lerp(a.z, b.z, t.z));
 }
 
-AABB k_Tracer::GetEyeHitPointBox(e_DynamicScene* m_pScene, e_Sensor* m_pCamera, bool recursive)
+AABB k_TracerBase::GetEyeHitPointBox(e_DynamicScene* m_pScene, bool recursive)
 {
 	ThrowCudaErrors();
 	uint3 ma = make_uint3(0), mi = make_uint3(UINT_MAX);
@@ -52,7 +52,7 @@ AABB k_Tracer::GetEyeHitPointBox(e_DynamicScene* m_pScene, e_Sensor* m_pCamera, 
 	cudaMemcpyToSymbol(g_EyeHitBoxMax, &ma, 12);
 	k_INITIALIZE(m_pScene, g_sRngs);
 	int qw = 128, qh = 128, p0 = 16;
-	float a = (float)m_pCamera->As()->m_resolution.x / qw, b = (float)m_pCamera->As()->m_resolution.y / qh;
+	float a = (float)m_pScene->getCamera()->As()->m_resolution.x / qw, b = (float)m_pScene->getCamera()->As()->m_resolution.y / qh;
 	if(recursive)
 		k_GuessPass<true> <<<dim3( qw/p0, qh/p0, 1), dim3(p0, p0, 1)>>>(qw, qh, a, b);
 	else k_GuessPass<false> <<<dim3( qw/p0, qh/p0, 1), dim3(p0, p0, 1)>>>(qw, qh, a, b);
@@ -77,7 +77,7 @@ CUDA_GLOBAL void traceKernel(Ray r)
 	res = k_TraceRay(r);
 }
 
-TraceResult k_Tracer::TraceSingleRay(Ray r, e_DynamicScene* s, e_Sensor* c)
+TraceResult k_TracerBase::TraceSingleRay(Ray r, e_DynamicScene* s)
 {
 	CudaRNGBuffer tmp;
 	k_INITIALIZE(s, tmp);
@@ -125,14 +125,14 @@ __global__ void estimateLightVisibility(int w, int h, float scx, float scy, int 
 	}
 }
 
-float k_Tracer::GetLightVisibility(e_DynamicScene* s, e_Sensor* c, int recursion_depth)
+float k_TracerBase::GetLightVisibility(e_DynamicScene* s, int recursion_depth)
 {
 	unsigned int zero = 0;
 	cudaMemcpyToSymbol(g_ShotRays, &zero, sizeof(unsigned int));
 	cudaMemcpyToSymbol(g_SuccRays, &zero, sizeof(unsigned int));
 	k_INITIALIZE(s, g_sRngs);
 	int qw = 128, qh = 128, p0 = 16;
-	float a = (float)c->As()->m_resolution.x / qw, b = (float)c->As()->m_resolution.y / qh;
+	float a = (float)s->getCamera()->As()->m_resolution.x / qw, b = (float)s->getCamera()->As()->m_resolution.y / qh;
 	estimateLightVisibility << <dim3(qw / p0, qh / p0, 1), dim3(p0, p0, 1) >> >(qw, qh, a, b, recursion_depth);
 	cudaThreadSynchronize();
 	unsigned int N, S;

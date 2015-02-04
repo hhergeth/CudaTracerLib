@@ -92,7 +92,9 @@ __global__ void doDirectKernel(unsigned int w, unsigned int h, k_PTDBuffer g_Int
 		unsigned int i = (255 << 24) | (c << 16) | (c << 8) | c;
 		col = *(RGBCOL*)&i;
 	}
-	I.SetSample(idx % w, idx / w, *(RGBCOL*)&col);
+	Spectrum s;
+	s.fromRGBCOL(col);
+	I.AddSample(idx % w, idx / w, s);
 }
 
 __device__ CUDA_INLINE float2 stratifiedSample(const float2& f, int pass)
@@ -196,89 +198,27 @@ static cTimer TT;
 void k_FastTracer::doDirect(e_Image* I)
 {
 	k_PTDBuffer* buf = bufA;
-	k_ProgressiveTracer::DoRender(I);
-	k_INITIALIZE(m_pScene, g_sRngs);
 	float scl = length(g_SceneData.m_sBox.Size());
 	pathCreateKernel<<< dim3((w*h)/(32*8)+1,1,1), dim3(32, 8, 1)>>>(w, h, *buf);
 	buf->setNumRays(w * h, 0);
-	/*
-	TT.StartTimer();
-	Ray r;
-	float2 ps, at = make_float2(0);
-	for(int i = 0; i < w; i++)
-		for(int j = 0; j < h; j++)
-		{
-			float4* t = (float4*)(hostRays + (j * w + i));
-			ps.x = i;
-			ps.y = j;
-			m_pCamera->sampleRay(r, ps, at);
-			t[0] = make_float4(r.origin, 0);
-			t[1] = make_float4(r.direction, FLT_MAX);
-		}
-	cudaMemcpy(intersector->m_pRayBuffer, hostRays, sizeof(traversalRay) * w * h, cudaMemcpyHostToDevice);
-	m_fTimeSpentRendering = (float)TT.EndTimer();*/
 	
-	cudaEventRecord(start, 0);
 	buf->IntersectBuffers<false>(m_pScene->getNodeCount() == 1);
-	cudaEventRecord(stop, 0);
-	cudaEventSynchronize(stop);
-	float elapsedTime;
-	cudaEventElapsedTime(&elapsedTime, start, stop);
-	m_fTimeSpentRendering = elapsedTime * 1e-3f;
-		/*
-	cudaEventRecord(start, 0);
-	I->StartNewRendering();
-	pathIterateKernel<<< dim3((w*h)/(32*8)+1,1,1), dim3(32, 8, 1)>>>(w * h, w, *intersector, *I, 1, 1);
-	I->UpdateDisplay();
-	cudaEventRecord(stop, 0);
-	cudaEventSynchronize(stop);
-	cudaEventElapsedTime(&elapsedTime, start, stop);
-	m_fTimeSpentRendering = elapsedTime * 1e-3f;
 
-	TT.StartTimer();
-	I->StartNewRendering();
-	CudaRNG rng = g_RNGData();
-	TraceResult r2;
-	BSDFSamplingRecord bRec;
-	cudaMemcpy(hostResults, intersector->m_pResultBuffer, sizeof(traversalResult) * w * h, cudaMemcpyDeviceToHost);
-	for(int i = 0; i < w; i++)
-		for(int j = 0; j < h; j++)
-		{
-			int id = j * w + i;
-			if(hostResults[id].dist)
-			{
-				r.origin = !hostRays[id].a;
-				r.direction = !hostRays[id].b;
-				hostResults[id].toResult(&r2, g_SceneData);
-				//r2.getBsdfSample(r, rng, &bRec);
-				I->AddSample(i,j,Spectrum(-dot(bRec.ng, r.direction)));
-			}
-		}
-	g_RNGData(rng);
-	I->UpdateDisplay();
-	m_fTimeSpentRendering = (float)TT.EndTimer();*/
-
+	I->Clear();
 	doDirectKernel<<< dim3((w*h)/(32*8)+1,1,1), dim3(32, 8, 1)>>>(w, h, *buf, *I, scl);
-	
-	m_uPassesDone++;
-	m_uNumRaysTraced = w * h;
-	cudaEventRecord(start, 0);
 }
 
 void k_FastTracer::doPath(e_Image* I)
 {
-	k_ProgressiveTracer::DoRender(I);
-	k_INITIALIZE(m_pScene, g_sRngs);
 	bufA->Clear();
 	pathCreateKernel<<< dim3((w*h)/(32*8)+1,1,1), dim3(32, 8, 1)>>>(w, h, *bufA);
 	bufA->setNumRays(w * h, 0);
 	int pass = 0, zero = 0;
 	k_PTDBuffer* srcBuf = bufA, *destBuf = bufB;
-	m_uNumRaysTraced = 0;
 	do
 	{
 		destBuf->Clear();
-		m_uNumRaysTraced += srcBuf->IntersectBuffers<false>(m_pScene->getNodeCount() == 1);
+		srcBuf->IntersectBuffers<false>(m_pScene->getNodeCount() == 1);
 		cudaMemcpyToSymbol(g_Intersector, srcBuf, sizeof(*srcBuf));
 		cudaMemcpyToSymbol(g_Intersector2, destBuf, sizeof(*destBuf));
 		cudaMemcpyToSymbol(g_NextRayCounterFT, &zero, sizeof(zero));
@@ -288,17 +228,10 @@ void k_FastTracer::doPath(e_Image* I)
 		swapk(srcBuf, destBuf);
 	}
 	while (srcBuf->getNumRays(0) && ++pass < MAX_PASS);
-	m_uPassesDone++;
-	I->DoUpdateDisplay(0);
 }
 
 void k_FastTracer::DoRender(e_Image* I)
 {
 	doPath(I);
 	//doDirect(I);
-}
-
-void k_FastTracer::Debug(e_Image* I, int2 pixel)
-{
-	std::cout << "x : " << pixel.x << ", y : " << pixel.y << "\n";
 }

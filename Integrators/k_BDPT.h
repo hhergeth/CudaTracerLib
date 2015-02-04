@@ -3,17 +3,17 @@
 #include "..\Kernel\k_Tracer.h"
 #include "..\Base\CudaRandom.h"
 
-class k_BDPT : public k_ProgressiveTracer
+class k_BDPT : public k_Tracer<true, true>
 {
 public:
 	k_BDPT()
 		: force_s(-1), force_t(-1), use_mis(true), LScale(1)
 	{
 	}
-	virtual void Debug(e_Image* I, int2 pixel);
+	virtual void Debug(e_Image* I, const int2& pixel);
 	bool use_mis;
 	int force_s, force_t;
 	float LScale;
 protected:
-	virtual void DoRender(e_Image* I);
+	virtual void RenderBlock(e_Image* I, int x, int y, int blockW, int blockH);
 };

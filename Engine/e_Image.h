@@ -13,7 +13,7 @@
 enum ImageDrawType
 {
 	Normal,
-	HDR
+	HDR,
 };
 
 struct ID3D11Resource;
@@ -95,6 +95,15 @@ public:
 	CUDA_FUNC_IN Spectrum getPixel(float splat, int x, int y)
 	{
 		return getPixel(y * xResolution + x)->toSpectrum(splat);
+	}
+	CUDA_FUNC_IN Pixel& accessPixel(int x, int y)
+	{
+		return *getPixel(y * xResolution + x);
+	}
+	void DrawSamplePlacement(int numPasses);
+	void disableUpdate()
+	{
+		m_bDoUpdate = false;
 	}
 	static void ComputeDiff(const e_Image& A, const e_Image& B, e_Image& dest, float scale);
 private:

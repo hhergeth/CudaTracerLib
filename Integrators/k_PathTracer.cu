@@ -76,95 +76,31 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(Ray& r, const Ray& rX, con
 	return cl;
 }
 
-template<bool DIRECT> __global__ void pathKernel(unsigned int width, unsigned int height, unsigned int a_PassIndex, e_Image g_Image)
+void k_PathTracer::Debug(e_Image* I, const int2& p)
 {
-	CudaRNG rng = g_RNGData();
-	int rayidx;
-	int N = width * height;
-	__shared__ volatile int nextRayArray[MaxBlockHeight];
-	do
-    {
-        const int tidx = threadIdx.x;
-        volatile int& rayBase = nextRayArray[threadIdx.y];
-
-        const bool          terminated     = 1;//nodeAddr == EntrypointSentinel;
-        const unsigned int  maskTerminated = __ballot(terminated);
-        const int           numTerminated  = __popc(maskTerminated);
-        const int           idxTerminated  = __popc(maskTerminated & ((1u<<tidx)-1));	
-
-        if(terminated)
-        {			
-            if (idxTerminated == 0)
-				rayBase = atomicAdd(&g_NextRayCounter, numTerminated);
-
-            rayidx = rayBase + idxTerminated;
-			if (rayidx >= N)
-                break;
-		}
-
-		float2 screenPos = make_float2(rayidx % width, rayidx / width) + rng.randomFloat2();
-		Ray r, rX, rY;
-		Spectrum imp = g_SceneData.sampleSensorRay(r, rX, rY, screenPos, rng.randomFloat2());
-
-		Spectrum col = imp * PathTrace<DIRECT>(r, rX, rY, rng);
-		
-		g_Image.AddSample(screenPos.x, screenPos.y, col);
-	}
-	while(true);
-	g_RNGData(rng);
-}
-
-__global__ void debugPixel(unsigned int width, unsigned int height, int2 p)
-{
+	k_INITIALIZE(m_pScene, g_sRngs);
 	CudaRNG rng = g_RNGData();
 	Ray r = g_SceneData.GenerateSensorRay(p.x, p.y);	
 	PathTrace<true>(r, r, r, rng);
 }
 
-void k_PathTracer::DoRender(e_Image* I)
+template<bool DIRECT> __global__ void pathKernel2(unsigned int w, unsigned int h, unsigned int xoff, unsigned int yoff, k_BlockSampleImage img)
 {
-	k_ProgressiveTracer::DoRender(I);
-	ZeroSymbol(g_NextRayCounter);
-	k_INITIALIZE(m_pScene, g_sRngs);
-	if(m_Direct)
-		pathKernel<true><<< 180, dim3(32, MaxBlockHeight, 1)>>>(w, h, m_uPassesDone, *I);
-	else pathKernel<false><<< 180, dim3(32, MaxBlockHeight, 1)>>>(w, h, m_uPassesDone, *I);
-	m_uPassesDone++;
-	k_TracerBase_update_TracedRays
-	I->DoUpdateDisplay(0);
-}
-
-void k_PathTracer::Debug(e_Image* I, int2 p)
-{
-	k_INITIALIZE(m_pScene, g_sRngs);
-	//debugPixel<<<1,1>>>(w,h,p);
+	int2 pixel = k_TracerBase::getPixelPos(xoff, yoff);
 	CudaRNG rng = g_RNGData();
-	Ray r = g_SceneData.GenerateSensorRay(p.x, p.y);	
-	PathTrace<true>(r, r, r, rng);
-}
-
-template<bool DIRECT> __global__ void pathKernel2(unsigned int width, unsigned int height, e_Image g_Image, k_BlockSampler sampler)
-{
-	uint2 pixel = sampler.pixelCoord();
-	CudaRNG rng = g_RNGData();
-	if(pixel.x < width && pixel.y < height)
+	if(pixel.x < w && pixel.y < h)
 	{
 		Ray r;
 		Spectrum imp = g_SceneData.sampleSensorRay(r, make_float2(pixel.x, pixel.y), rng.randomFloat2());
 		Spectrum col = imp * PathTrace<DIRECT>(r, r, r, rng);
-		g_Image.AddSample(pixel.x, pixel.y, col);
+		img.Add(pixel.x, pixel.y, col);
 	}
 	g_RNGData(rng);
 }
 
-void k_BlockPathTracer::DoRender(e_Image* I)
+void k_PathTracer::RenderBlock(e_Image* I, int x, int y, int blockW, int blockH)
 {
-	k_ProgressiveTracer::DoRender(I);
-	k_INITIALIZE(m_pScene, g_sRngs);
-	if(m_Direct)
-		pathKernel2<true><<< sampler.blockDim(), sampler.threadDim()>>>(w, h, *I, sampler);
-	else pathKernel2<false><<< sampler.blockDim(), sampler.threadDim()>>>(w, h, *I, sampler);
-	k_TracerBase_update_TracedRays
-	I->DoUpdateDisplay(0);
-	sampler.AddPass(*I);
+	if (m_Direct)
+		pathKernel2<true> << <numBlocks, threadsPerBlock >> > (w, h, x, y, m_pBlockSampler->getBlockImage());
+	else pathKernel2<false> << <numBlocks, threadsPerBlock >> > (w, h, x, y, m_pBlockSampler->getBlockImage());
 }

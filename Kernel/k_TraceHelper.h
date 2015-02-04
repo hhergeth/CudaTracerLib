@@ -26,12 +26,6 @@ extern CUDA_ALIGN(16) CudaRNGBuffer g_RNGDataHost;
 #define g_RNGData g_RNGDataHost
 #endif
 
-#ifdef __CUDACC__
-#define k_TracerBase_update_TracedRays { cudaMemcpyFromSymbol(&m_uNumRaysTraced, g_RayTracedCounterDevice, sizeof(unsigned int)); }
-#else
-#define k_TracerBase_update_TracedRays { m_uNumRaysTraced = g_RayTracedCounterHost; }
-#endif
-
 //__device__ __host__ bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResult* a_Result, const e_Node* N, int ln);
 
 __device__ __host__ bool k_TraceRay(const float3& dir, const float3& ori, TraceResult* a_Result);
@@ -46,6 +40,8 @@ CUDA_FUNC_IN TraceResult k_TraceRay(const Ray& r)
 
 void k_INITIALIZE(const e_DynamicScene* a_Scene, const CudaRNGBuffer& a_RngBuf);
 
+unsigned int k_getNumRaysTraced();
+void k_setNumRaysTraced(unsigned int i);
 
 struct traversalRay
 {

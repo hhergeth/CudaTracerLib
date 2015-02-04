@@ -4,13 +4,14 @@
 #include "..\Base\CudaRandom.h"
 #include "k_PhotonMapHelper.h"
 
-class k_VCM : public k_ProgressiveTracer
+class k_VCM : public k_Tracer<true, true>
 {
 public:
 	k_VCM();
 protected:
 	virtual void DoRender(e_Image* I);
 	virtual void StartNewTrace(e_Image* I);
+	virtual void RenderBlock(e_Image* I, int x, int y, int blockW, int blockH);
 private:
 	//current will be used for lookup, next will be stored in
 	k_PhotonMapCollection<false> m_sPhotonMapsCurrent, m_sPhotonMapsNext;

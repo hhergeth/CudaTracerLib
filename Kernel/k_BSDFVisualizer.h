@@ -5,7 +5,7 @@
 #include "..\Engine\e_BSDF.h"
 #include "..\Engine\e_Light.h"
 
-class k_BSDFVisualizer : public k_ProgressiveTracer
+class k_BSDFVisualizer : public k_Tracer<false, true>
 {
 public:
 	float3 m_wo;
@@ -20,9 +20,8 @@ public:
 	k_BSDFVisualizer()
 		: m_wo(make_float3(0, 0, 1)), m_Bsdf(0), LScale(1), cosTheta(true), m_pBuffer(0), m_pBuffer2(0), drawEnvMap(false)
 	{
-		k_Tracer::InitRngs();
 	}
-	void Debug(const int2& pixel);
+	virtual void Debug(e_Image* I, const int2& pixel);
 	void DrawRegion(e_Image* I, int2 off, int2 size);
 	void setSkydome(const char* compiledPath);
 protected:

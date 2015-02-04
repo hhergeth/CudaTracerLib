@@ -214,7 +214,7 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum L_FinalGathering(TraceResult& r2, BS
 	return L / float(N) + LCaustic;
 }
 
-template<bool DIRECT, bool FINAL_GATHER> CUDA_FUNC_IN void k_EyePassF(int x, int y, int w, int h, float a_PassIndex, float a_rSurfaceUNUSED, float a_rVolume, k_AdaptiveStruct A, float scale0, float scale1, e_Image g_Image, const k_PhotonMapCollection<true>& photonMap)
+template<bool DIRECT, bool FINAL_GATHER> CUDA_FUNC_IN void k_EyePassF(int x, int y, int w, int h, float a_PassIndex, float a_rSurfaceUNUSED, float a_rVolume, k_AdaptiveStruct A, k_BlockSampleImage& img, const k_PhotonMapCollection<true>& photonMap)
 {
 	CudaRNG rng = g_RNGData();
 	DifferentialGeometry dg;
@@ -293,7 +293,7 @@ template<bool DIRECT, bool FINAL_GATHER> CUDA_FUNC_IN void k_EyePassF(int x, int
 		}
 		L += throughput * g_SceneData.EvalEnvironment(r);
 	}
-	g_Image.AddSample(screenPos.x, screenPos.y, L);
+	img.Add(screenPos.x, screenPos.y, L);
 	//Spectrum qs;
 	//float t = A.E[y * w + x].r / a_rSurfaceUNUSED;
 	//t = (A.E[y * w + x].r - A.r_min) / (A.r_max - A.r_min);
@@ -309,50 +309,36 @@ template<bool DIRECT, bool FINAL_GATHER> CUDA_FUNC_IN void k_EyePassF(int x, int
 	g_RNGData(rng);
 }
 
-template<bool DIRECT, bool FINAL_GATHER> __global__ void k_EyePass(int2 off, int w, int h, float a_PassIndex, float a_rSurfaceUNUSED, float a_rVolume, k_AdaptiveStruct A, float scale0, float scale1, e_Image g_Image, k_PhotonMapCollection<true> photonMap)
+template<bool DIRECT, bool FINAL_GATHER> __global__ void k_EyePass(int2 off, int w, int h, float a_PassIndex, float a_rSurfaceUNUSED, float a_rVolume, k_AdaptiveStruct A, k_BlockSampleImage img, k_PhotonMapCollection<true> photonMap)
 {
-	int x = blockIdx.x * blockDim.x + threadIdx.x, y = blockIdx.y * blockDim.y + threadIdx.y;
-	x += off.x;
-	y += off.y;
-	if (x < w && y < h)
-		k_EyePassF<DIRECT, FINAL_GATHER>(x, y, w, h, a_PassIndex, a_rSurfaceUNUSED, a_rVolume, A, scale0, scale1, g_Image, photonMap);
+	int2 pixel = k_TracerBase::getPixelPos(off.x, off.y);
+	if (pixel.x < w && pixel.y < h)
+		k_EyePassF<DIRECT, FINAL_GATHER>(pixel.x, pixel.y, w, h, a_PassIndex, a_rSurfaceUNUSED, a_rVolume, A, img, photonMap);
 }
 
 #define TN(r) (r * powf(float(m_uPassesDone), -1.0f/6.0f))
-void k_sPpmTracer::doEyePass(e_Image* I)
+void k_sPpmTracer::RenderBlock(e_Image* I, int x, int y, int blockW, int blockH)
 {
 	float radius2 = powf(powf(m_fInitialRadius, float(2)) / std::pow(float(m_uPassesDone), 0.5f * (1 - ALPHA)), 1.0f / 2.0f);
 	float radius3 = powf(powf(m_fInitialRadius, float(3)) / std::pow(float(m_uPassesDone), 0.5f * (1 - ALPHA)), 1.0f / 3.0f);
-	//I->Clear();
-	k_INITIALIZE(m_pScene, g_sRngs);
-	float s1 = float(m_uPassesDone - 1) / float(m_uPassesDone), s2 = 1.0f / float(m_uPassesDone);
 	k_AdaptiveStruct A(TN(r_min), TN(r_max), m_pEntries);
-	unsigned int p = 16;
-	bool blocks = m_pScene->getVolumes().getLength() || m_bLongRunning || w * h > 1024 * 1024;
-	dim3 bls = blocks ? dim3(8, 8, 1) : dim3(w / p + 1, h / p + 1, 1);
-	int nx = blocks ? w / (bls.x * p) + 1 : 1, ny = blocks ? h / (bls.y * p) + 1 : 1;
-	for(int i = 0; i < nx; i++)
-	for (int j = 0; j < ny; j++)
+	int2 off = make_int2(x, y);
+	k_BlockSampleImage img = m_pBlockSampler->getBlockImage();
+	if (m_bDirect)
 	{
-		int2 off = make_int2(bls.x * p * i, bls.y * p * j);
-		if (m_bDirect)
-		{
-			if (m_bFinalGather)
-				k_EyePass<true, true> << <bls, dim3(p, p, 1) >> >(off, w, h, m_uPassesDone, radius2, radius3, A, s1, s2, *I, m_sMaps);
-			else k_EyePass<true, false> << <bls, dim3(p, p, 1) >> >(off, w, h, m_uPassesDone, radius2, radius3, A, s1, s2, *I, m_sMaps);
-		}
-		else
-		{
-			if (m_bFinalGather)
-				k_EyePass<false, true> << <bls, dim3(p, p, 1) >> >(off, w, h, m_uPassesDone, radius2, radius3, A, s1, s2, *I, m_sMaps);
-			else k_EyePass<false, false> << <bls, dim3(p, p, 1) >> >(off, w, h, m_uPassesDone, radius2, radius3, A, s1, s2, *I, m_sMaps);
-		}
+		if (m_bFinalGather)
+			k_EyePass<true, true> << <numBlocks, threadsPerBlock >> >(off, w, h, m_uPassesDone, radius2, radius3, A, img, m_sMaps);
+		else k_EyePass<true, false> << <numBlocks, threadsPerBlock >> >(off, w, h, m_uPassesDone, radius2, radius3, A, img, m_sMaps);
 	}
-	//Debug(I, make_int2(269, 158));
-	I->DoUpdateDisplay(0);
+	else
+	{
+		if (m_bFinalGather)
+			k_EyePass<false, true> << <numBlocks, threadsPerBlock >> >(off, w, h, m_uPassesDone, radius2, radius3, A, img, m_sMaps);
+		else k_EyePass<false, false> << <numBlocks, threadsPerBlock >> >(off, w, h, m_uPassesDone, radius2, radius3, A, img, m_sMaps);
+	}
 }
 
-void k_sPpmTracer::Debug(e_Image* I, int2 pixel)
+void k_sPpmTracer::Debug(e_Image* I, const int2& pixel)
 {
 	if(m_uPhotonsEmitted == (unsigned long long)-1)
 		return;

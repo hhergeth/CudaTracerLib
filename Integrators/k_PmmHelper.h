@@ -231,7 +231,7 @@ template<int D, int K> struct GaussianMixtureModel
 
 	static GaussianMixtureModel<D, K> BatchEM(const vec* samples, int N)
 	{
-		vec mi = vec::Ones() * FLT_MAX, ma = vec::Ones() * FLT_MIN;
+		vec mi = vec::Ones() * FLT_MAX, ma = vec::Ones() * -FLT_MAX;
 		for(int i = 0; i < N; i++)
 		{
 			mi = minimize(mi, samples[i]);

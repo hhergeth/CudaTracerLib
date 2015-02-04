@@ -42,7 +42,7 @@ enum
 	PPM_slots_per_block = PPM_photons_per_block * PPM_MaxRecursion,
 };
 
-class k_sPpmTracer : public k_ProgressiveTracer
+class k_sPpmTracer : public k_Tracer<true, true>
 {
 private:
 	k_PhotonMapCollection<true> m_sMaps;
@@ -66,15 +66,14 @@ public:
 		m_sMaps.Free();
 	}
 	virtual void Resize(unsigned int _w, unsigned int _h);
-	virtual void Debug(e_Image* I, int2 pixel);
-	virtual void PrintStatus(std::vector<std::string>& a_Buf);
-	virtual void CreateSliders(SliderCreateCallback a_Callback);
+	virtual void Debug(e_Image* I, const int2& pixel);
+	virtual void PrintStatus(std::vector<std::string>& a_Buf) const;
+	virtual void CreateSliders(SliderCreateCallback a_Callback) const;
 protected:
 	virtual void DoRender(e_Image* I);
 	virtual void StartNewTrace(e_Image* I);
+	virtual void RenderBlock(e_Image* I, int x, int y, int blockW, int blockH);
 private:
-	void initNewPass(e_Image* I);
 	void doPhotonPass();
-	void doEyePass(e_Image* I);
 	void doStartPass(float r, float rd);
 };

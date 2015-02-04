@@ -83,9 +83,7 @@ static unsigned int* modelToShow = 0;
 
 void k_PmmTracer::DoRender(e_Image* I)
 {
-	k_ProgressiveTracer::DoRender(I);
 	I->Clear();
-	k_INITIALIZE(m_pScene, g_sRngs);
 	
 	sMap.ResetBuffer();
 	cudaMemcpyToSymbol(g_sMap, &sMap, sizeof(sMap));
@@ -110,14 +108,12 @@ void k_PmmTracer::DoRender(e_Image* I)
 	}
 
 	cudaError_t r = cudaThreadSynchronize();
-	k_TracerBase_update_TracedRays
-	I->DoUpdateDisplay(0);
 }
 
 void k_PmmTracer::StartNewTrace(e_Image* I)
 {
 	passIteration = 1;
-	AABB box = this->GetEyeHitPointBox(m_pScene, m_pCamera, true);
+	AABB box = this->GetEyeHitPointBox(m_pScene, true);
 	//AABB box = m_pScene->getBox(m_pScene->getNodes());
 	sMap.SetSceneDimensions(box, length(box.Size()) / 100.0f);
 	dMap.ResetBuffer();
@@ -131,7 +127,7 @@ void k_PmmTracer::StartNewTrace(e_Image* I)
 	g_RNGData(rng);
 }
 
-void k_PmmTracer::Debug(e_Image* I, int2 p)
+void k_PmmTracer::Debug(e_Image* I, const int2& p)
 {
 	/*k_INITIALIZE(m_pScene, g_sRngs);
 	float3* deviceDirs;

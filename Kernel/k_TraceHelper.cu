@@ -355,6 +355,19 @@ void k_INITIALIZE(const e_DynamicScene* a_Scene, const CudaRNGBuffer& a_RngBuf)
 	g_RayTracedCounterHost = 0;
 }
 
+unsigned int k_getNumRaysTraced()
+{
+	unsigned int i;
+	cudaMemcpyFromSymbol(&i, g_RayTracedCounterDevice, sizeof(unsigned int));
+	return i + g_RayTracedCounterHost;
+}
+
+void k_setNumRaysTraced(unsigned int i)
+{
+	g_RayTracedCounterHost = i;
+	cudaMemcpyToSymbol(g_RayTracedCounterDevice, &i, sizeof(unsigned int));
+}
+
 Spectrum TraceResult::Le(const float3& p, const Frame& sys, const float3& w) const 
 {
 	unsigned int i = LightIndex();

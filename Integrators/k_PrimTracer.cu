@@ -180,18 +180,12 @@ __global__ void debugPixe2l(unsigned int width, unsigned int height, int2 p)
 
 void k_PrimTracer::DoRender(e_Image* I)
 {
-	ThrowCudaErrors();
-	k_OnePassTracer::DoRender(I);
 	unsigned int zero = 0;
 	cudaMemcpyToSymbol(g_NextRayCounter2, &zero, sizeof(unsigned int));
-	k_INITIALIZE(m_pScene, g_sRngs);
 	primaryKernel<<< 180, dim3(32, MaxBlockHeight, 1)>>>(w, h, *I);
-	cudaError_t r = cudaThreadSynchronize();
-	k_TracerBase_update_TracedRays
-	I->DoUpdateDisplay(0);
 }
 
-void k_PrimTracer::Debug(e_Image* I, int2 pixel)
+void k_PrimTracer::Debug(e_Image* I, const int2& pixel)
 {
 	//FW::printf("%f,%f",pixel.x/float(w),pixel.y/float(h));
 	k_INITIALIZE(m_pScene, g_sRngs);

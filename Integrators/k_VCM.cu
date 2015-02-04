@@ -44,7 +44,7 @@ CUDA_FUNC_IN Spectrum L_Surface(BPTSubPathState& aCameraState, BSDFSamplingRecor
 	return Lp / float(g_CurrentMap.m_uPhotonNumEmitted);
 }
 
-CUDA_FUNC_IN void VCM(const float2& pixelPosition, e_Image& g_Image, CudaRNG& rng, int w, int h, float a_Radius, int a_NumIteration)
+CUDA_FUNC_IN void VCM(const float2& pixelPosition, k_BlockSampleImage& img, CudaRNG& rng, int w, int h, float a_Radius, int a_NumIteration)
 {
 	float mLightSubPathCount = 1;
 	const float etaVCM = (PI * a_Radius * a_Radius) * w * h;
@@ -95,7 +95,7 @@ CUDA_FUNC_IN void VCM(const float2& pixelPosition, e_Image& g_Image, CudaRNG& rn
 
 		//connect to camera
 		if (r2.getMat().bsdf.hasComponent(ESmooth))
-			connectToCamera(lightPathState, v.bRec, r2.getMat(), g_Image, rng, mLightSubPathCount, mMisVmWeightFactor, 1, true);
+			connectToCamera(lightPathState, v.bRec, r2.getMat(), img.img, rng, mLightSubPathCount, mMisVmWeightFactor, 1, true);
 
 		if (!sampleScattering(lightPathState, v.bRec, r2.getMat(), rng, mMisVcWeightFactor, mMisVmWeightFactor))
 			break;
@@ -147,15 +147,15 @@ CUDA_FUNC_IN void VCM(const float2& pixelPosition, e_Image& g_Image, CudaRNG& rn
 			break;
 	}
 
-	g_Image.AddSample(pixelPosition.x, pixelPosition.y, acc);
+	img.Add(pixelPosition.x, pixelPosition.y, acc);
 }
 
-__global__ void pathKernel(unsigned int w, unsigned int h, int xoff, int yoff, e_Image g_Image, float a_Radius, int a_NumIteration)
+__global__ void pathKernel(unsigned int w, unsigned int h, int xoff, int yoff, k_BlockSampleImage img, float a_Radius, int a_NumIteration)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x + xoff, y = blockIdx.y * blockDim.y + threadIdx.y + yoff;
 	CudaRNG rng = g_RNGData();
 	if (x < w && y < h)
-		VCM(make_float2(x, y), g_Image, rng, w, h, a_Radius, a_NumIteration);
+		VCM(make_float2(x, y), img, rng, w, h, a_Radius, a_NumIteration);
 	g_RNGData(rng);
 }
 
@@ -172,27 +172,19 @@ __global__ void buildHashGrid2()
 	}
 }
 
+void k_VCM::RenderBlock(e_Image* I, int x, int y, int blockW, int blockH)
+{
+	float radius = getCurrentRadius(2);
+	pathKernel << < numBlocks, threadsPerBlock >> >(w, h, x, y, m_pBlockSampler->getBlockImage(), radius, m_uPassesDone);
+}
+
 void k_VCM::DoRender(e_Image* I)
 {
-	k_ProgressiveTracer::DoRender(I);
-	m_uPassesDone++;
-	k_INITIALIZE(m_pScene, g_sRngs);
 	m_sPhotonMapsNext.m_uPhotonNumEmitted = w * h;
 	cudaMemcpyToSymbol(g_CurrentMap, &m_sPhotonMapsCurrent, sizeof(k_PhotonMapCollection<false>));
 	cudaMemcpyToSymbol(g_NextMap, &m_sPhotonMapsNext, sizeof(k_PhotonMapCollection<false>));
-	//float radius = m_fInitialRadius /= std::pow(float(m_uPassesDone), 0.5f * (1 - ALPHA));
-	float radius = getCurrentRadius(2);
-	int p = 16;
-	if (w < 200 && h < 200)
-		pathKernel << < dim3((w + p - 1) / p, (h + p - 1) / p, 1), dim3(p, p, 1) >> >(w, h, 0, 0, *I, radius, m_uPassesDone);
-	else
-	{
-		unsigned int q = 8, pq = p * q;
-		int nx = w / pq + 1, ny = h / pq + 1;
-		for (int i = 0; i < nx; i++)
-		for (int j = 0; j < ny; j++)
-			pathKernel << < dim3(q, q, 1), dim3(p, p, 1) >> >(w, h, pq * i, pq * j, *I, radius, m_uPassesDone);
-	}
+
+	k_Tracer<true, true>::DoRender(I);
 	cudaMemcpyFromSymbol(&m_sPhotonMapsNext, g_NextMap, sizeof(k_PhotonMapCollection<false>));
 	buildHashGrid2 << <m_sPhotonMapsNext.m_uPhotonBufferLength / (32 * 6) + 1, dim3(32, 6, 1) >> >();
 	cudaMemcpyFromSymbol(&m_sPhotonMapsCurrent, g_CurrentMap, sizeof(k_PhotonMapCollection<false>));
@@ -200,17 +192,15 @@ void k_VCM::DoRender(e_Image* I)
 
 	swapk(m_sPhotonMapsNext, m_sPhotonMapsCurrent);
 	m_uPhotonsEmitted += m_sPhotonMapsCurrent.m_uPhotonNumEmitted;
-	
+
 	m_sPhotonMapsNext.StartNewPass();
-	k_TracerBase_update_TracedRays
-	I->DoUpdateDisplay(1.0f / float(m_uPassesDone));
 }
 
 void k_VCM::StartNewTrace(e_Image* I)
 {
-	k_ProgressiveTracer::StartNewTrace(I);
+	k_Tracer<true, true>::StartNewTrace(I);
 	m_uPhotonsEmitted = 0;
-	AABB m_sEyeBox = GetEyeHitPointBox(m_pScene, m_pCamera, true);
+	AABB m_sEyeBox = GetEyeHitPointBox(m_pScene, true);
 	m_sEyeBox.Enlarge(0.1f);
 	float r = fsumf(m_sEyeBox.maxV - m_sEyeBox.minV) / float(w);
 	m_sEyeBox.minV -= make_float3(r);

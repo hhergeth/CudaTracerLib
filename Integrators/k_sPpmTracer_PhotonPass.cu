@@ -130,7 +130,6 @@ __global__ void buildHashGrid()
 void k_sPpmTracer::doPhotonPass()
 {
 	cudaMemcpyToSymbol(g_Map, &m_sMaps, sizeof(k_PhotonMapCollection<true>));
-	k_INITIALIZE(m_pScene, g_sRngs);
 	while (!m_sMaps.PassFinished())
 	{
 		if (m_bDirect)

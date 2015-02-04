@@ -2,10 +2,10 @@
 #include "k_Tracer.h"
 #include "k_TraceHelper.h"
 
-CudaRNGBuffer k_Tracer::g_sRngs;
+CudaRNGBuffer k_TracerBase::g_sRngs;
 static bool initrng = false;
 
-void k_Tracer::InitRngs(unsigned int N)
+void k_TracerBase::InitRngs(unsigned int N)
 {
 	if(!initrng)
 	{
@@ -14,29 +14,7 @@ void k_Tracer::InitRngs(unsigned int N)
 	}
 }
 
-k_Tracer::k_Tracer()
+k_TracerBase::k_TracerBase()
 {
 	InitRngs(1024 * 768);
-}
-
-float k_TracerBase::getValuePerSecond(float val, float invScale)
-{
-	return val / (m_fTimeSpentRendering * invScale);
-}
-
-float k_TracerBase::getTimeSpentRendering()
-{
-	return m_fTimeSpentRendering;
-}
-
-void k_ProgressiveTracer::StartNewTrace(e_Image* I)
-{
-	I->Clear();
-	m_uPassesDone = 0; 
-}
-
-void k_ProgressiveTracer::DoRender(e_Image* I)
-{
-	m_uNumRaysTraced = 0;
-	//m_fTimeSpentRendering = 0;
 }

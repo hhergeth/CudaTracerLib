@@ -99,17 +99,13 @@ __global__ void pathKernel(unsigned int N, e_Image g_Image)
 
 void k_PhotonTracer::DoRender(e_Image* I)
 {
-	k_ProgressiveTracer::DoRender(I);
 	unsigned int zero = 0;
 	cudaMemcpyToSymbol(g_NextRayCounter3, &zero, sizeof(unsigned int));
 	k_INITIALIZE(m_pScene, g_sRngs);
-	pathKernel<<< 180, dim3(32, 4, 1)>>>(N, *I);
-	m_uPassesDone++;
-	k_TracerBase_update_TracedRays
-	I->DoUpdateDisplay(float(w*h) / float(m_uPassesDone * N));
+	pathKernel<<< 180, dim3(32, 4, 1)>>>(w * h, *I);
 }
 
-void k_PhotonTracer::Debug(e_Image* I, int2 pixel)
+void k_PhotonTracer::Debug(e_Image* I, const int2& pixel)
 {
 	CudaRNG rng = g_RNGData();
 	doWork(*I, rng);
