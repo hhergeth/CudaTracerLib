@@ -1,9 +1,10 @@
 #pragma once
 
-#include "cutil_math.h"
+#include "MathFunc.h"
+#include "Vector.h"
 
-#define m_alpha ((float)sqrtf(2.0/3.0))
-#define m_beta ((float)(1.0/sqrtf(5.0)))
+#define m_alpha ((float)math::sqrt(2.0/3.0))
+#define m_beta ((float)(1.0/math::sqrt(5.0)))
 #define m_x1 ((float)0.94288241569547971906)
 #define m_x2 ((float)0.64185334234578130578)
 #define m_x3 ((float)0.23638319966214988028)
@@ -12,9 +13,9 @@ CUDA_DEVICE CUDA_HOST float legendreP(int l, float x);
 
 CUDA_DEVICE CUDA_HOST float legendreP(int l, int m, float x);
 
-CUDA_DEVICE CUDA_HOST float2 legendrePD(int l, float x);
+CUDA_DEVICE CUDA_HOST Vec2f legendrePD(int l, float x);
 
-CUDA_DEVICE CUDA_HOST float2 legendreQ(int l, float x);
+CUDA_DEVICE CUDA_HOST Vec2f legendreQ(int l, float x);
 
 CUDA_DEVICE CUDA_HOST void gaussLegendre(int n, float *nodes, float *weights);
 
@@ -54,8 +55,6 @@ public:
 		const float absTolerance = calculateAbsTolerance(f, a, b, evals);
 		evals += 2;
 		float result = factor * adaptiveGaussLobattoStep(f, a, b, f(a), f(b), absTolerance, evals);
-		//if (evals >= m_maxEvals && m_warn)
-		//	SLog(EWarn, "GaussLobattoIntegrator: Maximum number of evaluations reached!");
 		if (_evals)
 			*_evals = evals;
 		return result;
@@ -135,12 +134,12 @@ private:
 		float result = FLT_MAX;
 
 		if (m_relError != 0 && acc != 0)
-			result = acc * MAX(m_relError,
+			result = acc * max(m_relError,
 				FLT_EPSILON)
 				/ (r*FLT_EPSILON);
 
 		if (m_absError != 0)
-			result = MIN(result, m_absError
+			result = min(result, m_absError
 				/ (r*FLT_EPSILON));
 
 		return result;

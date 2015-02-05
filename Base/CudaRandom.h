@@ -1,7 +1,6 @@
 #pragma once
 
-#include "..\Defines.h"
-
+#include "../Math/Vector.h"
 #include "curand_kernel.h"
 
 class LinearCongruental_GENERATOR
@@ -297,17 +296,17 @@ public:
 	CUDA_DEVICE CUDA_HOST float randomFloat();
 	CUDA_DEVICE CUDA_HOST unsigned long randomUint();
 
-	CUDA_FUNC_IN float2 randomFloat2()
+	CUDA_FUNC_IN Vec2f randomFloat2()
 	{
-		return make_float2(randomFloat(), randomFloat());
+		return Vec2f(randomFloat(), randomFloat());
 	}
-	CUDA_FUNC_IN float3 randomFloat3()
+	CUDA_FUNC_IN Vec3f randomFloat3()
 	{
-		return make_float3(randomFloat(), randomFloat(), randomFloat());
+		return Vec3f(randomFloat(), randomFloat(), randomFloat());
 	}
-	CUDA_FUNC_IN float4 randomFloat4()
+	CUDA_FUNC_IN Vec4f randomFloat4()
 	{
-		return make_float4(randomFloat(), randomFloat(), randomFloat(), randomFloat());
+		return Vec4f(randomFloat(), randomFloat(), randomFloat(), randomFloat());
 	}
 };
 
@@ -328,45 +327,5 @@ private:
 	void createGenerators(unsigned int a_Spacing, unsigned int a_Offset);
 };
 
-#define GENERATOR LinearCongruental_GENERATOR
-
-class k_Tracer_sobol
-{
-public:
-	float* points;
-	GENERATOR state;
-	CUDA_DEVICE CUDA_HOST float randomFloat();
-	CUDA_DEVICE CUDA_HOST unsigned long randomUint();
-
-	CUDA_FUNC_IN float2 randomFloat2()
-	{
-		return make_float2(randomFloat(), randomFloat());
-	}
-	CUDA_FUNC_IN float3 randomFloat3()
-	{
-		return make_float3(randomFloat(), randomFloat(), randomFloat());
-	}
-	CUDA_FUNC_IN float4 randomFloat4()
-	{
-		return make_float4(randomFloat(), randomFloat(), randomFloat(), randomFloat());
-	}
-};
-
-class k_Tracer_sobol_Buffer
-{
-	float points[32];
-	unsigned int X[32];
-	unsigned int passIndex;
-public:
-	k_Tracer_sobol_Buffer(unsigned int a_Length, unsigned int a_Spacing = 1234, unsigned int a_Offset = 0);
-	k_Tracer_sobol_Buffer(){}
-	CUDA_DEVICE CUDA_HOST k_Tracer_sobol operator()();
-	CUDA_DEVICE CUDA_HOST void operator()(k_Tracer_sobol& val);
-	void NextPass();
-};
-
 typedef k_TracerRNG_cuRAND CudaRNG;
 typedef CudaRNGBuffer_cuRAND CudaRNGBuffer;
-
-//typedef k_Tracer_sobol CudaRNG;
-//typedef k_Tracer_sobol_Buffer CudaRNGBuffer;

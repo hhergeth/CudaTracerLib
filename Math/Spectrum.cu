@@ -127,7 +127,7 @@ void Spectrum::fromLinearRGB(float r, float g, float b, Spectrum::EConversionInt
 		result *= .86445f;
 	}
 	*this = result;
-	clampNegative();
+	math::clampNegative();
 }
 
 void Spectrum::toXYZ(float &x, float &y, float &z) const
@@ -195,9 +195,9 @@ void Spectrum::toIPT(float &I, float &P, float &T) const
 	float S =   0.0000f * X + 0.0000f * Y + 0.9184f * Z;
 
 	/* Nonlinear transformation for perceptual uniformity */
-	float Lp = signf(L) * powf(::abs(L), (float) 0.43);
-	float Mp = signf(M) * powf(::abs(M), (float) 0.43);
-	float Sp = signf(S) * powf(::abs(S), (float) 0.43);
+	float Lp = math::sign(L) * math::pow(math::abs(L), (float) 0.43);
+	float Mp = math::sign(M) * math::pow(math::abs(M), (float) 0.43);
+	float Sp = math::sign(S) * math::pow(math::abs(S), (float) 0.43);
 
 	/* Second linear transformation to get to IPT space */
 	I = 0.4000f * Lp + 0.4000f * Mp + 0.2000f * Sp;
@@ -211,9 +211,9 @@ void Spectrum::fromIPT(float I, float P, float T, Spectrum::EConversionIntent in
 	float Mp = 1.0000f * I - 0.1139f * P + 0.1332f * T;
 	float Sp = 1.0000f * I + 0.0326f * P - 0.6769f * T;
 
-	float L = signf(Lp) * powf(::abs(Lp), (float) (1.0/0.43));
-	float M = signf(Mp) * powf(::abs(Mp), (float) (1.0/0.43));
-	float S = signf(Sp) * powf(::abs(Sp), (float) (1.0/0.43));
+	float L = math::sign(Lp) * math::pow(math::abs(Lp), (float) (1.0/0.43));
+	float M = math::sign(Mp) * math::pow(math::abs(Mp), (float) (1.0/0.43));
+	float S = math::sign(Sp) * math::pow(math::abs(Sp), (float) (1.0/0.43));
 
 	float X = 1.8502f * L - 1.1383f * M + 0.2384f * S;
 	float Y = 0.3668f * L + 0.6439f * M - 0.0107f * S;
@@ -258,7 +258,7 @@ RGBE Spectrum::toRGBE() const
 	float r, g, b;
 	toLinearRGB(r, g, b);
 	/* Find the largest contribution */
-	float max = MAX(r, g, b);
+	float max = ::max(r, g, b);
 	RGBE rgbe;
 	if (max < 1e-32) {
 		rgbe.x = rgbe.y = rgbe.z = rgbe.w = 0;
@@ -291,8 +291,8 @@ RGBCOL Spectrum::toRGBCOL() const
 {
 	float r,g,b;
 	toLinearRGB(r,g,b);
-//#define toInt(x) (unsigned char((float)powf(clamp01(x),1.0f/1.2f)*255.0f+0.5f))
-#define toInt(x) unsigned char(clamp01(x) * 255.0f)
+//#define toInt(x) (unsigned char((float)powf(math::clamp01(x),1.0f/1.2f)*255.0f+0.5f))
+#define toInt(x) unsigned char(math::clamp01(x) * 255.0f)
 	return make_uchar4(toInt(r), toInt(g), toInt(b), 255);
 #undef toInt
 }
@@ -307,7 +307,7 @@ void Spectrum::toYxy(float &_Y, float &x, float &y) const
 {
 	float X,Y,Z;
 	toXYZ(X,Y,Z);
-	float s = clamp(X + Y + Z, 0.001f, 100000.0f);
+	float s = math::clamp(X + Y + Z, 0.001f, 100000.0f);
 	_Y = Y;
 	x = X / s;
 	y = Y / s;
@@ -315,9 +315,9 @@ void Spectrum::toYxy(float &_Y, float &x, float &y) const
 
 void Spectrum::fromYxy(float _Y, float x, float y, EConversionIntent intent)
 {
-	float X = _Y / clamp(y,0.001f,100000.0f) * x;
+	float X = _Y / math::clamp(y,0.001f,100000.0f) * x;
 	float Y = _Y;
-	float Z = _Y / clamp(y,0.001f,100000.0f) * ( 1 - x - y );
+	float Z = _Y / math::clamp(y,0.001f,100000.0f) * ( 1 - x - y );
 	fromXYZ(X, Y, Z, intent);
 }
 
@@ -345,24 +345,24 @@ void Spectrum::fromHSL(float h, float s, float l)
         b = hue2rgb(p, q, h - 1/3);
 	}*/
 	//fromLinearRGB(r,g,b);
-	float3 color;
-	float c = (1.0 - fabsf(2 * l - 1.0)) * s;
+	Vec3f color;
+	float c = (1.0 - math::abs(2 * l - 1.0f)) * s;
 	float Hd = h * 6;
-	float x = c * (1.0 - fabsf(fmodf(Hd, 2) - 1.0));
+	float x = c * (1.0 - math::abs(fmodf(Hd, 2) - 1.0f));
 	if(0 <= Hd && Hd < 1)
-		color = make_float3(c,x,0);
+		color = Vec3f(c, x, 0);
 	else if(1 <= Hd && Hd < 2)
-		color = make_float3(x,c,0);
+		color = Vec3f(x, c, 0);
 	else if(2 <= Hd && Hd < 3)
-		color = make_float3(0,c,x);
+		color = Vec3f(0, c, x);
 	else if(3 <= Hd && Hd < 4)
-		color = make_float3(0,x,c);
+		color = Vec3f(0, x, c);
 	else if(4 <= Hd && Hd < 5)
-		color = make_float3(x,0,c);
+		color = Vec3f(x, 0, c);
 	else if(5 <= Hd && Hd < 6)
-		color = make_float3(c,0,x);
+		color = Vec3f(c, 0, x);
 	float m = l - 0.5f * c;
-	color += make_float3(m);
+	color += Vec3f(m);
 	fromLinearRGB(color.x, color.y, color.z);
 }
 
@@ -370,7 +370,7 @@ void Spectrum::toHSL(float& h, float& s, float& l) const
 {
 	float r,g,b;
 	toLinearRGB(r,g,b);
-	float max = MAX(r, g, b), min = MIN(r, g, b);
+	float max = ::max(r, g, b), min = ::min(r, g, b);
     l = (max + min) / 2;
 	h = s = 0;
 	if(max != min)
@@ -414,7 +414,7 @@ struct InterpolatedSpectrum
 				  b  = m_wavelengths[idx1],
 				  fa = m_values[idx1-1],
 				  fb = m_values[idx1];
-			return lerp(fb, fa, (lambda - a) / (b-a));
+			return math::lerp(fb, fa, (lambda - a) / (b-a));
 		} else if (idx2 == idx1+1) {
 			/* Hit a value exactly */
 			return m_values[idx1];
@@ -428,13 +428,13 @@ struct InterpolatedSpectrum
 		if(N < 2)
 			return 0.0f;
 
-		float rangeStart = MAX(lambdaMin, m_wavelengths[0]);
-		float rangeEnd = MIN(lambdaMax, m_wavelengths[N-1]);
+		float rangeStart = max(lambdaMin, m_wavelengths[0]);
+		float rangeEnd = min(lambdaMax, m_wavelengths[N-1]);
 
 		if (rangeEnd <= rangeStart)
 			return 0.0f;
 
-		size_t entry = MAX((size_t) (STL_lower_bound(m_wavelengths,
+		size_t entry = max((size_t) (STL_lower_bound(m_wavelengths,
 			m_wavelengths + (N - 1), rangeStart) - m_wavelengths), (size_t) 1) - 1;
 
 		float result = 0.0f;
@@ -443,8 +443,8 @@ struct InterpolatedSpectrum
 
 			float a  = m_wavelengths[entry],
 				  b  = m_wavelengths[entry+1],
-				  ca = MAX(a, rangeStart),
-				  cb = MIN(b, rangeEnd),
+				  ca = max(a, rangeStart),
+				  cb = min(b, rangeEnd),
 				  fa = m_values[entry],
 				  fb = m_values[entry+1],
 				  invAB = 1.0f / (b - a);
@@ -452,8 +452,8 @@ struct InterpolatedSpectrum
 			if (cb <= ca)
 				continue;
 
-			float interpA = lerp(fa, fb, (ca - a) * invAB);
-			float interpB = lerp(fa, fb, (cb - a) * invAB);
+			float interpA = math::lerp(fa, fb, (ca - a) * invAB);
+			float interpB = math::lerp(fa, fb, (cb - a) * invAB);
 
 			result += 0.5f * (interpA + interpB) * (cb-ca);
 		}
@@ -492,8 +492,8 @@ struct ProductSpectrum
 		float integral = 0;
 
 		/// Integrate over 50nm-sized regions
-		size_t nSteps = MAX((size_t) 1,
-				(size_t) std::ceil((lambdaMax - lambdaMin) / 50));
+		size_t nSteps = max((size_t) 1,
+				(size_t) math::ceil((lambdaMax - lambdaMin) / 50));
 		float stepSize = (lambdaMax - lambdaMin) / nSteps,
 			  pos = lambdaMin;
 
@@ -525,7 +525,7 @@ float InterpolateSpectrumSamples(const float *lambda, const float *vals,
     for (int i = 0; i < n-1; ++i) {
         if (l >= lambda[i] && l <= lambda[i+1]) {
             float t = (l - lambda[i]) / (lambda[i+1] - lambda[i]);
-            return lerp(vals[i], vals[i+1], t);
+            return math::lerp(vals[i], vals[i+1], t);
         }
     }
     return 0.f;
@@ -561,7 +561,7 @@ void SpectrumHelper::staticData::init()
 {
 	float stepSize = SPECTRUM_RANGE / (float) SPECTRUM_SAMPLES;
 	for (int i=0; i<SPECTRUM_SAMPLES + 1; i++) {
-		float value = SPECTRUM_MIN_WAVELENGTH + stepSize * i;
+		float value = SPECTRUM_min_WAVELENGTH + stepSize * i;
 		m_wavelengths[i] = value;
 	}
 

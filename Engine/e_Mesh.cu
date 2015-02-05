@@ -2,9 +2,9 @@
 #include "..\Base\StringUtils.h"
 #include "e_TraceResult.h"
 
-void e_TriIntersectorData::setData(const float3& a, const float3& b, const float3& c)
+void e_TriIntersectorData::setData(const Vec3f& a, const Vec3f& b, const Vec3f& c)
 {
-	//if(AbsDot(normalize(cross(a - c, b - c)), make_float3(1, 0, 0)) < 0.05f)
+	//if(absdot(normalize(cross(a - c, b - c)), make_float3(1, 0, 0)) < 0.05f)
 	/*{
 		float l = length((a + b + c) / 3.0f - a) / 200.0f;
 		//e += make_float3(0,0.02f,-0.02f);
@@ -16,15 +16,15 @@ void e_TriIntersectorData::setData(const float3& a, const float3& b, const float
 		e = e + make_float3(0,l,-l)/200.0f;
 	}*/
 	float4x4 m;
-	m.col(0, make_float4(a - c, 0));
-	m.col(1, make_float4(b - c, 0));
-	m.col(2, make_float4(cross(a - c, b - c), 0));
-	m.col(3, make_float4(c, 1));
+	m.col(0, Vec4f(a - c, 0));
+	m.col(1, Vec4f(b - c, 0));
+	m.col(2, Vec4f(cross(a - c, b - c), 0));
+	m.col(3, Vec4f(c, 1));
 	m = m.inverse();
-	this->a = make_float4(m(2, 0), m(2, 1), m(2, 2), -m(2, 3));
+	this->a = Vec4f(m(2, 0), m(2, 1), m(2, 2), -m(2, 3));
 	this->b = m.row(0);
 	this->c = m.row(1);
-	float3 v1, v2, v3;
+	Vec3f v1, v2, v3;
 	getData(v1, v2, v3);
 	//*(float2*)t2 = make_float2(m[0].x, m[0].y);
 	//*(half2*)(((int*)t2) + 2) = half2(m[0].z, m[0].w);
@@ -37,7 +37,7 @@ void e_TriIntersectorData::setData(const float3& a, const float3& b, const float
 	//t2->setXs(m[2].x, m[0].x, m[1].x);
 }
 
-void e_TriIntersectorData::getData(float3& v0, float3& v1, float3& v2) const
+void e_TriIntersectorData::getData(Vec3f& v0, Vec3f& v1, Vec3f& v2) const
 {
 	float4x4 m = float4x4::Identity();
 	m.row(0, b);
@@ -45,8 +45,8 @@ void e_TriIntersectorData::getData(float3& v0, float3& v1, float3& v2) const
 	m.row(2, a);
 	m(2, 3) *= -1.0f;
 	m = m.inverse();
-	float3 e02 = !m.col(0), e12 = !m.col(1);
-	v2 = !m.col(3);
+	Vec3f e02 = m.col(0).getXYZ(), e12 = m.col(1).getXYZ();
+	v2 = m.col(3).getXYZ();
 	v0 = v2 + e02;
 	v1 = v2 + e12;
 }
@@ -69,7 +69,7 @@ bool e_TriIntersectorData::Intersect(const Ray& r, TraceResult* a_Result) const
 			if (v >= 0.0f && u + v <= 1.0f)
 			{
 				a_Result->m_fDist = t;
-				a_Result->m_fUV = make_float2(u, v);
+				a_Result->m_fUV = Vec2f(u, v);
 				return true;
 			}
 		}

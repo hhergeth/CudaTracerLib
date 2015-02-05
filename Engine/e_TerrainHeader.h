@@ -25,18 +25,18 @@ typedef float2 CACHE_LEVEL_TYPE;
 
 struct e_KernelTerrainData
 {
-	float3 m_sMin;
-	float3 m_sMax;
+	Vec3f m_sMin;
+	Vec3f m_sMax;
 	unsigned int m_uDepth;
 	e_TerrainData_Inner* m_pNodes;
 	CACHE_LEVEL_TYPE* m_pCacheData;
-	CUDA_FUNC_IN float2 getsdxy()
+	CUDA_FUNC_IN Vec2f getsdxy()
 	{
-		float3 dim = m_sMax - m_sMin;
-		return make_float2(dim.x, dim.z) / make_float2(pow2((float)m_uDepth));
+		Vec3f dim = m_sMax - m_sMin;
+		return Vec2f(dim.x, dim.z) / Vec2f(pow2((float)m_uDepth));
 	}
-	float2 getFlatScale()
+	Vec2f getFlatScale()
 	{
-		return make_float2(m_sMax.x - m_sMin.x, m_sMax.z - m_sMin.z);
+		return Vec2f(m_sMax.x - m_sMin.x, m_sMax.z - m_sMin.z);
 	}
 };

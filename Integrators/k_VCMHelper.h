@@ -81,8 +81,8 @@ CUDA_FUNC_IN void sampleEmitter(BPTSubPathState& v, CudaRNG& rng, float mMisVcWe
 	v.r = Ray(pRec.p, dRec.d);
 
 	DirectSamplingRecord directRec;
-	directRec.d = directRec.refN = make_float3(1, 0, 0);
-	directRec.n = make_float3(-1, 0, 0);
+	directRec.d = directRec.refN = Vec3f(1, 0, 0);
+	directRec.n = Vec3f(-1, 0, 0);
 	directRec.measure = EArea;
 
 	float directPdfW = l->pdfDirect(directRec) * emitterPdf;
@@ -98,7 +98,7 @@ CUDA_FUNC_IN void sampleEmitter(BPTSubPathState& v, CudaRNG& rng, float mMisVcWe
 	v.dVM = v.dVC * mMisVcWeightFactor;
 }
 
-CUDA_FUNC_IN void sampleCamera(BPTSubPathState& v, CudaRNG& rng, const float2& pixelPosition, float mLightSubPathCount)
+CUDA_FUNC_IN void sampleCamera(BPTSubPathState& v, CudaRNG& rng, const Vec2f& pixelPosition, float mLightSubPathCount)
 {
 	PositionSamplingRecord pRec;
 	DirectionSamplingRecord dRec;
@@ -193,7 +193,7 @@ CUDA_FUNC_IN bool sampleScattering(BPTSubPathState& v, BSDFSamplingRecord& bRec,
 	float cosToCamera = fabsf(Frame::cosTheta(bRec.wo));
 	float cameraPdfA = dRec.pdf;
 	if (dRec.measure != EArea)
-		cameraPdfA = PdfWtoA(cameraPdfA, DistanceSquared(bRec.dg.P, dRec.p), dot(dRec.n, -dRec.d));
+		cameraPdfA = PdfWtoA(cameraPdfA, distanceSquared(bRec.dg.P, dRec.p), dot(dRec.n, -dRec.d));
 	const float wLight = Mis(cameraPdfA / mLightSubPathCount) * (
 						 mMisVmWeightFactor + lightState.dVCM + lightState.dVC * Mis(bsdfRevPdfW));
 	float miWeight = use_mis ? 1.f / (wLight + 1.f) : 1;
@@ -225,7 +225,7 @@ CUDA_FUNC_IN bool sampleScattering(BPTSubPathState& v, BSDFSamplingRecord& bRec,
 		return Spectrum(0.0f);
 
 	if (dRec.measure != ESolidAngle)
-		directPdfW = PdfAtoW(directPdfW, DistanceSquared(bRec.dg.P, dRec.p), cosAtLight);
+		directPdfW = PdfAtoW(directPdfW, distanceSquared(bRec.dg.P, dRec.p), cosAtLight);
 
 	const float wLight = Mis(bsdfDirPdfW / directPdfW);
 	const float wCamera = Mis(emissionPdfW * cosToLight / (directPdfW * cosAtLight)) * (
@@ -242,8 +242,8 @@ CUDA_FUNC_IN bool sampleScattering(BPTSubPathState& v, BSDFSamplingRecord& bRec,
 
  CUDA_FUNC_IN Spectrum connectVertices(BPTVertex& emitterVertex, const BPTSubPathState& cameraState, BSDFSamplingRecord& bRec, const e_KernelMaterial& mat, float mMisVcWeightFactor, float mMisVmWeightFactor, bool use_mis)
 {
-	const float dist2 = DistanceSquared(emitterVertex.dg.P, bRec.dg.P);
-	float3 direction = normalize(emitterVertex.dg.P - bRec.dg.P);
+	const float dist2 = distanceSquared(emitterVertex.dg.P, bRec.dg.P);
+	Vec3f direction = normalize(emitterVertex.dg.P - bRec.dg.P);
 
 	bRec.wo = bRec.dg.toLocal(direction);
 	const Spectrum cameraBsdf = mat.bsdf.f(bRec);

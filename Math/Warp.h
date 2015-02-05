@@ -1,6 +1,7 @@
 #pragma once
 
-#include "cutil_math.h"
+#include "MathFunc.h"
+#include "Vector.h"
 #include "Frame.h"
 
 CUDA_FUNC_IN float intervalToTent(float sample)
@@ -15,68 +16,68 @@ CUDA_FUNC_IN float intervalToTent(float sample)
 		sample = 2 * (sample - 0.5f);
 	}
 
-	return sign * (1 - sqrtf(sample));
+	return sign * (1 - math::sqrt(sample));
 }
 
 class Warp
 {
 public:
-	CUDA_FUNC_IN static float3 squareToUniformSphere(const float2 &sample)
+	CUDA_FUNC_IN static Vec3f squareToUniformSphere(const Vec2f &sample)
 	{
 		float z = 1.0f - 2.0f * sample.y;
-		float r = sqrtf(1.0f - z*z);
+		float r = math::sqrt(1.0f - z*z);
 		float sinPhi, cosPhi;
 		sincos(2.0f * PI * sample.x, &sinPhi, &cosPhi);
-		return make_float3(r * cosPhi, r * sinPhi, z);
+		return Vec3f(r * cosPhi, r * sinPhi, z);
 	}
 
 	CUDA_FUNC_IN static float squareToUniformSpherePdf() { return INV_FOURPI; }
 
-	CUDA_FUNC_IN static float3 squareToUniformHemisphere(const float2 &sample)
+	CUDA_FUNC_IN static Vec3f squareToUniformHemisphere(const Vec2f &sample)
 	{
 		float z = sample.x;
-		float tmp = sqrtf(1.0f - z*z);
+		float tmp = math::sqrt(1.0f - z*z);
 
 		float sinPhi, cosPhi;
 		sincos(2.0f * PI * sample.y, &sinPhi, &cosPhi);
 
-		return make_float3(cosPhi * tmp, sinPhi * tmp, z);
+		return Vec3f(cosPhi * tmp, sinPhi * tmp, z);
 	}
 
 	CUDA_FUNC_IN static float squareToUniformHemispherePdf() { return INV_TWOPI; }
 
-	CUDA_FUNC_IN static float3 squareToCosineHemisphere(const float2 &sample)
+	CUDA_FUNC_IN static Vec3f squareToCosineHemisphere(const Vec2f &sample)
 	{
-		float2 p = Warp::squareToUniformDiskConcentric(sample);
-		float z = sqrtf(1.0f - p.x*p.x - p.y*p.y);
-		return make_float3(p.x, p.y, z);
+		Vec2f p = Warp::squareToUniformDiskConcentric(sample);
+		float z = math::sqrt(1.0f - p.x*p.x - p.y*p.y);
+		return Vec3f(p.x, p.y, z);
 	}
 
-	CUDA_FUNC_IN static float squareToCosineHemispherePdf(const float3 &d)
+	CUDA_FUNC_IN static float squareToCosineHemispherePdf(const Vec3f &d)
 		{ return INV_PI * Frame::cosTheta(d); }
 
-	CUDA_FUNC_IN static float3 squareToUniformCone(float cosCutoff, const float2 &sample)
+	CUDA_FUNC_IN static Vec3f squareToUniformCone(float cosCutoff, const Vec2f &sample)
 	{
 		float cosTheta = (1-sample.x) + sample.x * cosCutoff;
-		float sinTheta = sqrtf(1.0f - cosTheta * cosTheta);
+		float sinTheta = math::sqrt(1.0f - cosTheta * cosTheta);
 
 		float sinPhi, cosPhi;
 		sincos(2.0f * PI * sample.y, &sinPhi, &cosPhi);
 
-		return make_float3(cosPhi * sinTheta, sinPhi * sinTheta, cosTheta);
+		return Vec3f(cosPhi * sinTheta, sinPhi * sinTheta, cosTheta);
 	}
 
 	CUDA_FUNC_IN static float squareToUniformConePdf(float cosCutoff) {
 		return INV_TWOPI / (1-cosCutoff);
 	}
 
-	CUDA_FUNC_IN static float2 squareToUniformDisk(const float2 &sample)
+	CUDA_FUNC_IN static Vec2f squareToUniformDisk(const Vec2f &sample)
 	{
-		float r = sqrtf(sample.x);
+		float r = math::sqrt(sample.x);
 		float sinPhi, cosPhi;
 		sincos(2.0f * PI * sample.y, &sinPhi, &cosPhi);
 
-		return make_float2(
+		return Vec2f(
 			cosPhi * r,
 			sinPhi * r
 		);
@@ -84,7 +85,7 @@ public:
 
 	CUDA_FUNC_IN static float squareToUniformDiskPdf() { return INV_PI; }
 
-	CUDA_FUNC_IN static float2 squareToUniformDiskConcentric(const float2 &sample)
+	CUDA_FUNC_IN static Vec2f squareToUniformDiskConcentric(const Vec2f &sample)
 	{
 		float r1 = 2.0f*sample.x - 1.0f;
 		float r2 = 2.0f*sample.y - 1.0f;
@@ -105,12 +106,12 @@ public:
 		float cosPhi, sinPhi;
 		sincos(phi, &sinPhi, &cosPhi);
 
-		return make_float2(r * cosPhi, r * sinPhi);
+		return Vec2f(r * cosPhi, r * sinPhi);
 	}
 
-	CUDA_FUNC_IN static float2 uniformDiskToSquareConcentric(const float2 &p)
+	CUDA_FUNC_IN static Vec2f uniformDiskToSquareConcentric(const Vec2f &p)
 	{
-		float r   = sqrtf(p.x * p.x + p.y * p.y),
+		float r   = math::sqrt(p.x * p.x + p.y * p.y),
 		phi = atan2(p.y, p.x),
 		a, b;
 
@@ -133,25 +134,25 @@ public:
 			a = -(phi - 3*PI/2) * b / (PI/4);
 		}
 
-		return make_float2(0.5f * (a+1), 0.5f * (b+1));
+		return Vec2f(0.5f * (a + 1), 0.5f * (b + 1));
 	}
 
 	CUDA_FUNC_IN static float squareToUniformDiskConcentricPdf() { return INV_PI; }
 
-	CUDA_FUNC_IN static float2 squareToUniformTriangle(const float2 &sample)
+	CUDA_FUNC_IN static Vec2f squareToUniformTriangle(const Vec2f &sample)
 	{
-		float a = sqrtf(1.0f - sample.x);
-		return make_float2(1 - a, a * sample.y);
+		float a = math::sqrt(1.0f - sample.x);
+		return Vec2f(1 - a, a * sample.y);
 	}
 
-	CUDA_FUNC_IN static float squareToStdNormalPdf(const float2 &pos)
+	CUDA_FUNC_IN static float squareToStdNormalPdf(const Vec2f &pos)
 	{
 		return INV_TWOPI * expf(-(pos.x*pos.x + pos.y*pos.y)/2.0f);
 	}
 
-	CUDA_FUNC_IN static float2 squareToTent(const float2 &sample)
+	CUDA_FUNC_IN static Vec2f squareToTent(const Vec2f &sample)
 	{
-		return make_float2(
+		return Vec2f(
 			intervalToTent(sample.x),
 			intervalToTent(sample.y)
 		);
@@ -169,6 +170,6 @@ public:
 			sample = (a-c)/(b-c) * (sample - (a-b)/(a-c));
 		}
 
-		return b + factor * (1-sqrtf(sample));
+		return b + factor * (1-math::sqrt(sample));
 	}
 };

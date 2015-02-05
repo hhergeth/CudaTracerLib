@@ -10,7 +10,7 @@ CUDA_FUNC_IN Spectrum EstimateDirect(BSDFSamplingRecord bRec, const e_KernelMate
 	Spectrum retVal(0.0f);
 	if(!value.isZero())
 	{
-		float3 oldWo = bRec.wo;
+		Vec3f oldWo = bRec.wo;
 		bRec.wo = normalize(bRec.dg.toLocal(dRec.d));
 		bRec.typeMask = flags;
 		Spectrum bsdfVal = mat.bsdf.f(bRec);
@@ -39,13 +39,13 @@ CUDA_FUNC_IN Spectrum EstimateDirect(BSDFSamplingRecord bRec, const e_KernelMate
 		{
 			Li = Li * Transmittance(r, 0, dRec.dist);
 			if(light->IsDeltaLight())
-				Ld += f * Li * AbsDot(r.direction, bRec.map.sys.n);
+				Ld += f * Li * absdot(r.direction, bRec.map.sys.n);
 			else
 			{
 				bRec.typeMask = flags;
 				bsdfPdf = mat.bsdf.pdf(bRec);
 				float weight = MonteCarlo::PowerHeuristic(1, lightPdf, 1, bsdfPdf);
-				Ld += f * Li * AbsDot(r.direction, bRec.map.sys.n) * weight;
+				Ld += f * Li * absdot(r.direction, bRec.map.sys.n) * weight;
 				bRec.typeMask = EAll;
 			}
 		}
@@ -55,7 +55,7 @@ CUDA_FUNC_IN Spectrum EstimateDirect(BSDFSamplingRecord bRec, const e_KernelMate
 	{
 		bRec.typeMask = flags;
 		Spectrum f = mat.bsdf.sample(bRec, bRec.rng->randomFloat2());
-		float3 wi = bRec.map.sys.toWorld(bRec.wo);
+		Vec3f wi = bRec.map.sys.toWorld(bRec.wo);
 		if(!f.isZero() && bsdfPdf > 0.0f)
 		{
 			float weight = 1.0f;
@@ -74,7 +74,7 @@ CUDA_FUNC_IN Spectrum EstimateDirect(BSDFSamplingRecord bRec, const e_KernelMate
 			if(!Li.isZero())
 			{
 				Li = Li * Transmittance(Ray(bRec.map.P, wi), 0, r2.m_fDist);
-				Ld += Li * f * AbsDot(wi, bRec.map.sys.n) * weight;
+				Ld += Li * f * absdot(wi, bRec.map.sys.n) * weight;
 			}
 		}
 	}
@@ -106,7 +106,7 @@ Spectrum UniformSampleAllLights(const BSDFSamplingRecord& bRec, const e_KernelMa
 Spectrum UniformSampleOneLight(const BSDFSamplingRecord& bRec, const e_KernelMaterial& mat)
 {
 	if(!g_SceneData.m_uEmitterCount)
-		return 0.0f;
+		return Spectrum(0.0f);
 	float emitpdf;
 	unsigned int index = g_SceneData.m_uEmitterIndices[g_SceneData.m_emitterPDF.SampleDiscrete(bRec.rng->randomFloat(), &emitpdf)];
 	return float(g_SceneData.m_sLightData.UsedCount) * EstimateDirect((BSDFSamplingRecord&)bRec, mat, g_SceneData.m_sLightData.Data + index, index, EBSDFType(EAll & ~EDelta));

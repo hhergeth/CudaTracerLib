@@ -17,14 +17,13 @@ template<bool RECURSIVE> __global__ void k_GuessPass(int w, int h, float scx, fl
 		int d = -1;
 		while(k_TraceRay(r.direction, r.origin, &r2) && ++d < 5)
 		{
-			float3 p = r(r2.m_fDist);
 			DifferentialGeometry dg;
 			BSDFSamplingRecord bRec(dg);
 			r2.getBsdfSample(r, rng, &bRec);
 			r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
 			r = Ray(dg.P, bRec.getOutgoing());
-			float3 per = clamp01((p - g_SceneData.m_sBox.minV) / (g_SceneData.m_sBox.maxV - g_SceneData.m_sBox.minV)) * float(UINT_MAX);
-			uint3 q = make_uint3(unsigned int(per.x), unsigned int(per.y), unsigned int(per.z));
+			Vec3f per = math::clamp01((dg.P - g_SceneData.m_sBox.minV) / (g_SceneData.m_sBox.maxV - g_SceneData.m_sBox.minV)) * float(UINT_MAX);
+			Vec3u q = Vec3u(unsigned int(per.x), unsigned int(per.y), unsigned int(per.z));
 			atomicMin(&g_EyeHitBoxMin.x, q.x);
 			atomicMin(&g_EyeHitBoxMin.y, q.y);
 			atomicMin(&g_EyeHitBoxMin.z, q.z);
@@ -39,15 +38,10 @@ template<bool RECURSIVE> __global__ void k_GuessPass(int w, int h, float scx, fl
 	g_RNGData(rng);
 }
 
-CUDA_FUNC_IN float3 lerp(const float3& a, const float3& b, const float3& t)
-{
-	return make_float3(lerp(a.x, b.x, t.x), lerp(a.y, b.y, t.y), lerp(a.z, b.z, t.z));
-}
-
 AABB k_TracerBase::GetEyeHitPointBox(e_DynamicScene* m_pScene, bool recursive)
 {
 	ThrowCudaErrors();
-	uint3 ma = make_uint3(0), mi = make_uint3(UINT_MAX);
+	Vec3u ma = Vec3u(0), mi = Vec3u(UINT_MAX);
 	cudaMemcpyToSymbol(g_EyeHitBoxMin, &mi, 12);
 	cudaMemcpyToSymbol(g_EyeHitBoxMax, &ma, 12);
 	k_INITIALIZE(m_pScene, g_sRngs);
@@ -62,11 +56,11 @@ AABB k_TracerBase::GetEyeHitPointBox(e_DynamicScene* m_pScene, bool recursive)
 	cudaMemcpyFromSymbol(&minU, g_EyeHitBoxMin, 12);
 	cudaMemcpyFromSymbol(&maxU, g_EyeHitBoxMax, 12);
 	AABB m_sEyeBox;
-	m_sEyeBox.minV = make_float3(float(minU.x), float(minU.y), float(minU.z)) / float(UINT_MAX);
-	m_sEyeBox.maxV = make_float3(float(maxU.x), float(maxU.y), float(maxU.z)) / float(UINT_MAX);
+	m_sEyeBox.minV = Vec3f(float(minU.x), float(minU.y), float(minU.z)) / float(UINT_MAX);
+	m_sEyeBox.maxV = Vec3f(float(maxU.x), float(maxU.y), float(maxU.z)) / float(UINT_MAX);
 	AABB box = m_pScene->getSceneBVH()->m_sBox;
-	m_sEyeBox.maxV = lerp(box.minV, box.maxV, m_sEyeBox.maxV);
-	m_sEyeBox.minV = lerp(box.minV, box.maxV, m_sEyeBox.minV);
+	m_sEyeBox.maxV = math::lerp(box.minV, box.maxV, m_sEyeBox.maxV);
+	m_sEyeBox.minV = math::lerp(box.minV, box.maxV, m_sEyeBox.minV);
 	return m_sEyeBox;
 }
 
@@ -81,11 +75,7 @@ TraceResult k_TracerBase::TraceSingleRay(Ray r, e_DynamicScene* s)
 {
 	CudaRNGBuffer tmp;
 	k_INITIALIZE(s, tmp);
-	//traceKernel<<<1,1>>>(r);
 	return k_TraceRay(r);
-	//TraceResult r2;
-	//cudaMemcpyFromSymbol(&r2, res, sizeof(r2));
-	//return r2;
 }
 
 CUDA_DEVICE unsigned int g_ShotRays;

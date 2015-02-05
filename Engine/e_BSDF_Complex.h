@@ -38,10 +38,9 @@ struct coating : public BSDF
 		float avgAbsorption = (m_sigmaA.Average()*(-2*m_thickness)).exp().average();
 		m_specularSamplingWeight = 1.0f / (avgAbsorption + 1.0f);
 	}
-	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &sample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
-	STD_DIFFUSE_REFLECTANCE
 	template<typename T> static coating Create(const T& val, float eta, float thickness, e_KernelTexture& sig)
 	{
 		BSDFFirst nested;
@@ -50,20 +49,20 @@ struct coating : public BSDF
 	}
 	TYPE_FUNC(coating)
 private:
-	CUDA_FUNC_IN float3 reflect(const float3 &wi) const {
-		return make_float3(-wi.x, -wi.y, wi.z);
+	CUDA_FUNC_IN Vec3f reflect(const Vec3f &wi) const {
+		return Vec3f(-wi.x, -wi.y, wi.z);
 	}
 	/// Refract into the material, preserve sign of direction
-	CUDA_FUNC_IN float3 refractIn(const float3 &wi, float &R) const {
+	CUDA_FUNC_IN Vec3f refractIn(const Vec3f &wi, float &R) const {
 		float cosThetaT;
-		R = MonteCarlo::fresnelDielectricExt(abs(Frame::cosTheta(wi)), cosThetaT, m_eta);
-		return make_float3(m_invEta*wi.x, m_invEta*wi.y, -signf(Frame::cosTheta(wi)) * cosThetaT);
+		R = MonteCarlo::fresnelDielectricExt(math::abs(Frame::cosTheta(wi)), cosThetaT, m_eta);
+		return Vec3f(m_invEta*wi.x, m_invEta*wi.y, -math::sign(Frame::cosTheta(wi)) * cosThetaT);
 	}
 	/// Refract out of the material, preserve sign of direction
-	CUDA_FUNC_IN float3 refractOut(const float3 &wi, float &R) const {
+	CUDA_FUNC_IN Vec3f refractOut(const Vec3f &wi, float &R) const {
 		float cosThetaT;
-		R = MonteCarlo::fresnelDielectricExt(abs(Frame::cosTheta(wi)), cosThetaT, m_invEta);
-		return make_float3(m_eta*wi.x, m_eta*wi.y, -signf(Frame::cosTheta(wi)) * cosThetaT);
+		R = MonteCarlo::fresnelDielectricExt(math::abs(Frame::cosTheta(wi)), cosThetaT, m_invEta);
+		return Vec3f(m_eta*wi.x, m_eta*wi.y, -math::sign(Frame::cosTheta(wi)) * cosThetaT);
 	}
 };
 
@@ -102,10 +101,9 @@ struct roughcoating : public BSDF
 		float avgAbsorption = (m_sigmaA.Average()*(-2*m_thickness)).exp().average();
 		m_specularSamplingWeight = 1.0f / (avgAbsorption + 1.0f);
 	}
-	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &sample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
-	STD_DIFFUSE_REFLECTANCE
 	template<typename T> static roughcoating Create(const T& val, MicrofacetDistribution::EType type, float eta, float thickness, e_KernelTexture& sig, e_KernelTexture& alpha)
 	{
 		BSDFFirst nested;
@@ -115,11 +113,11 @@ struct roughcoating : public BSDF
 	TYPE_FUNC(roughcoating)
 private:
 	/// Helper function: reflect \c wi with respect to a given surface normal
-	CUDA_FUNC_IN float3 reflect(const float3 &wi, const float3 &m) const {
+	CUDA_FUNC_IN Vec3f reflect(const Vec3f &wi, const Vec3f &m) const {
 		return 2 * dot(wi, m) * m - wi;
 	}
 	/// Refraction in local coordinates
-	CUDA_FUNC_IN float3 refractTo(EDestination dest, const float3 &wi) const {
+	CUDA_FUNC_IN Vec3f refractTo(EDestination dest, const Vec3f &wi) const {
 		float cosThetaI = Frame::cosTheta(wi);
 		float invEta = (dest == EInterior) ? m_invEta : m_eta;
 
@@ -131,12 +129,12 @@ private:
 
 		if (sinThetaTSqr >= 1.0f) {
 			/* Total internal reflection */
-			return make_float3(0.0f);
+			return Vec3f(0.0f);
 		} else {
-			float cosThetaT = sqrtf(1.0f - sinThetaTSqr);
+			float cosThetaT = math::sqrt(1.0f - sinThetaTSqr);
 
 			/* Retain the directionality of the vector */
-			return make_float3(invEta*wi.x, invEta*wi.y,
+			return Vec3f(invEta*wi.x, invEta*wi.y,
 				entering ? cosThetaT : -cosThetaT);
 		}
 	}
@@ -149,7 +147,7 @@ private:
 	float weights[10];
 	int num;
 public:
-	CUDA_FUNC_IN float pdf(float3& a, float3& b);
+	CUDA_FUNC_IN float pdf(Vec3f& a, Vec3f& b);
 };
 */
 #define blend_TYPE 16
@@ -176,10 +174,9 @@ public:
 		bsdfs[0] = nested1;
 		bsdfs[1] = nested2;
 	}
-	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &sample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
-	STD_DIFFUSE_REFLECTANCE
 	template<typename U, typename V> static blend Create(const U& a, const V& b, const e_KernelTexture& weight)
 	{
 		BSDFFirst n1, n2;

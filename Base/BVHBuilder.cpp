@@ -12,7 +12,7 @@ void print(const __m128& v)
 
 //copied from Efficient GPU Traversal
 
-#define TOVEC3(x) make_float3(x.m128_f32[0], x.m128_f32[1], x.m128_f32[2])
+#define TOVEC3(x) Vec3f(x.m128_f32[0], x.m128_f32[1], x.m128_f32[2])
 #define TOSSE3(v) _mm_set_ps(0, v.z, v.y, v.x)
 struct __m128_box
 {
@@ -30,7 +30,7 @@ struct __m128_box
 	__m128_box(const AABB& _box)
 	{
 		AABB box = _box;
-		if(fminf(box.Size()) < 0.05f)
+		if(box.Size().max() < 0.05f)
 		{
 		//	box = box.Enlarge(0.5f);
 		}
@@ -107,9 +107,9 @@ struct NodeSpec
 
 #define MaxSpatialDepth 48
 #define MaxDepth 64
-#define MAX_OBJECT_COUNT 1024 * 1024 * 12
+#define max_OBJECT_COUNT 1024 * 1024 * 12
 #define NumSpatialBins 128
-static __m128 binScale = _mm_set_ps1(1.0f / float(NumSpatialBins)), psZero = _mm_set_ps1(0), psBinClamp = _mm_set_ps1(NumSpatialBins - 1);
+static __m128 binScale = _mm_set_ps1(1.0f / float(NumSpatialBins)), psZero = _mm_set_ps1(0), psBinclamp = _mm_set_ps1(NumSpatialBins - 1);
 struct buffer2
 {
 private:
@@ -329,7 +329,7 @@ public:
 		for(int i = N - 1; i >= 0; i--)
 		{
 			__m128 s = _mm_sub_ps(items[0].box.t, items[0].box.b);
-			float mi = MIN(s.m128_f32[0], s.m128_f32[1], s.m128_f32[2]), ma = MAX(s.m128_f32[0], s.m128_f32[1], s.m128_f32[2]);
+			float mi = min(s.m128_f32[0], s.m128_f32[1], s.m128_f32[2]), ma = max(s.m128_f32[0], s.m128_f32[1], s.m128_f32[2]);
 			if(mi < 0.0f || (s.m128_f32[0] + s.m128_f32[1] + s.m128_f32[2]) == ma)
 			{
 				BBoxTmp old = items[i];
@@ -352,7 +352,7 @@ public:
 };
 
 float sqr(float f){return f*f;}
-static __m128_box* m_rightBounds = new __m128_box[MAX_OBJECT_COUNT];
+static __m128_box* m_rightBounds = new __m128_box[max_OBJECT_COUNT];
 static SpatialBin* m_bins[3] = {new SpatialBin[NumSpatialBins],new SpatialBin[NumSpatialBins],new SpatialBin[NumSpatialBins]};
 ObjectSplit findObjectSplit(buffer& buf, const BVHBuilder::Platform& P, float nodeSAH)
 {
@@ -364,7 +364,7 @@ ObjectSplit findObjectSplit(buffer& buf, const BVHBuilder::Platform& P, float no
 		split.numLeft = 1;
 		split.sortDim = 0;
 		split.leftBounds = buf[0]->box;
-		split.rightBounds = __m128_box(AABB(make_float3(0), make_float3(0)));
+		split.rightBounds = __m128_box(AABB(Vec3f(0), Vec3f(0)));
 		return split;
 	}
 	float bestTieBreak = FLT_MAX;
@@ -442,8 +442,8 @@ SpatialSplit findSpatialSplit(buffer& buf, __m128_box& box, const BVHBuilder::Pl
 		__m128 b = buf[refIdx]->box.b, t = buf[refIdx]->box.t;
 		__m128 firstBin = _mm_mul_ps(_mm_sub_ps(b, origin), invBinSize);
 		__m128 lastBin = _mm_mul_ps(_mm_sub_ps(t, origin), invBinSize);
-		firstBin = _mm_min_ps (_mm_max_ps(firstBin, psZero), psBinClamp);
-		lastBin = _mm_min_ps (_mm_max_ps(lastBin, firstBin), psBinClamp);
+		firstBin = _mm_min_ps (_mm_max_ps(firstBin, psZero), psBinclamp);
+		lastBin = _mm_min_ps (_mm_max_ps(lastBin, firstBin), psBinclamp);
 
         for (int dim = 0; dim < 3; dim++)
         {
@@ -540,7 +540,7 @@ void performSpatialSplit(buffer& buf, NodeSpec& left, NodeSpec& right, SpatialSp
     }
 
 	std::vector<BBoxTmp> refs;
-	refs.reserve(MAX(buf.N / 10, 128));
+	refs.reserve(max(buf.N / 10, 128));
 	while (leftEnd < rightStart)
     {
         // Split reference.
@@ -567,7 +567,7 @@ void performSpatialSplit(buffer& buf, NodeSpec& left, NodeSpec& right, SpatialSp
         float unsplitLeftSAH = lub.area() * lbc + right.bounds.area() * rac;
 		float unsplitRightSAH = left.bounds.area() * lac + rub.area() * rbc;
         float duplicateSAH = ldb.area() * lbc + rdb.area() * rbc;
-        float minSAH = MIN(unsplitLeftSAH, unsplitRightSAH, duplicateSAH);
+        float minSAH = min(unsplitLeftSAH, unsplitRightSAH, duplicateSAH);
 
         // Unsplit to left?
 
@@ -619,7 +619,7 @@ int buildNode(buffer& buf,  __m128_box& box, const BVHBuilder::Platform& P, floa
             spatial = findSpatialSplit(buf, box, P, nodeSAH, clb);
 		}
     }
-	float minSAH = MIN(leafSAH, object.sah, spatial.sah);
+	float minSAH = min(leafSAH, object.sah, spatial.sah);
 	if (minSAH == leafSAH && buf.N <= P.getMaxLeafSize() && level > 0)
         return createLeaf(buf, clb);
     NodeSpec left, right;
@@ -642,7 +642,7 @@ int buildNode(buffer& buf,  __m128_box& box, const BVHBuilder::Platform& P, floa
 	n->setRight(right.bounds.ToBox());
 	int rd = buildNode(rightB, right.bounds, P, m_minOverlap, clb, level + 1);
 	int ld = buildNode(leftB, left.bounds, P, m_minOverlap, clb, level + 1);
-	n->setChildren(make_int2(ld, rd));
+	n->setChildren(Vec2i(ld, rd));
 	leftB.Free();
 	rightB.Free();
 	return index;
@@ -657,7 +657,7 @@ void BVHBuilder::BuildBVH(IBVHBuilderCallback* clb, const BVHBuilder::Platform& 
 	for(unsigned int i = 0; i < N; i++)
 	{
 		clb->getBox(i, &box);
-		//if(fmaxf(box.Size()) < 0.01f)
+		//if(max(box.Size()) < 0.01f)
 		//	box.maxV += make_float3(0.01f);
 		data[i].box = __m128_box(box);
 		data[i]._pNode = i;

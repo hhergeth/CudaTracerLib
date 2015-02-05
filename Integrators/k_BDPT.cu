@@ -11,7 +11,7 @@ CUDA_FUNC_IN float pathWeight(int force_s, int force_t, int s, int t)
 	else return 1;
 }
 
-CUDA_FUNC_IN void BPT(const float2& pixelPosition, k_BlockSampleImage& img, CudaRNG& rng, unsigned int w, unsigned int h,
+CUDA_FUNC_IN void BPT(const Vec2f& pixelPosition, k_BlockSampleImage& img, CudaRNG& rng, unsigned int w, unsigned int h,
 					  bool use_mis, int force_s, int force_t, float LScale)
 {
 	float mLightSubPathCount = 1 * 1;
@@ -104,10 +104,10 @@ CUDA_FUNC_IN void BPT(const float2& pixelPosition, k_BlockSampleImage& img, Cuda
 __global__ void pathKernel(unsigned int w, unsigned int h, int xoff, int yoff, k_BlockSampleImage img,
 		bool use_mis, int force_s, int force_t, float LScale)
 {
-	int2 pixel = k_TracerBase::getPixelPos(xoff, yoff);
+	Vec2i pixel = k_TracerBase::getPixelPos(xoff, yoff);
 	CudaRNG rng = g_RNGData();
 	if (pixel.x < w && pixel.y < h)
-		BPT(make_float2(pixel.x, pixel.y), img, rng, w, h, use_mis, force_s, force_t, LScale);
+		BPT(Vec2f(pixel.x, pixel.y), img, rng, w, h, use_mis, force_s, force_t, LScale);
 	g_RNGData(rng);
 }
 
@@ -116,11 +116,11 @@ void k_BDPT::RenderBlock(e_Image* I, int x, int y, int blockW, int blockH)
 	pathKernel << < numBlocks, threadsPerBlock >> >(w, h, x, y, m_pBlockSampler->getBlockImage(), use_mis, force_s, force_t, LScale);
 }
 
-void k_BDPT::Debug(e_Image* I, const int2& pixel)
+void k_BDPT::Debug(e_Image* I, const Vec2i& pixel)
 {
 	k_INITIALIZE(m_pScene, g_sRngs);
 	//Li(*gI, g_RNGData(), pixel.x, pixel.y);
 	CudaRNG rng = g_RNGData();
-	BPT(make_float2(pixel), m_pBlockSampler->getBlockImage(), rng, w, h, use_mis, force_s, force_t, LScale);
+	BPT(Vec2f(pixel), m_pBlockSampler->getBlockImage(), rng, w, h, use_mis, force_s, force_t, LScale);
 	g_RNGData(rng);
 }

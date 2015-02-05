@@ -15,7 +15,7 @@ CUDA_FUNC_IN Spectrum trace(Ray& r, const Ray& rX, const Ray& rY, CudaRNG& rng)
 		r2.getBsdfSample(r, rng, &bRec);
 		dg.computePartials(r, rX, rY);
 		//return Spectrum(dg.dvdx, dg.dvdy, 0);
-		//return Spectrum(clamp01(dot(bRec.dg.sys.n, -normalize(r.direction))));
+		//return Spectrum(math::clamp01(dot(bRec.dg.sys.n, -normalize(r.direction))));
 		Spectrum through = Transmittance(r, 0, r2.m_fDist, -1);
 		Spectrum L = r2.Le(r(r2.m_fDist), bRec.dg.sys, -r.direction);
 		//return L + r2.getMat().bsdf.getDiffuseReflectance(bRec);
@@ -69,8 +69,8 @@ CUDA_FUNC_IN Spectrum traceR(Ray& r, CudaRNG& rng)
 			bRec.wo = bRec.map.sys.toLocal(wi);
 			Spectrum f = r2.getMat().bsdf.f(bRec);
 			float pdf = r2.getMat().bsdf.pdf(bRec);
-			//return AbsDot(wi, bRec.map.sys.n) * AbsDot(wo, bRec.map.sys.n) * f / pdf * le;
-			float pdf2 = 1.0f / (AbsDot(wo, bRec.map.sys.n) * AbsDot(wo, bRec.map.sys.n) * AbsDot(wo, bRec.map.sys.n)) * 1.0f / (dRecLight.dist * dRecLight.dist);
+			//return absdot(wi, bRec.map.sys.n) * absdot(wo, bRec.map.sys.n) * f / pdf * le;
+			float pdf2 = 1.0f / (absdot(wo, bRec.map.sys.n) * absdot(wo, bRec.map.sys.n) * absdot(wo, bRec.map.sys.n)) * 1.0f / (dRecLight.dist * dRecLight.dist);
 			return le * f / (pdf / pdf2);
 		}
 		else return 0.0f;*/
@@ -107,7 +107,7 @@ CUDA_FUNC_IN Spectrum traceS(Ray& r, CudaRNG& rng)
 {
 	TraceResult r2 = k_TraceRay(r);
 	if (!r2.hasHit())
-		return 0.0f;
+		return Spectrum(0.0f);
 	DifferentialGeometry dg;
 	BSDFSamplingRecord bRec(dg);
 	r2.getBsdfSample(r, rng, &bRec);
@@ -119,8 +119,8 @@ CUDA_FUNC_IN Spectrum traceS(Ray& r, CudaRNG& rng)
 	if (r2.getMat().bsdf.hasComponent(ETypeCombinations::EDiffuse))
 		return f * ::V(bRec.dg.P, dRec.p) / r2.getMat().bsdf.pdf(bRec) * Frame::cosTheta(bRec.wo);
 	else if (r2.getMat().bsdf.hasComponent(ETypeCombinations::EDelta))
-		return 1.0f * ::V(bRec.dg.P, dRec.p);
-	else return r2.getMat().bsdf.sample(bRec, make_float2(0.0f)) * Frame::cosTheta(bRec.wo) * ::V(bRec.dg.P, dRec.p);
+		return ::V(bRec.dg.P, dRec.p);
+	else return r2.getMat().bsdf.sample(bRec, Vec2f(0.0f)) * Frame::cosTheta(bRec.wo) * ::V(bRec.dg.P, dRec.p);
 }
 
 __global__ void primaryKernel(long long width, long long height, e_Image g_Image)
@@ -149,7 +149,7 @@ __global__ void primaryKernel(long long width, long long height, e_Image g_Image
                 break;
 		}
 		unsigned int x = rayidx % width, y = rayidx / width;
-		float2 pixelSample = make_float2(x,y);
+		Vec2f pixelSample = Vec2f(x, y);
 		
 		Spectrum c = Spectrum(0.0f);
 		float N2 = 1;
@@ -171,7 +171,7 @@ __global__ void primaryKernel(long long width, long long height, e_Image g_Image
 	g_RNGData(rng);
 }
 
-__global__ void debugPixe2l(unsigned int width, unsigned int height, int2 p)
+__global__ void debugPixe2l(unsigned int width, unsigned int height, Vec2i p)
 {
 	Ray r = g_SceneData.GenerateSensorRay(p.x, p.y);
 	CudaRNG rng = g_RNGData();
@@ -185,18 +185,18 @@ void k_PrimTracer::DoRender(e_Image* I)
 	primaryKernel<<< 180, dim3(32, MaxBlockHeight, 1)>>>(w, h, *I);
 }
 
-void k_PrimTracer::Debug(e_Image* I, const int2& pixel)
+void k_PrimTracer::Debug(e_Image* I, const Vec2i& pixel)
 {
 	//FW::printf("%f,%f",pixel.x/float(w),pixel.y/float(h));
 	k_INITIALIZE(m_pScene, g_sRngs);
 	//debugPixe2l<<<1,1>>>(w,h,pixel);
 	CudaRNG rng = g_RNGData();
 	Ray r, rX, rY;
-	g_SceneData.sampleSensorRay(r, rX, rY, make_float2(pixel.x, pixel.y), rng.randomFloat2());
+	g_SceneData.sampleSensorRay(r, rX, rY, Vec2f(pixel.x, pixel.y), rng.randomFloat2());
 	trace(r, rX, rY, rng);
 }
 
-void k_PrimTracer::CreateSliders(SliderCreateCallback a_Callback)
+void k_PrimTracer::CreateSliders(SliderCreateCallback a_Callback) const
 {
 	//a_Callback(0,1,false,(float*)&m_bDirect,"%f Direct");
 }

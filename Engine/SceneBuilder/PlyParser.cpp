@@ -90,7 +90,7 @@ struct varReader
 			*fres = int_as_float_((_byteswap_ulong(*(unsigned int*)buf)));
 			break;
 		case varReader::f64:
-			*fres = int_as_float_(_byteswap_uint64((unsigned int)*(double*)buf));
+			*fres = float_as_int_(_byteswap_uint64((unsigned int)*(double*)buf));
 			break;
 		default:
 			throw 1;
@@ -255,8 +255,8 @@ void compileply(IInStream& istream, OutputStream& a_Out)
 	if(hasPos != 7)
 		throw 1;
 
-	float3* Vertices = (float3*)malloc(vertexCount * sizeof(float3));
-	float2* TexCoords = (float2*)malloc(vertexCount * sizeof(float2));
+	Vec3f* Vertices = (Vec3f*)malloc(vertexCount * sizeof(Vec3f));
+	Vec2f* TexCoords = (Vec2f*)malloc(vertexCount * sizeof(Vec2f));
 	unsigned int* Indices = (unsigned int*)malloc(sizeof(unsigned int) * faceCount * 4);
 	unsigned int indexCount = 0;
 		
@@ -264,7 +264,7 @@ void compileply(IInStream& istream, OutputStream& a_Out)
 	if (format == ascii_format)
 	{
 		//TODO This is slow cause of the use of native stream
-		unsigned int* stack = (unsigned int*)alloca(MAX(elementIndex, 4) * sizeof(unsigned int));
+		unsigned int* stack = (unsigned int*)alloca(max(elementIndex, 4) * sizeof(unsigned int));
 		stringHelper hlp;
 		for(int v = 0; v < vertexCount; v++)	
 		{
@@ -273,9 +273,9 @@ void compileply(IInStream& istream, OutputStream& a_Out)
 			for(int i = 0; i < elementIndex; i++)
 				fReader.read(hlp.nextC(), 0, (float*)stack + i);
 			float* d = (float*)stack;
-			Vertices[v] = make_float3(d[posStart + 0], d[posStart + 1], d[posStart + 2]);
+			Vertices[v] = Vec3f(d[posStart + 0], d[posStart + 1], d[posStart + 2]);
 			if(hasUV)
-				TexCoords[v] = make_float2(d[uvStart + 0], d[uvStart + 0]);
+				TexCoords[v] = Vec2f(d[uvStart + 0], d[uvStart + 0]);
 		}
 		for(int f = 0; f < faceCount; f++)	//1 -> 0
 		{
@@ -307,13 +307,13 @@ void compileply(IInStream& istream, OutputStream& a_Out)
 		istream.Read(FILE_BUF, istream.getFileSize() - istream.getPos() - 1);
 		unsigned int file_pos = 0;
 
-		memcpy(Vertices, FILE_BUF + file_pos, sizeof(float3) * vertexCount);
+		memcpy(Vertices, FILE_BUF + file_pos, sizeof(Vec3f) * vertexCount);
 		float* fData = (float*)Vertices;
 		if (format == binary_big_endian_format)
 			for (int i = 0; i < vertexCount * 3; i++)
 				fData[i] = LongSwap(fData[i]);
 
-		file_pos += sizeof(float3) * vertexCount;
+		file_pos += sizeof(Vec3f) * vertexCount;
 		for(int f = 0; f < faceCount; f++)
 		{
 			unsigned int* dat = (unsigned int*)(FILE_BUF + file_pos + 1);
@@ -338,14 +338,14 @@ void compileply(IInStream& istream, OutputStream& a_Out)
 	//if(pos != size)
 	//	throw 1;
 
-	float3* Normals = new float3[vertexCount], *Tangents = new float3[vertexCount];
+	Vec3f* Normals = new Vec3f[vertexCount], *Tangents = new Vec3f[vertexCount];
 	ComputeTangentSpace(Vertices, TexCoords, Indices, vertexCount, faceCount, Normals, Tangents);
 	e_TriangleData* triData = new e_TriangleData[indexCount / 3];
-	float3 p[3];
-	float3 n[3];
-	float3 ta[3];
-	float3 bi[3];
-	float2 te[3];
+	Vec3f p[3];
+	Vec3f n[3];
+	Vec3f ta[3];
+	Vec3f bi[3];
+	Vec2f te[3];
 	AABB box = AABB::Identity();
 	for(unsigned int t = 0; t < indexCount; t += 3)
 	{

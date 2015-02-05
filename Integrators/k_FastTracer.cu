@@ -9,10 +9,10 @@ __global__ void pathCreateKernel(unsigned int w, unsigned int h, k_PTDBuffer g_I
 		return;
 	int x = idx % w, y = idx / w;
 	Ray r;
-	Spectrum W = g_SceneData.sampleSensorRay(r, make_float2(x,y), make_float2(0,0));
+	Spectrum W = g_SceneData.sampleSensorRay(r, Vec2f(x,y), Vec2f(0,0));
 	traversalRay& ray = g_Intersector(idx, 0);
-	ray.a = make_float4(r.origin, 0.0f);
-	ray.b = make_float4(r.direction, FLT_MAX);
+	ray.a = Vec4f(r.origin, 0.0f);
+	ray.b = Vec4f(r.direction, FLT_MAX);
 	rayData& dat = g_Intersector(idx);
 	dat.x = x;
 	dat.y = y;
@@ -97,15 +97,15 @@ __global__ void doDirectKernel(unsigned int w, unsigned int h, k_PTDBuffer g_Int
 	I.AddSample(idx % w, idx / w, s);
 }
 
-__device__ CUDA_INLINE float2 stratifiedSample(const float2& f, int pass)
+__device__ CUDA_INLINE Vec2f stratifiedSample(const Vec2f& f, int pass)
 {
 	return f;
 	int i = pass % 64;
 	int x = i % 8, y = i / 8;
-	return make_float2(x, y) / 8.0f + f / 8.0f;
+	return Vec2f(x, y) / 8.0f + f / 8.0f;
 }
 
-#define MAX_PASS 5
+#define max_PASS 5
 CUDA_DEVICE k_PTDBuffer g_Intersector;
 CUDA_DEVICE k_PTDBuffer g_Intersector2;
 CUDA_DEVICE int g_NextRayCounterFT;
@@ -149,7 +149,7 @@ __global__ void pathIterateKernel(unsigned int N, e_Image I, int pass, int itera
 
 		if (res.dist)
 		{
-			Ray r(!ray.a, !ray.b);
+			Ray r(ray.a.getXYZ(), ray.b.getXYZ());
 			TraceResult r2;
 			res.toResult(&r2, g_SceneData);
 			DifferentialGeometry dg;
@@ -157,14 +157,14 @@ __global__ void pathIterateKernel(unsigned int N, e_Image I, int pass, int itera
 			r2.getBsdfSample(r, rng, &bRec);
 			if (pass == 0 || dat.dIdx == -1)
 				dat.L += r2.Le(bRec.dg.P, bRec.dg.sys, -r.direction) * dat.throughput;
-			if (pass + 1 != MAX_PASS)
+			if (pass + 1 != max_PASS)
 			{
 				Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
 				dat.throughput *= f;
 				unsigned int idx2 = g_Intersector2.insertRay(0);
 				traversalRay& ray2 = g_Intersector2(idx2, 0);
-				ray2.a = make_float4(bRec.dg.P, 1e-2f);
-				ray2.b = make_float4(bRec.getOutgoing(), FLT_MAX);
+				ray2.a = Vec4f(bRec.dg.P, 1e-2f);
+				ray2.b = Vec4f(bRec.getOutgoing(), FLT_MAX);
 
 				DirectSamplingRecord dRec(bRec.dg.P, bRec.dg.sys.n);
 				Spectrum value = g_SceneData.sampleEmitterDirect(dRec, rng.randomFloat2());
@@ -178,16 +178,16 @@ __global__ void pathIterateKernel(unsigned int N, e_Image I, int pass, int itera
 					dat.dDist = dRec.dist;
 					dat.dIdx = g_Intersector2.insertRay(1);
 					traversalRay& ray3 = g_Intersector2(dat.dIdx, 1);
-					ray3.a = make_float4(bRec.dg.P, 1e-2f);
-					ray3.b = make_float4(dRec.d, FLT_MAX);
+					ray3.a = Vec4f(bRec.dg.P, 1e-2f);
+					ray3.b = Vec4f(dRec.d, FLT_MAX);
 				}
 				else dat.dIdx = -1;
 				g_Intersector2(idx2) = dat;
 			}
 		}
-		else dat.L += dat.throughput * g_SceneData.EvalEnvironment(Ray(!ray.a, !ray.b));
+		else dat.L += dat.throughput * g_SceneData.EvalEnvironment(Ray(ray.a.getXYZ(), ray.b.getXYZ()));
 
-		if (!res.dist || pass + 1 == MAX_PASS)
+		if (!res.dist || pass + 1 == max_PASS)
 			I.AddSample(dat.x, dat.y, dat.L);
 	} while (true);
 	g_RNGData(rng);
@@ -227,7 +227,7 @@ void k_FastTracer::doPath(e_Image* I)
 		cudaMemcpyFromSymbol(destBuf, g_Intersector2, sizeof(*destBuf));
 		swapk(srcBuf, destBuf);
 	}
-	while (srcBuf->getNumRays(0) && ++pass < MAX_PASS);
+	while (srcBuf->getNumRays(0) && ++pass < max_PASS);
 }
 
 void k_FastTracer::DoRender(e_Image* I)

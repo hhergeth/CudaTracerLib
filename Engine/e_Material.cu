@@ -15,28 +15,28 @@ e_KernelMaterial::e_KernelMaterial(const char* name)
 	usedBssrdf = false;
 }
 
-CUDA_FUNC_IN float2 parallaxOcclusion(const float2& texCoord, e_KernelMIPMap* tex, const float3& vViewTS, float HeightScale, int MinSamples, int MaxSamples)
+CUDA_FUNC_IN Vec2f parallaxOcclusion(const Vec2f& texCoord, e_KernelMIPMap* tex, const Vec3f& vViewTS, float HeightScale, int MinSamples, int MaxSamples)
 {
-	const float2 vParallaxDirection = normalize(!vViewTS);
+	const Vec2f vParallaxDirection = normalize(vViewTS.getXY());
 	float fLength = length(vViewTS);
 	float fParallaxLength = sqrt(fLength * fLength - vViewTS.z * vViewTS.z) / vViewTS.z;
-	const float2 vParallaxOffsetTS = vParallaxDirection * fParallaxLength * HeightScale;
+	const Vec2f vParallaxOffsetTS = vParallaxDirection * fParallaxLength * HeightScale;
 
-	int nNumSteps = (int)lerp(MaxSamples, MinSamples, Frame::cosTheta(normalize(vViewTS)));
+	int nNumSteps = (int)math::lerp(MaxSamples, MinSamples, Frame::cosTheta(normalize(vViewTS)));
 	float CurrHeight = 0.0f;
 	float StepSize = 1.0 / (float)nNumSteps;
 	float PrevHeight = 1.0;
 	int    StepIndex = 0;
-	float2 TexOffsetPerStep = StepSize * vParallaxOffsetTS;
-	float2 TexCurrentOffset = texCoord;
+	Vec2f TexOffsetPerStep = StepSize * vParallaxOffsetTS;
+	Vec2f TexCurrentOffset = texCoord;
 	float  CurrentBound = 1.0;
 	float  ParallaxAmount = 0.0;
 
 	// Create the 2D vectors that will be used as the sampled points 
-	float2 pt1 = make_float2(0);
-	float2 pt2 = make_float2(0);
+	Vec2f pt1 = Vec2f(0);
+	Vec2f pt2 = Vec2f(0);
 
-	float2 texOffset2 = make_float2(0);
+	Vec2f texOffset2 = Vec2f(0);
 
 	while (StepIndex < nNumSteps)
 	{
@@ -57,8 +57,8 @@ CUDA_FUNC_IN float2 parallaxOcclusion(const float2& texCoord, e_KernelMIPMap* te
 		*/
 		if (CurrHeight > CurrentBound)
 		{
-			pt1 = make_float2(CurrentBound, CurrHeight);
-			pt2 = make_float2(CurrentBound + StepSize, PrevHeight);
+			pt1 = Vec2f(CurrentBound, CurrHeight);
+			pt2 = Vec2f(CurrentBound + StepSize, PrevHeight);
 
 			texOffset2 = TexCurrentOffset - TexOffsetPerStep;
 
@@ -75,17 +75,17 @@ CUDA_FUNC_IN float2 parallaxOcclusion(const float2& texCoord, e_KernelMIPMap* te
 	float Delta1 = pt1.x - pt1.y;
 	float Denominator = Delta2 - Delta1;
 	ParallaxAmount = Denominator != 0 ? (pt1.x * Delta2 - pt2.x * Delta1) / Denominator : 0;
-	float2 ParallaxOffset = vParallaxOffsetTS * (1 - ParallaxAmount);
+	Vec2f ParallaxOffset = vParallaxOffsetTS * (1 - ParallaxAmount);
 	return texCoord - ParallaxOffset;
 }
 
-bool e_KernelMaterial::SampleNormalMap(DifferentialGeometry& dg, const float3& wi) const
+bool e_KernelMaterial::SampleNormalMap(DifferentialGeometry& dg, const Vec3f& wi) const
 {
 	if(NormalMap.used)
 	{
-		float3 n;
+		Vec3f n;
 		NormalMap.tex.Evaluate(dg).toLinearRGB(n.x, n.y, n.z);
-		float3 nWorld = dg.toWorld(n - make_float3(0.5f));
+		Vec3f nWorld = dg.toWorld(n - Vec3f(0.5f));
 		dg.sys.n = normalize(nWorld);
 		dg.sys.t = normalize(cross(nWorld, dg.sys.s));
 		dg.sys.s = normalize(cross(nWorld, dg.sys.t));
@@ -94,20 +94,20 @@ bool e_KernelMaterial::SampleNormalMap(DifferentialGeometry& dg, const float3& w
 	else if (HeightMap.used && HeightMap.tex.Is<e_KernelImageTexture>())
 	{
 		e_KernelTextureMapping2D& map = HeightMap.tex.As<e_KernelImageTexture>()->mapping;
-		float2 uv = map.Map(dg);
+		Vec2f uv = map.Map(dg);
 		if (enableParallaxOcclusion)
 		{
 			uv = parallaxOcclusion(uv, HeightMap.tex.As<e_KernelImageTexture>()->tex.operator->(), dg.toLocal(-wi), HeightScale, parallaxMinSamples, parallaxMaxSamples);
-			dg.uv[0] = (uv - make_float2(map.du, map.dv)) / make_float2(map.su, map.sv);
+			dg.uv[0] = (uv - Vec2f(map.du, map.dv)) / Vec2f(map.su, map.sv);
 		}
 
 		Spectrum grad[2];
 		HeightMap.tex.As<e_KernelImageTexture>()->tex->evalGradient(uv, grad);
 		float dDispDu = grad[0].getLuminance();
 		float dDispDv = grad[1].getLuminance();
-		float3 dpdu = dg.dpdu + dg.sys.n * (
+		Vec3f dpdu = dg.dpdu + dg.sys.n * (
 			dDispDu - dot(dg.sys.n, dg.dpdu));
-		float3 dpdv = dg.dpdv + dg.sys.n * (
+		Vec3f dpdv = dg.dpdv + dg.sys.n * (
 			dDispDv - dot(dg.sys.n, dg.dpdv));
 
 		dg.sys.n = normalize(cross(dpdu, dpdv));
@@ -129,7 +129,7 @@ float e_KernelMaterial::SampleAlphaMap(const DifferentialGeometry& uv) const
 	{//return 1;
 		if(AlphaMap.tex.type == e_KernelImageTexture_TYPE)
 		{
-			float2 uv2 = AlphaMap.tex.As<e_KernelImageTexture>()->mapping.Map(uv);
+			Vec2f uv2 = AlphaMap.tex.As<e_KernelImageTexture>()->mapping.Map(uv);
 			return AlphaMap.tex.As<e_KernelImageTexture>()->tex->SampleAlpha(uv2) != 1 ? 0 : 1;
 		}
 		Spectrum s = AlphaMap.tex.Evaluate(uv);

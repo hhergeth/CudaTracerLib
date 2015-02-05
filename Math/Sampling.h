@@ -1,6 +1,6 @@
 #pragma once
 
-#include "cutil_math.h"
+#include "Vector.h"
 #include "..\Base\CudaRandom.h"
 #include "..\Base\STL.h"
 
@@ -42,7 +42,7 @@ template<int N> struct Distribution1D
     CUDA_FUNC_IN unsigned int SampleDiscrete(float u, float *pdf = 0) const
 	{
         const float *ptr = STL_lower_bound(m_cdf, m_cdf+count, u);
-		unsigned int index = MIN(unsigned int(count - 2U), MAX(0U, unsigned int(ptr - m_cdf - 1)));
+		unsigned int index = min(unsigned int(count - 2U), max(0U, unsigned int(ptr - m_cdf - 1)));
 		while (operator[](index) == 0 && index < count-1)
 			++index;
         if (pdf)
@@ -89,8 +89,8 @@ template<int NU, int NV> struct Distribution2D
 
 	CUDA_FUNC_IN float Pdf(float u, float v) const
 	{
-		int iu = clamp(Float2Int(u * pConditionalV[0].count), 0, pConditionalV[0].count-1);
-        int iv = clamp(Float2Int(v * pMarginal.count), 0, pMarginal.count-1);
+		int iu = math::clamp(Float2Int(u * pConditionalV[0].count), 0, pConditionalV[0].count-1);
+        int iv = math::clamp(Float2Int(v * pMarginal.count), 0, pMarginal.count-1);
         if (pConditionalV[iv].m_sum * pMarginal.m_sum == 0.f)
 			return 0.f;
         return (pConditionalV[iv][iu] * pMarginal[iv]) / (pConditionalV[iv].m_sum * pMarginal.m_sum);
@@ -109,7 +109,7 @@ public:
 		// Find quadratic discriminant
 		float discrim = B * B - 4.f * A * C;
 		if (discrim <= 0.) return false;
-		float rootDiscrim = sqrtf(discrim);
+		float rootDiscrim = math::sqrt(discrim);
 
 		// Compute quadratic _t_ values
 		float q;
@@ -131,43 +131,43 @@ public:
 		*x = sx;
 		*y = sy;
 	}
-	CUDA_FUNC_IN static float3 UniformSampleHemisphere(float u1, float u2)
+	CUDA_FUNC_IN static Vec3f UniformSampleHemisphere(float u1, float u2)
 	{
 		float z = u1;
-		float r = sqrtf(MAX(0.f, 1.f - z*z));
+		float r = math::sqrt(max(0.f, 1.f - z*z));
 		float phi = 2 * PI * u2;
 		float x = r * cosf(phi);
 		float y = r * sinf(phi);
-		return make_float3(x, y, z);
+		return Vec3f(x, y, z);
 	}
 	CUDA_FUNC_IN static float  UniformHemispherePdf()
 	{
 		return 1.0f / (2.0f * PI);
 	}
-	CUDA_FUNC_IN static float3 UniformSampleSphere(float u1, float u2)
+	CUDA_FUNC_IN static Vec3f UniformSampleSphere(float u1, float u2)
 	{
 		float z = 1.f - 2.f * u1;
-		float r = sqrtf(MAX(0.f, 1.f - z*z));
+		float r = math::sqrt(max(0.f, 1.f - z*z));
 		float phi = 2.f * PI * u2;
 		float x = r * cosf(phi);
 		float y = r * sinf(phi);
-		return make_float3(x, y, z);
+		return Vec3f(x, y, z);
 	}
 	CUDA_FUNC_IN static float  UniformSpherePdf()
 	{
 		return 1.f / (4.f * PI);
 	}
-	CUDA_FUNC_IN static float3 UniformSampleCone(float u1, float u2, float costhetamax)
+	CUDA_FUNC_IN static Vec3f UniformSampleCone(float u1, float u2, float costhetamax)
 	{
 		float costheta = (1.f - u1) + u1 * costhetamax;
-		float sintheta = sqrtf(1.f - costheta*costheta);
+		float sintheta = math::sqrt(1.f - costheta*costheta);
 		float phi = u2 * 2.f * PI;
-		return make_float3(cosf(phi) * sintheta, sinf(phi) * sintheta, costheta);
+		return Vec3f(cosf(phi) * sintheta, sinf(phi) * sintheta, costheta);
 	}
-	CUDA_FUNC_IN static float3 UniformSampleCone(float u1, float u2, float costhetamax, const float3 &x, const float3 &y, const float3 &z)
+	CUDA_FUNC_IN static Vec3f UniformSampleCone(float u1, float u2, float costhetamax, const Vec3f &x, const Vec3f &y, const Vec3f &z)
 	{
-		float costheta = lerp(costhetamax, 1.f, u1);
-		float sintheta = sqrtf(1.f - costheta*costheta);
+		float costheta = math::lerp(costhetamax, 1.f, u1);
+		float sintheta = math::sqrt(1.f - costheta*costheta);
 		float phi = u2 * 2.f * PI;
 		return cosf(phi) * sintheta * x + sinf(phi) * sintheta * y + costheta * z;
 	}
@@ -177,7 +177,7 @@ public:
 	}
 	CUDA_FUNC_IN static void UniformSampleDisk(float u1, float u2, float *x, float *y)
 	{
-		float r = sqrtf(u1);
+		float r = math::sqrt(u1);
 		float theta = 2.0f * PI * u2;
 		*x = r * cosf(theta);
 		*y = r * sinf(theta);
@@ -226,10 +226,10 @@ public:
 		*dx = r * cosf(theta);
 		*dy = r * sinf(theta);
 	}
-	CUDA_FUNC_IN static float3 CosineSampleHemisphere(float u1, float u2) {
-		float3 ret;
+	CUDA_FUNC_IN static Vec3f CosineSampleHemisphere(float u1, float u2) {
+		Vec3f ret;
 		ConcentricSampleDisk(u1, u2, &ret.x, &ret.y);
-		ret.z = sqrtf(MAX(0.f, 1.f - ret.x*ret.x - ret.y*ret.y));
+		ret.z = sqrt(max(0.f, 1.f - ret.x*ret.x - ret.y*ret.y));
 		return ret;
 	}
 	CUDA_FUNC_IN static float CosineHemispherePdf(float costheta, float phi)
@@ -242,7 +242,7 @@ public:
 		for (int i = 0;  i < nSamples; ++i)
 		{
 			float delta = jitter ? rng.randomFloat() : 0.5f;
-			*samples++ = MIN((i + delta) * invTot, ONE_MINUS_EPS);
+			*samples++ = min((i + delta) * invTot, ONE_minUS_EPS);
 		}
 	}
 	CUDA_FUNC_IN static void StratifiedSample2D(float *samples, int nx, int ny, CudaRNG &rng, bool jitter = true)
@@ -253,8 +253,8 @@ public:
 			{
 				float jx = jitter ? rng.randomFloat() : 0.5f;
 				float jy = jitter ? rng.randomFloat() : 0.5f;
-				*samples++ = MIN((x + jx) * dx, ONE_MINUS_EPS);
-				*samples++ = MIN((y + jy) * dy, ONE_MINUS_EPS);
+				*samples++ = min((x + jx) * dx, ONE_minUS_EPS);
+				*samples++ = min((y + jy) * dy, ONE_minUS_EPS);
 			}
 	}
 	template <typename T> CUDA_FUNC_IN static void Shuffle(T *samp, unsigned int count, unsigned int dims, CudaRNG &rng)
@@ -267,12 +267,12 @@ public:
 		}
 	}
 
-	CUDA_FUNC_IN static float SphericalTheta(const float3 &v)
+	CUDA_FUNC_IN static float SphericalTheta(const Vec3f &v)
 	{
-		return acosf(clamp(-1.f, 1.f, v.z));
+		return acosf(math::clamp(v.z , - 1.f, 1.f));
 	}
 
-	CUDA_FUNC_IN static float SphericalPhi(const float3 &v)
+	CUDA_FUNC_IN static float SphericalPhi(const Vec3f &v)
 	{
 		float p = atan2f(v.y, v.x);
 		return (p < 0.f) ? p + 2.f * PI : p;
@@ -289,23 +289,23 @@ public:
 		return (f*f) / (f*f + g*g);
 	}
 
-	CUDA_FUNC_IN static float3 SphericalDirection(float theta, float phi)
+	CUDA_FUNC_IN static Vec3f SphericalDirection(float theta, float phi)
 	{
 		float sinTheta, cosTheta, sinPhi, cosPhi;
 
 		sincos(theta, &sinTheta, &cosTheta);
 		sincos(phi, &sinPhi, &cosPhi);
 
-		return make_float3(
+		return Vec3f(
 			sinTheta * cosPhi,
 			sinTheta * sinPhi,
 			cosTheta
 		);
 	}
 
-	CUDA_FUNC_IN static float2 toSphericalCoordinates(const float3 &v)
+	CUDA_FUNC_IN static Vec2f toSphericalCoordinates(const Vec3f &v)
 	{
-		float2 result = make_float2(
+		Vec2f result = Vec2f(
 			acos(v.z),
 			atan2(v.y, v.x)
 		);
@@ -339,7 +339,7 @@ public:
 		}
 	}
 
-	CUDA_FUNC_IN static void stratifiedSample2D(CudaRNG& random, float2 *dest, int countX, int countY, bool jitter)
+	CUDA_FUNC_IN static void stratifiedSample2D(CudaRNG& random, Vec2f *dest, int countX, int countY, bool jitter)
 	{
 		float invCountX = 1.0f / countX;
 		float invCountY = 1.0f / countY;
@@ -348,7 +348,7 @@ public:
 			for (int y=0; y<countY; y++) {
 				float offsetX = jitter ? random.randomFloat() : 0.5f;
 				float offsetY = jitter ? random.randomFloat() : 0.5f;
-				*dest++ = make_float2(
+				*dest++ = Vec2f(
 					(x + offsetX) * invCountX,
 					(y + offsetY) * invCountY
 				);
@@ -364,7 +364,7 @@ public:
 				dest[nDim * i + j] = (i + random.randomFloat()) * delta;
 		for (size_t i = 0; i < nDim; ++i) {
 			for (size_t j = 0; j < nSamples; ++j) {
-				unsigned int other = Floor2Int(float(nSamples) * random.randomFloat());
+				unsigned int other = math::Floor2Int(float(nSamples) * random.randomFloat());
 				swapk(dest + nDim * j + i, dest + nDim * other + i);
 			}
 		}
@@ -402,7 +402,7 @@ public:
 
 		/* Find the absolute cosines of the incident/transmitted rays */
 		float cosThetaI = abs(cosThetaI_);
-		float cosThetaT = sqrtf(cosThetaTSqr);
+		float cosThetaT = math::sqrt(cosThetaTSqr);
 
 		float Rs = (cosThetaI - eta * cosThetaT)
 				 / (cosThetaI + eta * cosThetaT);
@@ -455,8 +455,8 @@ public:
 			  sinThetaI4 = sinThetaI2*sinThetaI2;
 
 		float temp1 = eta*eta - k*k - sinThetaI2,
-			  a2pb2 = sqrtf(temp1*temp1 + 4*k*k*eta*eta),
-			  a     = sqrtf(0.5f * (a2pb2 + temp1));
+			  a2pb2 = math::sqrt(temp1*temp1 + 4*k*k*eta*eta),
+			  a     = math::sqrt(0.5f * (a2pb2 + temp1));
 
 		float term1 = a2pb2 + cosThetaI2,
 			  term2 = 2*a*cosThetaI;
@@ -495,18 +495,18 @@ public:
 		return 0.5f * (Rp2 + Rs2);
 	}
 
-	CUDA_FUNC_IN static float3 reflect(const float3 &wi, const float3 &n) {
+	CUDA_FUNC_IN static Vec3f reflect(const Vec3f &wi, const Vec3f &n) {
 		return 2 * dot(wi, n) * (n) - wi;
 	}
 
-	CUDA_FUNC_IN static float3 refract(const float3 &wi, const float3 &n, float eta, float cosThetaT) {
+	CUDA_FUNC_IN static Vec3f refract(const Vec3f &wi, const Vec3f &n, float eta, float cosThetaT) {
 		if (cosThetaT < 0)
 			eta = 1.0f / eta;
 
 		return n * (dot(wi, n) * eta + cosThetaT) - wi * eta;
 	}
 
-	CUDA_FUNC_IN static float3 refract(const float3 &wi, const float3 &n, float eta) {
+	CUDA_FUNC_IN static Vec3f refract(const Vec3f &wi, const Vec3f &n, float eta) {
 		if (eta == 1)
 			return -1.0f * wi;
 
@@ -520,17 +520,17 @@ public:
 
 		/* Check for total internal reflection */
 		if (cosThetaTSqr <= 0.0f)
-			return make_float3(0.0f);
+			return Vec3f(0.0f);
 
-		return n * (cosThetaI * eta - math::signum(cosThetaI) * sqrtf(cosThetaTSqr)) - wi * eta;
+		return n * (cosThetaI * eta - math::signum(cosThetaI) * math::sqrt(cosThetaTSqr)) - wi * eta;
 	}
 
-	CUDA_FUNC_IN static float3 refract(const float3 &wi, const float3 &n, float eta, float &cosThetaT, float &F) {
+	CUDA_FUNC_IN static Vec3f refract(const Vec3f &wi, const Vec3f &n, float eta, float &cosThetaT, float &F) {
 		float cosThetaI = dot(wi, n);
 		F = fresnelDielectricExt(cosThetaI, cosThetaT, eta);
 
 		if (F == 1.0f) /* Total internal reflection */
-			return make_float3(0.0f);
+			return Vec3f(0.0f);
 
 		if (cosThetaT < 0)
 			eta = 1 / eta;

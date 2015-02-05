@@ -2,7 +2,7 @@
 #include "..\..\Base\FileStream.h"
 #include "Importer.h"
 
-void ConstructBVH(const float3* vertices, const unsigned int* indices, int vCount, int cCount, OutputStream& O, BVH_Construction_Result* out)
+void ConstructBVH(const Vec3f* vertices, const unsigned int* indices, int vCount, int cCount, OutputStream& O, BVH_Construction_Result* out)
 {	
 	bvh_helper::clb c(vCount, cCount, vertices, indices);
 	BVHBuilder::BuildBVH(&c, BVHBuilder::Platform());

@@ -7,10 +7,10 @@ e_TerrainData_Leaf* e_Terrain::getValAt(unsigned int x, unsigned int y)
 	//return (e_TerrainData_Leaf*)m_pStream->operator()(calcIndex(x, y, m_uDepth - 1, m_uDepth));
 }
 
-bool upd(e_TerrainData_Inner* root, CACHE_LEVEL_TYPE* data, int d, int t, int x, int y, float2& ret, float2 sdxy)
+bool upd(e_TerrainData_Inner* root, CACHE_LEVEL_TYPE* data, int d, int t, int x, int y, Vec2f& ret, Vec2f sdxy)
 {
 	int i = calcIndex(x, y, d, t);
-	ret = make_float2(FLT_MAX, -FLT_MAX);
+	ret = Vec2f(FLT_MAX, -FLT_MAX);
 	int of = calcBoxSize(d + 1, t);
 	bool b = false;
 	if(d < t - 1)
@@ -18,25 +18,25 @@ bool upd(e_TerrainData_Inner* root, CACHE_LEVEL_TYPE* data, int d, int t, int x,
 			for(int y2 = 0; y2 < 2; y2++)
 			{
 				int xc = x + x2 * of, yc = y + y2 * of;
-				float2 q;
+				Vec2f q;
 				bool c = false;
 				if(upd(root, data, d + 1, t, xc, yc, q, sdxy))
 				{
 					c = b = true;
-					ret.x = MIN(q.x, ret.x);
-					ret.y = MAX(q.y, ret.y);
+					ret.x = min(q.x, ret.x);
+					ret.y = max(q.y, ret.y);
 				}
-				else q = make_float2(0, 0);
-				root[i].blocks[x2 + y2 * 2] = half2(make_float2(q.x, c ? MAX(q.y - q.x, 1e-2f) : 0));
+				else q = Vec2f(0, 0);
+				root[i].blocks[x2 + y2 * 2] = half2(Vec2f(q.x, c ? max(q.y - q.x, 1e-2f) : 0));
 			}
 	else
 	{
 		e_TerrainData_Leaf* l = (e_TerrainData_Leaf*)(root + i);
 		if(l->hasValidHeight())
 		{
-			float2 ra = l->getRange();
-			ret.x = MIN(ra.x, ret.x);
-			ret.y = MAX(ra.y, ret.y);
+			Vec2f ra = l->getRange();
+			ret.x = min(ra.x, ret.x);
+			ret.y = max(ra.y, ret.y);
 			return true;
 		}
 	}
@@ -46,9 +46,9 @@ bool upd(e_TerrainData_Inner* root, CACHE_LEVEL_TYPE* data, int d, int t, int x,
 		float mi = FLT_MAX, ma = -FLT_MAX;
 		for(int j = 0; j < 4; j++)
 		{
-			float2 f = root[i].blocks[j].ToFloat2(); f.y += f.x;
-			mi = MIN(mi, f.x);
-			ma = MAX(ma, f.y);
+			Vec2f f = root[i].blocks[j].ToFloat2(); f.y += f.x;
+			mi = min(mi, f.x);
+			ma = max(ma, f.y);
 		}
 		unsigned int s = calcBoxSize(d, t);
 		data[y / s * pow2(CACHE_LEVEL) + x / s] = make_float2(mi, ma);
@@ -64,7 +64,7 @@ void e_Terrain::updateFromTriangles()
 	//m_pCacheStream->Invalidate(DataStreamRefresh_Buffered);
 }
 
-void prnt(e_TerrainData_Inner* root,unsigned int lvl, uchar3* data, unsigned int d, unsigned int t, int x, int y, float2 rng, float2 val)
+void prnt(e_TerrainData_Inner* root, unsigned int lvl, uchar3* data, unsigned int d, unsigned int t, int x, int y, Vec2f rng, Vec2f val)
 {
 	int i = calcIndex(x, y, d, t);
 	if(lvl == d)

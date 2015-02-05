@@ -3,28 +3,28 @@
 #include <time.h>
 #include "..\Kernel\k_TraceAlgorithms.h"
 
-CUDA_FUNC_IN float3 hemishphere(const float2& q)
+CUDA_FUNC_IN Vec3f hemishphere(const Vec2f& q)
 {
-	float2 f = q * 2 - make_float2(1);
-	return normalize(make_float3(f, sqrtf(1 - f.x * f.x - f.y * f.y)));
+	Vec2f f = q * 2 - Vec2f(1);
+	return normalize(Vec3f(f, math::sqrt(1 - f.x * f.x - f.y * f.y)));
 }
 
-CUDA_FUNC_IN Spectrum func(BSDFALL& bsdf, float3 wo, int w, int h, int x, int y, bool cosTheta)
+CUDA_FUNC_IN Spectrum func(BSDFALL& bsdf, Vec3f wo, int w, int h, int x, int y, bool cosTheta)
 {
 	DifferentialGeometry dg;
-	dg.bary = make_float2(0.5f);
+	dg.bary = Vec2f(0.5f);
 	dg.hasUVPartials = false;
-	dg.n = make_float3(0, 0, 1);
-	dg.P = make_float3(0);
-	dg.uv[0] = make_float2(0);
+	dg.n = Vec3f(0, 0, 1);
+	dg.P = Vec3f(0);
+	dg.uv[0] = Vec2f(0);
 	dg.sys = Frame(dg.n);
 	BSDFSamplingRecord bRec(dg);
 	bRec.eta = 1;
 	bRec.mode = ERadiance;
 	bRec.typeMask = EAll;
 	bRec.wi = wo;
-	float2 xy = make_float2(x, y) / make_float2(w, h);
-	if (length(2 * xy - make_float2(1)) > 1)
+	Vec2f xy = Vec2f(x, y) / Vec2f(w, h);
+	if (length(2.0f * xy - Vec2f(1)) > 1)
 		return Spectrum(100, 149, 237) / 255.0f;
 	bRec.wo = hemishphere(xy);//bsdf.As()->hasComponent(EDelta) ? EDiscrete : ESolidAngle
 	Spectrum f = bsdf.f(bRec, EDiscrete) + bsdf.f(bRec, ESolidAngle);
@@ -34,18 +34,18 @@ CUDA_FUNC_IN Spectrum func(BSDFALL& bsdf, float3 wo, int w, int h, int x, int y,
 CUDA_FUNC_IN Spectrum func2(BSDFALL& bsdf, e_InfiniteLight& light, CudaRNG& rng, float3 wo, int w, int h, int x, int y, bool cosTheta)
 {
 	DifferentialGeometry dg;
-	dg.bary = make_float2(0.5f);
+	dg.bary = Vec2f(0.5f);
 	dg.hasUVPartials = false;
-	dg.n = make_float3(0, 0, 1);
-	dg.P = make_float3(0);
-	dg.uv[0] = make_float2(0);
+	dg.n = Vec3f(0, 0, 1);
+	dg.P = Vec3f(0);
+	dg.uv[0] = Vec2f(0);
 	dg.sys = Frame(dg.n);
 	BSDFSamplingRecord bRec(dg);
 	bRec.eta = 1;
 	bRec.mode = ERadiance;
 	bRec.typeMask = EAll;
-	float2 xy = make_float2(x, y) / make_float2(w, h);
-	if (length(2 * xy - make_float2(1)) > 1)
+	Vec2f xy = Vec2f(x, y) / Vec2f(w, h);
+	if (length(2.0f * xy - Vec2f(1)) > 1)
 		return Spectrum(100, 149, 237) / 255.0f;
 	bRec.wi = hemishphere(xy);
 	Spectrum q(0.0f);
@@ -53,14 +53,14 @@ CUDA_FUNC_IN Spectrum func2(BSDFALL& bsdf, e_InfiniteLight& light, CudaRNG& rng,
 	for (int i = 0; i < N; i++)
 	{
 		Spectrum f = bsdf.sample(bRec, rng.randomFloat2());
-		q += f * light.evalEnvironment(Ray(make_float3(0), bRec.wo));
+		q += f * light.evalEnvironment(Ray(Vec3f(0), bRec.wo));
 	}
 	return q / float(N);
 }
 
 CUDA_DEVICE BSDFALL g_BSDF;
 CUDA_DEVICE CUDA_ALIGN(256) char g_Light[sizeof(e_InfiniteLight)];
-CUDA_GLOBAL void BSDFCalc(float3 wo, e_Image I, int2 off, int2 size, float scale, bool cosTheta)
+CUDA_GLOBAL void BSDFCalc(Vec3f wo, e_Image I, Vec2i off, Vec2i size, float scale, bool cosTheta)
 {
 	int x = threadId % size.x, y = threadId / size.x;
 	if (y < size.y)
@@ -70,7 +70,7 @@ CUDA_GLOBAL void BSDFCalc(float3 wo, e_Image I, int2 off, int2 size, float scale
 	}
 }
 
-CUDA_GLOBAL void BSDFCalc2(float3 wo, e_Image I, int2 off, int2 size, float scale, bool cosTheta)
+CUDA_GLOBAL void BSDFCalc2(Vec3f wo, e_Image I, Vec2i off, Vec2i size, float scale, bool cosTheta)
 {
 	int x = threadId % size.x, y = threadId / size.x;
 	if (y < size.y)
@@ -82,7 +82,7 @@ CUDA_GLOBAL void BSDFCalc2(float3 wo, e_Image I, int2 off, int2 size, float scal
 	}
 }
 
-void k_BSDFVisualizer::DrawRegion(e_Image* I, int2 off, int2 size)
+void k_BSDFVisualizer::DrawRegion(e_Image* I, const Vec2i& off, const Vec2i& size)
 {
 	if (!m_Bsdf)
 		return;
@@ -101,10 +101,10 @@ void k_BSDFVisualizer::DrawRegion(e_Image* I, int2 off, int2 size)
 void k_BSDFVisualizer::DoRender(e_Image* I)
 {
 	I->Clear();
-	DrawRegion(I, make_int2(0, 0), make_int2(w, h));
+	DrawRegion(I, Vec2i(0, 0), Vec2i(w, h));
 }
 
-void k_BSDFVisualizer::Debug(e_Image* I, const int2& p)
+void k_BSDFVisualizer::Debug(e_Image* I, const Vec2i& p)
 {
 	g_RNGDataHost = k_Tracer::g_sRngs;
 	if (drawEnvMap)
@@ -124,5 +124,5 @@ void k_BSDFVisualizer::setSkydome(const char* compiledPath)
 	e_BufferReference<e_MIPMap, e_KernelMIPMap> mip = m_pBuffer2->malloc(1); 
 	m_pMipMap = new (mip.operator->())e_MIPMap(in);
 	in.Close();	
-	m_pLight = new e_InfiniteLight(m_pBuffer, mip, Spectrum(1.0f), AABB(make_float3(0), make_float3(1)));
+	m_pLight = new e_InfiniteLight(m_pBuffer, mip, Spectrum(1.0f), AABB(Vec3f(0), Vec3f(1)));
 }

@@ -2,17 +2,17 @@
 
 #include "k_TraceHelper.h"
 
-CUDA_FUNC_IN bool V(const float3& a, const float3& b, TraceResult* res = 0)
+CUDA_FUNC_IN bool V(const Vec3f& a, const Vec3f& b, TraceResult* res = 0)
 {
-	float3 d = b - a;
+	Vec3f d = b - a;
 	float l = length(d);
 	return !g_SceneData.Occluded(Ray(a, d / l), 0, l, res);
 }
 
-CUDA_FUNC_IN float G(const float3& N_x, const float3& N_y, const float3& x, const float3& y)
+CUDA_FUNC_IN float G(const Vec3f& N_x, const Vec3f& N_y, const Vec3f& x, const Vec3f& y)
 {
-	float3 theta = normalize(y - x);
-	return AbsDot(N_x, theta) * AbsDot(N_y, -theta) / DistanceSquared(x, y);
+	Vec3f theta = normalize(y - x);
+	return absdot(N_x, theta) * absdot(N_y, -theta) / distanceSquared(x, y);
 }
 
 CUDA_FUNC_IN Spectrum Transmittance(const Ray& r, float tmin, float tmax, unsigned int a_NodeIndex)

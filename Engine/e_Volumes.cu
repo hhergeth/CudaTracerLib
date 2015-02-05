@@ -6,8 +6,8 @@ bool e_HomogeneousVolumeDensity::IntersectP(const Ray &ray, const float minT, co
 	bool b = e_BaseVolumeRegion::Box.Intersect(r, t0, t1);
 	if(b)
 	{
-		*t0 = clamp(*t0, minT, maxT);
-		*t1 = clamp(*t1, minT, maxT);
+		*t0 = math::clamp(*t0, minT, maxT);
+		*t1 = math::clamp(*t1, minT, maxT);
 	}
 	return b && *t1 > *t0 && *t1 > 0;
 }
@@ -25,7 +25,7 @@ bool e_HomogeneousVolumeDensity::sampleDistance(const Ray& ray, float minT, floa
 	return sampleDistanceHomogenous(ray, minT, maxT, rand, mRec, sig_a, sig_s);
 }
 
-e_VolumeGrid::e_VolumeGrid(const e_PhaseFunction& func, const float4x4 volToWorld, e_Stream<char>* a_Buffer, uint3 dim)
+e_VolumeGrid::e_VolumeGrid(const e_PhaseFunction& func, const float4x4 volToWorld, e_Stream<char>* a_Buffer, Vec3u dim)
 	: grid(a_Buffer, dim), singleGrid(true)
 {
 	VolumeToWorld = volToWorld;
@@ -36,7 +36,7 @@ e_VolumeGrid::e_VolumeGrid(const e_PhaseFunction& func, const float4x4 volToWorl
 	Update();
 }
 
-e_VolumeGrid::e_VolumeGrid(const e_PhaseFunction& func, const float4x4 volToWorld, e_Stream<char>* a_Buffer, uint3 dimA, uint3 dimS, uint3 dimL)
+e_VolumeGrid::e_VolumeGrid(const e_PhaseFunction& func, const float4x4 volToWorld, e_Stream<char>* a_Buffer, Vec3u dimA, Vec3u dimS, Vec3u dimL)
 	: gridA(a_Buffer, dimA), gridS(a_Buffer, dimS), gridL(a_Buffer, dimL), singleGrid(false)
 {
 	VolumeToWorld = volToWorld;
@@ -49,7 +49,7 @@ e_VolumeGrid::e_VolumeGrid(const e_PhaseFunction& func, const float4x4 volToWorl
 
 void e_VolumeGrid::Update()
 {
-	e_BaseVolumeRegion::Box = AABB(make_float3(0), make_float3(1)).Transform(VolumeToWorld);
+	e_BaseVolumeRegion::Box = AABB(Vec3f(0), Vec3f(1)).Transform(VolumeToWorld);
 	float dimf[] = { grid.dim.x - 1, grid.dim.y - 1, grid.dim.z - 1 };
 	if (!singleGrid)
 	{
@@ -57,14 +57,14 @@ void e_VolumeGrid::Update()
 		dimf[0] = dimf[1] = dimf[2] = 0;
 		for (int i = 0; i < 3; i++)
 		{
-			dimf[0] = MAX(dimf[0], float(dims[i].x - 1));
-			dimf[1] = MAX(dimf[1], float(dims[i].y - 1));
-			dimf[2] = MAX(dimf[2], float(dims[i].z - 1));
+			dimf[0] = max(dimf[0], float(dims[i].x - 1));
+			dimf[1] = max(dimf[1], float(dims[i].y - 1));
+			dimf[2] = max(dimf[2], float(dims[i].z - 1));
 		}
 	}
 	m_stepSize = FLT_MAX;
 	for (int i = 0; i < 3; i++)
-		m_stepSize = MIN(m_stepSize, (Box.max[i] - Box.min[i]) / dimf[i]);
+		m_stepSize = min(m_stepSize, (Box.maxV[i] - Box.minV[i]) / dimf[i]);
 	m_stepSize /= 2.0f;
 }
 
@@ -73,8 +73,8 @@ bool e_VolumeGrid::IntersectP(const Ray &ray, const float minT, const float maxT
 	bool b = e_BaseVolumeRegion::Box.Intersect(ray, t0, t1);
 	if (b)
 	{
-		*t0 = clamp(*t0, minT, maxT);
-		*t1 = clamp(*t1, minT, maxT);
+		*t0 = math::clamp(*t0, minT, maxT);
+		*t1 = math::clamp(*t1, minT, maxT);
 	}
 	return b && *t1 > *t0 && *t1 > 0;
 }
@@ -115,18 +115,18 @@ Spectrum e_VolumeGrid::tau(const Ray &ray, const float minT, const float maxT) c
 float e_VolumeGrid::integrateDensity(const Ray& ray, float minT, float maxT) const
 {
 	float length = maxT - minT, maxComp = 0;
-	float3 p = ray(minT), pLast = ray(maxT);
+	Vec3f p = ray(minT), pLast = ray(maxT);
 	float pf[] = { p.x, p.y, p.z };
 	float pLastf[] = { pLast.x, pLast.y, pLast.z };
 	for (int i = 0; i<3; ++i)
-		maxComp = MAX(MAX(maxComp, fabsf(pf[i])), fabsf(pLastf[i]));
+		maxComp = max(max(maxComp, fabsf(pf[i])), fabsf(pLastf[i]));
 	if (length < 1e-6f * maxComp)
 		return 0.0f;
 	float m_scale = 1.0f;
 	unsigned int nSteps = (unsigned int)ceilf(length / (2 * m_stepSize));
 	nSteps += nSteps % 2;
 	float stepSize = length / nSteps;
-	const float3 increment = ray.direction * stepSize;
+	const Vec3f increment = ray.direction * stepSize;
 	float integratedDensity = densityT(p) + densityT(pLast);
 	p += increment;
 	float m = 4;
@@ -134,7 +134,7 @@ float e_VolumeGrid::integrateDensity(const Ray& ray, float minT, float maxT) con
 	{
 		integratedDensity += m * densityT(p);
 		m = 6 - m;
-		float3 next = p + increment;
+		Vec3f next = p + increment;
 		if (p == next)
 		{
 			printf("integrateDensity() not stepping forward, stepsize = %f.\n", stepSize);
@@ -150,17 +150,17 @@ bool e_VolumeGrid::invertDensityIntegral(const Ray& ray, float minT, float maxT,
 {
 	integratedDensity = densityAtMinT = densityAtT = 0.0f;
 	float length = maxT - minT, maxComp = 0;
-	float3 p = ray(minT), pLast = ray(maxT);
+	Vec3f p = ray(minT), pLast = ray(maxT);
 	float pf[] = {p.x, p.y, p.z};
 	float pLastf[] = { pLast.x, pLast.y, pLast.z };
 	for (int i = 0; i<3; ++i)
-		maxComp = MAX(MAX(maxComp, fabsf(pf[i])), fabsf(pLastf[i]));
+		maxComp = max(max(maxComp, fabsf(pf[i])), fabsf(pLastf[i]));
 	if (length < 1e-6f * maxComp)
 		return 0.0f;
 	float m_scale = 1;
 	unsigned int nSteps = (unsigned int)ceilf(length / (2 * m_stepSize));
 	float stepSize = length / nSteps, multiplier = (1.0f / 6.0f) * stepSize * m_scale;
-	float3 fullStep = ray.direction * stepSize,	halfStep = fullStep * .5f;
+	Vec3f fullStep = ray.direction * stepSize, halfStep = fullStep * .5f;
 	float node1 = densityT(p);
 	densityAtMinT = node1 * m_scale;
 	for (unsigned int i = 0; i < nSteps; ++i)
@@ -209,20 +209,20 @@ bool e_VolumeGrid::invertDensityIntegral(const Ray& ray, float minT, float maxT,
 					a = x;
 			}*/
 			//float c = 0, a = (node3 - node1 - 2 * (node2 - node1)) / (stepSize * stepSize * 0.5f), b = (node3 - node1 - a * stepSize * stepSize) / stepSize, d = desiredDensity - integratedDensity - node1;
-			//float q0 = (1.73205080757f*sqrtf(d*(6 * a * a * d - b * b * b)) / (2.82842712475f * a * a) + (12 * a * a * d - b * b * b) / (8 * a * a * a)), q1 = powf(q0, 1.0f / 3.0f);
+			//float q0 = (1.73205080757f*math::sqrt(d*(6 * a * a * d - b * b * b)) / (2.82842712475f * a * a) + (12 * a * a * d - b * b * b) / (8 * a * a * a)), q1 = powf(q0, 1.0f / 3.0f);
 			//t = minT + stepSize * i + q1 + b * b / (4 * a * a * q1) - b / (2 * a);
 			//return true;
 			float V = desiredDensity - integratedDensity, s = (node3 - node1) / (2 * stepSize);
 			float r = (node1 * node1) / (4 * stepSize * stepSize) + V / stepSize;
 			if (r < 0)
 				printf("r = %f\n", r);
-			float tl = -node1 / (2 * stepSize) + sqrtf(r);
+			float tl = -node1 / (2 * stepSize) + math::sqrt(r);
 			t = minT + stepSize * i + tl;
 			integratedDensity = desiredDensity;
 			densityAtT = s * tl + node1;
 			return true;
 		}
-		float3 next = p + fullStep;
+		Vec3f next = p + fullStep;
 		if (p == next)
 		{
 			printf("invertDensityIntegral() not stepping forward, stepsize = %f.\n", stepSize);
@@ -270,14 +270,14 @@ bool e_KernelAggregateVolume::IntersectP(const Ray &ray, float minT, float maxT,
 		float a, b;
 		if (m_pVolumes[i].As()->isInVolume(a_NodeIndex) && m_pVolumes[i].IntersectP(ray, minT, maxT, &a, &b))
 		{
-			*t0 = MIN(*t0, a);
-			*t1 = MAX(*t1, b);
+			*t0 = min(*t0, a);
+			*t1 = max(*t1, b);
 		}
 	}
 	return (*t0 < *t1);
 }
 
-Spectrum e_KernelAggregateVolume::sigma_a(const float3& p, const float3& w, unsigned int a_NodeIndex) const
+Spectrum e_KernelAggregateVolume::sigma_a(const Vec3f& p, const Vec3f& w, unsigned int a_NodeIndex) const
 {
 	Spectrum s = Spectrum(0.0f);
 	for(unsigned int i = 0; i < m_uVolumeCount; i++)
@@ -286,7 +286,7 @@ Spectrum e_KernelAggregateVolume::sigma_a(const float3& p, const float3& w, unsi
 	return s;
 }
 
-Spectrum e_KernelAggregateVolume::sigma_s(const float3& p, const float3& w, unsigned int a_NodeIndex) const
+Spectrum e_KernelAggregateVolume::sigma_s(const Vec3f& p, const Vec3f& w, unsigned int a_NodeIndex) const
 {
 	Spectrum s = Spectrum(0.0f);
 	for(unsigned int i = 0; i < m_uVolumeCount; i++)
@@ -295,7 +295,7 @@ Spectrum e_KernelAggregateVolume::sigma_s(const float3& p, const float3& w, unsi
 	return s;
 }
 
-Spectrum e_KernelAggregateVolume::Lve(const float3& p, const float3& w, unsigned int a_NodeIndex) const
+Spectrum e_KernelAggregateVolume::Lve(const Vec3f& p, const Vec3f& w, unsigned int a_NodeIndex) const
 {
 	Spectrum s = Spectrum(0.0f);
 	for(unsigned int i = 0; i < m_uVolumeCount; i++)
@@ -304,7 +304,7 @@ Spectrum e_KernelAggregateVolume::Lve(const float3& p, const float3& w, unsigned
 	return s;
 }
 
-Spectrum e_KernelAggregateVolume::sigma_t(const float3 &p, const float3 &wo, unsigned int a_NodeIndex) const
+Spectrum e_KernelAggregateVolume::sigma_t(const Vec3f &p, const Vec3f &wo, unsigned int a_NodeIndex) const
 {
 	Spectrum s = Spectrum(0.0f);
 	for(unsigned int i = 0; i < m_uVolumeCount; i++)
@@ -322,7 +322,7 @@ Spectrum e_KernelAggregateVolume::tau(const Ray &ray, float minT, float maxT, un
 	return s;
 }
 
-float e_KernelAggregateVolume::Sample(const float3& p, const float3& wo, unsigned int a_NodeIndex, CudaRNG& rng, float3* wi)
+float e_KernelAggregateVolume::Sample(const Vec3f& p, const Vec3f& wo, unsigned int a_NodeIndex, CudaRNG& rng, Vec3f* wi)
 {
 	PhaseFunctionSamplingRecord r2(wo);
 	r2.wi = wo;
@@ -338,7 +338,7 @@ float e_KernelAggregateVolume::Sample(const float3& p, const float3& wo, unsigne
 	return 0.0f;
 }
 
-float e_KernelAggregateVolume::p(const float3& p, const float3& wo, const float3& wi, unsigned int a_NodeIndex, CudaRNG& rng)
+float e_KernelAggregateVolume::p(const Vec3f& p, const Vec3f& wo, const Vec3f& wi, unsigned int a_NodeIndex, CudaRNG& rng)
 {
 	PhaseFunctionSamplingRecord r2(wo, wi);
 	r2.wi = wo;

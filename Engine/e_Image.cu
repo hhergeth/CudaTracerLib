@@ -5,7 +5,7 @@ void e_Image::AddSample(float sx, float sy, const Spectrum &_L)
 {
 	Spectrum L = _L;
 	L.clampNegative();
-	int x = Floor2Int(sx), y = Floor2Int(sy);
+	int x = math::Floor2Int(sx), y = math::Floor2Int(sy);
 	if (x < 0 || x >= xResolution || y < 0 || y >= yResolution || L.isNaN() || !L.isValid())
 		return;
 	float rgb[3];
@@ -24,7 +24,7 @@ void e_Image::AddSample(float sx, float sy, const Spectrum &_L)
 
 void e_Image::Splat(float sx, float sy, const Spectrum &L)
 {
-	int x = Floor2Int(sx), y = Floor2Int(sy);
+	int x = math::Floor2Int(sx), y = math::Floor2Int(sy);
 	if (x < 0 || x >= xResolution || y < 0 || y >= yResolution)
 		return;
 	Pixel* pixel = getPixel(y * xResolution + x);
@@ -43,7 +43,7 @@ CUDA_FUNC_IN unsigned int FloatToUInt(float f)
 {
 	//int mask = -int(*(unsigned int*)&f >> 31) | 0x80000000;
 	//return (*(unsigned int*)&f) ^ mask;
-	return unsigned int(clamp(f, 0.0f, 100.0f) * 1000000);
+	return unsigned int(math::clamp(f, 0.0f, 100.0f) * 1000000);
 }
 
 CUDA_FUNC_IN float UIntToFloat(unsigned int f)
@@ -67,7 +67,7 @@ CUDA_GLOBAL void rtm_SumLogLum(e_Image::Pixel* P, unsigned int w, unsigned int h
 		__syncthreads();
 		Spectrum L_w = P[y * w + x].toSpectrum(splatScale);
 		float f2 = L_w.getLuminance();
-		f2 = clamp(f2, 0.0f, 100.0f);
+		f2 = math::clamp(f2, 0.0f, 100.0f);
 		float logLum = logf(0.0001f + f2);
 		atomicAdd(&g_LogLum, logLum);
 		atomicMax(&g_MaxLum, FloatToUInt(f2));
@@ -118,14 +118,14 @@ CUDA_FUNC_IN Spectrum evalFilter(e_KernelFilter filter, e_Image::Pixel* P, float
 	//return P[_y * w + _x].toSpectrum(splatScale);
 	float dimageX = _x - 0.5f;
 	float dimageY = _y - 0.5f;
-	int x0 = Ceil2Int(dimageX - filter.As<e_KernelFilterBase>()->xWidth);
-	int x1 = Floor2Int(dimageX + filter.As<e_KernelFilterBase>()->xWidth);
-	int y0 = Ceil2Int(dimageY - filter.As<e_KernelFilterBase>()->yWidth);
-	int y1 = Floor2Int(dimageY + filter.As<e_KernelFilterBase>()->yWidth);
-	x0 = MAX(x0, 0);
-	x1 = MIN(x1, 0 + int(w) - 1);
-	y0 = MAX(y0, 0);
-	y1 = MIN(y1, 0 + int(h) - 1);
+	int x0 = math::Ceil2Int(dimageX - filter.As<e_KernelFilterBase>()->xWidth);
+	int x1 = math::Floor2Int(dimageX + filter.As<e_KernelFilterBase>()->xWidth);
+	int y0 = math::Ceil2Int(dimageY - filter.As<e_KernelFilterBase>()->yWidth);
+	int y1 = math::Floor2Int(dimageY + filter.As<e_KernelFilterBase>()->yWidth);
+	x0 = max(x0, 0);
+	x1 = min(x1, 0 + int(w) - 1);
+	y0 = max(y0, 0);
+	y1 = min(y1, 0 + int(h) - 1);
 	if ((x1 - x0) < 0 || (y1 - y0) < 0)
 		return Spectrum(0.0f);
 	Spectrum acc(0.0f);
@@ -154,7 +154,7 @@ template<typename TARGET> CUDA_GLOBAL void rtm_Scale(e_Image::Pixel* P, TARGET T
 	unsigned int x = threadId % w, y = threadId / w;
 	if(x < w && y < h)
 	{
-		float3 yxy;
+		Vec3f yxy;
 		evalFilter(filter, P, splatScale, x, y, w, h).toYxy(yxy.x, yxy.y, yxy.z);
 		if (yxy.x < 1e-3f)
 			return;
@@ -163,7 +163,7 @@ template<typename TARGET> CUDA_GLOBAL void rtm_Scale(e_Image::Pixel* P, TARGET T
 		yxy.x = L_d;
 		Spectrum c;
 		c.fromYxy(yxy.x, yxy.y, yxy.z);	
-		T(x, y, c.toRGBCOL());
+		T(x, y, gammaCorrecture(c));
 	}
 }
 
@@ -206,7 +206,7 @@ void e_Image::InternalUpdateDisplay(float splatScale)
 		float maxLum = UIntToFloat(mLum);
 		float L_w = exp(Lum_avg / float(xResolution * yResolution));
 		//float middleGrey = 1.03f - 2.0f / (2.0f + log10(L_w + 1.0f));
-		float alpha = 0.18, lumWhite2 = MAX(maxLum * maxLum, 0.1f);
+		float alpha = 0.18, lumWhite2 = max(maxLum * maxLum, 0.1f);
 		if(outState == 1)
 			rtm_Scale<<<dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block)>>>(cudaPixels, T2, xResolution, yResolution, splatScale, L_w, alpha, lumWhite2, filter);
 		else rtm_Scale << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(cudaPixels, T1, xResolution, yResolution, splatScale, L_w, alpha, lumWhite2, filter);

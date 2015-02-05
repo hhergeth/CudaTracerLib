@@ -64,7 +64,7 @@ void DifferentialGeometry::computePartials(const Ray& r, const Ray& rx, const Ra
 	A[1][0] = dpduA[axes[1]];
 	A[1][1] = dpdvA[axes[1]];
 
-	float3 px = rx.origin + rx.direction * tx,
+	Vec3f px = rx.origin + rx.direction * tx,
 		  py = ry.origin + ry.direction * ty;
 	float pA[] = { P.x, P.y, P.z };
 	float pxA[] = { px.x, px.y, px.z };

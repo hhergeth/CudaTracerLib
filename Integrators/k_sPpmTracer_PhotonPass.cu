@@ -19,7 +19,7 @@ template<bool DIRECT> __global__ void k_PhotonPass()
 	{
 		Ray r;
 		const e_KernelLight* light;
-		float2 sps = rng.randomFloat2(), sds = rng.randomFloat2();
+		Vec2f sps = rng.randomFloat2(), sds = rng.randomFloat2();
 		Spectrum Le = g_SceneData.sampleEmitterRay(r, light, sps, sds),
 				 throughput(1.0f);
 		int depth = -1;
@@ -38,7 +38,7 @@ template<bool DIRECT> __global__ void k_PhotonPass()
 				|| (bssrdf && sampleDistanceHomogenous(r, 0, r2.m_fDist, rng.randomFloat(), mRec, bssrdf->sig_a, bssrdf->sigp_s)))
 			{
 				throughput *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
-				wasStored |= storePhoton(mRec.p, throughput * Le, -r.direction, make_float3(0, 0, 0), PhotonType::pt_Volume, g_Map);
+				wasStored |= storePhoton(mRec.p, throughput * Le, -r.direction, Vec3f(0, 0, 0), PhotonType::pt_Volume, g_Map);
 				if (bssrdf)
 					r.direction = Warp::squareToUniformSphere(rng.randomFloat2());
 				else throughput *= V.Sample(mRec.p, -r.direction, r2.getNodeIndex(), rng, &r.direction);
@@ -52,7 +52,7 @@ template<bool DIRECT> __global__ void k_PhotonPass()
 			{
 				if (medium)
 					throughput *= mRec.transmittance / mRec.pdfFailure;
-				float3 wo = bssrdf ? r.direction : -r.direction;
+				Vec3f wo = bssrdf ? r.direction : -r.direction;
 				r2.getBsdfSample(-wo, r(r2.m_fDist), &bRec, &rng);
 				bRec.mode = EImportance;
 				if ((DIRECT && depth > 0) || !DIRECT)
@@ -108,7 +108,7 @@ __global__ void buildHashGrid()
 			f.s *= a_Radius;
 			f.n *= a_Radius;
 			float3 a = -1.0f * f.t - f.s, b = f.t - f.s, c = -1.0f * f.t + f.s, d = f.t + f.s;
-			float3 low = fminf(fminf(a, b), fminf(c, d)) + e.getPos(), high = fmaxf(fmaxf(a, b), fmaxf(c, d)) + e.getPos();
+			float3 low = min(min(a, b), min(c, d)) + e.getPos(), high = max(max(a, b), max(c, d)) + e.getPos();
 			uint3 lo = map.m_sHash.Transform(low), hi = map.m_sHash.Transform(high);
 			for (unsigned int a = lo.x; a <= hi.x; a++)
 			for (unsigned int b = lo.y; b <= hi.y; b++)

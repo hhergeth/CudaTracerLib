@@ -7,8 +7,8 @@
 struct MediumSamplingRecord
 {
 	float t;
-	float3 p;
-	float3 orientation;
+	Vec3f p;
+	Vec3f orientation;
 	Spectrum transmittance;
 	Spectrum sigmaA;
 	Spectrum sigmaS;
@@ -25,7 +25,7 @@ CUDA_FUNC_IN bool sampleDistanceHomogenous(const Ray& ray, float minT, float max
 	if (albedo[i] > m_mediumSamplingWeight && sig_t[i] != 0)
 		m_mediumSamplingWeight = albedo[i];
 	if (m_mediumSamplingWeight > 0)
-		m_mediumSamplingWeight = MAX(m_mediumSamplingWeight, 0.5f);
+		m_mediumSamplingWeight = max(m_mediumSamplingWeight, 0.5f);
 	float sampledDistance;
 	int channel = int(rand * SPECTRUM_SAMPLES);
 	rand = (rand - channel * 1.0f / SPECTRUM_SAMPLES) * SPECTRUM_SAMPLES;
@@ -87,7 +87,7 @@ public:
 		return m_uNodeIndex == 0xffffffff || m_uNodeIndex == a_NodeIndex;
 	}
 
-	CUDA_FUNC_IN bool inside(const float3& p) const
+	CUDA_FUNC_IN bool inside(const Vec3f& p) const
 	{
 		return Box.Contains(p);
 	}
@@ -120,22 +120,22 @@ public:
 
     CUDA_DEVICE CUDA_HOST bool IntersectP(const Ray &ray, const float minT, const float maxT, float *t0, float *t1) const;
 
-    CUDA_FUNC_IN Spectrum sigma_a(const float3& p, const float3& w) const
+	CUDA_FUNC_IN Spectrum sigma_a(const Vec3f& p, const Vec3f& w) const
 	{
 		return inside(p) ? sig_a : Spectrum(0.0f);
 	}
 
-    CUDA_FUNC_IN Spectrum sigma_s(const float3& p, const float3& w) const
+	CUDA_FUNC_IN Spectrum sigma_s(const Vec3f& p, const Vec3f& w) const
 	{
 		return inside(p) ? sig_s : Spectrum(0.0f);
 	}
 
-    CUDA_FUNC_IN Spectrum Lve(const float3& p, const float3& w) const
+	CUDA_FUNC_IN Spectrum Lve(const Vec3f& p, const Vec3f& w) const
 	{
 		return inside(p) ? le : Spectrum(0.0f);
 	}
 
-    CUDA_FUNC_IN Spectrum sigma_t(const float3 &p, const float3 &wo) const
+	CUDA_FUNC_IN Spectrum sigma_t(const Vec3f &p, const Vec3f &wo) const
 	{
 		return inside(p) ? (sig_s + sig_a) : Spectrum(0.0f);
 	}
@@ -156,13 +156,13 @@ private:
 	e_Variable<T> data;
 	e_StreamReference(char) streamRef;
 public:
-	uint3 dim;
-	float3 dimF;
+	Vec3u dim;
+	Vec3f dimF;
 	e_DenseVolGrid(){}
-	e_DenseVolGrid(e_Stream<char>* a_Buffer, uint3 dim)
+	e_DenseVolGrid(e_Stream<char>* a_Buffer, Vec3u dim)
 		: dim(dim)
 	{
-		dimF = make_float3(dim.x, dim.y, dim.z);
+		dimF = Vec3f(dim.x, dim.y, dim.z);
 		streamRef = a_Buffer->malloc(dim.x * dim.y * dim.z * sizeof(T));
 		data = streamRef.AsVar<T>();
 	}
@@ -186,7 +186,7 @@ public:
 	{
 		return k + j * dim.x + i * dim.x * dim.y;
 	}
-	CUDA_FUNC_IN bool isInBounds(const uint3& idx) const
+	CUDA_FUNC_IN bool isInBounds(const Vec3u& idx) const
 	{
 		return idx.x < dim.x && idx.y < dim.y && idx.z < dim.z;
 	}
@@ -198,13 +198,13 @@ public:
 	{
 		return data[idx(i, j, k)];
 	}
-	CUDA_FUNC_IN T sampleTrilinear(const float3& vsP) const
+	CUDA_FUNC_IN T sampleTrilinear(const Vec3f& vsP) const
 	{
-		const float3 p = vsP - make_float3(0.5f);
-		const uint3 corner = make_uint3(unsigned int(p.x), unsigned int(p.y), unsigned int(p.z));
+		const Vec3f p = vsP - Vec3f(0.5f);
+		const Vec3u corner = Vec3u(unsigned int(p.x), unsigned int(p.y), unsigned int(p.z));
 		float weight[3];
 		T val = T(0);
-		uint3 cl_l = make_uint3(0), cl_h = dim - make_uint3(1);
+		Vec3u cl_l = Vec3u(0), cl_h = dim - Vec3u(1);
 		for (int i = 0; i < 2; i++)
 		{
 			unsigned int cur_x = corner.x + i;
@@ -217,7 +217,7 @@ public:
 				{
 					unsigned int cur_z = corner.z + k;
 					weight[2] = 1 - fabsf(p.z - cur_z);
-					val += weight[0] * weight[1] * weight[2] * value(clamp(cur_x, cl_l.x, cl_h.x), clamp(cur_y, cl_l.y, cl_h.y), clamp(cur_z, cl_l.z, cl_h.z));
+					val += weight[0] * weight[1] * weight[2] * value(math::clamp(cur_x, cl_l.x, cl_h.x), math::clamp(cur_y, cl_l.y, cl_h.y), math::clamp(cur_z, cl_l.z, cl_h.z));
 				}
 			}
 		}
@@ -230,27 +230,27 @@ struct e_VolumeGrid : public e_BaseVolumeRegion
 {
 public:
 	e_VolumeGrid(){}
-	e_VolumeGrid(const e_PhaseFunction& func, const float4x4 worldToVol, e_Stream<char>* a_Buffer, uint3 dim);
-	e_VolumeGrid(const e_PhaseFunction& func, const float4x4 worldToVol, e_Stream<char>* a_Buffer, uint3 dimA, uint3 dimS, uint3 dimL);
+	e_VolumeGrid(const e_PhaseFunction& func, const float4x4 worldToVol, e_Stream<char>* a_Buffer, Vec3u dim);
+	e_VolumeGrid(const e_PhaseFunction& func, const float4x4 worldToVol, e_Stream<char>* a_Buffer, Vec3u dimA, Vec3u dimS, Vec3u dimL);
 
 	CUDA_DEVICE CUDA_HOST bool IntersectP(const Ray &ray, const float minT, const float maxT, float *t0, float *t1) const;
 
-	CUDA_FUNC_IN Spectrum sigma_a(const float3& p, const float3& w) const
+	CUDA_FUNC_IN Spectrum sigma_a(const Vec3f& p, const Vec3f& w) const
 	{
 		return sigAMin + (sigAMax - sigAMin) * densityA(p);
 	}
 
-	CUDA_FUNC_IN Spectrum sigma_s(const float3& p, const float3& w) const
+	CUDA_FUNC_IN Spectrum sigma_s(const Vec3f& p, const Vec3f& w) const
 	{
 		return sigSMin + (sigSMax - sigSMin) * densityS(p);
 	}
 
-	CUDA_FUNC_IN Spectrum Lve(const float3& p, const float3& w) const
+	CUDA_FUNC_IN Spectrum Lve(const Vec3f& p, const Vec3f& w) const
 	{
 		return leMin + (leMax - leMin) * densityL(p);
 	}
 
-	CUDA_FUNC_IN Spectrum sigma_t(const float3 &p, const float3 &wo) const
+	CUDA_FUNC_IN Spectrum sigma_t(const Vec3f &p, const Vec3f &wo) const
 	{
 		float a, s;
 		densityT(p, a, s);
@@ -266,9 +266,9 @@ public:
 
 	CUDA_DEVICE CUDA_HOST bool sampleDistance(const Ray& ray, float minT, float maxT, float sample, MediumSamplingRecord& mRec) const;
 
-	CUDA_FUNC_IN void Voxelize(const float3& p, const e_DenseVolGrid<float>* V, float& i, float& j, float& k) const
+	CUDA_FUNC_IN void Voxelize(const Vec3f& p, const e_DenseVolGrid<float>* V, float& i, float& j, float& k) const
 	{
-		float3 f = tr(p, V->dimF);
+		Vec3f f = tr(p, V->dimF);
 		i = f.x;
 		j = f.y;
 		k = f.z;
@@ -276,7 +276,7 @@ public:
 
 	CUDA_FUNC_IN void VoxelToWorld(int i, int j, int k, const e_DenseVolGrid<float>* V, float& a, float& b, float& c) const
 	{
-		float3 f = make_float3(float(i) / V->dimF.x, float(j) / V->dimF.y, float(k) / V->dimF.z);
+		Vec3f f = Vec3f(float(i) / V->dimF.x, float(j) / V->dimF.y, float(k) / V->dimF.z);
 		f = VolumeToWorld.TransformPoint(f);
 		a = f.x;
 		b = f.y;
@@ -293,37 +293,37 @@ public:
 	bool singleGrid;
 	float m_stepSize;
 private:
-	CUDA_FUNC_IN float3 tr(const float3& p, const float3& dimF) const
+	CUDA_FUNC_IN Vec3f tr(const Vec3f& p, const Vec3f& dimF) const
 	{
-		float3 csP = WorldToVolume.TransformPoint(p);
-		csP = clamp01(csP) * dimF;
+		Vec3f csP = WorldToVolume.TransformPoint(p);
+		csP = math::clamp01(csP) * dimF;
 		return csP;
 	}
-	CUDA_FUNC_IN float densityA(const float3& p) const
+	CUDA_FUNC_IN float densityA(const Vec3f& p) const
 	{
 		if (singleGrid)
 			return grid.sampleTrilinear(tr(p, grid.dimF));
 		else return gridA.sampleTrilinear(tr(p, gridA.dimF));
 	}
-	CUDA_FUNC_IN float densityS(const float3& p) const
+	CUDA_FUNC_IN float densityS(const Vec3f& p) const
 	{
 		if (singleGrid)
 			return grid.sampleTrilinear(tr(p, grid.dimF));
 		else return gridS.sampleTrilinear(tr(p, gridS.dimF));
 	}
-	CUDA_FUNC_IN float densityL(const float3& p) const
+	CUDA_FUNC_IN float densityL(const Vec3f& p) const
 	{
 		if (singleGrid)
 			return grid.sampleTrilinear(tr(p, grid.dimF));
 		else return gridL.sampleTrilinear(tr(p, gridL.dimF));
 	}
-	CUDA_FUNC_IN float densityT(const float3& p) const
+	CUDA_FUNC_IN float densityT(const Vec3f& p) const
 	{
 		if (singleGrid)
 			return 2 * grid.sampleTrilinear(tr(p, grid.dimF));
 		else return gridA.sampleTrilinear(tr(p, gridA.dimF)) + gridS.sampleTrilinear(tr(p, gridS.dimF));
 	}
-	CUDA_FUNC_IN void densityT(const float3& p, float& a, float& s) const
+	CUDA_FUNC_IN void densityT(const Vec3f& p, float& a, float& s) const
 	{
 		if (singleGrid)
 			a = s = grid.sampleTrilinear(tr(p, grid.dimF));
@@ -335,7 +335,7 @@ private:
 	}
 };
 
-#define VOL_SIZE RND_16(DMAX2(sizeof(e_HomogeneousVolumeDensity), sizeof(e_VolumeGrid)))
+#define VOL_SIZE RND_16(Dmax2(sizeof(e_HomogeneousVolumeDensity), sizeof(e_VolumeGrid)))
 
 struct CUDA_ALIGN(16) e_VolumeRegion : public e_AggregateBaseType<e_BaseVolumeRegion, VOL_SIZE> 
 {
@@ -361,25 +361,25 @@ public:
 		return false;
 	}
 
-    CUDA_FUNC_IN Spectrum sigma_a(const float3& p, const float3& w) const
+	CUDA_FUNC_IN Spectrum sigma_a(const Vec3f& p, const Vec3f& w) const
 	{
 		CALL_FUNC2(e_HomogeneousVolumeDensity, e_VolumeGrid, sigma_a(p, w))
 		return 0.0f;
 	}
 
-    CUDA_FUNC_IN Spectrum sigma_s(const float3& p, const float3& w) const
+	CUDA_FUNC_IN Spectrum sigma_s(const Vec3f& p, const Vec3f& w) const
 	{
 		CALL_FUNC2(e_HomogeneousVolumeDensity, e_VolumeGrid, sigma_s(p, w))
 		return 0.0f;
 	}
 
-    CUDA_FUNC_IN Spectrum Lve(const float3& p, const float3& w) const
+	CUDA_FUNC_IN Spectrum Lve(const Vec3f& p, const Vec3f& w) const
 	{
 		CALL_FUNC2(e_HomogeneousVolumeDensity, e_VolumeGrid, Lve(p, w))
 		return 0.0f;
 	}
 
-    CUDA_FUNC_IN Spectrum sigma_t(const float3 &p, const float3 &wo) const
+	CUDA_FUNC_IN Spectrum sigma_t(const Vec3f &p, const Vec3f &wo) const
 	{
 		CALL_FUNC2(e_HomogeneousVolumeDensity, e_VolumeGrid, sigma_t(p, wo))
 		return 0.0f;
@@ -422,22 +422,22 @@ public:
 	CUDA_DEVICE CUDA_HOST bool IntersectP(const Ray &ray, float minT, float maxT, unsigned int a_NodeIndex, float *t0, float *t1) const;
 
 	///The probability that light is abosrbed per unit distance
-	CUDA_DEVICE CUDA_HOST Spectrum sigma_a(const float3& p, const float3& w, unsigned int a_NodeIndex) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sigma_a(const Vec3f& p, const Vec3f& w, unsigned int a_NodeIndex) const;
 
 	///The probability that light is scattered per unit distance
-	CUDA_DEVICE CUDA_HOST Spectrum sigma_s(const float3& p, const float3& w, unsigned int a_NodeIndex) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sigma_s(const Vec3f& p, const Vec3f& w, unsigned int a_NodeIndex) const;
 
-	CUDA_DEVICE CUDA_HOST Spectrum Lve(const float3& p, const float3& w, unsigned int a_NodeIndex) const;
+	CUDA_DEVICE CUDA_HOST Spectrum Lve(const Vec3f& p, const Vec3f& w, unsigned int a_NodeIndex) const;
 
 	///Combined sigmas
-	CUDA_DEVICE CUDA_HOST Spectrum sigma_t(const float3 &p, const float3 &wo, unsigned int a_NodeIndex) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sigma_t(const Vec3f &p, const Vec3f &wo, unsigned int a_NodeIndex) const;
 
 	///Calculates the volumes optical thickness along a ray in the volumes bounds
 	CUDA_DEVICE CUDA_HOST Spectrum tau(const Ray &ray, float minT, float maxT, unsigned int a_NodeIndex) const;
 
-	CUDA_DEVICE CUDA_HOST float Sample(const float3& p, const float3& wo, unsigned int a_NodeIndex, CudaRNG& rng, float3* wi);
+	CUDA_DEVICE CUDA_HOST float Sample(const Vec3f& p, const Vec3f& wo, unsigned int a_NodeIndex, CudaRNG& rng, Vec3f* wi);
 
-	CUDA_DEVICE CUDA_HOST float p(const float3& p, const float3& wo, const float3& wi, unsigned int a_NodeIndex, CudaRNG& rng);
+	CUDA_DEVICE CUDA_HOST float p(const Vec3f& p, const Vec3f& wo, const Vec3f& wi, unsigned int a_NodeIndex, CudaRNG& rng);
 
 	CUDA_DEVICE CUDA_HOST bool sampleDistance(const Ray& ray, float minT, float maxT, unsigned int a_NodeIndex, CudaRNG& rng, MediumSamplingRecord& mRec) const;
 
@@ -446,7 +446,7 @@ public:
 		return m_uVolumeCount > 0;
 	}
 
-	CUDA_FUNC_IN bool IsInVolume(const float3& p, unsigned int a_NodeIndex) const
+	CUDA_FUNC_IN bool IsInVolume(const Vec3f& p, unsigned int a_NodeIndex) const
 	{
 		for (unsigned int i = 0; i < m_uVolumeCount; i++)
 			if (m_pVolumes[i].BaseRegion()->Box.Contains(p))

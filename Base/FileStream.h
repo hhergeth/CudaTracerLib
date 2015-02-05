@@ -4,6 +4,20 @@
 #include <fstream>
 #include <MathTypes.h>
 
+#define DCL_IN(TYPE) \
+	IInStream& operator>>(TYPE& rhs) \
+	{ \
+		Read(rhs); \
+		return *this; \
+	}
+
+#define DCL_OUT(TYPE) \
+	OutputStream& operator<<(TYPE rhs) \
+	{ \
+		Write(rhs); \
+		return *this; \
+	}
+
 class IInStream
 {
 protected:
@@ -61,96 +75,26 @@ public:
 	}
 	virtual const char* getFilePath() const = 0;
 public:
-	IInStream& operator>>(char& rhs)
-	{
-		Read(rhs);
-		return *this;
-	}
-	IInStream& operator>>(short& rhs)
-	{
-		Read(rhs);
-		return *this;
-	}
-	IInStream& operator>>(int& rhs)
-	{
-		Read(rhs);
-		return *this;
-	}
-	IInStream& operator>>(unsigned char& rhs)
-	{
-		Read(rhs);
-		return *this;
-	}
-	IInStream& operator>>(unsigned short& rhs)
-	{
-		Read(rhs);
-		return *this;
-	}
-	IInStream& operator>>(unsigned int& rhs)
-	{
-		Read(rhs);
-		return *this;
-	}
-	IInStream& operator>>(unsigned long& rhs)
-	{
-		Read(rhs);
-		return *this;
-	}
-	IInStream& operator>>(unsigned long long& rhs)
-	{
-		Read(rhs);
-		return *this;
-	}
-	IInStream& operator>>(long long& rhs)
-	{
-		Read(rhs);
-		return *this;
-	}
-	IInStream& operator>>(float& rhs)
-	{
-		Read(rhs);
-		return *this;
-	}
-	IInStream& operator>>(double& rhs)
-	{
-		Read(rhs);
-		return *this;
-	}
-	IInStream& operator>>(float2& rhs)
-	{
-		Read(rhs);
-		return *this;
-	}
-	IInStream& operator>>(float3& rhs)
-	{
-		Read(rhs);
-		return *this;
-	}
-	IInStream& operator>>(float4& rhs)
-	{
-		Read(rhs);
-		return *this;
-	}
-	IInStream& operator>>(Spectrum& rhs)
-	{
-		Read(rhs);
-		return *this;
-	}
-	IInStream& operator>>(AABB& rhs)
-	{
-		Read(rhs);
-		return *this;
-	}
-	IInStream& operator>>(Ray& rhs)
-	{
-		Read(rhs);
-		return *this;
-	}
-	IInStream& operator>>(float4x4& rhs)
-	{
-		Read(rhs);
-		return *this;
-	}
+	DCL_IN(char)
+	DCL_IN(short)
+	DCL_IN(int)
+	DCL_IN(long long)
+	DCL_IN(unsigned char)
+	DCL_IN(unsigned short)
+	DCL_IN(unsigned int)
+	DCL_IN(unsigned long long)
+	DCL_IN(float)
+	DCL_IN(double)
+	DCL_IN(Vec2i)
+	DCL_IN(Vec3i)
+	DCL_IN(Vec4i)
+	DCL_IN(Vec2f)
+	DCL_IN(Vec3f)
+	DCL_IN(Vec4f)
+	DCL_IN(Spectrum)
+	DCL_IN(AABB)
+	DCL_IN(Ray)
+	DCL_IN(float4x4)
 };
 
 class InputStream : public IInStream
@@ -234,89 +178,24 @@ public:
 	{
 		_Write(&a_Data, sizeof(T));
 	}
-	OutputStream& operator<<(char rhs)
-	{
-		Write(rhs);
-		return *this;
-	}
-	OutputStream& operator<<(short rhs)
-	{
-		Write(rhs);
-		return *this;
-	}
-	OutputStream& operator<<(int rhs)
-	{
-		Write(rhs);
-		return *this;
-	}
-	OutputStream& operator<<(long long rhs)
-	{
-		Write(rhs);
-		return *this;
-	}
-	OutputStream& operator<<(unsigned char rhs)
-	{
-		Write(rhs);
-		return *this;
-	}
-	OutputStream& operator<<(unsigned short rhs)
-	{
-		Write(rhs);
-		return *this;
-	}
-	OutputStream& operator<<(unsigned int rhs)
-	{
-		Write(rhs);
-		return *this;
-	}
-	OutputStream& operator<<(unsigned long long rhs)
-	{
-		Write(rhs);
-		return *this;
-	}
-	OutputStream& operator<<(float rhs)
-	{
-		Write(rhs);
-		return *this;
-	}
-	OutputStream& operator<<(double rhs)
-	{
-		Write(rhs);
-		return *this;
-	}
-	OutputStream& operator<<(float2 rhs)
-	{
-		Write(rhs);
-		return *this;
-	}
-	OutputStream& operator<<(float3 rhs)
-	{
-		Write(rhs);
-		return *this;
-	}
-	OutputStream& operator<<(float4 rhs)
-	{
-		Write(rhs);
-		return *this;
-	}
-	OutputStream& operator<<(Spectrum rhs)
-	{
-		Write(rhs);
-		return *this;
-	}
-	OutputStream& operator<<(AABB rhs)
-	{
-		Write(rhs);
-		return *this;
-	}
-	OutputStream& operator<<(Ray rhs)
-	{
-		Write(rhs);
-		return *this;
-	}
-	OutputStream& operator<<(float4x4 rhs)
-	{
-		Write(rhs);
-		return *this;
-	}
+	DCL_OUT(char)
+	DCL_OUT(short)
+	DCL_OUT(int)
+	DCL_OUT(long long)
+	DCL_OUT(unsigned char)
+	DCL_OUT(unsigned short)
+	DCL_OUT(unsigned int)
+	DCL_OUT(unsigned long long)
+	DCL_OUT(float)
+	DCL_OUT(double)
+	DCL_OUT(Vec2i)
+	DCL_OUT(Vec3i)
+	DCL_OUT(Vec4i)
+	DCL_OUT(Vec2f)
+	DCL_OUT(Vec3f)
+	DCL_OUT(Vec4f)
+	DCL_OUT(Spectrum)
+	DCL_OUT(AABB)
+	DCL_OUT(Ray)
+	DCL_OUT(float4x4)
 };

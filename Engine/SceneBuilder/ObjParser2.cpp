@@ -56,21 +56,21 @@ void compileobj3(const char* a_InputFile, OutputStream& a_Out)
 	std::vector<tinyobj::shape_t> shapes;
 	std::string err = tinyobj::LoadObj(shapes, a_InputFile, getDirName(a_InputFile).c_str());
 
-	float3 p[3];
-	float3 n[3];
-	float3 ta[3];
-	float3 bi[3];
-	float2 t[3];
+	Vec3f p[3];
+	Vec3f n[3];
+	Vec3f ta[3];
+	Vec3f bi[3];
+	Vec2f t[3];
 	size_t numTriangles = 0, numVertices = 0;
 	size_t numMaxV = 0;
 	for(size_t i = 0; i < shapes.size(); i++)
 	{
 		numTriangles += shapes[i].mesh.indices.size() / 3;
 		numVertices += shapes[i].mesh.positions.size() / 3;
-		numMaxV = MAX(numMaxV, (size_t)shapes[i].mesh.indices.size());
+		numMaxV = max(numMaxV, (size_t)shapes[i].mesh.indices.size());
 	}
 
-	std::vector<float3> positions;
+	std::vector<Vec3f> positions;
 	positions.resize(numVertices);
 	std::vector<unsigned int> indices;
 	indices.resize(numTriangles * 3);
@@ -81,7 +81,7 @@ void compileobj3(const char* a_InputFile, OutputStream& a_Out)
 	e_TriangleData* triData = new e_TriangleData[numTriangles];
 	unsigned int triIndex = 0;
 #ifdef EXT_TRI
-	float3* v_Normals = new float3[numMaxV], *v_Tangents = new float3[numMaxV], *v_BiTangents = new float3[numMaxV];
+	Vec3f* v_Normals = new Vec3f[numMaxV], *v_Tangents = new Vec3f[numMaxV], *v_BiTangents = new Vec3f[numMaxV];
 #endif
 	size_t posIndex = 0, indIndex = 0;
 	AABB box = AABB::Identity();
@@ -92,12 +92,12 @@ void compileobj3(const char* a_InputFile, OutputStream& a_Out)
 		//create bvh construction info
 		for(unsigned int j = 0; j < S.mesh.positions.size() / 3; j++)
 		{
-			positions[posIndex + j] = make_float3(S.mesh.positions[j * 3 + 0], S.mesh.positions[j * 3 + 1], S.mesh.positions[j * 3 + 2]);
+			positions[posIndex + j] = Vec3f(S.mesh.positions[j * 3 + 0], S.mesh.positions[j * 3 + 1], S.mesh.positions[j * 3 + 2]);
 			box.Enlarge(positions[posIndex + j]);
 		}
 		for(unsigned int j = 0; j < S.mesh.indices.size(); j++)
 			indices[indIndex + j] = (unsigned int)posIndex + S.mesh.indices[j];
-		float3* P = &positions[posIndex];
+		Vec3f* P = &positions[posIndex];
 		posIndex += S.mesh.positions.size() / 3;
 		indIndex += S.mesh.indices.size();
 
@@ -105,11 +105,11 @@ void compileobj3(const char* a_InputFile, OutputStream& a_Out)
 		matData.push_back(cnvMat(S.material, m_sLights, &lightCount));
 		
 		//build tri data
-		float2* T = S.mesh.texcoords.size() ? (float2*)&S.mesh.texcoords[0] : 0;
+		Vec2f* T = S.mesh.texcoords.size() ? (Vec2f*)&S.mesh.texcoords[0] : 0;
 #ifdef EXT_TRI
-		Platform::SetMemory(v_Normals, sizeof(float3) * numMaxV);
-		Platform::SetMemory(v_Tangents, sizeof(float3) * numMaxV);
-		Platform::SetMemory(v_BiTangents, sizeof(float3) * numMaxV);
+		Platform::SetMemory(v_Normals, sizeof(Vec3f) * numMaxV);
+		Platform::SetMemory(v_Tangents, sizeof(Vec3f) * numMaxV);
+		Platform::SetMemory(v_BiTangents, sizeof(Vec3f) * numMaxV);
 		ComputeTangentSpace(P, T, &S.mesh.indices[0], (unsigned int)S.mesh.positions.size(), (unsigned int)S.mesh.indices.size() / 3, v_Normals, v_Tangents, v_BiTangents);
 #endif
 		for(size_t ti = 0; ti < S.mesh.indices.size() / 3; ti++)

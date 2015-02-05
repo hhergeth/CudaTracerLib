@@ -21,7 +21,7 @@ CUDA_ONLY_FUNC float4x4 d_Compute(float4x4* a_Matrices, e_AnimatedVertex& v)
 	return mat;
 }
 
-__global__ void g_ComputeVertices(e_TmpVertex* a_Dest, e_AnimatedVertex* a_Source, float4x4* a_Matrices, float4x4* a_Matrices2, float a_Lerp, unsigned int a_VCount)
+__global__ void g_ComputeVertices(e_TmpVertex* a_Dest, e_AnimatedVertex* a_Source, float4x4* a_Matrices, float4x4* a_Matrices2, float a_lerp, unsigned int a_VCount)
 {
 	unsigned int N = blockIdx.x * blockDim.x + threadIdx.x;
 	if(N < a_VCount)
@@ -29,17 +29,17 @@ __global__ void g_ComputeVertices(e_TmpVertex* a_Dest, e_AnimatedVertex* a_Sourc
 		e_AnimatedVertex v = a_Source[N];
 		float4x4 mat0 = d_Compute(a_Matrices, v);
 		float4x4 mat1 = d_Compute(a_Matrices2, v);
-		float3 v0 = mat0.TransformPoint(v.m_fVertexPos), v1 = mat1.TransformPoint(v.m_fVertexPos);
-		a_Dest[N].m_fPos = lerp(v0, v1, a_Lerp);
+		Vec3f v0 = mat0.TransformPoint(v.m_fVertexPos), v1 = mat1.TransformPoint(v.m_fVertexPos);
+		a_Dest[N].m_fPos = math::lerp(v0, v1, a_lerp);
 
-		float3 n0 = mat0.TransformDirection(v.m_fNormal), n1 = mat1.TransformDirection(v.m_fNormal);
-		a_Dest[N].m_fNormal = normalize(lerp(n0, n1, a_Lerp));
+		Vec3f n0 = mat0.TransformDirection(v.m_fNormal), n1 = mat1.TransformDirection(v.m_fNormal);
+		a_Dest[N].m_fNormal = normalize(math::lerp(n0, n1, a_lerp));
 
-		float3 t0 = mat0.TransformDirection(v.m_fTangent), t1 = mat1.TransformDirection(v.m_fTangent);
-		a_Dest[N].m_fTangent = normalize(lerp(t0, t1, a_Lerp));
+		Vec3f t0 = mat0.TransformDirection(v.m_fTangent), t1 = mat1.TransformDirection(v.m_fTangent);
+		a_Dest[N].m_fTangent = normalize(math::lerp(t0, t1, a_lerp));
 
-		float3 b0 = mat0.TransformDirection(v.m_fBitangent), b1 = mat1.TransformDirection(v.m_fBitangent);
-		a_Dest[N].m_fBiTangent = normalize(lerp(b0, b1, a_Lerp));
+		Vec3f b0 = mat0.TransformDirection(v.m_fBitangent), b1 = mat1.TransformDirection(v.m_fBitangent);
+		a_Dest[N].m_fBiTangent = normalize(math::lerp(b0, b1, a_lerp));
 	}
 }
 
@@ -72,8 +72,8 @@ __global__ void g_ComputeBVHState(e_TriIntersectorData* a_BVHIntersectionData, e
 		{
 			AABB l, r;
 			a_BVHNodeData[e.m_sNode].getBox(l, r);
-			box.minV = fminf(l.minV, r.minV);
-			box.maxV = fmaxf(l.maxV, r.maxV);
+			box.minV = min(l.minV, r.minV);
+			box.maxV = max(l.maxV, r.maxV);
 		}
 		else if(e.m_sNode < 0)
 		{
@@ -81,7 +81,7 @@ __global__ void g_ComputeBVHState(e_TriIntersectorData* a_BVHIntersectionData, e
 			{
 				e_TriIntersectorData2 i = a_BVHIntersectionData2[triAddr];
 				uint3 t = a_TriData[i.getIndex()];
-				float3 v0 = a_Tmp[t.x].m_fPos, v1 = a_Tmp[t.y].m_fPos, v2 = a_Tmp[t.z].m_fPos;
+				Vec3f v0 = a_Tmp[t.x].m_fPos, v1 = a_Tmp[t.y].m_fPos, v2 = a_Tmp[t.z].m_fPos;
 				box.Enlarge(v0);
 				box.Enlarge(v1);
 				box.Enlarge(v2);
@@ -101,12 +101,12 @@ __global__ void g_ComputeBVHState(e_TriIntersectorData* a_BVHIntersectionData, e
 
 #include "e_Core.h"
 
-void e_AnimatedMesh::k_ComputeState(unsigned int a_Anim, unsigned int a_Frame, float a_Lerp, e_KernelDynamicScene a_Data, e_Stream<e_BVHNodeData>* a_BVHNodeStream, e_TmpVertex* a_DeviceTmp)
+void e_AnimatedMesh::k_ComputeState(unsigned int a_Anim, unsigned int a_Frame, float a_lerp, e_KernelDynamicScene a_Data, e_Stream<e_BVHNodeData>* a_BVHNodeStream, e_TmpVertex* a_DeviceTmp)
 {
 	unsigned int n = (a_Frame + 1) % m_pAnimations[a_Anim].m_uNumFrames;
 	float4x4* m0 = (float4x4*)m_pAnimations[a_Anim].m_pFrames[a_Frame].m_sMatrices.getDevice();
 	float4x4* m1 = (float4x4*)m_pAnimations[a_Anim].m_pFrames[n].m_sMatrices.getDevice();
-	g_ComputeVertices<<<k_Data.m_uVertexCount / 256 + 1, 256>>>(a_DeviceTmp, (e_AnimatedVertex*)m_sVertices.getDevice(), m0, m1, a_Lerp, k_Data.m_uVertexCount);
+	g_ComputeVertices<<<k_Data.m_uVertexCount / 256 + 1, 256>>>(a_DeviceTmp, (e_AnimatedVertex*)m_sVertices.getDevice(), m0, m1, a_lerp, k_Data.m_uVertexCount);
 	cudaThreadSynchronize();
 	ThrowCudaErrors();
 	g_ComputeTriangles<<<m_sTriInfo.getLength() / 256 + 1, 256>>>(a_DeviceTmp, (uint3*)m_sTriangles.getDevice(), m_sTriInfo.getDevice(), m_sTriInfo.getLength());

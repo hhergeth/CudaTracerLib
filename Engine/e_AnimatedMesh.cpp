@@ -22,7 +22,7 @@ struct c_bFrame
 		data = new float4x4[F->joints.size()];
 		for(int i = 0; i < F->joints.size(); i++)
 		{
-			data[i] = mul(F->joints[i].quat.toMatrix(), float4x4::Translate(*(float3*)&F->joints[i].pos));
+			data[i] = mul(F->joints[i].quat.toMatrix(), float4x4::Translate(*(Vec3f*)&F->joints[i].pos));
 			if(F->joints[i].parent != -1)
 				data[i] = mul(data[i], data[F->joints[i].parent]);
 		}
@@ -49,7 +49,7 @@ struct c_Animation
 
 		float4x4* inverseJoints = new float4x4[A->baseJoints.size()];
 		for(unsigned int i = 0; i < A->baseJoints.size(); i++)
-			inverseJoints[i] = mul(M->joints[i].quat.toMatrix(), float4x4::Translate(*(float3*)&M->joints[i].pos)).inverse();
+			inverseJoints[i] = mul(M->joints[i].quat.toMatrix(), float4x4::Translate(*(Vec3f*)&M->joints[i].pos)).inverse();
 		data = new c_bFrame[m_uNumbFrames];
 		for(unsigned int i = 0; i < m_uNumbFrames; i++)
 			data[i] = c_bFrame(&A->bFrames[i], inverseJoints);
@@ -90,7 +90,7 @@ void e_AnimatedMesh::CompileToBinary(const char* a_InputFile, std::vector<std::s
 	box = box.Identity();
 	std::vector<uint3> triData2;
 	e_AnimatedVertex* v_Data;
-	float3* v_Pos;
+	Vec3f* v_Pos;
 	std::vector<e_TriangleData> triData;
 	std::vector<e_KernelMaterial> matData;
 	unsigned int off = 0;
@@ -113,18 +113,18 @@ void e_AnimatedMesh::CompileToBinary(const char* a_InputFile, std::vector<std::s
 
 		for(int t = 0; t < sm->tris.size(); t++)
 		{
-			float3 P[3], N[3], Tan[3], BiTan[3];
-			float2 T[3];
+			Vec3f P[3], N[3], Tan[3], BiTan[3];
+			Vec2f T[3];
 			for(int j = 0; j < 3; j++)
 			{
 				unsigned int v = sm->tris[t].v[j] + off;
 				P[j] = v_Data[v].m_fVertexPos;
-				T[j] = *(float2*)&sm->verts[v - off].tc;
+				T[j] = *(Vec2f*)&sm->verts[v - off].tc;
 				box.Enlarge(P[j]);
 			}
 			e_TriangleData d(P, s, T, N, Tan, BiTan);
 			triData.push_back(d);
-			uint3 q = *(uint3*)&sm->tris[t].v + make_uint3(off);
+			Vec3u q = *(Vec3u*)&sm->tris[t].v + Vec3u(off);
 			triData2.push_back(q);
 		}
 		off += (unsigned int)sm->verts.size();
@@ -189,7 +189,7 @@ e_BVHHierarchy::e_BVHHierarchy(e_BVHNodeData* ref)
 		m_pEntries.push_back(n);
 		if(n.m_sNode < 0)
 			continue;
-		int2 d0 = ref[n.m_sNode].getChildren(), d = make_int2(d0.x < 0 ? d0.x : d0.x / 4, d0.y < 0 ? d0.y : d0.y / 4);
+		Vec2i d0 = ref[n.m_sNode].getChildren(), d = Vec2i(d0.x < 0 ? d0.x : d0.x / 4, d0.y < 0 ? d0.y : d0.y / 4);
 		bfs.push(e_BVHLevelEntry(n.m_sNode, d.x, +1, n.m_sLevel + 1));
 		bfs.push(e_BVHLevelEntry(n.m_sNode, d.y, -1, n.m_sLevel + 1));
 	}

@@ -4,14 +4,14 @@
 
 #ifdef EXT_TRI
 
-e_TriangleData::e_TriangleData(const float3* P, unsigned char matIndex, const float2* T, const float3* N, const float3* Tan, const float3* BiTan)
+e_TriangleData::e_TriangleData(const Vec3f* P, unsigned char matIndex, const Vec2f* T, const Vec3f* N, const Vec3f* Tan, const Vec3f* BiTan)
 {
 	m_sHostData.MatIndex = matIndex;
 	setUvSetData(0, T[0], T[1], T[2]);
 	setData(P[0], P[1], P[2], N[0], N[1], N[2]);
 }
 
-void e_TriangleData::setUvSetData(int setId, const float2& a, const float2& b, const float2& c)
+void e_TriangleData::setUvSetData(int setId, const Vec2f& a, const Vec2f& b, const Vec2f& c)
 {
 	half2 a1 = half2(a), b1 = half2(b), c1 = half2(c);
 	m_sHostData.UV_Sets[setId].TexCoord[0] = *(ushort2*)&a1;
@@ -19,19 +19,19 @@ void e_TriangleData::setUvSetData(int setId, const float2& a, const float2& b, c
 	m_sHostData.UV_Sets[setId].TexCoord[2] = *(ushort2*)&c1;
 }
 
-void e_TriangleData::setData(const float3& v0, const float3& v1, const float3& v2,
-							 const float3& n0, const float3& n1, const float3& n2)
+void e_TriangleData::setData(const Vec3f& v0, const Vec3f& v1, const Vec3f& v2,
+							 const Vec3f& n0, const Vec3f& n1, const Vec3f& n2)
 {
 	uint3 uvset = m_sDeviceData.UVSets[0];
-	float2  t0 = make_float2(half(unsigned short(uvset.x)), half(unsigned short(uvset.x >> 16))),
-			t1 = make_float2(half(unsigned short(uvset.y)), half(unsigned short(uvset.y >> 16))),
-			t2 = make_float2(half(unsigned short(uvset.z)), half(unsigned short(uvset.z >> 16)));
+	Vec2f   t0 = Vec2f(half(unsigned short(uvset.x)), half(unsigned short(uvset.x >> 16))),
+			t1 = Vec2f(half(unsigned short(uvset.y)), half(unsigned short(uvset.y >> 16))),
+			t2 = Vec2f(half(unsigned short(uvset.z)), half(unsigned short(uvset.z >> 16)));
 
-	float3 dP1 = v1 - v0, dP2 = v2 - v0;
-	float2 dUV1 = t1 - t0, dUV2 = t2 - t0;
-	float3 n = normalize(cross(dP1, dP2));
+	Vec3f dP1 = v1 - v0, dP2 = v2 - v0;
+	Vec2f dUV1 = t1 - t0, dUV2 = t2 - t0;
+	Vec3f n = normalize(cross(dP1, dP2));
 	float determinant = dUV1.x * dUV2.y - dUV1.y * dUV2.x;
-	float3 dpdu, dpdv;
+	Vec3f dpdu, dpdv;
 	if (determinant == 0)
 	{
 		coordinateSystem(n, dpdu, dpdv);
@@ -54,24 +54,24 @@ void e_TriangleData::setData(const float3& v0, const float3& v1, const float3& v
 void e_TriangleData::fillDG(const float4x4& localToWorld, const float4x4& worldToLocal, DifferentialGeometry& dg) const
 {
 	uint2 nme = m_sDeviceData.NorMatExtra;
-	float3 na = Uchar2ToNormalizedFloat3(nme.x), nb = Uchar2ToNormalizedFloat3(nme.x >> 16), nc = Uchar2ToNormalizedFloat3(nme.y);
+	Vec3f na = Uchar2ToNormalizedFloat3(nme.x), nb = Uchar2ToNormalizedFloat3(nme.x >> 16), nc = Uchar2ToNormalizedFloat3(nme.y);
 	float w = 1.0f - dg.bary.x - dg.bary.y, u = dg.bary.x, v = dg.bary.y;
 	dg.sys.n = u * na + v * nb + w * nc;
 	uint3 dpd = m_sDeviceData.DpduDpdv;
-	float3 dpdu = make_float3(half(unsigned short(dpd.x)), half(unsigned short(dpd.x >> 16)), half(unsigned short(dpd.y)));
-	float3 dpdv = make_float3(half(unsigned short(dpd.y >> 16)), half(unsigned short(dpd.z)), half(unsigned short(dpd.z >> 16)));
+	Vec3f dpdu = Vec3f(half(unsigned short(dpd.x)), half(unsigned short(dpd.x >> 16)), half(unsigned short(dpd.y)));
+	Vec3f dpdv = Vec3f(half(unsigned short(dpd.y >> 16)), half(unsigned short(dpd.z)), half(unsigned short(dpd.z >> 16)));
 	dg.sys.s = dpdu - dg.sys.n * dot(dg.sys.n, dpdu);
 	dg.sys.t = cross(dg.sys.s, dg.sys.n);
 	dg.sys = dg.sys * localToWorld;
-	dg.n = normalize(!worldToLocal.TransformTranspose(make_float4(na+nb+nc, 0.0f)));
+	dg.n = normalize(worldToLocal.TransformTranspose(Vec4f(na + nb + nc, 0.0f)).getXYZ());
 	dg.dpdu = (localToWorld.TransformDirection(dpdu));
 	dg.dpdv = (localToWorld.TransformDirection(dpdv));
 	for (int i = 0; i < NUM_UV_SETS; i++)
 	{
 		uint3 uvset = m_sDeviceData.UVSets[i];
-		float2  ta = make_float2(half(unsigned short(uvset.x)), half(unsigned short(uvset.x >> 16))),
-				tb = make_float2(half(unsigned short(uvset.y)), half(unsigned short(uvset.y >> 16))),
-				tc = make_float2(half(unsigned short(uvset.z)), half(unsigned short(uvset.z >> 16)));
+		Vec2f   ta = Vec2f(half(unsigned short(uvset.x)), half(unsigned short(uvset.x >> 16))),
+				tb = Vec2f(half(unsigned short(uvset.y)), half(unsigned short(uvset.y >> 16))),
+				tc = Vec2f(half(unsigned short(uvset.z)), half(unsigned short(uvset.z >> 16)));
 		dg.uv[i] = u * ta + v * tb + w * tc;
 	}
 	dg.extraData = nme.y >> 24;

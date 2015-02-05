@@ -1,8 +1,7 @@
-#ifndef _S10E5_H_
-#define _S10E5_H_
+#pragma once
 
 #include "..\Defines.h"
-#include "cutil_math.h"
+#include "Vector.h"
 
 class s10e5
 {
@@ -87,11 +86,11 @@ class s10e5
 // std::istream &		operator >> (std::istream &is, s10e5 &h);
 
 
-#define S10E5_MIN	5.96046448e-08	// Smallest positive s10e5
+#define S10E5_min	5.96046448e-08	// Smallest positive s10e5
 
-#define S10E5_NRM_MIN	6.10351562e-05	// Smallest positive normalized s10e5
+#define S10E5_NRM_min	6.10351562e-05	// Smallest positive normalized s10e5
 
-#define S10E5_MAX	65504.0		// Largest positive s10e5
+#define S10E5_max	65504.0		// Largest positive s10e5
 
 #define S10E5_EPSILON	0.00097656	// Smallest positive e for which
 					// s10e5 (1.0 + e) != s10e5 (1.0)
@@ -104,21 +103,21 @@ class s10e5
 
 #define S10E5_RADIX	2		// Base of the exponent
 
-#define S10E5_MIN_EXP	-13		// Minimum negative integer such that
+#define S10E5_min_EXP	-13		// Minimum negative integer such that
 					// S10E5_RADIX raised to the power of
 					// one less than that integer is a
 					// normalized s10e5
 
-#define S10E5_MAX_EXP	16		// Maximum positive integer such that
+#define S10E5_max_EXP	16		// Maximum positive integer such that
 					// S10E5_RADIX raised to the power of
 					// one less than that integer is a
 					// normalized s10e5
 
-#define S10E5_MIN_10_EXP	-4		// Minimum positive integer such
+#define S10E5_min_10_EXP	-4		// Minimum positive integer such
 					// that 10 raised to that power is
 					// a normalized s10e5
 
-#define S10E5_MAX_10_EXP	4		// Maximum positive integer such
+#define S10E5_max_10_EXP	4		// Maximum positive integer such
 					// that 10 raised to that power is
 					// a normalized s10e5
 
@@ -486,7 +485,7 @@ struct half2
 {
 	half x, y;
 	CUDA_FUNC_IN half2() {}
-	CUDA_FUNC_IN half2(const float2& v)
+	CUDA_FUNC_IN half2(const Vec2f& v)
 	{
 		x = half(v.x);
 		y = half(v.y);
@@ -496,9 +495,9 @@ struct half2
 		x = half(_x);
 		y = half(_y);
 	}
-	CUDA_FUNC_IN float2 ToFloat2()
+	CUDA_FUNC_IN Vec2f ToFloat2()
 	{
-		return make_float2(x.ToFloat(), y.ToFloat());
+		return Vec2f(x.ToFloat(), y.ToFloat());
 	}
 };
 
@@ -506,7 +505,7 @@ struct half3
 {
 	half x, y, z;
 	CUDA_FUNC_IN half3() {}
-	CUDA_FUNC_IN half3(float3& v)
+	CUDA_FUNC_IN half3(const Vec3f& v)
 	{
 		x = half(v.x);
 		y = half(v.y);
@@ -518,9 +517,9 @@ struct half3
 		y = half(_y);
 		z = half(_z);
 	}
-	CUDA_FUNC_IN float3 ToFloat3()
+	CUDA_FUNC_IN Vec3f ToFloat3()
 	{
-		return make_float3(x.ToFloat(), y.ToFloat(), z.ToFloat());
+		return Vec3f(x.ToFloat(), y.ToFloat(), z.ToFloat());
 	}
 };
 
@@ -528,7 +527,7 @@ struct half4
 {
 	half x, y, z, w;
 	CUDA_FUNC_IN half4() {}
-	CUDA_FUNC_IN half4(float4& v)
+	CUDA_FUNC_IN half4(const Vec4f& v)
 	{
 		x = half(v.x);
 		y = half(v.y);
@@ -542,10 +541,8 @@ struct half4
 		z = half(_z);
 		w = half(_w);
 	}
-	CUDA_FUNC_IN float4 ToFloat4()
+	CUDA_FUNC_IN Vec4f ToFloat4()
 	{
-		return make_float4(x.ToFloat(), y.ToFloat(), z.ToFloat(), w.ToFloat());
+		return Vec4f(x.ToFloat(), y.ToFloat(), z.ToFloat(), w.ToFloat());
 	}
 };
-
-#endif

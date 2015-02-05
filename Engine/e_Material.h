@@ -45,7 +45,7 @@ public:
 	int parallaxMinSamples, parallaxMaxSamples;
 public:
 	e_KernelMaterial(const char* name = 0);
-	CUDA_DEVICE CUDA_HOST bool SampleNormalMap(DifferentialGeometry& uv, const float3& wi) const;
+	CUDA_DEVICE CUDA_HOST bool SampleNormalMap(DifferentialGeometry& uv, const Vec3f& wi) const;
 	CUDA_DEVICE CUDA_HOST float SampleAlphaMap(const DifferentialGeometry& uv) const;
 	CUDA_DEVICE CUDA_HOST bool GetBSSRDF(const DifferentialGeometry& uv, const e_KernelBSSRDF** res) const;
 	template<typename L> void LoadTextures(L callback)
@@ -67,7 +67,7 @@ public:
 	}
 	void SetNormalMap(const char* path)
 	{
-		SetNormalMap(CreateTexture(path, make_float3(0)));
+		SetNormalMap(CreateTexture(path, Spectrum(0.0f)));
 	}
 	void SetHeightMap(const e_KernelTexture& tex)
 	{
@@ -78,7 +78,7 @@ public:
 	}
 	void SetHeightMap(const char* path)
 	{
-		SetHeightMap(CreateTexture(path, make_float3(0)));
+		SetHeightMap(CreateTexture(path, Spectrum(0.0f)));
 	}
 	void SetAlphaMap(const e_KernelTexture& tex)
 	{
@@ -89,7 +89,7 @@ public:
 	}
 	void SetAlphaMap(const char* path)
 	{
-		SetAlphaMap(CreateTexture(path, make_float4(0)));
+		SetAlphaMap(CreateTexture(path, Spectrum(0.0f)));
 	}
 	void setBssrdf(const Spectrum& sig_a, const Spectrum& sigp_s, float e);
 };

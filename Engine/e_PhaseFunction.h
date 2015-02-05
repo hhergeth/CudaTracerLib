@@ -71,10 +71,10 @@ struct e_IsotropicPhaseFunction : public e_BasePhaseFunction
 struct e_KajiyaKayPhaseFunction : public e_BasePhaseFunction
 {
 	float m_ks, m_kd, m_exponent, m_normalization;
-	float3 orientation;
+	Vec3f orientation;
 	
 	e_KajiyaKayPhaseFunction(){}
-	e_KajiyaKayPhaseFunction(float ks, float kd, float e, float3 o);
+	e_KajiyaKayPhaseFunction(float ks, float kd, float e, Vec3f o);
 
 	virtual void Update();
 
@@ -104,7 +104,7 @@ struct e_RayleighPhaseFunction : public e_BasePhaseFunction
 	TYPE_FUNC(e_RayleighPhaseFunction)
 };
 
-#define PHF_SIZE RND_16(DMAX4(sizeof(e_HGPhaseFunction), sizeof(e_IsotropicPhaseFunction), sizeof(e_KajiyaKayPhaseFunction), sizeof(e_RayleighPhaseFunction)))
+#define PHF_SIZE RND_16(Dmax4(sizeof(e_HGPhaseFunction), sizeof(e_IsotropicPhaseFunction), sizeof(e_KajiyaKayPhaseFunction), sizeof(e_RayleighPhaseFunction)))
 
 struct CUDA_ALIGN(16) e_PhaseFunction : public e_AggregateBaseType<e_BasePhaseFunction, PHF_SIZE>
 {

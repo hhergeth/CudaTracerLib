@@ -43,6 +43,12 @@
 #define ISCUDA
 #endif
 
+#if _DEBUG && !__CUDACC__
+#   define CT_ASSERT(X) ((X) ? ((void)0) : fail("Assertion failed!\n%s:%d\n%s", __FILE__, __LINE__, #X))
+#else
+#   define CT_ASSERT(X) ((void)0)
+#endif
+
 #if defined(__CUDACC__) // NVCC
    #define CUDA_ALIGN(n) __align__(n)
 #elif defined(__GNUC__) // GCC
@@ -58,6 +64,8 @@
 	{ \
 		return name##_TYPE; \
 	}
+
+void fail(const char* format, ...);
 
  CUDA_FUNC_IN int getGlobalIdx_2D_2D()
 {
@@ -88,44 +96,47 @@ CUDA_FUNC_IN int getGlobalIdx_3D_3D()
 #endif
 }
 
+template<typename T> CUDA_FUNC_IN void swapk(T* a, T* b)
+{
+	T q = *a;
+	*a = *b;
+	*b = q;
+}
+
+template<typename T> CUDA_FUNC_IN void swapk(T& a, T& b)
+{
+	T q = a;
+	a = b;
+	b = q;
+}
+
+typedef unsigned int uint;
+typedef unsigned short ushort;
+
 #define threadId getGlobalIdx_2D_2D()
 
-#define DMAX2(A, B) ((A) > (B) ? (A) : (B))
-#define DMAX3(A, B, C) DMAX2(DMAX2(A, B), C)
-#define DMAX4(A, B, C, D) DMAX2(DMAX3(A, B, C), D)
-#define DMAX5(A, B, C, D, E) DMAX2(DMAX4(A, B, C, D), E)
-#define DMAX6(A, B, C, D, E, F) DMAX2(DMAX5(A, B, C, D, E), F)
-#define DMAX7(A, B, C, D, E, F, G) DMAX2(DMAX6(A, B, C, D, E, F), G)
-#define DMAX8(A, B, C, D, E, F, G, H) DMAX2(DMAX7(A, B, C, D, E, F, G), H)
-#define DMAX9(A, B, C, D, E, F, G, H, I) DMAX2(DMAX8(A, B, C, D, E, F, G, H), I)
+#define Dmax2(A, B) ((A) > (B) ? (A) : (B))
+#define Dmax3(A, B, C) Dmax2(Dmax2(A, B), C)
+#define Dmax4(A, B, C, D) Dmax2(Dmax3(A, B, C), D)
+#define Dmax5(A, B, C, D, E) Dmax2(Dmax4(A, B, C, D), E)
+#define Dmax6(A, B, C, D, E, F) Dmax2(Dmax5(A, B, C, D, E), F)
+#define Dmax7(A, B, C, D, E, F, G) Dmax2(Dmax6(A, B, C, D, E, F), G)
+#define Dmax8(A, B, C, D, E, F, G, H) Dmax2(Dmax7(A, B, C, D, E, F, G), H)
+#define Dmax9(A, B, C, D, E, F, G, H, I) Dmax2(Dmax8(A, B, C, D, E, F, G, H), I)
 
-#define DMIN2(A, B) ((A) < (B) ? (A) : (B))
-#define DMIN3(A, B, C) DMIN2(DMIN2(A, B), C)
-#define DMIN4(A, B, C, D) DMIN2(DMIN3(A, B, C), D)
-#define DMIN5(A, B, C, D, E) DMIN2(DMIN4(A, B, C, D), E)
-#define DMIN6(A, B, C, D, E, F) DMIN2(DMIN5(A, B, C, D, E), F)
-#define DMIN7(A, B, C, D, E, F, G) DMIN2(DMIN6(A, B, C, D, E, F), G)
-#define DMIN8(A, B, C, D, E, F, G, H) DMIN2(DMIN7(A, B, C, D, E, F, G), H)
-#define DMIN9(A, B, C, D, E, F, G, H, I) DMIN2(DMIN8(A, B, C, D, E, F, G, H), I)
+#define Dmin2(A, B) ((A) < (B) ? (A) : (B))
+#define Dmin3(A, B, C) Dmin2(Dmin2(A, B), C)
+#define Dmin4(A, B, C, D) Dmin2(Dmin3(A, B, C), D)
+#define Dmin5(A, B, C, D, E) Dmin2(Dmin4(A, B, C, D), E)
+#define Dmin6(A, B, C, D, E, F) Dmin2(Dmin5(A, B, C, D, E), F)
+#define Dmin7(A, B, C, D, E, F, G) Dmin2(Dmin6(A, B, C, D, E, F), G)
+#define Dmin8(A, B, C, D, E, F, G, H) Dmin2(Dmin7(A, B, C, D, E, F, G), H)
+#define Dmin9(A, B, C, D, E, F, G, H, I) Dmin2(Dmin8(A, B, C, D, E, F, G, H), I)
 
 #define RND_UP(VAL, MOD) (VAL + (((VAL) % (MOD)) != 0 ? ((MOD) - ((VAL) % (MOD))) : (0)))
 #define RND_16(VAL) RND_UP(VAL, 16)
 
-inline void CudaSetToZero(void* dest, size_t length)
-{
-	static void* zeroBuf = 0;
-	static size_t zeroBufLength = 0;
-	if(!zeroBuf || zeroBufLength < length)
-	{
-		if(zeroBuf)
-			free(zeroBuf);
-		zeroBufLength = RND_16(DMAX2(length, zeroBufLength));
-		zeroBuf = malloc(zeroBufLength);
-		for(int i = 0; i < zeroBufLength / 8; i++)
-			*((unsigned long long*)zeroBuf + i) = 0;
-	}
-	cudaMemcpy(dest, zeroBuf, length, cudaMemcpyHostToDevice);
-}
+void CudaSetToZero(void* dest, size_t length);
 template<typename T> inline void ZeroMemoryCuda(T* cudaVar)
 {
 	CudaSetToZero(cudaVar, sizeof(T));

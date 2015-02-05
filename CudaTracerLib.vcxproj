@@ -108,6 +108,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClCompile Include="Base\BVHBuilder.cpp" />
     <ClCompile Include="Base\FileStream.cpp" />
     <ClCompile Include="Base\StringUtils.cpp" />
+    <ClCompile Include="Defines.cpp" />
     <ClCompile Include="Engine\e_AnimatedMesh.cpp" />
     <ClCompile Include="Engine\e_Core.cpp" />
     <ClCompile Include="Engine\e_DynamicScene.cpp" />
@@ -150,11 +151,9 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="Engine\e_BSDF_Complex.h" />
     <ClInclude Include="Engine\e_BSDF_Simple.h" />
     <ClInclude Include="Engine\e_Buffer.h" />
-    <ClInclude Include="Engine\e_CameraController.h" />
     <ClInclude Include="Engine\e_Core.h" />
     <ClInclude Include="Engine\e_DifferentialGeometry.h" />
     <ClInclude Include="Engine\e_DynamicScene.h" />
-    <ClInclude Include="Engine\e_EnvironmentMap.h" />
     <ClInclude Include="Engine\e_ErrorHandler.h" />
     <ClInclude Include="Engine\e_FileTexture.h" />
     <ClInclude Include="Engine\e_FileTextureHelper.h" />
@@ -206,17 +205,18 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="MathTypes.h" />
     <ClInclude Include="Math\AABB.h" />
     <ClInclude Include="Math\Compression.h" />
-    <ClInclude Include="Math\cutil_math.h" />
     <ClInclude Include="Math\float4x4.h" />
     <ClInclude Include="Math\Frame.h" />
     <ClInclude Include="Math\half.h" />
     <ClInclude Include="Math\Int24.h" />
     <ClInclude Include="Math\Integrator.h" />
+    <ClInclude Include="Math\MathFunc.h" />
     <ClInclude Include="Math\Quaternion.h" />
     <ClInclude Include="Math\Ray.h" />
     <ClInclude Include="Math\Sampling.h" />
     <ClInclude Include="Math\Spectrum.h" />
     <ClInclude Include="Math\Spline.h" />
+    <ClInclude Include="Math\Vector.h" />
     <ClInclude Include="Math\Warp.h" />
     <ClInclude Include="StdAfx.h" />
   </ItemGroup>
@@ -255,6 +255,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <CudaCompile Include="Kernel\k_TraceAlgorithms.cu" />
     <CudaCompile Include="Kernel\k_TraceHelper.cu" />
     <CudaCompile Include="Kernel\k_Tracer.cu" />
+    <CudaCompile Include="Math\float4x4.cu" />
     <CudaCompile Include="Math\Integrator.cu" />
     <CudaCompile Include="Math\Spectrum.cu" />
     <CudaCompile Include="Math\Spline.cu" />

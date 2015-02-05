@@ -32,10 +32,10 @@ struct e_SensorBase : public e_AbstractEmitter
 {
 public:
 	float aspect;
-	float2 m_resolution, m_invResolution;
+	Vec2f m_resolution, m_invResolution;
 	float4x4 toWorld, toWorldInverse;
 	float4x4 m_cameraToSample, m_sampleToCamera;
-	float2 m_fNearFarDepths;
+	Vec2f m_fNearFarDepths;
 	float fov;
 	float m_apertureRadius;
 	float m_focusDistance;
@@ -53,7 +53,7 @@ public:
 	virtual void Update()
 	{
 		toWorldInverse = toWorld.inverse();
-		m_invResolution = make_float2(1) / m_resolution;
+		m_invResolution = Vec2f(1) / m_resolution;
 		aspect = m_resolution.x / m_resolution.y;
 	}
 	virtual void SetToWorld(const float4x4& w)
@@ -65,18 +65,18 @@ public:
 	///_fov in degrees
 	virtual void SetFov(float _fov)
 	{
-		fov = Radians(_fov);
+		fov = math::Radians(_fov);
 		Update();
 	}
 	virtual void SetNearFarDepth(float nearD, float farD)
 	{
-		m_fNearFarDepths = make_float2(nearD, farD);
+		m_fNearFarDepths = Vec2f(nearD, farD);
 		Update();
 	}
 	virtual void SetFilmData(int w, int h)
 	{
-		m_resolution = make_float2(w, h);
-		m_invResolution = make_float2(1) / m_resolution;
+		m_resolution = Vec2f(w, h);
+		m_invResolution = Vec2f(1) / m_resolution;
 		aspect = m_resolution.x / m_resolution.y;
 		Update();
 	}
@@ -108,29 +108,29 @@ struct e_SphericalCamera : public e_SensorBase
 		SetFilmData(w, h);
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const float2 &pixelSample, const float2 &apertureSample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
 
-	CUDA_FUNC_IN Spectrum sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const float2 &pixelSample, const float2 &apertureSample) const
+	CUDA_FUNC_IN Spectrum sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const
 	{
 		return sampleRay(ray, pixelSample, apertureSample);
 	}
 
-	CUDA_FUNC_IN Spectrum eval(const float3& p, const Frame& sys, const float3 &d) const
+	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const Vec3f &d) const
 	{
 		return Spectrum(0.0f);
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleDirect(DirectSamplingRecord &dRec, const float2 &sample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const;
 
 	CUDA_FUNC_IN float pdfDirect(const DirectSamplingRecord &dRec) const
 	{
 		return (dRec.measure == EDiscrete) ? 1.0f : 0.0f;
 	}
 
-	CUDA_FUNC_IN Spectrum samplePosition(PositionSamplingRecord &pRec, const float2 &sample, const float2 *extra) const
+	CUDA_FUNC_IN Spectrum samplePosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const
 	{
 		pRec.p = toWorld.Translation();
-		pRec.n = make_float3(0.0f);
+		pRec.n = Vec3f(0.0f);
 		pRec.pdf = 1.0f;
 		pRec.measure = EDiscrete;
 		return Spectrum(1.0f);
@@ -146,9 +146,9 @@ struct e_SphericalCamera : public e_SensorBase
 		return (pRec.measure == EDiscrete) ? 1.0f : 0.0f;
 	}
 
-	CUDA_FUNC_IN Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const float2 &sample, const float2 *extra) const
+	CUDA_FUNC_IN Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const
 	{
-		float3 samplePos = make_float3(sample.x, sample.y, 0.0f);
+		Vec3f samplePos = Vec3f(sample.x, sample.y, 0.0f);
 
 		if (extra)
 		{
@@ -157,15 +157,15 @@ struct e_SphericalCamera : public e_SensorBase
 			samplePos.y = (extra->y + sample.y) * m_invResolution.y;
 		}
 
-		pRec.uv = make_float2(samplePos.x * m_resolution.x, samplePos.y * m_resolution.y);
+		pRec.uv = Vec2f(samplePos.x * m_resolution.x, samplePos.y * m_resolution.y);
 
 		float sinPhi, cosPhi, sinTheta, cosTheta;
 		sincos(samplePos.x * 2 * PI, &sinPhi, &cosPhi);
 		sincos(samplePos.y * PI, &sinTheta, &cosTheta);
 
-		dRec.d = toWorld.TransformPoint(make_float3(sinPhi*sinTheta, cosTheta, -cosPhi*sinTheta));
+		dRec.d = toWorld.TransformPoint(Vec3f(sinPhi*sinTheta, cosTheta, -cosPhi*sinTheta));
 		dRec.measure = ESolidAngle;
-		dRec.pdf = 1 / (2 * PI * PI * MAX(sinTheta, EPSILON));
+		dRec.pdf = 1 / (2 * PI * PI * max(sinTheta, EPSILON));
 
 		return Spectrum(1.0f);
 	}
@@ -174,7 +174,7 @@ struct e_SphericalCamera : public e_SensorBase
 
 	CUDA_DEVICE CUDA_HOST Spectrum evalDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const;
 
-	CUDA_DEVICE CUDA_HOST bool getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, float2 &samplePosition) const;
+	CUDA_DEVICE CUDA_HOST bool getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, Vec2f &samplePosition) const;
 
 	TYPE_FUNC(e_SphericalCamera)
 };
@@ -182,7 +182,7 @@ struct e_SphericalCamera : public e_SensorBase
 #define e_PerspectiveCamera_TYPE 2
 struct e_PerspectiveCamera : public e_SensorBase
 {
-	float3 m_dx, m_dy;
+	Vec3f m_dx, m_dy;
 	float m_normalization;
 	AABB m_imageRect;
 public:
@@ -193,32 +193,32 @@ public:
 	e_PerspectiveCamera(int w, int h, float _fov)
 		: e_SensorBase(EDeltaPosition | EPerspectiveCamera | EOnSurface | EDirectionSampleMapsToPixels | EProjectiveCamera)
 	{
-		m_fNearFarDepths = make_float2(1, 100000);
+		m_fNearFarDepths = Vec2f(1, 100000);
 		SetFilmData(w, h);
-		fov = Radians(_fov);
+		fov = math::Radians(_fov);
 	}
 
 	virtual void Update();
 
-	CUDA_DEVICE CUDA_HOST float importance(const float3 &d) const;
+	CUDA_DEVICE CUDA_HOST float importance(const Vec3f &d) const;
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const float2 &pixelSample, const float2 &apertureSample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const float2 &pixelSample, const float2 &apertureSample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
 
-	CUDA_FUNC_IN Spectrum eval(const float3& p, const Frame& sys, const float3 &d) const
+	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const Vec3f &d) const
 	{
 		return Spectrum(0.0f);
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleDirect(DirectSamplingRecord &dRec, const float2 &sample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const;
 
 	CUDA_FUNC_IN float pdfDirect(const DirectSamplingRecord &dRec) const
 	{
 		return (dRec.measure == EDiscrete) ? 1.0f : 0.0f;
 	}
 
-	CUDA_FUNC_IN Spectrum samplePosition(PositionSamplingRecord &pRec, const float2 &sample, const float2 *extra) const
+	CUDA_FUNC_IN Spectrum samplePosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const
 	{
 		pRec.p = toWorld.Translation();
 		pRec.n = toWorld.Forward();
@@ -237,7 +237,7 @@ public:
 		return (pRec.measure == EDiscrete) ? 1.0f : 0.0f;
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const float2 &sample, const float2 *extra) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const;
 
 	CUDA_FUNC_IN float pdfDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
 	{
@@ -255,7 +255,7 @@ public:
 		return Spectrum(importance(toWorldInverse.TransformDirection(dRec.d)));
 	}
 
-	CUDA_DEVICE CUDA_HOST bool getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, float2 &samplePosition) const;
+	CUDA_DEVICE CUDA_HOST bool getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, Vec2f &samplePosition) const;
 
 	TYPE_FUNC(e_PerspectiveCamera)
 };
@@ -263,10 +263,10 @@ public:
 #define e_ThinLensCamera_TYPE 3
 struct e_ThinLensCamera : public e_SensorBase
 {
-	float3 m_dx, m_dy;
+	Vec3f m_dx, m_dy;
 	float m_aperturePdf;
 	float m_normalization;
-	CUDA_DEVICE CUDA_HOST float importance(const float3 &p, const float3 &d, float2* sample = 0) const;
+	CUDA_DEVICE CUDA_HOST float importance(const Vec3f &p, const Vec3f &d, Vec2f* sample = 0) const;
 public:
 	e_ThinLensCamera()
 		: e_SensorBase(ENeedsApertureSample | EPerspectiveCamera | EOnSurface | EDirectionSampleMapsToPixels | EProjectiveCamera)
@@ -275,7 +275,7 @@ public:
 	e_ThinLensCamera(int w, int h, float _fov, float a, float dist)
 		: e_SensorBase(ENeedsApertureSample | EPerspectiveCamera | EOnSurface | EDirectionSampleMapsToPixels | EProjectiveCamera)
 	{
-		m_fNearFarDepths = make_float2(1, 100000);
+		m_fNearFarDepths = Vec2f(1, 100000);
 		SetFilmData(w, h);
 		fov = _fov;
 		m_apertureRadius = a;
@@ -284,24 +284,24 @@ public:
 
 	virtual void Update();
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const float2 &pixelSample, const float2 &apertureSample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const float2 &pixelSample, const float2 &apertureSample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
 
-	CUDA_FUNC_IN Spectrum eval(const float3& p, const Frame& sys, const float3 &d) const
+	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const Vec3f &d) const
 	{
 		return Spectrum(0.0f);
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleDirect(DirectSamplingRecord &dRec, const float2 &sample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const;
 
 	CUDA_DEVICE CUDA_HOST float pdfDirect(const DirectSamplingRecord &dRec) const;
 
-	CUDA_FUNC_IN Spectrum samplePosition(PositionSamplingRecord &pRec, const float2 &sample, const float2 *extra) const
+	CUDA_FUNC_IN Spectrum samplePosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const
 	{
-		float2 aperturePos = Warp::squareToUniformDiskConcentric(sample) * m_apertureRadius;
+		Vec2f aperturePos = Warp::squareToUniformDiskConcentric(sample) * m_apertureRadius;
 
-		pRec.p = toWorld.TransformPoint(make_float3(aperturePos.x, aperturePos.y, 0.0f));
+		pRec.p = toWorld.TransformPoint(Vec3f(aperturePos.x, aperturePos.y, 0.0f));
 		pRec.n = toWorld.Forward();
 		pRec.pdf = m_aperturePdf;
 		pRec.measure = EArea;
@@ -318,7 +318,7 @@ public:
 		return (pRec.measure == EArea) ? m_aperturePdf : 0.0f;
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const float2 &sample, const float2 *extra) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const;
 
 	CUDA_FUNC_IN float pdfDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
 	{
@@ -336,22 +336,22 @@ public:
 		return Spectrum(importance(toWorldInverse.TransformPoint(pRec.p), toWorldInverse.TransformDirection(dRec.d)));
 	}
 
-	CUDA_FUNC_IN bool getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, float2 &samplePosition) const
+	CUDA_FUNC_IN bool getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, Vec2f &samplePosition) const
 	{
-		float3 localP(toWorldInverse.TransformPoint(pRec.p));
-		float3 localD(toWorldInverse.TransformDirection(dRec.d));
+		Vec3f localP(toWorldInverse.TransformPoint(pRec.p));
+		Vec3f localD(toWorldInverse.TransformDirection(dRec.d));
 
 		if (localD.z <= 0)
 			return false;
 
-		float3 intersection = localP + localD * (m_focusDistance / localD.z);
+		Vec3f intersection = localP + localD * (m_focusDistance / localD.z);
 
-		float3 screenSample = m_cameraToSample.TransformPoint(intersection);
+		Vec3f screenSample = m_cameraToSample.TransformPoint(intersection);
 		if (screenSample.x < 0 || screenSample.x > 1 ||
 			screenSample.y < 0 || screenSample.y > 1)
 			return false;
 
-		samplePosition = make_float2(
+		samplePosition = Vec2f(
 				screenSample.x * m_resolution.x,
 				screenSample.y * m_resolution.y);
 
@@ -365,10 +365,10 @@ public:
 struct e_OrthographicCamera : public e_SensorBase
 {
 public:
-	float2 screenScale;
+	Vec2f screenScale;
 private:
 	float m_invSurfaceArea, m_scale;
-	float3 m_dx, m_dy;
+	Vec3f m_dx, m_dy;
 public:
 	e_OrthographicCamera()
 		: e_SensorBase(EDeltaDirection | EOrthographicCamera | EPositionSampleMapsToPixels | EProjectiveCamera)
@@ -376,36 +376,36 @@ public:
 	e_OrthographicCamera(int w, int h, float sx = 1, float sy = 1)
 		: e_SensorBase(EDeltaDirection | EOrthographicCamera | EPositionSampleMapsToPixels | EProjectiveCamera)
 	{
-		m_fNearFarDepths = make_float2(0.00001f, 100000);
+		m_fNearFarDepths = Vec2f(0.00001f, 100000);
 		SetFilmData(w, h);
 		SetScreenScale(sx, sy);
 	}
 
 	void SetScreenScale(float sx, float sy)
 	{
-		screenScale = make_float2(sx, sy);
+		screenScale = Vec2f(sx, sy);
 		Update();
 	}
 
 	virtual void Update();
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const float2 &pixelSample, const float2 &apertureSample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const float2 &pixelSample, const float2 &apertureSample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
 
-	CUDA_FUNC_IN Spectrum eval(const float3& p, const Frame& sys, const float3 &d) const
+	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const Vec3f &d) const
 	{
 		return Spectrum(0.0f);
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleDirect(DirectSamplingRecord &dRec, const float2 &) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleDirect(DirectSamplingRecord &dRec, const Vec2f &) const;
 
 	CUDA_FUNC_IN float pdfDirect(const DirectSamplingRecord &dRec) const
 	{
 		return (dRec.measure == EDiscrete) ? 1.0f : 0.0f;
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum samplePosition(PositionSamplingRecord &pRec, const float2 &sample, const float2 *extra) const;
+	CUDA_DEVICE CUDA_HOST Spectrum samplePosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const;
 
 	CUDA_FUNC_IN Spectrum evalPosition(const PositionSamplingRecord &pRec) const
 	{
@@ -417,7 +417,7 @@ public:
 		return (pRec.measure == EArea) ? m_invSurfaceArea : 0.0f;
 	}
 
-	CUDA_FUNC_IN Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const float2 &sample, const float2 *extra) const
+	CUDA_FUNC_IN Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const
 	{
 		dRec.d = pRec.n;
 		dRec.measure = EDiscrete;
@@ -436,7 +436,7 @@ public:
 		return Spectrum((pRec.measure == EDiscrete) ? 1.0f : 0.0f);
 	}
 
-	CUDA_DEVICE CUDA_HOST bool getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, float2 &samplePosition) const;
+	CUDA_DEVICE CUDA_HOST bool getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, Vec2f &samplePosition) const;
 
 	TYPE_FUNC(e_OrthographicCamera)
 };
@@ -445,11 +445,11 @@ public:
 struct e_TelecentricCamera : public e_SensorBase
 {
 public:
-	float2 screenScale;
+	Vec2f screenScale;
 protected:
 	float m_normalization;
 	float m_aperturePdf;
-	float3 m_dx, m_dy;
+	Vec3f m_dx, m_dy;
 public:
 	e_TelecentricCamera()
 		: e_SensorBase(ENeedsApertureSample | EOrthographicCamera | EPositionSampleMapsToPixels | EProjectiveCamera)
@@ -457,7 +457,7 @@ public:
 	e_TelecentricCamera(int w, int h, float a, float dist, float sx = 1, float sy = 1)
 		: e_SensorBase(ENeedsApertureSample | EOrthographicCamera | EPositionSampleMapsToPixels | EProjectiveCamera)
 	{
-		m_fNearFarDepths = make_float2(0.00001f, 100000);
+		m_fNearFarDepths = Vec2f(0.00001f, 100000);
 		SetFilmData(w, h);
 		SetScreenScale(sx, sy);
 		m_apertureRadius = a;
@@ -466,29 +466,29 @@ public:
 
 	void SetScreenScale(float sx, float sy)
 	{
-		screenScale = make_float2(sx, sy);
+		screenScale = Vec2f(sx, sy);
 		Update();
 	}
 
 	virtual void Update();
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const float2 &pixelSample, const float2 &apertureSample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const float2 &pixelSample, const float2 &apertureSample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
 
-	CUDA_FUNC_IN Spectrum eval(const float3& p, const Frame& sys, const float3 &d) const
+	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const Vec3f &d) const
 	{
 		return Spectrum(0.0f);
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleDirect(DirectSamplingRecord &dRec, const float2 &sample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const;
 
 	CUDA_FUNC_IN float pdfDirect(const DirectSamplingRecord &dRec) const
 	{
 		return 0.0f;
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum samplePosition(PositionSamplingRecord &pRec, const float2 &sample, const float2 *extra) const;
+	CUDA_DEVICE CUDA_HOST Spectrum samplePosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const;
 
 	CUDA_FUNC_IN Spectrum evalPosition(const PositionSamplingRecord &pRec) const
 	{
@@ -500,7 +500,7 @@ public:
 		return (pRec.measure == EArea) ? m_aperturePdf : 0.0f;
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const float2 &sample, const float2 *extra) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const;
 
 	CUDA_FUNC_IN float pdfDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
 	{
@@ -516,7 +516,7 @@ public:
 		return Spectrum(1.0f);
 	}
 
-	CUDA_FUNC_IN bool getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, float2 &samplePosition) const
+	CUDA_FUNC_IN bool getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, Vec2f &samplePosition) const
 	{
 		return false;
 	}
@@ -524,7 +524,7 @@ public:
 	TYPE_FUNC(e_TelecentricCamera)
 };
 
-#define CAM_SIZE DMAX5(sizeof(e_SphericalCamera), sizeof(e_PerspectiveCamera), sizeof(e_ThinLensCamera), sizeof(e_OrthographicCamera), sizeof(e_TelecentricCamera))
+#define CAM_SIZE Dmax5(sizeof(e_SphericalCamera), sizeof(e_PerspectiveCamera), sizeof(e_ThinLensCamera), sizeof(e_OrthographicCamera), sizeof(e_TelecentricCamera))
 
 struct e_Sensor : public e_AggregateBaseType<e_SensorBase, CAM_SIZE>
 {
@@ -532,13 +532,13 @@ public:
 	//storage for the last viewing frustum, might(!) be computed, don't depend on it
 	float4x4 View() const;
 
-	float3 Position() const;
+	Vec3f Position() const;
 
-	void SetToWorld(const float3& pos, const float4x4& rot);
+	void SetToWorld(const Vec3f& pos, const float4x4& rot);
 
-	void SetToWorld(const float3& pos, const float3& f);
+	void SetToWorld(const Vec3f& pos, const Vec3f& f);
 
-	void SetToWorld(const float3& pos, const float3& tar, const float3& up);
+	void SetToWorld(const Vec3f& pos, const Vec3f& tar, const Vec3f& up);
 
 	void SetFilmData(int w, int h);
 
@@ -549,29 +549,29 @@ public:
 	CUDA_FUNC_IN Ray GenRay(int x, int y)
 	{
 		Ray r;
-		sampleRay(r,make_float2(x,y),make_float2(0,0));
+		sampleRay(r,Vec2f(x,y),Vec2f(0,0));
 		return r;
 	}
 
-	CUDA_FUNC_IN Spectrum sampleRay(Ray &ray, const float2 &pixelSample, const float2 &apertureSample) const
+	CUDA_FUNC_IN Spectrum sampleRay(Ray &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const
 	{
 		CALL_FUNC5(e_SphericalCamera,e_PerspectiveCamera,e_ThinLensCamera,e_OrthographicCamera,e_TelecentricCamera, sampleRay(ray, pixelSample, apertureSample))
 		return Spectrum(1.0f);
 	}
 
-	CUDA_FUNC_IN Spectrum sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const float2 &pixelSample, const float2 &apertureSample) const
+	CUDA_FUNC_IN Spectrum sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const
 	{
 		CALL_FUNC5(e_SphericalCamera, e_PerspectiveCamera, e_ThinLensCamera, e_OrthographicCamera, e_TelecentricCamera, sampleRayDifferential(ray, rayX, rayY, pixelSample, apertureSample))
 			return Spectrum(1.0f);
 	}
 
-	CUDA_FUNC_IN Spectrum eval(const float3& p, const Frame& sys, const float3 &d) const
+	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const Vec3f &d) const
 	{
 		CALL_FUNC5(e_SphericalCamera,e_PerspectiveCamera,e_ThinLensCamera,e_OrthographicCamera,e_TelecentricCamera, eval(p, sys, d))
 		return Spectrum(1.0f);
 	}
 
-	CUDA_FUNC_IN Spectrum sampleDirect(DirectSamplingRecord &dRec, const float2 &sample) const
+	CUDA_FUNC_IN Spectrum sampleDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const
 	{
 		CALL_FUNC5(e_SphericalCamera,e_PerspectiveCamera,e_ThinLensCamera,e_OrthographicCamera,e_TelecentricCamera, sampleDirect(dRec, sample))
 		return Spectrum(1.0f);
@@ -583,7 +583,7 @@ public:
 		return 0.0f;
 	}
 
-	CUDA_FUNC_IN Spectrum samplePosition(PositionSamplingRecord &pRec, const float2 &sample, const float2 *extra) const
+	CUDA_FUNC_IN Spectrum samplePosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const
 	{
 		CALL_FUNC5(e_SphericalCamera,e_PerspectiveCamera,e_ThinLensCamera,e_OrthographicCamera,e_TelecentricCamera, samplePosition(pRec, sample, extra))
 		return Spectrum(1.0f);
@@ -601,7 +601,7 @@ public:
 		return 1.0f;
 	}
 
-	CUDA_FUNC_IN Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const float2 &sample, const float2 *extra) const
+	CUDA_FUNC_IN Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const
 	{
 		CALL_FUNC5(e_SphericalCamera,e_PerspectiveCamera,e_ThinLensCamera,e_OrthographicCamera,e_TelecentricCamera, sampleDirection(dRec, pRec, sample, extra))
 		return Spectrum(1.0f);
@@ -619,7 +619,7 @@ public:
 		return Spectrum(1.0f);
 	}
 
-	CUDA_FUNC_IN bool getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, float2 &samplePosition) const
+	CUDA_FUNC_IN bool getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, Vec2f &samplePosition) const
 	{
 		CALL_FUNC5(e_SphericalCamera,e_PerspectiveCamera,e_ThinLensCamera,e_OrthographicCamera,e_TelecentricCamera, getSamplePosition(pRec, dRec, samplePosition))
 		return false;

@@ -1,6 +1,6 @@
 #pragma once
 
-const int INT24_MAX = 8388607;
+const int INT24_max = 8388607;
 
 class Int24
 {

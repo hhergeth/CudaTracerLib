@@ -10,8 +10,8 @@ public:
 		: m_bDirect(false)
 	{
 	}
-	virtual void Debug(e_Image* I, const int2& pixel);
-	virtual void CreateSliders(SliderCreateCallback a_Callback);
+	virtual void Debug(e_Image* I, const Vec2i& pixel);
+	virtual void CreateSliders(SliderCreateCallback a_Callback) const;
 protected:
 	virtual void DoRender(e_Image* I);
 };

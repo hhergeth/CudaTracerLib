@@ -18,49 +18,19 @@ public:
 	static TraceResult TraceSingleRay(Ray r, e_DynamicScene* s);
 	static void InitRngs(unsigned int N = 1 << 16);
 
-	k_TracerBase();
-
-	CUDA_DEVICE static int2 getPixelPos(unsigned int xoff, unsigned int yoff)
+	CUDA_DEVICE static Vec2i getPixelPos(unsigned int xoff, unsigned int yoff)
 	{
 #ifdef ISCUDA
 		unsigned int x = xoff + blockIdx.x * threadsPerBlock.x + threadIdx.x;
 		unsigned int y = yoff + blockIdx.y * threadsPerBlock.y + threadIdx.y;
-		return make_int2(x, y);
+		return Vec2i(x, y);
 #else
-		return make_int2(xoff, yoff);
+		return Vec2i(xoff, yoff);
 #endif
 	}
 
+	k_TracerBase();
 	virtual ~k_TracerBase()
-	{
-
-	}
-	virtual void InitializeScene(e_DynamicScene* a_Scene) = 0;
-	virtual void Resize(unsigned int _w, unsigned int _h) = 0;
-	virtual void DoPass(e_Image* I, bool a_NewTrace) = 0;
-	virtual void Debug(e_Image* I, const int2& pixel) = 0;
-	virtual void PrintStatus(std::vector<std::string>& a_Buf) const = 0;
-	virtual void CreateSliders(SliderCreateCallback a_Callback) const = 0;
-	virtual const k_BlockSampler* getBlockSampler() const = 0;
-	virtual bool isMultiPass() const = 0;
-	virtual bool usesBlockSampler() const = 0;
-	virtual unsigned int getNumPassesDone() const = 0;
-	virtual unsigned int getRaysInLastPass() const = 0;
-	virtual float getLastTimeSpentRenderingSec() const = 0;
-	virtual unsigned int getAccRays() const = 0;
-	virtual float getAccTimeSpentRenderingSec() const = 0;
-};
-
-template<bool USE_BLOCKSAMPLER, bool PROGRESSIVE> class k_Tracer : public k_TracerBase
-{
-public:
-	k_Tracer()
-		: m_pScene(0), m_pBlockSampler(0)
-	{
-		cudaEventCreate(&start);
-		cudaEventCreate(&stop);
-	}
-	virtual ~k_Tracer()
 	{
 		cudaEventDestroy(start);
 		cudaEventDestroy(stop);
@@ -69,6 +39,58 @@ public:
 	{
 		m_pScene = a_Scene;
 	}
+	virtual void Resize(unsigned int _w, unsigned int _h) = 0;
+	virtual void DoPass(e_Image* I, bool a_NewTrace) = 0;
+	virtual void Debug(e_Image* I, const Vec2i& pixel)
+	{
+
+	}
+	virtual void PrintStatus(std::vector<std::string>& a_Buf) const
+	{
+
+	}
+	virtual void CreateSliders(SliderCreateCallback a_Callback) const
+	{
+
+	}
+	virtual const k_BlockSampler* getBlockSampler() const = 0;
+	virtual bool isMultiPass() const = 0;
+	virtual bool usesBlockSampler() const = 0;
+	virtual unsigned int getNumPassesDone() const
+	{
+		return m_uPassesDone;
+	}
+	virtual unsigned int getRaysInLastPass() const
+	{
+		return m_uLastNumRaysTraced;
+	}
+	virtual float getLastTimeSpentRenderingSec() const
+	{
+		return m_fLastRuntime;
+	}
+	virtual unsigned int getAccRays() const
+	{
+		return m_uAccNumRaysTraced;
+	}
+	virtual float getAccTimeSpentRenderingSec() const
+	{
+		return m_fAccRuntime;
+	}
+protected:
+	float m_fLastRuntime;
+	unsigned int m_uLastNumRaysTraced;
+	float m_fAccRuntime;
+	unsigned int m_uAccNumRaysTraced;
+	unsigned int m_uPassesDone;
+	unsigned int w, h;
+	e_DynamicScene* m_pScene;
+	k_BlockSampler* m_pBlockSampler;
+	cudaEvent_t start, stop;
+};
+
+template<bool USE_BLOCKSAMPLER, bool PROGRESSIVE> class k_Tracer : public k_TracerBase
+{
+public:
 	virtual void Resize(unsigned int _w, unsigned int _h)
 	{
 		w = _w;
@@ -114,17 +136,6 @@ public:
 		m_fAccRuntime += m_fLastRuntime;
 		m_uAccNumRaysTraced += m_uLastNumRaysTraced;
 	}
-	virtual void Debug(e_Image* I, const int2& pixel)
-	{
-
-	}
-	virtual void PrintStatus(std::vector<std::string>& a_Buf) const
-	{
-	}
-	virtual void CreateSliders(SliderCreateCallback a_Callback) const
-	{
-
-	}
 	virtual const k_BlockSampler* getBlockSampler() const
 	{
 		return m_pBlockSampler;
@@ -137,26 +148,7 @@ public:
 	{
 		return USE_BLOCKSAMPLER;
 	}
-	virtual unsigned int getNumPassesDone() const
-	{
-		return m_uPassesDone;
-	}
-	virtual unsigned int getRaysInLastPass() const
-	{
-		return m_uLastNumRaysTraced;
-	}
-	virtual float getLastTimeSpentRenderingSec() const
-	{
-		return m_fLastRuntime;
-	}
-	virtual unsigned int getAccRays() const
-	{
-		return m_uAccNumRaysTraced;
-	}
-	virtual float getAccTimeSpentRenderingSec() const
-	{
-		return m_fAccRuntime;
-	}
+
 protected:
 	//w,h <= 64
 	virtual void RenderBlock(e_Image* I, int x, int y, int blockW, int blockH)
@@ -202,7 +194,7 @@ protected:
 				{
 					int x = ix * blockSize, y = iy * blockSize;
 					int x2 = (ix + 1) * blockSize, y2 = (iy + 1) * blockSize;
-					int bw = MIN(int(w), x2) - x, bh = MIN(int(h), y2) - y;
+					int bw = min(int(w), x2) - x, bh = min(int(h), y2) - y;
 					RenderBlock(I, x, y, bw, bh);
 				}
 		}
@@ -217,15 +209,4 @@ protected:
 			return 1.0f / float(m_uPassesDone);
 		else return 0;
 	}
-
-	float m_fLastRuntime;
-	unsigned int m_uLastNumRaysTraced;
-	float m_fAccRuntime;
-	unsigned int m_uAccNumRaysTraced;
-	unsigned int m_uPassesDone;
-	unsigned int w, h;
-	e_DynamicScene* m_pScene;
-	k_BlockSampler* m_pBlockSampler;
-private:
-	cudaEvent_t start, stop;
 };

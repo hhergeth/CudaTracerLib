@@ -21,7 +21,7 @@ void toClipboard(std::string str)
 	CloseClipboard();
 }
 
-void plotPoints(float3* dirs, unsigned int N)
+void plotPoints(Vec3f* dirs, unsigned int N)
 {
 	std::ostringstream str1, str2;
 	str1 << "x = [";

@@ -21,7 +21,7 @@ __global__ void tracePhotons()
 		Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
 		if(f.isZero())
 			break;
-		float3 p = r(r2.m_fDist);
+		Vec3f p = r(r2.m_fDist);
 		g_sMap.store(p, bRec.wi); 
 		if (depth > 5)
 			if (rng.randomFloat() >= f.max())
@@ -32,16 +32,16 @@ __global__ void tracePhotons()
 	g_RNGData(rng);
 }
 
-template<int MAX_SAMPLES> __global__ void updateCache(float ny)
+template<int max_SAMPLES> __global__ void updateCache(float ny)
 {
-	uint3 i = make_uint3(blockIdx.x * blockDim.x + threadIdx.x,
+	Vec3u i = Vec3u(blockIdx.x * blockDim.x + threadIdx.x,
 						 blockIdx.y * blockDim.y + threadIdx.y,
 						 blockIdx.z * blockDim.z + threadIdx.z);
 	if(i.x < g_dMap.gridSize && i.y < g_dMap.gridSize && i.z < g_dMap.gridSize)
 	{
-		float3 mi = g_dMap.hashMap.InverseTransform(i), ma = g_dMap.hashMap.InverseTransform(i + make_uint3(1));
+		Vec3f mi = g_dMap.hashMap.InverseTransform(i), ma = g_dMap.hashMap.InverseTransform(i + Vec3u(1));
 		unsigned int idx = g_dMap.hashMap.Hash(i);
-		g_dMap(idx).Update<MAX_SAMPLES>(g_sMap, mi, ma, ny);
+		g_dMap(idx).Update<max_SAMPLES>(g_sMap, mi, ma, ny);
 	}
 }
 
@@ -55,7 +55,7 @@ __global__ void visualize(e_Image I, int w, int h, float scale)
 		float num = 0;
 		if(r2.hasHit())
 		{
-			float3 p = r(r2.m_fDist);
+			Vec3f p = r(r2.m_fDist);
 			num = g_dMap(p).numSamples;
 			//uint3 i = g_dMap.hashMap.Transform(p);
 			//float3 mi = g_dMap.hashMap.InverseTransform(i), ma = g_dMap.hashMap.InverseTransform(i + make_uint3(1));
@@ -127,7 +127,7 @@ void k_PmmTracer::StartNewTrace(e_Image* I)
 	g_RNGData(rng);
 }
 
-void k_PmmTracer::Debug(e_Image* I, const int2& p)
+void k_PmmTracer::Debug(e_Image* I, const Vec2i& p)
 {
 	/*k_INITIALIZE(m_pScene, g_sRngs);
 	float3* deviceDirs;
@@ -146,7 +146,7 @@ void k_PmmTracer::Debug(e_Image* I, const int2& p)
 	k_INITIALIZE(m_pScene, g_sRngs);
 	Ray r = g_SceneData.GenerateSensorRay(p.x, p.y);
 	TraceResult r2 = k_TraceRay(r);
-	float3 pa = r(r2.m_fDist);
+	Vec3f pa = r(r2.m_fDist);
 	unsigned int idx = dMap.hashMap.Hash(pa);
 	modelToShow = new unsigned int(idx);
 	//plotModel(model);

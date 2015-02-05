@@ -14,11 +14,11 @@ struct e_KernelTextureMapping2D
 		this->dv = dv;
 		this->setId = setId;
 	}
-	CUDA_FUNC_IN float2 Map(const DifferentialGeometry& map) const
+	CUDA_FUNC_IN Vec2f Map(const DifferentialGeometry& map) const
 	{
 		float u = su * map.uv[setId].x + du;
 		float v = sv * map.uv[setId].y + dv;
-		return make_float2(u, v);
+		return Vec2f(u, v);
 	}
 	float su, sv, du, dv;
 	int setId;
@@ -28,11 +28,11 @@ struct e_KernelTextureBase : public e_BaseType
 {
 };
 
-#define e_KernelBiLerpTexture_TYPE 1
-struct e_KernelBiLerpTexture : public e_KernelTextureBase
+#define e_KernelBilerpTexture_TYPE 1
+struct e_KernelBilerpTexture : public e_KernelTextureBase
 {
-	e_KernelBiLerpTexture(){}
-	e_KernelBiLerpTexture(const e_KernelTextureMapping2D& m, const Spectrum &t00, const Spectrum &t01, const Spectrum &t10, const Spectrum &t11)
+	e_KernelBilerpTexture(){}
+	e_KernelBilerpTexture(const e_KernelTextureMapping2D& m, const Spectrum &t00, const Spectrum &t01, const Spectrum &t10, const Spectrum &t11)
 	{
 		mapping = m;
 		v00 = t00;
@@ -42,7 +42,7 @@ struct e_KernelBiLerpTexture : public e_KernelTextureBase
 	}
 	CUDA_FUNC_IN Spectrum Evaluate(const DifferentialGeometry& map) const
 	{
-		float2 uv = mapping.Map(map);
+		Vec2f uv = mapping.Map(map);
 		return (1-uv.x)*(1-uv.y) * v00 + (1-uv.x)*(  uv.y) * v01 +
                (  uv.x)*(1-uv.y) * v10 + (  uv.x)*(  uv.y) * v11;
 	}
@@ -53,7 +53,7 @@ struct e_KernelBiLerpTexture : public e_KernelTextureBase
 	template<typename L> void LoadTextures(L callback)
 	{
 	}
-	TYPE_FUNC(e_KernelBiLerpTexture)
+	TYPE_FUNC(e_KernelBilerpTexture)
 	e_KernelTextureMapping2D mapping;
 	Spectrum v00, v01, v10, v11;
 };
@@ -94,7 +94,7 @@ struct e_KernelCheckerboardTexture : public e_KernelTextureBase
 	}
 	CUDA_FUNC_IN Spectrum Evaluate(const DifferentialGeometry& map) const
 	{
-		float2 uv = mapping.Map(map);
+		Vec2f uv = mapping.Map(map);
 		int x = 2*math::modulo((int) (uv.x * 2), 2) - 1,
 			y = 2*math::modulo((int) (uv.y * 2), 2) - 1;
 
@@ -127,17 +127,17 @@ struct e_KernelImageTexture : public e_KernelTextureBase
 	}
 	CUDA_FUNC_IN Spectrum Evaluate(const DifferentialGeometry& its) const
 	{
-		float2 uv = mapping.Map(its);
+		Vec2f uv = mapping.Map(its);
 		if (its.hasUVPartials)
-			return tex->eval(uv, make_float2(its.dudx * mapping.su, its.dvdx * mapping.sv),
-								 make_float2(its.dudy * mapping.su, its.dvdy * mapping.sv));
+			return tex->eval(uv, Vec2f(its.dudx * mapping.su, its.dvdx * mapping.sv),
+								 Vec2f(its.dudy * mapping.su, its.dvdy * mapping.sv));
 		return tex->Sample(uv);
 	}
 	CUDA_FUNC_IN Spectrum Average()
 	{
 		if(tex.operator*())
-			return tex->Sample(make_float2(0), 1);
-		else return 0.0f;
+			return tex->Sample(Vec2f(0), 1);
+		else return Spectrum(0.0f);
 	}
 	template<typename L> void LoadTextures(L callback)
 	{
@@ -162,7 +162,7 @@ struct e_KernelUVTexture : public e_KernelTextureBase
 	CUDA_FUNC_IN Spectrum Evaluate(const DifferentialGeometry& map) const
 	{
 		float2 uv = mapping.Map(map);
-		return Spectrum(frac(uv.x), frac(uv.y), 0);
+		return Spectrum(math::frac(uv.x), math::frac(uv.y), 0);
 	}
 	CUDA_FUNC_IN Spectrum Average()
 	{
@@ -205,7 +205,7 @@ struct e_KernelExtraDataTexture : public e_KernelTextureBase
 {
 	CUDA_FUNC_IN Spectrum Evaluate(const DifferentialGeometry& map) const
 	{
-		return float(map.extraData) / 255.0f;
+		return Spectrum(float(map.extraData) / 255.0f);
 	}
 	CUDA_FUNC_IN Spectrum Average()
 	{
@@ -217,7 +217,7 @@ struct e_KernelExtraDataTexture : public e_KernelTextureBase
 	TYPE_FUNC(e_KernelExtraDataTexture)
 };
 
-#define TEX_SIZE (DMAX7(sizeof(e_KernelBiLerpTexture), sizeof(e_KernelConstantTexture), sizeof(e_KernelImageTexture), \
+#define TEX_SIZE (Dmax7(sizeof(e_KernelBilerpTexture), sizeof(e_KernelConstantTexture), sizeof(e_KernelImageTexture), \
 						sizeof(e_KernelUVTexture), sizeof(e_KernelCheckerboardTexture), sizeof(e_KernelWireframeTexture), sizeof(e_KernelExtraDataTexture)) + 12)
 
 struct CUDA_ALIGN(16) e_KernelTexture : public e_AggregateBaseType<e_KernelTextureBase, TEX_SIZE>
@@ -235,17 +235,17 @@ public:
 #endif
 	CUDA_FUNC_IN Spectrum Evaluate(const DifferentialGeometry & dg) const
 	{
-		CALL_FUNC7(e_KernelBiLerpTexture,e_KernelConstantTexture,e_KernelCheckerboardTexture,e_KernelImageTexture,e_KernelUVTexture,e_KernelWireframeTexture, e_KernelExtraDataTexture, Evaluate(dg))
+		CALL_FUNC7(e_KernelBilerpTexture, e_KernelConstantTexture, e_KernelCheckerboardTexture, e_KernelImageTexture, e_KernelUVTexture, e_KernelWireframeTexture, e_KernelExtraDataTexture, Evaluate(dg))
 		return Spectrum(0.0f);
 	}
 	CUDA_FUNC_IN Spectrum Average()
 	{
-		CALL_FUNC7(e_KernelBiLerpTexture,e_KernelConstantTexture,e_KernelCheckerboardTexture,e_KernelImageTexture,e_KernelUVTexture,e_KernelWireframeTexture, e_KernelExtraDataTexture, Average())
+		CALL_FUNC7(e_KernelBilerpTexture, e_KernelConstantTexture, e_KernelCheckerboardTexture, e_KernelImageTexture, e_KernelUVTexture, e_KernelWireframeTexture, e_KernelExtraDataTexture, Average())
 		return Spectrum(0.0f);
 	}
 	template<typename L> void LoadTextures(L callback)
 	{
-		CALL_FUNC7(e_KernelBiLerpTexture,e_KernelConstantTexture,e_KernelCheckerboardTexture,e_KernelImageTexture,e_KernelUVTexture,e_KernelWireframeTexture, e_KernelExtraDataTexture, LoadTextures(callback))
+		CALL_FUNC7(e_KernelBilerpTexture, e_KernelConstantTexture, e_KernelCheckerboardTexture, e_KernelImageTexture, e_KernelUVTexture, e_KernelWireframeTexture, e_KernelExtraDataTexture, LoadTextures(callback))
 	}
 };
 

@@ -15,6 +15,9 @@ void k_TracerBase::InitRngs(unsigned int N)
 }
 
 k_TracerBase::k_TracerBase()
+	: m_pScene(0), m_pBlockSampler(0)
 {
 	InitRngs(1024 * 768);
+	cudaEventCreate(&start);
+	cudaEventCreate(&stop);
 }

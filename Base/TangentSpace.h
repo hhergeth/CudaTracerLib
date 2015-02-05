@@ -1,19 +1,19 @@
 #pragma once
 
 #ifdef TS_DEC_FRAMEWORK
-inline void ComputeTangentSpace(const float3* V, const float2* T, const unsigned int* I, unsigned int vertexCount, unsigned int triCount, float3* a_Normals, float3* a_Tangents, float3* a_BiTangents = 0)
+inline void ComputeTangentSpace(const Vec3f* V, const Vec2f* T, const unsigned int* I, unsigned int vertexCount, unsigned int triCount, Vec3f* a_Normals, Vec3f* a_Tangents, Vec3f* a_BiTangents = 0)
 {
 	bool hasUV = false;
 	if(T)
-		for(unsigned int i = 0; i < MIN(12u, vertexCount); i++)
+		for(unsigned int i = 0; i < min(12u, vertexCount); i++)
 			if(length(T[i]) != 0)
 			{
 				hasUV = true;
 				break;
 			}
 
-	float3 *tan1 = new float3[vertexCount * 2];
-    float3 *tan2 = tan1 + vertexCount;
+	Vec3f *tan1 = new Vec3f[vertexCount * 2];
+    Vec3f *tan2 = tan1 + vertexCount;
     Platform::SetMemory(tan1, vertexCount * sizeof(float3) * 2);
 	Platform::SetMemory(a_Normals, vertexCount * sizeof(float3));
 	for (unsigned int f = 0; f < triCount; f++)
@@ -21,11 +21,11 @@ inline void ComputeTangentSpace(const float3* V, const float2* T, const unsigned
 		unsigned int i1 = I ? I[f * 3 + 0] : f * 3 + 0;
 		unsigned int i2 = I ? I[f * 3 + 1] : f * 3 + 1;
 		unsigned int i3 = I ? I[f * 3 + 2] : f * 3 + 2;
-		const float3 v1 = V[i1], v2 = V[i2], v3 = V[i3];
+		const Vec3f v1 = V[i1], v2 = V[i2], v3 = V[i3];
 
-		const float3 e0 = v3 - v1, e1 = v2 - v1;//, n = normalize(v1q.n + v2q.n + v3q.n);
-		const float2 w1 = T ? T[i1] : make_float2(0), w2 = T ? T[i2] : make_float2(0), w3 = T ? T[i3] : make_float2(0);
-		const float3 n2 = normalize(cross(e1, e0));
+		const Vec3f e0 = v3 - v1, e1 = v2 - v1;//, n = normalize(v1q.n + v2q.n + v3q.n);
+		const Vec2f w1 = T ? T[i1] : Vec2f(0), w2 = T ? T[i2] : Vec2f(0), w3 = T ? T[i3] : Vec2f(0);
+		const Vec3f n2 = normalize(cross(e1, e0));
 		//if(fsumf(n2 - n) > 1e-3)
 		//	throw 1;
 		a_Normals[i1] += n2;
@@ -52,8 +52,8 @@ inline void ComputeTangentSpace(const float3* V, const float2* T, const unsigned
 		}
         
 		float r = 1.0F / (s1 * t2 - s2 * t1);
-		float3 sdir = make_float3((t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r,	(t2 * z1 - t1 * z2) * r);
-		float3 tdir = make_float3((s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r,	(s1 * z2 - s2 * z1) * r);
+		Vec3f sdir = Vec3f((t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r,	(t2 * z1 - t1 * z2) * r);
+		Vec3f tdir = Vec3f((s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r,	(s1 * z2 - s2 * z1) * r);
         
 		tan1[i1] += sdir;
 		tan1[i2] += sdir;
@@ -81,8 +81,8 @@ inline void ComputeTangentSpace(const float3* V, const float2* T, const unsigned
 		for(int j = 0; j < 3; j++)
 		{
 			unsigned int a = I ? I[i * 3 + j] : i * 3 + j;
-			const float3 n = a_Normals[a] = normalize(normalize(a_Normals[a]));
-			const float3 t = tan1[a];
+			const Vec3f n = a_Normals[a] = normalize(normalize(a_Normals[a]));
+			const Vec3f t = tan1[a];
         
 			// Gram-Schmidt orthogonalize
 			a_Tangents[a] = normalize(t - n * dot(n, t));
@@ -98,13 +98,13 @@ inline void ComputeTangentSpace(const float3* V, const float2* T, const unsigned
 #endif
 
 #ifdef TS_DEC_MD5
-inline void ComputeTangentSpace(MD5Model* a_Mesh, e_AnimatedVertex** a_Vertices, float3** a_Pos, unsigned int* a_NumV)
+inline void ComputeTangentSpace(MD5Model* a_Mesh, e_AnimatedVertex** a_Vertices, Vec3f** a_Pos, unsigned int* a_NumV)
 {
 	unsigned int vertexCount = 0;
 	for(int i = 0; i < a_Mesh->meshes.size(); i++)
 		vertexCount += (unsigned int)a_Mesh->meshes[i]->verts.size();
 	*a_NumV = vertexCount;
-	*a_Pos = new float3[vertexCount];
+	*a_Pos = new Vec3f[vertexCount];
 	*a_Vertices = new e_AnimatedVertex[vertexCount];
 	Platform::SetMemory(a_Pos[0], sizeof(float3) * vertexCount);
 	Platform::SetMemory(a_Vertices[0], sizeof(e_AnimatedVertex) * vertexCount);
@@ -115,15 +115,15 @@ inline void ComputeTangentSpace(MD5Model* a_Mesh, e_AnimatedVertex** a_Vertices,
 		for(int v = 0; v < a_Mesh->meshes[i]->verts.size(); v++)
 		{
 			e_AnimatedVertex& av = a_Vertices[0][off + v];
-			float3 pos = make_float3(0);
+			Vec3f pos = Vec3f(0);
 			Vertex& V = a_Mesh->meshes[i]->verts[v];
-			int a = MIN(g_uMaxWeights, V.weightCount);
+			int a = min(g_uMaxWeights, V.weightCount);
 			for ( int k=0; k < a; k++ )
 			{
 				Weight &w = a_Mesh->meshes[i]->weights[V.weightIndex + k];
 				Joint &joint = a_Mesh->joints[w.joint];
-				float3 r = joint.quat.toMatrix().TransformPoint(*(float3*)&w.pos);
-				pos += (*(float3*)&joint.pos + r) * w.w;
+				Vec3f r = joint.quat.toMatrix().TransformPoint(*(Vec3f*)&w.pos);
+				pos += (*(Vec3f*)&joint.pos + r) * w.w;
 				av.m_cBoneIndices[k] = (unsigned char)w.joint;
 				av.m_fBoneWeights[k] = (unsigned char)(w.w * 255.0f);
 			}
@@ -144,7 +144,7 @@ inline void ComputeTangentSpace(MD5Model* a_Mesh, e_AnimatedVertex** a_Vertices,
 			long i3 = indices[i].v[2];
 			Vertex& v1 = vertices[i1], &v2 = vertices[i2], &v3 = vertices[i3];
 
-			float3 p0 = a_Pos[0][i1 + off], p1 = a_Pos[0][i2 + off], p2 = a_Pos[0][i3 + off], e0 = p1 - p0, e1 = p2 - p0, n = normalize(cross(e0, e1));
+			Vec3f p0 = a_Pos[0][i1 + off], p1 = a_Pos[0][i2 + off], p2 = a_Pos[0][i3 + off], e0 = p1 - p0, e1 = p2 - p0, n = normalize(cross(e0, e1));
 			a_Vertices[0][i1].m_fNormal += n;
 			a_Vertices[0][i2].m_fNormal += n;
 			a_Vertices[0][i3].m_fNormal += n;
@@ -162,8 +162,8 @@ inline void ComputeTangentSpace(MD5Model* a_Mesh, e_AnimatedVertex** a_Vertices,
 			float t2 = v3.tc[1] - v1.tc[1];
         
 			float r = 1.0F / (s1 * t2 - s2 * t1);
-			float3 sdir = make_float3((t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r, (t2 * z1 - t1 * z2) * r);
-			float3 tdir = make_float3((s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r, (s1 * z2 - s2 * z1) * r);
+			Vec3f sdir = Vec3f((t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r, (t2 * z1 - t1 * z2) * r);
+			Vec3f tdir = Vec3f((s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r, (s1 * z2 - s2 * z1) * r);
         
 			a_Vertices[0][i1 + off].m_fTangent += sdir;
 			a_Vertices[0][i2 + off].m_fTangent += sdir;
@@ -186,8 +186,8 @@ inline void ComputeTangentSpace(MD5Model* a_Mesh, e_AnimatedVertex** a_Vertices,
 			for(int j = 0; j < 3; j++)
 			{
 				unsigned int a = indices[i].v[j] + off;
-				const float3 n = a_Vertices[0][a].m_fNormal = normalize(a_Vertices[0][a].m_fNormal);
-				const float3 t = a_Vertices[0][a].m_fTangent;
+				const Vec3f n = a_Vertices[0][a].m_fNormal = normalize(a_Vertices[0][a].m_fNormal);
+				const Vec3f t = a_Vertices[0][a].m_fTangent;
         
 				// Gram-Schmidt orthogonalize
 				a_Vertices[0][a].m_fTangent = normalize(t - n * dot(n, t));

@@ -26,33 +26,33 @@ struct e_LightBase : public e_AbstractEmitter
 #define e_PointLight_TYPE 1
 struct e_PointLight : public e_LightBase
 {
-	float3 lightPos;
+	Vec3f lightPos;
     Spectrum m_intensity;
 	
 	e_PointLight()
 		: e_LightBase(EDeltaPosition)
 	{}
-	e_PointLight(float3 p, Spectrum L, float r = 0)
+	e_PointLight(Vec3f p, Spectrum L, float r = 0)
 		: e_LightBase(EDeltaPosition), lightPos(p), m_intensity(L)
 	{
 
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const float2 &spatialSample, const float2 &directionalSample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
 
-	CUDA_FUNC_IN Spectrum eval(const float3& p, const Frame& sys, const float3 &d) const
+	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const Vec3f &d) const
 	{
 		return Spectrum(0.0f);
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleDirect(DirectSamplingRecord &dRec, const float2 &sample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const;
 
 	CUDA_FUNC_IN float pdfDirect(const DirectSamplingRecord &dRec) const
 	{
 		return dRec.measure == EDiscrete ? 1.0f : 0.0f;
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum samplePosition(PositionSamplingRecord &pRec, const float2 &sample, const float2 *extra) const;
+	CUDA_DEVICE CUDA_HOST Spectrum samplePosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const;
 
 	CUDA_FUNC_IN Spectrum evalPosition(const PositionSamplingRecord &pRec) const
 	{
@@ -64,7 +64,7 @@ struct e_PointLight : public e_LightBase
 		return (pRec.measure == EDiscrete) ? 1.0f : 0.0f;
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const float2 &sample, const float2 *extra) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const;
 
 	CUDA_FUNC_IN float pdfDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
 	{
@@ -78,7 +78,7 @@ struct e_PointLight : public e_LightBase
 
 	AABB getBox(float eps) const
 	{
-		return AABB(lightPos - make_float3(eps), lightPos + make_float3(eps));
+		return AABB(lightPos - Vec3f(eps), lightPos + Vec3f(eps));
 	}
 	
 	TYPE_FUNC(e_PointLight)
@@ -117,15 +117,15 @@ struct e_DiffuseLight : public e_LightBase
 		Update();
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const float2 &spatialSample, const float2 &directionalSample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
 
-	CUDA_DEVICE CUDA_HOST Spectrum eval(const float3& p, const Frame& sys, const float3 &d) const;
+	CUDA_DEVICE CUDA_HOST Spectrum eval(const Vec3f& p, const Frame& sys, const Vec3f &d) const;
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleDirect(DirectSamplingRecord &dRec, const float2 &sample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const;
 
 	CUDA_DEVICE CUDA_HOST float pdfDirect(const DirectSamplingRecord &dRec) const;
 
-	CUDA_FUNC_IN Spectrum samplePosition(PositionSamplingRecord &pRec, const float2 &sample, const float2 *extra) const
+	CUDA_FUNC_IN Spectrum samplePosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const
 	{
 		shapeSet.SamplePosition(pRec, sample);
 		return m_power;
@@ -138,7 +138,7 @@ struct e_DiffuseLight : public e_LightBase
 		return shapeSet.Pdf(pRec);
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const float2 &sample, const float2 *extra) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const;
 
 	CUDA_DEVICE CUDA_HOST float pdfDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const;
 
@@ -163,7 +163,7 @@ struct e_DistantLight : public e_LightBase
 		: e_LightBase(EDeltaDirection)
 	{}
 	///r is the radius of the scene's bounding sphere
-	e_DistantLight(const Spectrum& L, float3 d, float r)
+	e_DistantLight(const Spectrum& L, Vec3f d, float r)
 		: e_LightBase(EDeltaDirection), ToWorld(d), radius(r * 1.1f)
 	{
 		float surfaceArea = PI * radius * radius;
@@ -186,21 +186,21 @@ struct e_DistantLight : public e_LightBase
 		setEmit(m_normalIrradiance * L);
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const float2 &spatialSample, const float2 &directionalSample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
 
-	CUDA_FUNC_IN Spectrum eval(const float3& p, const Frame& sys, const float3 &d) const
+	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const Vec3f &d) const
 	{
 		return Spectrum(0.0f);
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleDirect(DirectSamplingRecord &dRec, const float2 &sample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const;
 
 	CUDA_FUNC_IN float pdfDirect(const DirectSamplingRecord &dRec) const
 	{
 		return dRec.measure == EDiscrete ? 1.0f : 0.0f;
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum samplePosition(PositionSamplingRecord &pRec, const float2 &sample, const float2 *extra) const;
+	CUDA_DEVICE CUDA_HOST Spectrum samplePosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const;
 
 	CUDA_FUNC_IN Spectrum evalPosition(const PositionSamplingRecord &pRec) const
 	{
@@ -212,7 +212,7 @@ struct e_DistantLight : public e_LightBase
 		return (pRec.measure == EArea) ? m_invSurfaceArea : 0.0f;
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const float2 &sample, const float2 *extra) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const;
 
 	CUDA_FUNC_IN float pdfDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
 	{
@@ -226,7 +226,7 @@ struct e_DistantLight : public e_LightBase
 	
 	AABB getBox(float eps) const
 	{
-		return AABB(make_float3(-radius), make_float3(+radius));
+		return AABB(Vec3f(-radius), Vec3f(+radius));
 	}
 	
 	TYPE_FUNC(e_DistantLight)
@@ -239,12 +239,12 @@ struct e_SpotLight : public e_LightBase
 	float m_beamWidth, m_cutoffAngle;
 	float m_cosBeamWidth, m_cosCutoffAngle, m_invTransitionWidth;
 	Frame ToWorld;
-	float3 Position, Target;
+	Vec3f Position, Target;
 	
 	e_SpotLight()
 		: e_LightBase(EDeltaPosition)
 	{}
-	e_SpotLight(float3 p, float3 t, Spectrum L, float width, float fall);
+	e_SpotLight(Vec3f p, Vec3f t, Spectrum L, float width, float fall);
 
 	virtual void Update()
 	{
@@ -254,21 +254,21 @@ struct e_SpotLight : public e_LightBase
 		m_invTransitionWidth = 1.0f / (m_cutoffAngle - m_beamWidth);
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const float2 &spatialSample, const float2 &directionalSample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
 
-	CUDA_FUNC_IN Spectrum eval(const float3& p, const Frame& sys, const float3 &d) const
+	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const Vec3f &d) const
 	{
 		return Spectrum(0.0f);
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleDirect(DirectSamplingRecord &dRec, const float2 &sample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const;
 
 	CUDA_FUNC_IN float pdfDirect(const DirectSamplingRecord &dRec) const
 	{
 		return dRec.measure == EDiscrete ? 1.0f : 0.0f;
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum samplePosition(PositionSamplingRecord &pRec, const float2 &sample, const float2 *extra) const;
+	CUDA_DEVICE CUDA_HOST Spectrum samplePosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const;
 
 	CUDA_FUNC_IN Spectrum evalPosition(const PositionSamplingRecord &pRec) const
 	{
@@ -280,7 +280,7 @@ struct e_SpotLight : public e_LightBase
 		return (pRec.measure == EDiscrete) ? 1.0f : 0.0f;
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const float2 &sample, const float2 *extra) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const;
 
 	CUDA_FUNC_IN float pdfDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
 	{
@@ -294,12 +294,12 @@ struct e_SpotLight : public e_LightBase
 	
 	AABB getBox(float eps) const
 	{
-		return AABB(Position - make_float3(eps), Position + make_float3(eps));
+		return AABB(Position - Vec3f(eps), Position + Vec3f(eps));
 	}
 	
 	TYPE_FUNC(e_SpotLight)
 private:
-	CUDA_DEVICE CUDA_HOST Spectrum falloffCurve(const float3 &d) const;
+	CUDA_DEVICE CUDA_HOST Spectrum falloffCurve(const Vec3f &d) const;
 };
 
 #define e_InfiniteLight_TYPE 5
@@ -307,12 +307,12 @@ struct e_InfiniteLight : public e_LightBase
 {
 	e_KernelMIPMap radianceMap;
 	e_Variable<float> m_cdfRows, m_cdfCols, m_rowWeights;
-	float3 m_SceneCenter;
+	Vec3f m_SceneCenter;
 	float m_SceneRadius;
 	float m_normalization;
 	float m_power;
 	float m_invSurfaceArea;
-	float2 m_size, m_pixelSize;
+	Vec2f m_size, m_pixelSize;
 	Spectrum m_scale;
 	float4x4 m_worldTransform, m_worldTransformInverse;
 	
@@ -320,18 +320,18 @@ struct e_InfiniteLight : public e_LightBase
 
 	CUDA_HOST e_InfiniteLight(e_Stream<char>* a_Buffer, e_BufferReference<e_MIPMap, e_KernelMIPMap>& mip, const Spectrum& scale, const AABB& scenBox);
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const float2 &spatialSample, const float2 &directionalSample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
 
-	CUDA_FUNC_IN Spectrum eval(const float3& p, const Frame& sys, const float3 &d) const
+	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const Vec3f &d) const
 	{
 		return evalEnvironment(Ray(p, -1.0f * d));
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleDirect(DirectSamplingRecord &dRec, const float2 &sample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const;
 
 	CUDA_DEVICE CUDA_HOST float pdfDirect(const DirectSamplingRecord &dRec) const;
 
-	CUDA_DEVICE CUDA_HOST Spectrum samplePosition(PositionSamplingRecord &pRec, const float2 &sample, const float2 *extra) const;
+	CUDA_DEVICE CUDA_HOST Spectrum samplePosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const;
 
 	CUDA_FUNC_IN Spectrum evalPosition(const PositionSamplingRecord &pRec) const
 	{
@@ -343,11 +343,11 @@ struct e_InfiniteLight : public e_LightBase
 		return m_invSurfaceArea;
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const float2 &sample, const float2 *extra) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const;
 
 	CUDA_FUNC_IN float pdfDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
 	{
-		return internalPdfDirection(m_worldTransformInverse.TransformDirection(-1.0f * dRec.d));
+		return internalPdfDirection(m_worldTransformInverse.TransformDirection(-dRec.d));
 	}
 
 	CUDA_DEVICE CUDA_HOST Spectrum evalDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const;
@@ -358,34 +358,34 @@ struct e_InfiniteLight : public e_LightBase
 	
 	AABB getBox(float eps) const
 	{
-		return AABB(-make_float3(1.0f / eps), make_float3(1.0f / eps));
+		return AABB(-Vec3f(1.0f / eps), Vec3f(1.0f / eps));
 	}
 
 	TYPE_FUNC(e_InfiniteLight)
 private:
-	CUDA_DEVICE CUDA_HOST void internalSampleDirection(float2 sample, float3 &d, Spectrum &value, float &pdf) const;
-	CUDA_DEVICE CUDA_HOST float internalPdfDirection(const float3 &d) const;
+	CUDA_DEVICE CUDA_HOST void internalSampleDirection(Vec2f sample, Vec3f &d, Spectrum &value, float &pdf) const;
+	CUDA_DEVICE CUDA_HOST float internalPdfDirection(const Vec3f &d) const;
 	CUDA_DEVICE CUDA_HOST unsigned int sampleReuse(float *cdf, unsigned int size, float &sample) const;
 };
 
-#define LGT_SIZE RND_16(DMAX5(sizeof(e_PointLight), sizeof(e_DiffuseLight), sizeof(e_DistantLight), sizeof(e_SpotLight), sizeof(e_InfiniteLight)))
+#define LGT_SIZE RND_16(Dmax5(sizeof(e_PointLight), sizeof(e_DiffuseLight), sizeof(e_DistantLight), sizeof(e_SpotLight), sizeof(e_InfiniteLight)))
 
 CUDA_ALIGN(16) struct e_KernelLight : public e_AggregateBaseType<e_LightBase, LGT_SIZE>
 {
 public:
-	CUDA_FUNC_IN Spectrum sampleRay(Ray &ray, const float2 &spatialSample, const float2 &directionalSample) const
+	CUDA_FUNC_IN Spectrum sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const
 	{
 		CALL_FUNC5(e_PointLight,e_DiffuseLight,e_DistantLight,e_SpotLight,e_InfiniteLight, sampleRay(ray, spatialSample, directionalSample))
 		return 0.0f;
 	}
 
-	CUDA_FUNC_IN Spectrum eval(const float3& p, const Frame& sys, const float3 &d) const
+	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const Vec3f &d) const
 	{
 		CALL_FUNC5(e_PointLight,e_DiffuseLight,e_DistantLight,e_SpotLight,e_InfiniteLight, eval(p, sys, d))
 		return 0.0f;
 	}
 
-	CUDA_FUNC_IN Spectrum sampleDirect(DirectSamplingRecord &dRec, const float2 &sample) const
+	CUDA_FUNC_IN Spectrum sampleDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const
 	{
 		CALL_FUNC5(e_PointLight,e_DiffuseLight,e_DistantLight,e_SpotLight,e_InfiniteLight, sampleDirect(dRec, sample))
 		return 0.0f;
@@ -397,7 +397,7 @@ public:
 		return 0.0f;
 	}
 
-	CUDA_FUNC_IN Spectrum samplePosition(PositionSamplingRecord &pRec, const float2 &sample, const float2 *extra = 0) const
+	CUDA_FUNC_IN Spectrum samplePosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra = 0) const
 	{
 		CALL_FUNC5(e_PointLight,e_DiffuseLight,e_DistantLight,e_SpotLight,e_InfiniteLight, samplePosition(pRec, sample, extra))
 		return 0.0f;
@@ -415,7 +415,7 @@ public:
 		return 0.0f;
 	}
 
-	CUDA_FUNC_IN Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const float2 &sample, const float2 *extra = 0) const
+	CUDA_FUNC_IN Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra = 0) const
 	{
 		CALL_FUNC5(e_PointLight,e_DiffuseLight,e_DistantLight,e_SpotLight,e_InfiniteLight, sampleDirection(dRec, pRec, sample, extra))
 		return 0.0f;

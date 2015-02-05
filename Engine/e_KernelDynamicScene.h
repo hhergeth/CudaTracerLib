@@ -21,7 +21,7 @@ struct e_KernelMaterial;
 struct e_KernelMIPMap;
 struct TraceResult;
 
-#define MAX_LIGHT_COUNT 32
+#define max_LIGHT_COUNT 32
 struct e_KernelDynamicScene
 {
 	e_KernelBuffer<e_TriangleData> m_sTriData;
@@ -38,8 +38,8 @@ struct e_KernelDynamicScene
 	e_KernelTerrainData m_sTerrain;
 	e_KernelAggregateVolume m_sVolume;
 	unsigned int m_uEnvMapIndex;
-	Distribution1D<MAX_LIGHT_COUNT> m_emitterPDF;
-	unsigned int m_uEmitterIndices[MAX_LIGHT_COUNT];
+	Distribution1D<max_LIGHT_COUNT> m_emitterPDF;
+	unsigned int m_uEmitterIndices[max_LIGHT_COUNT];
 	unsigned int m_uEmitterCount;
 	AABB m_sBox;
 	e_Sensor m_Camera;
@@ -49,30 +49,30 @@ struct e_KernelDynamicScene
 	CUDA_DEVICE CUDA_HOST Spectrum EvalEnvironment(const Ray& r, const Ray& rX, const Ray& rY) const;
 	CUDA_DEVICE CUDA_HOST float pdfEmitterDiscrete(const e_KernelLight *emitter) const;
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleEmitterDirect(DirectSamplingRecord &dRec, const float2 &sample) const;
-	CUDA_DEVICE CUDA_HOST Spectrum sampleSensorDirect(DirectSamplingRecord &dRec, const float2 &sample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleEmitterDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleSensorDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const;
 	CUDA_DEVICE CUDA_HOST float pdfEmitterDirect(const DirectSamplingRecord &dRec) const;
 	CUDA_DEVICE CUDA_HOST float pdfSensorDirect(const DirectSamplingRecord &dRec) const;
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleEmitterPosition(PositionSamplingRecord &pRec, const float2 &sample) const;
-	CUDA_DEVICE CUDA_HOST Spectrum sampleSensorPosition(PositionSamplingRecord &pRec, const float2 &sample, const float2 *extra = NULL) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleEmitterPosition(PositionSamplingRecord &pRec, const Vec2f &sample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleSensorPosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra = NULL) const;
 	CUDA_DEVICE CUDA_HOST float pdfEmitterPosition(const PositionSamplingRecord &pRec) const;
 	CUDA_DEVICE CUDA_HOST float pdfSensorPosition(const PositionSamplingRecord &pRec) const;
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleEmitterRay(Ray& ray, const e_KernelLight*& emitter, const float2 &spatialSample, const float2 &directionalSample) const;
-	CUDA_DEVICE CUDA_HOST Spectrum sampleSensorRay(Ray& ray, const e_Sensor*& emitter, const float2 &spatialSample, const float2 &directionalSample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleEmitterRay(Ray& ray, const e_KernelLight*& emitter, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleSensorRay(Ray& ray, const e_Sensor*& emitter, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
 
-	CUDA_FUNC_IN Spectrum sampleEmitterRay(Ray& ray, const float2 &spatialSample, const float2 &directionalSample) const
+	CUDA_FUNC_IN Spectrum sampleEmitterRay(Ray& ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const
 	{
 		const e_KernelLight* emitter;
 		return sampleEmitterRay(ray, emitter, spatialSample, directionalSample);
 	}
-	CUDA_FUNC_IN Spectrum sampleSensorRay(Ray& ray, const float2 &spatialSample, const float2 &directionalSample) const
+	CUDA_FUNC_IN Spectrum sampleSensorRay(Ray& ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const
 	{
 		const e_Sensor* emitter;
 		return sampleSensorRay(ray, emitter, spatialSample, directionalSample);
 	}
-	CUDA_FUNC_IN Spectrum sampleSensorRay(Ray& ray, Ray& rX, Ray& rY, const float2 &spatialSample, const float2 &directionalSample) const
+	CUDA_FUNC_IN Spectrum sampleSensorRay(Ray& ray, Ray& rX, Ray& rY, const Vec2f &spatialSample, const Vec2f &directionalSample) const
 	{
 		return m_Camera.sampleRayDifferential(ray, rX, rY, spatialSample, directionalSample);
 	}
@@ -80,10 +80,10 @@ struct e_KernelDynamicScene
 	CUDA_FUNC_IN Ray GenerateSensorRay(int x, int y)
 	{
 		Ray r;
-		sampleSensorRay(r, make_float2(x, y), make_float2(0));
+		sampleSensorRay(r, Vec2f(x, y), Vec2f(0));
 		return r;
 	}
 
-	CUDA_DEVICE CUDA_HOST const e_KernelLight* sampleLight(float& emPdf, float2& sample) const;
+	CUDA_DEVICE CUDA_HOST const e_KernelLight* sampleLight(float& emPdf, Vec2f& sample) const;
 	CUDA_DEVICE CUDA_HOST float pdfLight(const e_KernelLight* light);
 };

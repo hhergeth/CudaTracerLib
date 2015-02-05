@@ -67,7 +67,7 @@ public:
 	{
 		SetNodeTransform(mat % GetNodeTransform(n), n);
 	}
-	void MoveNode(float3 p, e_StreamReference(e_Node) n)
+	void MoveNode(const Vec3f& p, e_StreamReference(e_Node) n)
 	{
 		TransformNode(float4x4::Translate(p), n);
 	}
@@ -160,7 +160,7 @@ public:
 	unsigned int getLightCount(e_StreamReference(e_Node) n)
 	{
 		int i = 0;
-		while(n->m_uLightIndices[i] != 0xffffffff && i < MAX_AREALIGHT_NUM)
+		while (n->m_uLightIndices[i] != 0xffffffff && i < MAX_AREALIGHT_NUM)
 			i++;
 		return i;
 	}

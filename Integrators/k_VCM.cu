@@ -11,8 +11,8 @@ CUDA_FUNC_IN Spectrum L_Surface(BPTSubPathState& aCameraState, BSDFSamplingRecor
 	sys.t *= a_rSurfaceUNUSED;
 	sys.s *= a_rSurfaceUNUSED;
 	sys.n *= a_rSurfaceUNUSED;
-	float3 a = -1.0f * sys.t - sys.s, b = sys.t - sys.s, c = -1.0f * sys.t + sys.s, d = sys.t + sys.s;
-	float3 low = fminf(fminf(a, b), fminf(c, d)) + bRec.dg.P, high = fmaxf(fmaxf(a, b), fmaxf(c, d)) + bRec.dg.P;
+	Vec3f a = -1.0f * sys.t - sys.s, b = sys.t - sys.s, c = -1.0f * sys.t + sys.s, d = sys.t + sys.s;
+	Vec3f low = min(min(a, b), min(c, d)) + bRec.dg.P, high = max(max(a, b), max(c, d)) + bRec.dg.P;
 	uint3 lo = g_CurrentMap.m_sSurfaceMap.m_sHash.Transform(low), hi = g_CurrentMap.m_sSurfaceMap.m_sHash.Transform(high);
 	for (unsigned int a = lo.x; a <= hi.x; a++)
 	for (unsigned int b = lo.y; b <= hi.y; b++)
@@ -22,9 +22,9 @@ CUDA_FUNC_IN Spectrum L_Surface(BPTSubPathState& aCameraState, BSDFSamplingRecor
 		while (i != 0xffffffff && i != 0xffffff)
 		{
 			k_pPpmPhoton e = g_CurrentMap.m_pPhotons[i];
-			float3 n = e.getNormal(), wi = e.getWi(), P = e.getPos();
+			Vec3f n = e.getNormal(), wi = e.getWi(), P = e.getPos();
 			Spectrum l = e.getL();
-			float dist2 = DistanceSquared(P, bRec.dg.P);
+			float dist2 = distanceSquared(P, bRec.dg.P);
 			if (dist2 < r2 && dot(n, bRec.dg.sys.n) > 0.8f)
 			{
 				bRec.wo = bRec.dg.toLocal(wi);
@@ -35,7 +35,7 @@ CUDA_FUNC_IN Spectrum L_Surface(BPTSubPathState& aCameraState, BSDFSamplingRecor
 				const float wCamera = aCameraState.dVCM * mMisVcWeightFactor + aCameraState.dVM * cameraBsdfRevPdfW;
 				const float misWeight = 1.f / (wLight + 1.f + wCamera);
 
-				float ke = k_tr(a_rSurfaceUNUSED, sqrtf(dist2));
+				float ke = k_tr(a_rSurfaceUNUSED, math::sqrt(dist2));
 				Lp += misWeight * PI * ke * l * bsdfFactor / Frame::cosTheta(bRec.wo);
 			}
 			i = e.getNext();
@@ -44,7 +44,7 @@ CUDA_FUNC_IN Spectrum L_Surface(BPTSubPathState& aCameraState, BSDFSamplingRecor
 	return Lp / float(g_CurrentMap.m_uPhotonNumEmitted);
 }
 
-CUDA_FUNC_IN void VCM(const float2& pixelPosition, k_BlockSampleImage& img, CudaRNG& rng, int w, int h, float a_Radius, int a_NumIteration)
+CUDA_FUNC_IN void VCM(const Vec2f& pixelPosition, k_BlockSampleImage& img, CudaRNG& rng, int w, int h, float a_Radius, int a_NumIteration)
 {
 	float mLightSubPathCount = 1;
 	const float etaVCM = (PI * a_Radius * a_Radius) * w * h;
@@ -155,7 +155,7 @@ __global__ void pathKernel(unsigned int w, unsigned int h, int xoff, int yoff, k
 	int x = blockIdx.x * blockDim.x + threadIdx.x + xoff, y = blockIdx.y * blockDim.y + threadIdx.y + yoff;
 	CudaRNG rng = g_RNGData();
 	if (x < w && y < h)
-		VCM(make_float2(x, y), img, rng, w, h, a_Radius, a_NumIteration);
+		VCM(Vec2f(x, y), img, rng, w, h, a_Radius, a_NumIteration);
 	g_RNGData(rng);
 }
 
@@ -202,9 +202,9 @@ void k_VCM::StartNewTrace(e_Image* I)
 	m_uPhotonsEmitted = 0;
 	AABB m_sEyeBox = GetEyeHitPointBox(m_pScene, true);
 	m_sEyeBox.Enlarge(0.1f);
-	float r = fsumf(m_sEyeBox.maxV - m_sEyeBox.minV) / float(w);
-	m_sEyeBox.minV -= make_float3(r);
-	m_sEyeBox.maxV += make_float3(r);
+	float r = (m_sEyeBox.maxV - m_sEyeBox.minV).sum() / float(w);
+	m_sEyeBox.minV -= Vec3f(r);
+	m_sEyeBox.maxV += Vec3f(r);
 	m_fInitialRadius = r;
 	m_sPhotonMapsCurrent.StartNewRendering(m_sEyeBox, m_sEyeBox, r);
 	m_sPhotonMapsCurrent.StartNewPass();

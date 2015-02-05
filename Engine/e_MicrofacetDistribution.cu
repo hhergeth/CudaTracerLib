@@ -1,6 +1,6 @@
 #include "e_MicrofacetDistribution.h"
 
-float MicrofacetDistribution::eval(const float3 &m, float alphaU, float alphaV) const
+float MicrofacetDistribution::eval(const Vec3f &m, float alphaU, float alphaV) const
 {
 	if (Frame::cosTheta(m) <= 0)
 		return 0.0f;
@@ -43,7 +43,7 @@ float MicrofacetDistribution::eval(const float3 &m, float alphaU, float alphaV) 
 					return 0.0f;
 				const float exponent = (alphaU * m.x * m.x
 						+ alphaV * m.y * m.y) / ds;
-				result = sqrtf((alphaU + 2) * (alphaV + 2))
+				result = math::sqrt((alphaU + 2) * (alphaV + 2))
 					* INV_TWOPI * std::pow(cosTheta, exponent);
 			}
 			break;
@@ -56,7 +56,7 @@ float MicrofacetDistribution::eval(const float3 &m, float alphaU, float alphaV) 
 	return result;
 }
 
-float MicrofacetDistribution::pdf(const float3 &m, float alphaU, float alphaV) const
+float MicrofacetDistribution::pdf(const Vec3f &m, float alphaU, float alphaV) const
 {
 	/* Usually, this is just D(m) * cos(theta_M) */
 	if (m_type != EAshikhminShirley)
@@ -71,7 +71,7 @@ float MicrofacetDistribution::pdf(const float3 &m, float alphaU, float alphaV) c
 		return 0.0f;
 	const float exponent = (alphaU * m.x * m.x
 			+ alphaV * m.y * m.y) / ds;
-	float result = sqrtf((alphaU + 1) * (alphaV + 1))
+	float result = math::sqrt((alphaU + 1) * (alphaV + 1))
 		* INV_TWOPI * std::pow(cosTheta, exponent);
 
 	/* Prevent potential numerical issues in other stages of the model */
@@ -81,7 +81,7 @@ float MicrofacetDistribution::pdf(const float3 &m, float alphaU, float alphaV) c
 	return result;
 }
 
-float3 MicrofacetDistribution::sample(const float2 &sample, float alphaU, float alphaV) const
+Vec3f MicrofacetDistribution::sample(const Vec2f &sample, float alphaU, float alphaV) const
 {
 	/* The azimuthal component is always selected
 		uniformly regardless of the distribution */
@@ -90,13 +90,13 @@ float3 MicrofacetDistribution::sample(const float2 &sample, float alphaU, float 
 	switch (m_type) {
 		case EBeckmann: {
 				float tanThetaMSqr = -alphaU*alphaU * log(1.0f - sample.x);
-				cosThetaM = 1.0f / sqrtf(1 + tanThetaMSqr);
+				cosThetaM = 1.0f / math::sqrt(1 + tanThetaMSqr);
 			}
 			break;
 
 		case EGGX: {
 				float tanThetaMSqr = alphaU * alphaU * sample.x / (1.0f - sample.x);
-				cosThetaM = 1.0f / sqrtf(1 + tanThetaMSqr);
+				cosThetaM = 1.0f / math::sqrt(1 + tanThetaMSqr);
 			}
 			break;
 
@@ -127,20 +127,20 @@ float3 MicrofacetDistribution::sample(const float2 &sample, float alphaU, float 
 			break;
 	}
 
-	const float sinThetaM = sqrtf(
-		MAX((float) 0, 1 - cosThetaM*cosThetaM));
+	const float sinThetaM = math::sqrt(
+		max((float) 0, 1 - cosThetaM*cosThetaM));
 
 	float sinPhiM, cosPhiM;
 	sincos(phiM, &sinPhiM, &cosPhiM);
 
-	return make_float3(
+	return Vec3f(
 		sinThetaM * cosPhiM,
 		sinThetaM * sinPhiM,
 		cosThetaM
 	);
 }
 
-float3 MicrofacetDistribution::sample(const float2 &sample, float alphaU, float alphaV, float &pdf) const
+Vec3f MicrofacetDistribution::sample(const Vec2f &sample, float alphaU, float alphaV, float &pdf) const
 {
 	/* The azimuthal component is always selected
 		uniformly regardless of the distribution */
@@ -149,7 +149,7 @@ float3 MicrofacetDistribution::sample(const float2 &sample, float alphaU, float 
 	switch (m_type) {
 		case EBeckmann: {
 				float tanThetaMSqr = -alphaU*alphaU * logf(1.0f - sample.x);
-				cosThetaM = 1.0f / sqrtf(1 + tanThetaMSqr);
+				cosThetaM = 1.0f / math::sqrt(1 + tanThetaMSqr);
 				float cosThetaM2 = cosThetaM * cosThetaM,
 						cosThetaM3 = cosThetaM2 * cosThetaM;
 				pdf = (1.0f - sample.x) / (PI * alphaU*alphaU * cosThetaM3);
@@ -159,7 +159,7 @@ float3 MicrofacetDistribution::sample(const float2 &sample, float alphaU, float 
 		case EGGX: {
 				float alphaUSqr = alphaU * alphaU;
 				float tanThetaMSqr = alphaUSqr * sample.x / (1.0f - sample.x);
-				cosThetaM = 1.0f / sqrtf(1 + tanThetaMSqr);
+				cosThetaM = 1.0f / math::sqrt(1 + tanThetaMSqr);
 
 				float cosThetaM2 = cosThetaM * cosThetaM,
 						cosThetaM3 = cosThetaM2 * cosThetaM,
@@ -196,21 +196,21 @@ float3 MicrofacetDistribution::sample(const float2 &sample, float alphaU, float 
 						4 * (1 - sample.x), sample.y, phiM, cosThetaM);
 					phiM = 2 * PI - phiM;
 				}
-				const float sinThetaM = sqrtf(
-						MAX((float) 0, 1 - cosThetaM*cosThetaM)),
+				const float sinThetaM = math::sqrt(
+						max((float) 0, 1 - cosThetaM*cosThetaM)),
 						sinPhiM = std::sin(phiM),
 						cosPhiM = std::cos(phiM);
 
 				const float exponent = alphaU * cosPhiM*cosPhiM
 						+ alphaV * sinPhiM*sinPhiM;
-				pdf = sqrtf((alphaU + 1) * (alphaV + 1))
+				pdf = math::sqrt((alphaU + 1) * (alphaV + 1))
 					* INV_TWOPI * std::pow(cosThetaM, exponent);
 
 				/* Prevent potential numerical issues in other stages of the model */
 				if (pdf < 1e-20f)
 					pdf = 0;
 
-				return make_float3(
+				return Vec3f(
 					sinThetaM * cosPhiM,
 					sinThetaM * sinPhiM,
 					cosThetaM
@@ -222,17 +222,17 @@ float3 MicrofacetDistribution::sample(const float2 &sample, float alphaU, float 
 	if (pdf < 1e-20f)
 		pdf = 0;
 
-	const float sinThetaM = sqrtf(
-		MAX((float) 0, 1 - cosThetaM*cosThetaM));
+	const float sinThetaM = math::sqrt(
+		max((float) 0, 1 - cosThetaM*cosThetaM));
 	float phiM = (2.0f * PI) * sample.y;
-	return make_float3(
+	return Vec3f(
 		sinThetaM * std::cos(phiM),
 		sinThetaM * std::sin(phiM),
 		cosThetaM
 	);
 }
 
-float MicrofacetDistribution::G(const float3 &wi, const float3 &wo, const float3 &m, float alphaU, float alphaV) const
+float MicrofacetDistribution::G(const Vec3f &wi, const Vec3f &wo, const Vec3f &m, float alphaU, float alphaV) const
 {
 	if (m_type != EAshikhminShirley) {
 		return smithG1(wi, m, alphaU)
@@ -250,13 +250,13 @@ float MicrofacetDistribution::G(const float3 &wi, const float3 &wo, const float3
 					woDotM = dot(wo, m),
 					wiDotM = dot(wi, m);
 
-		return MIN((float) 1,
-			MIN(abs(2 * nDotM * nDotWo / woDotM),
+		return min((float) 1,
+			min(abs(2 * nDotM * nDotWo / woDotM),
 						abs(2 * nDotM * nDotWi / wiDotM)));
 	}
 }
 
-float MicrofacetDistribution::smithG1(const float3 &v, const float3 &m, float alpha) const
+float MicrofacetDistribution::smithG1(const Vec3f &v, const Vec3f &m, float alpha) const
 {
 	const float tanTheta = abs(Frame::tanTheta(v));
 
@@ -276,7 +276,7 @@ float MicrofacetDistribution::smithG1(const float3 &v, const float3 &m, float al
 					the Beckmann shadowing-masking function with
 					specially chosen roughness value */
 				if (m_type != EBeckmann)
-					a = sqrtf(0.5f * alpha + 1) / tanTheta;
+					a = math::sqrt(0.5f * alpha + 1) / tanTheta;
 				else
 					a = 1.0f / (alpha * tanTheta);
 
@@ -292,7 +292,7 @@ float MicrofacetDistribution::smithG1(const float3 &v, const float3 &m, float al
 
 		case EGGX: {
 				const float root = alpha * tanTheta;
-				return 2.0f / (1.0f + sqrtf(1.0f + root*root));
+				return 2.0f / (1.0f + math::sqrt(1.0f + root*root));
 			}
 	}
 	return 0;

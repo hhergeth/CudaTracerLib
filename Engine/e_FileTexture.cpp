@@ -41,17 +41,17 @@ struct sampleHelper
 		dest = i % 2 == 1 ? tmp : d->data;
 	}
 
-	float4 operator()(int x, int y)
+	Vec4f operator()(int x, int y)
 	{
 		if(data->type == vtRGBE)
-			return make_float4(SpectrumConverter::RGBEToFloat3(((RGBE*)source)[y * w + x]));
+			return Vec4f(SpectrumConverter::RGBEToFloat3(((RGBE*)source)[y * w + x]), 1);
 		else return SpectrumConverter::COLORREFToFloat4(((RGBCOL*)source)[y * w + x]);
 	}
 };
 
 void resize(imgData* d)
 {
-	int w = RoundUpPow2(d->w), h = RoundUpPow2(d->h);
+	int w = math::RoundUpPow2(d->w), h = math::RoundUpPow2(d->h);
 	int* data = (int*)malloc(w * h * 4);
 	for(int x = 0; x < w; x++)
 		for(int y = 0; y < h; y++)
@@ -73,7 +73,7 @@ void e_MIPMap::CompileToBinary(const char* a_InputFile, OutputStream& a_Out, boo
 	if(popc(data.w) != 1 || popc(data.h) != 1)
 		resize(&data);
 
-	unsigned int nLevels = 1 + Log2Int(MAX(float(data.w), float(data.h)));
+	unsigned int nLevels = 1 + math::Log2Int(max(float(data.w), float(data.h)));
 	//if(!a_MipMap)
 	//	nLevels = 1;
 	unsigned int size = 0;
@@ -91,7 +91,7 @@ void e_MIPMap::CompileToBinary(const char* a_InputFile, OutputStream& a_Out, boo
 	a_Out << size;
 	a_Out.Write(data.data, data.w * data.h * sizeof(RGBCOL));
 
-	unsigned int m_sOffsets[MAX_MIPS];
+	unsigned int m_sOffsets[max_MIPS];
 	m_sOffsets[0] = 0;
 	unsigned int off = data.w * data.h;
 	for(unsigned int i = 1, j = data.w / 2, k = data.h / 2; i < nLevels; i++, j >>= 1, k >>= 1)
@@ -101,9 +101,9 @@ void e_MIPMap::CompileToBinary(const char* a_InputFile, OutputStream& a_Out, boo
 			for(unsigned int s = 0; s < j; s++)
 			{
 				void* tar = (RGBE*)H.dest + t * j + s;
-				float4 v = 0.25f * (H(2*s, 2*t) + H(2*s+1, 2*t) + H(2*s, 2*t+1) + H(2*s+1, 2*t+1));
+				Vec4f v = 0.25f * (H(2*s, 2*t) + H(2*s+1, 2*t) + H(2*s, 2*t+1) + H(2*s+1, 2*t+1));
 				if(data.type == vtRGBE)
-					*(RGBE*)tar = SpectrumConverter::Float3ToRGBE(make_float3(v));
+					*(RGBE*)tar = SpectrumConverter::Float3ToRGBE(v.getXYZ());
 				else *(RGBCOL*)tar = SpectrumConverter::Float4ToCOLORREF(v);
 			}
 		m_sOffsets[i] = off;
@@ -131,7 +131,7 @@ e_KernelMIPMap e_MIPMap::getKernelData()
 	r.m_uFilterMode = m_uFilterMode;
 	r.m_uWidth = m_uWidth;
 	r.m_uHeight = m_uHeight;
-	r.m_fDim = make_float2(m_uWidth - 1, m_uHeight - 1);
+	r.m_fDim = Vec2f(m_uWidth - 1, m_uHeight - 1);
 	r.m_uLevels = m_uLevels;
 	memcpy(r.m_sOffsets, m_sOffsets, sizeof(m_sOffsets));
 	memcpy(r.m_weightLut, m_weightLut, sizeof(m_weightLut));

@@ -65,15 +65,15 @@ struct e_BVHHierarchy
 const int g_uMaxWeights = 8;
 struct CUDA_ALIGN(16) e_AnimatedVertex
 {
-	CUDA_ALIGN(16) float3 m_fVertexPos;
-	CUDA_ALIGN(16) float3 m_fNormal;
-	CUDA_ALIGN(16) float3 m_fTangent;
-	CUDA_ALIGN(16) float3 m_fBitangent;
+	CUDA_ALIGN(16) Vec3f m_fVertexPos;
+	CUDA_ALIGN(16) Vec3f m_fNormal;
+	CUDA_ALIGN(16) Vec3f m_fTangent;
+	CUDA_ALIGN(16) Vec3f m_fBitangent;
 	CUDA_ALIGN(16) unsigned char m_cBoneIndices[g_uMaxWeights];
 	CUDA_ALIGN(16) unsigned char m_fBoneWeights[g_uMaxWeights];
 	e_AnimatedVertex()
 	{
-		m_fVertexPos = make_float3(0);
+		m_fVertexPos = Vec3f(0);
 		for(int i = 0; i < g_uMaxWeights; i++)
 			m_cBoneIndices[i] = m_fBoneWeights[i] = 0;
 	}
@@ -81,10 +81,10 @@ struct CUDA_ALIGN(16) e_AnimatedVertex
 
 struct CUDA_ALIGN(16) e_TmpVertex
 {
-	CUDA_ALIGN(16) float3 m_fPos;
-	CUDA_ALIGN(16) float3 m_fNormal;
-	CUDA_ALIGN(16) float3 m_fTangent;
-	CUDA_ALIGN(16) float3 m_fBiTangent;
+	CUDA_ALIGN(16) Vec3f m_fPos;
+	CUDA_ALIGN(16) Vec3f m_fNormal;
+	CUDA_ALIGN(16) Vec3f m_fTangent;
+	CUDA_ALIGN(16) Vec3f m_fBiTangent;
 };
 
 struct e_Frame
@@ -176,13 +176,13 @@ class e_AnimatedMesh : public e_Mesh
 public:
 	e_AnimatedMesh(IInStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4, e_Stream<char>* a_Stream5);
 	static void CompileToBinary(const char* a_InputFile, std::vector<std::string>& a_Anims, OutputStream& a_Out);
-	void k_ComputeState(unsigned int a_Anim, unsigned int a_Frame, float a_Lerp, e_KernelDynamicScene a_Data, e_Stream<e_BVHNodeData>* a_BVHNodeStream, e_TmpVertex* a_DeviceTmp);
+	void k_ComputeState(unsigned int a_Anim, unsigned int a_Frame, float a_lerp, e_KernelDynamicScene a_Data, e_Stream<e_BVHNodeData>* a_BVHNodeStream, e_TmpVertex* a_DeviceTmp);
 	void CreateNewMesh(e_AnimatedMesh* A, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4, e_Stream<char>* a_Stream5);
-	void ComputeFrameIndex(float t, unsigned int a_Anim, unsigned int* a_FrameIndex, float* a_Lerp)
+	void ComputeFrameIndex(float t, unsigned int a_Anim, unsigned int* a_FrameIndex, float* a_lerp)
 	{
 		float a = (float)m_pAnimations[a_Anim].m_uFrameRate * t;
-		if(a_Lerp)
-			*a_Lerp = frac(a);
+		if(a_lerp)
+			*a_lerp = math::frac(a);
 		if(a_FrameIndex)
 			*a_FrameIndex = unsigned int(a) % m_pAnimations[a_Anim].m_uNumFrames;
 	}

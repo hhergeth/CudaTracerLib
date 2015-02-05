@@ -63,7 +63,7 @@ void print(k_PhotonMapCollection& m_sMaps, k_PhotonMap<k_HashGrid_Reg>& m_Map, s
 			for( ; p->next != -1; c++)
 				p = photons + p->next;
 			counts[i] = c;
-			maxCount = MAX(maxCount, c);
+			maxCount = max(maxCount, c);
 		}
 		else
 		{
@@ -81,7 +81,7 @@ void print(k_PhotonMapCollection& m_sMaps, k_PhotonMap<k_HashGrid_Reg>& m_Map, s
 	for(unsigned int i = 0; i < m_Map.m_uGridLength; i++)
 		if(counts[i])
 			var += (counts[i] - avg) * (counts[i] - avg) / float(usedCells);
-	std::string s = format("max : %d, avg : %f, used cells : %f, var : %f\n", maxCount, avgNum, f1, sqrtf(var));
+	std::string s = format("max : %d, avg : %f, used cells : %f, var : %f\n", maxCount, avgNum, f1, math::sqrt(var));
 	std::cout << s;
 	OutputDebugString(s.c_str());
 }*/
@@ -107,9 +107,9 @@ void k_sPpmTracer::StartNewTrace(e_Image* I)
 	m_uPhotonsEmitted = 0;
 	AABB m_sEyeBox = GetEyeHitPointBox(m_pScene, true);
 	m_sEyeBox.Enlarge(0.1f);
-	float r = fsumf(m_sEyeBox.maxV - m_sEyeBox.minV) / float(w);
-	m_sEyeBox.minV -= make_float3(r);
-	m_sEyeBox.maxV += make_float3(r);
+	float r = (m_sEyeBox.maxV - m_sEyeBox.minV).sum() / float(w);
+	m_sEyeBox.minV -= Vec3f(r);
+	m_sEyeBox.maxV += Vec3f(r);
 	m_fInitialRadius = r;
 	AABB volBox = m_pScene->getKernelSceneData().m_sVolume.box;
 	for (unsigned int i = 0; i < m_pScene->getNodeCount(); i++)

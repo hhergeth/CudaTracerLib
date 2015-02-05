@@ -8,7 +8,7 @@
 
 CUDA_FUNC_IN float randomNormal(CudaRNG& rng)
 {
-	return sqrtf(-2.0f * logf(rng.randomFloat())) * cosf(2.0f * PI * rng.randomFloat());
+	return math::sqrt(-2.0f * logf(rng.randomFloat())) * cosf(2.0f * PI * rng.randomFloat());
 }
 
 CUDA_FUNC_IN float ny(int i)
@@ -17,17 +17,17 @@ CUDA_FUNC_IN float ny(int i)
 	return powf(float(i), -alpha);
 }
 
-CUDA_FUNC_IN qMatrix<float, 2, 1> HemishphereToSquare(const float3& d)
+CUDA_FUNC_IN qMatrix<float, 2, 1> HemishphereToSquare(const Vec3f& d)
 {
-	float3 q = normalize(d);
-	float2 a = Warp::uniformDiskToSquareConcentric(make_float2(d.x, d.y));
+	Vec3f q = normalize(d);
+	Vec2f a = Warp::uniformDiskToSquareConcentric(Vec2f(d.x, d.y));
 	return VEC<float, 2>() % a.x % a.y;
 }
 
-CUDA_FUNC_IN float3 SquareToHemisphere(const qMatrix<float, 2, 1>& s)
+CUDA_FUNC_IN Vec3f SquareToHemisphere(const qMatrix<float, 2, 1>& s)
 {
-	float2 a = Warp::squareToUniformDiskConcentric(make_float2(s(0, 0), s(1, 0)));
-	return make_float3(a.x, a.y, 1.0f - a.x * a.x - a.y * a.y);
+	Vec2f a = Warp::squareToUniformDiskConcentric(Vec2f(s(0, 0), s(1, 0)));
+	return Vec3f(a.x, a.y, 1.0f - a.x * a.x - a.y * a.y);
 }
 
 template<int D, int K> struct GaussianMixtureModel
@@ -50,7 +50,7 @@ template<int D, int K> struct GaussianMixtureModel
 			: mean(mean)
 		{
 			invCovariance = inv(covariance);
-			a = 1.0f / (powf(2.0f * PI, float(D) / 2.0f) * sqrtf(det(covariance)));
+			a = 1.0f / (powf(2.0f * PI, float(D) / 2.0f) * math::sqrt(det(covariance)));
 			mat eigValues, eigVectors;
 			qrAlgorithmSymmetric(covariance, eigValues, eigVectors);
 			Q = diagmat(eigValues.diag().sqrt()) * eigVectors;
@@ -205,9 +205,9 @@ template<int D, int K> struct GaussianMixtureModel
 		}
 	}
 
-	template<int MAX_SAMPLES> CUDA_FUNC_IN void OnlineEM(SufStat* stats, const vec* samples, int N, float ny, int n_all, float w_all)
+	template<int max_SAMPLES> CUDA_FUNC_IN void OnlineEM(SufStat* stats, const vec* samples, int N, float ny, int n_all, float w_all)
 	{
-		float gamma[MAX_SAMPLES][K];
+		float gamma[max_SAMPLES][K];
 		for(int q = 0; q < N; q++)
 		{
 			float sumRes = 0;
@@ -282,8 +282,8 @@ template<int D, int K> struct GaussianMixtureModel
 
 struct SpatialEntry
 {
-	float3 wi;
-	CUDA_FUNC_IN SpatialEntry(const float3& wi)
+	Vec3f wi;
+	CUDA_FUNC_IN SpatialEntry(const Vec3f& wi)
 		: wi(wi)
 	{
 	}
@@ -307,22 +307,22 @@ struct DirectionModel
 		gmm = GaussianMixtureModel<2, K>::Random(rng, VEC<float, 2>() % 0 % 0, VEC<float, 2>() % 1 % 1);
 	}
 
-	template<int MAX_SAMPLES> CUDA_FUNC_IN void Update(const e_SpatialLinkedMap<SpatialEntry>& sMap, const float3& mi, const float3& ma, float ny)
+	template<int max_SAMPLES> CUDA_FUNC_IN void Update(const e_SpatialLinkedMap<SpatialEntry>& sMap, const Vec3f& mi, const Vec3f& ma, float ny)
 	{
-		qMatrix<float, 2, 1> samples[MAX_SAMPLES];
+		qMatrix<float, 2, 1> samples[max_SAMPLES];
 		int N = 0;
 		for(e_SpatialLinkedMap<SpatialEntry>::iterator it = sMap.begin(mi, ma); it != sMap.end(mi, ma); ++it)
 		{
 			samples[N++] = HemishphereToSquare(it->wi);
-			if(N == MAX_SAMPLES)
+			if(N == max_SAMPLES)
 				break;
 		}
 		numSamples += N;
 		if(N)
-			gmm.OnlineEM<MAX_SAMPLES>(stats, samples, N, ny, numSamples, 1);
+			gmm.OnlineEM<max_SAMPLES>(stats, samples, N, ny, numSamples, 1);
 	}
 
-	CUDA_FUNC_IN float3 Sample(CudaRNG& rng)
+	CUDA_FUNC_IN Vec3f Sample(CudaRNG& rng)
 	{
 		qMatrix<float, 2, 1> s = gmm.sample(rng);
 		return SquareToHemisphere(s);

@@ -1,7 +1,7 @@
 #include "e_KernelDynamicScene.h"
 #include "..\Kernel\k_TraceHelper.h"
 
-const e_KernelLight* e_KernelDynamicScene::sampleLight(float& emPdf, float2& sample) const
+const e_KernelLight* e_KernelDynamicScene::sampleLight(float& emPdf, Vec2f& sample) const
 {
 	unsigned int index = m_emitterPDF.SampleReuse(sample.x, emPdf);
 	return m_sLightData.Data + g_SceneData.m_uEmitterIndices[index];
@@ -44,9 +44,9 @@ float e_KernelDynamicScene::pdfEmitterDiscrete(const e_KernelLight *emitter) con
 	return m_emitterPDF[index];
 }
 
-Spectrum e_KernelDynamicScene::sampleEmitterDirect(DirectSamplingRecord &dRec, const float2 &_sample) const
+Spectrum e_KernelDynamicScene::sampleEmitterDirect(DirectSamplingRecord &dRec, const Vec2f &_sample) const
 {
-	float2 sample = _sample;
+	Vec2f sample = _sample;
 	float emPdf;
 	const e_KernelLight *emitter = sampleLight(emPdf, sample);
 	Spectrum value = emitter->sampleDirect(dRec, sample);
@@ -68,7 +68,7 @@ Spectrum e_KernelDynamicScene::sampleEmitterDirect(DirectSamplingRecord &dRec, c
 	}
 }
 
-Spectrum e_KernelDynamicScene::sampleSensorDirect(DirectSamplingRecord &dRec, const float2 &sample) const
+Spectrum e_KernelDynamicScene::sampleSensorDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const
 {
 	Spectrum value = m_Camera.sampleDirect(dRec, sample);
 	if (dRec.pdf != 0)
@@ -98,9 +98,9 @@ float e_KernelDynamicScene::pdfSensorDirect(const DirectSamplingRecord &dRec) co
 	return m_Camera.pdfDirect(dRec);
 }
 
-Spectrum e_KernelDynamicScene::sampleEmitterPosition(PositionSamplingRecord &pRec, const float2 &_sample) const
+Spectrum e_KernelDynamicScene::sampleEmitterPosition(PositionSamplingRecord &pRec, const Vec2f &_sample) const
 {
-	float2 sample = _sample;
+	Vec2f sample = _sample;
 	float emPdf;
 	const e_KernelLight *emitter = sampleLight(emPdf, sample);
 
@@ -112,7 +112,7 @@ Spectrum e_KernelDynamicScene::sampleEmitterPosition(PositionSamplingRecord &pRe
 	return value / emPdf;
 }
 
-Spectrum e_KernelDynamicScene::sampleSensorPosition(PositionSamplingRecord &pRec, const float2 &sample, const float2 *extra) const
+Spectrum e_KernelDynamicScene::sampleSensorPosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const
 {
 	pRec.object = &m_Camera;
 	return m_Camera.samplePosition(pRec, sample, extra);
@@ -130,16 +130,16 @@ float e_KernelDynamicScene::pdfSensorPosition(const PositionSamplingRecord &pRec
 	return sensor->pdfPosition(pRec);
 }
 
-Spectrum e_KernelDynamicScene::sampleEmitterRay(Ray& ray, const e_KernelLight*& emitter, const float2 &spatialSample, const float2 &directionalSample) const
+Spectrum e_KernelDynamicScene::sampleEmitterRay(Ray& ray, const e_KernelLight*& emitter, const Vec2f &spatialSample, const Vec2f &directionalSample) const
 {
-	float2 sample = spatialSample;
+	Vec2f sample = spatialSample;
 	float emPdf;
 	emitter = sampleLight(emPdf, sample);
 
 	return emitter->sampleRay(ray, sample, directionalSample) / emPdf;
 }
 
-Spectrum e_KernelDynamicScene::sampleSensorRay(Ray& ray, const e_Sensor*& sensor, const float2 &spatialSample, const float2 &directionalSample) const
+Spectrum e_KernelDynamicScene::sampleSensorRay(Ray& ray, const e_Sensor*& sensor, const Vec2f &spatialSample, const Vec2f &directionalSample) const
 {
 	sensor = &m_Camera;
 	return sensor->sampleRay(ray, spatialSample, directionalSample);

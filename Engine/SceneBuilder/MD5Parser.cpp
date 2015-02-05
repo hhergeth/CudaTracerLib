@@ -153,7 +153,7 @@ int MD5Model::loadAnim(const char *filename) {
 				}
 
 			Quaternion q(0.5f, 0.5f, 0.5000001f, -0.5000001f);
-			float3 pos2 = make_float3(pos[0], pos[1], pos[2]);
+			Vec3f pos2 = Vec3f(pos[0], pos[1], pos[2]);
 			Quaternion oriented(orient[0], orient[1], orient[2]);
 			if(anim->jointInfo[j].parentIndex == -1)
 			{

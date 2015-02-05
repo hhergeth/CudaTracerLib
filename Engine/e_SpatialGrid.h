@@ -40,7 +40,7 @@ public:
 		cudaMemset(deviceMap, -1, sizeof(unsigned int) * gridSize * gridSize * gridSize);
 	}
 
-	CUDA_FUNC_IN void store(const float3& p, const T& v)
+	CUDA_FUNC_IN void store(const Vec3f& p, const T& v)
 	{
 		//build linked list and spatial map
 		unsigned int data_idx = Platform::Increment(&deviceDataIdx);
@@ -53,13 +53,13 @@ public:
 		deviceData[data_idx].nextIdx = old_idx;
 	}
 
-	CUDA_FUNC_IN e_SpatialLinkedMap_volume_iterator<T> begin(const float3& p) const;
+	CUDA_FUNC_IN e_SpatialLinkedMap_volume_iterator<T> begin(const Vec3f& p) const;
 
-	CUDA_FUNC_IN e_SpatialLinkedMap_volume_iterator<T> end(const float3& max) const;
+	CUDA_FUNC_IN e_SpatialLinkedMap_volume_iterator<T> end(const Vec3f& max) const;
 
-	CUDA_FUNC_IN e_SpatialLinkedMap_volume_iterator<T> begin(const float3& min, const float3& max) const;
+	CUDA_FUNC_IN e_SpatialLinkedMap_volume_iterator<T> begin(const Vec3f& min, const Vec3f& max) const;
 
-	CUDA_FUNC_IN e_SpatialLinkedMap_volume_iterator<T> end(const float3& min, const float3& max) const;
+	CUDA_FUNC_IN e_SpatialLinkedMap_volume_iterator<T> end(const Vec3f& min, const Vec3f& max) const;
 
 	//internal
 
@@ -87,11 +87,11 @@ public:
 template<typename T> struct e_SpatialLinkedMap_volume_iterator
 {
 	const e_SpatialLinkedMap<T>& map;
-	uint3 low, high, diff;// := [low, high)
+	Vec3u low, high, diff;// := [low, high)
 	unsigned int dataIdx, flatGridIdx;
 
-	CUDA_FUNC_IN e_SpatialLinkedMap_volume_iterator(const e_SpatialLinkedMap<T>& m, const uint3& mi, const uint3& ma, bool isEnd)
-		: map(m), low(mi), high(ma + make_uint3(1)), diff(high - low)
+	CUDA_FUNC_IN e_SpatialLinkedMap_volume_iterator(const e_SpatialLinkedMap<T>& m, const Vec3u& mi, const Vec3u& ma, bool isEnd)
+		: map(m), low(mi), high(ma + Vec3u(1)), diff(high - low)
 	{
 		flatGridIdx = isEnd ? diff.x * diff.y * diff.z : 0;
 		dataIdx = isEnd ? unsigned int(-1) : m.idx(mi);
@@ -106,7 +106,7 @@ template<typename T> struct e_SpatialLinkedMap_volume_iterator
 		while(dataIdx == unsigned int(-1) && ++flatGridIdx != diff.x * diff.y * diff.z)
 		{
 			unsigned int slice = diff.x * diff.y, inSlice = flatGridIdx % slice;
-			uint3 mi = low + make_uint3(inSlice % diff.x, inSlice / diff.x, flatGridIdx / slice);
+			Vec3u mi = low + Vec3u(inSlice % diff.x, inSlice / diff.x, flatGridIdx / slice);
 			dataIdx = map.idx(mi);
 		}
 		return *this;
@@ -133,22 +133,22 @@ template<typename T> struct e_SpatialLinkedMap_volume_iterator
 	}
 };
 
-template<typename T> e_SpatialLinkedMap_volume_iterator<T> e_SpatialLinkedMap<T>::begin(const float3& p) const
+template<typename T> e_SpatialLinkedMap_volume_iterator<T> e_SpatialLinkedMap<T>::begin(const Vec3f& p) const
 {
 	return e_SpatialLinkedMap_volume_iterator<T>(*this, hashMap.Transform(p), hashMap.Transform(p), false);
 }
 
-template<typename T> e_SpatialLinkedMap_volume_iterator<T> e_SpatialLinkedMap<T>::end(const float3& p) const
+template<typename T> e_SpatialLinkedMap_volume_iterator<T> e_SpatialLinkedMap<T>::end(const Vec3f& p) const
 {
 	return e_SpatialLinkedMap_volume_iterator<T>(*this, hashMap.Transform(p), hashMap.Transform(p), true);
 }
 
-template<typename T> e_SpatialLinkedMap_volume_iterator<T> e_SpatialLinkedMap<T>::begin(const float3& min, const float3& max) const
+template<typename T> e_SpatialLinkedMap_volume_iterator<T> e_SpatialLinkedMap<T>::begin(const Vec3f& min, const Vec3f& max) const
 {
 	return e_SpatialLinkedMap_volume_iterator<T>(*this, hashMap.Transform(min), hashMap.Transform(max), false);
 }
 
-template<typename T> e_SpatialLinkedMap_volume_iterator<T> e_SpatialLinkedMap<T>::end(const float3& min, const float3& max) const
+template<typename T> e_SpatialLinkedMap_volume_iterator<T> e_SpatialLinkedMap<T>::end(const Vec3f& min, const Vec3f& max) const
 {
 	return e_SpatialLinkedMap_volume_iterator<T>(*this, hashMap.Transform(min), hashMap.Transform(max), true);
 }
@@ -177,12 +177,12 @@ public:
 		cudaMemset(deviceData, 0, sizeof(T) * gridSize * gridSize * gridSize);
 	}
 
-	CUDA_FUNC_IN const T& operator()(const float3& p) const
+	CUDA_FUNC_IN const T& operator()(const Vec3f& p) const
 	{
 		return deviceData[hashMap.Hash(p)].value;
 	}
 
-	CUDA_FUNC_IN T& operator()(const float3& p)
+	CUDA_FUNC_IN T& operator()(const Vec3f& p)
 	{
 		return deviceData[hashMap.Hash(p)];
 	}

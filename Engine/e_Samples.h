@@ -87,16 +87,16 @@ enum ETypeCombinations {
 struct PositionSamplingRecord
 {
 public:
-	float3 p;
-	float3 n;
+	Vec3f p;
+	Vec3f n;
 	float pdf;
 	EMeasure measure;
-	float2 uv;
+	Vec2f uv;
 	///This is so unbelievably ugly it hurts my brain....
 	const void* object;
 public:
 	CUDA_FUNC_IN PositionSamplingRecord() { }
-	CUDA_FUNC_IN PositionSamplingRecord(const float3& _p, const float3& _n, const void* _obj, EMeasure m = EArea )
+	CUDA_FUNC_IN PositionSamplingRecord(const Vec3f& _p, const Vec3f& _n, const void* _obj, EMeasure m = EArea)
 		: p(_p), n(_n), measure(m), object(_obj)
 	{
 
@@ -106,12 +106,12 @@ public:
 struct DirectionSamplingRecord
 {
 public:
-	float3 d;
+	Vec3f d;
 	float pdf;
 	EMeasure measure;
 public:
 	CUDA_FUNC_IN DirectionSamplingRecord() { }
-	CUDA_FUNC_IN DirectionSamplingRecord(const float3 &d, EMeasure m = ESolidAngle)
+	CUDA_FUNC_IN DirectionSamplingRecord(const Vec3f &d, EMeasure m = ESolidAngle)
 		: d(d), measure(m)
 	{
 	}
@@ -119,16 +119,16 @@ public:
 
 struct DirectSamplingRecord : public PositionSamplingRecord
 {
-	float3 ref;
-	float3 refN;
-	float3 d;
+	Vec3f ref;
+	Vec3f refN;
+	Vec3f d;
 	float dist;
 
 	CUDA_FUNC_IN DirectSamplingRecord()
 	{
 	}
 
-	CUDA_FUNC_IN DirectSamplingRecord(const float3& _p, const float3& _n)
+	CUDA_FUNC_IN DirectSamplingRecord(const Vec3f& _p, const Vec3f& _n)
 		: PositionSamplingRecord(_p, _n, 0), ref(_p), refN(_n)
 	{
 		refN = _n;
@@ -137,17 +137,17 @@ struct DirectSamplingRecord : public PositionSamplingRecord
 
 struct PhaseFunctionSamplingRecord
 {
-	float3 wi;
-	float3 wo;
+	Vec3f wi;
+	Vec3f wo;
 	ETransportMode mode;
 
-	CUDA_FUNC_IN PhaseFunctionSamplingRecord(const float3& _wo, ETransportMode m = ERadiance)
+	CUDA_FUNC_IN PhaseFunctionSamplingRecord(const Vec3f& _wo, ETransportMode m = ERadiance)
 	{
 		wo = _wo;
 		mode = m;
 	}
 
-	CUDA_FUNC_IN PhaseFunctionSamplingRecord(const float3& _wo, const float3& _wi, ETransportMode m = ERadiance)
+	CUDA_FUNC_IN PhaseFunctionSamplingRecord(const Vec3f& _wo, const Vec3f& _wi, ETransportMode m = ERadiance)
 	{
 		wo = _wo;
 		wi = _wi;
@@ -166,9 +166,9 @@ struct BSDFSamplingRecord
 	CudaRNG* rng;
 	DifferentialGeometry& dg;
 	/// Normalized incident direction in local coordinates
-	float3 wi;
+	Vec3f wi;
 	/// Normalized outgoing direction in local coordinates
-	float3 wo;
+	Vec3f wo;
 	/// Relative index of refraction in the sampled direction
 	float eta;
 	ETransportMode mode;
@@ -183,7 +183,7 @@ struct BSDFSamplingRecord
 		eta = 1.0f;
 		mode = ERadiance;
 	}
-	CUDA_FUNC_IN float3 getOutgoing()
+	CUDA_FUNC_IN Vec3f getOutgoing()
 	{
 		return normalize(dg.toWorld(wo));
 	}

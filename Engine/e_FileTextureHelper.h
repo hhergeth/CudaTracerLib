@@ -51,7 +51,7 @@ inline bool parseImage(const char* a_InputFile, imgData* data)
 						for (unsigned int x = 0; x < w; ++x)
 						{
 							//*tar++ = Float4ToCOLORREF(make_float4(pixel->red, pixel->green, pixel->blue, pixel->alpha));
-							*(RGBE*)tar++ = SpectrumConverter::Float3ToRGBE(make_float3(pixel->red, pixel->green, pixel->blue));
+							*(RGBE*)tar++ = SpectrumConverter::Float3ToRGBE(Vec3f(pixel->red, pixel->green, pixel->blue));
 							pixel = (FIRGBAF*)((long long)pixel + bpp / 8);
 						}
 						bits += pitch;

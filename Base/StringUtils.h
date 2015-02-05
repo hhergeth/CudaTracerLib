@@ -59,9 +59,9 @@ inline std::string getFileName(const std::string& s)
 
 inline std::string getDirName(const std::string& s)
 {
-	char drive[_MAX_DRIVE]; 
-	char dir[_MAX_DIR]; 
-	char fname[_MAX_FNAME]; 
+	char drive[_MAX_DRIVE];
+	char dir[_MAX_DIR];
+	char fname[_MAX_FNAME];
 	char ext[_MAX_EXT];
 	_splitpath_s(s.c_str(), drive, dir, fname, ext); 
 	return std::string(drive) + std::string(dir);

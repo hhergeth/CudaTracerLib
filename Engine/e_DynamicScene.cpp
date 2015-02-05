@@ -74,7 +74,7 @@ e_DynamicScene::e_DynamicScene(e_Sensor* C, e_SceneInitData a_Data, const char* 
 	m_pBVH = new e_SceneBVH(a_Data.m_uNumNodes);
 	if(a_Data.m_uSizeAnimStream > 1024)
 		CUDA_MALLOC(&m_pDeviceTmpFloats, sizeof(e_TmpVertex) * (1 << 16));
-	m_pTerrain = new e_Terrain(1, make_float2(0,0), make_float2(0,0));
+	m_pTerrain = new e_Terrain(1, Vec2f(0,0), Vec2f(0,0));
 	unsigned int a = this->getCudaBufferSize() / (1024 * 1024);
 	//if(a > 900 * 1024 * 1024)
 	//	throw 1;
@@ -330,7 +330,7 @@ e_KernelDynamicScene e_DynamicScene::getKernelSceneData(bool devicePointer) cons
 			vals[i] = m_pLightStream->operator()(i)->As()->IsRemoved ? 0.0f : 1.0f;
 			r.m_uEmitterIndices[i] = i;
 		}
-		r.m_emitterPDF = Distribution1D<MAX_LIGHT_COUNT>(vals, l);
+		r.m_emitterPDF = Distribution1D<max_LIGHT_COUNT>(vals, l);
 		r.m_uEmitterCount = l;
 	}
 	else
@@ -404,8 +404,8 @@ e_StreamReference(e_KernelLight) e_DynamicScene::createLight(e_StreamReference(e
 
 ShapeSet e_DynamicScene::CreateShape(e_StreamReference(e_Node) Node, const char* name, unsigned int* a_Mi)
 {
-	e_StreamReference(e_TriIntersectorData) n[MAX_SHAPE_LENGTH];
-	e_StreamReference(e_TriIntersectorData2) n2[MAX_SHAPE_LENGTH];
+	e_StreamReference(e_TriIntersectorData) n[max_SHAPE_LENGTH];
+	e_StreamReference(e_TriIntersectorData2) n2[max_SHAPE_LENGTH];
 
 	e_BufferReference<e_Mesh, e_KernelMesh> m = getMesh(Node);
 	unsigned int c = 0, mi = -1;
@@ -465,7 +465,7 @@ void e_DynamicScene::removeAllLights(e_StreamReference(e_Node) Node)
 	for(unsigned int i = 0; i < m->m_sMatInfo.getLength(); i++)
 		m_pMaterialBuffer->operator()(Node->m_uMaterialOffset + i)->NodeLightIndex = -1;
 	int i = 0;
-	while(i < MAX_AREALIGHT_NUM && Node->m_uLightIndices[i] != -1)
+	while (i < MAX_AREALIGHT_NUM && Node->m_uLightIndices[i] != -1)
 	{
 		//m_pLightStream->dealloc(m_pLightStream->operator()(Node->m_uLightIndices[i]));
 		m_pLightStream->operator()(Node->m_uLightIndices[i])->As()->IsRemoved = true;
@@ -511,7 +511,7 @@ e_StreamReference(e_VolumeRegion) e_DynamicScene::AddVolume(int w, int h, int d,
 {
 	e_StreamReference(e_VolumeRegion) r2 = m_pVolumes->malloc(1);
 	e_VolumeRegion r;
-	r.SetData(e_VolumeGrid(p, worldToVol, m_pAnimStream, make_uint3(w, h, d)));
+	r.SetData(e_VolumeGrid(p, worldToVol, m_pAnimStream, Vec3u(w, h, d)));
 	*r2.operator->() = r;
 	return r2;
 }
@@ -522,7 +522,7 @@ e_StreamReference(e_VolumeRegion) e_DynamicScene::AddVolume(int wA, int hA, int 
 {
 	e_StreamReference(e_VolumeRegion) r2 = m_pVolumes->malloc(1);
 	e_VolumeRegion r;
-	r.SetData(e_VolumeGrid(p, worldToVol, m_pAnimStream, make_uint3(wA, hA, dA), make_uint3(wS, hS, dS), make_uint3(wL, hL, dL)));
+	r.SetData(e_VolumeGrid(p, worldToVol, m_pAnimStream, Vec3u(wA, hA, dA), Vec3u(wS, hS, dS), Vec3u(wL, hL, dL)));
 	*r2.operator->() = r;
 	return r2;
 }

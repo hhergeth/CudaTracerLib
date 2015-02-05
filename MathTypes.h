@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Math/Vector.h"
 #include "Math/AABB.h"
 #include "Math/float4x4.h"
 #include "Math/Quaternion.h"

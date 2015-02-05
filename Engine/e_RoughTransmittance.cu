@@ -72,11 +72,11 @@ float e_RoughTransmittance::Evaluate(float cosTheta, float alpha, float eta) con
 	float warpedEta = powf((eta - m_etaMin)
 			/ (m_etaMax-m_etaMin), (float) 0.25f);
 
-	result = Spline::evalCubicInterp3D(make_float3(warpedCosTheta, warpedAlpha, warpedEta),
+	result = Spline::evalCubicInterp3D(Vec3f(warpedCosTheta, warpedAlpha, warpedEta),
 		data, make_uint3((unsigned int)m_thetaSamples, (unsigned int)m_alphaSamples, (unsigned int)m_etaSamples),
-		make_float3(0.0f), make_float3(1.0f));
+		Vec3f(0.0f), Vec3f(1.0f));
 
-	return MIN((float) 1.0f, MAX((float) 0.0f, result));
+	return min((float) 1.0f, max((float) 0.0f, result));
 }
 
 float e_RoughTransmittance::EvaluateDiffuse(float alpha, float eta) const
@@ -103,9 +103,9 @@ float e_RoughTransmittance::EvaluateDiffuse(float alpha, float eta) const
 	float warpedEta = powf((eta - m_etaMin)
 			/ (m_etaMax-m_etaMin), (float) 0.25f);
 
-	result = Spline::evalCubicInterp2D(make_float2(warpedAlpha, warpedEta), data,
-		make_uint2((unsigned int)m_alphaSamples, (unsigned int)m_etaSamples), make_float2(0.0f), make_float2(1.0f));
-	return MIN((float) 1.0f, MAX((float) 0.0f,  result));
+	result = Spline::evalCubicInterp2D(Vec2f(warpedAlpha, warpedEta), data,
+		make_uint2((unsigned int)m_alphaSamples, (unsigned int)m_etaSamples), Vec2f(0.0f), Vec2f(1.0f));
+	return min((float) 1.0f, max((float) 0.0f,  result));
 }
 
 static e_RoughTransmittance m_sObjectsHost[3];

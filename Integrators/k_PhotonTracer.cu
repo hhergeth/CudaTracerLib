@@ -58,7 +58,7 @@ CUDA_FUNC_IN void doWork(e_Image& g_Image, CudaRNG& rng)
 		throughput *= bsdfWeight;
 		if(depth > 5)
 		{
-			float q = MIN(throughput.max(), 0.95f);
+			float q = min(throughput.max(), 0.95f);
 			if(rng.randomFloat() >= q)
 				break;
 			throughput /= q;
@@ -105,7 +105,7 @@ void k_PhotonTracer::DoRender(e_Image* I)
 	pathKernel<<< 180, dim3(32, 4, 1)>>>(w * h, *I);
 }
 
-void k_PhotonTracer::Debug(e_Image* I, const int2& pixel)
+void k_PhotonTracer::Debug(e_Image* I, const Vec2i& pixel)
 {
 	CudaRNG rng = g_RNGData();
 	doWork(*I, rng);

@@ -28,11 +28,11 @@ struct TraceResult;
 struct e_TriIntersectorData
 {
 private:
-	float4 a, b, c;
+	Vec4f a, b, c;
 public:
-	CUDA_DEVICE CUDA_HOST void setData(const float3& v0, const float3& v1, const float3& v2);
+	CUDA_DEVICE CUDA_HOST void setData(const Vec3f& v0, const Vec3f& v1, const Vec3f& v2);
 
-	CUDA_DEVICE CUDA_HOST void getData(float3& v0, float3& v1, float3& v2) const;
+	CUDA_DEVICE CUDA_HOST void getData(Vec3f& v0, Vec3f& v1, Vec3f& v2) const;
 
 	CUDA_DEVICE CUDA_HOST bool Intersect(const Ray& r, TraceResult* a_Result) const;
 };

@@ -3,12 +3,12 @@
 float e_HGPhaseFunction::Evaluate(const PhaseFunctionSamplingRecord &pRec) const
 {
 	float temp = 1.0f + m_g*m_g + 2.0f * m_g * dot(pRec.wi, pRec.wo);
-	return (1.0f / (4.0f * PI)) * (1 - m_g*m_g) / (temp * sqrtf(temp));
+	return (1.0f / (4.0f * PI)) * (1 - m_g*m_g) / (temp * math::sqrt(temp));
 }
 
 float e_HGPhaseFunction::Sample(PhaseFunctionSamplingRecord &pRec, CudaRNG& sampler) const
 {
-	float2 sample = sampler.randomFloat2();
+	Vec2f sample = sampler.randomFloat2();
 
 	float cosTheta;
 	if (abs(m_g) < EPSILON)
@@ -21,11 +21,11 @@ float e_HGPhaseFunction::Sample(PhaseFunctionSamplingRecord &pRec, CudaRNG& samp
 		cosTheta = (1 + m_g * m_g - sqrTerm * sqrTerm) / (2 * m_g);
 	}
 
-	float sinTheta = sqrtf(1.0f-cosTheta*cosTheta), sinPhi, cosPhi;
+	float sinTheta = math::sqrt(1.0f-cosTheta*cosTheta), sinPhi, cosPhi;
 
 	sincos(2*PI*sample.y, &sinPhi, &cosPhi);
 
-	pRec.wo = Frame(-pRec.wi).toWorld(make_float3(
+	pRec.wo = Frame(-pRec.wi).toWorld(Vec3f(
 		sinTheta * cosPhi,
 		sinTheta * sinPhi,
 		cosTheta
@@ -48,7 +48,7 @@ float e_IsotropicPhaseFunction::Evaluate(const PhaseFunctionSamplingRecord &pRec
 
 float e_IsotropicPhaseFunction::Sample(PhaseFunctionSamplingRecord &pRec, CudaRNG& sampler) const
 {
-	float2 sample = sampler.randomFloat2();
+	Vec2f sample = sampler.randomFloat2();
 	pRec.wo = Warp::squareToUniformSphere(sample);
 	return 1.0f;
 }
@@ -60,7 +60,7 @@ float e_IsotropicPhaseFunction::Sample(PhaseFunctionSamplingRecord &pRec, float 
 	return 1.0f;
 }
 
-e_KajiyaKayPhaseFunction::e_KajiyaKayPhaseFunction(float ks, float kd, float e, float3 o)
+e_KajiyaKayPhaseFunction::e_KajiyaKayPhaseFunction(float ks, float kd, float e, Vec3f o)
 	: e_BasePhaseFunction(EPhaseFunctionType::pEAnisotropic), m_ks(ks), m_kd(kd), m_exponent(e), orientation(o)
 {
 	int nParts = 1000;
@@ -101,15 +101,15 @@ float e_KajiyaKayPhaseFunction::Evaluate(const PhaseFunctionSamplingRecord &pRec
 		return m_kd / (4*PI);
 
 	Frame frame(normalize(orientation));
-	float3 reflectedLocal = frame.toLocal(pRec.wo);
+	Vec3f reflectedLocal = frame.toLocal(pRec.wo);
 
 	reflectedLocal.z = -dot(pRec.wi, frame.n);
-	float a = sqrtf((1-reflectedLocal.z*reflectedLocal.z) / (reflectedLocal.x*reflectedLocal.x + reflectedLocal.y*reflectedLocal.y));
+	float a = math::sqrt((1-reflectedLocal.z*reflectedLocal.z) / (reflectedLocal.x*reflectedLocal.x + reflectedLocal.y*reflectedLocal.y));
 	reflectedLocal.y *= a;
 	reflectedLocal.x *= a;
-	float3 R = frame.toWorld(reflectedLocal);
+	Vec3f R = frame.toWorld(reflectedLocal);
 
-	return powf(MAX(0.0f, dot(R, pRec.wo)), m_exponent) * m_normalization * m_ks + m_kd / (4*PI);
+	return powf(max(0.0f, dot(R, pRec.wo)), m_exponent) * m_normalization * m_ks + m_kd / (4*PI);
 }
 
 float e_KajiyaKayPhaseFunction::Sample(PhaseFunctionSamplingRecord &pRec, CudaRNG& sampler) const
@@ -133,18 +133,18 @@ float e_RayleighPhaseFunction::Evaluate(const PhaseFunctionSamplingRecord &pRec)
 
 float e_RayleighPhaseFunction::Sample(PhaseFunctionSamplingRecord &pRec, CudaRNG& sampler) const
 {
-	float2 sample(sampler.randomFloat2());
+	Vec2f sample(sampler.randomFloat2());
 
 	float z = 2 * (2*sample.x - 1),
-			tmp = sqrtf(z*z+1),
+			tmp = math::sqrt(z*z+1),
 			A = powf(z+tmp, (float) (1.0f/3.0f)),
 			B = powf(z-tmp, (float) (1.0f/3.0f)),
 			cosTheta = A + B,
-			sinTheta = sqrtf(1.0f-cosTheta*cosTheta),
+			sinTheta = math::sqrt(1.0f-cosTheta*cosTheta),
 			phi = 2*PI*sample.y, cosPhi, sinPhi;
 	sincos(phi, &sinPhi, &cosPhi);
 
-	float3 dir = make_float3(
+	Vec3f dir = Vec3f(
 		sinTheta * cosPhi,
 		sinTheta * sinPhi,
 		cosTheta);

@@ -53,9 +53,6 @@
     <ClInclude Include="Math\Compression.h">
       <Filter>Math</Filter>
     </ClInclude>
-    <ClInclude Include="Math\cutil_math.h">
-      <Filter>Math</Filter>
-    </ClInclude>
     <ClInclude Include="Math\float4x4.h">
       <Filter>Math</Filter>
     </ClInclude>
@@ -128,16 +125,10 @@
     <ClInclude Include="Engine\e_Buffer.h">
       <Filter>Engine</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\e_CameraController.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
     <ClInclude Include="Engine\e_Core.h">
       <Filter>Engine</Filter>
     </ClInclude>
     <ClInclude Include="Engine\e_DynamicScene.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_EnvironmentMap.h">
       <Filter>Engine</Filter>
     </ClInclude>
     <ClInclude Include="Engine\e_ErrorHandler.h">
@@ -267,6 +258,12 @@
     <ClInclude Include="Kernel\k_BSDFVisualizer.h">
       <Filter>Kernel</Filter>
     </ClInclude>
+    <ClInclude Include="Math\Vector.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\MathFunc.h">
+      <Filter>Math</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Base\BVHBuilder.cpp">
@@ -342,6 +339,7 @@
     <ClCompile Include="Engine\e_Node.cpp">
       <Filter>Engine</Filter>
     </ClCompile>
+    <ClCompile Include="Defines.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="Base\CudaRandom.cu">
@@ -454,6 +452,9 @@
     </CudaCompile>
     <CudaCompile Include="Kernel\k_BSDFVisualizer.cu">
       <Filter>Kernel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Math\float4x4.cu">
+      <Filter>Math</Filter>
     </CudaCompile>
   </ItemGroup>
 </Project>

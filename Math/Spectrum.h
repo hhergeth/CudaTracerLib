@@ -1,13 +1,13 @@
 #pragma once
 
-#include "cutil_math.h"
+#include "Vector.h"
 
 #define SPECTRUM_SAMPLES 3
 
-#define SPECTRUM_MIN_WAVELENGTH   360
-#define SPECTRUM_MAX_WAVELENGTH   830
+#define SPECTRUM_min_WAVELENGTH   360
+#define SPECTRUM_max_WAVELENGTH   830
 #define SPECTRUM_RANGE                \
-	(SPECTRUM_MAX_WAVELENGTH-SPECTRUM_MIN_WAVELENGTH)
+	(SPECTRUM_max_WAVELENGTH-SPECTRUM_min_WAVELENGTH)
 
 template <typename T, int N> struct TSpectrum
 {
@@ -183,7 +183,7 @@ public:
 	CUDA_FUNC_IN TSpectrum sqrt() const {
 		TSpectrum value;
 		for (int i=0; i<N; i++)
-			value.s[i] = sqrtf(s[i]);
+			value.s[i] = math::sqrt(s[i]);
 		return value;
 	}
 
@@ -191,7 +191,7 @@ public:
 	CUDA_FUNC_IN TSpectrum abs() const {
 		TSpectrum value;
 		for(int i = 0; i < N; i++)
-			value.s[i] = ::abs(s[i]);
+			value.s[i] = math::abs(s[i]);
 		return value;
 	}
 
@@ -199,7 +199,7 @@ public:
 	CUDA_FUNC_IN TSpectrum saturate() const {
 		TSpectrum value;
 		for(int i = 0; i < N; i++)
-			value.s[i] = clamp01(s[i]);
+			value.s[i] = math::clamp01(s[i]);
 		return value;
 	}
 
@@ -215,7 +215,7 @@ public:
 	CUDA_FUNC_IN TSpectrum exp() const {
 		TSpectrum value;
 		for (int i=0; i<N; i++)
-			value.s[i] = expf(s[i]);
+			value.s[i] = math::exp(s[i]);
 		return value;
 	}
 
@@ -223,21 +223,21 @@ public:
 	CUDA_FUNC_IN TSpectrum pow(Scalar f) const {
 		TSpectrum value;
 		for (int i=0; i<N; i++)
-			value.s[i] = powf(s[i], f);
+			value.s[i] = math::pow(s[i], f);
 		return value;
 	}
 
-	/// Clamp negative values
+	/// math::clamp negative values
 	CUDA_FUNC_IN void clampNegative() {
 		for (int i=0; i<N; i++)
-			s[i] = MAX((Scalar) 0.0f, s[i]);
+			s[i] = ::max((Scalar) 0.0f, s[i]);
 	}
 
 	/// Return the highest-valued spectral sample
 	CUDA_FUNC_IN Scalar max() const {
 		Scalar result = s[0];
 		for (int i=1; i<N; i++)
-			result = MAX(result, s[i]);
+			result = ::max(result, s[i]);
 		return result;
 	}
 
@@ -245,7 +245,7 @@ public:
 	CUDA_FUNC_IN Scalar min() const {
 		Scalar result = s[0];
 		for (int i=1; i<N; i++)
-			result = MIN(result, s[i]);
+			result = ::min(result, s[i]);
 		return result;
 	}
 
@@ -298,19 +298,19 @@ public:
 	}
 };
 
-template<typename T, int N> CUDA_FUNC_IN TSpectrum<T, N> fmaxf(const TSpectrum<T, N>& a, const TSpectrum<T, N>& b)
+template<typename T, int N> CUDA_FUNC_IN TSpectrum<T, N> max(const TSpectrum<T, N>& a, const TSpectrum<T, N>& b)
 {
 	TSpectrum<T, N> r;
 	for(int i = 0; i < N; i++)
-		r[i] = MAX(a[i], b[i]);
+		r[i] = max(a[i], b[i]);
 	return r;
 }
 
-template<typename T, int N> CUDA_FUNC_IN TSpectrum<T, N> fminf(const TSpectrum<T, N>& a, const TSpectrum<T, N>& b)
+template<typename T, int N> CUDA_FUNC_IN TSpectrum<T, N> min(const TSpectrum<T, N>& a, const TSpectrum<T, N>& b)
 {
 	TSpectrum<T, N> r;
 	for(int i = 0; i < N; i++)
-		r[i] = MIN(a[i], b[i]);
+		r[i] = min(a[i], b[i]);
 	return r;
 }
 
@@ -331,16 +331,6 @@ public:
 	CUDA_FUNC_IN Spectrum(float r, float g, float b)
 	{
 		fromLinearRGB(r, g, b);
-	}
-
-	CUDA_FUNC_IN Spectrum(const float3& f)
-	{
-		fromLinearRGB(f.x, f.y, f.z);
-	}
-
-	CUDA_FUNC_IN Spectrum(const float4& f)
-	{
-		fromLinearRGB(f.x, f.y, f.z);
 	}
 
 	/// Construct from a TSpectrum instance
@@ -384,7 +374,7 @@ public:
 #if SPECTRUM_SAMPLES == 3
 		return 0.0f;
 #else
-		int index = Floor2Int((lambda - SPECTRUM_MIN_WAVELENGTH) *
+		int index = Floor2Int((lambda - SPECTRUM_min_WAVELENGTH) *
 			((float) SPECTRUM_SAMPLES / (float) SPECTRUM_RANGE));
 
 		if (index < 0 || index >= SPECTRUM_SAMPLES)
@@ -466,39 +456,39 @@ public:
 class SpectrumConverter
 {
 public:
-	static CUDA_FUNC_IN float y(const float3& v)
+	static CUDA_FUNC_IN float y(const Vec3f& v)
 	{
 		const float YWeight[3] = { 0.212671f, 0.715160f, 0.072169f };
 		return YWeight[0] * v.x + YWeight[1] * v.y + YWeight[2] * v.z;
 	}
  
-#define toInt(x) (int((float)pow(clamp01(x),1.0f/1.2f)*255.0f+0.5f))
+#define toInt(x) (int((float)math::pow(math::clamp01(x),1.0f/1.2f)*255.0f+0.5f))
 //#define toInt(x) (unsigned char(x * 255.0f))
 
-	static CUDA_FUNC_IN RGBCOL Float4ToCOLORREF(const float4& c)
+	static CUDA_FUNC_IN RGBCOL Float4ToCOLORREF(const Vec4f& c)
 	{
 		return make_uchar4(toInt(c.x), toInt(c.y), toInt(c.z), toInt(c.w));
 	}
 
-	static CUDA_FUNC_IN float4 COLORREFToFloat4(RGBCOL c)
+	static CUDA_FUNC_IN Vec4f COLORREFToFloat4(RGBCOL c)
 	{
-		return make_float4((float)c.x / 255.0f, (float)c.y / 255.0f, (float)c.z / 255.0f, (float)c.w / 255.0f);
+		return Vec4f((float)c.x / 255.0f, (float)c.y / 255.0f, (float)c.z / 255.0f, (float)c.w / 255.0f);
 	}
 
-	static CUDA_FUNC_IN RGBCOL Float3ToCOLORREF(const float3& c)
+	static CUDA_FUNC_IN RGBCOL Float3ToCOLORREF(const Vec3f& c)
 	{
 		return make_uchar4(toInt(c.x), toInt(c.y), toInt(c.z), 255);
 	}
 
-	static CUDA_FUNC_IN float3 COLORREFToFloat3(RGBCOL c)
+	static CUDA_FUNC_IN Vec3f COLORREFToFloat3(RGBCOL c)
 	{
-		return make_float3((float)c.x / 255.0f, (float)c.y / 255.0f, (float)c.z / 255.0f);
+		return Vec3f((float)c.x / 255.0f, (float)c.y / 255.0f, (float)c.z / 255.0f);
 	}
 #undef toInt
 
-	static CUDA_FUNC_IN RGBE Float3ToRGBE(const float3& c)
+	static CUDA_FUNC_IN RGBE Float3ToRGBE(const Vec3f& c)
 	{
-		float v = fmaxf(c);
+		float v = c.max();
 		if(v < 1e-32)
 			return make_uchar4(0,0,0,0);
 		else
@@ -509,45 +499,45 @@ public:
 		}
 	}
 
-	static CUDA_FUNC_IN float3 RGBEToFloat3(RGBE a)
+	static CUDA_FUNC_IN Vec3f RGBEToFloat3(RGBE a)
 	{
 		float f = ldexp(1.0f, a.w - (int)(128+8));
-		return make_float3((float)a.x * f, (float)a.y * f, (float)a.z * f);
+		return Vec3f((float)a.x * f, (float)a.y * f, (float)a.z * f);
 	}
 
 	///this is not luminence! This is some strange msdn stuff, no idea
-	static CUDA_FUNC_IN float Luma(const float3& c)
+	static CUDA_FUNC_IN float Luma(const Vec3f& c)
 	{
 		return 0.299f * c.x + 0.587f * c.y + 0.114f * c.z;
 	}
 
-	static CUDA_FUNC_IN float3 RGBToXYZ(const float3& c)
+	static CUDA_FUNC_IN Vec3f RGBToXYZ(const Vec3f& c)
 	{
-		float3 r;
-		r.x = dot(make_float3(0.5767309f,  0.1855540f,  0.1881852f), c);
-		r.y = dot(make_float3(0.2973769f,  0.6273491f,  0.0752741f), c);
-		r.z = dot(make_float3(0.0270343f,  0.0706872f,  0.9911085f), c);
+		Vec3f r;
+		r.x = dot(Vec3f(0.5767309f,  0.1855540f,  0.1881852f), c);
+		r.y = dot(Vec3f(0.2973769f,  0.6273491f,  0.0752741f), c);
+		r.z = dot(Vec3f(0.0270343f,  0.0706872f,  0.9911085f), c);
 		return r;
 	}
 
-	static CUDA_FUNC_IN float3 XYZToRGB(const float3& c)
+	static CUDA_FUNC_IN Vec3f XYZToRGB(const Vec3f& c)
 	{
-		float3 r;
-		r.x = dot(make_float3(2.0413690, -0.5649464, -0.3446944), c);
-		r.y = dot(make_float3(-0.9692660,  1.8760108,  0.0415560), c);
-		r.z = dot(make_float3(0.0134474, -0.1183897,  1.0154096), c);
+		Vec3f r;
+		r.x = dot(Vec3f(2.0413690, -0.5649464, -0.3446944), c);
+		r.y = dot(Vec3f(-0.9692660,  1.8760108,  0.0415560), c);
+		r.z = dot(Vec3f(0.0134474, -0.1183897,  1.0154096), c);
 		return r;
 	}
 
-	static CUDA_FUNC_IN float3 XYZToYxy(const float3& c)
+	static CUDA_FUNC_IN Vec3f XYZToYxy(const Vec3f& c)
 	{
 		float s = c.x + c.y + c.z;
-		return make_float3(c.y, c.x / s, c.y / s);
+		return Vec3f(c.y, c.x / s, c.y / s);
 	}
 
-	static CUDA_FUNC_IN float3 YxyToXYZ(const float3& c)
+	static CUDA_FUNC_IN Vec3f YxyToXYZ(const Vec3f& c)
 	{
-		float3 r;
+		Vec3f r;
 		r.x = c.x * c.y / c.z;
 		r.y = c.x;
 		r.z = c.x * (1.0f - c.y - c.z) / c.z;

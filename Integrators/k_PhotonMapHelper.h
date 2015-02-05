@@ -11,7 +11,7 @@ CUDA_FUNC_IN float k(float t)
 {
 	//float t2 = t * t;
 	//return 1.0f + t2 * t * (-6.0f * t2 + 15.0f * t - 10.0f);
-	return clamp01(1.0f + t * t * t * (-6.0f * t * t + 15.0f * t - 10.0f));
+	return math::clamp01(1.0f + t * t * t * (-6.0f * t * t + 15.0f * t - 10.0f));
 }
 
 CUDA_FUNC_IN float k_tr(float r, float t)
@@ -21,7 +21,7 @@ CUDA_FUNC_IN float k_tr(float r, float t)
 	return k(t / r) / (PI * r * r);
 }
 
-CUDA_FUNC_IN float k_tr(float r, const float3& t)
+CUDA_FUNC_IN float k_tr(float r, const Vec3f& t)
 {
 	return k_tr(r, length(t));
 }
@@ -37,7 +37,7 @@ enum PhotonType
 struct k_pPpmPhoton
 {
 private:
-	float3 Pos;
+	Vec3f Pos;
 	//Spectrum L;
 	//float3 Wi;
 	//float3 Nor;
@@ -48,7 +48,7 @@ private:
 public:
 	float dVC, dVCM, dVM;
 	CUDA_FUNC_IN k_pPpmPhoton(){}
-	CUDA_FUNC_IN k_pPpmPhoton(const float3& p, const Spectrum& l, const float3& wi, const float3& n, PhotonType type)
+	CUDA_FUNC_IN k_pPpmPhoton(const Vec3f& p, const Spectrum& l, const Vec3f& wi, const Vec3f& n, PhotonType type)
 	{
 		Pos = p;
 		Nor = NormalizedFloat3ToUchar2(n);
@@ -72,11 +72,11 @@ public:
 	{
 		typeNextField = (typeNextField & 0xff000000) | (next & 0xffffff);
 	}
-	CUDA_FUNC_IN float3 getNormal()
+	CUDA_FUNC_IN Vec3f getNormal()
 	{
 		return Uchar2ToNormalizedFloat3(Nor);
 	}
-	CUDA_FUNC_IN float3 getWi()
+	CUDA_FUNC_IN Vec3f getWi()
 	{
 		return Uchar2ToNormalizedFloat3(Wi);
 	}
@@ -86,7 +86,7 @@ public:
 		s.fromRGBE(L);
 		return s;
 	}
-	CUDA_FUNC_IN float3 getPos()
+	CUDA_FUNC_IN Vec3f getPos()
 	{/*
 	 uint4 r;
 	 r.x = Pos;
@@ -291,7 +291,7 @@ template<bool HAS_MULTIPLE_MAPS> struct k_PhotonMapCollection
 typedef k_PhotonMap<k_HashGrid_Reg> k_PhotonMapReg;
 
 #ifdef __CUDACC__
-CUDA_ONLY_FUNC bool storePhoton(const float3& p, const Spectrum& phi, const float3& wi, const float3& n, PhotonType type, k_PhotonMapCollection<true>& g_Map)
+CUDA_ONLY_FUNC bool storePhoton(const Vec3f& p, const Spectrum& phi, const Vec3f& wi, const Vec3f& n, PhotonType type, k_PhotonMapCollection<true>& g_Map)
 {
 	unsigned int p_idx = atomicInc(&g_Map.m_uPhotonNumStored, 0xffffffff);
 	if (p_idx < g_Map.m_uPhotonBufferLength)
@@ -311,7 +311,7 @@ CUDA_ONLY_FUNC bool storePhoton(const float3& p, const Spectrum& phi, const floa
 	else return false;
 }
 
-CUDA_ONLY_FUNC bool storePhoton(const float3& p, const Spectrum& phi, const float3& wi, const float3& n, PhotonType type, k_PhotonMapCollection<false>& g_Map, k_pPpmPhoton** resPhoton = 0)
+CUDA_ONLY_FUNC bool storePhoton(const Vec3f& p, const Spectrum& phi, const Vec3f& wi, const Vec3f& n, PhotonType type, k_PhotonMapCollection<false>& g_Map, k_pPpmPhoton** resPhoton = 0)
 {
 	unsigned int p_idx = atomicInc(&g_Map.m_uPhotonNumStored, 0xffffffff);
 	if (p_idx < g_Map.m_uPhotonBufferLength)

@@ -63,7 +63,7 @@ struct e_KernelGaussianFilter : public e_KernelFilterBase
 	}
 
 	CUDA_FUNC_IN float Gaussian(float d, float expv) const {
-        return MAX(0.f, float(expf(-alpha * d * d) - expv));
+        return max(0.f, float(expf(-alpha * d * d) - expv));
     }
 
 	CUDA_FUNC_IN float Evaluate(float x, float y) const
@@ -147,13 +147,13 @@ struct e_KernelTriangleFilter : public e_KernelFilterBase
 
 	CUDA_FUNC_IN float Evaluate(float x, float y) const
 	{
-		return MAX(0.f, xWidth - fabsf(x)) * MAX(0.f, yWidth - fabsf(y));
+		return max(0.f, xWidth - fabsf(x)) * max(0.f, yWidth - fabsf(y));
 	}
 
 	TYPE_FUNC(e_KernelTriangleFilter)
 };
 
-#define FLT_SIZE RND_16(DMAX5(sizeof(e_KernelBoxFilter), sizeof(e_KernelGaussianFilter), sizeof(e_KernelMitchellFilter), sizeof(e_KernelLanczosSincFilter), sizeof(e_KernelTriangleFilter)))
+#define FLT_SIZE RND_16(Dmax5(sizeof(e_KernelBoxFilter), sizeof(e_KernelGaussianFilter), sizeof(e_KernelMitchellFilter), sizeof(e_KernelLanczosSincFilter), sizeof(e_KernelTriangleFilter)))
 
 struct CUDA_ALIGN(16) e_KernelFilter : public e_AggregateBaseType<e_KernelFilterBase, FLT_SIZE>
 {

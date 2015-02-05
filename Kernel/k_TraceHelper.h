@@ -28,7 +28,7 @@ extern CUDA_ALIGN(16) CudaRNGBuffer g_RNGDataHost;
 
 //__device__ __host__ bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResult* a_Result, const e_Node* N, int ln);
 
-__device__ __host__ bool k_TraceRay(const float3& dir, const float3& ori, TraceResult* a_Result);
+__device__ __host__ bool k_TraceRay(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result);
 
 CUDA_FUNC_IN TraceResult k_TraceRay(const Ray& r)
 {
@@ -45,8 +45,8 @@ void k_setNumRaysTraced(unsigned int i);
 
 struct traversalRay
 {
-	float4 a;
-	float4 b;
+	Vec4f a;
+	Vec4f b;
 };
 
 struct CUDA_ALIGN(16) traversalResult

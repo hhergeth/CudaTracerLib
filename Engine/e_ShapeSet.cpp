@@ -21,10 +21,10 @@ void ShapeSet::triData::Recalculate(const float4x4& mat)
 
 ShapeSet::ShapeSet(e_StreamReference(e_TriIntersectorData)* indices, unsigned int indexCount, float4x4& mat)
 {
-	if(indexCount > MAX_SHAPE_LENGTH)
+	if(indexCount > max_SHAPE_LENGTH)
 		throw 1;
 	count = indexCount;
-	float areas[MAX_SHAPE_LENGTH];
+	float areas[max_SHAPE_LENGTH];
 	sumArea = 0;
 	for(int i = 0; i < count; i++)
 	{
@@ -32,13 +32,13 @@ ShapeSet::ShapeSet(e_StreamReference(e_TriIntersectorData)* indices, unsigned in
 		areas[i] = tris[i].area;
 		sumArea += tris[i].area;
 	}
-	areaDistribution = Distribution1D<MAX_SHAPE_LENGTH>(areas, count);
+	areaDistribution = Distribution1D<max_SHAPE_LENGTH>(areas, count);
 	areaDistribution.Normalize();
 }
 
 void ShapeSet::Recalculate(const float4x4& mat)
 {
-	float areas[MAX_SHAPE_LENGTH];
+	float areas[max_SHAPE_LENGTH];
 	sumArea = 0;
 	for(int i = 0; i < count; i++)
 	{
@@ -46,6 +46,6 @@ void ShapeSet::Recalculate(const float4x4& mat)
 		areas[i] = tris[i].area;
 		sumArea += tris[i].area;
 	}
-	areaDistribution = Distribution1D<MAX_SHAPE_LENGTH>(areas, count);
+	areaDistribution = Distribution1D<max_SHAPE_LENGTH>(areas, count);
 	areaDistribution.Normalize();
 }

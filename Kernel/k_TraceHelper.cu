@@ -49,7 +49,7 @@ CUDA_FUNC_IN void loadInvModl(int i, float4x4* o)
 #endif
 }
 
-CUDA_FUNC_IN bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResult* a_Result, const e_Node* N)
+CUDA_FUNC_IN bool k_TraceRayNode(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result, const e_Node* N)
 {
 	const bool USE_ALPHA = true;
 	unsigned int mIndex = N->m_uMeshIndex;
@@ -86,13 +86,13 @@ CUDA_FUNC_IN bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResu
 			const float4 nz   = tex1Dfetch(t_nodesA, mesh.m_uBVHNodeOffset + nodeAddr + 2); // (c0.lo.z, c0.hi.z, c1.lo.z, c1.hi.z)
 				  float4 tmp  = tex1Dfetch(t_nodesA, mesh.m_uBVHNodeOffset + nodeAddr + 3); // child_index0, child_index1
 #else
-			float4* dat = (float4*)g_SceneData.m_sBVHNodeData.Data;
-			const float4 n0xy = dat[mesh.m_uBVHNodeOffset + nodeAddr + 0];
-			const float4 n1xy = dat[mesh.m_uBVHNodeOffset + nodeAddr + 1];
-			const float4 nz   = dat[mesh.m_uBVHNodeOffset + nodeAddr + 2];
-				  float4 tmp  = dat[mesh.m_uBVHNodeOffset + nodeAddr + 3];
+			Vec4f* dat = (Vec4f*)g_SceneData.m_sBVHNodeData.Data;
+			const Vec4f n0xy = dat[mesh.m_uBVHNodeOffset + nodeAddr + 0];
+			const Vec4f n1xy = dat[mesh.m_uBVHNodeOffset + nodeAddr + 1];
+			const Vec4f nz   = dat[mesh.m_uBVHNodeOffset + nodeAddr + 2];
+				  Vec4f tmp  = dat[mesh.m_uBVHNodeOffset + nodeAddr + 3];
 #endif
-			int2  cnodes= *(int2*)&tmp;
+				  Vec2i  cnodes = *(Vec2i*)&tmp;
 			const float c0lox = n0xy.x * idirx - oodx;
 			const float c0hix = n0xy.y * idirx - oodx;
 			const float c0loy = n0xy.z * idiry - oody;
@@ -101,14 +101,14 @@ CUDA_FUNC_IN bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResu
 			const float c0hiz = nz.y   * idirz - oodz;
 			const float c1loz = nz.z   * idirz - oodz;
 			const float c1hiz = nz.w   * idirz - oodz;
-			const float c0min = spanBeginKepler(c0lox, c0hix, c0loy, c0hiy, c0loz, c0hiz, 0);
-			const float c0max = spanEndKepler  (c0lox, c0hix, c0loy, c0hiy, c0loz, c0hiz, a_Result->m_fDist);
+			const float c0min = math::spanBeginKepler(c0lox, c0hix, c0loy, c0hiy, c0loz, c0hiz, 0);
+			const float c0max = math::spanEndKepler  (c0lox, c0hix, c0loy, c0hiy, c0loz, c0hiz, a_Result->m_fDist);
 			const float c1lox = n1xy.x * idirx - oodx;
 			const float c1hix = n1xy.y * idirx - oodx;
 			const float c1loy = n1xy.z * idiry - oody;
 			const float c1hiy = n1xy.w * idiry - oody;
-			const float c1min = spanBeginKepler(c1lox, c1hix, c1loy, c1hiy, c1loz, c1hiz, 0);
-			const float c1max = spanEndKepler  (c1lox, c1hix, c1loy, c1hiy, c1loz, c1hiz, a_Result->m_fDist);
+			const float c1min = math::spanBeginKepler(c1lox, c1hix, c1loy, c1hiy, c1loz, c1hiz, 0);
+			const float c1max = math::spanEndKepler  (c1lox, c1hix, c1loy, c1hiy, c1loz, c1hiz, a_Result->m_fDist);
 			bool swp = (c1min < c0min);
 			bool traverseChild0 = (c0max >= c0min);
 			bool traverseChild1 = (c1max >= c1min);
@@ -163,10 +163,10 @@ CUDA_FUNC_IN bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResu
 					const float4 v22 = tex1Dfetch(t_tris, mesh.m_uBVHTriangleOffset + triAddr * 3 + 2);
 					unsigned int index = tex1Dfetch(t_triIndices, mesh.m_uBVHIndicesOffset + triAddr);
 #else
-					float4* dat = (float4*)g_SceneData.m_sBVHIntData.Data;
-					const float4 v00 = dat[mesh.m_uBVHTriangleOffset + triAddr * 3 + 0];
-					const float4 v11 = dat[mesh.m_uBVHTriangleOffset + triAddr * 3 + 1];
-					const float4 v22 = dat[mesh.m_uBVHTriangleOffset + triAddr * 3 + 2];
+					Vec4f* dat = (Vec4f*)g_SceneData.m_sBVHIntData.Data;
+					const Vec4f v00 = dat[mesh.m_uBVHTriangleOffset + triAddr * 3 + 0];
+					const Vec4f v11 = dat[mesh.m_uBVHTriangleOffset + triAddr * 3 + 1];
+					const Vec4f v22 = dat[mesh.m_uBVHTriangleOffset + triAddr * 3 + 2];
 					unsigned int index = g_SceneData.m_sBVHIndexData.Data[mesh.m_uBVHIndicesOffset + triAddr].index;
 #endif
 
@@ -194,7 +194,7 @@ CUDA_FUNC_IN bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResu
 									DifferentialGeometry dg;
 									dg.bary = make_float2(u, v);
 									for (int i = 0; i < NUM_UV_SETS; i++)
-										dg.uv[i] = tri->lerpUV(i, dg.bary);
+										dg.uv[i] = tri->math::lerpUV(i, dg.bary);
 									float a = mat->SampleAlphaMap(dg);
 									q = a >= mat->m_fAlphaThreshold;
 
@@ -203,8 +203,7 @@ CUDA_FUNC_IN bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResu
 								{
 									a_Result->m_pNode = N;
 									a_Result->m_pTri = tri;
-									a_Result->m_pInt = g_SceneData.m_sBVHIntData.Data + mesh.m_uBVHTriangleOffset / 3 + triAddr;
-									a_Result->m_fUV = make_float2(u, v);
+									a_Result->m_fUV = Vec2f(u, v);
 									a_Result->m_fDist = t;
 									found = true;
 								}
@@ -226,7 +225,7 @@ CUDA_FUNC_IN bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResu
 	return found;
 }
 
-bool k_TraceRay(const float3& dir, const float3& ori, TraceResult* a_Result)
+bool k_TraceRay(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result)
 {
 	Platform::Increment(&g_RayTracedCounter);
 	if(!g_SceneData.m_sNodeData.UsedCount)
@@ -237,7 +236,7 @@ bool k_TraceRay(const float3& dir, const float3& ori, TraceResult* a_Result)
 	//transform a_Result->m_fDist to local system
 	float4x4 modl;
 	loadInvModl(node, &modl);
-	float3 d = modl.TransformNormal(dir), o = modl.TransformNormal(ori) + modl.Translation();
+	Vec3f d = modl.TransformNormal(dir), o = modl.TransformNormal(ori) + modl.Translation();
 	a_Result->m_fDist /= length(d);
 	k_TraceRayNode(d, o, a_Result, N, lastNode == N ? lastIndex : -1);
 	a_Result->m_fDist *= length(d);
@@ -246,10 +245,10 @@ bool k_TraceRay(const float3& dir, const float3& ori, TraceResult* a_Result)
 	int at = 1;
 	traversalStackOuter[0] = g_SceneData.m_sSceneBVH.m_sStartNode;
 	const float ooeps = exp2f(-80.0f);
-	float3 O, I;
-	I.x = 1.0f / (fabsf(dir.x) > ooeps ? dir.x : copysignf(ooeps, dir.x));
-	I.y = 1.0f / (fabsf(dir.y) > ooeps ? dir.y : copysignf(ooeps, dir.y));
-	I.z = 1.0f / (fabsf(dir.z) > ooeps ? dir.z : copysignf(ooeps, dir.z));
+	Vec3f O, I;
+	I.x = 1.0f / (abs(dir.x) > ooeps ? dir.x : copysignf(ooeps, dir.x));
+	I.y = 1.0f / (abs(dir.y) > ooeps ? dir.y : copysignf(ooeps, dir.y));
+	I.z = 1.0f / (abs(dir.z) > ooeps ? dir.z : copysignf(ooeps, dir.z));
 	O = I * ori;
 	while(at)
 	{
@@ -262,12 +261,12 @@ bool k_TraceRay(const float3& dir, const float3& ori, TraceResult* a_Result)
 			const float4 nz   = tex1Dfetch(t_SceneNodes, nodeAddrOuter + 2); // (c0.lo.z, c0.hi.z, c1.lo.z, c1.hi.z)
 				  float4 tmp  = tex1Dfetch(t_SceneNodes, nodeAddrOuter + 3); // child_index0, child_index1
 #else
-			const float4 n0xy = g_SceneData.m_sSceneBVH.m_pNodes[nodeAddrOuter / 4].a;
-			const float4 n1xy = g_SceneData.m_sSceneBVH.m_pNodes[nodeAddrOuter / 4].b;
-			const float4 nz   = g_SceneData.m_sSceneBVH.m_pNodes[nodeAddrOuter / 4].c;
-				  float4 tmp  = g_SceneData.m_sSceneBVH.m_pNodes[nodeAddrOuter / 4].d;
+			const Vec4f n0xy = g_SceneData.m_sSceneBVH.m_pNodes[nodeAddrOuter / 4].a;
+			const Vec4f n1xy = g_SceneData.m_sSceneBVH.m_pNodes[nodeAddrOuter / 4].b;
+			const Vec4f nz   = g_SceneData.m_sSceneBVH.m_pNodes[nodeAddrOuter / 4].c;
+				  Vec4f tmp  = g_SceneData.m_sSceneBVH.m_pNodes[nodeAddrOuter / 4].d;
 #endif
-			int2  cnodesOuter = *(int2*)&tmp;
+			Vec2i  cnodesOuter = *(Vec2i*)&tmp;
 			const float c0lox = n0xy.x * I.x - O.x;
 			const float c0hix = n0xy.y * I.x - O.x;
 			const float c0loy = n0xy.z * I.y - O.y;
@@ -276,14 +275,14 @@ bool k_TraceRay(const float3& dir, const float3& ori, TraceResult* a_Result)
 			const float c0hiz = nz.y   * I.z - O.z;
 			const float c1loz = nz.z   * I.z - O.z;
 			const float c1hiz = nz.w   * I.z - O.z;
-			const float c0min = spanBeginKepler(c0lox, c0hix, c0loy, c0hiy, c0loz, c0hiz, 0);
-			const float c0max = spanEndKepler  (c0lox, c0hix, c0loy, c0hiy, c0loz, c0hiz, a_Result->m_fDist);
+			const float c0min = math::spanBeginKepler(c0lox, c0hix, c0loy, c0hiy, c0loz, c0hiz, 0);
+			const float c0max = math::spanEndKepler  (c0lox, c0hix, c0loy, c0hiy, c0loz, c0hiz, a_Result->m_fDist);
 			const float c1lox = n1xy.x * I.x - O.x;
 			const float c1hix = n1xy.y * I.x - O.x;
 			const float c1loy = n1xy.z * I.y - O.y;
 			const float c1hiy = n1xy.w * I.y - O.y;
-			const float c1min = spanBeginKepler(c1lox, c1hix, c1loy, c1hiy, c1loz, c1hiz, 0);
-			const float c1max = spanEndKepler  (c1lox, c1hix, c1loy, c1hiy, c1loz, c1hiz, a_Result->m_fDist);
+			const float c1min = math::spanBeginKepler(c1lox, c1hix, c1loy, c1hiy, c1loz, c1hiz, 0);
+			const float c1max = math::spanEndKepler  (c1lox, c1hix, c1loy, c1hiy, c1loz, c1hiz, a_Result->m_fDist);
 			bool swpOuter = (c1min < c0min);
 			bool traverseChild0Outer = (c0max >= c0min);
 			bool traverseChild1Outer = (c1max >= c1min);
@@ -313,7 +312,7 @@ bool k_TraceRay(const float3& dir, const float3& ori, TraceResult* a_Result)
 			float4x4 modl, modl2;
 			loadInvModl(node, &modl);
 			loadModl(node, &modl2);
-			float3 d = modl.TransformDirection(dir), o = modl.TransformPoint(ori);
+			Vec3f d = modl.TransformDirection(dir), o = modl.TransformPoint(ori);
 			//a_Result->m_fDist /= length(d);
 			//a_Result->m_fDist = Distance(modl * (ori + dir * a_Result->m_fDist), modl * ori);
 			k_TraceRayNode(d, o, a_Result, N);
@@ -368,7 +367,7 @@ void k_setNumRaysTraced(unsigned int i)
 	cudaMemcpyToSymbol(g_RayTracedCounterDevice, &i, sizeof(unsigned int));
 }
 
-Spectrum TraceResult::Le(const float3& p, const Frame& sys, const float3& w) const 
+Spectrum TraceResult::Le(const Vec3f& p, const Frame& sys, const Vec3f& w) const
 {
 	unsigned int i = LightIndex();
 	if(i == 0xffffffff)
@@ -408,19 +407,19 @@ void TraceResult::fillDG(DifferentialGeometry& dg) const
 	float4 rowB = tex1Dfetch(t_TriDataB, i * 4 + 1);
 	float4 rowC = tex1Dfetch(t_TriDataB, i * 4 + 2);
 	float4 rowD = tex1Dfetch(t_TriDataB, i * 4 + 3);
-	float3 na = Uchar2ToNormalizedFloat3(nme.x), nb = Uchar2ToNormalizedFloat3(nme.x >> 16), nc = Uchar2ToNormalizedFloat3(nme.y);
+	Vec3f na = Uchar2ToNormalizedFloat3(nme.x), nb = Uchar2ToNormalizedFloat3(nme.x >> 16), nc = Uchar2ToNormalizedFloat3(nme.y);
 	float w = 1.0f - dg.bary.x - dg.bary.y, u = dg.bary.x, v = dg.bary.y;
 	dg.extraData = nme.y >> 24;
 	dg.sys.n = u * na + v * nb + w * nc;
-	float3 dpdu = !rowB;
-	float3 dpdv = make_float3(rowB.z, rowC.x, rowC.y);
+	Vec3f dpdu = Vec3f(rowB.x, rowB.y, rowB.z);
+	Vec3f dpdv = Vec3f(rowB.z, rowC.x, rowC.y);
 	dg.sys.s = dpdu - dg.sys.n * dot(dg.sys.n, dpdu);
 	dg.sys.t = cross(dg.sys.s, dg.sys.n);
 	dg.sys = dg.sys * localToWorld;
-	dg.n = normalize(!worldToLocal.TransformTranspose(make_float4(na + nb + nc, 0.0f)));
-	dg.dpdu = (localToWorld.TransformDirection(dpdu));
-	dg.dpdv = (localToWorld.TransformDirection(dpdv));
-	float2 ta = make_float2(rowC.z, rowC.w), tb = make_float2(rowD.x, rowD.y), tc = make_float2(rowD.z, rowD.w);
+	dg.n = normalize(worldToLocal.TransformTranspose(Vec4f(na + nb + nc, 0.0f)).getXYZ());
+	dg.dpdu = localToWorld.TransformDirection(dpdu);
+	dg.dpdv = localToWorld.TransformDirection(dpdv);
+	Vec2f ta = Vec2f(rowC.z, rowC.w), tb = Vec2f(rowD.x, rowD.y), tc = Vec2f(rowD.z, rowD.w);
 	dg.uv[0] = u * ta + v * tb + w * tc;
 
 	if (dot(dg.n, dg.sys.n) < 0.0f)
@@ -430,7 +429,7 @@ void TraceResult::fillDG(DifferentialGeometry& dg) const
 #endif
 }
 
-void TraceResult::getBsdfSample(const float3& wi, const float3& p, BSDFSamplingRecord* bRec, CudaRNG* _rng) const
+void TraceResult::getBsdfSample(const Vec3f& wi, const Vec3f& p, BSDFSamplingRecord* bRec, CudaRNG* _rng) const
 {
 	bRec->Clear(_rng);
 	bRec->dg.P = p;
@@ -450,8 +449,8 @@ __device__ __inline__ float fmin_fmin2 (float a, float b, float c) { return __in
 __device__ __inline__ float fmin_fmax2 (float a, float b, float c) { return __int_as_float(min_max2(__float_as_int(a), __float_as_int(b), __float_as_int(c))); }
 __device__ __inline__ float fmax_fmin2 (float a, float b, float c) { return __int_as_float(max_min2(__float_as_int(a), __float_as_int(b), __float_as_int(c))); }
 __device__ __inline__ float fmax_fmax2 (float a, float b, float c) { return __int_as_float(max_max2(__float_as_int(a), __float_as_int(b), __float_as_int(c))); }
-__device__ __inline__ float spanBeginKepler2(float a0, float a1, float b0, float b1, float c0, float c1, float d){	return fmax_fmax2( fminf(a0,a1), fminf(b0,b1), fmin_fmax2(c0, c1, d)); }
-__device__ __inline__ float spanEndKepler2(float a0, float a1, float b0, float b1, float c0, float c1, float d)	{	return fmin_fmin2( fmaxf(a0,a1), fmaxf(b0,b1), fmax_fmin2(c0, c1, d)); }
+__device__ __inline__ float spanBeginKepler2(float a0, float a1, float b0, float b1, float c0, float c1, float d){	return fmax_fmax2( min(a0,a1), min(b0,b1), fmin_fmax2(c0, c1, d)); }
+__device__ __inline__ float spanEndKepler2(float a0, float a1, float b0, float b1, float c0, float c1, float d)	{	return fmin_fmin2( max(a0,a1), max(b0,b1), fmax_fmin2(c0, c1, d)); }
 
 template<bool ANY_HIT> __global__ void intersectKernel_SKIPOUTER(int numRays, traversalRay* a_RayBuffer, traversalResult* a_ResBuffer)
 {
@@ -477,7 +476,7 @@ template<bool ANY_HIT> __global__ void intersectKernel_SKIPOUTER(int numRays, tr
     float   idirx;
     float   idiry;
     float   idirz;
-	float2 bCoords;
+	Vec2f bCoords;
 
     // Initialize persistent threads.
 
@@ -513,7 +512,7 @@ template<bool ANY_HIT> __global__ void intersectKernel_SKIPOUTER(int numRays, tr
 			//to local
 			float4x4 modl;
 			loadInvModl(0, &modl);
-			float3 d = modl.TransformDirection(!d1), o = modl.TransformPoint(!o1);
+			float3 d = modl.TransformDirection(Vec3f(d1.x, d1.y, d1.z)), o = modl.TransformPoint(Vec3f(o1.x, o1.y, o1.z));
 
             origx = o.x;
             origy = o.y;
@@ -561,14 +560,14 @@ template<bool ANY_HIT> __global__ void intersectKernel_SKIPOUTER(int numRays, tr
                 const float c0hiz = nz.y   * idirz - oodz;
                 const float c1loz = nz.z   * idirz - oodz;
                 const float c1hiz = nz.w   * idirz - oodz;
-                const float c0min = spanBeginKepler(c0lox, c0hix, c0loy, c0hiy, c0loz, c0hiz, tmin);
-                const float c0max = spanEndKepler  (c0lox, c0hix, c0loy, c0hiy, c0loz, c0hiz, hitT);
+                const float c0min = spanBeginKepler2(c0lox, c0hix, c0loy, c0hiy, c0loz, c0hiz, tmin);
+                const float c0max = spanEndKepler2  (c0lox, c0hix, c0loy, c0hiy, c0loz, c0hiz, hitT);
                 const float c1lox = n1xy.x * idirx - oodx;
                 const float c1hix = n1xy.y * idirx - oodx;
                 const float c1loy = n1xy.z * idiry - oody;
                 const float c1hiy = n1xy.w * idiry - oody;
-                const float c1min = spanBeginKepler(c1lox, c1hix, c1loy, c1hiy, c1loz, c1hiz, tmin);
-                const float c1max = spanEndKepler  (c1lox, c1hix, c1loy, c1hiy, c1loz, c1hiz, hitT);
+                const float c1min = spanBeginKepler2(c1lox, c1hix, c1loy, c1hiy, c1loz, c1hiz, tmin);
+                const float c1max = spanEndKepler2  (c1lox, c1hix, c1loy, c1hiy, c1loz, c1hiz, hitT);
 
                 bool swp = (c1min < c0min);
 
@@ -665,7 +664,7 @@ template<bool ANY_HIT> __global__ void intersectKernel_SKIPOUTER(int numRays, tr
 
 									hitT = t;
 									hitIndex = index >> 1;
-									bCoords = make_float2(u,v);
+									bCoords = Vec2f(u,v);
 									if (ANY_HIT)
 									{
 										nodeAddr = EntrypointSentinel;
@@ -689,10 +688,10 @@ template<bool ANY_HIT> __global__ void intersectKernel_SKIPOUTER(int numRays, tr
 			if( __popc(__ballot(true)) < DYNAMIC_FETCH_THRESHOLD )
 				break;
 		}
-		int4 res = make_int4(0,0,0,0);
+		Vec4i res = Vec4i(0, 0, 0, 0);
 		if(hitIndex != -1)
 		{
-			//res.x = __float_as_int(hitT * sqrtf(dirx * dirx + diry * diry + dirz * dirz));
+			//res.x = __float_as_int(hitT * math::sqrt(dirx * dirx + diry * diry + dirz * dirz));
 			res.x = __float_as_int(hitT);
 			res.y = 0;
 			res.z = hitIndex;
@@ -729,7 +728,7 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
     float   idirx;
     float   idiry;
     float   idirz;
-	float2 bCorrds;
+	Vec2f bCorrds;
 	int nodeIdx = 0;
 
 	int ltraversalStack[STACK_SIZE];
@@ -806,7 +805,7 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
         }
 
         // Traversal loop.
-		TraceResult r2 = k_TraceRay(Ray(!a_RayBuffer[rayidx].a, !a_RayBuffer[rayidx].b));
+		TraceResult r2 = k_TraceRay(Ray(a_RayBuffer[rayidx].a.getXYZ(), a_RayBuffer[rayidx].b.getXYZ()));
 		int4 res = make_int4(0, 0, 0, 0);
 		if (r2.hasHit())
 		{
@@ -1055,7 +1054,7 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 											nodeIdx = ~leafAddr;
 											lhitT = t;
 											hitIndex = index >> 1 + m_uTriangleOffset;
-											bCorrds = make_float2(u, v);
+											bCorrds = Vec2f(u, v);
 											if (ANY_HIT)
 											{
 												nodeAddr = lnodeAddr = EntrypointSentinel;

@@ -12,7 +12,7 @@ float Spline::evalCubicInterp1D(float x, const float *values, size_t size, float
 
 	/* Find the index of the left knot in the queried subinterval, be
 	   robust to cases where 't' lies exactly on the right endpoint */
-	size_t k = MAX((size_t) 0, MIN((size_t) t, size - 2));
+	size_t k = ::max((size_t) 0, ::min((size_t) t, size - 2));
 
 	float f0  = values[k],
 	      f1  = values[k+1],
@@ -47,7 +47,7 @@ float Spline::evalCubicInterp1DN(float x, const float *nodes, const float *value
 	if (!(x >= nodes[0] && x <= nodes[size-1]) && !extrapolate)
 		return 0.0f;
 
-	size_t k = (size_t) MAX((ptrdiff_t) 0, MIN((ptrdiff_t) size - 2,
+	size_t k = (size_t) max((ptrdiff_t) 0, min((ptrdiff_t) size - 2,
 		STL_lower_bound(nodes, nodes + size, x) - nodes - 1));
 
 	float f0       = values[k],
@@ -218,7 +218,7 @@ float Spline::sampleCubicInterp1DN(size_t idx, float *nodes, float *values, size
 	}
 }
 
-float Spline::evalCubicInterp2D(const float2 &_p, const float *values, const uint2 &_size, const float2 &_min, const float2 &_max, bool extrapolate)
+float Spline::evalCubicInterp2D(const Vec2f &_p, const float *values, const uint2 &_size, const Vec2f &_min, const Vec2f &_max, bool extrapolate)
 {
 	const float* p = (float*)&_p, *min = (float*)&_min, *max = (float*)&_max;
 	const unsigned int* size = (unsigned int*)&_size;
@@ -239,7 +239,7 @@ float Spline::evalCubicInterp2D(const float2 &_p, const float *values, const uin
 
 		/* Find the index of the left knot in the queried subinterval, be
 		   robust to cases where 't' lies exactly on the right endpoint */
-		knot[dim] = MIN((unsigned int) t, size[dim] - 2);
+		knot[dim] = ::min((unsigned int) t, size[dim] - 2);
 
 		/* Compute the relative position within the interval */
 		t = t - (float) knot[dim];
@@ -291,7 +291,7 @@ float Spline::evalCubicInterp2D(const float2 &_p, const float *values, const uin
 	return result;
 }
 
-float Spline::evalCubicInterp2DN(const float2 &_p, const float **nodes_, const float *values, const uint2 &_size, bool extrapolate)
+float Spline::evalCubicInterp2DN(const Vec2f &_p, const float **nodes_, const float *values, const uint2 &_size, bool extrapolate)
 {
 	const float* p = (float*)&_p;
 	const unsigned int* size = (unsigned int*)&_size;
@@ -310,7 +310,7 @@ float Spline::evalCubicInterp2DN(const float2 &_p, const float **nodes_, const f
 
 		/* Find the index of the left knot in the queried subinterval, be
 		   robust to cases where 't' lies exactly on the right endpoint */
-		int k = MAX((ptrdiff_t) 0, MIN((ptrdiff_t) size[dim] - 2,
+		int k = max((ptrdiff_t) 0, min((ptrdiff_t) size[dim] - 2,
 			STL_lower_bound(nodes, nodes + size[dim], p[dim]) - nodes - 1));
 		knot[dim] = k;
 
@@ -367,7 +367,7 @@ float Spline::evalCubicInterp2DN(const float2 &_p, const float **nodes_, const f
 	return result;
 }
 
-float Spline::evalCubicInterp3D(const float3 &_p, const float *values, const uint3 &_size, const float3 &_min, const float3 &_max, bool extrapolate)
+float Spline::evalCubicInterp3D(const Vec3f &_p, const float *values, const uint3 &_size, const Vec3f &_min, const Vec3f &_max, bool extrapolate)
 {
 	const float* p = (float*)&_p, *min = (float*)&_min, *max = (float*)&_max;
 	const unsigned int* size = (unsigned int*)&_size;
@@ -388,7 +388,7 @@ float Spline::evalCubicInterp3D(const float3 &_p, const float *values, const uin
 
 		/* Find the index of the left knot in the queried subinterval, be
 		   robust to cases where 't' lies exactly on the right endpoint */
-		knot[dim] = MIN((unsigned int) t, size[dim] - 2);
+		knot[dim] = ::min((unsigned int) t, size[dim] - 2);
 
 		/* Compute the relative position within the interval */
 		t = t - (float) knot[dim];
@@ -444,7 +444,7 @@ float Spline::evalCubicInterp3D(const float3 &_p, const float *values, const uin
 	return result;
 }
 
-float Spline::evalCubicInterp3DN(const float3 &_p, const float **nodes_, const float *values, const uint3 &_size, bool extrapolate)
+float Spline::evalCubicInterp3DN(const Vec3f &_p, const float **nodes_, const float *values, const uint3 &_size, bool extrapolate)
 {
 	const float* p = (float*)&_p;
 	const unsigned int* size = (unsigned int*)&_size;
@@ -463,7 +463,7 @@ float Spline::evalCubicInterp3DN(const float3 &_p, const float **nodes_, const f
 
 		/* Find the index of the left knot in the queried subinterval, be
 		   robust to cases where 't' lies exactly on the right endpoint */
-		int k = MAX((ptrdiff_t) 0, MIN((ptrdiff_t) size[dim] - 2,
+		int k = max((ptrdiff_t) 0, min((ptrdiff_t) size[dim] - 2,
 			STL_lower_bound(nodes, nodes + size[dim], p[dim]) - nodes - 1));
 		knot[dim] = k;
 

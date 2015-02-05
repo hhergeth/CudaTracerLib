@@ -8,7 +8,7 @@
 class k_BSDFVisualizer : public k_Tracer<false, true>
 {
 public:
-	float3 m_wo;
+	Vec3f m_wo;
 	BSDFALL* m_Bsdf;
 	e_InfiniteLight* m_pLight;
 	e_Stream<char>* m_pBuffer;
@@ -18,11 +18,11 @@ public:
 	bool cosTheta;
 	bool drawEnvMap;
 	k_BSDFVisualizer()
-		: m_wo(make_float3(0, 0, 1)), m_Bsdf(0), LScale(1), cosTheta(true), m_pBuffer(0), m_pBuffer2(0), drawEnvMap(false)
+		: m_wo(Vec3f(0, 0, 1)), m_Bsdf(0), LScale(1), cosTheta(true), m_pBuffer(0), m_pBuffer2(0), drawEnvMap(false)
 	{
 	}
-	virtual void Debug(e_Image* I, const int2& pixel);
-	void DrawRegion(e_Image* I, int2 off, int2 size);
+	virtual void Debug(e_Image* I, const Vec2i& pixel);
+	void DrawRegion(e_Image* I, const Vec2i& off, const Vec2i& size);
 	void setSkydome(const char* compiledPath);
 protected:
 	virtual void DoRender(e_Image* I);

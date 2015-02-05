@@ -7,7 +7,7 @@ namespace bvh_helper
 {
 	class clb : public IBVHBuilderCallback
 	{
-		const float3* V;
+		const Vec3f* V;
 		const unsigned int* Iab;
 		unsigned int v, i;
 		unsigned int _index(unsigned int i, unsigned int o) const
@@ -24,7 +24,7 @@ namespace bvh_helper
 		int startNode;
 		unsigned int L0, L1;
 	public:
-		clb(unsigned int _v, unsigned int _i, const float3* _V, const unsigned int* _I)
+		clb(unsigned int _v, unsigned int _i, const Vec3f* _V, const unsigned int* _I)
 			: V(_V), Iab(_I), v(_v), i(_i)
 		{
 			nodeIndex = triIndex = 0;
@@ -51,7 +51,7 @@ namespace bvh_helper
 			*out = AABB::Identity();
 			for(int i = 0; i < 3; i++)
 				out->Enlarge(V[_index(index, i)]);
-			//if(fminf(out->Size()) < 0.01f)
+			//if(min(out->Size()) < 0.01f)
 			//	out->maxV += make_float3(0.01f);
 		}
 		virtual void HandleBoundingBox(const AABB& box)
@@ -92,10 +92,10 @@ namespace bvh_helper
 		virtual bool SplitNode(unsigned int index, int dim, float pos, AABB& lBox, AABB& rBox, const AABB& refBox) const
 		{
 			lBox = rBox = AABB::Identity();
-			float3 v1 = V[_index(index, 2)];
+			Vec3f v1 = V[_index(index, 2)];
 			for (int i = 0; i < 3; i++)
 			{
-				float3 v0 = v1;
+				Vec3f v0 = v1;
 				v1 = V[_index(index, i)];
 				float V0[] = { v0.x, v0.y, v0.z };
 				float V1[] = { v1.x, v1.y, v1.z };
@@ -113,13 +113,13 @@ namespace bvh_helper
 
 				if ((v0p < pos && v1p > pos) || (v0p > pos && v1p < pos))
 				{
-					float3 t = lerp(v0, v1, clamp01((pos - v0p) / (v1p - v0p)));
+					Vec3f t = math::lerp(v0, v1, math::clamp01((pos - v0p) / (v1p - v0p)));
 					lBox.Enlarge(t);
 					rBox.Enlarge(t);
 				}
 			}
-			lBox.max[dim] = pos;
-			rBox.min[dim] = pos;
+			lBox.maxV[dim] = pos;
+			rBox.minV[dim] = pos;
 			lBox.intersect(refBox);
 			rBox.intersect(refBox);
 			return true;
@@ -143,7 +143,7 @@ struct BVH_Construction_Result
 	}
 };
 
-inline BVH_Construction_Result ConstructBVH(const float3* vertices, const unsigned int* indices, unsigned int vCount, unsigned int cCount)
+inline BVH_Construction_Result ConstructBVH(const Vec3f* vertices, const unsigned int* indices, unsigned int vCount, unsigned int cCount)
 {
 	bvh_helper::clb c(vCount, cCount, vertices, indices);
 	BVHBuilder::BuildBVH(&c, BVHBuilder::Platform());
@@ -157,4 +157,4 @@ inline BVH_Construction_Result ConstructBVH(const float3* vertices, const unsign
 	return r;
 }
 
-void ConstructBVH(const float3* vertices, const unsigned int* indices, int vCount, int cCount, OutputStream& O, BVH_Construction_Result* out = 0);
+void ConstructBVH(const Vec3f* vertices, const unsigned int* indices, int vCount, int cCount, OutputStream& O, BVH_Construction_Result* out = 0);

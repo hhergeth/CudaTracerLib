@@ -12,10 +12,10 @@ struct diffuse : public BSDF
 		: m_reflectance(d), BSDF(EDiffuseReflection, 0, &m_reflectance)
 	{
 	}
-	CUDA_FUNC_IN Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &sample) const
+	CUDA_FUNC_IN Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const
 	{
 		if (!(bRec.typeMask & EDiffuseReflection) || Frame::cosTheta(bRec.wi) <= 0)
-			return make_float3(0.0f);
+			return 0.0f;
 
 		bRec.wo = Warp::squareToCosineHemisphere(sample);
 		bRec.eta = 1.0f;
@@ -28,7 +28,7 @@ struct diffuse : public BSDF
 		if (!(bRec.typeMask & EDiffuseReflection) || measure != ESolidAngle
 			|| Frame::cosTheta(bRec.wi) <= 0
 			|| Frame::cosTheta(bRec.wo) <= 0)
-			return make_float3(0.0f);
+			return 0.0f;
 
 		return m_reflectance.Evaluate(bRec.dg)	* (INV_PI * Frame::cosTheta(bRec.wo));
 	}
@@ -40,10 +40,6 @@ struct diffuse : public BSDF
 			return 0.0f;
 
 		return Warp::squareToCosineHemispherePdf(bRec.wo);
-	}
-	CUDA_FUNC_IN Spectrum getDiffuseReflectance(BSDFSamplingRecord &bRec) const
-	{
-		return m_reflectance.Evaluate(bRec.dg);
 	}
 	TYPE_FUNC(diffuse)
 };
@@ -62,7 +58,7 @@ struct roughdiffuse : public BSDF
 		: m_reflectance(r), m_alpha(a), BSDF(EDiffuseReflection, 0, &m_reflectance, &m_alpha)
 	{
 	}
-	CUDA_FUNC_IN Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &sample) const
+	CUDA_FUNC_IN Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const
 	{
 		bRec.wo = Warp::squareToCosineHemisphere(sample);
 		bRec.eta = 1.0f;
@@ -79,10 +75,6 @@ struct roughdiffuse : public BSDF
 			return 0.0f;
 
 		return Warp::squareToCosineHemispherePdf(bRec.wo);
-	}
-	CUDA_FUNC_IN Spectrum getDiffuseReflectance(BSDFSamplingRecord &bRec) const
-	{
-		return m_reflectance.Evaluate(bRec.dg);
 	}
 	TYPE_FUNC(roughdiffuse)
 };
@@ -126,18 +118,17 @@ struct dielectric : public BSDF
 		m_invEta = 1.0f / m_eta;
 	}
 	/// Reflection in local coordinates
-	CUDA_FUNC_IN float3 reflect(const float3 &wi) const {
-		return make_float3(-wi.x, -wi.y, wi.z);
+	CUDA_FUNC_IN Vec3f reflect(const Vec3f &wi) const {
+		return Vec3f(-wi.x, -wi.y, wi.z);
 	}
 	/// Refraction in local coordinates
-	CUDA_FUNC_IN float3 refract(const float3 &wi, float cosThetaT) const {
+	CUDA_FUNC_IN Vec3f refract(const Vec3f &wi, float cosThetaT) const {
 		float scale = -(cosThetaT < 0 ? m_invEta : m_eta);
-		return make_float3(scale*wi.x, scale*wi.y, cosThetaT);
+		return Vec3f(scale*wi.x, scale*wi.y, cosThetaT);
 	}
-	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &sample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
-	STD_DIFFUSE_REFLECTANCE
 	TYPE_FUNC(dielectric)
 };
 
@@ -165,17 +156,16 @@ struct thindielectric : public BSDF
 		m_specularTransmittance = t;
 		m_specularReflectance = r;
 	}
-	CUDA_FUNC_IN float3 transmit(const float3 &wi) const {
+	CUDA_FUNC_IN Vec3f transmit(const Vec3f &wi) const {
 		return -1.0f * wi;
 	}
 	/// Reflection in local coordinates
-	CUDA_FUNC_IN float3 reflect(const float3 &wi) const {
-		return make_float3(-wi.x, -wi.y, wi.z);
+	CUDA_FUNC_IN Vec3f reflect(const Vec3f &wi) const {
+		return Vec3f(-wi.x, -wi.y, wi.z);
 	}
-	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &sample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
-	STD_DIFFUSE_REFLECTANCE
 	TYPE_FUNC(thindielectric)
 };
 
@@ -213,10 +203,9 @@ struct roughdielectric : public BSDF
 	{
 		m_invEta = 1.0f / m_eta;
 	}
-	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &_sample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &_sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
-	STD_DIFFUSE_REFLECTANCE
 	TYPE_FUNC(roughdielectric)
 };
 
@@ -245,13 +234,12 @@ struct conductor : public BSDF
 		m_k = k;
 	}
 	/// Reflection in local coordinates
-	CUDA_FUNC_IN float3 reflect(const float3 &wi) const {
-		return make_float3(-wi.x, -wi.y, wi.z);
+	CUDA_FUNC_IN Vec3f reflect(const Vec3f &wi) const {
+		return Vec3f(-wi.x, -wi.y, wi.z);
 	}
-	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &sample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
-	STD_DIFFUSE_REFLECTANCE
 	TYPE_FUNC(conductor)
 };
 
@@ -282,10 +270,9 @@ struct roughconductor : public BSDF
 		m_k = k;
 		m_distribution.m_type = type;
 	}
-	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &sample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
-	STD_DIFFUSE_REFLECTANCE
 	TYPE_FUNC(roughconductor)
 };
 
@@ -331,16 +318,12 @@ struct plastic : public BSDF
 		float dAvg = m_diffuseReflectance.Average().getLuminance(), sAvg = m_specularReflectance.Average().getLuminance();
 		m_specularSamplingWeight = sAvg / (dAvg + sAvg);
 	}
-	CUDA_FUNC_IN float3 reflect(const float3 &wi) const {
-		return make_float3(-wi.x, -wi.y, wi.z);
+	CUDA_FUNC_IN Vec3f reflect(const Vec3f &wi) const {
+		return Vec3f(-wi.x, -wi.y, wi.z);
 	}
-	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &sample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
-	CUDA_FUNC_IN Spectrum getDiffuseReflectance(BSDFSamplingRecord &bRec) const
-	{
-		return m_diffuseReflectance.Evaluate(bRec.dg) * (1.0f - m_fdrExt);
-	}
 	TYPE_FUNC(plastic)
 private:
 	float fresnelDiffuseReflectance(float eta) const {
@@ -423,19 +406,12 @@ struct roughplastic : public BSDF
 		m_specularSamplingWeight = sAvg / (dAvg + sAvg);
 	}
 	/// Helper function: reflect \c wi with respect to a given surface normal
-	CUDA_FUNC_IN float3 reflect(const float3 &wi, const float3 &m) const {
+	CUDA_FUNC_IN Vec3f reflect(const Vec3f &wi, const Vec3f &m) const {
 		return 2 * dot(wi, m) * m - wi;
 	}
-	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const float2 &sample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
-	CUDA_FUNC_IN Spectrum getDiffuseReflectance(BSDFSamplingRecord &bRec) const
-	{
-		float alpha = m_alpha.Evaluate(bRec.dg).average();
-		float Ftr = e_RoughTransmittanceManager::EvaluateDiffuse(m_distribution.m_type, alpha, m_eta);
-
-		return m_diffuseReflectance.Evaluate(bRec.dg) * Ftr;
-	}
 	TYPE_FUNC(roughplastic)
 };
 
@@ -461,16 +437,12 @@ struct phong : public BSDF
 		float dAvg = m_diffuseReflectance.Average().getLuminance(), sAvg = m_specularReflectance.Average().getLuminance();
 		m_specularSamplingWeight = sAvg / (dAvg + sAvg);
 	}
-	CUDA_FUNC_IN float3 reflect(const float3 &wi) const {
-		return make_float3(-wi.x, -wi.y, wi.z);
+	CUDA_FUNC_IN Vec3f reflect(const Vec3f &wi) const {
+		return Vec3f(-wi.x, -wi.y, wi.z);
 	}	
-	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &_pdf, const float2& _sample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &_pdf, const Vec2f& _sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
-	CUDA_FUNC_IN Spectrum getDiffuseReflectance(BSDFSamplingRecord &bRec) const
-	{
-		return m_diffuseReflectance.Evaluate(bRec.dg);
-	}
 	TYPE_FUNC(phong)
 };
 
@@ -506,13 +478,9 @@ struct ward : public BSDF
 		float dAvg = m_diffuseReflectance.Average().getLuminance(), sAvg = m_specularReflectance.Average().getLuminance();
 		m_specularSamplingWeight = sAvg / (dAvg + sAvg);
 	}
-	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &_pdf, const float2 &_sample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &_pdf, const Vec2f &_sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
-	CUDA_FUNC_IN Spectrum getDiffuseReflectance(BSDFSamplingRecord &bRec) const
-	{
-		return m_diffuseReflectance.Evaluate(bRec.dg);
-	}
 	TYPE_FUNC(ward)
 };
 
@@ -531,18 +499,8 @@ struct hk : public BSDF
 		: m_sigmaS(ss), m_sigmaA(sa), m_phase(phase), m_thickness(thickness), BSDF(EBSDFType(EGlossyReflection | EGlossyTransmission | EDeltaTransmission), 0, &m_sigmaS, &m_sigmaA)
 	{
 	}
-	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &_pdf, const float2 &_sample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &_pdf, const Vec2f &_sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
-	CUDA_FUNC_IN Spectrum getDiffuseReflectance(BSDFSamplingRecord &bRec) const
-	{
-		Spectrum sigmaA = m_sigmaA.Evaluate(bRec.dg),
-				 sigmaS = m_sigmaS.Evaluate(bRec.dg),
-				 sigmaT = sigmaA + sigmaS,
-				 albedo;
-		for (int i = 0; i < SPECTRUM_SAMPLES; i++)
-			albedo[i] = sigmaT[i] > 0 ? (sigmaS[i]/sigmaT[i]) : (float) 0;
-		return albedo;
-	}
 	TYPE_FUNC(hk)
 };

@@ -5,7 +5,7 @@
 
 CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_NextRayCounter;
 
-template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTraceTTT(float3& a_Dir, float3& a_Ori, CudaRNG& rnd, float* distTravalled = 0)
+template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTraceTTT(Vec3f& a_Dir, Vec3f& a_Ori, CudaRNG& rnd, float* distTravalled = 0)
 {
 	Ray r0 = Ray(a_Ori, a_Dir);
 	TraceResult r;
@@ -76,7 +76,7 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(Ray& r, const Ray& rX, con
 	return cl;
 }
 
-void k_PathTracer::Debug(e_Image* I, const int2& p)
+void k_PathTracer::Debug(e_Image* I, const Vec2i& p)
 {
 	k_INITIALIZE(m_pScene, g_sRngs);
 	CudaRNG rng = g_RNGData();
@@ -86,12 +86,12 @@ void k_PathTracer::Debug(e_Image* I, const int2& p)
 
 template<bool DIRECT> __global__ void pathKernel2(unsigned int w, unsigned int h, unsigned int xoff, unsigned int yoff, k_BlockSampleImage img)
 {
-	int2 pixel = k_TracerBase::getPixelPos(xoff, yoff);
+	Vec2i pixel = k_TracerBase::getPixelPos(xoff, yoff);
 	CudaRNG rng = g_RNGData();
 	if(pixel.x < w && pixel.y < h)
 	{
 		Ray r;
-		Spectrum imp = g_SceneData.sampleSensorRay(r, make_float2(pixel.x, pixel.y), rng.randomFloat2());
+		Spectrum imp = g_SceneData.sampleSensorRay(r, Vec2f(pixel.x, pixel.y), rng.randomFloat2());
 		Spectrum col = imp * PathTrace<DIRECT>(r, r, r, rng);
 		img.Add(pixel.x, pixel.y, col);
 	}

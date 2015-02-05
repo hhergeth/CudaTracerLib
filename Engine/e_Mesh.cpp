@@ -87,7 +87,7 @@ e_SceneInitData e_Mesh::ParseBinary(const char* a_InputFile)
 	return e_SceneInitData::CreateForSpecificMesh(m_uTriangleCount, m_uIntSize, m_uNodeSize, m_uIndicesSize, 255, 16, 16, 8);
 }
 
-void e_Mesh::CompileMesh(const float3* vertices, unsigned int nVertices, const float2* uvs, const unsigned int* indices, unsigned int nIndices, const e_KernelMaterial& mat, const Spectrum& Le, OutputStream& a_Out)
+void e_Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2f* uvs, const unsigned int* indices, unsigned int nIndices, const e_KernelMaterial& mat, const Spectrum& Le, OutputStream& a_Out)
 {
 	e_MeshPartLight m_sLights[MAX_AREALIGHT_NUM];
 	Platform::SetMemory(m_sLights, sizeof(m_sLights));
@@ -98,19 +98,19 @@ void e_Mesh::CompileMesh(const float3* vertices, unsigned int nVertices, const f
 		strcpy(m_sLights[0].MatName, mat.Name);
 		lightCount++;
 	}
-	float3 p[3];
-	float3 n[3];
-	float3 ta[3];
-	float3 bi[3];
-	float2 t[3];
+	Vec3f p[3];
+	Vec3f n[3];
+	Vec3f ta[3];
+	Vec3f bi[3];
+	Vec2f t[3];
 	unsigned int numTriangles = indices ? nIndices / 3 : nVertices / 3;
 	e_TriangleData* triData = new e_TriangleData[numTriangles];
 	unsigned int triIndex = 0;
 #ifdef EXT_TRI
-	float3* v_Normals = new float3[nVertices], *v_Tangents = new float3[nVertices], *v_BiTangents = new float3[nVertices];
-	Platform::SetMemory(v_Normals, sizeof(float3) * nVertices);
-	Platform::SetMemory(v_Tangents, sizeof(float3) * nVertices);
-	Platform::SetMemory(v_BiTangents, sizeof(float3) * nVertices);
+	Vec3f* v_Normals = new Vec3f[nVertices], *v_Tangents = new Vec3f[nVertices], *v_BiTangents = new Vec3f[nVertices];
+	Platform::SetMemory(v_Normals, sizeof(Vec3f) * nVertices);
+	Platform::SetMemory(v_Tangents, sizeof(Vec3f) * nVertices);
+	Platform::SetMemory(v_BiTangents, sizeof(Vec3f) * nVertices);
 	ComputeTangentSpace(vertices, uvs, indices, nVertices, numTriangles, v_Normals, v_Tangents, v_BiTangents);
 #endif
 	AABB box = AABB::Identity();
@@ -147,7 +147,7 @@ void e_Mesh::CompileMesh(const float3* vertices, unsigned int nVertices, const f
 	delete [] triData;
 }
 
-void e_Mesh::CompileMesh(const float3* vertices, unsigned int nVertices, const float2** uvs, unsigned int nUV_Sets, const unsigned int* indices, unsigned int nIndices, const std::vector<e_KernelMaterial>& mats, const std::vector<Spectrum>& Les, const std::vector<unsigned int>& subMeshes, const unsigned char* extraData, OutputStream& a_Out)
+void e_Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2f** uvs, unsigned int nUV_Sets, const unsigned int* indices, unsigned int nIndices, const std::vector<e_KernelMaterial>& mats, const std::vector<Spectrum>& Les, const std::vector<unsigned int>& subMeshes, const unsigned char* extraData, OutputStream& a_Out)
 {
 	e_MeshPartLight m_sLights[MAX_AREALIGHT_NUM];
 	Platform::SetMemory(m_sLights, sizeof(m_sLights));
@@ -158,19 +158,19 @@ void e_Mesh::CompileMesh(const float3* vertices, unsigned int nVertices, const f
 		strcpy(m_sLights[0].MatName, mats[0].Name);
 		lightCount++;
 	}
-	float3 p[3];
-	float3 n[3];
-	float3 ta[3];
-	float3 bi[3];
-	float2 t[3];
+	Vec3f p[3];
+	Vec3f n[3];
+	Vec3f ta[3];
+	Vec3f bi[3];
+	Vec2f t[3];
 	unsigned int numTriangles = indices ? nIndices / 3 : nVertices / 3;
 	e_TriangleData* triData = new e_TriangleData[numTriangles];
 	unsigned int triIndex = 0;
 #ifdef EXT_TRI
-	float3* v_Normals = new float3[nVertices], *v_Tangents = new float3[nVertices], *v_BiTangents = new float3[nVertices];
-	Platform::SetMemory(v_Normals, sizeof(float3) * nVertices);
-	Platform::SetMemory(v_Tangents, sizeof(float3) * nVertices);
-	Platform::SetMemory(v_BiTangents, sizeof(float3) * nVertices);
+	Vec3f* v_Normals = new Vec3f[nVertices], *v_Tangents = new Vec3f[nVertices], *v_BiTangents = new Vec3f[nVertices];
+	Platform::SetMemory(v_Normals, sizeof(Vec3f) * nVertices);
+	Platform::SetMemory(v_Tangents, sizeof(Vec3f) * nVertices);
+	Platform::SetMemory(v_BiTangents, sizeof(Vec3f) * nVertices);
 	//compute the frame for the first set and hope the rest is aligned
 	ComputeTangentSpace(vertices, uvs[0], indices, nVertices, numTriangles, v_Normals, v_Tangents, v_BiTangents);
 #endif

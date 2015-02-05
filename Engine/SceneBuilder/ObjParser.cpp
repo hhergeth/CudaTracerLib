@@ -32,8 +32,8 @@
 inline unsigned int          floatToBits     (float a)         { return *(unsigned int*)&a; }
 inline unsigned int  hashBits        (unsigned int a, unsigned int b = FW_HASH_MAGIC, unsigned int c = 0)                   { c += FW_HASH_MAGIC; FW_JENKINS_MIX(a, b, c); return c; }
 template <class T>  inline unsigned int  hash            (const T& value)                        { return 0;}
-template <> inline unsigned int  hash<float2>     (const float2& value)                { return hashBits(floatToBits(value.x), floatToBits(value.y)); }
-template <> inline unsigned int  hash<float3>     (const float3& value)                { return hashBits(floatToBits(value.x), floatToBits(value.y), floatToBits(value.z)); }
+template <> inline unsigned int  hash<Vec2f>     (const Vec2f& value)                { return hashBits(floatToBits(value.x), floatToBits(value.y)); }
+template <> inline unsigned int  hash<Vec3f>(const Vec3f& value)                { return hashBits(floatToBits(value.x), floatToBits(value.y), floatToBits(value.z)); }
 
 enum TextureType
 {
@@ -50,25 +50,25 @@ struct Material
     {
 		std::string		Name;
 		int				IlluminationModel;
-        float4          diffuse;
-        float3          specular;
-		float3			emission;
+        Vec4f          diffuse;
+		Vec3f          specular;
+		Vec3f			emission;
         float           glossiness;
         float           displacementCoef; // height = texture/255 * coef + bias
         float           displacementBias;
 		float			IndexOfRefraction;
-		float3			Tf;
+		Vec3f			Tf;
         std::string     textures[TextureType_Max];
 		//int				SubMesh;
 
         Material(void)
         {
-            diffuse             = make_float4(0.75f, 0.75f, 0.75f, 1.0f);
-            specular            = make_float3(0.5f);
+            diffuse             = Vec4f(0.75f, 0.75f, 0.75f, 1.0f);
+			specular = Vec3f(0.5f);
             glossiness          = 32.0f;
             displacementCoef    = 1.0f;
             displacementBias    = 0.0f;
-			emission = make_float3(0,0,0); 
+			emission = Vec3f(0, 0, 0);
         }
     };
 
@@ -150,7 +150,7 @@ bool parseTexture(const char*& ptr, TextureSpec& value, const std::string& dirNa
     while (*ptr)
     {
         parseSpace(ptr);
-        if ((parseLiteral(ptr, "-blendu ") || parseLiteral(ptr, "-blendv ") || parseLiteral(ptr, "-cc ") || parseLiteral(ptr, "-clamp ")) && parseSpace(ptr))
+        if ((parseLiteral(ptr, "-blendu ") || parseLiteral(ptr, "-blendv ") || parseLiteral(ptr, "-cc ") || parseLiteral(ptr, "-math::clamp ")) && parseSpace(ptr))
         {
             if (!parseLiteral(ptr, "on") && !parseLiteral(ptr, "off"))
                 return false;
@@ -214,9 +214,9 @@ bool parseTexture(const char*& ptr, TextureSpec& value, const std::string& dirNa
 
 struct ImportState
 {
-	std::vector<float3>						positions;
-	std::vector<float3>						normals;
-    std::vector<float2>						texCoords;
+	std::vector<Vec3f>						positions;
+	std::vector<Vec3f>						normals;
+    std::vector<Vec2f>						texCoords;
 
 	HashTable<std::string, Material, 1<<12> materialHash;
 };
@@ -283,7 +283,7 @@ void loadMtl(ImportState& s, IInStream& mtlIn, const std::string& dirName)
             if (mat->glossiness <= 0.0f)
             {
                 mat->glossiness = 1.0f;
-                mat->specular = make_float3(0);
+				mat->specular = Vec3f(0);
             }
         }
         else if (parseLiteral(ptr, "map_Kd ")) // diffuse texture
@@ -386,9 +386,9 @@ void compileobj(IInStream& in, OutputStream& a_Out)
 	int submesh = -1;
     int defaultSubmesh = -1;
 	
-	std::vector<float3> positions;
-	std::vector<float3> normals;
-	std::vector<float2> texCoords;
+	std::vector<Vec3f> positions;
+	std::vector<Vec3f> normals;
+	std::vector<Vec2f> texCoords;
 	std::vector<unsigned int> indices;
 	std::vector<SubMesh> subMeshes;
 	AABB box = AABB::Identity();
@@ -406,7 +406,7 @@ void compileobj(IInStream& in, OutputStream& a_Out)
         }
         else if (parseLiteral(ptr, "v ") && parseSpace(ptr)) // position vertex
         {
-            float3 v;
+			Vec3f v;
             if (parseFloats(ptr, (float*)&v, 3) && parseSpace(ptr) && !*ptr)
             {
 				s.positions.push_back(v);
@@ -415,7 +415,7 @@ void compileobj(IInStream& in, OutputStream& a_Out)
         }
         else if (parseLiteral(ptr, "vn ") && parseSpace(ptr)) // position vertex
         {
-            float3 v;
+			Vec3f v;
             if (parseFloats(ptr, (float*)&v, 3) && parseSpace(ptr) && !*ptr)
             {
 				s.normals.push_back(v);
@@ -424,7 +424,7 @@ void compileobj(IInStream& in, OutputStream& a_Out)
         }
         else if (parseLiteral(ptr, "vt ") && parseSpace(ptr)) // texture vertex
         {
-            float2 v;
+			Vec2f v;
             if (parseFloats(ptr, (float*)&v, 2) && parseSpace(ptr))
             {
                 float dummy;
@@ -432,7 +432,7 @@ void compileobj(IInStream& in, OutputStream& a_Out)
 
                 if (!*ptr)
                 {
-					s.texCoords.push_back(make_float2(v.x, 1.0f - v.y));
+					s.texCoords.push_back(Vec2f(v.x, 1.0f - v.y));
                     valid = true;
                 }
             }
@@ -465,11 +465,11 @@ void compileobj(IInStream& in, OutputStream& a_Out)
                         ptn[i] = -1;
                 }
 				
-				float3 p = (ptn[0] == -1) ? make_float3(0.0f) : s.positions[ptn[0]];
+				Vec3f p = (ptn[0] == -1) ? Vec3f(0.0f) : s.positions[ptn[0]];
 				box.Enlarge(p);
 				positions.push_back(p);
-				texCoords.push_back((ptn[1] == -1) ? make_float2(0.0f) : s.texCoords[ptn[1]]);
-				normals.push_back((ptn[2] == -1) ? make_float3(0.0f) : s.normals[ptn[2]]);
+				texCoords.push_back((ptn[1] == -1) ? Vec2f(0.0f) : s.texCoords[ptn[1]]);
+				normals.push_back((ptn[2] == -1) ? Vec3f(0.0f) : s.normals[ptn[2]]);
 				indices.push_back(unsigned int(positions.size() - 1));
             }
         }
@@ -548,7 +548,7 @@ void compileobj(IInStream& in, OutputStream& a_Out)
 		if(M.IlluminationModel == 2)
 		{
 			diffuse d;
-			d.m_reflectance = CreateTexture(M.textures[0].c_str(), Spectrum(M.diffuse));
+			d.m_reflectance = CreateTexture(M.textures[0].c_str(), Spectrum(M.diffuse.x, M.diffuse.y, M.diffuse.z));
 			mat.bsdf.SetData(d);
 		}
 		else if(M.IlluminationModel == 5)
@@ -565,8 +565,8 @@ void compileobj(IInStream& in, OutputStream& a_Out)
 			dielectric d;
 			d.m_eta = M.IndexOfRefraction;
 			d.m_invEta = 1.0f / M.IndexOfRefraction;
-			d.m_specularReflectance = CreateTexture(0, Spectrum(M.specular));
-			d.m_specularTransmittance = CreateTexture(0, Spectrum(M.Tf));
+			d.m_specularReflectance = CreateTexture(0, Spectrum(M.specular.x, M.specular.y, M.specular.z));
+			d.m_specularTransmittance = CreateTexture(0, Spectrum(M.Tf.x, M.Tf.y, M.Tf.z));
 			mat.bsdf.SetData(d);
 		}
 		else if(M.IlluminationModel == 9)
@@ -575,7 +575,7 @@ void compileobj(IInStream& in, OutputStream& a_Out)
 			d.m_eta = M.IndexOfRefraction;
 			d.m_invEta = 1.0f / M.IndexOfRefraction;
 			d.m_specularReflectance = CreateTexture(0, Spectrum(0.0f));
-			d.m_specularTransmittance = CreateTexture(0, Spectrum(M.Tf));
+			d.m_specularTransmittance = CreateTexture(0, Spectrum(M.Tf.x, M.Tf.y, M.Tf.z));
 			mat.bsdf.SetData(d);
 		}
 		if (M.textures[TextureType_Displacement].size())
@@ -617,7 +617,7 @@ void compileobj(IInStream& in, OutputStream& a_Out)
 		*/
 		if(length(M.emission))
 		{
-			m_sLights[lc].L = M.emission;
+			m_sLights[lc].L = Spectrum(M.emission.x, M.emission.y, M.emission.z);
 			strcpy(m_sLights[lc].MatName, M.Name.c_str());
 			mat.NodeLightIndex = lc++;
 		}
@@ -627,16 +627,16 @@ void compileobj(IInStream& in, OutputStream& a_Out)
 	unsigned int m_numTriangles = (unsigned int)indices.size() / 3;
 	unsigned int m_numVertices = (unsigned int)positions.size();
 	e_TriangleData* triData = new e_TriangleData[m_numTriangles];
-	float3 p[3];
-	float3 n[3];
-	float3 ta[3];
-	float3 bi[3];
-	float2 t[3];
+	Vec3f p[3];
+	Vec3f n[3];
+	Vec3f ta[3];
+	Vec3f bi[3];
+	Vec2f t[3];
 #ifdef EXT_TRI
-	float3* v_Normals = new float3[m_numVertices], *v_Tangents = new float3[m_numVertices], *v_BiTangents = new float3[m_numVertices];
-	Platform::SetMemory(v_Normals, sizeof(float3) * m_numVertices);
-	Platform::SetMemory(v_Tangents, sizeof(float3) * m_numVertices);
-	Platform::SetMemory(v_BiTangents, sizeof(float3) * m_numVertices);
+	Vec3f* v_Normals = new Vec3f[m_numVertices], *v_Tangents = new Vec3f[m_numVertices], *v_BiTangents = new Vec3f[m_numVertices];
+	Platform::SetMemory(v_Normals, sizeof(Vec3f) * m_numVertices);
+	Platform::SetMemory(v_Tangents, sizeof(Vec3f) * m_numVertices);
+	Platform::SetMemory(v_BiTangents, sizeof(Vec3f) * m_numVertices);
 	ComputeTangentSpace(&positions[0], &texCoords[0], &indices[0], m_numVertices, m_numTriangles, v_Normals, v_Tangents, v_BiTangents);
 	if(m_numVertices == m_numTriangles * 3)
 		v_Normals = &normals[0];

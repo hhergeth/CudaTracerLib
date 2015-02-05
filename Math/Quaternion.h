@@ -1,23 +1,24 @@
 #pragma once
 
-#include "cutil_math.h"
+#include "MathFunc.h"
+#include "Vector.h"
 
 class Quaternion
 {
 public:
-	float4 val;
+	Vec4f val;
 	inline float& operator[](int n) { return *(((float*)&val) + n); }
 	inline float operator[](int n) const { return *(((float*)&val) + n); }
 	CUDA_FUNC_IN Quaternion(){}
 	CUDA_FUNC_IN Quaternion(float x, float y, float z, float w)
 	{
-		val = make_float4(x,y,z,w);
+		val = Vec4f(x, y, z, w);
 	}
 	CUDA_FUNC_IN Quaternion(float x, float y, float z)
 	{
 		float w = 1.0f - x*x - y*y - z*z;
 		w = w < 0.0 ? 0.0f : (float)-sqrt( double(w) );
-		val = make_float4(x,y,z,w);
+		val = Vec4f(x, y, z, w);
 		normalize();
 	}
 	CUDA_FUNC_IN Quaternion operator *(const Quaternion &q) const
@@ -29,7 +30,7 @@ public:
 		r.val.z = val.w*q.val.z + val.z*q.val.w + val.x*q.val.y - val.y*q.val.x;
 		return r;
 	}
-	CUDA_FUNC_IN float3 operator *(const float3 &v) const
+	CUDA_FUNC_IN Vec3f operator *(const Vec3f &v) const
 	{
         float x = val.x + val.x;
         float y = val.y + val.y;
@@ -43,7 +44,7 @@ public:
         float yy = val.y * y;
         float yz = val.y * z;
         float zz = val.z * z;
-		float3 vector;
+		Vec3f vector;
         vector.x = ((v.x * ((1.0f - yy) - zz)) + (v.y * (xy - wz))) + (v.z * (xz + wy));
 		vector.y = ((v.x * (xy + wz)) + (v.y * ((1.0f - xx) - zz))) + (v.z * (yz - wx));
         vector.z = ((v.x * (xz - wy)) + (v.y * (yz + wx))) + (v.z * ((1.0f - xx) - yy));
@@ -57,7 +58,7 @@ public:
 		val.z = val.w*q.val.z + val.z*q.val.w + val.x*q.val.y - val.y*q.val.x;
 		return *this;
 	}    
-	CUDA_FUNC_IN void buildFromAxisAngle(const float3& axis, float angle)
+	CUDA_FUNC_IN void buildFromAxisAngle(const Vec3f& axis, float angle)
 	{
 		float radians = (angle/180.0f)*3.14159f;
 
@@ -109,10 +110,10 @@ public:
         float yz = val.y * val.z;
         float xw = val.x * val.w;
 		float4x4 r;
-		r.row(0, make_float4(1.0f - (2.0f * (yy + zz)), 2.0f * (xy + zw), 2.0f * (zx - yw), 0));
-		r.row(1, make_float4(2.0f * (xy - zw), 1.0f - (2.0f * (zz + xx)), 2.0f * (yz + xw), 0));
-		r.row(2, make_float4(2.0f * (zx + yw), 2.0f * (yz - xw), 1.0f - (2.0f * (yy + xx)), 0));
-		r.row(3, make_float4(0, 0, 0, 1));
+		r.row(0, Vec4f(1.0f - (2.0f * (yy + zz)), 2.0f * (xy + zw), 2.0f * (zx - yw), 0));
+		r.row(1, Vec4f(2.0f * (xy - zw), 1.0f - (2.0f * (zz + xx)), 2.0f * (yz + xw), 0));
+		r.row(2, Vec4f(2.0f * (zx + yw), 2.0f * (yz - xw), 1.0f - (2.0f * (yy + xx)), 0));
+		r.row(3, Vec4f(0, 0, 0, 1));
 		return r;
 	}
 	CUDA_FUNC_IN Quaternion slerp(const Quaternion &q1, const Quaternion &q2, float t)
