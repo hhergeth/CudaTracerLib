@@ -249,7 +249,7 @@ template<int D, int K> struct GaussianMixtureModel
 			gamma[i].resize(K);
 		}
 		std::vector<SufStat> stats;
-		stats.resize(K); int I = 0;
+		stats.resize(K);
 		float L_old, L_new = res.L(samples, N);
 		do
 		{
@@ -274,8 +274,8 @@ template<int D, int K> struct GaussianMixtureModel
 			res.RecomputeFromStats(&stats[0], N, 1);
 			L_new = res.L(samples, N);
 		}
-		while(I++ < 100);
-		//while(abs(L_old - L_new) > eps * abs(L_new));
+		//while(I++ < 100);
+		while(abs(L_old - L_new) > eps * abs(L_new));
 		return res;
 	}
 };

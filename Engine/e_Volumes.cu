@@ -50,7 +50,7 @@ e_VolumeGrid::e_VolumeGrid(const e_PhaseFunction& func, const float4x4 volToWorl
 void e_VolumeGrid::Update()
 {
 	e_BaseVolumeRegion::Box = AABB(Vec3f(0), Vec3f(1)).Transform(VolumeToWorld);
-	float dimf[] = { grid.dim.x - 1, grid.dim.y - 1, grid.dim.z - 1 };
+	float dimf[] = { (float)grid.dim.x - 1, (float)grid.dim.y - 1, (float)grid.dim.z - 1 };
 	if (!singleGrid)
 	{
 		uint3 dims[] = {gridA.dim, gridS.dim, gridL.dim};
@@ -261,7 +261,7 @@ bool e_VolumeGrid::sampleDistance(const Ray& ray, float minT, float maxT, float 
 	return success && mRec.pdfSuccess > 0;
 }
 
-bool e_KernelAggregateVolume::IntersectP(const Ray &ray, float minT, float maxT, unsigned int a_NodeIndex, float *t0, float *t1) const
+bool e_KernelAggregateVolume::IntersectP(const Ray &ray, float minT, float maxT, float *t0, float *t1, unsigned int a_NodeIndex) const
 {
 	*t0 = FLT_MAX;
 	*t1 = -FLT_MAX;
@@ -322,7 +322,7 @@ Spectrum e_KernelAggregateVolume::tau(const Ray &ray, float minT, float maxT, un
 	return s;
 }
 
-float e_KernelAggregateVolume::Sample(const Vec3f& p, const Vec3f& wo, unsigned int a_NodeIndex, CudaRNG& rng, Vec3f* wi)
+float e_KernelAggregateVolume::Sample(const Vec3f& p, const Vec3f& wo, CudaRNG& rng, Vec3f* wi, unsigned int a_NodeIndex)
 {
 	PhaseFunctionSamplingRecord r2(wo);
 	r2.wi = wo;
@@ -338,7 +338,7 @@ float e_KernelAggregateVolume::Sample(const Vec3f& p, const Vec3f& wo, unsigned 
 	return 0.0f;
 }
 
-float e_KernelAggregateVolume::p(const Vec3f& p, const Vec3f& wo, const Vec3f& wi, unsigned int a_NodeIndex, CudaRNG& rng)
+float e_KernelAggregateVolume::p(const Vec3f& p, const Vec3f& wo, const Vec3f& wi, CudaRNG& rng, unsigned int a_NodeIndex)
 {
 	PhaseFunctionSamplingRecord r2(wo, wi);
 	r2.wi = wo;
@@ -356,7 +356,7 @@ CUDA_FUNC_IN int ffsn(unsigned int v, int n) {
 	return v & ~(v - 1); // extract the least significant bit
 }
 
-bool e_KernelAggregateVolume::sampleDistance(const Ray& ray, float minT, float maxT, unsigned int a_NodeIndex, CudaRNG& rng, MediumSamplingRecord& mRec) const
+bool e_KernelAggregateVolume::sampleDistance(const Ray& ray, float minT, float maxT, CudaRNG& rng, MediumSamplingRecord& mRec, unsigned int a_NodeIndex) const
 {
 	if (m_uVolumeCount == 1 && m_pVolumes[0].As()->isInVolume(a_NodeIndex) && m_pVolumes[0].WorldBound().Intersect(ray))
 		return m_pVolumes[0].sampleDistance(ray, minT, maxT, rng.randomFloat(), mRec);

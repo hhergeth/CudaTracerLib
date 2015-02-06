@@ -109,7 +109,7 @@ struct order
 void k_BlockSampler::AddPass()
 {
 	return;
-	static bool initIndices = false;
+	/*static bool initIndices = false;
 	static std::vector<unsigned int> g_IndicesH, g_IndicesH2;
 	if (!initIndices)
 	{
@@ -134,11 +134,11 @@ void k_BlockSampler::AddPass()
 		//cudaMemcpy(m_pHostIndexData, m_pDeviceIndexData, sizeof(unsigned int) * totalNumBlocks(), cudaMemcpyDeviceToHost);
 		//m_uNumBlocksToLaunch = totalNumBlocks() / 2;
 		float w_max = 0;
-		for (int i = 0; i < totalNumBlocks(); i++)
+		for (unsigned int i = 0; i < totalNumBlocks(); i++)
 			w_max = max(w_max, m_pHostBlockData[i]);
 		m_uNumBlocksToLaunch = 0;
 		cudaMemcpy(&g_IndicesH2[0], m_pDeviceIndexData, sizeof(unsigned int) * totalNumBlocks(), cudaMemcpyDeviceToHost);
-		for (int i = 0; i < totalNumBlocks(); i++)
+		for (unsigned int i = 0; i < totalNumBlocks(); i++)
 		{
 			float wd = m_pHostBlockData[g_IndicesH2[i]] / w_max;
 			float rnd = float(rand()) / float(RAND_MAX);
@@ -146,7 +146,7 @@ void k_BlockSampler::AddPass()
 				m_pHostIndexData[m_uNumBlocksToLaunch++] = g_IndicesH2[i];
 		}
 		//copyKernel << <dim3(m_uNumBlocksToLaunch, BLOCK_FACTOR * BLOCK_FACTOR), dim3(32, 32) >> >(*img, m_pLumData, m_pDeviceIndexData, nx);
-	}
+	}*/
 }
 
 void k_BlockSampler::Clear()
@@ -175,7 +175,7 @@ struct Colorizer
 	template<typename T> static Colorizer FromData(const T* data, unsigned int N)
 	{
 		float avg = 0, avg2 = 0, min = FLT_MAX, max = -FLT_MAX;
-		for (int i = 0; i < N; i++)
+		for (unsigned int i = 0; i < N; i++)
 		{
 			float f = data[i];
 			avg += f;
@@ -191,7 +191,7 @@ struct Colorizer
 	template<typename T, typename Converter> static Colorizer FromData(const T* data, unsigned int N, const Converter& cnv)
 	{
 		float avg = 0, avg2 = 0, min = FLT_MAX, max = -FLT_MAX;
-		for (int i = 0; i < N; i++)
+		for (unsigned int i = 0; i < N; i++)
 		{
 			float f = cnv(data[i]);
 			avg += f;
@@ -207,8 +207,7 @@ struct Colorizer
 	CUDA_FUNC_IN float operator()(float f)
 	{
 		return (f - min) / (max - min);
-
-		if (abs(f - avg) < stdDev)
+		/*if (abs(f - avg) < stdDev)
 		{
 			float l = (f - avg) / stdDev;
 			return mappedAvg + mappedDev * l;
@@ -221,7 +220,7 @@ struct Colorizer
 			float l = abs(f - b);
 			float range = 0.5f - mappedDev;
 			return m + l * range * s;
-		}
+		}*/
 	}
 
 	CUDA_FUNC_IN Spectrum colorize(float f)

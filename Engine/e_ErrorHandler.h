@@ -16,9 +16,9 @@
 
 #define BAD_HOST_ALLOC(_SIZE_) BAD_EXCEPTION("Memory allocation(%d bytes) failure.", _SIZE_)
 
-#define BAD_HOST_DEVICE_COPY(_START_, _SIZE_) BAD_EXCEPTION("Host to device memcpy failure, start at : %d, size : %d", _START_, _SIZE_)
+#define BAD_HOST_DEVICE_COPY(_START_, _SIZE_) BAD_EXCEPTION("Host to device memcpy failure, start at : %u, size : %u", unsigned int(_START_), unsigned int(_SIZE_))
 
-#define BAD_DEVICE_HOST_COPY(_START_, _SIZE_) BAD_EXCEPTION("Device to host memcpy failure, start at : %d, size : %d", _START_, _SIZE_)
+#define BAD_DEVICE_HOST_COPY(_START_, _SIZE_) BAD_EXCEPTION("Device to host memcpy failure, start at : %u, size : %u", unsigned int(_START_), unsigned int(_SIZE_))
 
 #define CHECK_CUDA_CODE(_ERR_, _MES_) if(_ERR_ != CUDA_SUCCESS) BAD_EXCEPTION("%s \nCuda Message : %s", _MES_, cudaGetErrorString(_ERR_))
 

@@ -51,7 +51,6 @@ CUDA_FUNC_IN void loadInvModl(int i, float4x4* o)
 
 CUDA_FUNC_IN bool k_TraceRayNode(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result, const e_Node* N)
 {
-	const bool USE_ALPHA = true;
 	unsigned int mIndex = N->m_uMeshIndex;
 	e_KernelMesh mesh = g_SceneData.m_sMeshData[mIndex];
 	bool found = false;
@@ -326,6 +325,9 @@ bool k_TraceRay(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result)
 
 void k_INITIALIZE(const e_DynamicScene* a_Scene, const CudaRNGBuffer& a_RngBuf)
 {
+	if (!a_Scene)
+		return;
+
 	e_KernelDynamicScene a_Data = a_Scene->getKernelSceneData();
 
 	size_t offset;

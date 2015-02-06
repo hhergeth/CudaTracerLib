@@ -34,14 +34,14 @@ template<bool DIRECT> __global__ void k_PhotonPass()
 		{
 			TraceResult r2 = k_TraceRay(r);
 			float minT, maxT;
-			if ((!bssrdf && V.HasVolumes() && V.IntersectP(r, 0, r2.m_fDist, -1, &minT, &maxT) && V.sampleDistance(r, 0, r2.m_fDist, -1, rng, mRec))
+			if ((!bssrdf && V.HasVolumes() && V.IntersectP(r, 0, r2.m_fDist, &minT, &maxT) && V.sampleDistance(r, 0, r2.m_fDist, rng, mRec))
 				|| (bssrdf && sampleDistanceHomogenous(r, 0, r2.m_fDist, rng.randomFloat(), mRec, bssrdf->sig_a, bssrdf->sigp_s)))
 			{
 				throughput *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
 				wasStored |= storePhoton(mRec.p, throughput * Le, -r.direction, Vec3f(0, 0, 0), PhotonType::pt_Volume, g_Map);
 				if (bssrdf)
 					r.direction = Warp::squareToUniformSphere(rng.randomFloat2());
-				else throughput *= V.Sample(mRec.p, -r.direction, r2.getNodeIndex(), rng, &r.direction);
+				else throughput *= V.Sample(mRec.p, -r.direction, rng, &r.direction);
 				r.origin = mRec.p;
 				delta = false;
 				medium = true;

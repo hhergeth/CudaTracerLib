@@ -121,6 +121,7 @@ void k_BDPT::Debug(e_Image* I, const Vec2i& pixel)
 	k_INITIALIZE(m_pScene, g_sRngs);
 	//Li(*gI, g_RNGData(), pixel.x, pixel.y);
 	CudaRNG rng = g_RNGData();
-	BPT(Vec2f(pixel), m_pBlockSampler->getBlockImage(), rng, w, h, use_mis, force_s, force_t, LScale);
+	k_BlockSampleImage img = m_pBlockSampler->getBlockImage();
+	BPT(Vec2f(pixel), img, rng, w, h, use_mis, force_s, force_t, LScale);
 	g_RNGData(rng);
 }

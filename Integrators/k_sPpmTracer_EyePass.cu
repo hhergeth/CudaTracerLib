@@ -2,7 +2,7 @@
 #include "..\Kernel\k_TraceHelper.h"
 #include "..\Kernel\k_TraceAlgorithms.h"
 
-template<bool VOL> CUDA_FUNC_IN Spectrum L_Volume(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, unsigned int a_NodeIndex, const Spectrum& sigt, const Spectrum& sigs, Spectrum& Tr, const k_PhotonMapCollection<true>& photonMap)
+template<bool VOL> CUDA_FUNC_IN Spectrum L_Volume(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const Spectrum& sigt, const Spectrum& sigs, Spectrum& Tr, const k_PhotonMapCollection<true>& photonMap, unsigned int a_NodeIndex = 0xffffffff)
 {
 	const k_PhotonMapReg& map = photonMap.m_sVolumeMap;
 	Spectrum Tau = Spectrum(0.0f);
@@ -32,7 +32,7 @@ template<bool VOL> CUDA_FUNC_IN Spectrum L_Volume(float a_r, CudaRNG& rng, const
 						Spectrum l = e.getL();
 						if(distanceSquared(P, x) < r2)
 						{
-							float p = VOL ? g_SceneData.m_sVolume.p(x, r.direction, wi, a_NodeIndex, rng) : Warp::squareToUniformSpherePdf();
+							float p = VOL ? g_SceneData.m_sVolume.p(x, r.direction, wi, rng, a_NodeIndex) : Warp::squareToUniformSpherePdf();
 							L += p * l * Vs;
 						}
 						i = e.getNext();
@@ -234,10 +234,10 @@ template<bool DIRECT, bool FINAL_GATHER> CUDA_FUNC_IN void k_EyePassF(int x, int
 		if(g_SceneData.m_sVolume.HasVolumes())
 		{
 			float tmin, tmax;
-			if (g_SceneData.m_sVolume.IntersectP(r, 0, r2.m_fDist, -1, &tmin, &tmax))
+			if (g_SceneData.m_sVolume.IntersectP(r, 0, r2.m_fDist, &tmin, &tmax))
 			{
 				Spectrum Tr;
-				L += throughput * L_Volume<true>(a_rVolume, rng, r, tmin, tmax, -1, Spectrum(0.0f), Spectrum(0.0f), Tr, photonMap);
+				L += throughput * L_Volume<true>(a_rVolume, rng, r, tmin, tmax, Spectrum(0.0f), Spectrum(0.0f), Tr, photonMap);
 				throughput = throughput * Tr;
 			}
 		}
@@ -254,7 +254,7 @@ template<bool DIRECT, bool FINAL_GATHER> CUDA_FUNC_IN void k_EyePassF(int x, int
 			Spectrum Tr;
 			/*if (r2.getMat().bsdf.m_bReflectDirAtSurface)
 				L += throughput * L_Volume<true>(a_rVolume, rng, rTrans, 0, r3.m_fDist, r2.getNodeIndex(), Spectrum(0.0f), Spectrum(0.0f), Tr, photonMap);
-			else */L += throughput * L_Volume<false>(a_rVolume, rng, rTrans, 0, r3.m_fDist, r2.getNodeIndex(), bssrdf->sigp_s + bssrdf->sig_a, bssrdf->sigp_s, Tr, photonMap);
+				else */L += throughput * L_Volume<false>(a_rVolume, rng, rTrans, 0, r3.m_fDist, bssrdf->sigp_s + bssrdf->sig_a, bssrdf->sigp_s, Tr, photonMap, r2.getNodeIndex());
 			//break;
 		}
 		bool hasSmooth = r2.getMat().bsdf.hasComponent(ESmooth),
@@ -287,9 +287,9 @@ template<bool DIRECT, bool FINAL_GATHER> CUDA_FUNC_IN void k_EyePassF(int x, int
 		if(g_SceneData.m_sVolume.HasVolumes())
 		{
 			float tmin, tmax;
-			g_SceneData.m_sVolume.IntersectP(r, 0, r2.m_fDist, -1, &tmin, &tmax);
+			g_SceneData.m_sVolume.IntersectP(r, 0, r2.m_fDist, &tmin, &tmax);
 			Spectrum Tr;
-			L += throughput * L_Volume<true>(a_rVolume, rng, r, tmin, tmax, -1, Spectrum(0.0f), Spectrum(0.0f), Tr, photonMap);
+			L += throughput * L_Volume<true>(a_rVolume, rng, r, tmin, tmax, Spectrum(0.0f), Spectrum(0.0f), Tr, photonMap);
 		}
 		L += throughput * g_SceneData.EvalEnvironment(r);
 	}

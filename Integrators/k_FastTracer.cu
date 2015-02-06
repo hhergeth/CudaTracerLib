@@ -18,7 +18,7 @@ __global__ void pathCreateKernel(unsigned int w, unsigned int h, k_PTDBuffer g_I
 	dat.y = y;
 	dat.throughput = W;
 	dat.L = Spectrum(0.0f);
-	dat.dIdx = -1;
+	dat.dIdx = 0xffffffff;
 }
 
 __global__ void doDirectKernel(unsigned int w, unsigned int h, k_PTDBuffer g_Intersector, e_Image I, float SCALE)
@@ -100,9 +100,9 @@ __global__ void doDirectKernel(unsigned int w, unsigned int h, k_PTDBuffer g_Int
 __device__ CUDA_INLINE Vec2f stratifiedSample(const Vec2f& f, int pass)
 {
 	return f;
-	int i = pass % 64;
-	int x = i % 8, y = i / 8;
-	return Vec2f(x, y) / 8.0f + f / 8.0f;
+	//int i = pass % 64;
+	//int x = i % 8, y = i / 8;
+	//return Vec2f(x, y) / 8.0f + f / 8.0f;
 }
 
 #define max_PASS 5
@@ -136,7 +136,7 @@ __global__ void pathIterateKernel(unsigned int N, e_Image I, int pass, int itera
 
 
 		rayData dat = g_Intersector(rayidx);
-		if (pass > 0 && dat.dIdx != -1)
+		if (pass > 0 && dat.dIdx != 0xffffffff)
 		{
 			traversalResult& res = g_Intersector.res(dat.dIdx, 1);
 			traversalRay& ray = g_Intersector(dat.dIdx, 1);
@@ -155,7 +155,7 @@ __global__ void pathIterateKernel(unsigned int N, e_Image I, int pass, int itera
 			DifferentialGeometry dg;
 			BSDFSamplingRecord bRec(dg);
 			r2.getBsdfSample(r, rng, &bRec);
-			if (pass == 0 || dat.dIdx == -1)
+			if (pass == 0 || dat.dIdx == 0xffffffff)
 				dat.L += r2.Le(bRec.dg.P, bRec.dg.sys, -r.direction) * dat.throughput;
 			if (pass + 1 != max_PASS)
 			{
@@ -181,7 +181,7 @@ __global__ void pathIterateKernel(unsigned int N, e_Image I, int pass, int itera
 					ray3.a = Vec4f(bRec.dg.P, 1e-2f);
 					ray3.b = Vec4f(dRec.d, FLT_MAX);
 				}
-				else dat.dIdx = -1;
+				else dat.dIdx = 0xffffffff;
 				g_Intersector2(idx2) = dat;
 			}
 		}

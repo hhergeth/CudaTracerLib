@@ -26,4 +26,8 @@ public:
 	void setSkydome(const char* compiledPath);
 protected:
 	virtual void DoRender(e_Image* I);
+	virtual void StartNewTrace(e_Image* I)
+	{
+		I->Clear();
+	}
 };

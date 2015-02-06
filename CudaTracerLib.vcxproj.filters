@@ -264,15 +264,13 @@
     <ClInclude Include="Math\MathFunc.h">
       <Filter>Math</Filter>
     </ClInclude>
+    <ClInclude Include="VirtualFuncType.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Base\BVHBuilder.cpp">
       <Filter>Base</Filter>
     </ClCompile>
     <ClCompile Include="Base\FileStream.cpp">
-      <Filter>Base</Filter>
-    </ClCompile>
-    <ClCompile Include="Base\StringUtils.cpp">
       <Filter>Base</Filter>
     </ClCompile>
     <ClCompile Include="Kernel\k_Tracer.cpp">

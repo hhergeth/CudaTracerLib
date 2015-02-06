@@ -359,8 +359,6 @@ CUDA_FUNC_IN Vec3f  cross(const Vec3f& a, const Vec3f& b)    { return a.cross(b)
     CUDA_FUNC_IN T max(T& a, T& b, T& c, T& d)                          { return a.max(b).max(c).max(d); } \
     CUDA_FUNC_IN T clamp(const T& v, const T& lo, const T& hi)          { return v.clamp(lo, hi); } \
     CUDA_FUNC_IN T clamp(T& v, T& lo, T& hi)                            { return v.clamp(lo, hi); } \
-    CUDA_FUNC_IN T sign(const T& v)										{ return v.sign(); } \
-    CUDA_FUNC_IN T sign(T& v)											{ return v.sign(); } \
     CUDA_FUNC_IN T ceil(const T& v)										{ return v.ceil(); } \
     CUDA_FUNC_IN T ceil(T& v)											{ return v.ceil(); } \
     CUDA_FUNC_IN T floor(const T& v)									{ return v.floor(); } \
@@ -371,4 +369,13 @@ CUDA_FUNC_IN Vec3f  cross(const Vec3f& a, const Vec3f& b)    { return a.cross(b)
 minmax(Vec2i) minmax(Vec3i) minmax(Vec4i)
 minmax(Vec2u) minmax(Vec3u) minmax(Vec4u)
 minmax(Vec2f) minmax(Vec3f) minmax(Vec4f)
+
+#define signABC(T) \
+	CUDA_FUNC_IN T sign(const T& v)										{ return v.sign(); } \
+	CUDA_FUNC_IN T sign(T& v)											{ return v.sign(); }
+
+signABC(Vec2i) signABC(Vec3i) signABC(Vec4i)
+signABC(Vec2f) signABC(Vec3f) signABC(Vec4f)
+
 #undef minmax
+#undef signABC

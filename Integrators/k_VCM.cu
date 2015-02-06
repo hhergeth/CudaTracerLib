@@ -3,7 +3,7 @@
 
 CUDA_DEVICE k_PhotonMapCollection<false> g_CurrentMap, g_NextMap;
 
-CUDA_FUNC_IN Spectrum L_Surface(BPTSubPathState& aCameraState, BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED, const e_KernelMaterial* mat, float mMisVcWeightFactor)
+CUDA_DEVICE Spectrum L_Surface(BPTSubPathState& aCameraState, BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED, const e_KernelMaterial* mat, float mMisVcWeightFactor)
 {
 	Spectrum Lp = Spectrum(0.0f);
 	const float r2 = a_rSurfaceUNUSED * a_rSurfaceUNUSED;
@@ -140,7 +140,9 @@ CUDA_FUNC_IN void VCM(const Vec2f& pixelPosition, k_BlockSampleImage& img, CudaR
 			}
 
 			//scale by 2 to account for no merging in the first iteration
+#ifdef ISCUDA
 			acc += cameraState.throughput * (a_NumIteration == 2 ? 2 : 1) * L_Surface(cameraState, bRec, a_Radius, &r2.getMat(), mMisVcWeightFactor);
+#endif
 		}
 
 		if (!sampleScattering(cameraState, bRec, r2.getMat(), rng, mMisVcWeightFactor, mMisVmWeightFactor))
@@ -216,6 +218,6 @@ k_VCM::k_VCM()
 {
 	int gridLength = 100;
 	int numPhotons = 1024 * 1024 * 5;
-	m_sPhotonMapsCurrent = k_PhotonMapCollection<false>(numPhotons, gridLength*gridLength*gridLength, -1);
-	m_sPhotonMapsNext = k_PhotonMapCollection<false>(numPhotons, gridLength*gridLength*gridLength, -1);
+	m_sPhotonMapsCurrent = k_PhotonMapCollection<false>(numPhotons, gridLength*gridLength*gridLength, 0xffffffff);
+	m_sPhotonMapsNext = k_PhotonMapCollection<false>(numPhotons, gridLength*gridLength*gridLength, 0xffffffff);
 }

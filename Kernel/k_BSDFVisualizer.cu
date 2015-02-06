@@ -45,9 +45,12 @@ CUDA_FUNC_IN Spectrum func2(BSDFALL& bsdf, e_InfiniteLight& light, CudaRNG& rng,
 	bRec.mode = ERadiance;
 	bRec.typeMask = EAll;
 	Vec2f xy = Vec2f(x, y) / Vec2f(w, h);
-	if (length(2.0f * xy - Vec2f(1)) > 1)
-		return Spectrum(100, 149, 237) / 255.0f;
-	bRec.wi = hemishphere(xy);
+	//if (length(2.0f * xy - Vec2f(1)) > 1)
+	//	return Spectrum(100, 149, 237) / 255.0f;
+	//bRec.wi = hemishphere(xy);
+	Vec3f tar(xy.x, 0, xy.y);
+	Vec3f cam(0, 1, 0);
+	bRec.wi = normalize(tar - cam);
 	Spectrum q(0.0f);
 	int N = 20;
 	for (int i = 0; i < N; i++)
@@ -95,20 +98,24 @@ void k_BSDFVisualizer::DrawRegion(e_Image* I, const Vec2i& off, const Vec2i& siz
 		BSDFCalc2 << <dim3(size.x / p + 1, size.y / p + 1, 1), dim3(p, p, 1) >> >(m_wo, *I, off, size, LScale, cosTheta);
 		I->DoUpdateDisplay(0);
 	}
-	else BSDFCalc << <dim3(size.x / p + 1, size.y / p + 1, 1), dim3(p, p, 1) >> >(m_wo, *I, off, size, LScale, cosTheta);
+	else
+	{
+		I->Clear();
+		BSDFCalc << <dim3(size.x / p + 1, size.y / p + 1, 1), dim3(p, p, 1) >> >(m_wo, *I, off, size, LScale, cosTheta);
+	}
 }
 
 void k_BSDFVisualizer::DoRender(e_Image* I)
 {
-	I->Clear();
 	DrawRegion(I, Vec2i(0, 0), Vec2i(w, h));
 }
 
 void k_BSDFVisualizer::Debug(e_Image* I, const Vec2i& p)
 {
 	g_RNGDataHost = k_Tracer::g_sRngs;
+	CudaRNG rng = g_RNGData();
 	if (drawEnvMap)
-		func2(*m_Bsdf, *m_pLight, g_RNGData(), m_wo, w, h, p.x, p.y, cosTheta);
+		func2(*m_Bsdf, *m_pLight, rng, m_wo, w, h, p.x, p.y, cosTheta);
 	func(*m_Bsdf, m_wo, w, h, p.x, p.y, cosTheta);
 }
 

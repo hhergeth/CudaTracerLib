@@ -419,34 +419,34 @@ public:
 	}
 
 	///Calculates the intersection of the ray with the bound of the volume
-	CUDA_DEVICE CUDA_HOST bool IntersectP(const Ray &ray, float minT, float maxT, unsigned int a_NodeIndex, float *t0, float *t1) const;
+	CUDA_DEVICE CUDA_HOST bool IntersectP(const Ray &ray, float minT, float maxT, float *t0, float *t1, unsigned int a_NodeIndex = 0xffffffff) const;
 
 	///The probability that light is abosrbed per unit distance
-	CUDA_DEVICE CUDA_HOST Spectrum sigma_a(const Vec3f& p, const Vec3f& w, unsigned int a_NodeIndex) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sigma_a(const Vec3f& p, const Vec3f& w, unsigned int a_NodeIndex = 0xffffffff) const;
 
 	///The probability that light is scattered per unit distance
-	CUDA_DEVICE CUDA_HOST Spectrum sigma_s(const Vec3f& p, const Vec3f& w, unsigned int a_NodeIndex) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sigma_s(const Vec3f& p, const Vec3f& w, unsigned int a_NodeIndex = 0xffffffff) const;
 
-	CUDA_DEVICE CUDA_HOST Spectrum Lve(const Vec3f& p, const Vec3f& w, unsigned int a_NodeIndex) const;
+	CUDA_DEVICE CUDA_HOST Spectrum Lve(const Vec3f& p, const Vec3f& w, unsigned int a_NodeIndex = 0xffffffff) const;
 
 	///Combined sigmas
-	CUDA_DEVICE CUDA_HOST Spectrum sigma_t(const Vec3f &p, const Vec3f &wo, unsigned int a_NodeIndex) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sigma_t(const Vec3f &p, const Vec3f &wo, unsigned int a_NodeIndex = 0xffffffff) const;
 
 	///Calculates the volumes optical thickness along a ray in the volumes bounds
-	CUDA_DEVICE CUDA_HOST Spectrum tau(const Ray &ray, float minT, float maxT, unsigned int a_NodeIndex) const;
+	CUDA_DEVICE CUDA_HOST Spectrum tau(const Ray &ray, float minT, float maxT, unsigned int a_NodeIndex = 0xffffffff) const;
 
-	CUDA_DEVICE CUDA_HOST float Sample(const Vec3f& p, const Vec3f& wo, unsigned int a_NodeIndex, CudaRNG& rng, Vec3f* wi);
+	CUDA_DEVICE CUDA_HOST float Sample(const Vec3f& p, const Vec3f& wo, CudaRNG& rng, Vec3f* wi, unsigned int a_NodeIndex = 0xffffffff);
 
-	CUDA_DEVICE CUDA_HOST float p(const Vec3f& p, const Vec3f& wo, const Vec3f& wi, unsigned int a_NodeIndex, CudaRNG& rng);
+	CUDA_DEVICE CUDA_HOST float p(const Vec3f& p, const Vec3f& wo, const Vec3f& wi, CudaRNG& rng, unsigned int a_NodeIndex = 0xffffffff);
 
-	CUDA_DEVICE CUDA_HOST bool sampleDistance(const Ray& ray, float minT, float maxT, unsigned int a_NodeIndex, CudaRNG& rng, MediumSamplingRecord& mRec) const;
+	CUDA_DEVICE CUDA_HOST bool sampleDistance(const Ray& ray, float minT, float maxT, CudaRNG& rng, MediumSamplingRecord& mRec, unsigned int a_NodeIndex = 0xffffffff) const;
 
 	CUDA_FUNC_IN bool HasVolumes()
 	{
 		return m_uVolumeCount > 0;
 	}
 
-	CUDA_FUNC_IN bool IsInVolume(const Vec3f& p, unsigned int a_NodeIndex) const
+	CUDA_FUNC_IN bool IsInVolume(const Vec3f& p, unsigned int a_NodeIndex = 0xffffffff) const
 	{
 		for (unsigned int i = 0; i < m_uVolumeCount; i++)
 			if (m_pVolumes[i].BaseRegion()->Box.Contains(p))

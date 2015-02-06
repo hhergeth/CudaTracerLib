@@ -30,7 +30,7 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 6.5.props" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 7.0.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -107,7 +107,6 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
   <ItemGroup>
     <ClCompile Include="Base\BVHBuilder.cpp" />
     <ClCompile Include="Base\FileStream.cpp" />
-    <ClCompile Include="Base\StringUtils.cpp" />
     <ClCompile Include="Defines.cpp" />
     <ClCompile Include="Engine\e_AnimatedMesh.cpp" />
     <ClCompile Include="Engine\e_Core.cpp" />
@@ -219,6 +218,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="Math\Vector.h" />
     <ClInclude Include="Math\Warp.h" />
     <ClInclude Include="StdAfx.h" />
+    <ClInclude Include="VirtualFuncType.h" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="Base\CudaRandom.cu" />
@@ -262,6 +262,6 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 6.5.targets" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 7.0.targets" />
   </ImportGroup>
 </Project>

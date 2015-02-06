@@ -5,6 +5,7 @@
 #include "..\MathTypes.h"
 #include "e_RoughTransmittance.h"
 
+#define FREEIMAGE_LIB
 #include <FreeImage.h>
 
 void InitializeCuda4Tracer(const char* dataPath)

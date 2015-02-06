@@ -154,7 +154,7 @@ public:
 		return max(a, b, c);
 #endif
 	}
-
+	
 	CUDA_FUNC_IN static float fmin_fmin(float a, float b, float c) { return int_as_float_(min_min(float_as_int_(a), float_as_int_(b), float_as_int_(c))); }
 	CUDA_FUNC_IN static float fmin_fmax(float a, float b, float c) { return int_as_float_(min_max(float_as_int_(a), float_as_int_(b), float_as_int_(c))); }
 	CUDA_FUNC_IN static float fmax_fmin(float a, float b, float c) { return int_as_float_(max_min(float_as_int_(a), float_as_int_(b), float_as_int_(c))); }
