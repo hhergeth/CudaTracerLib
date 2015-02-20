@@ -1,6 +1,5 @@
 #include "e_Mesh.h"
 #include "..\Base\StringUtils.h"
-#include "e_TraceResult.h"
 
 void e_TriIntersectorData::setData(const Vec3f& a, const Vec3f& b, const Vec3f& c)
 {
@@ -51,12 +50,13 @@ void e_TriIntersectorData::getData(Vec3f& v0, Vec3f& v1, Vec3f& v2) const
 	v1 = v2 + e12;
 }
 
-bool e_TriIntersectorData::Intersect(const Ray& r, TraceResult* a_Result) const
+bool e_TriIntersectorData::Intersect(const Ray& r, float* dist, Vec2f* bary) const
 {
 	float Oz = a.w - r.origin.x*a.x - r.origin.y*a.y - r.origin.z*a.z;
 	float invDz = 1.0f / (r.direction.x*a.x + r.direction.y*a.y + r.direction.z*a.z);
 	float t = Oz * invDz;
-	if (t > 0.0001f && t < a_Result->m_fDist)
+	float tmax = dist ? *dist : FLT_MAX;
+	if (t > 0.0001f && t < tmax)
 	{
 		float Ox = b.w + r.origin.x*b.x + r.origin.y*b.y + r.origin.z*b.z;
 		float Dx = r.direction.x*b.x + r.direction.y*b.y + r.direction.z*b.z;
@@ -68,8 +68,10 @@ bool e_TriIntersectorData::Intersect(const Ray& r, TraceResult* a_Result) const
 			float v = Oy + t*Dy;
 			if (v >= 0.0f && u + v <= 1.0f)
 			{
-				a_Result->m_fDist = t;
-				a_Result->m_fUV = Vec2f(u, v);
+				if (dist)
+					*dist = t;
+				if (bary)
+					*bary = Vec2f(u, v);
 				return true;
 			}
 		}

@@ -11,7 +11,7 @@ inline std::string vformat (const char *fmt, va_list ap)
 {
 	int l = _vscprintf(fmt, ap);
 	char* c = new char[l];
-	vsnprintf_s(c, l, l, fmt, ap);
+	vsprintf_s(c, l + 1, fmt, ap);
 	return std::string(c);
 }
 

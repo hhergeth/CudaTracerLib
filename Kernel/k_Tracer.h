@@ -9,6 +9,80 @@
 
 typedef void (*SliderCreateCallback)(float, float, bool, float*, std::string);
 
+class ITracerDebugger
+{
+public:
+
+	enum PathType
+	{
+		Camera,
+		Light
+	};
+
+	CUDA_FUNC_IN virtual void StartNewPath(const e_KernelLight* l, const Vec3f& pos, const Spectrum& col) = 0;
+	CUDA_FUNC_IN virtual void StartNewPath(const e_Sensor* c, const Vec3f& pos, const Spectrum& col) = 0;
+	CUDA_FUNC_IN virtual void AppendVertex(ITracerDebugger::PathType t, const Vec3f& pos) = 0;
+	CUDA_FUNC_IN virtual void AppendVertex(ITracerDebugger::PathType t, const Ray& ray, const TraceResult& res) = 0;
+
+};
+
+struct k_KernelTracerDebugger_NO_OP
+{
+	CUDA_FUNC_IN void StartNewPath(const e_KernelLight* l, const Vec3f& pos, const Spectrum& col)
+	{
+
+	}
+
+	CUDA_FUNC_IN void StartNewPath(const e_Sensor* c, const Vec3f& pos, const Spectrum& col)
+	{
+
+	}
+
+	CUDA_FUNC_IN void AppendVertex(ITracerDebugger::PathType t, const Vec3f& pos)
+	{
+
+	}
+
+	CUDA_FUNC_IN void AppendVertex(ITracerDebugger::PathType t, const Ray& ray, const TraceResult& res)
+	{
+
+	}
+};
+
+struct k_KernelTracerDebugger
+{
+	ITracerDebugger* wrapped;
+
+	k_KernelTracerDebugger(ITracerDebugger* debugger)
+		: wrapped(debugger)
+	{
+	}
+
+	CUDA_FUNC_IN void StartNewPath(const e_KernelLight* l, const Vec3f& pos, const Spectrum& col)
+	{
+		if (wrapped)
+			wrapped->StartNewPath(l, pos, col);
+	}
+
+	CUDA_FUNC_IN void StartNewPath(const e_Sensor* c, const Vec3f& pos, const Spectrum& col)
+	{
+		if (wrapped)
+			wrapped->StartNewPath(c, pos, col);
+	}
+
+	CUDA_FUNC_IN void AppendVertex(ITracerDebugger::PathType t, const Vec3f& pos)
+	{
+		if (wrapped)
+			wrapped->AppendVertex(t, pos);
+	}
+
+	CUDA_FUNC_IN void AppendVertex(ITracerDebugger::PathType t, const Ray& ray, const TraceResult& res)
+	{
+		if (wrapped)
+			wrapped->AppendVertex(t, ray, res);
+	}
+};
+
 class k_TracerBase
 {
 public:
@@ -17,6 +91,7 @@ public:
 	static float GetLightVisibility(e_DynamicScene* s, int recursion_depth);
 	static TraceResult TraceSingleRay(Ray r, e_DynamicScene* s);
 	static void InitRngs(unsigned int N = 1 << 16);
+	static void RenderDepth(e_Image* img, e_DynamicScene* s);
 
 	CUDA_DEVICE static Vec2i getPixelPos(unsigned int xoff, unsigned int yoff)
 	{
@@ -41,7 +116,7 @@ public:
 	}
 	virtual void Resize(unsigned int _w, unsigned int _h) = 0;
 	virtual void DoPass(e_Image* I, bool a_NewTrace) = 0;
-	virtual void Debug(e_Image* I, const Vec2i& pixel)
+	virtual void Debug(e_Image* I, const Vec2i& pixel, ITracerDebugger* debugger = 0)
 	{
 
 	}
@@ -53,7 +128,7 @@ public:
 	{
 
 	}
-	virtual const k_BlockSampler* getBlockSampler() const = 0;
+	virtual k_BlockSampler* getBlockSampler() const = 0;
 	virtual bool isMultiPass() const = 0;
 	virtual bool usesBlockSampler() const = 0;
 	virtual unsigned int getNumPassesDone() const
@@ -136,7 +211,7 @@ public:
 		m_fAccRuntime += m_fLastRuntime;
 		m_uAccNumRaysTraced += m_uLastNumRaysTraced;
 	}
-	virtual const k_BlockSampler* getBlockSampler() const
+	virtual k_BlockSampler* getBlockSampler() const
 	{
 		return m_pBlockSampler;
 	}

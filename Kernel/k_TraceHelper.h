@@ -1,6 +1,7 @@
 #pragma once
 #include "..\Engine\e_Sensor.h"
 #include "..\Engine\e_DynamicScene.h"
+#include "k_TraceResult.h"
 
 enum
 {
@@ -38,6 +39,8 @@ CUDA_FUNC_IN TraceResult k_TraceRay(const Ray& r)
 	return r2;
 }
 
+CUDA_DEVICE CUDA_HOST void fillDG(const Vec2f& bary, const e_TriangleData* tri, const e_Node* node, DifferentialGeometry& dg);
+
 void k_INITIALIZE(const e_DynamicScene* a_Scene, const CudaRNGBuffer& a_RngBuf);
 
 unsigned int k_getNumRaysTraced();
@@ -58,7 +61,7 @@ struct CUDA_ALIGN(16) traversalResult
 	CUDA_FUNC_IN void toResult(TraceResult* tR, e_KernelDynamicScene& g_SceneData)
 	{
 		tR->m_fDist = dist;
-		tR->m_fUV = ((half2*)&bCoords)->ToFloat2();
+		tR->m_fBaryCoords = ((half2*)&bCoords)->ToFloat2();
 		tR->m_pNode = g_SceneData.m_sNodeData.Data + nodeIdx;
 		tR->m_pTri = g_SceneData.m_sTriData.Data + triIdx;
 	}

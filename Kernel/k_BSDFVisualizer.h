@@ -21,7 +21,7 @@ public:
 		: m_wo(Vec3f(0, 0, 1)), m_Bsdf(0), LScale(1), cosTheta(true), m_pBuffer(0), m_pBuffer2(0), drawEnvMap(false)
 	{
 	}
-	virtual void Debug(e_Image* I, const Vec2i& pixel);
+	virtual void Debug(e_Image* I, const Vec2i& pixel, ITracerDebugger* debugger = 0);
 	void DrawRegion(e_Image* I, const Vec2i& off, const Vec2i& size);
 	void setSkydome(const char* compiledPath);
 protected:

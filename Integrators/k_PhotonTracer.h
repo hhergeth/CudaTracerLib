@@ -10,7 +10,7 @@ public:
 	k_PhotonTracer()
 	{
 	}
-	virtual void Debug(e_Image* I, const Vec2i& pixel);
+	virtual void Debug(e_Image* I, const Vec2i& pixel, ITracerDebugger* debugger = 0);
 	virtual void PrintStatus(std::vector<std::string>& a_Buf) const
 	{
 		double pC = floor((double)(m_uPassesDone * w * h) / 1000000.0);

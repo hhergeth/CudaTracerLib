@@ -51,7 +51,7 @@ Spectrum e_DiffuseLight::sampleRay(Ray &ray, const Vec2f &spatialSample, const V
 {
 	PositionSamplingRecord pRec;
 	shapeSet.SamplePosition(pRec, spatialSample);
-	Vec3f local = Warp::squareToCosineHemisphere(directionalSample);
+	Vec3f local = m_bOrthogonal ? Vec3f(0, 0, 1) : Warp::squareToCosineHemisphere(directionalSample);
 	ray = Ray(pRec.p, Frame(pRec.n).toWorld(local));
 	return m_power;
 }
@@ -61,7 +61,11 @@ Spectrum e_DiffuseLight::eval(const Vec3f& p, const Frame& sys, const Vec3f &d) 
 	if (dot(sys.n, d) <= 0)
 		return Spectrum(0.0f);
 	else
-		return m_radiance;
+	{
+		if (m_bOrthogonal && dot(d, sys.n) < 1 - DeltaEpsilon)
+			return 0.0f;
+		else return m_radiance;
+	}
 }
 
 Spectrum e_DiffuseLight::sampleDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const
@@ -74,7 +78,7 @@ Spectrum e_DiffuseLight::sampleDirect(DirectSamplingRecord &dRec, const Vec2f &s
 	float dp = absdot(dRec.d, dRec.n);
 	dRec.pdf *= dp != 0 ? (distSquared / dp) : 0.0f;
 	dRec.measure = ESolidAngle;
-	if (dot(dRec.d, dRec.refN) >= 0 && dot(dRec.d, dRec.n) < 0 && dRec.pdf != 0) {
+	if (dot(dRec.d, dRec.refN) >= 0 && dot(dRec.d, dRec.n) < 0 && dRec.pdf != 0 && ((dot(dRec.d, dRec.n) > 1 - DeltaEpsilon && m_bOrthogonal) || !m_bOrthogonal)) {
 		return m_radiance / dRec.pdf;
 	} else {
 		dRec.pdf = 0.0f;
@@ -101,8 +105,8 @@ float e_DiffuseLight::pdfDirect(const DirectSamplingRecord &dRec) const
 Spectrum e_DiffuseLight::sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const
 {
 	Vec3f local = Warp::squareToCosineHemisphere(sample);
-	dRec.d = Frame(pRec.n).toWorld(local);
-	dRec.pdf = Warp::squareToCosineHemispherePdf(local);
+	dRec.d = m_bOrthogonal ? pRec.n : Frame(pRec.n).toWorld(local);
+	dRec.pdf = m_bOrthogonal ? 1 : Warp::squareToCosineHemispherePdf(local);
 	dRec.measure = ESolidAngle;
 	return Spectrum(1.0f);
 }
@@ -114,7 +118,7 @@ float e_DiffuseLight::pdfDirection(const DirectionSamplingRecord &dRec, const Po
 	if (dRec.measure != ESolidAngle || dp < 0)
 		dp = 0.0f;
 
-	return INV_PI * dp;
+	return m_bOrthogonal ? 1 : INV_PI * dp;
 }
 
 Spectrum e_DiffuseLight::evalDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
@@ -124,7 +128,7 @@ Spectrum e_DiffuseLight::evalDirection(const DirectionSamplingRecord &dRec, cons
 	if (dRec.measure != ESolidAngle || dp < 0)
 		dp = 0.0f;
 
-	return Spectrum(INV_PI * dp);
+	return m_bOrthogonal ? Spectrum(1.0f) : Spectrum(INV_PI * dp);
 }
 
 Spectrum e_DiffuseLight::evalPosition(const PositionSamplingRecord &pRec) const

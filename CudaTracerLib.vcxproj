@@ -125,6 +125,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClCompile Include="Engine\SceneBuilder\ObjParser.cpp" />
     <ClCompile Include="Engine\SceneBuilder\ObjParser2.cpp" />
     <ClCompile Include="Engine\SceneBuilder\PlyParser.cpp" />
+    <ClCompile Include="Engine\SceneBuilder\SplitBVHBuilder.cpp" />
     <ClCompile Include="Engine\SceneBuilder\tiny_obj_loader.cpp" />
     <ClCompile Include="Integrators\k_PmmTracer.cpp" />
     <ClCompile Include="Integrators\k_sPpmTracer.cpp" />
@@ -179,11 +180,11 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="Engine\e_SpatialGrid.h" />
     <ClInclude Include="Engine\e_Terrain.h" />
     <ClInclude Include="Engine\e_TerrainHeader.h" />
-    <ClInclude Include="Engine\e_TraceResult.h" />
     <ClInclude Include="Engine\e_TriangleData.h" />
     <ClInclude Include="Engine\e_Volumes.h" />
     <ClInclude Include="Engine\SceneBuilder\Importer.h" />
     <ClInclude Include="Engine\SceneBuilder\MD5Parser.h" />
+    <ClInclude Include="Engine\SceneBuilder\SplitBVHBuilder.hpp" />
     <ClInclude Include="Engine\SceneBuilder\tiny_obj_loader.h" />
     <ClInclude Include="Integrators\k_BDPT.h" />
     <ClInclude Include="Integrators\k_FastTracer.h" />
@@ -201,6 +202,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="Kernel\k_TraceAlgorithms.h" />
     <ClInclude Include="Kernel\k_TraceHelper.h" />
     <ClInclude Include="Kernel\k_Tracer.h" />
+    <ClInclude Include="Kernel\k_TraceResult.h" />
     <ClInclude Include="MathTypes.h" />
     <ClInclude Include="Math\AABB.h" />
     <ClInclude Include="Math\Compression.h" />
@@ -238,7 +240,6 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <CudaCompile Include="Engine\e_RoughTransmittance.cu" />
     <CudaCompile Include="Engine\e_Sensor.cu" />
     <CudaCompile Include="Engine\e_ShapeSet.cu" />
-    <CudaCompile Include="Engine\e_TraceResult.cu" />
     <CudaCompile Include="Engine\e_TriangleData.cu" />
     <CudaCompile Include="Engine\e_Volumes.cu" />
     <CudaCompile Include="Integrators\k_BDPT.cu" />
@@ -255,6 +256,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <CudaCompile Include="Kernel\k_TraceAlgorithms.cu" />
     <CudaCompile Include="Kernel\k_TraceHelper.cu" />
     <CudaCompile Include="Kernel\k_Tracer.cu" />
+    <CudaCompile Include="Kernel\k_TraceResult.cu" />
     <CudaCompile Include="Math\float4x4.cu" />
     <CudaCompile Include="Math\Integrator.cu" />
     <CudaCompile Include="Math\Spectrum.cu" />

@@ -17,7 +17,7 @@ __global__ void tracePhotons()
 	{
 		DifferentialGeometry dg;
 		BSDFSamplingRecord bRec(dg);
-		r2.getBsdfSample(r, rng, &bRec);
+		r2.getBsdfSample(r, bRec, ETransportMode::EImportance);
 		Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
 		if(f.isZero())
 			break;
@@ -127,7 +127,7 @@ void k_PmmTracer::StartNewTrace(e_Image* I)
 	g_RNGData(rng);
 }
 
-void k_PmmTracer::Debug(e_Image* I, const Vec2i& p)
+void k_PmmTracer::Debug(e_Image* I, const Vec2i& p, ITracerDebugger* debugger)
 {
 	/*k_INITIALIZE(m_pScene, g_sRngs);
 	float3* deviceDirs;

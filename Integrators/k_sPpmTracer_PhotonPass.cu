@@ -53,8 +53,7 @@ template<bool DIRECT> __global__ void k_PhotonPass()
 				if (medium)
 					throughput *= mRec.transmittance / mRec.pdfFailure;
 				Vec3f wo = bssrdf ? r.direction : -r.direction;
-				r2.getBsdfSample(-wo, r(r2.m_fDist), &bRec, &rng);
-				bRec.mode = EImportance;
+				r2.getBsdfSample(-wo, r(r2.m_fDist), bRec, ETransportMode::EImportance);
 				if ((DIRECT && depth > 0) || !DIRECT)
 					if (r2.getMat().bsdf.hasComponent(ESmooth) && dot(bRec.dg.sys.n, wo) > 0.0f)
 						wasStored |= storePhoton(dg.P, throughput * Le, wo, bRec.dg.sys.n, delta ? PhotonType::pt_Caustic : PhotonType::pt_Diffuse, g_Map);
@@ -82,7 +81,7 @@ template<bool DIRECT> __global__ void k_PhotonPass()
 
 __global__ void buildHashGrid()
 {
-	unsigned int idx = threadId;
+	unsigned int idx = threadIdx.y * blockDim.x + threadIdx.x + blockDim.x * blockDim.y * blockIdx.x;
 	if (idx < g_Map.m_uPhotonBufferLength)
 	{
 		k_pPpmPhoton& e = g_Map.m_pPhotons[idx];

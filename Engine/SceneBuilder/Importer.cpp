@@ -1,11 +1,13 @@
 #include <StdAfx.h>
 #include "..\..\Base\FileStream.h"
 #include "Importer.h"
+#include "SplitBVHBuilder.hpp"
 
 void ConstructBVH(const Vec3f* vertices, const unsigned int* indices, int vCount, int cCount, OutputStream& O, BVH_Construction_Result* out)
 {	
 	bvh_helper::clb c(vCount, cCount, vertices, indices);
-	BVHBuilder::BuildBVH(&c, BVHBuilder::Platform());
+	//BVHBuilder::BuildBVH(&c, BVHBuilder::Platform());
+	SplitBVHBuilder bu(&c, BVHBuilder::Platform(), BVHBuilder::BuildParams()); bu.run();
 	O << (unsigned long long)c.nodeIndex;
 	if(c.nodeIndex)
 		O.Write(c.nodes, (unsigned int)c.nodeIndex * sizeof(e_BVHNodeData));

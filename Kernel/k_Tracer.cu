@@ -7,7 +7,7 @@ CUDA_DEVICE uint3 g_EyeHitBoxMin;
 CUDA_DEVICE uint3 g_EyeHitBoxMax;
 template<bool RECURSIVE> __global__ void k_GuessPass(int w, int h, float scx, float scy)
 {
-	int x = threadId % w, y = threadId / w;
+	unsigned int x = threadIdx.x + blockDim.x * blockIdx.x, y = threadIdx.y + blockDim.y * blockIdx.y;
 	CudaRNG rng = g_RNGData();
 	if(x < w && y < h)
 	{
@@ -19,7 +19,7 @@ template<bool RECURSIVE> __global__ void k_GuessPass(int w, int h, float scx, fl
 		{
 			DifferentialGeometry dg;
 			BSDFSamplingRecord bRec(dg);
-			r2.getBsdfSample(r, rng, &bRec);
+			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance);
 			r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
 			r = Ray(dg.P, bRec.getOutgoing());
 			Vec3f per = math::clamp01((dg.P - g_SceneData.m_sBox.minV) / (g_SceneData.m_sBox.maxV - g_SceneData.m_sBox.minV)) * float(UINT_MAX);
@@ -83,7 +83,7 @@ CUDA_DEVICE unsigned int g_SuccRays;
 
 __global__ void estimateLightVisibility(int w, int h, float scx, float scy, int recursion_depth)
 {
-	int x = threadId % w, y = threadId / w;
+	unsigned int x = threadIdx.x + blockDim.x * blockIdx.x, y = threadIdx.y + blockDim.y * blockIdx.y;
 	CudaRNG rng = g_RNGData();
 	if (x < w && y < h)
 	{
@@ -96,7 +96,7 @@ __global__ void estimateLightVisibility(int w, int h, float scx, float scy, int 
 		{
 			DifferentialGeometry dg;
 			BSDFSamplingRecord bRec(dg);
-			r2.getBsdfSample(r, rng, &bRec);
+			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance);
 
 			for (int i = 0; i < g_SceneData.m_sLightData.Length; i++)
 			{
@@ -129,4 +129,28 @@ float k_TracerBase::GetLightVisibility(e_DynamicScene* s, int recursion_depth)
 	cudaMemcpyFromSymbol(&N, g_ShotRays, sizeof(unsigned int));
 	cudaMemcpyFromSymbol(&S, g_SuccRays, sizeof(unsigned int));
 	return float(S) / float(N);
+}
+
+__global__ void depthKernel(e_Image I)
+{
+	unsigned int x = threadIdx.x + blockDim.x * blockIdx.x, y = threadIdx.y + blockDim.y * blockIdx.y;
+	if (x < I.getWidth() && y < I.getHeight())
+	{
+		Ray r = g_SceneData.GenerateSensorRay(x, y);
+		TraceResult r2 = k_TraceRay(r);
+		float d = 1.0f;
+		if (r2.hasHit())
+		{
+			float n = g_SceneData.m_Camera.As()->m_fNearFarDepths.x,
+				  f = g_SceneData.m_Camera.As()->m_fNearFarDepths.y;
+			d = (f / (f - n) * r2.m_fDist - f * n / (f - n)) / r2.m_fDist;
+		}
+		I.SetSample(x, y, *(RGBCOL*)&d);
+	}
+}
+
+void k_TracerBase::RenderDepth(e_Image* img, e_DynamicScene* s)
+{
+	k_INITIALIZE(s, g_sRngs);
+	depthKernel << <dim3(img->getWidth() / 16 + 1, img->getHeight() / 16 + 1), dim3(16, 16) >> >(*img);
 }

@@ -46,9 +46,21 @@ void CudaRNGBuffer_cuRAND::createGenerators(unsigned int a_Spacing, unsigned int
 	cudaMemcpy(m_pDeviceGenerators, m_pHostGenerators, sizeof(k_TracerRNG_cuRAND) * m_uNumGenerators, cudaMemcpyHostToDevice);
 }
 
+CUDA_FUNC_IN unsigned int getGlobalIdx_2D_2D()
+{
+#ifdef ISCUDA
+	unsigned int blockId = blockIdx.x + blockIdx.y * gridDim.x;
+	unsigned int threadId = blockId * (blockDim.x * blockDim.y) + (threadIdx.y * blockDim.x) + threadIdx.x;
+	return threadId;
+#else
+	return 0u;
+#endif
+}
+
+
 k_TracerRNG_cuRAND CudaRNGBuffer_cuRAND::operator()()
 {
-	unsigned int idx = threadId;
+	unsigned int idx = getGlobalIdx_2D_2D();
 	unsigned int i = idx % m_uNumGenerators;
 	k_TracerRNG_cuRAND rng;
 #ifdef ISCUDA
@@ -65,12 +77,12 @@ k_TracerRNG_cuRAND CudaRNGBuffer_cuRAND::operator()()
 
 void CudaRNGBuffer_cuRAND::operator()(k_TracerRNG_cuRAND& val)
 {
+	unsigned int i = getGlobalIdx_2D_2D();
 #ifdef ISCUDA
-	unsigned int i = threadId;
 	if(i < m_uNumGenerators)
 		m_pDeviceGenerators[i] = val;
 #else
-	m_pHostGenerators[threadId % m_uNumGenerators] = val;
+	m_pHostGenerators[i % m_uNumGenerators] = val;
 #endif
 }
 

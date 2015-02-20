@@ -202,7 +202,7 @@ CUDA_FUNC_IN bool k_TraceRayNode(const Vec3f& dir, const Vec3f& ori, TraceResult
 								{
 									a_Result->m_pNode = N;
 									a_Result->m_pTri = tri;
-									a_Result->m_fUV = Vec2f(u, v);
+									a_Result->m_fBaryCoords = Vec2f(u, v);
 									a_Result->m_fDist = t;
 									found = true;
 								}
@@ -236,9 +236,7 @@ bool k_TraceRay(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result)
 	float4x4 modl;
 	loadInvModl(node, &modl);
 	Vec3f d = modl.TransformNormal(dir), o = modl.TransformNormal(ori) + modl.Translation();
-	a_Result->m_fDist /= length(d);
 	k_TraceRayNode(d, o, a_Result, N, lastNode == N ? lastIndex : -1);
-	a_Result->m_fDist *= length(d);
 #else
 	int traversalStackOuter[64];
 	int at = 1;
@@ -312,11 +310,7 @@ bool k_TraceRay(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result)
 			loadInvModl(node, &modl);
 			loadModl(node, &modl2);
 			Vec3f d = modl.TransformDirection(dir), o = modl.TransformPoint(ori);
-			//a_Result->m_fDist /= length(d);
-			//a_Result->m_fDist = Distance(modl * (ori + dir * a_Result->m_fDist), modl * ori);
 			k_TraceRayNode(d, o, a_Result, N);
-			//a_Result->m_fDist *= length(d);
-			//a_Result->m_fDist = Distance(modl2 * (o + dir * a_Result->m_fDist), modl2 * o);
 		}
 	}
 #endif
@@ -356,55 +350,15 @@ void k_INITIALIZE(const e_DynamicScene* a_Scene, const CudaRNGBuffer& a_RngBuf)
 	g_RayTracedCounterHost = 0;
 }
 
-unsigned int k_getNumRaysTraced()
-{
-	unsigned int i;
-	cudaMemcpyFromSymbol(&i, g_RayTracedCounterDevice, sizeof(unsigned int));
-	return i + g_RayTracedCounterHost;
-}
-
-void k_setNumRaysTraced(unsigned int i)
-{
-	g_RayTracedCounterHost = i;
-	cudaMemcpyToSymbol(g_RayTracedCounterDevice, &i, sizeof(unsigned int));
-}
-
-Spectrum TraceResult::Le(const Vec3f& p, const Frame& sys, const Vec3f& w) const
-{
-	unsigned int i = LightIndex();
-	if(i == 0xffffffff)
-		return Spectrum(0.0f);
-	else return g_SceneData.m_sLightData[i].eval(p, sys, w);
-}
-
-unsigned int TraceResult::LightIndex() const
-{
-	unsigned int i = g_SceneData.m_sMatData[m_pTri->getMatIndex(m_pNode->m_uMaterialOffset)].NodeLightIndex;
-	if(i == 0xffffffff)
-		return 0xffffffff;
-	unsigned int j = m_pNode->m_uLightIndices[i];
-	return j;
-}
-
-unsigned int TraceResult::getNodeIndex() const
-{
-	return m_pNode - g_SceneData.m_sNodeData.Data;
-}
-
-const e_KernelMaterial& TraceResult::getMat() const
-{
-	return g_SceneData.m_sMatData[getMatIndex()];
-}
-
-void TraceResult::fillDG(DifferentialGeometry& dg) const
+void fillDG(const Vec2f& bary, const e_TriangleData* tri, const e_Node* node, DifferentialGeometry& dg)
 {
 	float4x4 localToWorld, worldToLocal;
-	loadModl(m_pNode - g_SceneData.m_sNodeData.Data, &localToWorld);
-	loadInvModl(m_pNode - g_SceneData.m_sNodeData.Data, &worldToLocal);
-	dg.bary = m_fUV;
+	loadModl(node - g_SceneData.m_sNodeData.Data, &localToWorld);
+	loadInvModl(node - g_SceneData.m_sNodeData.Data, &worldToLocal);
+	dg.bary = bary;
 	dg.hasUVPartials = false;
 #if defined(ISCUDA) && NUM_UV_SETS == 1
-	unsigned int i = m_pTri - g_SceneData.m_sTriData.Data;
+	unsigned int i = tri - g_SceneData.m_sTriData.Data;
 	int2 nme = tex1Dfetch(t_TriDataA, i * 4 + 0);
 	float4 rowB = tex1Dfetch(t_TriDataB, i * 4 + 1);
 	float4 rowC = tex1Dfetch(t_TriDataB, i * 4 + 2);
@@ -427,17 +381,21 @@ void TraceResult::fillDG(DifferentialGeometry& dg) const
 	if (dot(dg.n, dg.sys.n) < 0.0f)
 		dg.n = -dg.n;
 #else
-	m_pTri->fillDG(localToWorld, worldToLocal, dg);
+	tri->fillDG(localToWorld, worldToLocal, dg);
 #endif
 }
 
-void TraceResult::getBsdfSample(const Vec3f& wi, const Vec3f& p, BSDFSamplingRecord* bRec, CudaRNG* _rng) const
+unsigned int k_getNumRaysTraced()
 {
-	bRec->Clear(_rng);
-	bRec->dg.P = p;
-	fillDG(bRec->dg);
-	bRec->wi = normalize(bRec->dg.toLocal(-1.0f * wi));
-	getMat().SampleNormalMap(bRec->dg, wi * m_fDist);
+	unsigned int i;
+	cudaMemcpyFromSymbol(&i, g_RayTracedCounterDevice, sizeof(unsigned int));
+	return i + g_RayTracedCounterHost;
+}
+
+void k_setNumRaysTraced(unsigned int i)
+{
+	g_RayTracedCounterHost = i;
+	cudaMemcpyToSymbol(g_RayTracedCounterDevice, &i, sizeof(unsigned int));
 }
 
 const int DYNAMIC_FETCH_THRESHOLD = 20;
@@ -807,7 +765,7 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
         }
 
         // Traversal loop.
-		TraceResult r2 = k_TraceRay(Ray(a_RayBuffer[rayidx].a.getXYZ(), a_RayBuffer[rayidx].b.getXYZ()));
+		/*TraceResult r2 = k_TraceRay(Ray(a_RayBuffer[rayidx].a.getXYZ(), a_RayBuffer[rayidx].b.getXYZ()));
 		int4 res = make_int4(0, 0, 0, 0);
 		if (r2.hasHit())
 		{
@@ -818,9 +776,9 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 			res.w = *(int*)&h;
 		}
 		((int4*)a_ResBuffer)[rayidx] = res;
-		nodeAddr = EntrypointSentinel;
+		nodeAddr = EntrypointSentinel;*/
 
-        /*while(nodeAddr != EntrypointSentinel)
+        while(nodeAddr != EntrypointSentinel)
         {
 			nodeAddr = nodeAddr == EntrypointSentinel - 1 ? EntrypointSentinel : nodeAddr;
             // Traverse internal nodes until all SIMD lanes have found a leaf.
@@ -913,18 +871,15 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 					{
 						float4x4 modl;
 						loadInvModl(~leafAddr, &modl);
-						float3 d = modl.TransformDirection(make_float3(dirx, diry, dirz)), o = modl.TransformPoint(make_float3(origx, origy, origz));
-						//d = normalize(d);
+						float3 d = modl.TransformDirection(Vec3f(dirx, diry, dirz)), o = modl.TransformPoint(Vec3f(origx, origy, origz));
 
 						lorigx = o.x;
 						lorigy = o.y;
 						lorigz = o.z;
-						//ltmin  = tmin / length(d);
 						ltmin = tmin;
 						ldirx = d.x;
 						ldiry = d.y;
 						ldirz = d.z;
-						//lhitT  = hitT / length(d);
 						lhitT = hitT;
 						float ooeps = exp2f(-80.0f); // Avoid div by zero.
 						lidirx = 1.0f / (fabsf(d.x) > ooeps ? d.x : copysignf(ooeps, d.x));
@@ -1055,7 +1010,7 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 
 											nodeIdx = ~leafAddr;
 											lhitT = t;
-											hitIndex = index >> 1 + m_uTriangleOffset;
+											hitIndex = (index >> 1) + m_uTriangleOffset;
 											bCorrds = Vec2f(u, v);
 											if (ANY_HIT)
 											{
@@ -1068,7 +1023,6 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 								if (index & 1)
 									break;
 							} // triangle
-							//hitT = lhitT * sqrt(ldirx*ldirx+ldiry*ldiry+ldirz*ldirz);
 							hitT = lhitT;
 
 							lleafAddr = lnodeAddr;
@@ -1114,7 +1068,7 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 			half2 h(bCorrds);
 			res.w = *(int*)&h;
 		}
-		((int4*)a_ResBuffer)[rayidx] = res;*/
+		((int4*)a_ResBuffer)[rayidx] = res;
 //outerlabel: ;
     } while(true);
 }
@@ -1134,4 +1088,5 @@ void __internal__IntersectBuffers(int N, traversalRay* a_RayBuffer, traversalRes
 			intersectKernel<true><<< 180, dim3(32, 4, 1)>>>(N, a_RayBuffer, a_ResBuffer);
 		else intersectKernel<false><<< 180, dim3(32, 4, 1)>>>(N, a_RayBuffer, a_ResBuffer);;
 	}
+	g_RayTracedCounterHost += N;
 }

@@ -206,9 +206,6 @@
     <ClInclude Include="Engine\e_TerrainHeader.h">
       <Filter>Engine</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\e_TraceResult.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
     <ClInclude Include="Engine\e_TriangleData.h">
       <Filter>Engine</Filter>
     </ClInclude>
@@ -265,6 +262,12 @@
       <Filter>Math</Filter>
     </ClInclude>
     <ClInclude Include="VirtualFuncType.h" />
+    <ClInclude Include="Engine\SceneBuilder\SplitBVHBuilder.hpp">
+      <Filter>Engine\SceneBuilder</Filter>
+    </ClInclude>
+    <ClInclude Include="Kernel\k_TraceResult.h">
+      <Filter>Kernel</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Base\BVHBuilder.cpp">
@@ -338,6 +341,9 @@
       <Filter>Engine</Filter>
     </ClCompile>
     <ClCompile Include="Defines.cpp" />
+    <ClCompile Include="Engine\SceneBuilder\SplitBVHBuilder.cpp">
+      <Filter>Engine\SceneBuilder</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="Base\CudaRandom.cu">
@@ -439,9 +445,6 @@
     <CudaCompile Include="Integrators\k_sPpmTracer_PhotonPass.cu">
       <Filter>Integrators</Filter>
     </CudaCompile>
-    <CudaCompile Include="Engine\e_TraceResult.cu">
-      <Filter>Engine</Filter>
-    </CudaCompile>
     <CudaCompile Include="Engine\e_DifferentialGeometry.cu">
       <Filter>Engine</Filter>
     </CudaCompile>
@@ -453,6 +456,9 @@
     </CudaCompile>
     <CudaCompile Include="Math\float4x4.cu">
       <Filter>Math</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Kernel\k_TraceResult.cu">
+      <Filter>Kernel</Filter>
     </CudaCompile>
   </ItemGroup>
 </Project>

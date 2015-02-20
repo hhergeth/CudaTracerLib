@@ -6,7 +6,7 @@
 #include <iostream>
 
 e_Image::e_Image(int xRes, int yRes, unsigned int viewGLTexture)
-	: xResolution(xRes), yResolution(yRes)
+	: xResolution(xRes), yResolution(yRes), lastSplatVal(0)
 {
 	ownsTarget = false;
 	drawStyle = ImageDrawType::Normal;
@@ -27,7 +27,7 @@ e_Image::e_Image(int xRes, int yRes, unsigned int viewGLTexture)
 #ifdef ISWINDOWS
 #include <cuda_d3d11_interop.h>
 e_Image::e_Image(int xRes, int yRes, ID3D11Resource *pD3DResource)
-	: xResolution(xRes), yResolution(yRes)
+	: xResolution(xRes), yResolution(yRes), lastSplatVal(0)
 {
 ownsTarget = false;
 	drawStyle = ImageDrawType::Normal;
@@ -37,8 +37,11 @@ ownsTarget = false;
 	outState = 1;
 	isMapped = 0;
 	cudaError er = cudaGraphicsD3D11RegisterResource(&viewCudaResource, pD3DResource, cudaGraphicsRegisterFlagsSurfaceLoadStore);
-	if(er)
+	if (er)
+	{
+		std::cout << cudaGetErrorString(er) << "\n";
 		throw std::runtime_error(cudaGetErrorString(er));
+	}
 	//use this to clear the array
 	CUDA_MALLOC(&viewTarget, sizeof(RGBCOL) * xRes * yRes);
 	ownsTarget = true;
@@ -47,7 +50,7 @@ ownsTarget = false;
 #endif
 
 e_Image::e_Image(int xRes, int yRes, RGBCOL* target)
-	: xResolution(xRes), yResolution(yRes)
+	: xResolution(xRes), yResolution(yRes), lastSplatVal(0)
 {
 	drawStyle = ImageDrawType::Normal;
 	setStdFilter();
@@ -130,18 +133,16 @@ void e_Image::StartRendering()
 	}
 }
 
-//urgs
-float gsplat;
 void e_Image::DoUpdateDisplay(float splat)
 {
 	m_bDoUpdate = true;
-	gsplat = splat;
+	lastSplatVal = splat;
 }
 
 void e_Image::EndRendering()
 {
 	if(m_bDoUpdate)
-		InternalUpdateDisplay(gsplat);
+		InternalUpdateDisplay();
 	m_bDoUpdate = false;
 	if(outState == 1)
 	{

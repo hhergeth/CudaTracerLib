@@ -8,11 +8,11 @@ struct e_TriIntersectorData2
 public:
 	CUDA_FUNC_IN void setIndex(unsigned int i)
 	{
-		index |= i << 1;
+		index = (i << 1) | (index & 1);
 	}
 	CUDA_FUNC_IN void setFlag(bool b)
 	{
-		index |= !!b;
+		index = (index & ~1) | !!b;
 	}
 	CUDA_FUNC_IN unsigned int getIndex()
 	{
@@ -24,7 +24,6 @@ public:
 	}
 };
 
-struct TraceResult;
 struct e_TriIntersectorData
 {
 private:
@@ -34,5 +33,5 @@ public:
 
 	CUDA_DEVICE CUDA_HOST void getData(Vec3f& v0, Vec3f& v1, Vec3f& v2) const;
 
-	CUDA_DEVICE CUDA_HOST bool Intersect(const Ray& r, TraceResult* a_Result) const;
+	CUDA_DEVICE CUDA_HOST bool Intersect(const Ray& r, float* dist = 0, Vec2f* bary = 0) const;
 };

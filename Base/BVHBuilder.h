@@ -121,5 +121,31 @@ public:
 		int     m_minLeafSize;
 		int     m_maxLeafSize;
 	};
+	struct Stats
+	{
+		Stats()             { clear(); }
+		void clear()        { memset(this, 0, sizeof(Stats)); }
+		void print() const  { printf("Tree stats: [bfactor=%d] %d nodes (%d+%d), %.2f SAHCost, %.1f children/inner, %.1f tris/leaf\n", branchingFactor, numLeafNodes + numInnerNodes, numLeafNodes, numInnerNodes, SAHCost, 1.f*numChildNodes / max(numInnerNodes, 1), 1.f*numTris / max(numLeafNodes, 1)); }
+
+		float   SAHCost;
+		int     branchingFactor;
+		int     numInnerNodes;
+		int     numLeafNodes;
+		int     numChildNodes;
+		int     numTris;
+	};
+	struct BuildParams
+	{
+		Stats*      stats;
+		bool        enablePrints;
+		float       splitAlpha;     // spatial split area threshold
+
+		BuildParams(void)
+		{
+			stats = NULL;
+			enablePrints = true;
+			splitAlpha = 1.0e-5f;
+		}
+	};
 	static void BuildBVH(IBVHBuilderCallback* clb, const BVHBuilder::Platform& P);
 };

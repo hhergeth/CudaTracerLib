@@ -65,7 +65,7 @@ CUDA_DEVICE BSDFALL g_BSDF;
 CUDA_DEVICE CUDA_ALIGN(256) char g_Light[sizeof(e_InfiniteLight)];
 CUDA_GLOBAL void BSDFCalc(Vec3f wo, e_Image I, Vec2i off, Vec2i size, float scale, bool cosTheta)
 {
-	int x = threadId % size.x, y = threadId / size.x;
+	int x = blockIdx.x * blockDim.x + threadIdx.x, y = blockIdx.y * blockDim.y + threadIdx.y;
 	if (y < size.y)
 	{
 		Spectrum f = func(g_BSDF, wo, size.x, size.y, x, y, cosTheta) * scale;
@@ -75,7 +75,7 @@ CUDA_GLOBAL void BSDFCalc(Vec3f wo, e_Image I, Vec2i off, Vec2i size, float scal
 
 CUDA_GLOBAL void BSDFCalc2(Vec3f wo, e_Image I, Vec2i off, Vec2i size, float scale, bool cosTheta)
 {
-	int x = threadId % size.x, y = threadId / size.x;
+	int x = blockIdx.x * blockDim.x + threadIdx.x, y = blockIdx.y * blockDim.y + threadIdx.y;
 	if (y < size.y)
 	{
 		CudaRNG rng = g_RNGData();
@@ -110,7 +110,7 @@ void k_BSDFVisualizer::DoRender(e_Image* I)
 	DrawRegion(I, Vec2i(0, 0), Vec2i(w, h));
 }
 
-void k_BSDFVisualizer::Debug(e_Image* I, const Vec2i& p)
+void k_BSDFVisualizer::Debug(e_Image* I, const Vec2i& p, ITracerDebugger* debugger)
 {
 	g_RNGDataHost = k_Tracer::g_sRngs;
 	CudaRNG rng = g_RNGData();

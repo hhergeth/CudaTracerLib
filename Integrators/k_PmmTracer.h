@@ -13,7 +13,7 @@ class k_PmmTracer : public k_Tracer<false, true>
 {
 public:
 	k_PmmTracer();
-	virtual void Debug(e_Image* I, const Vec2i& pixel);
+	virtual void Debug(e_Image* I, const Vec2i& pixel, ITracerDebugger* debugger = 0);
 protected:
 	virtual void DoRender(e_Image* I);
 	virtual void StartNewTrace(e_Image* I);

@@ -105,13 +105,13 @@ e_DynamicScene::~e_DynamicScene()
 	Free();
 }
 
-e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_Token, IInStream& in)
+e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_Token, IInStream& in, bool force_recompile)
 {
 	m_uModified = 1;
 	std::string token = toLower(a_Token);
 	bool load;
 	e_BufferReference<e_Mesh, e_KernelMesh> M = m_pMeshBuffer->LoadCached(token.c_str(), &load);
-	if(load)
+	if (load || force_recompile)
 	{
 		IInStream* xmshStream = 0;
 		if(token.find(".xmsh") == std::string::npos)
@@ -170,10 +170,10 @@ e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_Token, IInStr
 	return N;
 }
 
-e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_MeshFile2)
+e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_MeshFile2, bool force_recompile)
 {
 	IInStream& in = *OpenFile(a_MeshFile2);
-	e_StreamReference(e_Node) n = CreateNode(getFileName(std::string(a_MeshFile2)).c_str(), in);
+	e_StreamReference(e_Node) n = CreateNode(getFileName(std::string(a_MeshFile2)).c_str(), in, force_recompile);
 	in.Close();
 	return n;
 }

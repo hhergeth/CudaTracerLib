@@ -3,7 +3,6 @@
 #include <MathTypes.h>
 #include "..\Math\half.h"
 #include "e_Material.h"
-#include "e_TraceResult.h"
 
 #ifdef EXT_TRI
 struct e_TriangleData

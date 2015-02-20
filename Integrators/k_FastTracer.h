@@ -25,6 +25,8 @@ public:
 			CUDA_MALLOC(&m_pResultBuffer[i], sizeof(traversalResult) * Length);
 		}
 		CUDA_MALLOC(&m_pPayloadBuffer, sizeof(T) * Length);
+		for (int i = 0; i < N; i++)
+			m_cInsertCounters[i] = 0;
 	}
 	void Free()
 	{
@@ -41,7 +43,8 @@ public:
 		for (int i = 0; i < N; i++)
 		{
 			S += m_cInsertCounters[i];
-			__internal__IntersectBuffers(m_cInsertCounters[i], m_pRayBuffer[i], m_pResultBuffer[i], skipOuterTree, ANY_HIT);
+			if (m_cInsertCounters[i])
+				__internal__IntersectBuffers(m_cInsertCounters[i], m_pRayBuffer[i], m_pResultBuffer[i], skipOuterTree, ANY_HIT);
 		}
 		return S;
 	}
@@ -107,9 +110,10 @@ typedef k_RayBuffer<rayData, 2> k_PTDBuffer;
 
 class k_FastTracer : public k_Tracer<false, true>
 {
+	bool pathTracer;
 public:
-	k_FastTracer()
-		: bufA(0), bufB(0)
+	k_FastTracer(bool doPT = false)
+		: bufA(0), bufB(0), pathTracer(doPT)
 	{
 		
 	}

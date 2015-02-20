@@ -46,8 +46,8 @@ public:
 	e_DynamicScene(e_Sensor* C, e_SceneInitData a_Data, const char* texPath, const char* cmpPath, const char* dataPath);
 	~e_DynamicScene();
 	void Free();
-	e_StreamReference(e_Node) CreateNode(const char* a_MeshFile);
-	e_StreamReference(e_Node) CreateNode(const char* a_MeshFile, IInStream& in);
+	e_StreamReference(e_Node) CreateNode(const char* a_MeshFile, bool force_recompile = false);
+	e_StreamReference(e_Node) CreateNode(const char* a_MeshFile, IInStream& in, bool force_recompile = false);
 	e_StreamReference(e_Node) CreateNode(unsigned int a_TriangleCount, unsigned int a_MaterialCount);
 	void DeleteNode(e_StreamReference(e_Node) ref);
 	///Do not use this! Just invalidate and update the material
@@ -60,6 +60,8 @@ public:
 	}
 	float4x4 GetNodeTransform(e_StreamReference(e_Node) n)
 	{
+		if (n.getIndex() >= m_pNodeStream->getLength())
+			throw std::runtime_error("Invalid idx!");
 		return *m_pBVH->m_pTransforms[0](n.getIndex());
 	}
 	void SetNodeTransform(const float4x4& mat, e_StreamReference(e_Node) n);

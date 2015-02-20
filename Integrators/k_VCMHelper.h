@@ -2,6 +2,8 @@
 
 #include "..\MathTypes.h"
 #include "..\Kernel\k_TraceAlgorithms.h"
+#define NUM_V_PER_PATH 5
+#define MAX_SUB_PATH_LENGTH 10
 
 CUDA_FUNC_IN float Mis(float pdf)
 {

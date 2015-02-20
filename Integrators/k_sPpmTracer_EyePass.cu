@@ -24,8 +24,8 @@ template<bool VOL> CUDA_FUNC_IN Spectrum L_Volume(float a_r, CudaRNG& rng, const
 			for(unsigned int bc = lo.y; bc <= hi.y; bc++)
 				for(unsigned int cc = lo.z; cc <= hi.z; cc++)
 				{
-					unsigned int i0 = map.m_sHash.Hash(make_uint3(ac, bc, cc)), i = map.m_pDeviceHashGrid[i0];
-					while(i != 0xffffffff && i != 0xffffff)
+					unsigned int i0 = map.m_sHash.Hash(make_uint3(ac, bc, cc)), i = map.m_pDeviceHashGrid[i0], NUM = 0;
+					while(i != 0xffffffff && i != 0xffffff && NUM++ < 100)
 					{
 						k_pPpmPhoton e = photonMap.m_pPhotons[i];
 						Vec3f wi = e.getWi(), P = e.getPos();
@@ -204,10 +204,10 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum L_FinalGathering(TraceResult& r2, BS
 		{
 			DifferentialGeometry dg;
 			BSDFSamplingRecord bRec2(dg);
-			r3.getBsdfSample(r, rng, &bRec2);
+			r3.getBsdfSample(r, bRec2, ETransportMode::ERadiance);
 			L += f * L_Surface(bRec2, a_rSurfaceUNUSED, &r3.getMat(), photonMap, photonMap.m_sSurfaceMap);
 			if (DIRECT)
-				L += f * UniformSampleAllLights(bRec2, r3.getMat(), 1);
+				L += f * UniformSampleAllLights(bRec2, r3.getMat(), 1, rng);
 			else L += f * r3.Le(bRec2.dg.P, bRec2.dg.sys, -r.direction);
 		}
 	}
@@ -228,7 +228,7 @@ template<bool DIRECT, bool FINAL_GATHER> CUDA_FUNC_IN void k_EyePassF(int x, int
 	Spectrum L(0.0f);
 	while(k_TraceRay(r.direction, r.origin, &r2) && depth++ < 5)
 	{
-		r2.getBsdfSample(r, rng, &bRec);
+		r2.getBsdfSample(r, bRec, ETransportMode::ERadiance);
 		if (depth == 0)
 			dg.computePartials(r, rX, rY);
 		if(g_SceneData.m_sVolume.HasVolumes())
@@ -242,7 +242,7 @@ template<bool DIRECT, bool FINAL_GATHER> CUDA_FUNC_IN void k_EyePassF(int x, int
 			}
 		}
 		if(DIRECT)
-			L += throughput * UniformSampleAllLights(bRec, r2.getMat(), 1);
+			L += throughput * UniformSampleAllLights(bRec, r2.getMat(), 1, rng);
 		L += throughput * r2.Le(bRec.dg.P, bRec.dg.sys, -r.direction);//either it's the first bounce -> account or it's a specular reflection -> ...
 		const e_KernelBSSRDF* bssrdf;
 		if (r2.getMat().GetBSSRDF(bRec.dg, &bssrdf))
@@ -338,7 +338,7 @@ void k_sPpmTracer::RenderBlock(e_Image* I, int x, int y, int blockW, int blockH)
 	}
 }
 
-void k_sPpmTracer::Debug(e_Image* I, const Vec2i& pixel)
+void k_sPpmTracer::Debug(e_Image* I, const Vec2i& pixel, ITracerDebugger* debugger)
 {
 	/*if(m_uPhotonsEmitted == (unsigned long long)-1)
 		return;
@@ -377,7 +377,8 @@ void k_sPpmTracer::Debug(e_Image* I, const Vec2i& pixel)
 
 __global__ void k_StartPass(int w, int h, float r, float rd, k_AdaptiveEntry* E)
 {
-	int i = threadId, x = i % w, y = i / w;
+	int x = blockIdx.x * blockDim.x + threadIdx.x, y = blockIdx.y * blockDim.y + threadIdx.y;
+	int i = y * w + x;
 	if(x < w && y < h)
 	{
 		E[i].r = r;

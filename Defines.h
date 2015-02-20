@@ -67,35 +67,6 @@
 
 void fail(const char* format, ...);
 
- CUDA_FUNC_IN int getGlobalIdx_2D_2D()
-{
-#ifdef ISCUDA
-	int blockId = blockIdx.x + blockIdx.y * gridDim.x; 
-	int threadId = blockId * (blockDim.x * blockDim.y) + (threadIdx.y * blockDim.x) + threadIdx.x;
-	return threadId;
-#else
-	//return GetCurrentThreadId();
-	return 0;
-#endif
-}
-
-CUDA_FUNC_IN int getGlobalIdx_3D_3D()
-{
-#ifdef ISCUDA
-	int blockId = blockIdx.x 
-			 + blockIdx.y * gridDim.x 
-			 + gridDim.x * gridDim.y * blockIdx.z; 
-	int threadId = blockId * (blockDim.x * blockDim.y * blockDim.z)
-			  + (threadIdx.z * (blockDim.x * blockDim.y))
-			  + (threadIdx.y * blockDim.x)
-			  + threadIdx.x;
-	return threadId;
-#else
-	//return GetCurrentThreadId();
-	return 0;
-#endif
-}
-
 template<typename T> CUDA_FUNC_IN void swapk(T* a, T* b)
 {
 	T q = *a;
@@ -112,8 +83,6 @@ template<typename T> CUDA_FUNC_IN void swapk(T& a, T& b)
 
 typedef unsigned int uint;
 typedef unsigned short ushort;
-
-#define threadId getGlobalIdx_2D_2D()
 
 #define Dmax2(A, B) ((A) > (B) ? (A) : (B))
 #define Dmax3(A, B, C) Dmax2(Dmax2(A, B), C)

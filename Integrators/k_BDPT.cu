@@ -4,6 +4,8 @@
 #include "..\Kernel\k_TraceAlgorithms.h"
 #include "k_VCMHelper.h"
 
+
+
 CUDA_FUNC_IN float pathWeight(int force_s, int force_t, int s, int t)
 {
 	if (force_s != -1 && force_t != -1 && (s != force_s || t != force_t))
@@ -19,19 +21,18 @@ CUDA_FUNC_IN void BPT(const Vec2f& pixelPosition, k_BlockSampleImage& img, CudaR
 	float mMisVmWeightFactor = 0;
 	float mMisVcWeightFactor = Mis(1.f / etaVCM);
 
-	const int NUM_V_PER_PATH = 5;
 	BPTVertex lightPath[NUM_V_PER_PATH];
 	BPTSubPathState lightPathState;
 	sampleEmitter(lightPathState, rng, mMisVcWeightFactor);
 	int emitterPathLength = 1, emitterVerticesStored = 0;
-	for (; emitterVerticesStored < NUM_V_PER_PATH; emitterPathLength++)
+	for (; emitterVerticesStored < NUM_V_PER_PATH && emitterPathLength < MAX_SUB_PATH_LENGTH; emitterPathLength++)
 	{
 		TraceResult r2 = k_TraceRay(lightPathState.r);
 		if (!r2.hasHit())
 			break;
 
 		BPTVertex& v = lightPath[emitterVerticesStored];
-		r2.getBsdfSample(lightPathState.r, rng, &v.bRec);
+		r2.getBsdfSample(lightPathState.r, v.bRec, ETransportMode::EImportance);
 
 		if (emitterPathLength > 1 || true)
 			lightPathState.dVCM *= r2.m_fDist * r2.m_fDist;
@@ -72,7 +73,7 @@ CUDA_FUNC_IN void BPT(const Vec2f& pixelPosition, k_BlockSampleImage& img, CudaR
 
 		DifferentialGeometry dg;
 		BSDFSamplingRecord bRec(dg);
-		r2.getBsdfSample(cameraState.r, rng, &bRec);
+		r2.getBsdfSample(cameraState.r, bRec, ETransportMode::ERadiance);
 
 		cameraState.dVCM *= r2.m_fDist * r2.m_fDist;
 		cameraState.dVCM /= fabsf(fabsf(Frame::cosTheta(bRec.wi)));
@@ -116,7 +117,7 @@ void k_BDPT::RenderBlock(e_Image* I, int x, int y, int blockW, int blockH)
 	pathKernel << < numBlocks, threadsPerBlock >> >(w, h, x, y, m_pBlockSampler->getBlockImage(), use_mis, force_s, force_t, LScale);
 }
 
-void k_BDPT::Debug(e_Image* I, const Vec2i& pixel)
+void k_BDPT::Debug(e_Image* I, const Vec2i& pixel, ITracerDebugger* debugger)
 {
 	k_INITIALIZE(m_pScene, g_sRngs);
 	//Li(*gI, g_RNGData(), pixel.x, pixel.y);

@@ -3,6 +3,8 @@
 
 void e_Image::AddSample(float sx, float sy, const Spectrum &_L)
 {
+	if (_L.isNaN() || !_L.isValid())
+		return;
 	Spectrum L = _L;
 	L.clampNegative();
 	int x = math::Floor2Int(sx), y = math::Floor2Int(sy);
@@ -22,8 +24,12 @@ void e_Image::AddSample(float sx, float sy, const Spectrum &_L)
 #endif
 }
 
-void e_Image::Splat(float sx, float sy, const Spectrum &L)
+void e_Image::Splat(float sx, float sy, const Spectrum &_L)
 {
+	if (_L.isNaN() || !_L.isValid())
+		return;
+	Spectrum L = _L;
+	L.clampNegative();
 	int x = math::Floor2Int(sx), y = math::Floor2Int(sy);
 	if (x < 0 || x >= xResolution || y < 0 || y >= yResolution)
 		return;
@@ -135,7 +141,7 @@ CUDA_FUNC_IN Spectrum evalFilter(e_KernelFilter filter, e_Image::Pixel* P, float
 		for (int x = x0; x <= x1; ++x)
 		{
 			float filterWt = filter.Evaluate(fabsf(x - dimageX), fabsf(y - dimageY));
-			acc += P[y * w + x].toSpectrum(splatScale) * filterWt;
+			acc += P[y * w + x].toSpectrum(splatScale).saturate() * filterWt;
 			accFilter += filterWt;
 		}
 	}
@@ -151,7 +157,7 @@ CUDA_FUNC_IN RGBCOL gammaCorrecture(const Spectrum& c)
 
 template<typename TARGET> CUDA_GLOBAL void rtm_Scale(e_Image::Pixel* P, TARGET T, unsigned int w, unsigned int h, float splatScale, float L_w, float alpha, float L_white2, e_KernelFilter filter)
 {
-	unsigned int x = threadId % w, y = threadId / w;
+	unsigned int x = threadIdx.x + blockDim.x * blockIdx.x, y = threadIdx.y + blockDim.y * blockIdx.y;
 	if(x < w && y < h)
 	{
 		Vec3f yxy;
@@ -177,7 +183,7 @@ template<typename TARGET> CUDA_GLOBAL void rtm_Copy(e_Image::Pixel* P, TARGET T,
 	}
 }
 
-void e_Image::InternalUpdateDisplay(float splatScale)
+void e_Image::InternalUpdateDisplay()
 {
 	if(outState > 2)
 		return;
@@ -198,7 +204,7 @@ void e_Image::InternalUpdateDisplay(float splatScale)
 		unsigned int val = FloatToUInt(0);
 		cudaError_t r = cudaMemcpyToSymbol(g_LogLum, &Lum_avg, sizeof(Lum_avg));
 		r = cudaMemcpyToSymbol(g_MaxLum, &val, sizeof(unsigned int));
-		rtm_SumLogLum<<<dim3(xResolution / 32 + 1, yResolution / 32 + 1), dim3(32, 32)>>>(cudaPixels, xResolution, yResolution, splatScale);
+		rtm_SumLogLum << <dim3(xResolution / 32 + 1, yResolution / 32 + 1), dim3(32, 32) >> >(cudaPixels, xResolution, yResolution, lastSplatVal);
 		r = cudaThreadSynchronize();
 		r = cudaMemcpyFromSymbol(&Lum_avg, g_LogLum, sizeof(Lum_avg));
 		unsigned int mLum;
@@ -208,14 +214,14 @@ void e_Image::InternalUpdateDisplay(float splatScale)
 		//float middleGrey = 1.03f - 2.0f / (2.0f + log10(L_w + 1.0f));
 		float alpha = 0.18, lumWhite2 = max(maxLum * maxLum, 0.1f);
 		if(outState == 1)
-			rtm_Scale<<<dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block)>>>(cudaPixels, T2, xResolution, yResolution, splatScale, L_w, alpha, lumWhite2, filter);
-		else rtm_Scale << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(cudaPixels, T1, xResolution, yResolution, splatScale, L_w, alpha, lumWhite2, filter);
+			rtm_Scale << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(cudaPixels, T2, xResolution, yResolution, lastSplatVal, L_w, alpha, lumWhite2, filter);
+		else rtm_Scale << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(cudaPixels, T1, xResolution, yResolution, lastSplatVal, L_w, alpha, lumWhite2, filter);
 	}
 	else
 	{
 		if(outState == 1)
-			rtm_Copy << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(cudaPixels, T2, xResolution, yResolution, splatScale, filter);
-		else rtm_Copy << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(cudaPixels, T1, xResolution, yResolution, splatScale, filter);
+			rtm_Copy << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(cudaPixels, T2, xResolution, yResolution, lastSplatVal, filter);
+		else rtm_Copy << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(cudaPixels, T1, xResolution, yResolution, lastSplatVal, filter);
 	}
 }
 
@@ -242,8 +248,8 @@ void e_Image::ComputeDiff(const e_Image& A, const e_Image& B, e_Image& dest, flo
 	int block = 32;
 	unsigned int w = dest.xResolution, h = dest.yResolution;
 	if (dest.outState == 1)
-		rtm_Copy << <dim3(w / block + 1, h / block + 1), dim3(block, block) >> >(A.cudaPixels, B.cudaPixels, T2, w, h, 1, 1, A.filter, B.filter, scale);
-	else rtm_Copy << <dim3(w / block + 1, h / block + 1), dim3(block, block) >> >(A.cudaPixels, B.cudaPixels, T1, w, h, 1, 1, A.filter, B.filter, scale);
+		rtm_Copy << <dim3(w / block + 1, h / block + 1), dim3(block, block) >> >(A.cudaPixels, B.cudaPixels, T2, w, h, A.lastSplatVal, B.lastSplatVal, A.filter, B.filter, scale);
+	else rtm_Copy << <dim3(w / block + 1, h / block + 1), dim3(block, block) >> >(A.cudaPixels, B.cudaPixels, T1, w, h, A.lastSplatVal, B.lastSplatVal, A.filter, B.filter, scale);
 }
 
 void e_Image::Clear()
@@ -266,7 +272,6 @@ template<typename TARGET> CUDA_GLOBAL void rtm_NumSamples(e_Image::Pixel* P, TAR
 		T(x, y, c.toRGBCOL());
 	}
 }
-
 
 void e_Image::DrawSamplePlacement(int numPasses)
 {

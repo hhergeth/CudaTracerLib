@@ -92,9 +92,9 @@ public:
 	}
 	void DoUpdateDisplay(float splat);
 	RGBCOL* getCudaPixels(){return viewTarget;}
-	CUDA_FUNC_IN Spectrum getPixel(float splat, int x, int y)
+	CUDA_FUNC_IN Spectrum getPixel(int x, int y)
 	{
-		return getPixel(y * xResolution + x)->toSpectrum(splat);
+		return getPixel(y * xResolution + x)->toSpectrum(lastSplatVal);
 	}
 	CUDA_FUNC_IN Pixel& accessPixel(int x, int y)
 	{
@@ -105,9 +105,13 @@ public:
 	{
 		m_bDoUpdate = false;
 	}
+	void copyToHost()
+	{
+		cudaMemcpy(hostPixels, cudaPixels, sizeof(Pixel) * xResolution * yResolution, cudaMemcpyDeviceToHost);
+	}
 	static void ComputeDiff(const e_Image& A, const e_Image& B, e_Image& dest, float scale);
 private:
-	void InternalUpdateDisplay(float splat);
+	void InternalUpdateDisplay();
 	bool m_bDoUpdate;
 	e_KernelFilter filter;
     Pixel *cudaPixels;
@@ -115,6 +119,7 @@ private:
 	bool usedHostPixels;
 	int xResolution, yResolution;
 	ImageDrawType drawStyle;
+	float lastSplatVal;
 	CUDA_FUNC_IN Pixel* getPixel(int i)
 	{
 #ifdef ISCUDA

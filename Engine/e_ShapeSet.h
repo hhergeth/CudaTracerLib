@@ -59,6 +59,15 @@ public:
 		return b;
 	}
 	void Recalculate(const float4x4& mat);
+
+	unsigned int numTriangles() const
+	{
+		return count;
+	}
+	const triData& getTriangle(unsigned int index) const
+	{
+		return tris[index];
+	}
 private:
     CUDA_ALIGN(16) triData tris[max_SHAPE_LENGTH];
     float sumArea;

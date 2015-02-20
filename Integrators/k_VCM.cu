@@ -51,19 +51,18 @@ CUDA_FUNC_IN void VCM(const Vec2f& pixelPosition, k_BlockSampleImage& img, CudaR
 	float mMisVmWeightFactor = 1;
 	float mMisVcWeightFactor = 1.0f / etaVCM;
 
-	const int NUM_V_PER_PATH = 5;
 	BPTVertex lightPath[NUM_V_PER_PATH];
 	BPTSubPathState lightPathState;
 	sampleEmitter(lightPathState, rng, mMisVcWeightFactor);
 	int emitterPathLength = 1, emitterVerticesStored = 0;
-	for (; emitterVerticesStored < NUM_V_PER_PATH; emitterPathLength++)
+	for (; emitterVerticesStored < NUM_V_PER_PATH && emitterPathLength < MAX_SUB_PATH_LENGTH; emitterPathLength++)
 	{
 		TraceResult r2 = k_TraceRay(lightPathState.r);
 		if (!r2.hasHit())
 			break;
 
 		BPTVertex& v = lightPath[emitterVerticesStored];
-		r2.getBsdfSample(lightPathState.r, rng, &v.bRec);
+		r2.getBsdfSample(lightPathState.r, v.bRec, ETransportMode::EImportance);
 
 		if (emitterPathLength > 1 || true)
 			lightPathState.dVCM *= r2.m_fDist * r2.m_fDist;
@@ -116,7 +115,7 @@ CUDA_FUNC_IN void VCM(const Vec2f& pixelPosition, k_BlockSampleImage& img, CudaR
 
 		DifferentialGeometry dg;
 		BSDFSamplingRecord bRec(dg);
-		r2.getBsdfSample(cameraState.r, rng, &bRec);
+		r2.getBsdfSample(cameraState.r, bRec, ETransportMode::ERadiance);
 
 		cameraState.dVCM *= r2.m_fDist * r2.m_fDist;
 		cameraState.dVCM /= fabsf(Frame::cosTheta(bRec.wi));
@@ -163,7 +162,7 @@ __global__ void pathKernel(unsigned int w, unsigned int h, int xoff, int yoff, k
 
 __global__ void buildHashGrid2()
 {
-	unsigned int idx = threadId;
+	unsigned int idx = threadIdx.y * blockDim.x + threadIdx.x + blockDim.x * blockDim.y * blockIdx.x;
 	if (idx < g_NextMap.m_uPhotonNumEmitted)
 	{
 		k_pPpmPhoton& e = g_NextMap.m_pPhotons[idx];
