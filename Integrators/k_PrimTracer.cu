@@ -12,7 +12,7 @@ CUDA_FUNC_IN Spectrum trace(Ray& r, const Ray& rX, const Ray& rY, CudaRNG& rng)
 	{
 		DifferentialGeometry dg;
 		BSDFSamplingRecord bRec(dg);
-		r2.getBsdfSample(r, bRec, ETransportMode::ERadiance);
+		r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
 		dg.computePartials(r, rX, rY);
 		//return Spectrum(dg.dvdx, dg.dvdy, 0);
 		//return Spectrum(math::clamp01(dot(bRec.dg.sys.n, -normalize(r.direction))));
@@ -28,7 +28,7 @@ CUDA_FUNC_IN Spectrum trace(Ray& r, const Ray& rX, const Ray& rY, CudaRNG& rng)
 			r2 = k_TraceRay(r);
 			if(r2.hasHit())
 			{
-				r2.getBsdfSample(r, bRec, ETransportMode::ERadiance);
+				r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
 				f *= r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
 			}
 			else break;
@@ -53,7 +53,7 @@ CUDA_FUNC_IN Spectrum traceR(Ray& r, CudaRNG& rng)
 	while(k_TraceRay(r.direction, r.origin, &r2) && depth++ < 5)
 	{
 		c *= Transmittance(r, 0, r2.m_fDist);
-		r2.getBsdfSample(r, bRec, ETransportMode::ERadiance);
+		r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
 		/*
 		DirectSamplingRecord dRecLight(r(r2.m_fDist), bRec.ng, bRec.map.uv);
 		Spectrum le = g_SceneData.sampleEmitterDirect(dRecLight, rng.randomFloat2());
@@ -110,7 +110,7 @@ CUDA_FUNC_IN Spectrum traceS(Ray& r, CudaRNG& rng)
 		return Spectrum(0.0f);
 	DifferentialGeometry dg;
 	BSDFSamplingRecord bRec(dg);
-	r2.getBsdfSample(r, bRec, ETransportMode::ERadiance);
+	r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
 	//Spectrum f = r2.getMat().bsdf.sample(bRec, make_float2(0.0f));
 	DirectSamplingRecord dRec(bRec.dg.P, bRec.dg.sys.n);
 	g_SceneData.sampleEmitterDirect(dRec, rng.randomFloat2());

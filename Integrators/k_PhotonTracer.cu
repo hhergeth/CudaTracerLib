@@ -46,10 +46,10 @@ template<typename DEBUGGER> CUDA_FUNC_IN void doWork(e_Image& g_Image, CudaRNG& 
 	BSDFSamplingRecord bRec(dg);
 	while(++depth < 12 && k_TraceRay(r.direction, r.origin, &r2))
 	{
-		r2.getBsdfSample(r, bRec, ETransportMode::EImportance);
+		r2.getBsdfSample(r, bRec, ETransportMode::EImportance, &rng);
 		
 		handleSurfaceInteraction(power * throughput, bRec, r2, g_Image, rng);
-		
+
 		Spectrum bsdfWeight = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
 		dbg.AppendVertex(ITracerDebugger::PathType::Light, r, r2);
 		r = Ray(bRec.dg.P, bRec.getOutgoing());

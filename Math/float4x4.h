@@ -393,4 +393,15 @@ public:
 	{
 		return TransformDirection(Vec3f(0, 1, 0));
 	}
+
+	friend std::ostream& operator<< (std::ostream & os, const float4x4& rhs);
 };
+
+inline std::ostream& operator<< (std::ostream & os, const float4x4& rhs)
+{
+	os << "[" << rhs.row(0)
+		<< "\n " << rhs.row(1)
+		<< "\n " << rhs.row(2)
+		<< "\n " << rhs.row(3) << "\n]";
+	return os;
+}

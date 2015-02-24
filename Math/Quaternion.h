@@ -85,7 +85,7 @@ public:
 	{
 		Quaternion result(0,0,0,0);
 
-		if ( fabs(val.w) < 0.9999 )
+		if (math::abs(val.w) < 0.9999)
 		{
 			float alpha = (float)acos(val.w);
 			float newAlpha = alpha * t;
@@ -154,4 +154,12 @@ public:
 
 		return result;
 	}
+
+	friend std::ostream& operator<< (std::ostream & os, const Quaternion& rhs);
 };
+
+inline std::ostream& operator<< (std::ostream & os, const Quaternion& rhs)
+{
+	os << rhs.val;
+	return os;
+}

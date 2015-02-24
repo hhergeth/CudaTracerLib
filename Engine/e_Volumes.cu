@@ -119,7 +119,7 @@ float e_VolumeGrid::integrateDensity(const Ray& ray, float minT, float maxT) con
 	float pf[] = { p.x, p.y, p.z };
 	float pLastf[] = { pLast.x, pLast.y, pLast.z };
 	for (int i = 0; i<3; ++i)
-		maxComp = max(max(maxComp, fabsf(pf[i])), fabsf(pLastf[i]));
+		maxComp = max(max(maxComp, math::abs(pf[i])), math::abs(pLastf[i]));
 	if (length < 1e-6f * maxComp)
 		return 0.0f;
 	float m_scale = 1.0f;
@@ -154,7 +154,7 @@ bool e_VolumeGrid::invertDensityIntegral(const Ray& ray, float minT, float maxT,
 	float pf[] = {p.x, p.y, p.z};
 	float pLastf[] = { pLast.x, pLast.y, pLast.z };
 	for (int i = 0; i<3; ++i)
-		maxComp = max(max(maxComp, fabsf(pf[i])), fabsf(pLastf[i]));
+		maxComp = max(max(maxComp, math::abs(pf[i])), math::abs(pLastf[i]));
 	if (length < 1e-6f * maxComp)
 		return 0.0f;
 	float m_scale = 1;
@@ -188,7 +188,7 @@ bool e_VolumeGrid::invertDensityIntegral(const Ray& ray, float minT, float maxT,
 					+ 4 * (node1 - 2 * node2 + node3)*x*x));
 				fx = intval - desiredDensity;
 
-				if (fabsf(fx) < 1e-3f) {
+				if (math::abs(fx) < 1e-3f) {
 					t = minT + stepSize * i + x;
 					integratedDensity = intval;
 					densityAtT = temp * (node1 * stepSizeSqr
@@ -209,7 +209,7 @@ bool e_VolumeGrid::invertDensityIntegral(const Ray& ray, float minT, float maxT,
 					a = x;
 			}*/
 			//float c = 0, a = (node3 - node1 - 2 * (node2 - node1)) / (stepSize * stepSize * 0.5f), b = (node3 - node1 - a * stepSize * stepSize) / stepSize, d = desiredDensity - integratedDensity - node1;
-			//float q0 = (1.73205080757f*math::sqrt(d*(6 * a * a * d - b * b * b)) / (2.82842712475f * a * a) + (12 * a * a * d - b * b * b) / (8 * a * a * a)), q1 = powf(q0, 1.0f / 3.0f);
+			//float q0 = (1.73205080757f*math::sqrt(d*(6 * a * a * d - b * b * b)) / (2.82842712475f * a * a) + (12 * a * a * d - b * b * b) / (8 * a * a * a)), q1 = math::pow(q0, 1.0f / 3.0f);
 			//t = minT + stepSize * i + q1 + b * b / (4 * a * a * q1) - b / (2 * a);
 			//return true;
 			float V = desiredDensity - integratedDensity, s = (node3 - node1) / (2 * stepSize);
@@ -253,7 +253,7 @@ bool e_VolumeGrid::sampleDistance(const Ray& ray, float minT, float maxT, float 
 		mRec.sigmaS = sigma_s(mRec.p, -ray.direction);
 		mRec.sigmaA = sigma_s(mRec.p, -ray.direction);
 	}
-	float expVal = expf(-integratedDensity);
+	float expVal = math::exp(-integratedDensity);
 	mRec.pdfFailure = expVal;
 	mRec.pdfSuccess = expVal * densityAtT;
 	mRec.pdfSuccessRev = expVal * densityAtMinT;

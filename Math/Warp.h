@@ -147,7 +147,7 @@ public:
 
 	CUDA_FUNC_IN static float squareToStdNormalPdf(const Vec2f &pos)
 	{
-		return INV_TWOPI * expf(-(pos.x*pos.x + pos.y*pos.y)/2.0f);
+		return INV_TWOPI * math::exp(-(pos.x*pos.x + pos.y*pos.y) / 2.0f);
 	}
 
 	CUDA_FUNC_IN static Vec2f squareToTent(const Vec2f &sample)

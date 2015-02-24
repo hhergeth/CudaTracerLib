@@ -3,13 +3,14 @@
 #include "../Engine/e_Node.h"
 #include "k_TraceHelper.h"
 
-void TraceResult::getBsdfSample(const Ray& r, BSDFSamplingRecord& bRec, ETransportMode mode, const Vec3f* wo) const
+void TraceResult::getBsdfSample(const Ray& r, BSDFSamplingRecord& bRec, ETransportMode mode, CudaRNG* rng, const Vec3f* wo) const
 {
-	getBsdfSample(r.direction, r(m_fDist), bRec, mode, wo);
+	getBsdfSample(r.direction, r(m_fDist), bRec, mode, rng, wo);
 }
 
-void TraceResult::getBsdfSample(const Vec3f& wi, const Vec3f& p, BSDFSamplingRecord& bRec, ETransportMode mode, const Vec3f* wo) const
+void TraceResult::getBsdfSample(const Vec3f& wi, const Vec3f& p, BSDFSamplingRecord& bRec, ETransportMode mode, CudaRNG* rng, const Vec3f* wo) const
 {
+	bRec.rng = rng;
 	bRec.eta = 1.0f;
 	bRec.mode = mode;
 	bRec.sampledType = 0;

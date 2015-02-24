@@ -140,7 +140,7 @@ __global__ void pathIterateKernel(unsigned int N, e_Image I, int pass, int itera
 			res.toResult(&r2, g_SceneData);
 			DifferentialGeometry dg;
 			BSDFSamplingRecord bRec(dg);
-			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance);
+			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
 			if (pass == 0 || dat.dIdx == 0xffffffff)
 				dat.L += r2.Le(bRec.dg.P, bRec.dg.sys, -r.direction) * dat.throughput;
 			if (pass + 1 != max_PASS)

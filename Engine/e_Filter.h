@@ -58,12 +58,12 @@ struct e_KernelGaussianFilter : public e_KernelFilterBase
 
 	virtual void Update()
 	{
-		expX = expf(-alpha * xWidth * xWidth);
-		expY = expf(-alpha * yWidth * yWidth);
+		expX = math::exp(-alpha * xWidth * xWidth);
+		expY = math::exp(-alpha * yWidth * yWidth);
 	}
 
 	CUDA_FUNC_IN float Gaussian(float d, float expv) const {
-        return max(0.f, float(expf(-alpha * d * d) - expv));
+		return max(0.f, float(math::exp(-alpha * d * d) - expv));
     }
 
 	CUDA_FUNC_IN float Evaluate(float x, float y) const
@@ -87,7 +87,7 @@ struct e_KernelMitchellFilter : public e_KernelFilterBase
 	}
 
 	CUDA_FUNC_IN float Mitchell1D(float x) const {
-        x = fabsf(2.f * x);
+        x = math::abs(2.f * x);
         if (x > 1.f)
             return ((-B - 6*C) * x*x*x + (6*B + 30*C) * x*x +
                     (-12*B - 48*C) * x + (8*B + 24*C)) * (1.f/6.f);
@@ -118,7 +118,7 @@ struct e_KernelLanczosSincFilter : public e_KernelFilterBase
 	}
 
 	CUDA_FUNC_IN float Sinc1D(float x) const {
-        x = fabsf(x);
+        x = math::abs(x);
         if (x < 1e-5) return 1.f;
         if (x > 1.)   return 0.f;
         x *= PI;
@@ -147,7 +147,7 @@ struct e_KernelTriangleFilter : public e_KernelFilterBase
 
 	CUDA_FUNC_IN float Evaluate(float x, float y) const
 	{
-		return max(0.f, xWidth - fabsf(x)) * max(0.f, yWidth - fabsf(y));
+		return max(0.f, xWidth - math::abs(x)) * max(0.f, yWidth - math::abs(y));
 	}
 
 	TYPE_FUNC(e_KernelTriangleFilter)

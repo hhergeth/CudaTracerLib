@@ -38,7 +38,7 @@ struct MicrofacetDistribution
 				math::sqrt((alphaU + 1.0f) / (alphaV + 1.0f)) *
 				std::tan(PI * u1 * 0.5f));
 		const float cosPhi = std::cos(phi), sinPhi = std::sin(phi);
-		cosTheta = std::pow(u2, 1.0f /
+		cosTheta = math::pow(u2, 1.0f /
 			(alphaU * cosPhi * cosPhi + alphaV * sinPhi * sinPhi + 1.0f));
 	}
 	CUDA_FUNC_IN Vec3f sample(const Vec2f &sample, float alpha) const {

@@ -32,12 +32,12 @@ CUDA_FUNC_IN void BPT(const Vec2f& pixelPosition, k_BlockSampleImage& img, CudaR
 			break;
 
 		BPTVertex& v = lightPath[emitterVerticesStored];
-		r2.getBsdfSample(lightPathState.r, v.bRec, ETransportMode::EImportance);
+		r2.getBsdfSample(lightPathState.r, v.bRec, ETransportMode::EImportance, &rng);
 
 		if (emitterPathLength > 1 || true)
 			lightPathState.dVCM *= r2.m_fDist * r2.m_fDist;
-		lightPathState.dVCM /= fabsf(fabsf(Frame::cosTheta(v.bRec.wi)));
-		lightPathState.dVC /= fabsf(fabsf(Frame::cosTheta(v.bRec.wi)));
+		lightPathState.dVCM /= math::abs(Frame::cosTheta(v.bRec.wi));
+		lightPathState.dVC /= math::abs(Frame::cosTheta(v.bRec.wi));
 
 		//store in list
 		if (r2.getMat().bsdf.hasComponent(ESmooth))
@@ -73,11 +73,11 @@ CUDA_FUNC_IN void BPT(const Vec2f& pixelPosition, k_BlockSampleImage& img, CudaR
 
 		DifferentialGeometry dg;
 		BSDFSamplingRecord bRec(dg);
-		r2.getBsdfSample(cameraState.r, bRec, ETransportMode::ERadiance);
+		r2.getBsdfSample(cameraState.r, bRec, ETransportMode::ERadiance, &rng);
 
 		cameraState.dVCM *= r2.m_fDist * r2.m_fDist;
-		cameraState.dVCM /= fabsf(fabsf(Frame::cosTheta(bRec.wi)));
-		cameraState.dVC /= fabsf(fabsf(Frame::cosTheta(bRec.wi)));
+		cameraState.dVCM /= math::abs(Frame::cosTheta(bRec.wi));
+		cameraState.dVC /= math::abs(Frame::cosTheta(bRec.wi));
 
 		if (r2.LightIndex() != 0xffffffff)
 		{

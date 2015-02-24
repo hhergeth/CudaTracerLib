@@ -277,7 +277,7 @@ BVHNode* SplitBVHBuilder::buildNode(NodeSpec spec, int level, float progressStar
     // Remove degenerates.
     {
 		int firstRef = (int)m_refStack.size() - spec.numRef;
-		for (int i = m_refStack.size() - 1; i >= firstRef; i--)
+		for (int i = (int)m_refStack.size() - 1; i >= firstRef; i--)
         {
             Vec3f size = m_refStack[i].bounds.maxV - m_refStack[i].bounds.minV;
             if (min(size) < 0.0f || sum(size) == max(size))
@@ -351,7 +351,7 @@ SplitBVHBuilder::ObjectSplit SplitBVHBuilder::findObjectSplit(const NodeSpec& sp
 
     for (m_sortDim = 0; m_sortDim < 3; m_sortDim++)
     {
-        sort(this, m_refStack.size() - spec.numRef, m_refStack.size(), sortCompare, sortSwap);
+		sort(this, (int)m_refStack.size() - spec.numRef, (int)m_refStack.size(), sortCompare, sortSwap);
 
         // Sweep right to left and determine bounds.
 
@@ -390,7 +390,7 @@ SplitBVHBuilder::ObjectSplit SplitBVHBuilder::findObjectSplit(const NodeSpec& sp
 void SplitBVHBuilder::performObjectSplit(NodeSpec& left, NodeSpec& right, const NodeSpec& spec, const ObjectSplit& split)
 {
     m_sortDim = split.sortDim;
-    sort(this, m_refStack.size() - spec.numRef, m_refStack.size(), sortCompare, sortSwap);
+	sort(this, (int)m_refStack.size() - spec.numRef, (int)m_refStack.size(), sortCompare, sortSwap);
 
     left.numRef = split.numLeft;
     left.bounds = split.leftBounds;
@@ -421,7 +421,7 @@ SplitBVHBuilder::SpatialSplit SplitBVHBuilder::findSpatialSplit(const NodeSpec& 
 
     // Chop references into bins.
 
-    for (int refIdx = m_refStack.size() - spec.numRef; refIdx < m_refStack.size(); refIdx++)
+    for (int refIdx = (int)m_refStack.size() - spec.numRef; refIdx < m_refStack.size(); refIdx++)
     {
         const Reference& ref = m_refStack[refIdx];
         Vec3i firstBin = clamp(Vec3i((ref.bounds.minV - origin) * invBinSize), Vec3i(0), Vec3i(NumSpatialBins - 1));
@@ -492,9 +492,9 @@ void SplitBVHBuilder::performSpatialSplit(NodeSpec& left, NodeSpec& right, const
     // Right-hand side:     [rightStart, refs.getSize()[
 
     std::vector<Reference>& refs = m_refStack;
-    int leftStart = refs.size() - spec.numRef;
+    int leftStart = (int)refs.size() - spec.numRef;
     int leftEnd = leftStart;
-    int rightStart = refs.size();
+    int rightStart = (int)refs.size();
     left.bounds = right.bounds = AABB::Identity();
 
     for (int i = leftEnd; i < rightStart; i++)
@@ -537,9 +537,9 @@ void SplitBVHBuilder::performSpatialSplit(NodeSpec& left, NodeSpec& right, const
         rdb.Enlarge(rref.bounds);
 
         float lac = m_platform.getTriangleCost(leftEnd - leftStart);
-        float rac = m_platform.getTriangleCost(refs.size() - rightStart);
+		float rac = m_platform.getTriangleCost((int)refs.size() - rightStart);
         float lbc = m_platform.getTriangleCost(leftEnd - leftStart + 1);
-        float rbc = m_platform.getTriangleCost(refs.size() - rightStart + 1);
+        float rbc = m_platform.getTriangleCost((int)refs.size() - rightStart + 1);
 
         float unsplitLeftSAH = lub.Area() * lbc + right.bounds.Area() * rac;
         float unsplitRightSAH = left.bounds.Area() * lac + rub.Area() * rbc;
@@ -574,7 +574,7 @@ void SplitBVHBuilder::performSpatialSplit(NodeSpec& left, NodeSpec& right, const
     }
 
     left.numRef = leftEnd - leftStart;
-    right.numRef = refs.size() - rightStart;
+	right.numRef = (int)refs.size() - rightStart;
 }
 
 //------------------------------------------------------------------------

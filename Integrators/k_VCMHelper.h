@@ -25,7 +25,7 @@ CUDA_FUNC_IN float pdf(const e_KernelMaterial& mat, BSDFSamplingRecord& bRec)
 	bRec.typeMask = EAll;
 	if (mat.bsdf.hasComponent(EDelta))
 		return mat.bsdf.pdf(bRec, EDiscrete);
-	return mat.bsdf.pdf(bRec) / fabsf(Frame::cosTheta(bRec.wo));
+	return mat.bsdf.pdf(bRec) / math::abs(Frame::cosTheta(bRec.wo));
 }
 
 CUDA_FUNC_IN float revPdf(const e_KernelMaterial& mat, BSDFSamplingRecord& bRec)
@@ -34,7 +34,7 @@ CUDA_FUNC_IN float revPdf(const e_KernelMaterial& mat, BSDFSamplingRecord& bRec)
 	if (mat.bsdf.hasComponent(EDelta))
 		return mat.bsdf.pdf(bRec, EDiscrete);
 	swapk(bRec.wo, bRec.wi);
-	float pdf = mat.bsdf.pdf(bRec) / fabsf(Frame::cosTheta(bRec.wo));
+	float pdf = mat.bsdf.pdf(bRec) / math::abs(Frame::cosTheta(bRec.wo));
 	swapk(bRec.wo, bRec.wi);
 	return pdf;
 }
@@ -123,7 +123,7 @@ CUDA_FUNC_IN bool sampleScattering(BPTSubPathState& v, BSDFSamplingRecord& bRec,
 {
 	float bsdfDirPdfW;
 	Spectrum f = mat.bsdf.sample(bRec, bsdfDirPdfW, rng.randomFloat2());
-	float cosThetaOut = fabsf(Frame::cosTheta(bRec.wo));
+	float cosThetaOut = math::abs(Frame::cosTheta(bRec.wo));
 	float bsdfRevPdfW = bsdfDirPdfW;
 	if ((bRec.sampledType & EDelta) == 0)
 	{
@@ -192,7 +192,7 @@ CUDA_FUNC_IN bool sampleScattering(BPTSubPathState& v, BSDFSamplingRecord& bRec,
 	bRec.wo = bRec.dg.toLocal(dRec.d);
 	Spectrum bsdfFactor = mat.bsdf.f(bRec);
 	float bsdfRevPdfW = revPdf(mat, bRec);//AAAA
-	float cosToCamera = fabsf(Frame::cosTheta(bRec.wo));
+	float cosToCamera = math::abs(Frame::cosTheta(bRec.wo));
 	float cameraPdfA = dRec.pdf;
 	if (dRec.measure != EArea)
 		cameraPdfA = PdfWtoA(cameraPdfA, distanceSquared(bRec.dg.P, dRec.p), dot(dRec.n, -dRec.d));
@@ -218,7 +218,7 @@ CUDA_FUNC_IN bool sampleScattering(BPTSubPathState& v, BSDFSamplingRecord& bRec,
 	const float cosAtLight = dot(dRec.n, -dRec.d);
 
 	bRec.wo = bRec.dg.toLocal(dRec.d);
-	const float cosToLight = fabsf(Frame::cosTheta(bRec.wo));
+	const float cosToLight = math::abs(Frame::cosTheta(bRec.wo));
 	const Spectrum bsdfFactor = mat.bsdf.f(bRec);
 	const float bsdfDirPdfW = pdf(mat, bRec);
 	const float bsdfRevPdfW = revPdf(mat, bRec);
@@ -249,13 +249,13 @@ CUDA_FUNC_IN bool sampleScattering(BPTSubPathState& v, BSDFSamplingRecord& bRec,
 
 	bRec.wo = bRec.dg.toLocal(direction);
 	const Spectrum cameraBsdf = mat.bsdf.f(bRec);
-	const float cosCamera = fabsf(Frame::cosTheta(bRec.wo));
+	const float cosCamera = math::abs(Frame::cosTheta(bRec.wo));
 	const float cameraBsdfDirPdfW = pdf(mat, bRec);
 	const float cameraBsdfRevPdfW = revPdf(mat, bRec);
 
 	emitterVertex.bRec.wo = emitterVertex.bRec.dg.toLocal(-direction);
 	const Spectrum emitterBsdf = emitterVertex.mat->bsdf.f(emitterVertex.bRec);
-	const float cosLight = fabsf(Frame::cosTheta(emitterVertex.bRec.wo));
+	const float cosLight = math::abs(Frame::cosTheta(emitterVertex.bRec.wo));
 	const float lightBsdfDirPdfW = pdf(*emitterVertex.mat, emitterVertex.bRec);
 	const float lightBsdfRevPdfW = revPdf(*emitterVertex.mat, emitterVertex.bRec);
 

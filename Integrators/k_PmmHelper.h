@@ -14,7 +14,7 @@ CUDA_FUNC_IN float randomNormal(CudaRNG& rng)
 CUDA_FUNC_IN float ny(int i)
 {
 	const float alpha = 0.75f;
-	return powf(float(i), -alpha);
+	return math::pow(float(i), -alpha);
 }
 
 CUDA_FUNC_IN qMatrix<float, 2, 1> HemishphereToSquare(const Vec3f& d)
@@ -50,7 +50,7 @@ template<int D, int K> struct GaussianMixtureModel
 			: mean(mean)
 		{
 			invCovariance = inv(covariance);
-			a = 1.0f / (powf(2.0f * PI, float(D) / 2.0f) * math::sqrt(det(covariance)));
+			a = 1.0f / (math::pow(2.0f * PI, float(D) / 2.0f) * math::sqrt(det(covariance)));
 			mat eigValues, eigVectors;
 			qrAlgorithmSymmetric(covariance, eigValues, eigVectors);
 			Q = diagmat(eigValues.diag().sqrt()) * eigVectors;
@@ -60,7 +60,7 @@ template<int D, int K> struct GaussianMixtureModel
 		{
 			qMatrix<float, D, 1> d = x - mean;
 			float b = -0.5f * (d.Transpose() * invCovariance * d)(0, 0);
-			return a * expf(b);
+			return a * math::exp(b);
 		}
 
 		CUDA_FUNC_IN vec sample(CudaRNG& rng) const
@@ -192,7 +192,7 @@ template<int D, int K> struct GaussianMixtureModel
 	
 	CUDA_FUNC_IN void RecomputeFromStats(const SufStat* stats, int n, float w)
 	{
-		const float a = 2.01f, b = 5.0f * powf(10, -4), v = 1.01f;
+		const float a = 2.01f, b = 5.0f * math::pow(10, -4), v = 1.01f;
 		mat b_nI = b / float(n) * mat::Id();
 		for(int j = 0; j < K; j++)
 		{
@@ -275,7 +275,7 @@ template<int D, int K> struct GaussianMixtureModel
 			L_new = res.L(samples, N);
 		}
 		//while(I++ < 100);
-		while(abs(L_old - L_new) > eps * abs(L_new));
+		while (math::abs(L_old - L_new) > eps * math::abs(L_new));
 		return res;
 	}
 };

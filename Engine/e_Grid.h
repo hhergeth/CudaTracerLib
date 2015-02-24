@@ -20,7 +20,7 @@ template<bool REGULAR> struct k_HashGrid
 		float e = 0.015f, e2 = 1.0f + e;
 		m_sBox.maxV = m + q * e2;
 		m_sBox.minV = m - q * e2;
-		m_fGridSize = (int)floor(powf(a_NumEntries, 1.0/3.0));
+		m_fGridSize = (int)floor(math::pow(a_NumEntries, 1.0/3.0));
 		m_vMin = m_sBox.minV;
 		m_vInvSize = Vec3f(1.0f) / m_sBox.Size() * m_fGridSize;
 		m_vCellSize = m_sBox.Size() / m_fGridSize;

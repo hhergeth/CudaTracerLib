@@ -49,8 +49,8 @@ Spectrum coating::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &_sam
 		Spectrum sigmaA = m_sigmaA.Evaluate(bRec.dg) * m_thickness;
 		if (!sigmaA.isZero())
 			result *= (-sigmaA *
-				(1/std::abs(Frame::cosTheta(wiPrime)) +
-					1/std::abs(Frame::cosTheta(woPrime)))).exp();
+				(1/math::abs(Frame::cosTheta(wiPrime)) +
+					1/math::abs(Frame::cosTheta(woPrime)))).exp();
 
 		float R21;
 		bRec.wo = refractOut(woPrime, R21);
@@ -79,9 +79,9 @@ Spectrum coating::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 	bool sampleNested = (bRec.typeMask & m_nested.getType() & EAll);
 
 	if (measure == EDiscrete && sampleSpecular &&
-			std::abs(dot(reflect(bRec.wi), bRec.wo)-1) < DeltaEpsilon) {
+			math::abs(dot(reflect(bRec.wi), bRec.wo)-1) < DeltaEpsilon) {
 		return m_specularReflectance.Evaluate(bRec.dg) *
-			MonteCarlo::fresnelDielectricExt(abs(Frame::cosTheta(bRec.wi)), m_eta);
+			MonteCarlo::fresnelDielectricExt(math::abs(Frame::cosTheta(bRec.wi)), m_eta);
 	} else if (sampleNested) {
 		float R12, R21;
 		BSDFSamplingRecord bRecInt(bRec);
@@ -97,8 +97,8 @@ Spectrum coating::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 		Spectrum sigmaA = m_sigmaA.Evaluate(bRec.dg) * m_thickness;
 		if (!sigmaA.isZero())
 			result *= (-sigmaA *
-				(1/std::abs(Frame::cosTheta(bRecInt.wi)) +
-					1/abs(Frame::cosTheta(bRecInt.wo)))).exp();
+				(1/math::abs(Frame::cosTheta(bRecInt.wi)) +
+					1/math::abs(Frame::cosTheta(bRecInt.wo)))).exp();
 
 		if (measure == ESolidAngle) {
 			result *= m_invEta * m_invEta *
@@ -125,7 +125,7 @@ float coating::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 		(1-R12) * (1-m_specularSamplingWeight));
 
 	if (measure == EDiscrete && sampleSpecular &&
-			abs(dot(reflect(bRec.wi), bRec.wo)-1) < DeltaEpsilon) {
+			math::abs(dot(reflect(bRec.wi), bRec.wo)-1) < DeltaEpsilon) {
 		return sampleNested ? probSpecular : 1.0f;
 	} else if (sampleNested) {
 		float R21;
@@ -236,7 +236,7 @@ Spectrum roughcoating::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 
 		/* Calculate the specular reflection component */
 		float value = F * D * G /
-			(4.0f * abs(Frame::cosTheta(bRec.wi)));
+			(4.0f * math::abs(Frame::cosTheta(bRec.wi)));
 
 		result += m_specularReflectance.Evaluate(bRec.dg) * value;
 	}
@@ -253,8 +253,8 @@ Spectrum roughcoating::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 		Spectrum sigmaA = m_sigmaA.Evaluate(bRec.dg) * m_thickness;
 		if (!sigmaA.isZero())
 			nestedResult *= (-sigmaA *
-				(1/abs(Frame::cosTheta(bRecInt.wi)) +
-					1/abs(Frame::cosTheta(bRecInt.wo)))).exp();
+				(1/math::abs(Frame::cosTheta(bRecInt.wi)) +
+					1/math::abs(Frame::cosTheta(bRecInt.wo)))).exp();
 
 		if (measure == ESolidAngle) {
 			/* Solid angle compression & irradiance conversion factors */

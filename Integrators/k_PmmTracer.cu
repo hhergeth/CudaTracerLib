@@ -17,7 +17,7 @@ __global__ void tracePhotons()
 	{
 		DifferentialGeometry dg;
 		BSDFSamplingRecord bRec(dg);
-		r2.getBsdfSample(r, bRec, ETransportMode::EImportance);
+		r2.getBsdfSample(r, bRec, ETransportMode::EImportance, &rng);
 		Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
 		if(f.isZero())
 			break;

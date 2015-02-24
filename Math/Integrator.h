@@ -125,8 +125,8 @@ private:
 			const float integral1 = (h/1470)*
 				(77*(y1+y13) + 432*(y3+y11) + 625*(y5+y9) + 672*y7);
 
-			if (abs(integral2-acc) != 0.0)
-				r = std::abs(integral1-acc)/abs(integral2-acc);
+			if (math::abs(integral2 - acc) != 0.0)
+				r = math::abs(integral1 - acc) / math::abs(integral2 - acc);
 			if (r == 0.0 || r > 1.0)
 				r = 1.0;
 		}

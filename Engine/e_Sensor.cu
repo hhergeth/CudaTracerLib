@@ -575,7 +575,7 @@ Spectrum e_TelecentricCamera::sampleDirect(DirectSamplingRecord &dRec, const Vec
 	}
 
 	/* Circle of confusion */
-	float radius = abs(localP.z - f) * apertureRadius/f;
+	float radius = math::abs(localP.z - f) * apertureRadius/f;
 	radius += apertureRadius;
 
 	/* Sample the ray origin */

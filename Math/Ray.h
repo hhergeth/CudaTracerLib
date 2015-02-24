@@ -3,26 +3,20 @@
 
 class Ray
 {
-public:  //Data
-
-  // basic information about a ray
+public: 
   Vec3f origin;
   Vec3f direction;
   
-public:  // Methods
+public: 
 	CUDA_FUNC Ray()
 	{
 	}
-	// Set up the ray with a give origin and direction (and optionally a ray depth)
 	CUDA_FUNC_IN Ray(const Vec3f &orig, const Vec3f &dir)
 		: origin(orig), direction(dir)
 	{
 	}
-	// Normalize ray direction
 	CUDA_FUNC_IN void NormalizeRayDirection( void ) { direction = normalize(direction); }	
 
-	CUDA_FUNC_IN Vec3f getOrigin() const{return origin;}
-	CUDA_FUNC_IN Vec3f getDirection() const{return direction;}
 	CUDA_FUNC_IN Ray operator *(const float4x4& m) const
 	{
 		return Ray(m.TransformPoint(origin), m.TransformDirection(direction));
@@ -31,5 +25,13 @@ public:  // Methods
 	{
 		return origin + d * direction;
 	}
+
+	friend std::ostream& operator<< (std::ostream & os, const Ray& rhs);
 };
+
+inline std::ostream& operator<< (std::ostream & os, const Ray& rhs)
+{
+	os << "[" << rhs.origin << ", " << rhs.direction << "]";
+	return os;
+}
 

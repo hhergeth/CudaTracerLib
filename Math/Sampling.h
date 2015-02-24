@@ -318,7 +318,7 @@ public:
 	{
 		float det = a[0][0] * a[1][1] - a[0][1] * a[1][0];
 
-		if (abs(det) <= RCPOVERFLOW)
+		if (math::abs(det) <= RCPOVERFLOW)
 			return false;
 
 		float inverse = (float) 1.0f / det;
@@ -401,7 +401,7 @@ public:
 		}
 
 		/* Find the absolute cosines of the incident/transmitted rays */
-		float cosThetaI = abs(cosThetaI_);
+		float cosThetaI = math::abs(cosThetaI_);
 		float cosThetaT = math::sqrt(cosThetaTSqr);
 
 		float Rs = (cosThetaI - eta * cosThetaT)

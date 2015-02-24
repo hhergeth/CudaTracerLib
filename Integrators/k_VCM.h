@@ -22,7 +22,7 @@ private:
 		float f = 1;
 		for (unsigned int k = 1; k < m_uPassesDone; k++)
 			f *= (k + ALPHA) / k;
-		f = powf(m_fInitialRadius, float(exp)) * f * 1.0f / float(m_uPassesDone);
-		return powf(f, 1.0f / float(exp));
+		f = math::pow(m_fInitialRadius, float(exp)) * f * 1.0f / float(m_uPassesDone);
+		return math::pow(f, 1.0f / float(exp));
 	}
 };

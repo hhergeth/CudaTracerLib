@@ -430,7 +430,7 @@ void e_InfiniteLight::internalSampleDirection(Vec2f sample, Vec3f &d, Spectrum &
 	sincos(m_pixelSize.y * (pos.y + 0.5f), &sinTheta, &cosTheta);
 
 	d = Vec3f(sinPhi*sinTheta, cosTheta, -cosPhi*sinTheta);
-	pdf /= max(abs(sinTheta), EPSILON);
+	pdf /= max(math::abs(sinTheta), EPSILON);
 }
 
 float e_InfiniteLight::internalPdfDirection(const Vec3f &d) const

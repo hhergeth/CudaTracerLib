@@ -114,7 +114,7 @@ void e_MIPMap::CompileToBinary(const char* a_InputFile, OutputStream& a_Out, boo
 	for (int i = 0; i<MTS_MIPMAP_LUT_SIZE; ++i)
 	{
 		float r2 = (float)i / (float)(MTS_MIPMAP_LUT_SIZE - 1);
-		float val = expf(-2.0f * r2) - expf(-2.0f);
+		float val = math::exp(-2.0f * r2) - math::exp(-2.0f);
 		a_Out << val;
 	}
 	free(data.data);

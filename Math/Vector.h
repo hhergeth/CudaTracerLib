@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Defines.h"
+#include <iostream>
 #pragma warning(push, 3)
 #include <vector_functions.h> // float4, etc.
 #pragma warning(pop)
@@ -100,7 +101,23 @@ public:
 
 	template <class V> CUDA_FUNC_IN bool    operator==  (const VectorBase<T, L, V>& v) const    { const T* tp = getPtr(); const T* vp = v.getPtr(); for (int i = 0; i < L; i++) if (tp[i] != vp[i]) return false; return true; }
 	template <class V> CUDA_FUNC_IN bool    operator!=  (const VectorBase<T, L, V>& v) const    { return (!operator==(v)); }
+
+
+	template <class T2, int L2, class S2> friend std::ostream& operator<< (std::ostream & os, const VectorBase<T2, L2, S2 >& rhs);
 };
+
+template <class T2, int L2, class S2> inline std::ostream& operator << (std::ostream & stream, const VectorBase<T2, L2, S2 >& v)
+{
+	stream << "(";
+	for (int i = 0; i < L2; i++)
+	{
+		if (i != 0)
+			stream << ", ";
+		stream << v.operator[](i);
+	}
+	stream << ")";
+	return stream;
+}
 
 //------------------------------------------------------------------------
 

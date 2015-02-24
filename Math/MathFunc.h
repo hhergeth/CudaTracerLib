@@ -358,7 +358,7 @@ public:
 #ifdef ISCUDA
 		return ::min(a, b);
 #else
-		return (a + b - abs(a - b)) * 0.5f;
+		return (a + b - math::abs(a - b)) * 0.5f;
 #endif
 	}
 
@@ -367,7 +367,7 @@ public:
 #ifdef ISCUDA
 		return ::max(a, b);
 #else
-		return (a + b + abs(a - b)) * 0.5f;
+		return (a + b + math::abs(a - b)) * 0.5f;
 #endif
 	}
 

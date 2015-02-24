@@ -122,7 +122,7 @@ void gaussLegendre(int n, float *nodes, float *weights) {
 			float step = L.x / L.y;
 			x -= step;
 
-			if (abs(step) <= 4 * abs(x) * FLT_EPSILON)
+			if (math::abs(step) <= 4 * math::abs(x) * FLT_EPSILON)
 				break;
 		}
 
@@ -165,7 +165,7 @@ void gaussLobatto(int n, float *nodes, float *weights) {
 			float step = Q.x / Q.y;
 			x -= step;
 
-			if (abs(step) <= 4 * abs(x) * FLT_EPSILON)
+			if (math::abs(step) <= 4 * math::abs(x) * FLT_EPSILON)
 				break;
 		}
 

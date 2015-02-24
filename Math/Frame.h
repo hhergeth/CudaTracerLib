@@ -4,7 +4,7 @@
 
 CUDA_FUNC_IN void coordinateSystem(const Vec3f& a, Vec3f& s, Vec3f& t)
 {
-	if (abs(a.x) > abs(a.y))
+	if (math::abs(a.x) > math::abs(a.y))
 	{
 		float invLen = 1.0f / math::sqrt(a.x * a.x + a.z * a.z);
 		t = Vec3f(a.z * invLen, 0.0f, -a.x * invLen);
@@ -155,4 +155,12 @@ struct Frame
 	CUDA_FUNC_IN bool operator!=(const Frame &frame) const {
 		return !operator==(frame);
 	}
+
+	friend std::ostream& operator<< (std::ostream & os, const Frame& rhs);
 };
+
+inline std::ostream& operator<< (std::ostream & os, const Frame& rhs)
+{
+	os << "N = " << rhs.n << "\nT = " << rhs.t << "\nB = " << rhs.s;
+	return os;
+}

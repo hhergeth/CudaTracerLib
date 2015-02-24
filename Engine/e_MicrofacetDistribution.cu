@@ -12,7 +12,7 @@ float MicrofacetDistribution::eval(const Vec3f &m, float alphaU, float alphaV) c
 				const float exponent  = Frame::tanTheta2(m) / (alphaU*alphaU);
 				const float cosTheta2 = Frame::cosTheta2(m);
 
-				result = exp(-exponent) /
+				result = math::exp(-exponent) /
 					(PI * alphaU*alphaU*cosTheta2*cosTheta2);
 			}
 			break;
@@ -32,7 +32,7 @@ float MicrofacetDistribution::eval(const Vec3f &m, float alphaU, float alphaV) c
 		case EPhong: {
 				/* Phong distribution function */
 				result = (alphaU + 2) * INV_TWOPI
-						* std::pow(Frame::cosTheta(m), alphaU);
+						* math::pow(Frame::cosTheta(m), alphaU);
 			}
 			break;
 
@@ -44,7 +44,7 @@ float MicrofacetDistribution::eval(const Vec3f &m, float alphaU, float alphaV) c
 				const float exponent = (alphaU * m.x * m.x
 						+ alphaV * m.y * m.y) / ds;
 				result = math::sqrt((alphaU + 2) * (alphaV + 2))
-					* INV_TWOPI * std::pow(cosTheta, exponent);
+					* INV_TWOPI * math::pow(cosTheta, exponent);
 			}
 			break;
 	}
@@ -72,7 +72,7 @@ float MicrofacetDistribution::pdf(const Vec3f &m, float alphaU, float alphaV) co
 	const float exponent = (alphaU * m.x * m.x
 			+ alphaV * m.y * m.y) / ds;
 	float result = math::sqrt((alphaU + 1) * (alphaV + 1))
-		* INV_TWOPI * std::pow(cosTheta, exponent);
+		* INV_TWOPI * math::pow(cosTheta, exponent);
 
 	/* Prevent potential numerical issues in other stages of the model */
 	if (result < 1e-20f)
@@ -101,7 +101,7 @@ Vec3f MicrofacetDistribution::sample(const Vec2f &sample, float alphaU, float al
 			break;
 
 		case EPhong: {
-				cosThetaM = std::pow(sample.x, 1 / (alphaU + 2));
+				cosThetaM = math::pow(sample.x, 1 / (alphaU + 2));
 			}
 			break;
 
@@ -171,8 +171,8 @@ Vec3f MicrofacetDistribution::sample(const Vec2f &sample, float alphaU, float al
 
 		case EPhong: {
 				float exponent = 1 / (alphaU + 2);
-				cosThetaM = powf(sample.x, exponent);
-				pdf = (alphaU + 2) * INV_TWOPI * std::powf(sample.x, (alphaU+1) * exponent);
+				cosThetaM = math::pow(sample.x, exponent);
+				pdf = (alphaU + 2) * INV_TWOPI * math::pow(sample.x, (alphaU+1) * exponent);
 			}
 			break;
 
@@ -204,7 +204,7 @@ Vec3f MicrofacetDistribution::sample(const Vec2f &sample, float alphaU, float al
 				const float exponent = alphaU * cosPhiM*cosPhiM
 						+ alphaV * sinPhiM*sinPhiM;
 				pdf = math::sqrt((alphaU + 1) * (alphaV + 1))
-					* INV_TWOPI * std::pow(cosThetaM, exponent);
+					* INV_TWOPI * math::pow(cosThetaM, exponent);
 
 				/* Prevent potential numerical issues in other stages of the model */
 				if (pdf < 1e-20f)
@@ -251,14 +251,14 @@ float MicrofacetDistribution::G(const Vec3f &wi, const Vec3f &wo, const Vec3f &m
 					wiDotM = dot(wi, m);
 
 		return min((float) 1,
-			min(abs(2 * nDotM * nDotWo / woDotM),
-						abs(2 * nDotM * nDotWi / wiDotM)));
+			min(math::abs(2 * nDotM * nDotWo / woDotM),
+						math::abs(2 * nDotM * nDotWi / wiDotM)));
 	}
 }
 
 float MicrofacetDistribution::smithG1(const Vec3f &v, const Vec3f &m, float alpha) const
 {
-	const float tanTheta = abs(Frame::tanTheta(v));
+	const float tanTheta = math::abs(Frame::tanTheta(v));
 
 	/* perpendicular incidence -- no shadowing/masking */
 	if (tanTheta == 0.0f)

@@ -16,12 +16,11 @@ float e_KernelDynamicScene::pdfLight(const e_KernelLight* light)
 bool e_KernelDynamicScene::Occluded(const Ray& r, float tmin, float tmax, TraceResult* res) const
 {
 	const float eps = 0.01f;//remember this is an occluded test, so we shrink the interval!
-	TraceResult r2;
-	r2.Init();
-	bool b = k_TraceRay(r.direction, r.origin, &r2) && r2.m_fDist > tmin * (1.0f + eps) && r2.m_fDist < tmax * (1.0f - eps);
+	TraceResult r2 = k_TraceRay(r);
 	if (r2.hasHit() && res)
 		*res = r2;
-	return b;
+	return r2.m_fDist > tmin * (1.0f + eps) && r2.m_fDist < tmax * (1.0f - eps);
+	//return tmin < r2.m_fDist && r2.m_fDist < tmax;
 }
 
 Spectrum e_KernelDynamicScene::EvalEnvironment(const Ray& r) const

@@ -226,14 +226,14 @@ CUDA_FUNC_IN float toSRGBComponent(float value) {
 	if (value <= (float) 0.0031308)
 		return (float) 12.92 * value;
 	return (float) 1.055
-		* powf(value, (float) (1.0/2.4))
+		* math::pow(value, (float) (1.0/2.4))
 		 - (float) 0.055;
 }
 
 CUDA_FUNC_IN float fromSRGBComponent(float value) {
 	if (value <= (float) 0.04045)
 		return value * (float) (1.0 / 12.92);
-	return powf((value + (float) 0.055)
+	return math::pow((value + (float) 0.055)
 		* (float) (1.0 / 1.055), (float) 2.4);
 }
 
@@ -291,7 +291,7 @@ RGBCOL Spectrum::toRGBCOL() const
 {
 	float r,g,b;
 	toLinearRGB(r,g,b);
-//#define toInt(x) (unsigned char((float)powf(math::clamp01(x),1.0f/1.2f)*255.0f+0.5f))
+//#define toInt(x) (unsigned char((float)math::pow(math::clamp01(x),1.0f/1.2f)*255.0f+0.5f))
 #define toInt(x) unsigned char(math::clamp01(x) * 255.0f)
 	return make_uchar4(toInt(r), toInt(g), toInt(b), 255);
 #undef toInt

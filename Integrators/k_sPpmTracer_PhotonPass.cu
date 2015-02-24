@@ -53,7 +53,7 @@ template<bool DIRECT> __global__ void k_PhotonPass()
 				if (medium)
 					throughput *= mRec.transmittance / mRec.pdfFailure;
 				Vec3f wo = bssrdf ? r.direction : -r.direction;
-				r2.getBsdfSample(-wo, r(r2.m_fDist), bRec, ETransportMode::EImportance);
+				r2.getBsdfSample(-wo, r(r2.m_fDist), bRec, ETransportMode::EImportance, &rng);
 				if ((DIRECT && depth > 0) || !DIRECT)
 					if (r2.getMat().bsdf.hasComponent(ESmooth) && dot(bRec.dg.sys.n, wo) > 0.0f)
 						wasStored |= storePhoton(dg.P, throughput * Le, wo, bRec.dg.sys.n, delta ? PhotonType::pt_Caustic : PhotonType::pt_Diffuse, g_Map);

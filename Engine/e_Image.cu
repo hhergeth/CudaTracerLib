@@ -140,7 +140,7 @@ CUDA_FUNC_IN Spectrum evalFilter(e_KernelFilter filter, e_Image::Pixel* P, float
 	{
 		for (int x = x0; x <= x1; ++x)
 		{
-			float filterWt = filter.Evaluate(fabsf(x - dimageX), fabsf(y - dimageY));
+			float filterWt = filter.Evaluate(math::abs(x - dimageX), math::abs(y - dimageY));
 			acc += P[y * w + x].toSpectrum(splatScale).saturate() * filterWt;
 			accFilter += filterWt;
 		}

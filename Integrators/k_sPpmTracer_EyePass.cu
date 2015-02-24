@@ -173,7 +173,7 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED
 
 	if (VAR_Lapl)
 	{
-		ent.rd = 1.9635f * math::sqrt(VAR_Lapl) * powf(a_PassIndex, -1.0f / 8.0f);
+		ent.rd = 1.9635f * math::sqrt(VAR_Lapl) * math::pow(a_PassIndex, -1.0f / 8.0f);
 		ent.rd = math::clamp(ent.rd, A.r_min, A.r_max);
 	}
 
@@ -181,7 +181,7 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED
 	{
 		float k_2 = 10.0f * PI / 168.0f, k_22 = k_2 * k_2;
 		float ta = (2.0f * math::sqrt(VAR_Phi / float(photonMap.m_uPhotonNumEmitted))) / (PI * float(photonMap.m_uPhotonNumEmitted) * E_pl * k_22 * E_I * E_I);
-		ent.r = powf(ta, 1.0f / 6.0f) * powf(a_PassIndex, -1.0f / 6.0f);
+		ent.r = math::pow(ta, 1.0f / 6.0f) * math::pow(a_PassIndex, -1.0f / 6.0f);
 		ent.r = math::clamp(ent.r, A.r_min, A.r_max);
 	}
 	A.E[idx] = ent;
@@ -204,7 +204,7 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum L_FinalGathering(TraceResult& r2, BS
 		{
 			DifferentialGeometry dg;
 			BSDFSamplingRecord bRec2(dg);
-			r3.getBsdfSample(r, bRec2, ETransportMode::ERadiance);
+			r3.getBsdfSample(r, bRec2, ETransportMode::ERadiance, &rng);
 			L += f * L_Surface(bRec2, a_rSurfaceUNUSED, &r3.getMat(), photonMap, photonMap.m_sSurfaceMap);
 			if (DIRECT)
 				L += f * UniformSampleAllLights(bRec2, r3.getMat(), 1, rng);
@@ -228,7 +228,7 @@ template<bool DIRECT, bool FINAL_GATHER> CUDA_FUNC_IN void k_EyePassF(int x, int
 	Spectrum L(0.0f);
 	while(k_TraceRay(r.direction, r.origin, &r2) && depth++ < 5)
 	{
-		r2.getBsdfSample(r, bRec, ETransportMode::ERadiance);
+		r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
 		if (depth == 0)
 			dg.computePartials(r, rX, rY);
 		if(g_SceneData.m_sVolume.HasVolumes())
@@ -316,11 +316,11 @@ template<bool DIRECT, bool FINAL_GATHER> __global__ void k_EyePass(Vec2i off, in
 		k_EyePassF<DIRECT, FINAL_GATHER>(pixel.x, pixel.y, w, h, a_PassIndex, a_rSurfaceUNUSED, a_rVolume, A, img, photonMap);
 }
 
-#define TN(r) (r * powf(float(m_uPassesDone), -1.0f/6.0f))
+#define TN(r) (r * math::pow(float(m_uPassesDone), -1.0f/6.0f))
 void k_sPpmTracer::RenderBlock(e_Image* I, int x, int y, int blockW, int blockH)
 {
-	float radius2 = powf(powf(m_fInitialRadius, float(2)) / std::pow(float(m_uPassesDone), 0.5f * (1 - ALPHA)), 1.0f / 2.0f);
-	float radius3 = powf(powf(m_fInitialRadius, float(3)) / std::pow(float(m_uPassesDone), 0.5f * (1 - ALPHA)), 1.0f / 3.0f);
+	float radius2 = math::pow(math::pow(m_fInitialRadius, float(2)) / math::pow(float(m_uPassesDone), 0.5f * (1 - ALPHA)), 1.0f / 2.0f);
+	float radius3 = math::pow(math::pow(m_fInitialRadius, float(3)) / math::pow(float(m_uPassesDone), 0.5f * (1 - ALPHA)), 1.0f / 3.0f);
 	k_AdaptiveStruct A(TN(r_min), TN(r_max), m_pEntries);
 	Vec2i off = Vec2i(x, y);
 	k_BlockSampleImage img = m_pBlockSampler->getBlockImage();

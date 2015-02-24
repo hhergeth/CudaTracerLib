@@ -272,7 +272,7 @@ struct MapPoint
 		face = 2 * face + (val[face] > 0 ? 0 : 1);
 
 		int2 uvIdxs[3] = {make_int2(2, 1), make_int2(0, 2), make_int2(0, 1)};
-		float sc = val[uvIdxs[f].x], tc = val[uvIdxs[f].y], w = abs(val[f]);
+		float sc = val[uvIdxs[f].x], tc = val[uvIdxs[f].y], w = math::abs(val[f]);
 		float sign1 = (face == 0 || face == 5) ? -1 : 1, sign2 = face == 2 ? 1 : -1;
 		return (Vec2f(sc * sign1, tc * sign2) / w + Vec2f(1)) / 2.0f;
 	}

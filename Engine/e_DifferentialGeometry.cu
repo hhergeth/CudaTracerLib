@@ -4,7 +4,7 @@ CUDA_FUNC_IN bool solveLinearSystem2x2(const float a[2][2], const float b[2], fl
 {
 	float det = a[0][0] * a[1][1] - a[0][1] * a[1][0];
 
-	if (abs(det) <= RCPOVERFLOW)
+	if (math::abs(det) <= RCPOVERFLOW)
 		return false;
 
 	float inverse = (float) 1.0f / det;
@@ -42,9 +42,9 @@ void DifferentialGeometry::computePartials(const Ray& r, const Ray& rx, const Ra
 
 	/* Calculate the U and V partials by solving two out
 	of a set of 3 equations in an overconstrained system */
-	float absX = abs(n.x),
-		absY = abs(n.y),
-		absZ = abs(n.z);
+	float absX = math::abs(n.x),
+		absY = math::abs(n.y),
+		absZ = math::abs(n.z);
 
 	if (absX > absY && absX > absZ) {
 		axes[0] = 1; axes[1] = 2;

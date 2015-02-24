@@ -275,9 +275,24 @@ public:
 		}
 		return true;
 	}
+
+	template <class T2, int L2> friend std::ostream& operator<< (std::ostream & os, const TSpectrum<T2, L2>& rhs);
 protected:
 	Scalar s[N];
 };
+
+template <class T2, int L2> inline std::ostream& operator << (std::ostream & stream, const TSpectrum<T2, L2>& v)
+{
+	stream << "(";
+	for (int i = 0; i < L2; i++)
+	{
+		if (i != 0)
+			stream << ", ";
+		stream << v.operator[](i);
+	}
+	stream << ")";
+	return stream;
+}
 
 struct Color3 : public TSpectrum<float, 3> {
 public:

@@ -150,7 +150,7 @@ float Spline::sampleCubicInterp1D(size_t idx, float *values, size_t size, float 
 			+ f1 - f0 + b*(0.25f*(d0 + d1) + 0.5f * (f0 - f1))))) - sample;
 		float deriv = f0 + b*(d0 + b*(-2*d0 - d1 + 3*(f1-f0) + b*(d0 + d1 + 2*(f0 - f1))));
 
-		if (abs(value) < 1e-6f) {
+		if (math::abs(value) < 1e-6f) {
 			if (fval)
 				*fval = deriv;
 			return min + (idx+b) * (max-min) / (size-1);
@@ -203,7 +203,7 @@ float Spline::sampleCubicInterp1DN(size_t idx, float *nodes, float *values, size
 			+ f1 - f0 + b*(0.25f*(d0 + d1) + 0.5f * (f0 - f1))))) - sample;
 		float deriv = f0 + b*(d0 + b*(-2*d0 - d1 + 3*(f1-f0) + b*(d0 + d1 + 2*(f0 - f1))));
 
-		if (abs(value) < 1e-6f) {
+		if (math::abs(value) < 1e-6f) {
 			if (fval)
 				*fval = deriv;
 			return nodes[idx] + width*b;

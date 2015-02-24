@@ -55,7 +55,7 @@ CUDA_FUNC_IN bool sampleDistanceHomogenous(const Ray& ray, float minT, float max
 	mRec.pdfSuccess = 0;
 	for (int i = 0; i < SPECTRUM_SAMPLES; i++)
 	{
-		float t = expf(-sig_t[i] * sampledDistance);
+		float t = math::exp(-sig_t[i] * sampledDistance);
 		mRec.pdfFailure += t;
 		mRec.pdfSuccess += sig_t[i] * t;
 	}
@@ -208,15 +208,15 @@ public:
 		for (int i = 0; i < 2; i++)
 		{
 			unsigned int cur_x = corner.x + i;
-			weight[0] = 1 - fabsf(p.x - cur_x);
+			weight[0] = 1 - math::abs(p.x - cur_x);
 			for (int j = 0; j < 2; j++)
 			{
 				unsigned int cur_y = corner.y + j;
-				weight[1] = 1 - fabsf(p.y - cur_y);
+				weight[1] = 1 - math::abs(p.y - cur_y);
 				for (int k = 0; k < 2; k++)
 				{
 					unsigned int cur_z = corner.z + k;
-					weight[2] = 1 - fabsf(p.z - cur_z);
+					weight[2] = 1 - math::abs(p.z - cur_z);
 					val += weight[0] * weight[1] * weight[2] * value(math::clamp(cur_x, cl_l.x, cl_h.x), math::clamp(cur_y, cl_l.y, cl_h.y), math::clamp(cur_z, cl_l.z, cl_h.z));
 				}
 			}

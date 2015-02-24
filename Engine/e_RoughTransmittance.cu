@@ -42,7 +42,7 @@ e_RoughTransmittance::e_RoughTransmittance(const std::string& name)
 
 float e_RoughTransmittance::Evaluate(float cosTheta, float alpha, float eta) const
 {
-	float warpedCosTheta = powf(abs(cosTheta), (float) 0.25f),
+	float warpedCosTheta = math::pow(math::abs(cosTheta), (float) 0.25f),
 			  result;
 
 	if (cosTheta < 0)
@@ -67,9 +67,9 @@ float e_RoughTransmittance::Evaluate(float cosTheta, float alpha, float eta) con
 		eta = m_etaMin;
 
 	/* Transform the roughness and IOR values into the warped parameter space */
-	float warpedAlpha = powf((alpha - m_alphaMin)
+	float warpedAlpha = math::pow((alpha - m_alphaMin)
 			/ (m_alphaMax-m_alphaMin), (float) 0.25f);
-	float warpedEta = powf((eta - m_etaMin)
+	float warpedEta = math::pow((eta - m_etaMin)
 			/ (m_etaMax-m_etaMin), (float) 0.25f);
 
 	result = Spline::evalCubicInterp3D(Vec3f(warpedCosTheta, warpedAlpha, warpedEta),
@@ -98,9 +98,9 @@ float e_RoughTransmittance::EvaluateDiffuse(float alpha, float eta) const
 		eta = m_etaMin;
 
 	/* Transform the roughness and IOR values into the warped parameter space */
-	float warpedAlpha = powf((alpha - m_alphaMin)
+	float warpedAlpha = math::pow((alpha - m_alphaMin)
 			/ (m_alphaMax-m_alphaMin), (float) 0.25f);
-	float warpedEta = powf((eta - m_etaMin)
+	float warpedEta = math::pow((eta - m_etaMin)
 			/ (m_etaMax-m_etaMin), (float) 0.25f);
 
 	result = Spline::evalCubicInterp2D(Vec2f(warpedAlpha, warpedEta), data,

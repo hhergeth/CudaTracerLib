@@ -59,10 +59,10 @@ CUDA_FUNC_IN bool k_TraceRayNode(const Vec3f& dir, const Vec3f& ori, TraceResult
 	float   dirx = dir.x;
 	float   diry = dir.y;
 	float   dirz = dir.z;
-	const float ooeps = exp2f(-80.0f);
-	float   idirx = 1.0f / (fabsf(dir.x) > ooeps ? dir.x : copysignf(ooeps, dir.x));
-	float   idiry = 1.0f / (fabsf(dir.y) > ooeps ? dir.y : copysignf(ooeps, dir.y));
-	float   idirz = 1.0f / (fabsf(dir.z) > ooeps ? dir.z : copysignf(ooeps, dir.z));
+	const float ooeps = math::exp2(-80.0f);
+	float   idirx = 1.0f / (math::abs(dir.x) > ooeps ? dir.x : copysignf(ooeps, dir.x));
+	float   idiry = 1.0f / (math::abs(dir.y) > ooeps ? dir.y : copysignf(ooeps, dir.y));
+	float   idirz = 1.0f / (math::abs(dir.z) > ooeps ? dir.z : copysignf(ooeps, dir.z));
 	float   origx = ori.x;
 	float	origy = ori.y;
 	float	origz = ori.z;						// Ray origin.
@@ -241,11 +241,11 @@ bool k_TraceRay(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result)
 	int traversalStackOuter[64];
 	int at = 1;
 	traversalStackOuter[0] = g_SceneData.m_sSceneBVH.m_sStartNode;
-	const float ooeps = exp2f(-80.0f);
+	const float ooeps = math::exp2(-80.0f);
 	Vec3f O, I;
-	I.x = 1.0f / (abs(dir.x) > ooeps ? dir.x : copysignf(ooeps, dir.x));
-	I.y = 1.0f / (abs(dir.y) > ooeps ? dir.y : copysignf(ooeps, dir.y));
-	I.z = 1.0f / (abs(dir.z) > ooeps ? dir.z : copysignf(ooeps, dir.z));
+	I.x = 1.0f / (math::abs(dir.x) > ooeps ? dir.x : copysignf(ooeps, dir.x));
+	I.y = 1.0f / (math::abs(dir.y) > ooeps ? dir.y : copysignf(ooeps, dir.y));
+	I.z = 1.0f / (math::abs(dir.z) > ooeps ? dir.z : copysignf(ooeps, dir.z));
 	O = I * ori;
 	while(at)
 	{
@@ -484,10 +484,10 @@ template<bool ANY_HIT> __global__ void intersectKernel_SKIPOUTER(int numRays, tr
             dirz  = d.z;
             //hitT  = d1.w / length(d);
 			hitT = d1.w;
-            float ooeps = exp2f(-80.0f); // Avoid div by zero.
-            idirx = 1.0f / (fabsf(d.x) > ooeps ? d.x : copysignf(ooeps, d.x));
-            idiry = 1.0f / (fabsf(d.y) > ooeps ? d.y : copysignf(ooeps, d.y));
-            idirz = 1.0f / (fabsf(d.z) > ooeps ? d.z : copysignf(ooeps, d.z));
+			float ooeps = math::exp2(-80.0f); // Avoid div by zero.
+            idirx = 1.0f / (math::abs(d.x) > ooeps ? d.x : copysignf(ooeps, d.x));
+            idiry = 1.0f / (math::abs(d.y) > ooeps ? d.y : copysignf(ooeps, d.y));
+            idirz = 1.0f / (math::abs(d.z) > ooeps ? d.z : copysignf(ooeps, d.z));
             oodx  = origx * idirx;
             oody  = origy * idiry;
             oodz  = origz * idirz;
@@ -748,10 +748,10 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
             diry  = d.y;
             dirz  = d.z;
             hitT  = d.w;
-            float ooeps = exp2f(-80.0f); // Avoid div by zero.
-            idirx = 1.0f / (fabsf(d.x) > ooeps ? d.x : copysignf(ooeps, d.x));
-            idiry = 1.0f / (fabsf(d.y) > ooeps ? d.y : copysignf(ooeps, d.y));
-            idirz = 1.0f / (fabsf(d.z) > ooeps ? d.z : copysignf(ooeps, d.z));
+			float ooeps = math::exp2(-80.0f); // Avoid div by zero.
+            idirx = 1.0f / (math::abs(d.x) > ooeps ? d.x : copysignf(ooeps, d.x));
+            idiry = 1.0f / (math::abs(d.y) > ooeps ? d.y : copysignf(ooeps, d.y));
+            idirz = 1.0f / (math::abs(d.z) > ooeps ? d.z : copysignf(ooeps, d.z));
             oodx  = origx * idirx;
             oody  = origy * idiry;
             oodz  = origz * idirz;
@@ -881,10 +881,10 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 						ldiry = d.y;
 						ldirz = d.z;
 						lhitT = hitT;
-						float ooeps = exp2f(-80.0f); // Avoid div by zero.
-						lidirx = 1.0f / (fabsf(d.x) > ooeps ? d.x : copysignf(ooeps, d.x));
-						lidiry = 1.0f / (fabsf(d.y) > ooeps ? d.y : copysignf(ooeps, d.y));
-						lidirz = 1.0f / (fabsf(d.z) > ooeps ? d.z : copysignf(ooeps, d.z));
+						float ooeps = math::exp2(-80.0f); // Avoid div by zero.
+						lidirx = 1.0f / (math::abs(d.x) > ooeps ? d.x : copysignf(ooeps, d.x));
+						lidiry = 1.0f / (math::abs(d.y) > ooeps ? d.y : copysignf(ooeps, d.y));
+						lidirz = 1.0f / (math::abs(d.z) > ooeps ? d.z : copysignf(ooeps, d.z));
 						loodx = lorigx * lidirx;
 						loody = lorigy * lidiry;
 						loodz = lorigz * lidirz;

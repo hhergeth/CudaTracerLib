@@ -19,7 +19,7 @@ template<bool RECURSIVE> __global__ void k_GuessPass(int w, int h, float scx, fl
 		{
 			DifferentialGeometry dg;
 			BSDFSamplingRecord bRec(dg);
-			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance);
+			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
 			r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
 			r = Ray(dg.P, bRec.getOutgoing());
 			Vec3f per = math::clamp01((dg.P - g_SceneData.m_sBox.minV) / (g_SceneData.m_sBox.maxV - g_SceneData.m_sBox.minV)) * float(UINT_MAX);
@@ -96,7 +96,7 @@ __global__ void estimateLightVisibility(int w, int h, float scx, float scy, int 
 		{
 			DifferentialGeometry dg;
 			BSDFSamplingRecord bRec(dg);
-			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance);
+			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
 
 			for (int i = 0; i < g_SceneData.m_sLightData.Length; i++)
 			{

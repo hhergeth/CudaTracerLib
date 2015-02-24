@@ -272,7 +272,7 @@ struct Colorizer
 	CUDA_FUNC_IN float operator()(float f)
 	{
 		return (f - min) / (max - min);
-		/*if (abs(f - avg) < stdDev)
+		/*if (math::abs(f - avg) < stdDev)
 		{
 			float l = (f - avg) / stdDev;
 			return mappedAvg + mappedDev * l;
@@ -282,7 +282,7 @@ struct Colorizer
 			float s = math::sign(f - avg);
 			float b = avg + stdDev * s;
 			float m = mappedAvg + mappedDev * s;
-			float l = abs(f - b);
+			float l = math::abs(f - b);
 			float range = 0.5f - mappedDev;
 			return m + l * range * s;
 		}*/

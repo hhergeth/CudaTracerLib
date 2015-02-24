@@ -66,7 +66,7 @@ struct AABB
 		b.minV = minV;
 		b.maxV = maxV;
 		for(int i = 0; i < 3; i++)
-			if (abs(b.maxV[i] - b.minV[i]) < EPSILON)
+			if (math::abs(b.maxV[i] - b.minV[i]) < EPSILON)
 			{
 				b.maxV[i] += (float)EPSILON;
 				b.minV[i] -= (float)EPSILON;
@@ -143,4 +143,12 @@ struct AABB
 	{
 		return Intersect(r.direction, r.origin, min, max);
 	}
+
+	friend std::ostream& operator<< (std::ostream & os, const AABB& rhs);
 };
+
+inline std::ostream& operator<< (std::ostream & os, const AABB& rhs)
+{
+	os << "[" << rhs.minV << " - " << rhs.maxV << "]";
+	return os;
+}
