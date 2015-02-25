@@ -28,12 +28,12 @@ template<bool DIRECT, typename DEBUGGER> CUDA_FUNC_IN Spectrum PathTrace(Ray& r,
 		if (DIRECT)
 			cl += cf * UniformSampleAllLights(bRec, r2.getMat(), 1, rnd);
 		specularBounce = (bRec.sampledType & EDelta) != 0;
-		/*if (depth > 5)
+		if (depth > 5)
 		{
 			if (rnd.randomFloat() < f.max())
 				f = f / f.max();
 			else break;
-		}*/
+		}
 		cf = cf * f;
 		r = Ray(dg.P, bRec.getOutgoing());
 		r2.Init();

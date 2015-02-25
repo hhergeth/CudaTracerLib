@@ -14,8 +14,9 @@ struct CUDA_ALIGN(16) ShapeSet
 	{
 		CUDA_ALIGN(16) Vec3f p[3];
 		CUDA_ALIGN(16) Vec3f n;
-		CUDA_ALIGN(16) float area;
-		CUDA_ALIGN(16) e_StreamReference(e_TriIntersectorData) datRef;
+		e_TriIntersectorData* m_pGPUIntersectorData;
+		float area;
+		e_StreamReference(e_TriIntersectorData) datRef;
 
 		CUDA_FUNC_IN void UniformSampleTriangle(float u1, float u2, float *u, float *v) const
 		{
@@ -51,7 +52,7 @@ public:
 	{
 		return 1.0f / sumArea;
 	}
-	AABB getBox() const
+	CUDA_FUNC_IN AABB getBox() const
 	{
 		AABB b = AABB::Identity();
 		for(int i = 0; i < count; i++)
@@ -60,11 +61,11 @@ public:
 	}
 	void Recalculate(const float4x4& mat);
 
-	unsigned int numTriangles() const
+	CUDA_FUNC_IN unsigned int numTriangles() const
 	{
 		return count;
 	}
-	const triData& getTriangle(unsigned int index) const
+	CUDA_FUNC_IN const triData& getTriangle(unsigned int index) const
 	{
 		return tris[index];
 	}

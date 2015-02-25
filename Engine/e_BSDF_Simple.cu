@@ -428,62 +428,71 @@ Spectrum roughdielectric::f(const BSDFSamplingRecord &bRec, EMeasure measure) co
 	}
 }
 
+/// Reflection in local coordinates
+CUDA_FUNC_IN Vec3f reflect2(const Vec3f &wi) {
+	return Vec3f(-wi.x, -wi.y, wi.z);
+}
+/// Refraction in local coordinates
+CUDA_FUNC_IN Vec3f refract2(const Vec3f &wi, float cosThetaT, float m_eta) {
+	float scale = -(cosThetaT < 0 ? (1.0f / m_eta) : m_eta);
+	return Vec3f(scale*wi.x, scale*wi.y, cosThetaT);
+}
 Spectrum roughdielectric::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &_sample) const
 {
 	Vec2f sample = (_sample);
 
 	bool hasReflection = (bRec.typeMask & EGlossyReflection),
-		 hasTransmission = (bRec.typeMask & EGlossyTransmission),
-		 sampleReflection = hasReflection;
+		hasTransmission = (bRec.typeMask & EGlossyTransmission),
+		sampleReflection = hasReflection;
 
 	if (!hasReflection && !hasTransmission)
 		return Spectrum(0.0f);
 
 	/* Evaluate the roughness */
-	//float alphaU = m_distribution.transformRoughness(
-	//			m_alphaU.Evaluate(bRec.dg).average()),
-	//	  alphaV = m_distribution.transformRoughness(
-	//			m_alphaV.Evaluate(bRec.dg).average());
+	float alphaU = m_distribution.transformRoughness(
+		m_alphaU.Evaluate(bRec.dg).average()),
+		alphaV = m_distribution.transformRoughness(
+		m_alphaV.Evaluate(bRec.dg).average());
 
 #if ENLARGE_LOBE_TRICK == 1
 	Float factor = (1.2f - 0.2f * std::sqrt(
 		math::abs(Frame::cosTheta(bRec.wi))));
 	Float sampleAlphaU = alphaU * factor,
-			sampleAlphaV = alphaV * factor;
+		sampleAlphaV = alphaV * factor;
 #else
-	//float sampleAlphaU = alphaU,
-	//	  sampleAlphaV = alphaV;
+	float sampleAlphaU = alphaU,
+		sampleAlphaV = alphaV;
 #endif
 
 	/* Sample M, the microsurface normal */
-	//float microfacetPDF;
-	//Vec3f m = m_distribution.sample(sample,
-	//		sampleAlphaU, sampleAlphaV, microfacetPDF);
+	float microfacetPDF;
+	const Vec3f m = m_distribution.sample(sample,
+		sampleAlphaU, sampleAlphaV, microfacetPDF);
 
-	//if (microfacetPDF == 0)
-	//	return Spectrum(0.0f);
+	if (microfacetPDF == 0)
+		return Spectrum(0.0f);
 
-	//pdf = microfacetPDF;
-	pdf = 1;
-	Vec3f m = Vec3f(0, 0, 1);
+	pdf = microfacetPDF;
 
 	float cosThetaT, numerator = 1.0f;
 	float F = MonteCarlo::fresnelDielectricExt(dot(bRec.wi, m), cosThetaT, m_eta);
-	
 
 	if (hasReflection && hasTransmission) {
 		if (bRec.rng->randomFloat() > F) {
 			sampleReflection = false;
-			pdf *= 1-F;
-		} else {
-			pdf *= F;
+			pdf *= 1 - F;
 		}
-	} else {
-		numerator = hasReflection ? F : (1-F);
+		else {
+			pdf *= F;
+			sampleReflection = true;
+		}
+	}
+	else {
+		numerator = hasReflection ? F : (1 - F);
 	}
 
 	Spectrum result;
-	//float dwh_dwo;
+	float dwh_dwo;
 
 	if (sampleReflection) {
 		/* Perfect specular reflection based on the microsurface normal */
@@ -498,8 +507,9 @@ Spectrum roughdielectric::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec
 		result = m_specularReflectance.Evaluate(bRec.dg);
 
 		/* Jacobian of the half-direction mapping */
-		//dwh_dwo = 1.0f / (4.0f * dot(bRec.wo, m));
-	} else {
+		dwh_dwo = 1.0f / (4.0f * dot(bRec.wo, m));
+	}
+	else {
 		if (cosThetaT == 0)
 			return Spectrum(0.0f);
 
@@ -513,26 +523,26 @@ Spectrum roughdielectric::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec
 			return Spectrum(0.0f);
 
 		/* Radiance must be scaled to account for the solid angle compression
-			that occurs when crossing the interface. */
+		that occurs when crossing the interface. */
 		float factor = (bRec.mode == ERadiance)
 			? (cosThetaT < 0 ? m_invEta : m_eta) : (1.0f);
 
 		result = m_specularTransmittance.Evaluate(bRec.dg) * (factor * factor);
 
 		/* Jacobian of the half-direction mapping */
-		//float sqrtDenom = dot(bRec.wi, m) + bRec.eta * dot(bRec.wo, m);
-		//dwh_dwo = (bRec.eta*bRec.eta * dot(bRec.wo, m)) / (sqrtDenom*sqrtDenom);
+		float sqrtDenom = dot(bRec.wi, m) + bRec.eta * dot(bRec.wo, m);
+		dwh_dwo = (bRec.eta*bRec.eta * dot(bRec.wo, m)) / (sqrtDenom*sqrtDenom);
 	}
 
-	//numerator *= m_distribution.eval(m, alphaU, alphaV)
-	//	* m_distribution.G(bRec.wi, bRec.wo, m, alphaU, alphaV)
-	//	* dot(bRec.wi, m);
+	numerator *= m_distribution.eval(m, alphaU, alphaV)
+		* m_distribution.G(bRec.wi, bRec.wo, m, alphaU, alphaV)
+		* dot(bRec.wi, m);
 
-	//float denominator = microfacetPDF * Frame::cosTheta(bRec.wi);
+	float denominator = microfacetPDF * Frame::cosTheta(bRec.wi);
 
-	//pdf *= math::abs(dwh_dwo);
+	pdf *= math::abs(dwh_dwo);
 
-	return result;// *math::abs(numerator / denominator);
+	return result * math::abs(numerator / denominator);
 }
 
 Spectrum conductor::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const

@@ -11,6 +11,7 @@ AABB ShapeSet::triData::box() const
 
 void ShapeSet::triData::Recalculate(const float4x4& mat)
 {
+	m_pGPUIntersectorData = datRef.getDevice();
 	datRef->getData(p[0], p[1], p[2]);
 	for(int i = 0; i < 3; i++)
 		p[i] = mat.TransformPoint(p[i]);

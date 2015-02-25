@@ -402,7 +402,7 @@ public:
 
 		/* Find the absolute cosines of the incident/transmitted rays */
 		float cosThetaI = math::abs(cosThetaI_);
-		float cosThetaT = math::sqrt(cosThetaTSqr);
+		float cosThetaT = math::safe_sqrt(cosThetaTSqr);
 
 		float Rs = (cosThetaI - eta * cosThetaT)
 				 / (cosThetaI + eta * cosThetaT);

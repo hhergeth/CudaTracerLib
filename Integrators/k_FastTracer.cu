@@ -92,7 +92,7 @@ __device__ CUDA_INLINE Vec2f stratifiedSample(const Vec2f& f, int pass)
 	//return Vec2f(x, y) / 8.0f + f / 8.0f;
 }
 
-#define max_PASS 10
+#define max_PASS 7
 CUDA_DEVICE k_PTDBuffer g_Intersector;
 CUDA_DEVICE k_PTDBuffer g_Intersector2;
 __global__ void pathIterateKernel(unsigned int N, e_Image I, int pass, int iterationIdx)//template
@@ -146,7 +146,7 @@ __global__ void pathIterateKernel(unsigned int N, e_Image I, int pass, int itera
 			if (pass + 1 != max_PASS)
 			{
 				Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
-				if (pass > 5)
+				if (pass > 3)
 				{
 					if (rng.randomFloat() < f.max())
 						f = f / f.max();

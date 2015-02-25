@@ -17,7 +17,7 @@ CUDA_FUNC_IN Spectrum EstimateDirect(BSDFSamplingRecord bRec, const e_KernelMate
 		if (!bsdfVal.isZero() && !g_SceneData.Occluded(Ray(dRec.ref, dRec.d), 0, dRec.dist))
 		{
 			const float bsdfPdf = mat.bsdf.pdf(bRec);
-			const float weight = dRec.pdf / (dRec.pdf + bsdfPdf);
+			const float weight = MonteCarlo::PowerHeuristic(1, dRec.pdf, 1, bsdfPdf);
 			retVal = value * bsdfVal * weight;
 		}
 		bRec.typeMask = EAll;

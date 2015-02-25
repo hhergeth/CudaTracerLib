@@ -68,19 +68,63 @@ Spectrum e_DiffuseLight::eval(const Vec3f& p, const Frame& sys, const Vec3f &d) 
 	}
 }
 
-Spectrum e_DiffuseLight::sampleDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const
+//http://gamedev.stackexchange.com/questions/23743/whats-the-most-efficient-way-to-find-barycentric-coordinates
+// point p with respect to triangle (a, b, c)
+CUDA_FUNC_IN bool Barycentric(const Vec3f& p, const Vec3f& a, const Vec3f& b, const Vec3f& c, float u, float v)
 {
-	shapeSet.SamplePosition(dRec, sample);
+	Vec3f v0 = b - a, v1 = c - a, v2 = p - a;
+	float d00 = dot(v0, v0);
+	float d01 = dot(v0, v1);
+	float d11 = dot(v1, v1);
+	float d20 = dot(v2, v0);
+	float d21 = dot(v2, v1);
+	float denom = d00 * d11 - d01 * d01;
+	v = (d11 * d20 - d01 * d21) / denom;
+	float w = (d00 * d21 - d01 * d20) / denom;
+	u = 1.0f - v - w;
+	return 0 <= v && v <= 1 && 0 <= u && u <= 1 && 0 <= w && w <= 1;
+}
+
+Spectrum e_DiffuseLight::sampleDirect(DirectSamplingRecord &dRec, const Vec2f &_sample) const
+{
+	Vec2f sample = _sample;
+	if (m_bOrthogonal)
+	{
+		//sample random triangle using uniform pdf
+		float xN = shapeSet.numTriangles() * sample.x;
+		unsigned int t_idx = unsigned int(xN);
+		//resample sample
+		sample.x = xN - t_idx;
+		const ShapeSet::triData& tri = shapeSet.getTriangle(t_idx);
+		float lambda = dot(tri.p[0], tri.n) - dot(dRec.ref, tri.n);// := (p_0 * n - p * n) / (n * n)
+		dRec.p = dRec.ref + lambda * tri.n;
+		bool inTriangle = Barycentric(dRec.p, tri.p[0], tri.p[1], tri.p[2], dRec.uv.x, dRec.uv.y);
+		if(!inTriangle)
+		{
+			dRec.pdf = 0.0f;
+			return Spectrum(0.0f);
+		}
+		dRec.n = tri.n;
+		dRec.pdf = 1.0f / float(shapeSet.numTriangles());
+		dRec.measure = EArea;
+	}
+	else shapeSet.SamplePosition(dRec, sample);
 	dRec.d = dRec.p - dRec.ref;
 	float distSquared = dot(dRec.d, dRec.d);
 	dRec.dist = math::sqrt(distSquared);
 	dRec.d /= dRec.dist;
 	float dp = absdot(dRec.d, dRec.n);
-	dRec.pdf *= dp != 0 ? (distSquared / dp) : 0.0f;
-	dRec.measure = ESolidAngle;
-	if (dot(dRec.d, dRec.refN) >= 0 && dot(dRec.d, dRec.n) < 0 && dRec.pdf != 0 && ((dot(dRec.d, dRec.n) > 1 - DeltaEpsilon && m_bOrthogonal) || !m_bOrthogonal)) {
+	if (!m_bOrthogonal)
+	{
+		dRec.pdf *= dp != 0 ? (distSquared / dp) : 0.0f;
+		dRec.measure = ESolidAngle;
+	}
+	else dRec.measure = EDiscrete;
+
+	if (dot(dRec.d, dRec.refN) >= 0 && dot(dRec.d, dRec.n) < 0 && dRec.pdf != 0) {
 		return m_radiance / dRec.pdf;
-	} else {
+	}
+	else {
 		dRec.pdf = 0.0f;
 		return Spectrum(0.0f);
 	}
@@ -88,7 +132,11 @@ Spectrum e_DiffuseLight::sampleDirect(DirectSamplingRecord &dRec, const Vec2f &s
 
 float e_DiffuseLight::pdfDirect(const DirectSamplingRecord &dRec) const
 {
-	if (dot(dRec.d, dRec.refN) >= 0 && dot(dRec.d, dRec.n) < 0) {
+	if (dot(dRec.d, dRec.refN) >= 0 && dot(dRec.d, dRec.n) < 0)
+	{
+		if (m_bOrthogonal)
+			return dRec.measure == EDiscrete ? 1.0f / float(shapeSet.numTriangles()) : 0.0f;
+
 		float pdfPos = shapeSet.Pdf(dRec);
 
 		if (dRec.measure == ESolidAngle)
