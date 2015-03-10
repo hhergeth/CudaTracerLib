@@ -70,7 +70,7 @@ CUDA_FUNC_IN bool sampleDistanceHomogenous(const Ray& ray, float minT, float max
 	return success;
 }
 
-struct e_BaseVolumeRegion : public e_BaseType
+struct e_BaseVolumeRegion : public e_BaseType, public e_BaseTypeHelper<5001046>
 {
 public:
 	unsigned int m_uNodeIndex;
@@ -93,8 +93,7 @@ public:
 	}
 };
 
-#define e_HomogeneousVolumeDensity_TYPE 1
-struct e_HomogeneousVolumeDensity : public e_BaseVolumeRegion
+struct e_HomogeneousVolumeDensity : public e_BaseVolumeRegion, public e_DerivedTypeHelper<1>
 {
 public:
 	e_HomogeneousVolumeDensity(){}
@@ -143,8 +142,6 @@ public:
     CUDA_DEVICE CUDA_HOST Spectrum tau(const Ray &ray, const float minT, const float maxT) const;
 
 	CUDA_DEVICE CUDA_HOST bool sampleDistance(const Ray& ray, float minT, float maxT, float sample, MediumSamplingRecord& mRec) const;
-
-	TYPE_FUNC(e_HomogeneousVolumeDensity)
 public:
 	Spectrum sig_a, sig_s, le;
 	float4x4 WorldToVolume;
@@ -225,8 +222,7 @@ public:
 	}
 };
 
-#define e_VolumeGrid_TYPE 2
-struct e_VolumeGrid : public e_BaseVolumeRegion
+struct e_VolumeGrid : public e_BaseVolumeRegion, public e_DerivedTypeHelper<2>
 {
 public:
 	e_VolumeGrid(){}
@@ -284,8 +280,6 @@ public:
 	}
 
 	virtual void Update();
-
-	TYPE_FUNC(e_VolumeGrid)
 public:
 	float4x4 WorldToVolume, VolumeToWorld;
 	Spectrum sigAMin, sigAMax, sigSMin, sigSMax, leMin, leMax;

@@ -1,18 +1,29 @@
 #include "e_Material.h"
 
-e_KernelMaterial::e_KernelMaterial(const char* name)
+e_KernelMaterial::e_KernelMaterial()
 {
-	enableParallaxOcclusion = false;
 	parallaxMinSamples = 10;
 	parallaxMaxSamples = 50;
-	memset(Name, 0, sizeof(Name));
-	if(name)
-		memcpy(Name, name, strlen(name));
+	Name = "NoNameMaterial";
 	HeightScale = 1.0f;
 	NodeLightIndex = 0xffffffff;
 	m_fAlphaThreshold = 1.0f;
 	bsdf.type = 0;
-	usedBssrdf = false;
+	usedBssrdf = 0;
+	AlphaMap.used = NormalMap.used = HeightMap.used = 0;
+}
+
+e_KernelMaterial::e_KernelMaterial(const char* name)
+{
+	parallaxMinSamples = 10;
+	parallaxMaxSamples = 50;
+	Name = name;
+	HeightScale = 1.0f;
+	NodeLightIndex = 0xffffffff;
+	m_fAlphaThreshold = 1.0f;
+	bsdf.type = 0;
+	usedBssrdf = 0;
+	AlphaMap.used = NormalMap.used = HeightMap.used = 0;
 }
 
 CUDA_FUNC_IN Vec2f parallaxOcclusion(const Vec2f& texCoord, e_KernelMIPMap* tex, const Vec3f& vViewTS, float HeightScale, int MinSamples, int MaxSamples)
@@ -81,7 +92,7 @@ CUDA_FUNC_IN Vec2f parallaxOcclusion(const Vec2f& texCoord, e_KernelMIPMap* tex,
 
 bool e_KernelMaterial::SampleNormalMap(DifferentialGeometry& dg, const Vec3f& wi) const
 {
-	if(NormalMap.used)
+	/*if(NormalMap.used)
 	{
 		Vec3f n;
 		NormalMap.tex.Evaluate(dg).toLinearRGB(n.x, n.y, n.z);
@@ -120,14 +131,14 @@ bool e_KernelMaterial::SampleNormalMap(DifferentialGeometry& dg, const Vec3f& wi
 
 		return true;
 	}
-	else return false;
+	else */return false;
 }
 
 float e_KernelMaterial::SampleAlphaMap(const DifferentialGeometry& uv) const
 {
-	if(AlphaMap.used)
+	/*if(AlphaMap.used)
 	{//return 1;
-		if(AlphaMap.tex.type == e_KernelImageTexture_TYPE)
+		if (AlphaMap.tex.Is<e_KernelImageTexture>())
 		{
 			Vec2f uv2 = AlphaMap.tex.As<e_KernelImageTexture>()->mapping.Map(uv);
 			return AlphaMap.tex.As<e_KernelImageTexture>()->tex->SampleAlpha(uv2) != 1 ? 0 : 1;
@@ -137,7 +148,7 @@ float e_KernelMaterial::SampleAlphaMap(const DifferentialGeometry& uv) const
 			return 0.0f;
 		else return 1.0f;
 	}
-	else return 1.0f;
+	else */return 1.0f;
 }
 
 bool e_KernelMaterial::GetBSSRDF(const DifferentialGeometry& uv, const e_KernelBSSRDF** res) const
@@ -149,7 +160,7 @@ bool e_KernelMaterial::GetBSSRDF(const DifferentialGeometry& uv, const e_KernelB
 
 void e_KernelMaterial::setBssrdf(const Spectrum& sig_a, const Spectrum& sigp_s, float e)
 {
-	usedBssrdf = true;
+	usedBssrdf = 1;
 	bssrdf.e = e;
 	bssrdf.sig_a = sig_a;
 	bssrdf.sigp_s = sigp_s;

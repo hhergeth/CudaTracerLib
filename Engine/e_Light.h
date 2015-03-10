@@ -7,7 +7,7 @@
 #include "e_FileTexture.h"
 #include "e_AbstractEmitter.h"
 
-struct e_LightBase : public e_AbstractEmitter
+struct e_LightBase : public e_AbstractEmitter, public e_BaseTypeHelper<5523276>
 {
 	bool IsRemoved;
 
@@ -23,8 +23,7 @@ struct e_LightBase : public e_AbstractEmitter
 	}
 };
 
-#define e_PointLight_TYPE 1
-struct e_PointLight : public e_LightBase
+struct e_PointLight : public e_LightBase, public e_DerivedTypeHelper<1>
 {
 	Vec3f lightPos;
     Spectrum m_intensity;
@@ -80,12 +79,9 @@ struct e_PointLight : public e_LightBase
 	{
 		return AABB(lightPos - Vec3f(eps), lightPos + Vec3f(eps));
 	}
-	
-	TYPE_FUNC(e_PointLight)
 };
 
-#define e_DiffuseLight_TYPE 2
-struct e_DiffuseLight : public e_LightBase
+struct e_DiffuseLight : public e_LightBase, public e_DerivedTypeHelper<2>
 {
 	Spectrum m_radiance, m_power;
     ShapeSet shapeSet;
@@ -149,12 +145,9 @@ struct e_DiffuseLight : public e_LightBase
 	{
 		return shapeSet.getBox();
 	}
-	
-	TYPE_FUNC(e_DiffuseLight)
 };
 
-#define e_DistantLight_TYPE 3
-struct e_DistantLight : public e_LightBase
+struct e_DistantLight : public e_LightBase, public e_DerivedTypeHelper<3>
 {
 	Spectrum m_normalIrradiance, m_power;
 	Frame ToWorld;
@@ -229,12 +222,9 @@ struct e_DistantLight : public e_LightBase
 	{
 		return AABB(Vec3f(-radius), Vec3f(+radius));
 	}
-	
-	TYPE_FUNC(e_DistantLight)
 };
 
-#define e_SpotLight_TYPE 4
-struct e_SpotLight : public e_LightBase
+struct e_SpotLight : public e_LightBase, public e_DerivedTypeHelper<4>
 {
     Spectrum m_intensity;
 	float m_beamWidth, m_cutoffAngle;
@@ -297,14 +287,11 @@ struct e_SpotLight : public e_LightBase
 	{
 		return AABB(Position - Vec3f(eps), Position + Vec3f(eps));
 	}
-	
-	TYPE_FUNC(e_SpotLight)
 private:
 	CUDA_DEVICE CUDA_HOST Spectrum falloffCurve(const Vec3f &d) const;
 };
 
-#define e_InfiniteLight_TYPE 5
-struct e_InfiniteLight : public e_LightBase
+struct e_InfiniteLight : public e_LightBase, public e_DerivedTypeHelper<5>
 {
 	e_KernelMIPMap radianceMap;
 	e_Variable<float> m_cdfRows, m_cdfCols, m_rowWeights;
@@ -361,12 +348,9 @@ struct e_InfiniteLight : public e_LightBase
 	{
 		return AABB(-Vec3f(1.0f / eps), Vec3f(1.0f / eps));
 	}
-
-	TYPE_FUNC(e_InfiniteLight)
 private:
 	CUDA_DEVICE CUDA_HOST void internalSampleDirection(Vec2f sample, Vec3f &d, Spectrum &value, float &pdf) const;
 	CUDA_DEVICE CUDA_HOST float internalPdfDirection(const Vec3f &d) const;
-	CUDA_DEVICE CUDA_HOST unsigned int sampleReuse(float *cdf, unsigned int size, float &sample) const;
 };
 
 #define LGT_SIZE RND_16(Dmax5(sizeof(e_PointLight), sizeof(e_DiffuseLight), sizeof(e_DistantLight), sizeof(e_SpotLight), sizeof(e_InfiniteLight)))

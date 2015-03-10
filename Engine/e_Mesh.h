@@ -22,7 +22,7 @@ struct e_KernelMesh
 
 struct e_MeshPartLight
 {
-	e_String MatName;
+	FixedString<32> MatName;
 	Spectrum L;
 };
 

@@ -108,6 +108,7 @@ void k_PhotonTracer::DoRender(e_Image* I)
 
 void k_PhotonTracer::Debug(e_Image* I, const Vec2i& pixel, ITracerDebugger* debugger)
 {
+	k_INITIALIZE(m_pScene, g_sRngs);
 	CudaRNG rng = g_RNGData();
 	doWork(*I, rng, k_KernelTracerDebugger(debugger));
 	g_RNGData(rng);

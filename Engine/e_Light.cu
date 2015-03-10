@@ -96,15 +96,16 @@ Spectrum e_DiffuseLight::sampleDirect(DirectSamplingRecord &dRec, const Vec2f &_
 		//resample sample
 		sample.x = xN - t_idx;
 		const ShapeSet::triData& tri = shapeSet.getTriangle(t_idx);
-		float lambda = dot(tri.p[0], tri.n) - dot(dRec.ref, tri.n);// := (p_0 * n - p * n) / (n * n)
-		dRec.p = dRec.ref + lambda * tri.n;
+		const Vec3f n = -normalize(cross(tri.p[2] - tri.p[0], tri.p[1] - tri.p[0]));
+		float lambda = dot(tri.p[0], n) - dot(dRec.ref, n);// := (p_0 * n - p * n) / (n * n)
+		dRec.p = dRec.ref + lambda * n;
 		bool inTriangle = Barycentric(dRec.p, tri.p[0], tri.p[1], tri.p[2], dRec.uv.x, dRec.uv.y);
 		if(!inTriangle)
 		{
 			dRec.pdf = 0.0f;
 			return Spectrum(0.0f);
 		}
-		dRec.n = tri.n;
+		dRec.n = n;
 		dRec.pdf = 1.0f / float(shapeSet.numTriangles());
 		dRec.measure = EArea;
 	}
@@ -165,6 +166,8 @@ float e_DiffuseLight::pdfDirection(const DirectionSamplingRecord &dRec, const Po
 
 	if (dRec.measure != ESolidAngle || dp < 0)
 		dp = 0.0f;
+	if (m_bOrthogonal && dp < 1 - DeltaEpsilon)
+		return 0.0f;
 
 	return m_bOrthogonal ? 1 : INV_PI * dp;
 }
@@ -175,6 +178,8 @@ Spectrum e_DiffuseLight::evalDirection(const DirectionSamplingRecord &dRec, cons
 
 	if (dRec.measure != ESolidAngle || dp < 0)
 		dp = 0.0f;
+	if (m_bOrthogonal && dp < 1 - DeltaEpsilon)
+		return 0.0f;
 
 	return m_bOrthogonal ? Spectrum(1.0f) : Spectrum(INV_PI * dp);
 }
@@ -355,8 +360,8 @@ e_InfiniteLight::e_InfiniteLight(e_Stream<char>* a_Buffer, e_BufferReference<e_M
 	m_pixelSize = Vec2f(2 * PI / m_size.x, PI / m_size.y);
 	m1.Invalidate(); m2.Invalidate(); m3.Invalidate();
 
-	float lvl = 0.65f;
-	unsigned int INDEX = sampleReuse(m_cdfRows.operator->(), m_size.y, lvl);
+	float lvl = 0.65f, qpdf;
+	unsigned int INDEX = sampleReuse(m_cdfRows.operator->(), m_size.y, lvl, qpdf);
 
 	m_power = (surfaceArea * m_scale / m_normalization).average();
 
@@ -447,8 +452,9 @@ Spectrum e_InfiniteLight::evalDirection(const DirectionSamplingRecord &dRec, con
 
 void e_InfiniteLight::internalSampleDirection(Vec2f sample, Vec3f &d, Spectrum &value, float &pdf) const
 {
-	unsigned int	row = sampleReuse(m_cdfRows.operator->(), m_size.y, sample.y),
-					col = sampleReuse(m_cdfCols.operator->() + row * unsigned int(m_size.x+1), m_size.x, sample.x);
+	float qpdf;
+	unsigned int	row = sampleReuse(m_cdfRows.operator->(), m_size.y, sample.y, qpdf),
+					col = sampleReuse(m_cdfCols.operator->() + row * unsigned int(m_size.x + 1), m_size.x, sample.x, qpdf);
 
 	/* Using the remaining bits of precision to shift the sample by an offset
 		drawn from a tent function. This effectively creates a sampling strategy
@@ -499,15 +505,6 @@ float e_InfiniteLight::internalPdfDirection(const Vec3f &d) const
 	return (value1.getLuminance() * m_rowWeights[math::clamp(yPos,   0, (int)m_size.y-1)] +
 		    value2.getLuminance() * m_rowWeights[math::clamp(yPos+1, 0, (int)m_size.y-1)])
 			* m_normalization / max(math::abs(sinTheta), EPSILON);
-}
-
-unsigned int e_InfiniteLight::sampleReuse(float *cdf, unsigned int size, float &sample) const
-{
-	const float *entry = STL_lower_bound(cdf, cdf+size, sample);
-	//unsigned int index = min(unsigned int(size - 2U), max(0U, unsigned int(entry - cdf - 1)));
-	unsigned int index = min(max(0u, unsigned int(entry - cdf - 1)), unsigned int(size - 1));
-	sample = (sample - cdf[index]) / (cdf[index+1] - cdf[index]);
-	return index;
 }
 
 Spectrum e_InfiniteLight::evalEnvironment(const Ray &ray) const

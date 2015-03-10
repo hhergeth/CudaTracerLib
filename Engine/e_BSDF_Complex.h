@@ -4,8 +4,7 @@
 
 struct BSDFALL;
 
-#define coating_TYPE 13
-struct coating : public BSDF
+struct coating : public BSDF, public e_DerivedTypeHelper<13>
 {
 	BSDFFirst m_nested;
 	float m_specularSamplingWeight;
@@ -47,7 +46,6 @@ struct coating : public BSDF
 		nested.SetData(val);
 		return coating(nested, eta, thickness, sig);
 	}
-	TYPE_FUNC(coating)
 private:
 	CUDA_FUNC_IN Vec3f reflect(const Vec3f &wi) const {
 		return Vec3f(-wi.x, -wi.y, wi.z);
@@ -66,8 +64,7 @@ private:
 	}
 };
 
-#define roughcoating_TYPE 14
-struct roughcoating : public BSDF
+struct roughcoating : public BSDF, public e_DerivedTypeHelper<14>
 {
 	enum EDestination {
 		EInterior = 0,
@@ -110,7 +107,6 @@ struct roughcoating : public BSDF
 		nested.SetData(val);
 		return roughcoating(nested, type, eta, thickness, sig, alpha, CreateTexture(Spectrum(1.0f)));
 	}
-	TYPE_FUNC(roughcoating)
 private:
 	/// Helper function: reflect \c wi with respect to a given surface normal
 	CUDA_FUNC_IN Vec3f reflect(const Vec3f &wi, const Vec3f &m) const {
@@ -150,8 +146,8 @@ public:
 	CUDA_FUNC_IN float pdf(Vec3f& a, Vec3f& b);
 };
 */
-#define blend_TYPE 16
-struct blend : public BSDF
+
+struct blend : public BSDF, public e_DerivedTypeHelper<16>
 {
 	static std::vector<e_KernelTexture*>* join(const BSDFFirst& nested1, const BSDFFirst& nested2)
 	{
@@ -184,5 +180,4 @@ public:
 		n2.SetData(b);
 		return blend(n1, n2, weight);
 	}
-	TYPE_FUNC(blend)
 };

@@ -59,12 +59,6 @@
   #error "Please provide a definition for MY_ALIGN macro for your host compiler!"
 #endif
 
-#define TYPE_FUNC(name) \
-	static CUDA_FUNC_IN unsigned int TYPE() \
-	{ \
-		return name##_TYPE; \
-	}
-
 void fail(const char* format, ...);
 
 template<typename T> CUDA_FUNC_IN void swapk(T* a, T* b)
@@ -80,9 +74,6 @@ template<typename T> CUDA_FUNC_IN void swapk(T& a, T& b)
 	a = b;
 	b = q;
 }
-
-typedef unsigned int uint;
-typedef unsigned short ushort;
 
 #define Dmax2(A, B) ((A) > (B) ? (A) : (B))
 #define Dmax3(A, B, C) Dmax2(Dmax2(A, B), C)
@@ -118,217 +109,186 @@ template<typename T> inline void ZeroMemoryCuda(T* cudaVar)
 	}
 
 #define CALL_TYPE(t,func) \
-	case t##_TYPE : \
+	if(type == t::TYPE()) \
 		return ((t*)Data)->func;
 #define CALL_FUNC1(_TYPE0_, func) \
-	switch (type) \
-	{ \
-		CALL_TYPE(_TYPE0_, func) \
-	}
+	CALL_TYPE(_TYPE0_, func)
 #define CALL_FUNC2(_TYPE0_,_TYPE1_, func) \
-	switch (type) \
-	{ \
-		CALL_TYPE(_TYPE0_, func) \
-		CALL_TYPE(_TYPE1_, func) \
-	}
+	CALL_TYPE(_TYPE0_, func) \
+	CALL_TYPE(_TYPE1_, func)
 #define CALL_FUNC3(_TYPE0_,_TYPE1_,_TYPE2_, func) \
-	switch (type) \
-	{ \
-		CALL_TYPE(_TYPE0_, func) \
-		CALL_TYPE(_TYPE1_, func) \
-		CALL_TYPE(_TYPE2_, func) \
-	}
+	CALL_TYPE(_TYPE0_, func) \
+	CALL_TYPE(_TYPE1_, func) \
+	CALL_TYPE(_TYPE2_, func)
 #define CALL_FUNC4(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_, func) \
-	switch (type) \
-	{ \
-		CALL_TYPE(_TYPE0_, func) \
-		CALL_TYPE(_TYPE1_, func) \
-		CALL_TYPE(_TYPE2_, func) \
-		CALL_TYPE(_TYPE3_, func) \
-	}
+	CALL_TYPE(_TYPE0_, func) \
+	CALL_TYPE(_TYPE1_, func) \
+	CALL_TYPE(_TYPE2_, func) \
+	CALL_TYPE(_TYPE3_, func)
 #define CALL_FUNC5(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_, func) \
-	switch (type) \
-	{ \
-		CALL_TYPE(_TYPE0_, func) \
-		CALL_TYPE(_TYPE1_, func) \
-		CALL_TYPE(_TYPE2_, func) \
-		CALL_TYPE(_TYPE3_, func) \
-		CALL_TYPE(_TYPE4_, func) \
-	}
+	CALL_TYPE(_TYPE0_, func) \
+	CALL_TYPE(_TYPE1_, func) \
+	CALL_TYPE(_TYPE2_, func) \
+	CALL_TYPE(_TYPE3_, func) \
+	CALL_TYPE(_TYPE4_, func)
 
 #define CALL_FUNC6(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_, func) \
-	switch (type) \
-	{ \
-		CALL_TYPE(_TYPE0_, func) \
-		CALL_TYPE(_TYPE1_, func) \
-		CALL_TYPE(_TYPE2_, func) \
-		CALL_TYPE(_TYPE3_, func) \
-		CALL_TYPE(_TYPE4_, func) \
-		CALL_TYPE(_TYPE5_, func) \
-	}
+	CALL_TYPE(_TYPE0_, func) \
+	CALL_TYPE(_TYPE1_, func) \
+	CALL_TYPE(_TYPE2_, func) \
+	CALL_TYPE(_TYPE3_, func) \
+	CALL_TYPE(_TYPE4_, func) \
+	CALL_TYPE(_TYPE5_, func)
 #define CALL_FUNC7(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_,_TYPE6_, func) \
-	switch (type) \
-	{ \
-		CALL_TYPE(_TYPE0_, func) \
-		CALL_TYPE(_TYPE1_, func) \
-		CALL_TYPE(_TYPE2_, func) \
-		CALL_TYPE(_TYPE3_, func) \
-		CALL_TYPE(_TYPE4_, func) \
-		CALL_TYPE(_TYPE5_, func) \
-		CALL_TYPE(_TYPE6_, func) \
-	}
+	CALL_TYPE(_TYPE0_, func) \
+	CALL_TYPE(_TYPE1_, func) \
+	CALL_TYPE(_TYPE2_, func) \
+	CALL_TYPE(_TYPE3_, func) \
+	CALL_TYPE(_TYPE4_, func) \
+	CALL_TYPE(_TYPE5_, func) \
+	CALL_TYPE(_TYPE6_, func)
 #define CALL_FUNC8(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_,_TYPE6_,_TYPE7_, func) \
-	switch (type) \
-	{ \
-		CALL_TYPE(_TYPE0_, func) \
-		CALL_TYPE(_TYPE1_, func) \
-		CALL_TYPE(_TYPE2_, func) \
-		CALL_TYPE(_TYPE3_, func) \
-		CALL_TYPE(_TYPE4_, func) \
-		CALL_TYPE(_TYPE5_, func) \
-		CALL_TYPE(_TYPE6_, func) \
-		CALL_TYPE(_TYPE7_, func) \
-	}
+	CALL_TYPE(_TYPE0_, func) \
+	CALL_TYPE(_TYPE1_, func) \
+	CALL_TYPE(_TYPE2_, func) \
+	CALL_TYPE(_TYPE3_, func) \
+	CALL_TYPE(_TYPE4_, func) \
+	CALL_TYPE(_TYPE5_, func) \
+	CALL_TYPE(_TYPE6_, func) \
+	CALL_TYPE(_TYPE7_, func)
 #define CALL_FUNC9(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_,_TYPE6_,_TYPE7_,_TYPE8_, func) \
-	switch (type) \
-	{ \
-		CALL_TYPE(_TYPE0_, func) \
-		CALL_TYPE(_TYPE1_, func) \
-		CALL_TYPE(_TYPE2_, func) \
-		CALL_TYPE(_TYPE3_, func) \
-		CALL_TYPE(_TYPE4_, func) \
-		CALL_TYPE(_TYPE5_, func) \
-		CALL_TYPE(_TYPE6_, func) \
-		CALL_TYPE(_TYPE7_, func) \
-		CALL_TYPE(_TYPE8_, func) \
-	}
+	CALL_TYPE(_TYPE0_, func) \
+	CALL_TYPE(_TYPE1_, func) \
+	CALL_TYPE(_TYPE2_, func) \
+	CALL_TYPE(_TYPE3_, func) \
+	CALL_TYPE(_TYPE4_, func) \
+	CALL_TYPE(_TYPE5_, func) \
+	CALL_TYPE(_TYPE6_, func) \
+	CALL_TYPE(_TYPE7_, func) \
+	CALL_TYPE(_TYPE8_, func)
 #define CALL_FUNC10(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_,_TYPE6_,_TYPE7_,_TYPE8_,_TYPE9_, func) \
-	switch (type) \
-	{ \
-		CALL_TYPE(_TYPE0_, func) \
-		CALL_TYPE(_TYPE1_, func) \
-		CALL_TYPE(_TYPE2_, func) \
-		CALL_TYPE(_TYPE3_, func) \
-		CALL_TYPE(_TYPE4_, func) \
-		CALL_TYPE(_TYPE5_, func) \
-		CALL_TYPE(_TYPE6_, func) \
-		CALL_TYPE(_TYPE7_, func) \
-		CALL_TYPE(_TYPE8_, func) \
-		CALL_TYPE(_TYPE9_, func) \
-	}
+	CALL_TYPE(_TYPE0_, func) \
+	CALL_TYPE(_TYPE1_, func) \
+	CALL_TYPE(_TYPE2_, func) \
+	CALL_TYPE(_TYPE3_, func) \
+	CALL_TYPE(_TYPE4_, func) \
+	CALL_TYPE(_TYPE5_, func) \
+	CALL_TYPE(_TYPE6_, func) \
+	CALL_TYPE(_TYPE7_, func) \
+	CALL_TYPE(_TYPE8_, func) \
+	CALL_TYPE(_TYPE9_, func)
 #define CALL_FUNC11(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_,_TYPE6_,_TYPE7_,_TYPE8_,_TYPE9_,_TYPE10_, func) \
-	switch (type) \
-	{ \
-		CALL_TYPE(_TYPE0_, func) \
-		CALL_TYPE(_TYPE1_, func) \
-		CALL_TYPE(_TYPE2_, func) \
-		CALL_TYPE(_TYPE3_, func) \
-		CALL_TYPE(_TYPE4_, func) \
-		CALL_TYPE(_TYPE5_, func) \
-		CALL_TYPE(_TYPE6_, func) \
-		CALL_TYPE(_TYPE7_, func) \
-		CALL_TYPE(_TYPE8_, func) \
-		CALL_TYPE(_TYPE9_, func) \
-		CALL_TYPE(_TYPE10_, func) \
-	}
+	CALL_TYPE(_TYPE0_, func) \
+	CALL_TYPE(_TYPE1_, func) \
+	CALL_TYPE(_TYPE2_, func) \
+	CALL_TYPE(_TYPE3_, func) \
+	CALL_TYPE(_TYPE4_, func) \
+	CALL_TYPE(_TYPE5_, func) \
+	CALL_TYPE(_TYPE6_, func) \
+	CALL_TYPE(_TYPE7_, func) \
+	CALL_TYPE(_TYPE8_, func) \
+	CALL_TYPE(_TYPE9_, func) \
+	CALL_TYPE(_TYPE10_, func)
 #define CALL_FUNC12(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_,_TYPE6_,_TYPE7_,_TYPE8_,_TYPE9_,_TYPE10_,_TYPE11_, func) \
-	switch (type) \
-	{ \
-		CALL_TYPE(_TYPE0_, func) \
-		CALL_TYPE(_TYPE1_, func) \
-		CALL_TYPE(_TYPE2_, func) \
-		CALL_TYPE(_TYPE3_, func) \
-		CALL_TYPE(_TYPE4_, func) \
-		CALL_TYPE(_TYPE5_, func) \
-		CALL_TYPE(_TYPE6_, func) \
-		CALL_TYPE(_TYPE7_, func) \
-		CALL_TYPE(_TYPE8_, func) \
-		CALL_TYPE(_TYPE9_, func) \
-		CALL_TYPE(_TYPE10_, func) \
-		CALL_TYPE(_TYPE11_, func) \
-	}
+	CALL_TYPE(_TYPE0_, func) \
+	CALL_TYPE(_TYPE1_, func) \
+	CALL_TYPE(_TYPE2_, func) \
+	CALL_TYPE(_TYPE3_, func) \
+	CALL_TYPE(_TYPE4_, func) \
+	CALL_TYPE(_TYPE5_, func) \
+	CALL_TYPE(_TYPE6_, func) \
+	CALL_TYPE(_TYPE7_, func) \
+	CALL_TYPE(_TYPE8_, func) \
+	CALL_TYPE(_TYPE9_, func) \
+	CALL_TYPE(_TYPE10_, func) \
+	CALL_TYPE(_TYPE11_, func)
 #define CALL_FUNC13(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_,_TYPE6_,_TYPE7_,_TYPE8_,_TYPE9_,_TYPE10_,_TYPE11_,_TYPE12_, func) \
-	switch (type) \
-	{ \
-		CALL_TYPE(_TYPE0_, func) \
-		CALL_TYPE(_TYPE1_, func) \
-		CALL_TYPE(_TYPE2_, func) \
-		CALL_TYPE(_TYPE3_, func) \
-		CALL_TYPE(_TYPE4_, func) \
-		CALL_TYPE(_TYPE5_, func) \
-		CALL_TYPE(_TYPE6_, func) \
-		CALL_TYPE(_TYPE7_, func) \
-		CALL_TYPE(_TYPE8_, func) \
-		CALL_TYPE(_TYPE9_, func) \
-		CALL_TYPE(_TYPE10_, func) \
-		CALL_TYPE(_TYPE11_, func) \
-		CALL_TYPE(_TYPE12_, func) \
-	}
+	CALL_TYPE(_TYPE0_, func) \
+	CALL_TYPE(_TYPE1_, func) \
+	CALL_TYPE(_TYPE2_, func) \
+	CALL_TYPE(_TYPE3_, func) \
+	CALL_TYPE(_TYPE4_, func) \
+	CALL_TYPE(_TYPE5_, func) \
+	CALL_TYPE(_TYPE6_, func) \
+	CALL_TYPE(_TYPE7_, func) \
+	CALL_TYPE(_TYPE8_, func) \
+	CALL_TYPE(_TYPE9_, func) \
+	CALL_TYPE(_TYPE10_, func) \
+	CALL_TYPE(_TYPE11_, func) \
+	CALL_TYPE(_TYPE12_, func)
 #define CALL_FUNC14(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_,_TYPE6_,_TYPE7_,_TYPE8_,_TYPE9_,_TYPE10_,_TYPE11_,_TYPE12_,_TYPE13_, func) \
-	switch (type) \
-	{ \
-		CALL_TYPE(_TYPE0_, func) \
-		CALL_TYPE(_TYPE1_, func) \
-		CALL_TYPE(_TYPE2_, func) \
-		CALL_TYPE(_TYPE3_, func) \
-		CALL_TYPE(_TYPE4_, func) \
-		CALL_TYPE(_TYPE5_, func) \
-		CALL_TYPE(_TYPE6_, func) \
-		CALL_TYPE(_TYPE7_, func) \
-		CALL_TYPE(_TYPE8_, func) \
-		CALL_TYPE(_TYPE9_, func) \
-		CALL_TYPE(_TYPE10_, func) \
-		CALL_TYPE(_TYPE11_, func) \
-		CALL_TYPE(_TYPE12_, func) \
-		CALL_TYPE(_TYPE13_, func) \
-	}
+	CALL_TYPE(_TYPE0_, func) \
+	CALL_TYPE(_TYPE1_, func) \
+	CALL_TYPE(_TYPE2_, func) \
+	CALL_TYPE(_TYPE3_, func) \
+	CALL_TYPE(_TYPE4_, func) \
+	CALL_TYPE(_TYPE5_, func) \
+	CALL_TYPE(_TYPE6_, func) \
+	CALL_TYPE(_TYPE7_, func) \
+	CALL_TYPE(_TYPE8_, func) \
+	CALL_TYPE(_TYPE9_, func) \
+	CALL_TYPE(_TYPE10_, func) \
+	CALL_TYPE(_TYPE11_, func) \
+	CALL_TYPE(_TYPE12_, func) \
+	CALL_TYPE(_TYPE13_, func)
 
 #define CALL_FUNC15(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_,_TYPE6_,_TYPE7_,_TYPE8_,_TYPE9_,_TYPE10_,_TYPE11_,_TYPE12_,_TYPE13_,_TYPE14_, func) \
-	switch (type) \
-	{ \
-		CALL_TYPE(_TYPE0_, func) \
-		CALL_TYPE(_TYPE1_, func) \
-		CALL_TYPE(_TYPE2_, func) \
-		CALL_TYPE(_TYPE3_, func) \
-		CALL_TYPE(_TYPE4_, func) \
-		CALL_TYPE(_TYPE5_, func) \
-		CALL_TYPE(_TYPE6_, func) \
-		CALL_TYPE(_TYPE7_, func) \
-		CALL_TYPE(_TYPE8_, func) \
-		CALL_TYPE(_TYPE9_, func) \
-		CALL_TYPE(_TYPE10_, func) \
-		CALL_TYPE(_TYPE11_, func) \
-		CALL_TYPE(_TYPE12_, func) \
-		CALL_TYPE(_TYPE13_, func) \
-		CALL_TYPE(_TYPE14_, func) \
-	}
+	CALL_TYPE(_TYPE0_, func) \
+	CALL_TYPE(_TYPE1_, func) \
+	CALL_TYPE(_TYPE2_, func) \
+	CALL_TYPE(_TYPE3_, func) \
+	CALL_TYPE(_TYPE4_, func) \
+	CALL_TYPE(_TYPE5_, func) \
+	CALL_TYPE(_TYPE6_, func) \
+	CALL_TYPE(_TYPE7_, func) \
+	CALL_TYPE(_TYPE8_, func) \
+	CALL_TYPE(_TYPE9_, func) \
+	CALL_TYPE(_TYPE10_, func) \
+	CALL_TYPE(_TYPE11_, func) \
+	CALL_TYPE(_TYPE12_, func) \
+	CALL_TYPE(_TYPE13_, func) \
+	CALL_TYPE(_TYPE14_, func)
 
 #define CALL_FUNC16(_TYPE0_,_TYPE1_,_TYPE2_,_TYPE3_,_TYPE4_,_TYPE5_,_TYPE6_,_TYPE7_,_TYPE8_,_TYPE9_,_TYPE10_,_TYPE11_,_TYPE12_,_TYPE13_,_TYPE14_,_TYPE15_, func) \
-	switch (type) \
-	{ \
-		CALL_TYPE(_TYPE0_, func) \
-		CALL_TYPE(_TYPE1_, func) \
-		CALL_TYPE(_TYPE2_, func) \
-		CALL_TYPE(_TYPE3_, func) \
-		CALL_TYPE(_TYPE4_, func) \
-		CALL_TYPE(_TYPE5_, func) \
-		CALL_TYPE(_TYPE6_, func) \
-		CALL_TYPE(_TYPE7_, func) \
-		CALL_TYPE(_TYPE8_, func) \
-		CALL_TYPE(_TYPE9_, func) \
-		CALL_TYPE(_TYPE10_, func) \
-		CALL_TYPE(_TYPE11_, func) \
-		CALL_TYPE(_TYPE12_, func) \
-		CALL_TYPE(_TYPE13_, func) \
-		CALL_TYPE(_TYPE15_, func) \
-		CALL_TYPE(_TYPE16_, func) \
+	CALL_TYPE(_TYPE0_, func) \
+	CALL_TYPE(_TYPE1_, func) \
+	CALL_TYPE(_TYPE2_, func) \
+	CALL_TYPE(_TYPE3_, func) \
+	CALL_TYPE(_TYPE4_, func) \
+	CALL_TYPE(_TYPE5_, func) \
+	CALL_TYPE(_TYPE6_, func) \
+	CALL_TYPE(_TYPE7_, func) \
+	CALL_TYPE(_TYPE8_, func) \
+	CALL_TYPE(_TYPE9_, func) \
+	CALL_TYPE(_TYPE10_, func) \
+	CALL_TYPE(_TYPE11_, func) \
+	CALL_TYPE(_TYPE12_, func) \
+	CALL_TYPE(_TYPE13_, func) \
+	CALL_TYPE(_TYPE15_, func) \
+	CALL_TYPE(_TYPE16_, func)
+
+template<int ID> struct e_BaseTypeHelper
+{
+	static CUDA_FUNC_IN unsigned int BASE_TYPE()
+	{
+		return ID << 1;
 	}
+};
 
-typedef char e_String[256];
+template<int ID> struct e_DerivedTypeHelper
+{
+	static CUDA_FUNC_IN unsigned int TYPE()
+	{
+		return ID;
+	}
+};
 
-//thats not const correct
+struct VC13_ClassLayouter
+{
+	virtual ~VC13_ClassLayouter() {}
+};
 
-struct e_BaseType
+struct e_BaseType : public VC13_ClassLayouter
 {
 	virtual void Update()
 	{
@@ -337,8 +297,9 @@ struct e_BaseType
 
 template<typename BaseType, int Size> struct e_AggregateBaseType
 {
-	unsigned int type;
-	CUDA_ALIGN(16) unsigned char Data[Size];
+	CUDA_ALIGN(16) unsigned int type;
+	//unsigned int base_type;
+	CUDA_ALIGN(16) unsigned char Data[Dmax2(Dmin2(RND_16(Size), 2048), 12)];
 
 	template<typename SpecializedType> CUDA_FUNC_IN SpecializedType* As() const
 	{
@@ -349,11 +310,12 @@ template<typename BaseType, int Size> struct e_AggregateBaseType
 	{
 		memcpy(Data, &val, sizeof(SpecializedType));
 		type = SpecializedType::TYPE();
+		//base_type = SpecializedType::BASE_TYPE();
 	}
 
 	template<typename SpecializedType> CUDA_FUNC_IN bool Is() const
 	{
-		return type == SpecializedType::TYPE();
+		return type == SpecializedType::TYPE();// && base_type == SpecializedType::BASE_TYPE();
 	}
 
 	CUDA_FUNC_IN BaseType* As() const
@@ -373,16 +335,9 @@ template<typename T> class e_Variable
 {
 public:
 	T* host, *device;
-#ifdef __CUDACC__
-	e_Variable()
+	CUDA_FUNC_IN e_Variable()
 	{
 	}
-#else
-	e_Variable()
-		: host(0), device(0)
-	{
-	}
-#endif
 	/*
 	template<typename U, typename V> CUDA_HOST e_Variable(e_BufferReference<U, V> r)
 	{

@@ -365,25 +365,14 @@ public:
 
 template<typename H, typename D> class e_CachedBuffer : public e_Buffer<H, D>
 {
-	inline bool strcmpare(const char* a, const char* b) const
-	{
-		size_t al = strlen(a), bl = strlen(b);
-		if(al != bl)
-			return false;
-		else for(size_t i = 0; i < al; i++)
-			if(a[i] != b[i])
-				return false;
-		return true;
-	}
 private:
 	struct entry
 	{
 		unsigned int count;
-		e_String file;
+		std::string file;
 		entry()
 		{
 			count = 0;
-			Platform::SetMemory(file, sizeof(file));
 		}
 	};
 	std::vector<entry> m_sEntries;
@@ -393,10 +382,10 @@ public:
 	{
 		
 	}
-	e_BufferReference<H, D> LoadCached(const char* file, bool* load)
+	e_BufferReference<H, D> LoadCached(const std::string file, bool* load)
 	{
 		for(unsigned int i = 0; i < m_sEntries.size(); i++)
-			if(strcmpare(m_sEntries[i].file, file))
+			if (m_sEntries[i].file == file)
 			{
 				m_sEntries[i].count++;
 				*load = false;
@@ -405,8 +394,7 @@ public:
 		*load = true;
 		entry e;
 		e.count = 1;
-		Platform::SetMemory(e.file, sizeof(e.file));
-		::memcpy(e.file, file, strlen(file));
+		e.file = file;
 		e_BufferReference<H, D> ref = malloc(1);
 		if(m_sEntries.size() <= ref.getIndex())
 			m_sEntries.push_back(e);

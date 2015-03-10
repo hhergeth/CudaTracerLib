@@ -109,7 +109,9 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClCompile Include="Base\FileStream.cpp" />
     <ClCompile Include="Defines.cpp" />
     <ClCompile Include="Engine\e_AnimatedMesh.cpp" />
-    <ClCompile Include="Engine\e_Core.cpp" />
+    <ClCompile Include="Engine\e_Core.cpp">
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">/d1reportSingleClassLayoutmpHlp %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
     <ClCompile Include="Engine\e_DynamicScene.cpp" />
     <ClCompile Include="Engine\e_FileTexture.cpp" />
     <ClCompile Include="Engine\e_Image.cpp" />
@@ -139,6 +141,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="Base\BVHBuilder.h" />
     <ClInclude Include="Base\CudaRandom.h" />
     <ClInclude Include="Base\FileStream.h" />
+    <ClInclude Include="Base\FixedString.h" />
     <ClInclude Include="Base\Platform.h" />
     <ClInclude Include="Base\STL.h" />
     <ClInclude Include="Base\StringUtils.h" />

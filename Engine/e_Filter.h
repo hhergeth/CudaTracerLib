@@ -2,7 +2,7 @@
 
 #include <MathTypes.h>
 
-struct e_KernelFilterBase : public e_BaseType
+struct e_KernelFilterBase : public e_BaseType, public e_BaseTypeHelper<5524550>
 {
 	float xWidth, yWidth;
     float invXWidth, invYWidth;
@@ -25,8 +25,7 @@ struct e_KernelFilterBase : public e_BaseType
 	}
 };
 
-#define e_KernelBoxFilter_TYPE 1
-struct e_KernelBoxFilter : public e_KernelFilterBase
+struct e_KernelBoxFilter : public e_KernelFilterBase, public e_DerivedTypeHelper<1>
 {
 	e_KernelBoxFilter(){}
 	e_KernelBoxFilter(float xw, float yw)
@@ -39,12 +38,9 @@ struct e_KernelBoxFilter : public e_KernelFilterBase
 	{
 		return 1;
 	}
-
-	TYPE_FUNC(e_KernelBoxFilter)
 };
 
-#define e_KernelGaussianFilter_TYPE 2
-struct e_KernelGaussianFilter : public e_KernelFilterBase
+struct e_KernelGaussianFilter : public e_KernelFilterBase, public e_DerivedTypeHelper<2>
 {
 	float alpha;
     float expX, expY;
@@ -70,12 +66,9 @@ struct e_KernelGaussianFilter : public e_KernelFilterBase
 	{
 		return Gaussian(x, expX) * Gaussian(y, expY);
 	}
-
-	TYPE_FUNC(e_KernelGaussianFilter)
 };
 
-#define e_KernelMitchellFilter_TYPE 3
-struct e_KernelMitchellFilter : public e_KernelFilterBase
+struct e_KernelMitchellFilter : public e_KernelFilterBase, public e_DerivedTypeHelper<3>
 {
 	float B, C;
 	
@@ -101,12 +94,9 @@ struct e_KernelMitchellFilter : public e_KernelFilterBase
 	{
 		return Mitchell1D(x * invXWidth) * Mitchell1D(y * invYWidth);
 	}
-
-	TYPE_FUNC(e_KernelMitchellFilter)
 };
 
-#define e_KernelLanczosSincFilter_TYPE 4
-struct e_KernelLanczosSincFilter : public e_KernelFilterBase
+struct e_KernelLanczosSincFilter : public e_KernelFilterBase, public e_DerivedTypeHelper<4>
 {
 	float tau;
 	
@@ -131,12 +121,9 @@ struct e_KernelLanczosSincFilter : public e_KernelFilterBase
 	{
 		return Sinc1D(x * invXWidth) * Sinc1D(y * invYWidth);
 	}
-
-	TYPE_FUNC(e_KernelLanczosSincFilter)
 };
 
-#define e_KernelTriangleFilter_TYPE 5
-struct e_KernelTriangleFilter : public e_KernelFilterBase
+struct e_KernelTriangleFilter : public e_KernelFilterBase, public e_DerivedTypeHelper<5>
 {
 	e_KernelTriangleFilter(){}
 	e_KernelTriangleFilter(float xw, float yw)
@@ -149,8 +136,6 @@ struct e_KernelTriangleFilter : public e_KernelFilterBase
 	{
 		return max(0.f, xWidth - math::abs(x)) * max(0.f, yWidth - math::abs(y));
 	}
-
-	TYPE_FUNC(e_KernelTriangleFilter)
 };
 
 #define FLT_SIZE RND_16(Dmax5(sizeof(e_KernelBoxFilter), sizeof(e_KernelGaussianFilter), sizeof(e_KernelMitchellFilter), sizeof(e_KernelLanczosSincFilter), sizeof(e_KernelTriangleFilter)))

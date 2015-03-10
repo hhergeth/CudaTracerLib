@@ -4,6 +4,8 @@
 #include "..\Base\CudaRandom.h"
 #include "..\Base\STL.h"
 
+CUDA_DEVICE CUDA_HOST unsigned int sampleReuse(float *cdf, unsigned int size, float &sample, float& pdf);
+
 template<int N> struct Distribution1D
 {
 	CUDA_FUNC_IN Distribution1D()

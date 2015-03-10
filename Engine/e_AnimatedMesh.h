@@ -122,25 +122,21 @@ struct e_Animation
 {
 	unsigned int m_uNumFrames;
 	unsigned int m_uFrameRate;
-	e_String m_sName;
+	FixedString<32> m_sName;
 	std::vector<e_Frame> m_pFrames;//host pointer!
 
 	e_Animation(){}
 
 	e_Animation(unsigned int fps, const char* name, std::vector<e_Frame>& frames)
+		: m_uNumFrames((unsigned int)frames.size()), m_uFrameRate(fps), m_sName(name), m_pFrames(frames)
 	{
-		m_uNumFrames = (unsigned int)frames.size();
-		m_uFrameRate = fps;
-		memcpy(m_sName, name, strlen(name));
-		m_sName[strlen(name)] = 0;
-		m_pFrames = frames;
 	}
 
 	void serialize(OutputStream& a_Out)
 	{
 		a_Out << m_uNumFrames;
 		a_Out << m_uFrameRate;
-		a_Out.Write(m_sName);
+		a_Out.Write(&m_sName);
 		for(unsigned int i = 0; i < m_uNumFrames; i++)
 			m_pFrames[i].serialize(a_Out);
 	}
@@ -149,7 +145,7 @@ struct e_Animation
 	{
 		a_In >> m_uNumFrames;
 		a_In >> m_uFrameRate;
-		a_In.Read(m_sName, sizeof(m_sName));
+		a_In.Read(&m_sName, sizeof(m_sName));
 		for(unsigned int i = 0; i < m_uNumFrames; i++)
 		{
 			m_pFrames.push_back(e_Frame());

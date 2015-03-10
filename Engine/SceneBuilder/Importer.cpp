@@ -3,6 +3,21 @@
 #include "Importer.h"
 #include "SplitBVHBuilder.hpp"
 
+BVH_Construction_Result ConstructBVH(const Vec3f* vertices, const unsigned int* indices, unsigned int vCount, unsigned int cCount)
+{
+	bvh_helper::clb c(vCount, cCount, vertices, indices);
+	//BVHBuilder::BuildBVH(&c, BVHBuilder::Platform());
+	SplitBVHBuilder bu(&c, BVHBuilder::Platform(), BVHBuilder::BuildParams()); bu.run();
+	BVH_Construction_Result r;
+	r.box = c.box;
+	r.tris2 = c.indices;
+	r.nodeCount = c.nodeIndex;
+	r.nodes = c.nodes;
+	r.triCount = c.triIndex;
+	r.tris = c.tris;
+	return r;
+}
+
 void ConstructBVH(const Vec3f* vertices, const unsigned int* indices, int vCount, int cCount, OutputStream& O, BVH_Construction_Result* out)
 {	
 	bvh_helper::clb c(vCount, cCount, vertices, indices);

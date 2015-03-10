@@ -143,18 +143,6 @@ struct BVH_Construction_Result
 	}
 };
 
-inline BVH_Construction_Result ConstructBVH(const Vec3f* vertices, const unsigned int* indices, unsigned int vCount, unsigned int cCount)
-{
-	bvh_helper::clb c(vCount, cCount, vertices, indices);
-	BVHBuilder::BuildBVH(&c, BVHBuilder::Platform());
-	BVH_Construction_Result r;
-	r.box = c.box;
-	r.tris2 = c.indices;
-	r.nodeCount = c.nodeIndex;
-	r.nodes = c.nodes;
-	r.triCount = c.triIndex;
-	r.tris = c.tris;
-	return r;
-}
+BVH_Construction_Result ConstructBVH(const Vec3f* vertices, const unsigned int* indices, unsigned int vCount, unsigned int cCount);
 
 void ConstructBVH(const Vec3f* vertices, const unsigned int* indices, int vCount, int cCount, OutputStream& O, BVH_Construction_Result* out = 0);

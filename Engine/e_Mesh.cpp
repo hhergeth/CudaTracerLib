@@ -95,7 +95,7 @@ void e_Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Ve
 	if(!Le.isZero())
 	{
 		m_sLights[0].L = Le;
-		strcpy(m_sLights[0].MatName, mat.Name);
+		m_sLights[0].MatName = mat.Name;
 		lightCount++;
 	}
 	Vec3f p[3];
@@ -155,7 +155,7 @@ void e_Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Ve
 	if(!Les[0].isZero())
 	{
 		m_sLights[lightCount].L = Les[0];
-		strcpy(m_sLights[0].MatName, mats[0].Name);
+		m_sLights[0].MatName = mats[0].Name;
 		lightCount++;
 	}
 	Vec3f p[3];
@@ -210,7 +210,7 @@ void e_Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Ve
 			if(!Les[si].isZero())
 			{
 				m_sLights[lightCount].L = Les[si];
-				strcpy(m_sLights[lightCount].MatName, mats[si].Name);
+				m_sLights[lightCount].MatName = mats[si].Name;
 				lightCount++;
 			}
 		}

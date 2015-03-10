@@ -28,7 +28,7 @@ enum ESensorFlags
 	EDirectionSampleMapsToPixels = 0x2000
 };
 
-struct e_SensorBase : public e_AbstractEmitter
+struct e_SensorBase : public e_AbstractEmitter, public e_BaseTypeHelper<5459539>
 {
 public:
 	float aspect;
@@ -96,8 +96,7 @@ public:
 	}
 };
 
-#define e_SphericalCamera_TYPE 1
-struct e_SphericalCamera : public e_SensorBase
+struct e_SphericalCamera : public e_SensorBase, public e_DerivedTypeHelper<1>
 {
 	e_SphericalCamera()
 	: e_SensorBase(EDeltaPosition | EDirectionSampleMapsToPixels)
@@ -175,12 +174,9 @@ struct e_SphericalCamera : public e_SensorBase
 	CUDA_DEVICE CUDA_HOST Spectrum evalDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const;
 
 	CUDA_DEVICE CUDA_HOST bool getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, Vec2f &samplePosition) const;
-
-	TYPE_FUNC(e_SphericalCamera)
 };
 
-#define e_PerspectiveCamera_TYPE 2
-struct e_PerspectiveCamera : public e_SensorBase
+struct e_PerspectiveCamera : public e_SensorBase, public e_DerivedTypeHelper<2>
 {
 	Vec3f m_dx, m_dy;
 	float m_normalization;
@@ -256,12 +252,9 @@ public:
 	}
 
 	CUDA_DEVICE CUDA_HOST bool getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, Vec2f &samplePosition) const;
-
-	TYPE_FUNC(e_PerspectiveCamera)
 };
 
-#define e_ThinLensCamera_TYPE 3
-struct e_ThinLensCamera : public e_SensorBase
+struct e_ThinLensCamera : public e_SensorBase, public e_DerivedTypeHelper<3>
 {
 	Vec3f m_dx, m_dy;
 	float m_aperturePdf;
@@ -357,12 +350,9 @@ public:
 
 		return true;
 	}
-
-	TYPE_FUNC(e_ThinLensCamera)
 };
 
-#define e_OrthographicCamera_TYPE 4
-struct e_OrthographicCamera : public e_SensorBase
+struct e_OrthographicCamera : public e_SensorBase, public e_DerivedTypeHelper<4>
 {
 public:
 	Vec2f screenScale;
@@ -437,12 +427,9 @@ public:
 	}
 
 	CUDA_DEVICE CUDA_HOST bool getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, Vec2f &samplePosition) const;
-
-	TYPE_FUNC(e_OrthographicCamera)
 };
 
-#define e_TelecentricCamera_TYPE 5
-struct e_TelecentricCamera : public e_SensorBase
+struct e_TelecentricCamera : public e_SensorBase, public e_DerivedTypeHelper<5>
 {
 public:
 	Vec2f screenScale;
@@ -520,8 +507,6 @@ public:
 	{
 		return false;
 	}
-
-	TYPE_FUNC(e_TelecentricCamera)
 };
 
 #define CAM_SIZE Dmax5(sizeof(e_SphericalCamera), sizeof(e_PerspectiveCamera), sizeof(e_ThinLensCamera), sizeof(e_OrthographicCamera), sizeof(e_TelecentricCamera))

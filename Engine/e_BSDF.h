@@ -11,7 +11,7 @@
 
 #define NUM_TEX_PER_BSDF 10
 
-struct BSDF : public e_BaseType
+struct BSDF : public e_BaseType, public e_BaseTypeHelper<4608834>
 {
 	unsigned int m_combinedType;
 	unsigned int m_uTextureOffsets[NUM_TEX_PER_BSDF];

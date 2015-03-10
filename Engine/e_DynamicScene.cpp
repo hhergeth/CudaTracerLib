@@ -13,7 +13,7 @@ struct textureLoader
 	{
 		S = A;
 	}
-	e_BufferReference<e_MIPMap, e_KernelMIPMap> operator()(char* file, bool a_MipMap)
+	e_BufferReference<e_MIPMap, e_KernelMIPMap> operator()(const char* file, bool a_MipMap)
 	{
 		return S->LoadTexture(file, a_MipMap);
 	};
@@ -404,24 +404,26 @@ e_StreamReference(e_KernelLight) e_DynamicScene::createLight(e_StreamReference(e
 
 ShapeSet e_DynamicScene::CreateShape(e_StreamReference(e_Node) Node, const char* name, unsigned int* a_Mi)
 {
-	e_StreamReference(e_TriIntersectorData) n[max_SHAPE_LENGTH];
-	e_StreamReference(e_TriIntersectorData2) n2[max_SHAPE_LENGTH];
-
 	e_BufferReference<e_Mesh, e_KernelMesh> m = getMesh(Node);
-	unsigned int c = 0, mi = -1;
+	unsigned int matIdx = -1;
 		
 	e_StreamReference(e_KernelMaterial) mInfo = m->m_sMatInfo;
-	for(unsigned int j = 0; j < mInfo.getLength(); j++)
-		if(strstr(m->m_sMatInfo(j)->Name, name))
+	for (unsigned int j = 0; j < mInfo.getLength(); j++)
+	{
+		const char* mname = m->m_sMatInfo(j)->Name;
+		if (strstr(mname, name))
 		{
-			mi = j;
+			matIdx = j;
 			break;
 		}
-	if(mi == -1)
-		throw 1;
+	}
+	if (matIdx == -1)
+		throw std::runtime_error("Could not find material name in mesh!");
 	if(a_Mi)
-		*a_Mi = mi;
+		*a_Mi = matIdx;
 
+	std::vector<e_StreamReference(e_TriIntersectorData)> n;
+	std::vector<e_StreamReference(e_TriIntersectorData2)> n2;
 	int i = 0, e = m->m_sIntInfo.getLength();
 	while(i < e)
 	{
@@ -429,22 +431,22 @@ ShapeSet e_DynamicScene::CreateShape(e_StreamReference(e_Node) Node, const char*
 		e_StreamReference(e_TriIntersectorData2) sec2 = m->m_sIndicesInfo.operator()(i);
 		unsigned int i2 = sec2->getIndex();
 		e_TriangleData* d = m->m_sTriInfo(i2);
-		if(d->getMatIndex(0) == mi)//do not use Node->m_uMaterialOffset, cause mi is local...
+		if(d->getMatIndex(0) == matIdx)//do not use Node->m_uMaterialOffset, cause mi is local...
 		{
 			unsigned int k = 0;
-			for(; k < c; k++)
+			for (; k < n.size(); k++)
 				if(n2[k]->getIndex() == i2)
 					break;
-			if(k == c)
+			if (k == n.size())
 			{
-				n2[c] = sec2;
-				n[c++] = sec;
+				n.push_back(sec);
+				n2.push_back(sec2);
 			}
 		}
 		i++;
 	}
 
-	ShapeSet r = ShapeSet(n, c, GetNodeTransform(Node));
+	ShapeSet r = ShapeSet(&n[0], (unsigned int)n.size(), GetNodeTransform(Node), m_pAnimStream);
 	return r;
 }
 
@@ -561,7 +563,7 @@ e_StreamReference(e_KernelMaterial) e_DynamicScene::getMat(e_StreamReference(e_N
 			return m(i);
 		}
 	}
-	throw 1;
+	throw std::runtime_error("Could not find material name in mesh!");
 }
 
 e_StreamReference(e_KernelLight) e_DynamicScene::setEnvironementMap(const Spectrum& power, const char* file)

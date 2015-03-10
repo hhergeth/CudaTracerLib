@@ -618,7 +618,7 @@ void compileobj(IInStream& in, OutputStream& a_Out)
 		if(length(M.emission))
 		{
 			m_sLights[lc].L = Spectrum(M.emission.x, M.emission.y, M.emission.z);
-			strcpy(m_sLights[lc].MatName, M.Name.c_str());
+			m_sLights[lc].MatName = M.Name;
 			mat.NodeLightIndex = lc++;
 		}
 		matData.push_back(mat);

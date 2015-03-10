@@ -3,6 +3,7 @@
 #include "e_FileTexture.h"
 #include "e_DifferentialGeometry.h"
 #include "e_Buffer.h"
+#include "../Base/FixedString.h"
 
 struct e_KernelTextureMapping2D
 {
@@ -24,12 +25,11 @@ struct e_KernelTextureMapping2D
 	int setId;
 };
 
-struct e_KernelTextureBase : public e_BaseType
+struct e_KernelTextureBase : public e_BaseType, public e_BaseTypeHelper<5784916>
 {
 };
 
-#define e_KernelBilerpTexture_TYPE 1
-struct e_KernelBilerpTexture : public e_KernelTextureBase
+struct e_KernelBilerpTexture : public e_KernelTextureBase, public e_DerivedTypeHelper<1>
 {
 	e_KernelBilerpTexture(){}
 	e_KernelBilerpTexture(const e_KernelTextureMapping2D& m, const Spectrum &t00, const Spectrum &t01, const Spectrum &t10, const Spectrum &t11)
@@ -53,13 +53,11 @@ struct e_KernelBilerpTexture : public e_KernelTextureBase
 	template<typename L> void LoadTextures(L callback)
 	{
 	}
-	TYPE_FUNC(e_KernelBilerpTexture)
 	e_KernelTextureMapping2D mapping;
 	Spectrum v00, v01, v10, v11;
 };
 
-#define e_KernelConstantTexture_TYPE 2
-struct e_KernelConstantTexture : public e_KernelTextureBase
+struct e_KernelConstantTexture : public e_KernelTextureBase, public e_DerivedTypeHelper<2>
 {
 	e_KernelConstantTexture(){}
 	e_KernelConstantTexture(const Spectrum& v)
@@ -79,12 +77,10 @@ struct e_KernelConstantTexture : public e_KernelTextureBase
 	{
 
 	}
-	TYPE_FUNC(e_KernelConstantTexture)
 	Spectrum val;
 };
 
-#define e_KernelCheckerboardTexture_TYPE 3
-struct e_KernelCheckerboardTexture : public e_KernelTextureBase
+struct e_KernelCheckerboardTexture : public e_KernelTextureBase, public e_DerivedTypeHelper<3>
 {
 	e_KernelCheckerboardTexture(){}
 	e_KernelCheckerboardTexture(const Spectrum& u, const Spectrum& v, const e_KernelTextureMapping2D& m)
@@ -111,19 +107,16 @@ struct e_KernelCheckerboardTexture : public e_KernelTextureBase
 	{
 
 	}
-	TYPE_FUNC(e_KernelCheckerboardTexture)
 	Spectrum val0, val1;
 	e_KernelTextureMapping2D mapping;
 };
 
-#define e_KernelImageTexture_TYPE 4
-struct e_KernelImageTexture : public e_KernelTextureBase
+struct e_KernelImageTexture : public e_KernelTextureBase, public e_DerivedTypeHelper<4>
 {
 	e_KernelImageTexture(){}
 	e_KernelImageTexture(const e_KernelTextureMapping2D& m, const char* _file)
-		: mapping(m)
+		: mapping(m), file(_file)
 	{
-		memcpy(file, _file, strlen(_file) + 1);
 	}
 	CUDA_FUNC_IN Spectrum Evaluate(const DifferentialGeometry& its) const
 	{
@@ -144,15 +137,13 @@ struct e_KernelImageTexture : public e_KernelTextureBase
 		texRef = callback(file, true);
 		tex = texRef.AsVar();
 	}
-	TYPE_FUNC(e_KernelImageTexture)
 	e_BufferReference<e_MIPMap, e_KernelMIPMap> texRef;
 	e_Variable<e_KernelMIPMap> tex;
 	e_KernelTextureMapping2D mapping;
-	e_String file;
+	FixedString<64> file;
 };
 
-#define e_KernelUVTexture_TYPE 5
-struct e_KernelUVTexture : public e_KernelTextureBase
+struct e_KernelUVTexture : public e_KernelTextureBase, public e_DerivedTypeHelper<5>
 {
 	e_KernelUVTexture(){}
 	e_KernelUVTexture(const e_KernelTextureMapping2D& m)
@@ -171,12 +162,10 @@ struct e_KernelUVTexture : public e_KernelTextureBase
 	template<typename L> void LoadTextures(L callback)
 	{
 	}
-	TYPE_FUNC(e_KernelUVTexture)
 	e_KernelTextureMapping2D mapping;
 };
 
-#define e_KernelWireframeTexture_TYPE 6
-struct e_KernelWireframeTexture : public e_KernelTextureBase
+struct e_KernelWireframeTexture : public e_KernelTextureBase, public e_DerivedTypeHelper<6>
 {
 	e_KernelWireframeTexture(float lineWidth = 0.1f, const Spectrum& interior = Spectrum(0.5f), const Spectrum& edge = Spectrum(0.0f))
 		: width(lineWidth), interiorColor(interior), edgeColor(edge)
@@ -195,13 +184,11 @@ struct e_KernelWireframeTexture : public e_KernelTextureBase
 	template<typename L> void LoadTextures(L callback)
 	{
 	}
-	TYPE_FUNC(e_KernelWireframeTexture)
 	Spectrum interiorColor, edgeColor;
 	float width;
 };
 
-#define e_KernelExtraDataTexture_TYPE 7
-struct e_KernelExtraDataTexture : public e_KernelTextureBase
+struct e_KernelExtraDataTexture : public e_KernelTextureBase, public e_DerivedTypeHelper<7>
 {
 	CUDA_FUNC_IN Spectrum Evaluate(const DifferentialGeometry& map) const
 	{
@@ -214,25 +201,17 @@ struct e_KernelExtraDataTexture : public e_KernelTextureBase
 	template<typename L> void LoadTextures(L callback)
 	{
 	}
-	TYPE_FUNC(e_KernelExtraDataTexture)
 };
 
-#define TEX_SIZE (Dmax7(sizeof(e_KernelBilerpTexture), sizeof(e_KernelConstantTexture), sizeof(e_KernelImageTexture), \
-						sizeof(e_KernelUVTexture), sizeof(e_KernelCheckerboardTexture), sizeof(e_KernelWireframeTexture), sizeof(e_KernelExtraDataTexture)) + 12)
+#define TEX_SIZE Dmax7(sizeof(e_KernelBilerpTexture), sizeof(e_KernelConstantTexture), sizeof(e_KernelImageTexture), \
+						sizeof(e_KernelUVTexture), sizeof(e_KernelCheckerboardTexture), sizeof(e_KernelWireframeTexture), sizeof(e_KernelExtraDataTexture))
 
-struct CUDA_ALIGN(16) e_KernelTexture : public e_AggregateBaseType<e_KernelTextureBase, TEX_SIZE>
+struct e_KernelTexture : public e_AggregateBaseType<e_KernelTextureBase, TEX_SIZE>
 {
 public:
-#ifdef __CUDACC__
 	CUDA_FUNC_IN e_KernelTexture()
 	{
 	}
-#else
-	CUDA_FUNC_IN e_KernelTexture()
-	{
-		type = 0;
-	}
-#endif
 	CUDA_FUNC_IN Spectrum Evaluate(const DifferentialGeometry & dg) const
 	{
 		CALL_FUNC7(e_KernelBilerpTexture, e_KernelConstantTexture, e_KernelCheckerboardTexture, e_KernelImageTexture, e_KernelUVTexture, e_KernelWireframeTexture, e_KernelExtraDataTexture, Evaluate(dg))

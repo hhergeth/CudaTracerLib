@@ -24,27 +24,28 @@ struct e_KernelMaterial
 public:
 	struct mpHlp
 	{
-		bool used;
+		int used;
 		e_KernelTexture tex;
 		mpHlp()
-			: used(false)
+			: used(0)
 		{
 		}
 	};
-	BSDFALL bsdf;
 	e_KernelBSSRDF bssrdf;
-	bool usedBssrdf;
-	mpHlp NormalMap;
-	mpHlp HeightMap;
-	mpHlp AlphaMap;
-	e_String Name;
+	FixedString<32> Name;
 	unsigned int NodeLightIndex;
 	float HeightScale;
 	float m_fAlphaThreshold;
 	bool enableParallaxOcclusion;
 	int parallaxMinSamples, parallaxMaxSamples;
+	int usedBssrdf;
+	BSDFALL bsdf;
+	mpHlp NormalMap;
+	mpHlp HeightMap;
+	mpHlp AlphaMap;
 public:
-	e_KernelMaterial(const char* name = 0);
+	e_KernelMaterial();
+	e_KernelMaterial(const char* name);
 	CUDA_DEVICE CUDA_HOST bool SampleNormalMap(DifferentialGeometry& uv, const Vec3f& wi) const;
 	CUDA_DEVICE CUDA_HOST float SampleAlphaMap(const DifferentialGeometry& uv) const;
 	CUDA_DEVICE CUDA_HOST bool GetBSSRDF(const DifferentialGeometry& uv, const e_KernelBSSRDF** res) const;

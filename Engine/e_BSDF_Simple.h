@@ -1,7 +1,6 @@
 #pragma once
 
-#define diffuse_TYPE 1
-struct diffuse : public BSDF
+struct diffuse : public BSDF, public e_DerivedTypeHelper<1>
 {
 	e_KernelTexture	m_reflectance;
 	diffuse()
@@ -41,11 +40,9 @@ struct diffuse : public BSDF
 
 		return Warp::squareToCosineHemispherePdf(bRec.wo);
 	}
-	TYPE_FUNC(diffuse)
 };
 
-#define roughdiffuse_TYPE 2
-struct roughdiffuse : public BSDF
+struct roughdiffuse : public BSDF, public e_DerivedTypeHelper<2>
 {
 	e_KernelTexture	m_reflectance;
 	e_KernelTexture	m_alpha;
@@ -76,11 +73,9 @@ struct roughdiffuse : public BSDF
 
 		return Warp::squareToCosineHemispherePdf(bRec.wo);
 	}
-	TYPE_FUNC(roughdiffuse)
 };
 
-#define dielectric_TYPE 3
-struct dielectric : public BSDF
+struct dielectric : public BSDF, public e_DerivedTypeHelper<3>
 {
 	float m_eta, m_invEta;
 	e_KernelTexture m_specularTransmittance;
@@ -129,11 +124,9 @@ struct dielectric : public BSDF
 	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
-	TYPE_FUNC(dielectric)
 };
 
-#define thindielectric_TYPE 4
-struct thindielectric : public BSDF
+struct thindielectric : public BSDF, public e_DerivedTypeHelper<4>
 {
 	float m_eta;
 	e_KernelTexture m_specularTransmittance;
@@ -166,11 +159,9 @@ struct thindielectric : public BSDF
 	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
-	TYPE_FUNC(thindielectric)
 };
 
-#define roughdielectric_TYPE 5
-struct roughdielectric : public BSDF
+struct roughdielectric : public BSDF, public e_DerivedTypeHelper<5>
 {
 	MicrofacetDistribution m_distribution;
 	e_KernelTexture m_specularTransmittance;
@@ -206,11 +197,9 @@ struct roughdielectric : public BSDF
 	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &_sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
-	TYPE_FUNC(roughdielectric)
 };
 
-#define conductor_TYPE 6
-struct conductor : public BSDF
+struct conductor : public BSDF, public e_DerivedTypeHelper<6>
 {
 	e_KernelTexture m_specularReflectance;
 	Spectrum m_eta;
@@ -240,11 +229,9 @@ struct conductor : public BSDF
 	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
-	TYPE_FUNC(conductor)
 };
 
-#define roughconductor_TYPE 7
-struct roughconductor : public BSDF
+struct roughconductor : public BSDF, public e_DerivedTypeHelper<7>
 {	
 	MicrofacetDistribution m_distribution;
 	e_KernelTexture m_specularReflectance;
@@ -273,11 +260,9 @@ struct roughconductor : public BSDF
 	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
-	TYPE_FUNC(roughconductor)
 };
 
-#define plastic_TYPE 8
-struct plastic : public BSDF
+struct plastic : public BSDF, public e_DerivedTypeHelper<8>
 {
 	float m_fdrInt, m_fdrExt, m_eta, m_invEta2;
 	e_KernelTexture m_diffuseReflectance;
@@ -324,7 +309,6 @@ struct plastic : public BSDF
 	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
-	TYPE_FUNC(plastic)
 private:
 	float fresnelDiffuseReflectance(float eta) const {
 		/* Fast mode: the following code approximates the
@@ -369,8 +353,7 @@ private:
 	}
 };
 
-#define roughplastic_TYPE 9
-struct roughplastic : public BSDF
+struct roughplastic : public BSDF, public e_DerivedTypeHelper<9>
 {
 	MicrofacetDistribution m_distribution;
 	e_KernelTexture m_diffuseReflectance;
@@ -412,11 +395,9 @@ struct roughplastic : public BSDF
 	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
-	TYPE_FUNC(roughplastic)
 };
 
-#define phong_TYPE 10
-struct phong : public BSDF
+struct phong : public BSDF, public e_DerivedTypeHelper<10>
 {
 	e_KernelTexture m_diffuseReflectance;
 	e_KernelTexture m_specularReflectance;
@@ -443,11 +424,9 @@ struct phong : public BSDF
 	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &_pdf, const Vec2f& _sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
-	TYPE_FUNC(phong)
 };
 
-#define ward_TYPE 11
-struct ward : public BSDF
+struct ward : public BSDF, public e_DerivedTypeHelper<11>
 {
 	enum EModelVariant {
 		/// The original Ward model
@@ -481,11 +460,9 @@ struct ward : public BSDF
 	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &_pdf, const Vec2f &_sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
-	TYPE_FUNC(ward)
 };
 
-#define hk_TYPE 12
-struct hk : public BSDF
+struct hk : public BSDF, public e_DerivedTypeHelper<12>
 {
 	e_KernelTexture m_sigmaS;
 	e_KernelTexture m_sigmaA;
@@ -502,5 +479,4 @@ struct hk : public BSDF
 	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &_pdf, const Vec2f &_sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
-	TYPE_FUNC(hk)
 };

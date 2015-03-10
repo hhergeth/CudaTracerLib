@@ -33,7 +33,10 @@ Spectrum TraceResult::Le(const Vec3f& p, const Frame& sys, const Vec3f& w) const
 
 unsigned int TraceResult::LightIndex() const
 {
-	unsigned int i = g_SceneData.m_sMatData[m_pTri->getMatIndex(m_pNode->m_uMaterialOffset)].NodeLightIndex;
+	unsigned int mi = m_pTri->getMatIndex(m_pNode->m_uMaterialOffset);
+	e_KernelMaterial* mats = g_SceneData.m_sMatData.Data;
+	e_KernelMaterial* mat = mats + mi;
+	unsigned int i = mat->NodeLightIndex;
 	if (i == 0xffffffff)
 		return 0xffffffff;
 	unsigned int j = m_pNode->m_uLightIndices[i];

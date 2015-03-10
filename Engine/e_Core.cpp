@@ -8,8 +8,13 @@
 #define FREEIMAGE_LIB
 #include <FreeImage.h>
 
+#include "e_Material.h"
+
 void InitializeCuda4Tracer(const char* dataPath)
 {
+	e_KernelMaterial* mat = new e_KernelMaterial("aaaa");
+	
+
 	cudaError er = CUDA_FREE(0);
 	SpectrumHelper::StaticInitialize();
 	FreeImage_Initialise();
