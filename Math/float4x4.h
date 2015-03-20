@@ -106,7 +106,7 @@ public:
 		float4x4 r;
 		for (int i = 0; i < 4; i++)
 			for (int j = 0; j < 4; j++)
-				r(i, j) = operator()(i, j) + a;
+				r(i, j) = operator()(i, j) * a;
 		return r;
 	}
 

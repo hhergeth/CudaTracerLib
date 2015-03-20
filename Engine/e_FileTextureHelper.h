@@ -8,7 +8,7 @@ struct imgData
 {
 	unsigned int w, h;
 	void* data;
-	e_KernelTexture_DataType type;
+	e_Texture_DataType type;
 
 	CUDA_FUNC_IN Spectrum Load(int x, int y)
 	{
@@ -39,12 +39,12 @@ inline bool parseImage(const char* a_InputFile, imgData* data)
 		FREE_IMAGE_TYPE imageType = FreeImage_GetImageType(dib);
 		unsigned int bpp = FreeImage_GetBPP(dib);
 		BYTE *bits = (BYTE *)FreeImage_GetBits(dib);
-		e_KernelTexture_DataType type = e_KernelTexture_DataType::vtRGBCOL;
+		e_Texture_DataType type = e_Texture_DataType::vtRGBCOL;
 
 		RGBCOL* tar = new RGBCOL[w * h], *ori = tar;
 		if (((imageType == FIT_RGBAF) && (bpp == 128)) || ((imageType == FIT_RGBF) && (bpp == 96)))
 		{
-			type = e_KernelTexture_DataType::vtRGBE;
+			type = e_Texture_DataType::vtRGBE;
 				for (unsigned int y = 0; y < h; ++y)
 				{
 						FIRGBAF *pixel = (FIRGBAF *)bits;

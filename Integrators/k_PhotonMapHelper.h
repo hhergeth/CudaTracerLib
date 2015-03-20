@@ -37,34 +37,30 @@ enum PhotonType
 struct k_pPpmPhoton
 {
 private:
-	Vec3f Pos;
-	//Spectrum L;
-	//float3 Wi;
-	//float3 Nor;
+	//Vec3f Pos;
+	unsigned int pos;
 	RGBE L;
 	unsigned short Wi;
 	unsigned short Nor;
 	unsigned int typeNextField;
 public:
-	float dVC, dVCM, dVM;
 	CUDA_FUNC_IN k_pPpmPhoton(){}
-	CUDA_FUNC_IN k_pPpmPhoton(const Vec3f& p, const Spectrum& l, const Vec3f& wi, const Vec3f& n, PhotonType type)
+	CUDA_FUNC_IN k_pPpmPhoton(const Spectrum& l, const Vec3f& wi, const Vec3f& n, PhotonType type)
 	{
-		Pos = p;
 		Nor = NormalizedFloat3ToUchar2(n);
 		L = (l).toRGBE();
 		Wi = NormalizedFloat3ToUchar2(wi);
 		typeNextField = (unsigned char(type) << 24) | 0xffffff;
 	}
-	CUDA_FUNC_IN bool hasNext()
+	CUDA_FUNC_IN bool hasNext() const
 	{
 		return (typeNextField & 0xffffff) != 0xffffff;
 	}
-	CUDA_FUNC_IN PhotonType getType()
+	CUDA_FUNC_IN PhotonType getType() const
 	{
 		return PhotonType(typeNextField >> 24);
 	}
-	CUDA_FUNC_IN unsigned int getNext()
+	CUDA_FUNC_IN unsigned int getNext() const
 	{
 		return typeNextField & 0xffffff;
 	}
@@ -72,29 +68,29 @@ public:
 	{
 		typeNextField = (typeNextField & 0xff000000) | (next & 0xffffff);
 	}
-	CUDA_FUNC_IN Vec3f getNormal()
+	CUDA_FUNC_IN Vec3f getNormal() const
 	{
 		return Uchar2ToNormalizedFloat3(Nor);
 	}
-	CUDA_FUNC_IN Vec3f getWi()
+	CUDA_FUNC_IN Vec3f getWi() const
 	{
 		return Uchar2ToNormalizedFloat3(Wi);
 	}
-	CUDA_FUNC_IN Spectrum getL()
+	CUDA_FUNC_IN Spectrum getL() const
 	{
 		Spectrum s;
 		s.fromRGBE(L);
 		return s;
 	}
-	CUDA_FUNC_IN Vec3f getPos()
-	{/*
-	 uint4 r;
-	 r.x = Pos;
-	 r.y = (L.x << 24) | (L.y << 16) | (L.z << 8) | L.w;
-	 r.z = (L.x << 24) | (L.y << 16) | (L.z << 8) | L.w;
-	 r.w = next;
-	 return r;*/
-		return Pos;
+	template<typename HASH> CUDA_FUNC_IN void setPos(const HASH& hash, const Vec3u& i, const Vec3f& p)
+	{
+		pos = hash.EncodePos(p, i);
+		//Pos = p;
+	}
+	template<typename HASH> CUDA_FUNC_IN Vec3f getPos(const HASH& hash, const Vec3u& i) const
+	{
+		return hash.DecodePos(pos, i);
+		//return Pos;
 	}/*
 	 CUDA_FUNC_IN k_pPpmPhoton(const uint4& v)
 	 {
@@ -104,6 +100,16 @@ public:
 	 Nor = make_uchar2((v.z >> 16) & 0xff, v.z >> 24);
 	 next = v.w;
 	 }*/
+};
+
+struct k_MISPhoton : public k_pPpmPhoton
+{
+	float dVC, dVCM, dVM;
+	CUDA_FUNC_IN k_MISPhoton(){}
+	CUDA_FUNC_IN k_MISPhoton(const Spectrum& l, const Vec3f& wi, const Vec3f& n, PhotonType type)
+		: k_pPpmPhoton(l, wi, n, type)
+	{
+	}
 };
 
 template<typename HASH> struct k_PhotonMap
@@ -177,12 +183,13 @@ template<typename HASH> struct k_PhotonMap
 	}
 };
 
-template<bool HAS_MULTIPLE_MAPS> struct k_PhotonMapCollection
+template<bool HAS_MULTIPLE_MAPS, typename PHOTON> struct k_PhotonMapCollection
 {
 	k_PhotonMap<k_HashGrid_Reg> m_sSurfaceMap;
 	k_PhotonMap<k_HashGrid_Reg> m_sVolumeMap;
 	k_PhotonMap<k_HashGrid_Reg> m_sCausticMap;
-	k_pPpmPhoton* m_pPhotons;
+	PHOTON* m_pPhotons;// , *m_pPhotons2;
+	Vec3f* m_pPhotonPositions;
 	unsigned int m_uPhotonBufferLength;
 	unsigned int m_uPhotonNumStored;
 	unsigned int m_uPhotonNumEmitted;
@@ -193,7 +200,7 @@ template<bool HAS_MULTIPLE_MAPS> struct k_PhotonMapCollection
 	}
 
 	k_PhotonMapCollection(unsigned int a_BufferLength, unsigned int a_HashNum, unsigned int linkedListLength)
-		: m_pPhotons(0)
+		: m_pPhotons(0), m_pPhotonPositions(0)//, m_pPhotons2(0)
 	{
 		m_sSurfaceMap = k_PhotonMap<k_HashGrid_Reg>(a_HashNum);
 		if (HAS_MULTIPLE_MAPS)
@@ -208,12 +215,12 @@ template<bool HAS_MULTIPLE_MAPS> struct k_PhotonMapCollection
 
 	void Serialize(OutputStream& O)
 	{
-		void* hostbuf = malloc(m_uPhotonBufferLength * sizeof(k_pPpmPhoton));
+		void* hostbuf = malloc(m_uPhotonBufferLength * sizeof(PHOTON));
 		O << m_uPhotonBufferLength;
 		O << m_uPhotonNumStored;
 		O << m_uPhotonNumEmitted;
-		cudaMemcpy(hostbuf, m_pPhotons, m_uPhotonBufferLength * sizeof(k_pPpmPhoton), cudaMemcpyDeviceToHost);
-		O.Write(hostbuf, m_uPhotonBufferLength * sizeof(k_pPpmPhoton));
+		cudaMemcpy(hostbuf, m_pPhotons, m_uPhotonBufferLength * sizeof(PHOTON), cudaMemcpyDeviceToHost);
+		O.Write(hostbuf, m_uPhotonBufferLength * sizeof(PHOTON));
 		m_sSurfaceMap.Serialize(O, hostbuf);
 		m_sVolumeMap.Serialize(O, hostbuf);
 		m_sCausticMap.Serialize(O, hostbuf);
@@ -222,12 +229,12 @@ template<bool HAS_MULTIPLE_MAPS> struct k_PhotonMapCollection
 
 	void DeSerialize(InputStream& I)
 	{
-		void* hostbuf = malloc(m_uPhotonBufferLength * sizeof(k_pPpmPhoton));
+		void* hostbuf = malloc(m_uPhotonBufferLength * sizeof(PHOTON));
 		I >> m_uPhotonBufferLength;
 		I >> m_uPhotonNumStored;
 		I >> m_uPhotonNumEmitted;
-		I.Read(hostbuf, m_uPhotonBufferLength * sizeof(k_pPpmPhoton));
-		cudaMemcpy(m_pPhotons, hostbuf, m_uPhotonBufferLength * sizeof(k_pPpmPhoton), cudaMemcpyHostToDevice);
+		I.Read(hostbuf, m_uPhotonBufferLength * sizeof(PHOTON));
+		cudaMemcpy(m_pPhotons, hostbuf, m_uPhotonBufferLength * sizeof(PHOTON), cudaMemcpyHostToDevice);
 		m_sSurfaceMap.DeSerialize(I, hostbuf);
 		m_sVolumeMap.DeSerialize(I, hostbuf);
 		m_sCausticMap.DeSerialize(I, hostbuf);
@@ -243,14 +250,23 @@ template<bool HAS_MULTIPLE_MAPS> struct k_PhotonMapCollection
 			m_sCausticMap.Free();
 		}
 		CUDA_FREE(m_pPhotons);
+		//CUDA_FREE(m_pPhotons2);
+		CUDA_FREE(m_pPhotonPositions);
 	}
 
 	void Resize(unsigned int a_BufferLength, unsigned int linkedListLength)
 	{
 		if (m_pPhotons)
 			CUDA_FREE(m_pPhotons);
-		CUDA_MALLOC(&m_pPhotons, sizeof(k_pPpmPhoton)* a_BufferLength);
-		cudaMemset(m_pPhotons, 0, sizeof(k_pPpmPhoton)* a_BufferLength);
+		CUDA_MALLOC(&m_pPhotons, sizeof(PHOTON)* a_BufferLength);
+		cudaMemset(m_pPhotons, 0, sizeof(PHOTON)* a_BufferLength);
+		//if (m_pPhotons2)
+		//	CUDA_FREE(m_pPhotons2);
+		//CUDA_MALLOC(&m_pPhotons2, sizeof(PHOTON)* a_BufferLength);
+		//cudaMemset(m_pPhotons2, 0, sizeof(PHOTON)* a_BufferLength);
+		if (m_pPhotonPositions)
+			CUDA_FREE(m_pPhotonPositions);
+		CUDA_MALLOC(&m_pPhotonPositions, sizeof(Vec3f) * a_BufferLength);
 		m_uPhotonBufferLength = a_BufferLength;
 		m_sSurfaceMap.Resize(linkedListLength);
 		if (HAS_MULTIPLE_MAPS)
@@ -269,7 +285,7 @@ template<bool HAS_MULTIPLE_MAPS> struct k_PhotonMapCollection
 			m_sVolumeMap.StartNewPass();
 			m_sCausticMap.StartNewPass();
 		}
-		cudaMemset(m_pPhotons, 0, sizeof(k_pPpmPhoton)* m_uPhotonBufferLength);
+		cudaMemset(m_pPhotons, 0, sizeof(PHOTON)* m_uPhotonBufferLength);
 	}
 
 	bool PassFinished()
@@ -291,19 +307,21 @@ template<bool HAS_MULTIPLE_MAPS> struct k_PhotonMapCollection
 typedef k_PhotonMap<k_HashGrid_Reg> k_PhotonMapReg;
 
 #ifdef __CUDACC__
-CUDA_ONLY_FUNC bool storePhoton(const Vec3f& p, const Spectrum& phi, const Vec3f& wi, const Vec3f& n, PhotonType type, k_PhotonMapCollection<true>& g_Map)
+template<typename PHOTON> CUDA_ONLY_FUNC bool storePhoton(const Vec3f& p, const Spectrum& phi, const Vec3f& wi, const Vec3f& n, PhotonType type, k_PhotonMapCollection<true, PHOTON>& g_Map)
 {
 	unsigned int p_idx = atomicInc(&g_Map.m_uPhotonNumStored, 0xffffffff);
 	if (p_idx < g_Map.m_uPhotonBufferLength)
 	{
-		g_Map.m_pPhotons[p_idx] = k_pPpmPhoton(p, phi, wi, n, type);
+		g_Map.m_pPhotons[p_idx] = PHOTON(phi, wi, n, type);
+		g_Map.m_pPhotonPositions[p_idx] = p;
 		//if this photon is caustic we will also have to store it in the diffuse map
 		if (type == PhotonType::pt_Caustic)
 		{
 			p_idx = atomicInc(&g_Map.m_uPhotonNumStored, 0xffffffff);
 			if (p_idx < g_Map.m_uPhotonBufferLength)
 			{
-				g_Map.m_pPhotons[p_idx] = k_pPpmPhoton(p, phi, wi, n, PhotonType::pt_Diffuse);
+				g_Map.m_pPhotons[p_idx] = PHOTON(phi, wi, n, PhotonType::pt_Diffuse);
+				g_Map.m_pPhotonPositions[p_idx] = p;
 			}
 		}
 		return true;
@@ -311,12 +329,13 @@ CUDA_ONLY_FUNC bool storePhoton(const Vec3f& p, const Spectrum& phi, const Vec3f
 	else return false;
 }
 
-CUDA_ONLY_FUNC bool storePhoton(const Vec3f& p, const Spectrum& phi, const Vec3f& wi, const Vec3f& n, PhotonType type, k_PhotonMapCollection<false>& g_Map, k_pPpmPhoton** resPhoton = 0)
+template<typename PHOTON> CUDA_ONLY_FUNC bool storePhoton(const Vec3f& p, const Spectrum& phi, const Vec3f& wi, const Vec3f& n, PhotonType type, k_PhotonMapCollection<false, PHOTON>& g_Map, PHOTON** resPhoton = 0)
 {
 	unsigned int p_idx = atomicInc(&g_Map.m_uPhotonNumStored, 0xffffffff);
 	if (p_idx < g_Map.m_uPhotonBufferLength)
 	{
-		g_Map.m_pPhotons[p_idx] = k_pPpmPhoton(p, phi, wi, n, type);
+		g_Map.m_pPhotons[p_idx] = PHOTON(phi, wi, n, type);
+		g_Map.m_pPhotonPositions[p_idx] = p;
 		if (resPhoton)
 			*resPhoton = g_Map.m_pPhotons + p_idx;
 		return true;

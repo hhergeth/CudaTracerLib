@@ -367,7 +367,7 @@ void MD5Model::readJointsEl(std::ifstream &fin) {
     int parentIndex = readInt(fin);
   
     // read in joint position
-    readVec(fin, joint.pos, 3);
+    readVec(fin, (float*)&joint.pos, 3);
   
     // read in first 3 components of quaternion (must compute 4th)
     float quat[4];
@@ -417,7 +417,7 @@ void MD5Model::readMeshEl(std::ifstream &fin) {
       Vertex vert;
 
       int index = readInt(fin);
-      readVec(fin, vert.tc, 2);
+	  readVec(fin, (float*)&vert.tc, 2);
       vert.weightIndex = readInt(fin);
       vert.weightCount = readInt(fin);
 
@@ -448,7 +448,7 @@ void MD5Model::readMeshEl(std::ifstream &fin) {
       int weightIndex = readInt(fin);
       weight.joint = readInt(fin);
       weight.w = readFloat(fin);
-      readVec(fin, weight.pos, 3);
+	  readVec(fin, (float*)&weight.pos, 3);
 
       if ( size_t(weightIndex) >= mesh->weights.size() )
         throw Exception("MD5Model::readMeshEl(): weight index >= numweights");
@@ -554,8 +554,8 @@ void MD5Model::readBoundsEl(std::ifstream &fin, Anim &anim) {
 
   // read in bound for each bFrame
   for ( int i=0; i < anim.numbFrames; i++ ) {
-    readVec(fin, anim.bFrames[i].min, 3);
-    readVec(fin, anim.bFrames[i].max, 3);
+	  readVec(fin, (float*)&anim.bFrames[i].min, 3);
+	  readVec(fin, (float*)&anim.bFrames[i].max, 3);
   }
 
   // next token must be a closing brace }
@@ -582,7 +582,7 @@ void MD5Model::readBasebFrameEl(std::ifstream &fin, Anim &anim) {
   int i;
   for ( i=0; i < numJoints; i++ ) {
     // read in joint position
-    readVec(fin, anim.baseJoints[i].pos, 3);
+	  readVec(fin, (float*)&anim.baseJoints[i].pos, 3);
 
     // read in first 3 components of quaternion (must compute 4th)
     float quat[3];

@@ -18,7 +18,7 @@ enum EPhaseFunctionType
 	pENonSymmetric    = 0x08
 };
 
-struct e_BasePhaseFunction : public e_BaseType, public e_BaseTypeHelper<4408912>
+struct e_BasePhaseFunction : public e_BaseType//, public e_BaseTypeHelper<4408912>
 {
 	EPhaseFunctionType type;
 
@@ -30,8 +30,9 @@ struct e_BasePhaseFunction : public e_BaseType, public e_BaseTypeHelper<4408912>
 	}
 };
 
-struct e_HGPhaseFunction : public e_BasePhaseFunction, public e_DerivedTypeHelper<1>
+struct e_HGPhaseFunction : public e_BasePhaseFunction//, public e_DerivedTypeHelper<1>
 {
+	TYPE_FUNC(1)
 	float m_g;
 
 	e_HGPhaseFunction(){}
@@ -47,8 +48,9 @@ struct e_HGPhaseFunction : public e_BasePhaseFunction, public e_DerivedTypeHelpe
 	CUDA_DEVICE CUDA_HOST float Sample(PhaseFunctionSamplingRecord &pRec, float &pdf, CudaRNG& sampler) const;
 };
 
-struct e_IsotropicPhaseFunction : public e_BasePhaseFunction, public e_DerivedTypeHelper<2>
+struct e_IsotropicPhaseFunction : public e_BasePhaseFunction//, public e_DerivedTypeHelper<2>
 {
+	TYPE_FUNC(2)
 	e_IsotropicPhaseFunction()
 		: e_BasePhaseFunction((EPhaseFunctionType)(pEIsotropic | pEAngleDependence))
 	{
@@ -61,8 +63,9 @@ struct e_IsotropicPhaseFunction : public e_BasePhaseFunction, public e_DerivedTy
 	CUDA_DEVICE CUDA_HOST float Sample(PhaseFunctionSamplingRecord &pRec, float &pdf, CudaRNG& sampler) const;
 };
 
-struct e_KajiyaKayPhaseFunction : public e_BasePhaseFunction, public e_DerivedTypeHelper<3>
+struct e_KajiyaKayPhaseFunction : public e_BasePhaseFunction//, public e_DerivedTypeHelper<3>
 {
+	TYPE_FUNC(3)
 	float m_ks, m_kd, m_exponent, m_normalization;
 	Vec3f orientation;
 	
@@ -78,8 +81,9 @@ struct e_KajiyaKayPhaseFunction : public e_BasePhaseFunction, public e_DerivedTy
 	CUDA_DEVICE CUDA_HOST float Sample(PhaseFunctionSamplingRecord &pRec, float &pdf, CudaRNG& sampler) const;
 };
 
-struct e_RayleighPhaseFunction : public e_BasePhaseFunction, public e_DerivedTypeHelper<4>
+struct e_RayleighPhaseFunction : public e_BasePhaseFunction//, public e_DerivedTypeHelper<4>
 {
+	TYPE_FUNC(4)
 	e_RayleighPhaseFunction()
 		: e_BasePhaseFunction(EPhaseFunctionType::pEIsotropic)
 	{
@@ -92,9 +96,7 @@ struct e_RayleighPhaseFunction : public e_BasePhaseFunction, public e_DerivedTyp
 	CUDA_DEVICE CUDA_HOST float Sample(PhaseFunctionSamplingRecord &pRec, float &pdf, CudaRNG& sampler) const;
 };
 
-#define PHF_SIZE RND_16(Dmax4(sizeof(e_HGPhaseFunction), sizeof(e_IsotropicPhaseFunction), sizeof(e_KajiyaKayPhaseFunction), sizeof(e_RayleighPhaseFunction)))
-
-struct CUDA_ALIGN(16) e_PhaseFunction : public e_AggregateBaseType<e_BasePhaseFunction, PHF_SIZE>
+struct CUDA_ALIGN(16) e_PhaseFunction : public CudaVirtualAggregate<e_BasePhaseFunction, e_HGPhaseFunction, e_IsotropicPhaseFunction, e_KajiyaKayPhaseFunction, e_RayleighPhaseFunction>
 {
 public:
 	e_PhaseFunction()

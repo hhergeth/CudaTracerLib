@@ -463,5 +463,8 @@
     <CudaCompile Include="Kernel\k_TraceResult.cu">
       <Filter>Kernel</Filter>
     </CudaCompile>
+    <CudaCompile Include="Engine\e_Core.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
   </ItemGroup>
 </Project>

@@ -149,5 +149,7 @@ void k_PmmTracer::Debug(e_Image* I, const Vec2i& p, ITracerDebugger* debugger)
 	Vec3f pa = r(r2.m_fDist);
 	unsigned int idx = dMap.hashMap.Hash(pa);
 	modelToShow = new unsigned int(idx);
-	//plotModel(model);
+	DirectionModel model;
+	cudaMemcpy(&model, dMap.deviceData + idx, sizeof(model), cudaMemcpyDeviceToHost);
+	plotModel(model);
 }

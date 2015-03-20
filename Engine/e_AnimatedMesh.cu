@@ -33,7 +33,7 @@ __global__ void g_ComputeVertices(e_TmpVertex* a_Dest, e_AnimatedVertex* a_Sourc
 		a_Dest[N].m_fPos = math::lerp(v0, v1, a_lerp);
 
 		Vec3f n0 = mat0.TransformDirection(v.m_fNormal), n1 = mat1.TransformDirection(v.m_fNormal);
-		a_Dest[N].m_fNormal = normalize(math::lerp(n0, n1, a_lerp));
+		a_Dest[N].m_fNormal = -normalize(math::lerp(n0, n1, a_lerp));
 
 		Vec3f t0 = mat0.TransformDirection(v.m_fTangent), t1 = mat1.TransformDirection(v.m_fTangent);
 		a_Dest[N].m_fTangent = normalize(math::lerp(t0, t1, a_lerp));
@@ -103,7 +103,7 @@ __global__ void g_ComputeBVHState(e_TriIntersectorData* a_BVHIntersectionData, e
 
 void e_AnimatedMesh::k_ComputeState(unsigned int a_Anim, unsigned int a_Frame, float a_lerp, e_KernelDynamicScene a_Data, e_Stream<e_BVHNodeData>* a_BVHNodeStream, e_TmpVertex* a_DeviceTmp)
 {
-	unsigned int n = (a_Frame + 1) % m_pAnimations[a_Anim].m_uNumFrames;
+	unsigned int n = (a_Frame + 1) % m_pAnimations[a_Anim].m_pFrames.size();
 	float4x4* m0 = (float4x4*)m_pAnimations[a_Anim].m_pFrames[a_Frame].m_sMatrices.getDevice();
 	float4x4* m1 = (float4x4*)m_pAnimations[a_Anim].m_pFrames[n].m_sMatrices.getDevice();
 	g_ComputeVertices<<<k_Data.m_uVertexCount / 256 + 1, 256>>>(a_DeviceTmp, (e_AnimatedVertex*)m_sVertices.getDevice(), m0, m1, a_lerp, k_Data.m_uVertexCount);

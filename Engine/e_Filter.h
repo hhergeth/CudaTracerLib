@@ -2,12 +2,12 @@
 
 #include <MathTypes.h>
 
-struct e_KernelFilterBase : public e_BaseType, public e_BaseTypeHelper<5524550>
+struct e_FilterBase : public e_BaseType//, public e_BaseTypeHelper<5524550>
 {
 	float xWidth, yWidth;
     float invXWidth, invYWidth;
 
-	e_KernelFilterBase(float xw, float yw)
+	e_FilterBase(float xw, float yw)
 		: xWidth(xw), yWidth(yw), invXWidth(1.f/xw), invYWidth(1.f/yw)
 	{
 
@@ -19,17 +19,18 @@ struct e_KernelFilterBase : public e_BaseType, public e_BaseTypeHelper<5524550>
 		invYWidth = 1.0f / yWidth;
 	}
 
-	CUDA_FUNC_IN e_KernelFilterBase()
+	CUDA_FUNC_IN e_FilterBase()
 		: xWidth(0), yWidth(0), invXWidth(0), invYWidth(0)
 	{
 	}
 };
 
-struct e_KernelBoxFilter : public e_KernelFilterBase, public e_DerivedTypeHelper<1>
+struct e_BoxFilter : public e_FilterBase//, public e_DerivedTypeHelper<1>
 {
-	e_KernelBoxFilter(){}
-	e_KernelBoxFilter(float xw, float yw)
-		: e_KernelFilterBase(xw, yw)
+	TYPE_FUNC(1)
+	e_BoxFilter(){}
+	e_BoxFilter(float xw, float yw)
+		: e_FilterBase(xw, yw)
 	{
 
 	}
@@ -40,14 +41,15 @@ struct e_KernelBoxFilter : public e_KernelFilterBase, public e_DerivedTypeHelper
 	}
 };
 
-struct e_KernelGaussianFilter : public e_KernelFilterBase, public e_DerivedTypeHelper<2>
+struct e_GaussianFilter : public e_FilterBase//, public e_DerivedTypeHelper<2>
 {
+	TYPE_FUNC(2)
 	float alpha;
     float expX, expY;
 	
-	e_KernelGaussianFilter(){}
-	e_KernelGaussianFilter(float xw, float yw, float a)
-		: e_KernelFilterBase(xw, yw), alpha(a), expX(expf(-alpha * xWidth * xWidth)),  expY(expf(-alpha * yWidth * yWidth))
+	e_GaussianFilter(){}
+	e_GaussianFilter(float xw, float yw, float a)
+		: e_FilterBase(xw, yw), alpha(a), expX(expf(-alpha * xWidth * xWidth)),  expY(expf(-alpha * yWidth * yWidth))
 	{
 
 	}
@@ -68,13 +70,14 @@ struct e_KernelGaussianFilter : public e_KernelFilterBase, public e_DerivedTypeH
 	}
 };
 
-struct e_KernelMitchellFilter : public e_KernelFilterBase, public e_DerivedTypeHelper<3>
+struct e_MitchellFilter : public e_FilterBase//, public e_DerivedTypeHelper<3>
 {
+	TYPE_FUNC(3)
 	float B, C;
 	
-	e_KernelMitchellFilter(){}
-	e_KernelMitchellFilter(float b, float c, float xw, float yw)
-		: e_KernelFilterBase(xw, yw), B(b), C(c)
+	e_MitchellFilter(){}
+	e_MitchellFilter(float b, float c, float xw, float yw)
+		: e_FilterBase(xw, yw), B(b), C(c)
 	{
 
 	}
@@ -96,13 +99,14 @@ struct e_KernelMitchellFilter : public e_KernelFilterBase, public e_DerivedTypeH
 	}
 };
 
-struct e_KernelLanczosSincFilter : public e_KernelFilterBase, public e_DerivedTypeHelper<4>
+struct e_LanczosSincFilter : public e_FilterBase//, public e_DerivedTypeHelper<4>
 {
+	TYPE_FUNC(4)
 	float tau;
 	
-	e_KernelLanczosSincFilter(){}
-	e_KernelLanczosSincFilter(float xw, float yw, float t)
-		: e_KernelFilterBase(xw, yw), tau(t)
+	e_LanczosSincFilter(){}
+	e_LanczosSincFilter(float xw, float yw, float t)
+		: e_FilterBase(xw, yw), tau(t)
 	{
 
 	}
@@ -123,11 +127,12 @@ struct e_KernelLanczosSincFilter : public e_KernelFilterBase, public e_DerivedTy
 	}
 };
 
-struct e_KernelTriangleFilter : public e_KernelFilterBase, public e_DerivedTypeHelper<5>
+struct e_TriangleFilter : public e_FilterBase//, public e_DerivedTypeHelper<5>
 {
-	e_KernelTriangleFilter(){}
-	e_KernelTriangleFilter(float xw, float yw)
-		: e_KernelFilterBase(xw, yw)
+	TYPE_FUNC(5)
+	e_TriangleFilter(){}
+	e_TriangleFilter(float xw, float yw)
+		: e_FilterBase(xw, yw)
 	{
 
 	}
@@ -138,19 +143,17 @@ struct e_KernelTriangleFilter : public e_KernelFilterBase, public e_DerivedTypeH
 	}
 };
 
-#define FLT_SIZE RND_16(Dmax5(sizeof(e_KernelBoxFilter), sizeof(e_KernelGaussianFilter), sizeof(e_KernelMitchellFilter), sizeof(e_KernelLanczosSincFilter), sizeof(e_KernelTriangleFilter)))
-
-struct CUDA_ALIGN(16) e_KernelFilter : public e_AggregateBaseType<e_KernelFilterBase, FLT_SIZE>
+struct CUDA_ALIGN(16) e_Filter : public CudaVirtualAggregate<e_FilterBase, e_BoxFilter, e_GaussianFilter, e_MitchellFilter, e_LanczosSincFilter, e_TriangleFilter>
 {
 public:
-	CUDA_FUNC_IN e_KernelFilter()
+	CUDA_FUNC_IN e_Filter()
 	{
 		//type = 0;	
 	}
 
 	CUDA_FUNC_IN float Evaluate(float x, float y) const
 	{
-		CALL_FUNC5(e_KernelBoxFilter,e_KernelGaussianFilter,e_KernelMitchellFilter,e_KernelLanczosSincFilter,e_KernelTriangleFilter, Evaluate(x, y))
+		CALL_FUNC5(e_BoxFilter,e_GaussianFilter,e_MitchellFilter,e_LanczosSincFilter,e_TriangleFilter, Evaluate(x, y))
 		return 0.0f;
 	}
 };

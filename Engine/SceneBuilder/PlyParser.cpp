@@ -367,7 +367,7 @@ void compileply(IInStream& istream, OutputStream& a_Out)
 	Platform::SetMemory(m_sLights, sizeof(m_sLights));
 	e_KernelMaterial defaultMat("Default_Material");
 	diffuse mat;
-	mat.m_reflectance = CreateTexture(0, Spectrum(1,0,0));
+	mat.m_reflectance = CreateTexture(Spectrum(1,0,0));
 	defaultMat.bsdf.SetData(mat);
 	a_Out << box;
 	a_Out.Write(m_sLights, sizeof(m_sLights));

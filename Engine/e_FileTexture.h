@@ -21,7 +21,7 @@ enum e_ImageFilter
 	TEXTURE_Anisotropic
 };
 
-enum e_KernelTexture_DataType
+enum e_Texture_DataType
 {
 	vtRGBE,
 	vtRGBCOL,
@@ -57,7 +57,7 @@ struct e_KernelMIPMap
 	CUDA_ALIGN(16) unsigned int* m_pHostData;
 	CUDA_ALIGN(16) Vec2f m_fDim;
 	unsigned int m_uWidth, m_uHeight;
-	e_KernelTexture_DataType m_uType;
+	e_Texture_DataType m_uType;
 	e_ImageWrap m_uWrapMode;
 	e_ImageFilter m_uFilterMode;
 	unsigned int m_sOffsets[max_MIPS];
@@ -87,7 +87,7 @@ class e_MIPMap
 	unsigned int m_uBpp;
 	unsigned int m_uLevels;
 	unsigned int m_uSize;
-	e_KernelTexture_DataType m_uType;
+	e_Texture_DataType m_uType;
 	e_ImageWrap m_uWrapMode;
 	unsigned int m_sOffsets[max_MIPS];
 	float m_weightLut[MTS_MIPMAP_LUT_SIZE];

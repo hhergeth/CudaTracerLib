@@ -21,6 +21,46 @@ public:
 		val = Vec4f(x, y, z, w);
 		normalize();
 	}
+	//http://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/
+	CUDA_FUNC_IN Quaternion(const float4x4& mat)
+	{
+		float trace = mat(0, 0) + mat(1, 1) + mat(2, 2); // I removed + 1.0f; see discussion with Ethan
+		if (trace > 0)
+		{// I changed M_EPSILON to 0
+			float s = 0.5f / math::sqrt(trace + 1.0f);
+			val.w = 0.25f / s;
+			val.x = (mat(2, 1) - mat(1, 2)) * s;
+			val.y = (mat(0, 2) - mat(2, 0)) * s;
+			val.z = (mat(1, 0) - mat(0, 1)) * s;
+		}
+		else
+		{
+			if (mat(0, 0) > mat(1, 1) && mat(0, 0) > mat(2, 2))
+			{
+				float s = 2.0f * math::sqrt(1.0f + mat(0, 0) - mat(1, 1) - mat(2, 2));
+				val.w = (mat(2, 1) - mat(1, 2)) / s;
+				val.x = 0.25f * s;
+				val.y = (mat(0, 1) + mat(1, 0)) / s;
+				val.z = (mat(0, 2) + mat(2, 0)) / s;
+			}
+			else if (mat(1, 1) > mat(2, 2))
+			{
+				float s = 2.0f * math::sqrt(1.0f + mat(1, 1) - mat(0, 0) - mat(2, 2));
+				val.w = (mat(0, 2) - mat(2, 0)) / s;
+				val.x = (mat(0, 1) + mat(1, 0)) / s;
+				val.y = 0.25f * s;
+				val.z = (mat(1, 2) + mat(2, 1)) / s;
+			}
+			else
+			{
+				float s = 2.0f * math::sqrt(1.0f + mat(2, 2) - mat(0, 0) - mat(1, 1));
+				val.w = (mat(1, 0) - mat(0, 1)) / s;
+				val.x = (mat(0, 2) + mat(2, 0)) / s;
+				val.y = (mat(1, 2) + mat(2, 1)) / s;
+				val.z = 0.25f * s;
+			}
+		}
+	}
 	CUDA_FUNC_IN Quaternion operator *(const Quaternion &q) const
 	{
 		Quaternion r;
@@ -58,30 +98,32 @@ public:
 		val.z = val.w*q.val.z + val.z*q.val.w + val.x*q.val.y - val.y*q.val.x;
 		return *this;
 	}    
-	CUDA_FUNC_IN void buildFromAxisAngle(const Vec3f& axis, float angle)
+	CUDA_FUNC_IN static Quaternion buildFromAxisAngle(const Vec3f& axis, float angle)
 	{
 		float radians = (angle/180.0f)*3.14159f;
 
 		// cache this, since it is used multiple times below
 		float sinThetaDiv2 = (float)sin( (radians/2.0f) );
 
+		Quaternion ret;
 		// now calculate the components of the quaternion	
-		val.x = axis.x * sinThetaDiv2;
-		val.y = axis.y * sinThetaDiv2;
-		val.z = axis.z * sinThetaDiv2;
+		ret.val.x = axis.x * sinThetaDiv2;
+		ret.val.y = axis.y * sinThetaDiv2;
+		ret.val.z = axis.z * sinThetaDiv2;
 
-		val.w = (float)cos( (radians/2.0f) );
+		ret.val.w = (float)cos( (radians/2.0f) );
+		return ret;
+	}
+	CUDA_FUNC_IN void normalize()
+	{
+		val = ::normalize(val);
 	}
 	CUDA_FUNC_IN Quaternion conjugate() const { return Quaternion(-val.x, -val.y, -val.z, val.w); }
 	CUDA_FUNC_IN float length() const
 	{
 		return ::length(val);
 	}
-	CUDA_FUNC_IN void normalize()
-	{
-		val = ::normalize(val);
-	}
-	CUDA_FUNC_IN Quaternion pow(float t)
+	CUDA_FUNC_IN Quaternion pow(float t) const
 	{
 		Quaternion result(0,0,0,0);
 
@@ -98,7 +140,7 @@ public:
 		}
 		return result;
 	}
-	CUDA_FUNC_IN float4x4 toMatrix()
+	CUDA_FUNC_IN float4x4 toMatrix() const
 	{
 		float xx = val.x * val.x;
         float yy = val.y * val.y;
@@ -110,13 +152,13 @@ public:
         float yz = val.y * val.z;
         float xw = val.x * val.w;
 		float4x4 r;
-		r.row(0, Vec4f(1.0f - (2.0f * (yy + zz)), 2.0f * (xy + zw), 2.0f * (zx - yw), 0));
-		r.row(1, Vec4f(2.0f * (xy - zw), 1.0f - (2.0f * (zz + xx)), 2.0f * (yz + xw), 0));
-		r.row(2, Vec4f(2.0f * (zx + yw), 2.0f * (yz - xw), 1.0f - (2.0f * (yy + xx)), 0));
-		r.row(3, Vec4f(0, 0, 0, 1));
+		r.col(0, Vec4f(1.0f - (2.0f * (yy + zz)), 2.0f * (xy + zw), 2.0f * (zx - yw), 0));
+		r.col(1, Vec4f(2.0f * (xy - zw), 1.0f - (2.0f * (zz + xx)), 2.0f * (yz + xw), 0));
+		r.col(2, Vec4f(2.0f * (zx + yw), 2.0f * (yz - xw), 1.0f - (2.0f * (yy + xx)), 0));
+		r.col(3, Vec4f(0, 0, 0, 1));
 		return r;
 	}
-	CUDA_FUNC_IN Quaternion slerp(const Quaternion &q1, const Quaternion &q2, float t)
+	CUDA_FUNC_IN static Quaternion slerp(const Quaternion &q1, const Quaternion &q2, float t)
 	{
 		Quaternion result, _q2 = q2;
 

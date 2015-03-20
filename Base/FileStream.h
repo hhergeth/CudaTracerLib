@@ -3,6 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <MathTypes.h>
+#include "FixedString.h"
 
 #define DCL_IN(TYPE) \
 	IInStream& operator>>(TYPE& rhs) \
@@ -74,6 +75,10 @@ public:
 		Read((char*)&a, sizeof(T));
 	}
 	virtual const char* getFilePath() const = 0;
+	template<int N> void Read(FixedString<N>& str)
+	{
+		Read((char*)&str, sizeof(FixedString<N>));
+	}
 public:
 	DCL_IN(char)
 	DCL_IN(short)
@@ -177,6 +182,10 @@ public:
 	template<typename T> void Write(const T& a_Data)
 	{
 		_Write(&a_Data, sizeof(T));
+	}
+	template<int N> void Write(const FixedString<N>& str)
+	{
+		Write((char*)&str, sizeof(FixedString<N>));
 	}
 	DCL_OUT(char)
 	DCL_OUT(short)

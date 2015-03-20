@@ -49,7 +49,7 @@ void plotModel(const DirectionModel& model)
 {
 	std::ostringstream str1;	
 	str1 << "Z = [";
-	int N = 50;
+	int N = 10;
 	for(int x = 0; x < N; x++)
 	{
 		if(x != 0)

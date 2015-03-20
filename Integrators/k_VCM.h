@@ -14,7 +14,7 @@ protected:
 	virtual void RenderBlock(e_Image* I, int x, int y, int blockW, int blockH);
 private:
 	//current will be used for lookup, next will be stored in
-	k_PhotonMapCollection<false> m_sPhotonMapsCurrent, m_sPhotonMapsNext;
+	k_PhotonMapCollection<false, k_MISPhoton> m_sPhotonMapsCurrent, m_sPhotonMapsNext;
 	float m_fInitialRadius;
 	unsigned long long m_uPhotonsEmitted;
 	float getCurrentRadius(int exp)

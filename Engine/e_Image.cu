@@ -119,15 +119,15 @@ void e_Image::SetSample(int x, int y, RGBCOL c)
 	else viewTarget[y * xResolution + x] = c;
 }
 
-CUDA_FUNC_IN Spectrum evalFilter(e_KernelFilter filter, e_Image::Pixel* P, float splatScale, unsigned int _x, unsigned int _y, unsigned int w, unsigned int h)
+CUDA_FUNC_IN Spectrum evalFilter(const e_Filter& filter, e_Image::Pixel* P, float splatScale, unsigned int _x, unsigned int _y, unsigned int w, unsigned int h)
 {
 	//return P[_y * w + _x].toSpectrum(splatScale);
 	float dimageX = _x - 0.5f;
 	float dimageY = _y - 0.5f;
-	int x0 = math::Ceil2Int(dimageX - filter.As<e_KernelFilterBase>()->xWidth);
-	int x1 = math::Floor2Int(dimageX + filter.As<e_KernelFilterBase>()->xWidth);
-	int y0 = math::Ceil2Int(dimageY - filter.As<e_KernelFilterBase>()->yWidth);
-	int y1 = math::Floor2Int(dimageY + filter.As<e_KernelFilterBase>()->yWidth);
+	int x0 = math::Ceil2Int(dimageX - filter.As<e_FilterBase>()->xWidth);
+	int x1 = math::Floor2Int(dimageX + filter.As<e_FilterBase>()->xWidth);
+	int y0 = math::Ceil2Int(dimageY - filter.As<e_FilterBase>()->yWidth);
+	int y1 = math::Floor2Int(dimageY + filter.As<e_FilterBase>()->yWidth);
 	x0 = max(x0, 0);
 	x1 = min(x1, 0 + int(w) - 1);
 	y0 = max(y0, 0);
@@ -155,7 +155,7 @@ CUDA_FUNC_IN RGBCOL gammaCorrecture(const Spectrum& c)
 	return c2.toRGBCOL();
 }
 
-template<typename TARGET> CUDA_GLOBAL void rtm_Scale(e_Image::Pixel* P, TARGET T, unsigned int w, unsigned int h, float splatScale, float L_w, float alpha, float L_white2, e_KernelFilter filter)
+template<typename TARGET> CUDA_GLOBAL void rtm_Scale(e_Image::Pixel* P, TARGET T, unsigned int w, unsigned int h, float splatScale, float L_w, float alpha, float L_white2, e_Filter filter)
 {
 	unsigned int x = threadIdx.x + blockDim.x * blockIdx.x, y = threadIdx.y + blockDim.y * blockIdx.y;
 	if(x < w && y < h)
@@ -173,7 +173,7 @@ template<typename TARGET> CUDA_GLOBAL void rtm_Scale(e_Image::Pixel* P, TARGET T
 	}
 }
 
-template<typename TARGET> CUDA_GLOBAL void rtm_Copy(e_Image::Pixel* P, TARGET T, unsigned int w, unsigned int h, float splatScale, e_KernelFilter filter)
+template<typename TARGET> CUDA_GLOBAL void rtm_Copy(e_Image::Pixel* P, TARGET T, unsigned int w, unsigned int h, float splatScale, e_Filter filter)
 {
 	unsigned int x = threadIdx.x + blockDim.x * blockIdx.x, y = threadIdx.y + blockDim.y * blockIdx.y;
 	if(x < w && y < h)
@@ -225,7 +225,7 @@ void e_Image::InternalUpdateDisplay()
 	}
 }
 
-template<typename TARGET> CUDA_GLOBAL void rtm_Copy(e_Image::Pixel* A, e_Image::Pixel* B, TARGET T, unsigned int w, unsigned int h, float splatScaleA, float splatScaleB, e_KernelFilter filterA, e_KernelFilter filterB, float scale)
+template<typename TARGET> CUDA_GLOBAL void rtm_Copy(e_Image::Pixel* A, e_Image::Pixel* B, TARGET T, unsigned int w, unsigned int h, float splatScaleA, float splatScaleB, e_Filter filterA, e_Filter filterB, float scale)
 {
 	unsigned int x = threadIdx.x + blockDim.x * blockIdx.x, y = threadIdx.y + blockDim.y * blockIdx.y;
 	if (x < w && y < h)

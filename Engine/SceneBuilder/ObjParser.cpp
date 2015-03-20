@@ -378,6 +378,13 @@ struct SubMesh
 	}
 };
 
+static e_Texture CreateTexture(const char* p, const Spectrum& col)
+{
+	if (p && *p)
+		return CreateTexture(p);
+	else return CreateTexture(col);
+}
+
 void compileobj(IInStream& in, OutputStream& a_Out)
 {
 	std::string dirName = getDirName(in.getFilePath());

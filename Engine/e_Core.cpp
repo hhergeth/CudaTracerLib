@@ -1,25 +1,6 @@
 #include <StdAfx.h>
 #include "e_Core.h"
-
-
 #include "..\MathTypes.h"
-#include "e_RoughTransmittance.h"
-
-#define FREEIMAGE_LIB
-#include <FreeImage.h>
-
-#include "e_Material.h"
-
-void InitializeCuda4Tracer(const char* dataPath)
-{
-	e_KernelMaterial* mat = new e_KernelMaterial("aaaa");
-	
-
-	cudaError er = CUDA_FREE(0);
-	SpectrumHelper::StaticInitialize();
-	FreeImage_Initialise();
-	e_RoughTransmittanceManager::StaticInitialize(std::string(dataPath));
-}
 
 void ThrowCudaErrors()
 {

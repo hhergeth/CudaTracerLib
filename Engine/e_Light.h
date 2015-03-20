@@ -7,7 +7,7 @@
 #include "e_FileTexture.h"
 #include "e_AbstractEmitter.h"
 
-struct e_LightBase : public e_AbstractEmitter, public e_BaseTypeHelper<5523276>
+struct e_LightBase : public e_AbstractEmitter//, public e_BaseTypeHelper<5523276>
 {
 	bool IsRemoved;
 
@@ -23,8 +23,9 @@ struct e_LightBase : public e_AbstractEmitter, public e_BaseTypeHelper<5523276>
 	}
 };
 
-struct e_PointLight : public e_LightBase, public e_DerivedTypeHelper<1>
+struct e_PointLight : public e_LightBase//, public e_DerivedTypeHelper<1>
 {
+	TYPE_FUNC(1)
 	Vec3f lightPos;
     Spectrum m_intensity;
 	
@@ -81,8 +82,9 @@ struct e_PointLight : public e_LightBase, public e_DerivedTypeHelper<1>
 	}
 };
 
-struct e_DiffuseLight : public e_LightBase, public e_DerivedTypeHelper<2>
+struct e_DiffuseLight : public e_LightBase//, public e_DerivedTypeHelper<2>
 {
+	TYPE_FUNC(2)
 	Spectrum m_radiance, m_power;
     ShapeSet shapeSet;
 	bool m_bOrthogonal;
@@ -147,8 +149,9 @@ struct e_DiffuseLight : public e_LightBase, public e_DerivedTypeHelper<2>
 	}
 };
 
-struct e_DistantLight : public e_LightBase, public e_DerivedTypeHelper<3>
+struct e_DistantLight : public e_LightBase//, public e_DerivedTypeHelper<3>
 {
+	TYPE_FUNC(3)
 	Spectrum m_normalIrradiance, m_power;
 	Frame ToWorld;
 	float m_invSurfaceArea, radius;
@@ -224,8 +227,9 @@ struct e_DistantLight : public e_LightBase, public e_DerivedTypeHelper<3>
 	}
 };
 
-struct e_SpotLight : public e_LightBase, public e_DerivedTypeHelper<4>
+struct e_SpotLight : public e_LightBase//, public e_DerivedTypeHelper<4>
 {
+	TYPE_FUNC(4)
     Spectrum m_intensity;
 	float m_beamWidth, m_cutoffAngle;
 	float m_cosBeamWidth, m_cosCutoffAngle, m_invTransitionWidth;
@@ -291,8 +295,9 @@ private:
 	CUDA_DEVICE CUDA_HOST Spectrum falloffCurve(const Vec3f &d) const;
 };
 
-struct e_InfiniteLight : public e_LightBase, public e_DerivedTypeHelper<5>
+struct e_InfiniteLight : public e_LightBase//, public e_DerivedTypeHelper<5>
 {
+	TYPE_FUNC(5)
 	e_KernelMIPMap radianceMap;
 	e_Variable<float> m_cdfRows, m_cdfCols, m_rowWeights;
 	Vec3f m_SceneCenter;
@@ -353,9 +358,7 @@ private:
 	CUDA_DEVICE CUDA_HOST float internalPdfDirection(const Vec3f &d) const;
 };
 
-#define LGT_SIZE RND_16(Dmax5(sizeof(e_PointLight), sizeof(e_DiffuseLight), sizeof(e_DistantLight), sizeof(e_SpotLight), sizeof(e_InfiniteLight)))
-
-CUDA_ALIGN(16) struct e_KernelLight : public e_AggregateBaseType<e_LightBase, LGT_SIZE>
+CUDA_ALIGN(16) struct e_KernelLight : public CudaVirtualAggregate<e_LightBase, e_PointLight, e_DiffuseLight, e_DistantLight, e_SpotLight, e_InfiniteLight>
 {
 public:
 	CUDA_FUNC_IN Spectrum sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const

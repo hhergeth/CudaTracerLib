@@ -3,6 +3,7 @@
 #include <MathTypes.h>
 #include "e_Buffer.h"
 #include "e_Node.h"
+#include "e_Mesh.h"
 #include "e_SceneBVH.h"
 #include "e_Light.h"
 #include "e_TerrainHeader.h"
@@ -12,9 +13,10 @@
 #include "e_MeshCompiler.h"
 
 class e_Terrain;
+struct e_TmpVertex;
+class e_AnimatedMesh;
 
 #include "e_SceneInitData.h"
-#include "e_AnimatedMesh.h"
 #include "e_Sensor.h"
 
 class e_DynamicScene
@@ -79,12 +81,6 @@ public:
 		m_pMaterialBuffer->operator()(N->m_uMaterialOffset + mi).Invalidate();
 	}
 	void AnimateMesh(e_StreamReference(e_Node) n, float t, unsigned int anim);
-	e_AnimatedMesh* AccessAnimatedMesh(e_StreamReference(e_Node) n)
-	{
-		e_BufferReference<e_Mesh, e_KernelMesh> m = getMesh(n);
-		e_AnimatedMesh* m2 = (e_AnimatedMesh*)m.operator->();
-		return m2;
-	}
 	bool UpdateScene();
 	e_KernelDynamicScene getKernelSceneData(bool devicePointer = true)  const;
 	//void UpdateMaterial(e_StreamReference(e_KernelMaterial) m);
@@ -113,14 +109,9 @@ public:
 		return m_pMaterialBuffer->UsedElements();
 	}
 	e_SceneBVH* getSceneBVH();
+	e_AnimatedMesh* AccessAnimatedMesh(e_StreamReference(e_Node) n);
 	unsigned int getCudaBufferSize();
-	unsigned int getTriangleCount()
-	{
-		unsigned int r = 0;
-		for(unsigned int i = 0; i < m_pNodeStream->NumUsedElements(); i++)
-			r += getMesh(m_pNodeStream[0](i))->getTriangleCount();
-		return r;
-	}
+	unsigned int getTriangleCount();
 	void setTerrain(e_Terrain* T);
 	void printStatus(char* dest);
 	void setCamera(e_Sensor* C)

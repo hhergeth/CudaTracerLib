@@ -70,7 +70,7 @@ CUDA_FUNC_IN bool sampleDistanceHomogenous(const Ray& ray, float minT, float max
 	return success;
 }
 
-struct e_BaseVolumeRegion : public e_BaseType, public e_BaseTypeHelper<5001046>
+struct e_BaseVolumeRegion : public e_BaseType//, public e_BaseTypeHelper<5001046>
 {
 public:
 	unsigned int m_uNodeIndex;
@@ -93,8 +93,9 @@ public:
 	}
 };
 
-struct e_HomogeneousVolumeDensity : public e_BaseVolumeRegion, public e_DerivedTypeHelper<1>
+struct e_HomogeneousVolumeDensity : public e_BaseVolumeRegion//, public e_DerivedTypeHelper<1>
 {
+	TYPE_FUNC(1)
 public:
 	e_HomogeneousVolumeDensity(){}
 	e_HomogeneousVolumeDensity(const float sa, const float ss, const e_PhaseFunction& func, float emit, const AABB& box)
@@ -222,8 +223,9 @@ public:
 	}
 };
 
-struct e_VolumeGrid : public e_BaseVolumeRegion, public e_DerivedTypeHelper<2>
+struct e_VolumeGrid : public e_BaseVolumeRegion//, public e_DerivedTypeHelper<2>
 {
+	TYPE_FUNC(2)
 public:
 	e_VolumeGrid(){}
 	e_VolumeGrid(const e_PhaseFunction& func, const float4x4 worldToVol, e_Stream<char>* a_Buffer, Vec3u dim);
@@ -329,9 +331,7 @@ private:
 	}
 };
 
-#define VOL_SIZE RND_16(Dmax2(sizeof(e_HomogeneousVolumeDensity), sizeof(e_VolumeGrid)))
-
-struct CUDA_ALIGN(16) e_VolumeRegion : public e_AggregateBaseType<e_BaseVolumeRegion, VOL_SIZE> 
+struct CUDA_ALIGN(16) e_VolumeRegion : public CudaVirtualAggregate<e_BaseVolumeRegion, e_HomogeneousVolumeDensity, e_VolumeGrid>
 {
 public:
 	CUDA_FUNC_IN e_VolumeRegion()

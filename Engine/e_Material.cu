@@ -4,11 +4,12 @@ e_KernelMaterial::e_KernelMaterial()
 {
 	parallaxMinSamples = 10;
 	parallaxMaxSamples = 50;
+	enableParallaxOcclusion = false;
 	Name = "NoNameMaterial";
 	HeightScale = 1.0f;
 	NodeLightIndex = 0xffffffff;
 	m_fAlphaThreshold = 1.0f;
-	bsdf.type = 0;
+	bsdf.setTypeToken(0);
 	usedBssrdf = 0;
 	AlphaMap.used = NormalMap.used = HeightMap.used = 0;
 }
@@ -17,11 +18,12 @@ e_KernelMaterial::e_KernelMaterial(const char* name)
 {
 	parallaxMinSamples = 10;
 	parallaxMaxSamples = 50;
+	enableParallaxOcclusion = false;
 	Name = name;
 	HeightScale = 1.0f;
 	NodeLightIndex = 0xffffffff;
 	m_fAlphaThreshold = 1.0f;
-	bsdf.type = 0;
+	bsdf.setTypeToken(0);
 	usedBssrdf = 0;
 	AlphaMap.used = NormalMap.used = HeightMap.used = 0;
 }
@@ -92,7 +94,7 @@ CUDA_FUNC_IN Vec2f parallaxOcclusion(const Vec2f& texCoord, e_KernelMIPMap* tex,
 
 bool e_KernelMaterial::SampleNormalMap(DifferentialGeometry& dg, const Vec3f& wi) const
 {
-	/*if(NormalMap.used)
+	if(NormalMap.used)
 	{
 		Vec3f n;
 		NormalMap.tex.Evaluate(dg).toLinearRGB(n.x, n.y, n.z);
@@ -102,18 +104,18 @@ bool e_KernelMaterial::SampleNormalMap(DifferentialGeometry& dg, const Vec3f& wi
 		dg.sys.s = normalize(cross(nWorld, dg.sys.t));
 		return true;
 	}
-	else if (HeightMap.used && HeightMap.tex.Is<e_KernelImageTexture>())
+	else if (HeightMap.used && HeightMap.tex.Is<e_ImageTexture>())
 	{
-		e_KernelTextureMapping2D& map = HeightMap.tex.As<e_KernelImageTexture>()->mapping;
+		e_TextureMapping2D& map = HeightMap.tex.As<e_ImageTexture>()->mapping;
 		Vec2f uv = map.Map(dg);
 		if (enableParallaxOcclusion)
 		{
-			uv = parallaxOcclusion(uv, HeightMap.tex.As<e_KernelImageTexture>()->tex.operator->(), dg.toLocal(-wi), HeightScale, parallaxMinSamples, parallaxMaxSamples);
+			uv = parallaxOcclusion(uv, HeightMap.tex.As<e_ImageTexture>()->tex.operator->(), dg.toLocal(-wi), HeightScale, parallaxMinSamples, parallaxMaxSamples);
 			dg.uv[0] = (uv - Vec2f(map.du, map.dv)) / Vec2f(map.su, map.sv);
 		}
 
 		Spectrum grad[2];
-		HeightMap.tex.As<e_KernelImageTexture>()->tex->evalGradient(uv, grad);
+		HeightMap.tex.As<e_ImageTexture>()->tex->evalGradient(uv, grad);
 		float dDispDu = grad[0].getLuminance();
 		float dDispDv = grad[1].getLuminance();
 		Vec3f dpdu = dg.dpdu + dg.sys.n * (
@@ -131,24 +133,24 @@ bool e_KernelMaterial::SampleNormalMap(DifferentialGeometry& dg, const Vec3f& wi
 
 		return true;
 	}
-	else */return false;
+	else return false;
 }
 
 float e_KernelMaterial::SampleAlphaMap(const DifferentialGeometry& uv) const
 {
-	/*if(AlphaMap.used)
+	if(AlphaMap.used)
 	{//return 1;
-		if (AlphaMap.tex.Is<e_KernelImageTexture>())
+		if (AlphaMap.tex.Is<e_ImageTexture>())
 		{
-			Vec2f uv2 = AlphaMap.tex.As<e_KernelImageTexture>()->mapping.Map(uv);
-			return AlphaMap.tex.As<e_KernelImageTexture>()->tex->SampleAlpha(uv2) != 1 ? 0 : 1;
+			Vec2f uv2 = AlphaMap.tex.As<e_ImageTexture>()->mapping.Map(uv);
+			return AlphaMap.tex.As<e_ImageTexture>()->tex->SampleAlpha(uv2) != 1 ? 0 : 1;
 		}
 		Spectrum s = AlphaMap.tex.Evaluate(uv);
 		if(s.isZero())
 			return 0.0f;
 		else return 1.0f;
 	}
-	else */return 1.0f;
+	else return 1.0f;
 }
 
 bool e_KernelMaterial::GetBSSRDF(const DifferentialGeometry& uv, const e_KernelBSSRDF** res) const

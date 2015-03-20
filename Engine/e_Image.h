@@ -50,11 +50,11 @@ public:
 	}
 	void setStdFilter()
 	{
-		e_KernelFilter flt;
-		flt.SetData(e_KernelBoxFilter(1,1));
+		e_Filter flt;
+		flt.SetData(e_BoxFilter(1,1));
 		setFilter(flt);
 	}
-	void setFilter(const e_KernelFilter& filt)
+	void setFilter(const e_Filter& filt)
 	{
 		filter = filt;
 	}
@@ -82,7 +82,7 @@ public:
 			return (s / weight + s2 * splatScale);
 		}
     };
-	e_KernelFilter& accessFilter()
+	e_Filter& accessFilter()
 	{
 		return filter;
 	}
@@ -113,7 +113,7 @@ public:
 private:
 	void InternalUpdateDisplay();
 	bool m_bDoUpdate;
-	e_KernelFilter filter;
+	e_Filter filter;
     Pixel *cudaPixels;
 	Pixel *hostPixels;
 	bool usedHostPixels;

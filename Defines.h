@@ -267,7 +267,7 @@ template<typename T> inline void ZeroMemoryCuda(T* cudaVar)
 	CALL_TYPE(_TYPE15_, func) \
 	CALL_TYPE(_TYPE16_, func)
 
-template<int ID> struct e_BaseTypeHelper
+/*template<int ID> struct e_BaseTypeHelper
 {
 	static CUDA_FUNC_IN unsigned int BASE_TYPE()
 	{
@@ -281,26 +281,60 @@ template<int ID> struct e_DerivedTypeHelper
 	{
 		return ID;
 	}
-};
+};*/
 
-struct VC13_ClassLayouter
+#define TYPE_FUNC(id) \
+	static CUDA_FUNC_IN unsigned int TYPE() \
+	{ \
+		return id; \
+	}
+
+
+/*struct VC13_ClassLayouter
 {
 	virtual ~VC13_ClassLayouter() {}
-};
+};*/
 
-struct e_BaseType : public VC13_ClassLayouter
+struct e_BaseType// : public VC13_ClassLayouter
 {
 	virtual void Update()
 	{
 	}
 };
 
-template<typename BaseType, int Size> struct e_AggregateBaseType
+namespace CTVirtualHelper
 {
-	CUDA_ALIGN(16) unsigned int type;
-	//unsigned int base_type;
-	CUDA_ALIGN(16) unsigned char Data[Dmax2(Dmin2(RND_16(Size), 2048), 12)];
+	template<typename T, typename... REST> struct Unifier
+	{
+		enum { result = Dmax2(sizeof(T), Unifier<REST...>::result) };
+	};
 
+	template<typename T> struct Unifier<T>
+	{
+		enum { result = sizeof(T) };
+	};
+}
+
+template<typename BaseType, typename... Types> struct CudaVirtualAggregate
+{
+	static_assert(CTVirtualHelper::Unifier<Types...>::result > 0, "CudaVirtualAggregate::Data too  small.");
+	static_assert(CTVirtualHelper::Unifier<Types...>::result < 2048, "CudaVirtualAggregate::Data too large.");
+protected:
+	unsigned int type;
+	CUDA_ALIGN(16) unsigned char Data[CTVirtualHelper::Unifier<Types...>::result];
+
+	template<typename T, typename CLASS> CUDA_FUNC_IN bool isDerived() const
+	{
+		return T::Type() == CLASS::TYPE();
+	}
+
+	template<typename T, typename CLASS, typename CLASS2, typename... REST> CUDA_FUNC_IN bool isDerived() const
+	{
+		if (T::Type() == CLASS::TYPE())
+			return true;
+		else return isDerived<T, CLASS2, REST...>();
+	}
+public:
 	template<typename SpecializedType> CUDA_FUNC_IN SpecializedType* As() const
 	{
 		return (SpecializedType*)Data;
@@ -310,17 +344,31 @@ template<typename BaseType, int Size> struct e_AggregateBaseType
 	{
 		memcpy(Data, &val, sizeof(SpecializedType));
 		type = SpecializedType::TYPE();
-		//base_type = SpecializedType::BASE_TYPE();
 	}
 
 	template<typename SpecializedType> CUDA_FUNC_IN bool Is() const
 	{
-		return type == SpecializedType::TYPE();// && base_type == SpecializedType::BASE_TYPE();
+		return type == SpecializedType::TYPE();
 	}
 
 	CUDA_FUNC_IN BaseType* As() const
 	{
 		return As<BaseType>();
+	}
+
+	template<typename SpecializedType>  CUDA_FUNC_IN bool IsBase() const
+	{
+		return isDerived<SpecializedType, Types...>();
+	}
+
+	unsigned int getTypeToken()
+	{
+		return type;
+	}
+
+	void setTypeToken(unsigned int t)
+	{
+		type = t;
 	}
 };
 

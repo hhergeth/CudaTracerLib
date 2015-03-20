@@ -1,7 +1,7 @@
 #include "k_VCM.h"
 #include "k_VCMHelper.h"
 
-CUDA_DEVICE k_PhotonMapCollection<false> g_CurrentMap, g_NextMap;
+CUDA_DEVICE k_PhotonMapCollection<false, k_MISPhoton> g_CurrentMap, g_NextMap;
 
 CUDA_DEVICE Spectrum L_Surface(BPTSubPathState& aCameraState, BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED, const e_KernelMaterial* mat, float mMisVcWeightFactor)
 {
@@ -21,8 +21,8 @@ CUDA_DEVICE Spectrum L_Surface(BPTSubPathState& aCameraState, BSDFSamplingRecord
 		unsigned int i0 = g_CurrentMap.m_sSurfaceMap.m_sHash.Hash(make_uint3(a, b, c)), i = g_CurrentMap.m_sSurfaceMap.m_pDeviceHashGrid[i0];
 		while (i != 0xffffffff && i != 0xffffff)
 		{
-			k_pPpmPhoton e = g_CurrentMap.m_pPhotons[i];
-			Vec3f n = e.getNormal(), wi = e.getWi(), P = e.getPos();
+			k_MISPhoton e = g_CurrentMap.m_pPhotons[i];
+			Vec3f n = e.getNormal(), wi = e.getWi(), P = e.getPos(g_CurrentMap.m_sSurfaceMap.m_sHash, Vec3u(a,b,c));
 			Spectrum l = e.getL();
 			float dist2 = distanceSquared(P, bRec.dg.P);
 			if (dist2 < r2 && dot(n, bRec.dg.sys.n) > 0.8f)
@@ -82,7 +82,7 @@ CUDA_FUNC_IN void VCM(const Vec2f& pixelPosition, k_BlockSampleImage& img, CudaR
 			emitterVerticesStored++;
 
 #ifdef ISCUDA
-			k_pPpmPhoton* photon;
+			k_MISPhoton* photon;
 			if (emitterPathLength > 1 && storePhoton(v.bRec.dg.P, v.throughput, -lightPathState.r.direction, v.bRec.dg.sys.n, PhotonType::pt_Diffuse, g_NextMap, &photon))
 			{
 				photon->dVC = v.dVC;
@@ -166,8 +166,10 @@ __global__ void buildHashGrid2()
 	if (idx < g_NextMap.m_uPhotonNumEmitted)
 	{
 		k_pPpmPhoton& e = g_NextMap.m_pPhotons[idx];
+		Vec3f pos = g_NextMap.m_pPhotonPositions[idx];
 		const k_PhotonMap<k_HashGrid_Reg>& map = (&g_NextMap.m_sSurfaceMap)[e.getType()];
-		unsigned int i = map.m_sHash.Hash(e.getPos());
+		e.setPos(map.m_sHash, map.m_sHash.Transform(pos), pos);
+		unsigned int i = map.m_sHash.Hash(pos);
 		unsigned int k = atomicExch(map.m_pDeviceHashGrid + i, idx);
 		e.setNext(k);
 	}
@@ -182,14 +184,14 @@ void k_VCM::RenderBlock(e_Image* I, int x, int y, int blockW, int blockH)
 void k_VCM::DoRender(e_Image* I)
 {
 	m_sPhotonMapsNext.m_uPhotonNumEmitted = w * h;
-	cudaMemcpyToSymbol(g_CurrentMap, &m_sPhotonMapsCurrent, sizeof(k_PhotonMapCollection<false>));
-	cudaMemcpyToSymbol(g_NextMap, &m_sPhotonMapsNext, sizeof(k_PhotonMapCollection<false>));
+	cudaMemcpyToSymbol(g_CurrentMap, &m_sPhotonMapsCurrent, sizeof(m_sPhotonMapsCurrent));
+	cudaMemcpyToSymbol(g_NextMap, &m_sPhotonMapsNext, sizeof(m_sPhotonMapsNext));
 
 	k_Tracer<true, true>::DoRender(I);
-	cudaMemcpyFromSymbol(&m_sPhotonMapsNext, g_NextMap, sizeof(k_PhotonMapCollection<false>));
+	cudaMemcpyFromSymbol(&m_sPhotonMapsNext, g_NextMap, sizeof(m_sPhotonMapsNext));
 	buildHashGrid2 << <m_sPhotonMapsNext.m_uPhotonBufferLength / (32 * 6) + 1, dim3(32, 6, 1) >> >();
-	cudaMemcpyFromSymbol(&m_sPhotonMapsCurrent, g_CurrentMap, sizeof(k_PhotonMapCollection<false>));
-	cudaMemcpyFromSymbol(&m_sPhotonMapsNext, g_NextMap, sizeof(k_PhotonMapCollection<false>));
+	cudaMemcpyFromSymbol(&m_sPhotonMapsCurrent, g_CurrentMap, sizeof(m_sPhotonMapsCurrent));
+	cudaMemcpyFromSymbol(&m_sPhotonMapsNext, g_NextMap, sizeof(m_sPhotonMapsNext));
 
 	swapk(m_sPhotonMapsNext, m_sPhotonMapsCurrent);
 	m_uPhotonsEmitted += m_sPhotonMapsCurrent.m_uPhotonNumEmitted;
@@ -217,6 +219,6 @@ k_VCM::k_VCM()
 {
 	int gridLength = 100;
 	int numPhotons = 1024 * 1024 * 5;
-	m_sPhotonMapsCurrent = k_PhotonMapCollection<false>(numPhotons, gridLength*gridLength*gridLength, 0xffffffff);
-	m_sPhotonMapsNext = k_PhotonMapCollection<false>(numPhotons, gridLength*gridLength*gridLength, 0xffffffff);
+	m_sPhotonMapsCurrent = k_PhotonMapCollection<false, k_MISPhoton>(numPhotons, gridLength*gridLength*gridLength, 0xffffffff);
+	m_sPhotonMapsNext = k_PhotonMapCollection<false, k_MISPhoton>(numPhotons, gridLength*gridLength*gridLength, 0xffffffff);
 }

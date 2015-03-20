@@ -7,59 +7,40 @@
 #include "..\Base\TangentSpace.h"
 #undef TS_DEC_MD5
 
-float4x4 mul(float4x4& a, float4x4& b)
+void build_e_Animation(Anim* A, MD5Model* M, e_Animation& res, const std::string& name, const std::vector<float4x4>& inverseJoints)
 {
-	return b % a;
+	res.m_sName = name;
+	res.m_uFrameRate = A->bFrameRate;
+	for (int idxFrame = 0; idxFrame < A->numbFrames; idxFrame++)
+	{
+		e_Frame frame;
+		const bFrame& F = A->bFrames[idxFrame];
+		for (int j = 0; j < F.joints.size(); j++)
+		{
+			const Joint& joint = F.joints[j];
+			frame.m_sHostConstructionData.push_back(float4x4::Translate(joint.pos) % joint.quat.toMatrix());
+			if (joint.parent != -1)
+				frame.m_sHostConstructionData[j] = frame.m_sHostConstructionData[joint.parent] % frame.m_sHostConstructionData[j];
+		}
+		for (int j = 0; j < F.joints.size(); j++)
+			frame.m_sHostConstructionData[j] = frame.m_sHostConstructionData[j] % inverseJoints[j];
+		res.m_pFrames.push_back(frame);
+	}
 }
 
-struct c_bFrame
+e_BufferReference<char, char> malloc_aligned(e_Stream<char>* stream, unsigned int a_Count, unsigned int a_Alignment)
 {
-	float4x4* data;
-
-	c_bFrame(){}
-	c_bFrame(bFrame* F, float4x4* a_InverseTransforms)
+	e_BufferReference<char, char> ref = stream->malloc(a_Count + a_Alignment * 2);
+	uintptr_t ptr = (uintptr_t)ref.getDevice();
+	unsigned int diff = ptr % a_Alignment, off = a_Alignment - diff;
+	if (diff)
 	{
-		data = new float4x4[F->joints.size()];
-		for(int i = 0; i < F->joints.size(); i++)
-		{
-			data[i] = mul(F->joints[i].quat.toMatrix(), float4x4::Translate(*(Vec3f*)&F->joints[i].pos));
-			if(F->joints[i].parent != -1)
-				data[i] = mul(data[i], data[F->joints[i].parent]);
-		}
-		for(int i = 0; i < F->joints.size(); i++)
-			data[i] = mul(a_InverseTransforms[i], data[i]);
+		e_BufferReference<char, char> refFree = e_BufferReference<char, char>(stream, ref.getIndex(), off);
+		//stream->dealloc(refFree);
+		return e_BufferReference<char, char>(stream, ref.getIndex() + off, ref.getLength() - off);
 	}
-
-	~c_bFrame()
-	{
-		//delete data;
-	}
-};
-
-struct c_Animation
-{
-	unsigned int m_uNumbFrames;
-	unsigned int m_ubFrameRate;
-	c_bFrame* data;
-
-	c_Animation(Anim* A, MD5Model* M)
-	{
-		m_uNumbFrames = (unsigned int)A->numbFrames;
-		m_ubFrameRate = (unsigned int)A->bFrameRate;
-
-		float4x4* inverseJoints = new float4x4[A->baseJoints.size()];
-		for(unsigned int i = 0; i < A->baseJoints.size(); i++)
-			inverseJoints[i] = mul(M->joints[i].quat.toMatrix(), float4x4::Translate(*(Vec3f*)&M->joints[i].pos)).inverse();
-		data = new c_bFrame[m_uNumbFrames];
-		for(unsigned int i = 0; i < m_uNumbFrames; i++)
-			data[i] = c_bFrame(&A->bFrames[i], inverseJoints);
-	}
-
-	~c_Animation()
-	{
-		//delete [] data;
-	}
-};
+	else return ref;
+}
 
 e_AnimatedMesh::e_AnimatedMesh(IInStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4, e_Stream<char>* a_Stream5)
 	: e_Mesh(a_In, a_Stream0, a_Stream1, a_Stream2, a_Stream3, a_Stream4)
@@ -72,10 +53,11 @@ e_AnimatedMesh::e_AnimatedMesh(IInStream& a_In, e_Stream<e_TriIntersectorData>* 
 		A.deSerialize(a_In, a_Stream5);
 		m_pAnimations.push_back(A);
 	}
-	m_sVertices = a_Stream5->malloc(sizeof(e_AnimatedVertex) * k_Data.m_uVertexCount);
+	m_sVertices = a_Stream5->malloc(sizeof(e_AnimatedVertex) * k_Data.m_uVertexCount);//malloc_aligned(a_Stream5, sizeof(e_AnimatedVertex) * k_Data.m_uVertexCount, 16);//
 	m_sVertices.ReadFrom(a_In);
-	m_sTriangles = a_Stream5->malloc(sizeof(uint3) * m_sTriInfo.getLength());
+	m_sTriangles = a_Stream5->malloc(sizeof(uint3) * m_sTriInfo.getLength());//malloc_aligned(a_Stream5, sizeof(uint3) * m_sTriInfo.getLength(), 16);//
 	m_sTriangles.ReadFrom(a_In);
+	uint3* idx = ((uint3*)m_sTriangles().operator char *()) + (m_sTriInfo.getLength() - 2);
 	m_sHierchary.deSerialize(a_In, a_Stream5);
 	a_Stream5->UpdateInvalidated();
 }
@@ -103,7 +85,7 @@ void e_AnimatedMesh::CompileToBinary(const char* a_InputFile, std::vector<std::s
 		e_KernelMaterial mat;
 		mat.NodeLightIndex = -1;
 		diffuse ma;
-		ma.m_reflectance = CreateTexture("hellknight.tga", Spectrum());
+		ma.m_reflectance = CreateTexture("hellknight.tga");
 		mat.bsdf.SetData(ma);
 		//mat.NormalMap = e_Sampler<float3>("n_hellknight.tga", 1);
 		matData.push_back(mat);
@@ -118,8 +100,8 @@ void e_AnimatedMesh::CompileToBinary(const char* a_InputFile, std::vector<std::s
 			for(int j = 0; j < 3; j++)
 			{
 				unsigned int v = sm->tris[t].v[j] + off;
-				P[j] = v_Data[v].m_fVertexPos;
-				T[j] = *(Vec2f*)&sm->verts[v - off].tc;
+				P[j] = v_Pos[v];
+				T[j] = sm->verts[v - off].tc;
 				box.Enlarge(P[j]);
 			}
 			e_TriangleData d(P, s, T, N, Tan, BiTan);
@@ -146,13 +128,14 @@ void e_AnimatedMesh::CompileToBinary(const char* a_InputFile, std::vector<std::s
 	mesh.m_uJointCount = (unsigned int)M.joints.size();
 	mesh.m_uVertexCount = vCount;
 	a_Out.Write(mesh);
+	std::vector<float4x4> inverseJoints;
+	for (unsigned int i = 0; i < M.joints.size(); i++)
+		inverseJoints.push_back((float4x4::Translate(M.joints[i].pos) % M.joints[i].quat.toMatrix()).inverse());
 	for(int a = 0; a < M.anims.size(); a++)
 	{
-		c_Animation A(M.anims[a], &M);
-		std::vector<e_Frame> F;
-		for(unsigned int i = 0; i < A.m_uNumbFrames; i++)
-			F.push_back(e_Frame(A.data[i].data, mesh.m_uJointCount));
-		e_Animation(A.m_ubFrameRate, a_Anims[a].c_str(), F).serialize(a_Out);
+		e_Animation anim;
+		build_e_Animation(M.anims[a], &M, anim, a_Anims[a], inverseJoints);
+		anim.serialize(a_Out);
 	}
 	a_Out.Write(&v_Data[0], vCount * sizeof(e_AnimatedVertex));
 	a_Out.Write(&triData2[0], (unsigned int)triData2.size() * sizeof(uint3));

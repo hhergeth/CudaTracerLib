@@ -2,7 +2,7 @@
 #include "..\Kernel\k_TraceHelper.h"
 #include "..\Kernel\k_TraceAlgorithms.h"
 
-CUDA_DEVICE k_PhotonMapCollection<true> g_Map;
+CUDA_DEVICE k_PhotonMapCollection<true, k_pPpmPhoton> g_Map;
 
 template<bool DIRECT> __global__ void k_PhotonPass()
 { 
@@ -85,12 +85,42 @@ __global__ void buildHashGrid()
 	if (idx < g_Map.m_uPhotonBufferLength)
 	{
 		k_pPpmPhoton& e = g_Map.m_pPhotons[idx];
+		Vec3f pos = g_Map.m_pPhotonPositions[idx];
 		const k_PhotonMap<k_HashGrid_Reg>& map = (&g_Map.m_sSurfaceMap)[e.getType()];
-		unsigned int i = map.m_sHash.Hash(e.getPos());
+		e.setPos(map.m_sHash, map.m_sHash.Transform(pos), pos);
+		unsigned int i = map.m_sHash.Hash(pos);
 		unsigned int k = atomicExch(map.m_pDeviceHashGrid + i, idx);
 		e.setNext(k);
 	}
 }
+
+/*CUDA_DEVICE unsigned int g_NextPhotonIdx;
+__global__ void reorderPhotonBuffer()
+{
+	unsigned int idx = threadIdx.y * blockDim.x + threadIdx.x + blockDim.x * blockDim.y * blockIdx.x;
+	if (idx < g_Map.m_sSurfaceMap.m_uGridLength)
+	{
+		unsigned int i = g_Map.m_sSurfaceMap.m_pDeviceHashGrid[idx], N = 0;
+		while (i != 0xffffffff && i != 0xffffff && N < 30)
+		{
+			k_pPpmPhoton e = g_Map.m_pPhotons[i];
+			N++;
+			i = e.getNext();
+		}
+		if (N)
+		{
+			unsigned int start = atomicAdd(&g_NextPhotonIdx, N);
+			i = g_Map.m_sSurfaceMap.m_pDeviceHashGrid[idx];
+			g_Map.m_sSurfaceMap.m_pDeviceHashGrid[idx] = start;
+			for (unsigned int j = 0; j < N; j++)
+			{
+				k_pPpmPhoton e = g_Map.m_pPhotons[i];
+				g_Map.m_pPhotons2[start + j] = e;
+				i = e.getNext();
+			}
+		}
+	}
+}*/
 
 /*__global__ void buildHashGridLinkedList(float a_Radius)
 {
@@ -128,14 +158,132 @@ __global__ void buildHashGrid()
 
 void k_sPpmTracer::doPhotonPass()
 {
-	cudaMemcpyToSymbol(g_Map, &m_sMaps, sizeof(k_PhotonMapCollection<true>));
+	cudaMemcpyToSymbol(g_Map, &m_sMaps, sizeof(m_sMaps));
 	while (!m_sMaps.PassFinished())
 	{
 		if (m_bDirect)
 			k_PhotonPass<true> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >();
 		else k_PhotonPass<false> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >();
-		cudaMemcpyFromSymbol(&m_sMaps, g_Map, sizeof(k_PhotonMapCollection<true>));
+		cudaMemcpyFromSymbol(&m_sMaps, g_Map, sizeof(m_sMaps));
 	}
 	buildHashGrid<< <m_sMaps.m_uPhotonBufferLength / (32 * 6) + 1, dim3(32, 6, 1) >> >();
-	cudaMemcpyFromSymbol(&m_sMaps, g_Map, sizeof(k_PhotonMapCollection<true>));
+	//ZeroSymbol(g_NextPhotonIdx);
+	//reorderPhotonBuffer << < m_sMaps.m_sSurfaceMap.m_uGridLength / (32 * 6) + 1, dim3(32, 6, 1) >> >();
+	cudaMemcpyFromSymbol(&m_sMaps, g_Map, sizeof(m_sMaps));
+	//swapk(&m_sMaps.m_pPhotons, &m_sMaps.m_pPhotons2);
+}
+
+CUDA_GLOBAL void estimateRadius(unsigned int w, unsigned int h, k_AdaptiveEntry* E, k_PhotonMapCollection<true, k_pPpmPhoton> photonMap, float maxR, float targetNumPhotons)
+{
+	k_PhotonMap<k_HashGrid_Reg>& map = photonMap.m_sSurfaceMap;
+	unsigned int x = threadIdx.x + blockDim.x * blockIdx.x, y = threadIdx.y + blockDim.y * blockIdx.y;
+	if (x < w && y < h)
+	{
+		Ray r = g_SceneData.GenerateSensorRay(x, y);
+		TraceResult r2 = k_TraceRay(r);
+		int N = 0, d = 0;
+		while (r2.hasHit() && d++ < 10)
+		{
+			DifferentialGeometry dg;
+			BSDFSamplingRecord bRec(dg);
+			r2.getBsdfSample(r, bRec, ERadiance, 0);
+			if (r2.getMat().bsdf.hasComponent(EDelta))
+			{
+				r2.getMat().bsdf.sample(bRec, Vec2f(0));
+				r = Ray(dg.P, bRec.getOutgoing());
+				r2 = k_TraceRay(r);
+			}
+			else
+			{
+				Frame sys = Frame(bRec.dg.n);
+				sys.t *= maxR;
+				sys.s *= maxR;
+				Vec3f a = -1.0f * sys.t - sys.s, b = sys.t - sys.s, c = -1.0f * sys.t + sys.s, d = sys.t + sys.s;
+				Vec3f low = min(min(a, b), min(c, d)) + bRec.dg.P, high = max(max(a, b), max(c, d)) + bRec.dg.P;
+				Vec3u lo = map.m_sHash.Transform(low), hi = map.m_sHash.Transform(high);
+				for (unsigned int a = lo.x; a <= hi.x; a++)
+					for (unsigned int b = lo.y; b <= hi.y; b++)
+						for (unsigned int c = lo.z; c <= hi.z; c++)
+						{
+							unsigned int i0 = map.m_sHash.Hash(make_uint3(a, b, c)), i = map.m_pDeviceHashGrid[i0];
+							while (i != 0xffffffff && i != 0xffffff)
+							{
+								k_pPpmPhoton e = photonMap.m_pPhotons[i];
+								if (distanceSquared(e.getPos(map.m_sHash, Vec3u(a,b,c)), bRec.dg.P) < maxR * maxR)//&& dot(n, bRec.dg.sys.n) > 0.8f
+								{
+									N++;
+								}
+								i = e.getNext();
+							}
+						}
+				break;
+			}
+		}
+		k_AdaptiveEntry& e = E[y * w + x];
+		if (N == 0)
+			e.r = e.rd = maxR;
+		else
+		{
+			//A_max = PI * maxR^2, density = N / A_max
+			//target = density * A_correct = density * PI * r * r
+			//r = sqrt(target / (density * PI))
+			float d = float(N) / (PI * maxR * maxR);
+			e.r = e.rd = math::sqrt(targetNumPhotons / (PI * d));
+		}
+	}
+}
+
+void k_sPpmTracer::estimatePerPixelRadius()
+{
+	int p0 = 16;
+	estimateRadius << <dim3(w / p0 + 1, h / p0 + 1), dim3(p0, p0) >> >(w, h, m_pEntries, m_sMaps, 5 * m_fInitialRadius, 20);
+}
+
+CUDA_DEVICE unsigned int g_uMaxGridCounter;
+
+CUDA_GLOBAL void visGrid(unsigned int w, unsigned int h, e_Image I, k_PhotonMapCollection<true, k_pPpmPhoton> photonMap, float scale)
+{
+	k_PhotonMap<k_HashGrid_Reg>& map = photonMap.m_sSurfaceMap;
+	unsigned int x = threadIdx.x + blockDim.x * blockIdx.x, y = threadIdx.y + blockDim.y * blockIdx.y;
+	if (x < w && y < h)
+	{
+		Ray r = g_SceneData.GenerateSensorRay(x, y);
+		TraceResult r2 = k_TraceRay(r);
+		unsigned int N = 0, d = 0;
+		while (r2.hasHit() && d++ < 10)
+		{
+			DifferentialGeometry dg;
+			BSDFSamplingRecord bRec(dg);
+			r2.getBsdfSample(r, bRec, ERadiance, 0);
+			if (r2.getMat().bsdf.hasComponent(EDelta))
+			{
+				r2.getMat().bsdf.sample(bRec, Vec2f(0));
+				r = Ray(dg.P, bRec.getOutgoing());
+				r2 = k_TraceRay(r);
+			}
+			else
+			{
+				Vec3u idx = map.m_sHash.Transform(dg.P);
+				unsigned int i0 = map.m_sHash.Hash(idx), i = map.m_pDeviceHashGrid[i0];
+				while (i != 0xffffffff && i != 0xffffff)
+				{
+					k_pPpmPhoton e = photonMap.m_pPhotons[i];
+					N++;
+					i = e.getNext();
+				}
+				break;
+			}
+		}
+		atomicMax(&g_uMaxGridCounter, N);
+		I.AddSample(x, y, Spectrum(0, 0, N > scale / 2 ? 1 : 0));//N / scale
+	}
+}
+
+void k_sPpmTracer::visualizeGrid(e_Image* I)
+{
+	I->Clear();
+	ZeroSymbol(g_uMaxGridCounter);
+	int p0 = 16;
+	visGrid << <dim3(w / p0 + 1, h / p0 + 1), dim3(p0, p0) >> >(w, h, *I, m_sMaps, m_uVisLastMax);
+	cudaMemcpyFromSymbol(&m_uVisLastMax, g_uMaxGridCounter, sizeof(unsigned int));
 }

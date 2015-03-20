@@ -17,7 +17,7 @@ CUDA_FUNC_IN Spectrum trace(Ray& r, const Ray& rX, const Ray& rY, CudaRNG& rng)
 		//return Spectrum(dg.dvdx, dg.dvdy, 0);
 		//return Spectrum(math::clamp01(dot(bRec.dg.sys.n, -normalize(r.direction))));
 		Spectrum through = Transmittance(r, 0, r2.m_fDist);
-		Spectrum L = r2.Le(r(r2.m_fDist), bRec.dg.sys, -r.direction);
+		Spectrum L = 0.0f;// r2.Le(r(r2.m_fDist), bRec.dg.sys, -r.direction);
 		//return L + r2.getMat().bsdf.getDiffuseReflectance(bRec);
 		Spectrum f = L + r2.getMat().bsdf.sample(bRec, rng.randomFloat2()) * through;
 		int depth = 0;

@@ -6,7 +6,7 @@
 #define SER_NAME "photonMapBuf.dat"
 
 k_sPpmTracer::k_sPpmTracer()
-	: m_pEntries(0), m_bFinalGather(false)
+	: m_pEntries(0), m_bFinalGather(false), m_bVisualizeGrid(false)
 {
 #ifdef NDEBUG
 	m_uBlocksPerLaunch = 180;
@@ -17,7 +17,7 @@ k_sPpmTracer::k_sPpmTracer()
 	m_bLongRunning = false;
 	unsigned int numPhotons = (m_uBlocksPerLaunch + 2) * PPM_slots_per_block;
 	unsigned int linkedListLength = numPhotons * 10;
-	m_sMaps = k_PhotonMapCollection<true>(numPhotons, LNG*LNG*LNG, linkedListLength);
+	m_sMaps = k_PhotonMapCollection<true, k_pPpmPhoton>(numPhotons, LNG*LNG*LNG, linkedListLength);
 }
 
 void k_sPpmTracer::PrintStatus(std::vector<std::string>& a_Buf) const
@@ -28,6 +28,8 @@ void k_sPpmTracer::PrintStatus(std::vector<std::string>& a_Buf) const
 	a_Buf.push_back(format("Photons/Sec : %f", (float)pCs));
 	a_Buf.push_back(format("Light Visibility : %f", m_fLightVisibility));
 	a_Buf.push_back(format("Photons per pass : %d*100,000", m_sMaps.m_uPhotonBufferLength / 100000));
+	if (m_bVisualizeGrid)
+		a_Buf.push_back(format("Max #Photons per cell : %d", m_uVisLastMax));
 }
 
 void k_sPpmTracer::CreateSliders(SliderCreateCallback a_Callback) const
@@ -89,8 +91,14 @@ void print(k_PhotonMapCollection& m_sMaps, k_PhotonMap<k_HashGrid_Reg>& m_Map, s
 void k_sPpmTracer::DoRender(e_Image* I)
 {
 	doPhotonPass();
+	if (m_uPhotonsEmitted == 0)
+	{
+		//estimatePerPixelRadius();
+	}
 	m_uPhotonsEmitted += m_sMaps.m_uPhotonNumEmitted;
-	k_Tracer<true, true>::DoRender(I);
+	if (m_bVisualizeGrid)
+		visualizeGrid(I);
+	else k_Tracer<true, true>::DoRender(I);
 	m_sMaps.StartNewPass();
 }
 

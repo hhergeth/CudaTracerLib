@@ -28,7 +28,7 @@ enum ESensorFlags
 	EDirectionSampleMapsToPixels = 0x2000
 };
 
-struct e_SensorBase : public e_AbstractEmitter, public e_BaseTypeHelper<5459539>
+struct e_SensorBase : public e_AbstractEmitter//, public e_BaseTypeHelper<5459539>
 {
 public:
 	float aspect;
@@ -96,8 +96,9 @@ public:
 	}
 };
 
-struct e_SphericalCamera : public e_SensorBase, public e_DerivedTypeHelper<1>
+struct e_SphericalCamera : public e_SensorBase//, public e_DerivedTypeHelper<1>
 {
+	TYPE_FUNC(1)
 	e_SphericalCamera()
 	: e_SensorBase(EDeltaPosition | EDirectionSampleMapsToPixels)
 	{}
@@ -176,8 +177,9 @@ struct e_SphericalCamera : public e_SensorBase, public e_DerivedTypeHelper<1>
 	CUDA_DEVICE CUDA_HOST bool getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, Vec2f &samplePosition) const;
 };
 
-struct e_PerspectiveCamera : public e_SensorBase, public e_DerivedTypeHelper<2>
+struct e_PerspectiveCamera : public e_SensorBase//, public e_DerivedTypeHelper<2>
 {
+	TYPE_FUNC(2)
 	Vec3f m_dx, m_dy;
 	float m_normalization;
 	AABB m_imageRect;
@@ -254,8 +256,9 @@ public:
 	CUDA_DEVICE CUDA_HOST bool getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, Vec2f &samplePosition) const;
 };
 
-struct e_ThinLensCamera : public e_SensorBase, public e_DerivedTypeHelper<3>
+struct e_ThinLensCamera : public e_SensorBase//, public e_DerivedTypeHelper<3>
 {
+	TYPE_FUNC(3)
 	Vec3f m_dx, m_dy;
 	float m_aperturePdf;
 	float m_normalization;
@@ -352,8 +355,9 @@ public:
 	}
 };
 
-struct e_OrthographicCamera : public e_SensorBase, public e_DerivedTypeHelper<4>
+struct e_OrthographicCamera : public e_SensorBase//, public e_DerivedTypeHelper<4>
 {
+	TYPE_FUNC(4)
 public:
 	Vec2f screenScale;
 private:
@@ -429,8 +433,9 @@ public:
 	CUDA_DEVICE CUDA_HOST bool getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, Vec2f &samplePosition) const;
 };
 
-struct e_TelecentricCamera : public e_SensorBase, public e_DerivedTypeHelper<5>
+struct e_TelecentricCamera : public e_SensorBase//, public e_DerivedTypeHelper<5>
 {
+	TYPE_FUNC(5)
 public:
 	Vec2f screenScale;
 protected:
@@ -509,9 +514,7 @@ public:
 	}
 };
 
-#define CAM_SIZE Dmax5(sizeof(e_SphericalCamera), sizeof(e_PerspectiveCamera), sizeof(e_ThinLensCamera), sizeof(e_OrthographicCamera), sizeof(e_TelecentricCamera))
-
-struct e_Sensor : public e_AggregateBaseType<e_SensorBase, CAM_SIZE>
+struct e_Sensor : public CudaVirtualAggregate<e_SensorBase, e_SphericalCamera, e_PerspectiveCamera, e_ThinLensCamera, e_OrthographicCamera, e_TelecentricCamera>
 {
 public:
 	//storage for the last viewing frustum, might(!) be computed, don't depend on it

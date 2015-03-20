@@ -231,6 +231,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <CudaCompile Include="Engine\e_AnimatedMesh.cu" />
     <CudaCompile Include="Engine\e_BSDF_Complex.cu" />
     <CudaCompile Include="Engine\e_BSDF_Simple.cu" />
+    <CudaCompile Include="Engine\e_Core.cu" />
     <CudaCompile Include="Engine\e_DifferentialGeometry.cu" />
     <CudaCompile Include="Engine\e_FileTexture.cu" />
     <CudaCompile Include="Engine\e_Image.cu" />

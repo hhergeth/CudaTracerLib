@@ -122,8 +122,8 @@ inline void ComputeTangentSpace(MD5Model* a_Mesh, e_AnimatedVertex** a_Vertices,
 			{
 				Weight &w = a_Mesh->meshes[i]->weights[V.weightIndex + k];
 				Joint &joint = a_Mesh->joints[w.joint];
-				Vec3f r = joint.quat.toMatrix().TransformPoint(*(Vec3f*)&w.pos);
-				pos += (*(Vec3f*)&joint.pos + r) * w.w;
+				Vec3f r = joint.quat.toMatrix().TransformPoint(w.pos);
+				pos += (joint.pos + r) * w.w;
 				av.m_cBoneIndices[k] = (unsigned char)w.joint;
 				av.m_fBoneWeights[k] = (unsigned char)(w.w * 255.0f);
 			}

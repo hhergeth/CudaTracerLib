@@ -1,5 +1,6 @@
 #include "StdAfx.h"
 #include "e_MeshCompiler.h"
+#include "e_AnimatedMesh.h"
 #include <algorithm>
 #include <string>
 #include "..\Base\StringUtils.h"

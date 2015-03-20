@@ -90,9 +90,9 @@ template<bool REGULAR> struct k_HashGrid
 		return (unsigned int(m.x) << 16) | (unsigned int(m.y) << 8) | (unsigned int(m.z));
 	}
 	
-	CUDA_FUNC_IN Vec3f DecodePos(unsigned int p, const uint3& i) const
+	CUDA_FUNC_IN Vec3f DecodePos(unsigned int p, const Vec3u& i) const
 	{
-		const unsigned int q = 0x00ff0000, q2 = 0x0000ff00, q3 = 0x000000ff;
+		unsigned int q = 0x00ff0000, q2 = 0x0000ff00, q3 = 0x000000ff;
 		Vec3f low = Vec3f(i.x, i.y, i.z) / m_vInvSize + m_vMin;
 		Vec3f m = (Vec3f((p & q) >> 16, (p & q2) >> 8, (p & q3)) / 255.0f) * m_vCellSize + low;
 		return m;

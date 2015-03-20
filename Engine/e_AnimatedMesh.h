@@ -63,14 +63,14 @@ struct e_BVHHierarchy
 };
 
 const int g_uMaxWeights = 8;
-struct CUDA_ALIGN(16) e_AnimatedVertex
+struct e_AnimatedVertex
 {
-	CUDA_ALIGN(16) Vec3f m_fVertexPos;
-	CUDA_ALIGN(16) Vec3f m_fNormal;
-	CUDA_ALIGN(16) Vec3f m_fTangent;
-	CUDA_ALIGN(16) Vec3f m_fBitangent;
-	CUDA_ALIGN(16) unsigned char m_cBoneIndices[g_uMaxWeights];
-	CUDA_ALIGN(16) unsigned char m_fBoneWeights[g_uMaxWeights];
+	Vec3f m_fVertexPos;
+	Vec3f m_fNormal;
+	Vec3f m_fTangent;
+	Vec3f m_fBitangent;
+	unsigned char m_cBoneIndices[g_uMaxWeights];
+	unsigned char m_fBoneWeights[g_uMaxWeights];
 	e_AnimatedVertex()
 	{
 		m_fVertexPos = Vec3f(0);
@@ -79,34 +79,25 @@ struct CUDA_ALIGN(16) e_AnimatedVertex
 	}
 };
 
-struct CUDA_ALIGN(16) e_TmpVertex
+struct e_TmpVertex
 {
-	CUDA_ALIGN(16) Vec3f m_fPos;
-	CUDA_ALIGN(16) Vec3f m_fNormal;
-	CUDA_ALIGN(16) Vec3f m_fTangent;
-	CUDA_ALIGN(16) Vec3f m_fBiTangent;
+	Vec3f m_fPos;
+	Vec3f m_fNormal;
+	Vec3f m_fTangent;
+	Vec3f m_fBiTangent;
 };
 
 struct e_Frame
 {
-	//builder info
-	float4x4* m_pMatrices;
-	unsigned int m_uMatrixNum;
-
 	e_StreamReference(char) m_sMatrices;
+	std::vector<float4x4> m_sHostConstructionData;
 
 	e_Frame(){}
 
-	e_Frame(float4x4* mats, int N)
-	{
-		m_pMatrices = mats;
-		m_uMatrixNum = N;
-	}
-
 	void serialize(OutputStream& a_Out)
 	{
-		a_Out << (size_t)m_uMatrixNum;
-		a_Out.Write(m_pMatrices, sizeof(float4x4) * m_uMatrixNum);
+		a_Out << (size_t)m_sHostConstructionData.size();
+		a_Out.Write(&m_sHostConstructionData[0], sizeof(float4x4) * (unsigned int)m_sHostConstructionData.size());
 	}
 
 	void deSerialize(IInStream& a_In, e_Stream<char>* Buf)
@@ -120,33 +111,33 @@ struct e_Frame
 
 struct e_Animation
 {
-	unsigned int m_uNumFrames;
 	unsigned int m_uFrameRate;
-	FixedString<32> m_sName;
+	FixedString<128> m_sName;
 	std::vector<e_Frame> m_pFrames;//host pointer!
 
 	e_Animation(){}
 
 	e_Animation(unsigned int fps, const char* name, std::vector<e_Frame>& frames)
-		: m_uNumFrames((unsigned int)frames.size()), m_uFrameRate(fps), m_sName(name), m_pFrames(frames)
+		: m_uFrameRate(fps), m_sName(name), m_pFrames(frames)
 	{
 	}
 
 	void serialize(OutputStream& a_Out)
 	{
-		a_Out << m_uNumFrames;
+		a_Out << (size_t)m_pFrames.size();
 		a_Out << m_uFrameRate;
-		a_Out.Write(&m_sName);
-		for(unsigned int i = 0; i < m_uNumFrames; i++)
+		a_Out.Write(m_sName);
+		for (unsigned int i = 0; i < m_pFrames.size(); i++)
 			m_pFrames[i].serialize(a_Out);
 	}
 
 	void deSerialize(IInStream& a_In, e_Stream<char>* Buf)
 	{
+		size_t m_uNumFrames;
 		a_In >> m_uNumFrames;
 		a_In >> m_uFrameRate;
-		a_In.Read(&m_sName, sizeof(m_sName));
-		for(unsigned int i = 0; i < m_uNumFrames; i++)
+		a_In.Read(m_sName);
+		for (unsigned int i = 0; i < m_uNumFrames; i++)
 		{
 			m_pFrames.push_back(e_Frame());
 			m_pFrames[i].deSerialize(a_In, Buf);
@@ -180,7 +171,7 @@ public:
 		if(a_lerp)
 			*a_lerp = math::frac(a);
 		if(a_FrameIndex)
-			*a_FrameIndex = unsigned int(a) % m_pAnimations[a_Anim].m_uNumFrames;
+			*a_FrameIndex = unsigned int(a) % m_pAnimations[a_Anim].m_pFrames.size();
 	}
 	unsigned int numAntimations()
 	{

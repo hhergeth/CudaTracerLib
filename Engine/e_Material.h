@@ -25,7 +25,7 @@ public:
 	struct mpHlp
 	{
 		int used;
-		e_KernelTexture tex;
+		e_Texture tex;
 		mpHlp()
 			: used(0)
 		{
@@ -59,7 +59,7 @@ public:
 			AlphaMap.tex.LoadTextures(callback);
 		bsdf.LoadTextures(callback);
 	}
-	void SetNormalMap(const e_KernelTexture& tex)
+	void SetNormalMap(const e_Texture& tex)
 	{
 		if(HeightMap.used)
 			throw 1;
@@ -68,9 +68,9 @@ public:
 	}
 	void SetNormalMap(const char* path)
 	{
-		SetNormalMap(CreateTexture(path, Spectrum(0.0f)));
+		SetNormalMap(CreateTexture(path));
 	}
-	void SetHeightMap(const e_KernelTexture& tex)
+	void SetHeightMap(const e_Texture& tex)
 	{
 		if(NormalMap.used)
 			throw 1;
@@ -79,9 +79,9 @@ public:
 	}
 	void SetHeightMap(const char* path)
 	{
-		SetHeightMap(CreateTexture(path, Spectrum(0.0f)));
+		SetHeightMap(CreateTexture(path));
 	}
-	void SetAlphaMap(const e_KernelTexture& tex)
+	void SetAlphaMap(const e_Texture& tex)
 	{
 		if(AlphaMap.used)
 			throw 1;
@@ -90,7 +90,7 @@ public:
 	}
 	void SetAlphaMap(const char* path)
 	{
-		SetAlphaMap(CreateTexture(path, Spectrum(0.0f)));
+		SetAlphaMap(CreateTexture(path));
 	}
 	void setBssrdf(const Spectrum& sig_a, const Spectrum& sigp_s, float e);
 };

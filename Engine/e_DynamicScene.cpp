@@ -5,6 +5,7 @@
 #include <string>
 #include "e_Terrain.h"
 #include "..\Base\StringUtils.h"
+#include "e_AnimatedMesh.h"
 
 struct textureLoader
 {
@@ -72,12 +73,9 @@ e_DynamicScene::e_DynamicScene(e_Sensor* C, e_SceneInitData a_Data, const char* 
 	m_pLightStream = LL<e_KernelLight>(a_Data.m_uNumLights);
 	m_pVolumes = LL<e_VolumeRegion>(128);
 	m_pBVH = new e_SceneBVH(a_Data.m_uNumNodes);
-	if(a_Data.m_uSizeAnimStream > 1024)
+	//if(a_Data.m_uSizeAnimStream > 1024)
 		CUDA_MALLOC(&m_pDeviceTmpFloats, sizeof(e_TmpVertex) * (1 << 16));
 	m_pTerrain = new e_Terrain(1, Vec2f(0,0), Vec2f(0,0));
-	unsigned int a = this->getCudaBufferSize() / (1024 * 1024);
-	//if(a > 900 * 1024 * 1024)
-	//	throw 1;
 }
 
 void e_DynamicScene::Free()
@@ -588,4 +586,19 @@ e_SceneBVH* e_DynamicScene::getSceneBVH()
 		m_pBVH->Build(m_pNodeStream->UsedElements(), m_pMeshBuffer->UsedElements());
 	}
 	return m_pBVH;
+}
+
+unsigned int e_DynamicScene::getTriangleCount()
+{
+	unsigned int r = 0;
+	for (unsigned int i = 0; i < m_pNodeStream->NumUsedElements(); i++)
+		r += getMesh(m_pNodeStream[0](i))->getTriangleCount();
+	return r;
+}
+
+e_AnimatedMesh* e_DynamicScene::AccessAnimatedMesh(e_StreamReference(e_Node) n)
+{
+	e_BufferReference<e_Mesh, e_KernelMesh> m = getMesh(n);
+	e_AnimatedMesh* m2 = (e_AnimatedMesh*)m.operator->();
+	return m2;
 }

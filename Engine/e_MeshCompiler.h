@@ -2,7 +2,6 @@
 
 #include "..\Base\FileStream.h"
 #include <vector>
-#include "e_AnimatedMesh.h"
 
 //ugly
 void compileply(IInStream& in, OutputStream& a_Out);

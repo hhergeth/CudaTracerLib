@@ -45,7 +45,7 @@ enum
 class k_sPpmTracer : public k_Tracer<true, true>
 {
 private:
-	k_PhotonMapCollection<true> m_sMaps;
+	k_PhotonMapCollection<true, k_pPpmPhoton> m_sMaps;
 	bool m_bDirect;
 	float m_fLightVisibility;
 
@@ -59,6 +59,8 @@ private:
 	k_AdaptiveEntry* m_pEntries;
 	float r_min, r_max;
 public:
+	bool m_bVisualizeGrid;
+	unsigned int m_uVisLastMax;
 	bool m_bFinalGather;
 	k_sPpmTracer();
 	virtual ~k_sPpmTracer()
@@ -69,6 +71,14 @@ public:
 	virtual void Debug(e_Image* I, const Vec2i& pixel, ITracerDebugger* debugger = 0);
 	virtual void PrintStatus(std::vector<std::string>& a_Buf) const;
 	virtual void CreateSliders(SliderCreateCallback a_Callback) const;
+	CUDA_FUNC_IN static float getCurrentRadius(float initial_r, unsigned int iteration, float exp)
+	{
+		return math::pow(math::pow(initial_r, exp) / math::pow(float(iteration), 0.5f * (1 - ALPHA)), 1.0f / exp);
+	}
+	float getCurrentRadius2(float exp)
+	{
+		return getCurrentRadius(m_fInitialRadius, m_uPassesDone, exp);
+	}
 protected:
 	virtual void DoRender(e_Image* I);
 	virtual void StartNewTrace(e_Image* I);
@@ -76,4 +86,6 @@ protected:
 private:
 	void doPhotonPass();
 	void doStartPass(float r, float rd);
+	void estimatePerPixelRadius();
+	void visualizeGrid(e_Image* I);
 };

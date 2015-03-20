@@ -674,7 +674,7 @@ void BVHBuilder::BuildBVH(IBVHBuilderCallback* clb, const BVHBuilder::Platform& 
 		clb->HandleStartNode(sNode);
 		B.Free();
 		double tSec = T.EndTimer();
-		std::cout << "BVH Construction of " << N << " objects took " << tSec << " seconds\n";
+		//std::cout << "BVH Construction of " << N << " objects took " << tSec << " seconds\n";
 	}
 	else
 	{

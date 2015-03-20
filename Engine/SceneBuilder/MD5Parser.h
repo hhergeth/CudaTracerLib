@@ -20,13 +20,13 @@ enum TOKEN { TOKEN_KEYWORD,
   public:
     int weightIndex;
     int weightCount;
-    float tc[2];
+    Vec2f tc;
   };
   
   class Joint {
   public:
     std::string name;
-    float pos[3];
+    Vec3f pos;
     Quaternion quat;
     int parent;
     std::vector<int> children;
@@ -41,7 +41,7 @@ enum TOKEN { TOKEN_KEYWORD,
   public:
     int joint;
     float w;
-    float pos[3];
+	Vec3f pos;
   };
   
   class Mesh {
@@ -56,8 +56,8 @@ enum TOKEN { TOKEN_KEYWORD,
   public:
     std::vector<float> animatedComponents;
     std::vector<Joint> joints;
-    float min[3]; // min point of bounding box
-    float max[3]; // max point of bounding box
+    Vec3f min; // min point of bounding box
+    Vec3f max; // max point of bounding box
   };
   
   class JointInfo {

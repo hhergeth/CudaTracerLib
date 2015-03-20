@@ -4,6 +4,7 @@
 #include <sstream>      // std::istringstream
 #include <string>       // std::string
 #include <iomanip>
+#include <algorithm>
 #include <cmath>
 
 #ifndef CUDA_FUNC_IN
