@@ -9,6 +9,11 @@
 
 typedef void (*SliderCreateCallback)(float, float, bool, float*, std::string);
 
+CUDA_FUNC_IN float CalcZBufferDepth(float n, float f, float z)
+{
+	return (f / (f - n) * z - f * n / (f - n)) / z;
+}
+
 class ITracerDebugger
 {
 public:

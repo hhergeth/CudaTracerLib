@@ -6,9 +6,7 @@
 #define FREEIMAGE_LIB
 #include <FreeImage.h>
 
-#include "e_Material.h"
-
-
+#include "e_FileTexture.h"
 
 void InitializeCuda4Tracer(const char* dataPath)
 {

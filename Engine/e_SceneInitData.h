@@ -45,8 +45,6 @@ struct e_SceneInitData
 		return r;
 	}
 
-	static e_SceneInitData CreateFor_S_SanMiguel(unsigned int a_SceneNodes = 16, unsigned int a_Lights = 16);
-
 	e_SceneInitData e_SceneInitData::operator*=(unsigned int s)
 	{
 		e_SceneInitData r = *this;

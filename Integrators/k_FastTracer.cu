@@ -2,6 +2,8 @@
 #include "..\Kernel\k_TraceHelper.h"
 #include "..\Kernel\k_TraceAlgorithms.h"
 
+CUDA_DEVICE e_Image g_DepthImage;
+
 CUDA_DEVICE int g_NextRayCounterFT;
 __global__ void pathCreateKernel(unsigned int w, unsigned int h, k_PTDBuffer g_Intersector)
 {
@@ -42,7 +44,7 @@ __global__ void pathCreateKernel(unsigned int w, unsigned int h, k_PTDBuffer g_I
 	} while (true);
 }
 
-__global__ void doDirectKernel(unsigned int w, unsigned int h, k_PTDBuffer g_Intersector, e_Image I, float SCALE)
+__global__ void doDirectKernel(unsigned int w, unsigned int h, k_PTDBuffer g_Intersector, e_Image I, float SCALE, bool depthImage)
 { 
 	int rayidx;
 	__shared__ volatile int nextRayArray[MaxBlockHeight];
@@ -70,6 +72,7 @@ __global__ void doDirectKernel(unsigned int w, unsigned int h, k_PTDBuffer g_Int
 		RGBCOL col;
 		col.x = col.w = 255;
 		col.y = col.z = 0;
+		float d = 1.0f;
 		if (res.dist)
 		{
 			//tar[rayidx] = Spectrum(a_ResBuffer[rayidx].m_fDist/SCALE).toRGBCOL();
@@ -77,10 +80,13 @@ __global__ void doDirectKernel(unsigned int w, unsigned int h, k_PTDBuffer g_Int
 			unsigned char c = (unsigned char)f;
 			unsigned int i = (255 << 24) | (c << 16) | (c << 8) | c;
 			col = *(RGBCOL*)&i;
+			d = CalcZBufferDepth(g_SceneData.m_Camera.As()->m_fNearFarDepths.x, g_SceneData.m_Camera.As()->m_fNearFarDepths.y, res.dist);
 		}
 		Spectrum s;
 		s.fromRGBCOL(col);
 		I.AddSample(rayidx % w, rayidx / w, s);
+		if (depthImage)
+			g_DepthImage.SetSample(rayidx % w, rayidx / w, *(RGBCOL*)&d);
 	} while (true);
 }
 
@@ -95,7 +101,7 @@ __device__ CUDA_INLINE Vec2f stratifiedSample(const Vec2f& f, int pass)
 #define max_PASS 7
 CUDA_DEVICE k_PTDBuffer g_Intersector;
 CUDA_DEVICE k_PTDBuffer g_Intersector2;
-__global__ void pathIterateKernel(unsigned int N, e_Image I, int pass, int iterationIdx)//template
+__global__ void pathIterateKernel(unsigned int N, e_Image I, int pass, int iterationIdx, bool depthImage)//template
 {
 	CudaRNG rng = g_RNGData();
 	int rayidx;
@@ -120,7 +126,6 @@ __global__ void pathIterateKernel(unsigned int N, e_Image I, int pass, int itera
 				break;
 		}
 
-
 		rayData dat = g_Intersector(rayidx);
 		if (pass > 0 && dat.dIdx != 0xffffffff)
 		{
@@ -132,6 +137,15 @@ __global__ void pathIterateKernel(unsigned int N, e_Image I, int pass, int itera
 
 		traversalResult& res = g_Intersector.res(rayidx, 0);
 		traversalRay& ray = g_Intersector(rayidx, 0);
+
+		if (pass == 0)
+		{
+			float d = 1;
+			if (res.dist)
+				d = CalcZBufferDepth(g_SceneData.m_Camera.As()->m_fNearFarDepths.x, g_SceneData.m_Camera.As()->m_fNearFarDepths.y, res.dist);
+			if (depthImage)
+				g_DepthImage.SetSample(dat.x, dat.y, *(RGBCOL*)&d);
+		}
 
 		if (res.dist)
 		{
@@ -202,7 +216,7 @@ void k_FastTracer::doDirect(e_Image* I)
 
 	I->Clear();
 	cudaMemcpyToSymbol(g_NextRayCounterFT, &zero, sizeof(zero));
-	doDirectKernel << < dim3(180, 1, 1), dim3(32, 6, 1) >> >(w, h, *buf, *I, scl);
+	doDirectKernel << < dim3(180, 1, 1), dim3(32, 6, 1) >> >(w, h, *buf, *I, scl, depthImage ? 1 : 0);
 }
 
 void k_FastTracer::doPath(e_Image* I)
@@ -220,7 +234,7 @@ void k_FastTracer::doPath(e_Image* I)
 		cudaMemcpyToSymbol(g_Intersector, srcBuf, sizeof(*srcBuf));
 		cudaMemcpyToSymbol(g_Intersector2, destBuf, sizeof(*destBuf));
 		cudaMemcpyToSymbol(g_NextRayCounterFT, &zero, sizeof(zero));
-		pathIterateKernel << < dim3(180, 1, 1), dim3(32, 6, 1) >> >(srcBuf->getNumRays(0), *I, pass, m_uPassesDone);
+		pathIterateKernel << < dim3(180, 1, 1), dim3(32, 6, 1) >> >(srcBuf->getNumRays(0), *I, pass, m_uPassesDone, depthImage ? 1 : 0);
 		cudaMemcpyFromSymbol(srcBuf, g_Intersector, sizeof(*srcBuf));
 		cudaMemcpyFromSymbol(destBuf, g_Intersector2, sizeof(*destBuf));
 		swapk(srcBuf, destBuf);
@@ -230,7 +244,14 @@ void k_FastTracer::doPath(e_Image* I)
 
 void k_FastTracer::DoRender(e_Image* I)
 {
+	if (depthImage)
+	{
+		cudaMemcpyToSymbol(g_DepthImage, depthImage, sizeof(e_Image));
+		depthImage->StartRendering();
+	}	
 	if (pathTracer)
 		doPath(I);
 	else doDirect(I);
+	if (depthImage)
+		depthImage->EndRendering();
 }

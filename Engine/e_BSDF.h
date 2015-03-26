@@ -87,7 +87,6 @@ struct BSDF : public e_BaseType//, public e_BaseTypeHelper<4608834>
 		std::vector<e_Texture*> T = getTextureList();
 		for (size_t i = 0; i < T.size(); i++)
 			T[i]->LoadTextures(clb);
-		Update();
 	}
 };
 

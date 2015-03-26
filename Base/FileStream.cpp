@@ -41,7 +41,7 @@ InputStream::InputStream(const char* a_Name)
 			(LPTSTR) &lpMsgBuf,
 			0, NULL );
 		std::cout << (LPTSTR)lpMsgBuf << "\n";
-		throw 1;
+		throw std::runtime_error((LPTSTR)lpMsgBuf);
 	}
 	DWORD h;
 	DWORD l = GetFileSize(H, &h);
@@ -58,7 +58,7 @@ void InputStream::Read(void* a_Data, unsigned int a_Size)
 	DWORD a;
 	BOOL b = ReadFile(H, a_Data, a_Size, &a, 0);
 	if(!b || a != a_Size)
-		throw 1;
+		throw std::runtime_error("Impossible to read from file!");
 	numBytesRead += a_Size;
 }
 
@@ -66,7 +66,7 @@ void InputStream::Move(int off)
 {
 	DWORD r = SetFilePointer(H, off, 0, FILE_CURRENT);
 	if(r == INVALID_SET_FILE_POINTER)
-		throw 1;
+		throw std::runtime_error("Impossible to skip in file!");
 	numBytesRead += off;
 }
 
@@ -105,7 +105,7 @@ MemInputStream::MemInputStream(const char* a_Name)
 void MemInputStream::Read(void* a_Data, unsigned int a_Size)
 {
 	if(a_Size + numBytesRead > m_uFileSize)
-		throw 1;
+		throw std::runtime_error("Stream not long enough!");
 	memcpy(a_Data, buf + numBytesRead, a_Size);
 	numBytesRead += a_Size;
 }
@@ -189,12 +189,12 @@ void SetTimeStamp(const char* filename, unsigned long long val)
 {
 	HANDLE Handle = CreateFile(filename, GENERIC_WRITE, FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
 	if(Handle == INVALID_HANDLE_VALUE)
-		throw 1;
+		throw std::runtime_error("Invalid handle!");
 	FILETIME f;
 	f.dwHighDateTime = val >> 32;
 	f.dwLowDateTime = val & 0xffffffff;
 	if(!SetFileTime(Handle, &f, &f, &f))
-		throw 1;
+		throw std::runtime_error("Setting time stamp failed!");
 	CloseHandle(Handle);
 }
 
@@ -209,7 +209,7 @@ void OutputStream::_Write(const void* data, unsigned int size)
 	DWORD a;
 	BOOL b = WriteFile(H, data, size, &a, 0);
 	if(!b || a != size)
-		throw 1;
+		throw std::runtime_error("Writing to file failed!");
 	numBytesWrote += size;
 }
 

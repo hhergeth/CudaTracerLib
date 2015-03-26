@@ -30,21 +30,9 @@ struct matUpdater
 	void operator()(e_StreamReference(e_KernelMaterial) m)
 	{
 		m->LoadTextures(textureLoader(S));
-		//m->bsdf.As()->Update();
+		m->bsdf.As()->Update();
 	}
 };
-
-e_SceneInitData e_SceneInitData::CreateFor_S_SanMiguel(unsigned int a_SceneNodes, unsigned int a_Lights)
-{
-	int i = 4;
-	e_SceneInitData r = CreateForSpecificMesh(1200000*i, 1200000*i, 1200000*i, 1200000*i, 4096 * 5, a_Lights, a_SceneNodes, a_SceneNodes / 2);
-	//e_SceneInitData r = CreateForSpecificMesh(7880512, 9359209, 2341126, 28077626, 4096 * 5, a_Lights, a_SceneNodes);//san miguel
-	//e_SceneInitData r = CreateForSpecificMesh(1,1,1,1,1,1,1);
-	return CreateForSpecificMesh(100000, 100000, 100000, 1500000, 255, a_Lights, a_SceneNodes, a_SceneNodes / 2);
-	//r.m_uSizeAnimStream = 16 * 1024 * 1024;
-	r.m_uSizeAnimStream = 1;
-	return r;
-}
 
 template<typename T> e_Stream<T>* LL(int i)
 {
@@ -56,7 +44,6 @@ template<typename T> e_Stream<T>* LL(int i)
 e_DynamicScene::e_DynamicScene(e_Sensor* C, e_SceneInitData a_Data, const char* texPath, const char* cmpPath, const char* dataPath)
 	: m_uEnvMapIndex(0xffffffff), m_pCamera(C)
 {
-	instanciatedMaterials = false;
 	m_pCompilePath = cmpPath;
 	m_pTexturePath = texPath;
 	int nodeC = 1 << 16, tCount = 1 << 16;
@@ -148,8 +135,6 @@ e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_Token, IInStr
 	}
 	e_StreamReference(e_Node) N = m_pNodeStream->malloc(1);
 	e_StreamReference(e_KernelMaterial) m2 = M->m_sMatInfo;
-	if(instanciatedMaterials && m_pMaterialBuffer->NumUsedElements() + M->m_sMatInfo.getLength() < m_pMaterialBuffer->getLength() - 1)
-		m2 = m_pMaterialBuffer->malloc(M->m_sMatInfo);
 	m2.Invalidate();
 	new(N.operator->()) e_Node(M.getIndex(), M.operator->(), token.c_str(), m2);
 	unsigned int li[MAX_AREALIGHT_NUM];
@@ -343,6 +328,19 @@ void e_DynamicScene::setTerrain(e_Terrain* T)
 {
 	delete m_pTerrain;
 	m_pTerrain = T;
+}
+
+void e_DynamicScene::instanciateNodeMaterials(e_StreamReference(e_Node) n)
+{
+	auto M = getMesh(n);
+	//if (m_pMaterialBuffer->NumUsedElements() + M->m_sMatInfo.getLength() < m_pMaterialBuffer->getLength() - 1)
+	{
+		e_StreamReference(e_KernelMaterial) m2 = m_pMaterialBuffer->malloc(M->m_sMatInfo);
+		m2.Invalidate();
+		n->m_uMaterialOffset = m2.getIndex();
+		n->m_uInstanciatedMaterial = true;
+		n.Invalidate();
+	}
 }
 
 unsigned int e_DynamicScene::getCudaBufferSize()

@@ -108,6 +108,7 @@ public:
 		o.Close();
 	}
 	static void CreateSphericalSkydomeTexture(const char* front, const char* back, const char* left, const char* right, const char* top, const char* bottom, const char* outFile);
+	static void CreateRelaxedConeMap(const char* a_InputFile, OutputStream& Out);
 	e_KernelMIPMap getKernelData();
 	unsigned int getNumMips()
 	{

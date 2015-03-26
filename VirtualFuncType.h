@@ -309,12 +309,27 @@ private:
 	{
 		return T::Type() == CLASS::TYPEID();
 	}
-
 	template<typename T, typename CLASS, typename CLASS2, typename... REST> CUDA_FUNC_IN bool isDerived() const
 	{
 		if (T::Type() == CLASS::TYPEID())
 			return true;
 		else return isDerived<T, CLASS2, REST...>();
+	}
+
+	template<typename CLASS> void SetVtable()
+	{
+		if (type == CLASS::TYPEID())
+		{
+			CLASS obj;
+			uintptr_t* vftable = (uintptr_t*)&obj;
+			uintptr_t* vftable_tar = (uintptr_t*)data;
+			*vftable_tar = *vftable;
+		}
+	}
+	template<typename CLASS, typename CLASS2, typename... REST> void SetVtable()
+	{
+		SetVtable<CLASS>();//do the work
+		SetVtable<CLASS2, REST...>();
 	}
 protected:
 	template<typename Functor> CUDA_FUNC_IN void Call(Functor& f) const
@@ -346,6 +361,11 @@ public:
 	template<typename SpecializedType>  CUDA_FUNC_IN bool IsBase() const
 	{
 		return isDerived<SpecializedType, Types...>();
+	}
+
+	void SetVtable()
+	{
+		SetVtable<Types...>();
 	}
 };
 

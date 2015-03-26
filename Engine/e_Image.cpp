@@ -115,6 +115,8 @@ void e_Image::WriteDisplayImage(const char* fileName)
 	}
 	delete [] colData;
 	bool b = FreeImage_Save(ff, bitmap, fileName);
+	if (!b)
+		throw std::runtime_error("Failed saving Screenshot!");
 	FreeImage_Unload(bitmap);
 }
 

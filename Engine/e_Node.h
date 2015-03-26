@@ -11,10 +11,11 @@ class e_Node
 public:
 	unsigned int m_uMeshIndex;
 	unsigned int m_uMaterialOffset;
+	unsigned int m_uInstanciatedMaterial;
 	unsigned int m_uLightIndices[MAX_AREALIGHT_NUM];
 #ifdef _DEBUG
 public:
-	char m_cFile[256];
+	FixedString<64> m_FilePath;
 #endif
 public:
 	e_Node() {}

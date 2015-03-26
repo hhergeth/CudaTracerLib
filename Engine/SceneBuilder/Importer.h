@@ -62,14 +62,14 @@ namespace bvh_helper
 		{
 			*index = nodeIndex++ * 4;
 			if(nodeIndex > L0)
-				throw 1;
+				throw std::runtime_error("Not enough space for nodes!");
 			return nodes + *index / 4;
 		}
 		virtual unsigned int handleLeafObjects(unsigned int pNode)
 		{
 			unsigned int c = triIndex++;
 			if(triIndex > L1)
-				throw 1;
+				throw std::runtime_error("Not enough space for leafes!");
 			indices[c].setIndex(pNode);
 			tris[c].setData(V[_index(pNode, 0)], V[_index(pNode, 1)], V[_index(pNode, 2)]);
 			indices[c].setFlag(false);

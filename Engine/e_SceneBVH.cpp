@@ -2,6 +2,7 @@
 #include "e_SceneBVH.h"
 #include "e_Mesh.h"
 #include "e_Node.h"
+#include "SceneBuilder/SplitBVHBuilder.hpp"
 
 void e_SceneBVH::Build(e_StreamReference(e_Node) a_Nodes, e_BufferReference<e_Mesh, e_KernelMesh> a_Meshes)
 {
@@ -47,6 +48,7 @@ void e_SceneBVH::Build(e_StreamReference(e_Node) a_Nodes, e_BufferReference<e_Me
 		BVHBuilder::Platform Pq;
 		Pq.m_maxLeafSize = 1;
 		BVHBuilder::BuildBVH(&b, Pq);
+		//SplitBVHBuilder bu(&b, Pq, BVHBuilder::BuildParams()); bu.run();
 	}
 	m_pNodes->Invalidate();
 	m_pNodes->UpdateInvalidated();

@@ -20,6 +20,24 @@ struct imgData
 	}
 };
 
+inline void resize(imgData* d)
+{
+	int w = math::RoundUpPow2(d->w), h = math::RoundUpPow2(d->h);
+	if (w == d->w && h == d->h)
+		return;
+	int* data = (int*)malloc(w * h * 4);
+	for (int x = 0; x < w; x++)
+		for (int y = 0; y < h; y++)
+		{
+			float x2 = float(d->w) * float(x) / float(w), y2 = float(d->h) * float(y) / float(h);
+			data[y * w + x] = ((int*)d->data)[int(y2) * d->w + int(x2)];
+		}
+	free(d->data);
+	d->data = data;
+	d->w = w;
+	d->h = h;
+}
+
 inline bool parseImage(const char* a_InputFile, imgData* data)
 {
 	FREE_IMAGE_FORMAT fif = FreeImage_GetFileType(a_InputFile, 0);

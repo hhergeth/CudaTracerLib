@@ -174,7 +174,7 @@ public:
 		{
 			for(int j = 0; j < 3; j++)
 				if(sortedBuffers[j][entries[i].indices[j]] != i)
-					throw 1;
+					throw std::runtime_error("Invalid BVH configuration!");
 		}
 	}
 

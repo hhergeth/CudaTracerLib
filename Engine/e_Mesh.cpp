@@ -26,8 +26,8 @@ e_Mesh::e_Mesh(IInStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_Str
 	a_In >> m_uMaterialCount;
 	m_sMatInfo = a_Stream4->malloc(m_uMaterialCount);
 	a_In.Read(m_sMatInfo(0), m_sMatInfo.getSizeInBytes());
-	//e_KernelMaterial*m = m_sMatInfo(4).operator e_KernelMaterial *();
-//	std::cout << ((CudaVirtualAggregate<e_BaseType, e_BaseType>*)&m->bsdf)->getTypeToken() << "\n";
+	for (unsigned int i = 0; i < m_uMaterialCount; i++)
+		m_sMatInfo(i)->bsdf.SetVtable();
 	m_sMatInfo.Invalidate();
 
 	unsigned long long m_uNodeSize;

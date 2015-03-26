@@ -3,11 +3,11 @@
 #include "e_Mesh.h"
 
 e_Node::e_Node(unsigned int MeshIndex, e_Mesh* mesh, const char* file, e_StreamReference(e_KernelMaterial) mat)
+	: m_uInstanciatedMaterial(false)
 {
 	m_uMeshIndex = MeshIndex;
 #ifdef _DEBUG
-	Platform::SetMemory(m_cFile, sizeof(m_cFile));
-	strcpy(m_cFile, file);
+	m_FilePath = file;
 #endif
 	m_uMaterialOffset = mat.getIndex();
 	for (unsigned int i = 0; i< mesh->m_sMatInfo.getLength(); i++)

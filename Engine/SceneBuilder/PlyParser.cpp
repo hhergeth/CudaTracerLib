@@ -70,7 +70,7 @@ struct varReader
 			*fres = (float)std::atof(el.c_str());
 			break;
 		default:
-			throw 1;
+			throw std::runtime_error("Invalid ply type!");
 		}
 	}
 	void read(void* buf, format_type format, unsigned int* ures, float* fres)
@@ -93,7 +93,7 @@ struct varReader
 			*fres = float_as_int_(_byteswap_uint64((unsigned int)*(double*)buf));
 			break;
 		default:
-			throw 1;
+			throw std::runtime_error("Invalid ply type!");
 		}
 	}
 };

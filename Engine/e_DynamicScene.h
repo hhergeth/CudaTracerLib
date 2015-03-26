@@ -43,7 +43,6 @@ public:
 	e_MeshCompilerManager m_sCmpManager;
 	e_Sensor* m_pCamera;
 	unsigned int m_uEnvMapIndex;
-	bool instanciatedMaterials;
 public:
 	e_DynamicScene(e_Sensor* C, e_SceneInitData a_Data, const char* texPath, const char* cmpPath, const char* dataPath);
 	~e_DynamicScene();
@@ -56,10 +55,6 @@ public:
 	e_BufferReference<e_MIPMap, e_KernelMIPMap> LoadTexture(const char* file, bool a_MipMap);
 	void UnLoadTexture(e_BufferReference<e_MIPMap, e_KernelMIPMap> ref);
 	void ReloadTextures();
-	float4x4 GetNodeTransform(unsigned int i)
-	{
-		return GetNodeTransform(getNodes()(i));
-	}
 	float4x4 GetNodeTransform(e_StreamReference(e_Node) n)
 	{
 		if (n.getIndex() >= m_pNodeStream->getLength())
@@ -67,14 +62,6 @@ public:
 		return *m_pBVH->m_pTransforms[0](n.getIndex());
 	}
 	void SetNodeTransform(const float4x4& mat, e_StreamReference(e_Node) n);
-	void TransformNode(const float4x4& mat, e_StreamReference(e_Node) n)
-	{
-		SetNodeTransform(mat % GetNodeTransform(n), n);
-	}
-	void MoveNode(const Vec3f& p, e_StreamReference(e_Node) n)
-	{
-		TransformNode(float4x4::Translate(p), n);
-	}
 	template<typename MAT> void setMat(e_StreamReference(e_Node) N, unsigned int mi, MAT& m)
 	{
 		m_pMaterialBuffer->operator()(N->m_uMaterialOffset + mi)->bsdf.SetData(m);
@@ -161,4 +148,5 @@ public:
 	{
 		return m_pLightStream->operator()(n->m_uLightIndices[i], 1);
 	}
+	void instanciateNodeMaterials(e_StreamReference(e_Node) n);
 };

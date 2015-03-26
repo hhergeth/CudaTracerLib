@@ -334,6 +334,21 @@ protected:
 			return true;
 		else return isDerived<T, CLASS2, REST...>();
 	}
+	template<typename CLASS> void SetVtable()
+	{
+		if (type == CLASS::TYPE())
+		{
+			CLASS obj;
+			uintptr_t* vftable = (uintptr_t*)&obj;
+			uintptr_t* vftable_tar = (uintptr_t*)Data;
+			*vftable_tar = *vftable;
+		}
+	}
+	template<typename CLASS, typename CLASS2, typename... REST> void SetVtable()
+	{
+		SetVtable<CLASS>();//do the work
+		SetVtable<CLASS2, REST...>();
+	}
 public:
 	template<typename SpecializedType> CUDA_FUNC_IN SpecializedType* As() const
 	{
@@ -369,6 +384,11 @@ public:
 	void setTypeToken(unsigned int t)
 	{
 		type = t;
+	}
+
+	void SetVtable()
+	{
+		SetVtable<Types...>();
 	}
 };
 

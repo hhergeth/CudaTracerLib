@@ -32,7 +32,7 @@ public:
 		}
 	};
 	e_KernelBSSRDF bssrdf;
-	FixedString<32> Name;
+	FixedString<64> Name;
 	unsigned int NodeLightIndex;
 	float HeightScale;
 	float m_fAlphaThreshold;

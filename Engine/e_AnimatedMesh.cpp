@@ -80,17 +80,19 @@ void e_AnimatedMesh::CompileToBinary(const char* a_InputFile, std::vector<std::s
 	ComputeTangentSpace(&M, &v_Data, &v_Pos, &vCount);
 	e_MeshPartLight m_sLights[MAX_AREALIGHT_NUM];
 	unsigned int lc = 0;
+
+	diffuse stdMaterial;
+	stdMaterial.m_reflectance = CreateTexture(Spectrum(1, 0, 0));
+
 	for(int s = 0; s < M.meshes.size(); s++)
 	{
-		e_KernelMaterial mat;
+		Mesh* sm = M.meshes[s];
+
+		e_KernelMaterial mat(sm->texture.c_str());
 		mat.NodeLightIndex = -1;
-		diffuse ma;
-		ma.m_reflectance = CreateTexture("hellknight.tga");
-		mat.bsdf.SetData(ma);
-		//mat.NormalMap = e_Sampler<float3>("n_hellknight.tga", 1);
+		mat.bsdf.SetData(stdMaterial);
 		matData.push_back(mat);
 
-		Mesh* sm = M.meshes[s];
 		size_t st = triData2.size();
 
 		for(int t = 0; t < sm->tris.size(); t++)

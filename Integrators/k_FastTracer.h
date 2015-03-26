@@ -110,10 +110,10 @@ typedef k_RayBuffer<rayData, 2> k_PTDBuffer;
 
 class k_FastTracer : public k_Tracer<false, true>
 {
-	bool pathTracer;
 public:
+	bool pathTracer;
 	k_FastTracer(bool doPT = false)
-		: bufA(0), bufB(0), pathTracer(doPT)
+		: bufA(0), bufB(0), pathTracer(doPT), depthImage(0)
 	{
 		
 	}
@@ -132,10 +132,15 @@ public:
 		bufB = new k_PTDBuffer(w * h);
 		ThrowCudaErrors();
 	}
+	void setDethImage(e_Image* img)
+	{
+		depthImage = img;
+	}
 protected:
 	virtual void DoRender(e_Image* I);
 private:
 	k_PTDBuffer* bufA, *bufB;
+	e_Image* depthImage;
 	void doDirect(e_Image* I);
 	void doPath(e_Image* I);
 };

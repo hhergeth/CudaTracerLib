@@ -140,11 +140,7 @@ __global__ void depthKernel(e_Image I)
 		TraceResult r2 = k_TraceRay(r);
 		float d = 1.0f;
 		if (r2.hasHit())
-		{
-			float n = g_SceneData.m_Camera.As()->m_fNearFarDepths.x,
-				  f = g_SceneData.m_Camera.As()->m_fNearFarDepths.y;
-			d = (f / (f - n) * r2.m_fDist - f * n / (f - n)) / r2.m_fDist;
-		}
+			d = CalcZBufferDepth(g_SceneData.m_Camera.As()->m_fNearFarDepths.x, g_SceneData.m_Camera.As()->m_fNearFarDepths.y, r2.m_fDist);
 		I.SetSample(x, y, *(RGBCOL*)&d);
 	}
 }
