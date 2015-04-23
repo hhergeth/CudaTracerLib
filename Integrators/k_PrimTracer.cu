@@ -128,8 +128,8 @@ CUDA_FUNC_IN Spectrum traceS(Ray& r, CudaRNG& rng)
 texture<float2, 2, cudaReadModeElementType> t_ConeMap;
 __device__ Spectrum traceTerrain(Ray& r, CudaRNG& rng)
 {
-	const int cone_steps = 256;
-	const int binary_steps = 6;
+	const int cone_steps = 1024;
+	const int binary_steps = 32;
 
 	AABB box(Vec3f(0), Vec3f(1));
 	float t_min, t_max;
@@ -139,31 +139,35 @@ __device__ Spectrum traceTerrain(Ray& r, CudaRNG& rng)
 	r.origin = r(t_min + 1.0f / 128.0f);
 	float ray_ratio = length(Vec2f(r.direction.x, r.direction.z));
 	Vec3f pos = r.origin;
-	for (int i = 0; i < cone_steps; i++)
+	float lastD;
+	bool leftBox = false, currentOverTerrain = true; int N = 0;
+	while (N++ < cone_steps)
 	{
+		const float e = 0;
+		leftBox = (pos.x < e || pos.x > 1 - e || pos.z < e || pos.z > 1 - e);
 		float2 tex = tex2D(t_ConeMap, pos.x, pos.z);
+		currentOverTerrain = tex.x <= pos.y;
+		if (leftBox || !currentOverTerrain)
+			break;
 		float c = tex.y;
 		float h = (pos.y - tex.x);
-		float d = c*h / (ray_ratio - c * r.direction.y);
+		float d = lastD = c*h / (ray_ratio - c * r.direction.y);
 		pos += r.direction * d;
 	}
-
-	const float e = 0.01f;
-	if (pos.x < e || pos.x > 1 - e || pos.z < e || pos.z > 1 - e)
+	if (leftBox )//|| N > cone_steps - 2
 		return Spectrum(0, 1, 0);
-	return length(pos - r.origin);
+	//return length(pos - r.origin);
 
-	Vec3f bs_range = 0.5f * r.direction * pos.y;
-	Vec3f bs_position = r.origin + bs_range;
 	for (int i = 0; i < binary_steps; i++)
 	{
-		float2 tex = tex2D(t_ConeMap, bs_position.x, bs_position.z);
-		bs_range *= 0.5;
-		if (bs_position.y < tex.x)
-			bs_position += bs_range;
-		else bs_position -= bs_range;
+		float2 tex = tex2D(t_ConeMap, pos.x, pos.z);
+		lastD *= 0.5f;
+		if (tex.x >= pos.y)
+			pos -= lastD * r.direction;
+		else pos += lastD * r.direction;
 	}
 
+	return length(pos - r.origin);
 }
 
 __global__ void primaryKernel(long long width, long long height, e_Image g_Image, bool depthImage)
@@ -202,9 +206,8 @@ __global__ void primaryKernel(long long width, long long height, e_Image g_Image
 			Ray r, rX, rY;
 //			Spectrum imp = g_SceneData.sampleSensorRay(r, pixelSample, rng.randomFloat2());
 			Spectrum imp = g_SceneData.m_Camera.sampleRayDifferential(r, rX, rY, pixelSample, rng.randomFloat2());
-			//float2 a = tex2D(t_ConeMap, pixelSample.x / float(width), pixelSample.y / float(height));
-			c += imp * traceTerrain(r, rng);//trace(r, rX, rY, rng, d)
-			//c += imp * traceS(r, rng);
+			//c += imp * traceTerrain(r, rng);
+			c += imp * trace(r, rX, rY, rng, d);
 		}
 
 		g_Image.AddSample(x, y, c / N2);
@@ -237,11 +240,11 @@ void k_PrimTracer::DoRender(e_Image* I)
 		depthImage->StartRendering();
 	}
 
-	t_ConeMap.normalized = true;
-	t_ConeMap.addressMode[0] = t_ConeMap.addressMode[1] = cudaAddressModeClamp;
-	t_ConeMap.sRGB = false;
-	cudaError_t	r = cudaBindTexture2D(0, &t_ConeMap, mimMap.m_pDeviceData, &t_ConeMap.channelDesc, mimMap.m_uWidth, mimMap.m_uHeight, pitch);
-	ThrowCudaErrors(r);
+	//t_ConeMap.normalized = true;
+	//t_ConeMap.addressMode[0] = t_ConeMap.addressMode[1] = cudaAddressModeClamp;
+	//t_ConeMap.sRGB = false;
+	//cudaError_t	r = cudaBindTexture2D(0, &t_ConeMap, mimMap.m_pDeviceData, &t_ConeMap.channelDesc, mimMap.m_uWidth, mimMap.m_uHeight, pitch);
+	//ThrowCudaErrors(r);
 
 	unsigned int zero = 0;
 	cudaMemcpyToSymbol(g_NextRayCounter2, &zero, sizeof(unsigned int));
@@ -252,7 +255,6 @@ void k_PrimTracer::DoRender(e_Image* I)
 
 void k_PrimTracer::Debug(e_Image* I, const Vec2i& pixel, ITracerDebugger* debugger)
 {
-	//FW::printf("%f,%f",pixel.x/float(w),pixel.y/float(h));
 	k_INITIALIZE(m_pScene, g_sRngs);
 	//debugPixe2l<<<1,1>>>(w,h,pixel);
 	CudaRNG rng = g_RNGData();
@@ -275,12 +277,12 @@ k_PrimTracer::k_PrimTracer()
 	//e_MIPMap::CreateRelaxedConeMap("../Data/1.bmp", out);
 	//out.Close();
 
-	InputStream in(QQ);
-	heightMap = e_MIPMap(in);
-	in.Close();
-
-	mimMap = heightMap.getKernelData();
-	pitch = mimMap.m_uWidth * 8;
+	//InputStream in(QQ);
+	//heightMap = e_MIPMap(in);
+	//in.Close();
+	//
+	//mimMap = heightMap.getKernelData();
+	//pitch = mimMap.m_uWidth * 8;
 	//CUDA_FREE(mimMap.m_pDeviceData);
 	//cudaError_t r = cudaMallocPitch(&mimMap.m_pDeviceData, &pitch, mimMap.m_uWidth, mimMap.m_uHeight);
 	//ThrowCudaErrors(r);

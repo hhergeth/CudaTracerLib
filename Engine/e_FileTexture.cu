@@ -360,7 +360,7 @@ CUDA_FUNC_IN float sample(imgData& img, const Vec3f& p)
 	Vec2f q = clamp01(p.getXY()) * Vec2f(img.w, img.h);
 	return img.Load((int)q.x, (int)q.y).average();
 }
-template<int SEARCH_STEPS> CUDA_FUNC_IN Vec2f text_cords_next_intersection(imgData& img, const Vec3f& pos, const Vec3f& dir, float& height)
+template<int SEARCH_STEPS> CUDA_FUNC_IN bool text_cords_next_intersection(imgData& img, const Vec3f& pos, const Vec3f& dir, float& height, Vec2f& kw)
 {
 	Vec3f vec = dir;
 	Vec3f step_fwd = vec / SEARCH_STEPS;
@@ -370,9 +370,13 @@ template<int SEARCH_STEPS> CUDA_FUNC_IN Vec2f text_cords_next_intersection(imgDa
 		height = sample(img, ray_pos);
 		if (height <= ray_pos.z)
 			ray_pos += step_fwd;
-		else break;
+		else
+		{
+			kw = ray_pos.getXY();
+			return true;
+		}
 	}
-	return ray_pos.getXY();
+	return false;
 }
 template<int SEARCH_STEPS, int LOOKUP_WIDTH> __global__ void generateRelaxedConeMap(imgData img, float* coneData)
 {
@@ -394,7 +398,9 @@ template<int SEARCH_STEPS, int LOOKUP_WIDTH> __global__ void generateRelaxedCone
 					continue;
 				Vec3f dst = Vec3f(float(ti) / img.w, float(tj) / img.h, tj_depth);
 				float d;
-				Vec2f kw = text_cords_next_intersection<SEARCH_STEPS>(img, src, dst - src, d);
+				Vec2f kw;
+				if (!text_cords_next_intersection<SEARCH_STEPS>(img, src, dst - src, d, kw))
+					continue;
 				float cone_ratio = d <= src_texel_depth ? 1.0f : length(src.getXY() - kw) / (d - src_texel_depth);
 				if (*radius_cone > cone_ratio)
 					*radius_cone = cone_ratio;

@@ -43,6 +43,11 @@ template<int N> struct Distribution1D
 	}
     CUDA_FUNC_IN unsigned int SampleDiscrete(float u, float *pdf = 0) const
 	{
+		if (count == 1)
+		{
+			*pdf = 0;
+			return 0xffffffff;
+		}
         const float *ptr = STL_lower_bound(m_cdf, m_cdf+count, u);
 		unsigned int index = min(unsigned int(count - 2U), max(0U, unsigned int(ptr - m_cdf - 1)));
 		while (operator[](index) == 0 && index < count-1)
@@ -54,6 +59,8 @@ template<int N> struct Distribution1D
 	CUDA_FUNC_IN unsigned int SampleReuse(float &sampleValue, float &pdf) const
 	{
 		unsigned int index = SampleDiscrete(sampleValue, &pdf);
+		if (index == 0xffffffff)
+			return index;
 		sampleValue = (sampleValue - m_cdf[index]) / (m_cdf[index + 1] - m_cdf[index]);
 		return index;
 	}

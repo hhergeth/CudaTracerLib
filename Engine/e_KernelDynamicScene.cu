@@ -4,6 +4,8 @@
 const e_KernelLight* e_KernelDynamicScene::sampleLight(float& emPdf, Vec2f& sample) const
 {
 	unsigned int index = m_emitterPDF.SampleReuse(sample.x, emPdf);
+	if (index == 0xffffffff)
+		return 0;
 	return m_sLightData.Data + g_SceneData.m_uEmitterIndices[index];
 }
 
@@ -48,6 +50,12 @@ Spectrum e_KernelDynamicScene::sampleEmitterDirect(DirectSamplingRecord &dRec, c
 	Vec2f sample = _sample;
 	float emPdf;
 	const e_KernelLight *emitter = sampleLight(emPdf, sample);
+	if (emitter == 0)
+	{
+		dRec.pdf = 0;
+		dRec.object = 0;
+		return 0.0f;
+	}
 	Spectrum value = emitter->sampleDirect(dRec, sample);
 	if (dRec.pdf != 0)
 	{

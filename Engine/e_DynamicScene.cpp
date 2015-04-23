@@ -142,7 +142,7 @@ e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_Token, IInStr
 	for(unsigned int i = 0; i < M->m_uUsedLights; i++)
 	{
 		ShapeSet s = CreateShape(N, M->m_sLights[i].MatName);
-		li[i] = createLight(e_DiffuseLight(M->m_sLights[i].L, s)).getIndex();
+		li[i] = createLight(e_DiffuseLight(M->m_sLights[i].L, s, N.getIndex())).getIndex();
 	}
 	N->setLightData(li, M->m_uUsedLights);
 	N.Invalidate();
@@ -381,7 +381,7 @@ e_StreamReference(e_KernelLight) e_DynamicScene::createLight(e_StreamReference(e
 	if(*a != -1)
 	{
 		e_StreamReference(e_KernelLight) c = m_pLightStream->operator()(Node->m_uLightIndices[*a]);
-		c->SetData(e_DiffuseLight(L, s));
+		c->SetData(e_DiffuseLight(L, s, Node.getIndex()));
 		c.Invalidate();
 		return c;
 	}
@@ -393,7 +393,7 @@ e_StreamReference(e_KernelLight) e_DynamicScene::createLight(e_StreamReference(e
 		*a = b;
 		e_StreamReference(e_KernelLight) c = m_pLightStream->malloc(1);
 		Node->m_uLightIndices[b] = c.getIndex();
-		c->SetData(e_DiffuseLight(L, s));
+		c->SetData(e_DiffuseLight(L, s, Node.getIndex()));
 		return c;
 	}
 }

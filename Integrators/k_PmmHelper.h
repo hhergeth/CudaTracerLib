@@ -4,7 +4,8 @@
 #include <cmath>
 #include "../Defines.h"
 #include "../MathTypes.h"
-#include "qMatrix.h"
+#include <qMatrixAlgorithms.h>
+#include <qMatrixHelper.h>
 
 CUDA_FUNC_IN float randomNormal(CudaRNG& rng)
 {
@@ -53,13 +54,13 @@ template<int D, int K> struct GaussianMixtureModel
 			a = 1.0f / (math::pow(2.0f * PI, float(D) / 2.0f) * math::sqrt(det(covariance)));
 			mat eigValues, eigVectors;
 			qrAlgorithmSymmetric(covariance, eigValues, eigVectors);
-			Q = diagmat(eigValues.diag().sqrt()) * eigVectors;
+			Q = diagmat<vec>(diag<vec>(eigValues).sqrt()) * eigVectors;
 		}
 
 		CUDA_FUNC_IN float p(const vec& x) const
 		{
 			qMatrix<float, D, 1> d = x - mean;
-			float b = -0.5f * (d.Transpose() * invCovariance * d)(0, 0);
+			float b = -0.5f * (d.transpose() * invCovariance * d)(0, 0);
 			return a * math::exp(b);
 		}
 
@@ -158,7 +159,7 @@ template<int D, int K> struct GaussianMixtureModel
 		{
 			u = gamma;
 			s = s_q * gamma;
-			ss = s_q * s_q.Transpose() * gamma;
+			ss = s_q * s_q.transpose() * gamma;
 		}
 		CUDA_FUNC_IN SufStat operator*(float f) const
 		{
@@ -198,8 +199,8 @@ template<int D, int K> struct GaussianMixtureModel
 		{
 			weights[j] = (stats[j].u / w + (v - 1) / float(n)) / (1 + K * (v - 1) / float(n));
 			vec mu = stats[j].s / stats[j].u;
-			mat A = stats[j].s * mu.Transpose() + mu * stats[j].s.Transpose();
-			mat B = mu * mu.Transpose();
+			mat A = stats[j].s * mu.transpose() + mu * stats[j].s.transpose();
+			mat B = mu * mu.transpose();
 			mat sigma = (b_nI + (stats[j].ss - A + stats[j].u * B) / w) / ((a - 2) / float(n) + stats[j].u / w);
 			components[j] = Component(mu, sigma);
 		}

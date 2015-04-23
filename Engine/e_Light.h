@@ -88,12 +88,13 @@ struct e_DiffuseLight : public e_LightBase//, public e_DerivedTypeHelper<2>
 	Spectrum m_radiance, m_power;
     ShapeSet shapeSet;
 	bool m_bOrthogonal;
+	unsigned int m_uNodeIdx;
 	
 	e_DiffuseLight()
 		: e_LightBase(EOnSurface)
 	{}
-	e_DiffuseLight(const Spectrum& L, ShapeSet& s)
-		: e_LightBase(EOnSurface), shapeSet(s), m_bOrthogonal(false)
+	e_DiffuseLight(const Spectrum& L, ShapeSet& s, unsigned int nodeIdx)
+		: e_LightBase(EOnSurface), shapeSet(s), m_bOrthogonal(false), m_uNodeIdx(nodeIdx)
 	{
 		setEmit(L);
 	}

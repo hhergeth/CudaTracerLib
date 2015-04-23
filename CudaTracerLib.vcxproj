@@ -44,14 +44,14 @@
     <OutDir>Build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>Build\$(Platform)\$(Configuration)\</IntDir>
     <TargetExt>.lib</TargetExt>
-    <IncludePath>$(ProjectDir);$(SolutionDir)Libs/Include;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(SolutionDir)Libs/Include;$(SolutionDir)../qMatrixLib/qMatrixLib;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)Libs/Lib/$(Configuration);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>Build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>Build\$(Platform)\$(Configuration)\</IntDir>
     <TargetExt>.lib</TargetExt>
-    <IncludePath>$(ProjectDir);$(SolutionDir)Libs/Include;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(SolutionDir)Libs/Include;$(SolutionDir)../qMatrixLib/qMatrixLib;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)Libs/Lib/$(Configuration);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -129,6 +129,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClCompile Include="Engine\SceneBuilder\PlyParser.cpp" />
     <ClCompile Include="Engine\SceneBuilder\SplitBVHBuilder.cpp" />
     <ClCompile Include="Engine\SceneBuilder\tiny_obj_loader.cpp" />
+    <ClCompile Include="Integrators\k_GradientDescent.cpp" />
     <ClCompile Include="Integrators\k_PmmTracer.cpp" />
     <ClCompile Include="Integrators\k_sPpmTracer.cpp" />
     <ClCompile Include="Kernel\k_Tracer.cpp" />
