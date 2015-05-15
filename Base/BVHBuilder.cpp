@@ -681,6 +681,6 @@ void BVHBuilder::BuildBVH(IBVHBuilderCallback* clb, const BVHBuilder::Platform& 
 		clb->HandleStartNode(0);
 		int idx;
 		clb->HandleNodeAllocation(&idx)->setDummy();
-		_mm_free(data);
+		delete[] data;
 	}
 }

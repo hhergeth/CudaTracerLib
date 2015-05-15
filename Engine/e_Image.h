@@ -3,21 +3,15 @@
 #include "e_Filter.h"
 #include "e_Samples.h"
 
-#ifdef ISWINDOWS
-#include <windows.h>
-#include <cuda_gl_interop.h>
-#include <cuda_d3d11_interop.h>
-#endif
-
-#define FILTER_TABLE_SIZE 16
-
 enum ImageDrawType
 {
 	Normal,
 	HDR,
 };
 
+#ifdef ISWINDOWS
 struct ID3D11Resource;
+#endif
 
 class e_Image
 {

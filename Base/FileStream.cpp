@@ -1,6 +1,7 @@
 #include <StdAfx.h>
 #include "FileStream.h"
-#include <Windows.h>
+#include <boost/filesystem.hpp>
+#include <boost/iostreams/device/mapped_file.hpp> 
 
 bool IInStream::ReadTo(std::string& str, char end)
 {
@@ -24,49 +25,36 @@ InputStream::InputStream(const char* a_Name)
 {
 	path = std::string(a_Name);
 	numBytesRead = 0;
-	H = CreateFile(a_Name, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
-	if(H == INVALID_HANDLE_VALUE)
-	{
-		std::cout << a_Name << "\n";
-		LPVOID lpMsgBuf;
-		DWORD dw = GetLastError(); 
-
-		FormatMessage(
-			FORMAT_MESSAGE_ALLOCATE_BUFFER | 
-			FORMAT_MESSAGE_FROM_SYSTEM |
-			FORMAT_MESSAGE_IGNORE_INSERTS,
-			NULL,
-			dw,
-			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-			(LPTSTR) &lpMsgBuf,
-			0, NULL );
-		std::cout << (LPTSTR)lpMsgBuf << "\n";
-		throw std::runtime_error((LPTSTR)lpMsgBuf);
-	}
-	DWORD h;
-	DWORD l = GetFileSize(H, &h);
-	m_uFileSize = ((size_t)h << 32) | (size_t)l;
+	H = new boost::iostreams::mapped_file(a_Name, boost::iostreams::mapped_file::readonly);
+	boost::iostreams::mapped_file& mmap = *(boost::iostreams::mapped_file*)H;
+	m_uFileSize = mmap.size();
 }
 
 void InputStream::Close()
 {
-	CloseHandle(H);
+	if (H)
+	{
+		boost::iostreams::mapped_file& mmap = *(boost::iostreams::mapped_file*)H;
+		mmap.close();
+		H = 0;
+	}
 }
 
 void InputStream::Read(void* a_Data, unsigned int a_Size)
 {
-	DWORD a;
-	BOOL b = ReadFile(H, a_Data, a_Size, &a, 0);
-	if(!b || a != a_Size)
-		throw std::runtime_error("Impossible to read from file!");
-	numBytesRead += a_Size;
+	boost::iostreams::mapped_file& mmap = *(boost::iostreams::mapped_file*)H;
+	if (numBytesRead + a_Size <= m_uFileSize)
+	{
+		memcpy(a_Data, mmap.const_data() + numBytesRead, a_Size);
+		numBytesRead += a_Size;
+	}
+	else throw std::runtime_error("Passed end of file!");
 }
 
 void InputStream::Move(int off)
 {
-	DWORD r = SetFilePointer(H, off, 0, FILE_CURRENT);
-	if(r == INVALID_SET_FILE_POINTER)
-		throw std::runtime_error("Impossible to skip in file!");
+	if (numBytesRead + off > m_uFileSize)
+		throw std::runtime_error("Passed end of file!");
 	numBytesRead += off;
 }
 
@@ -109,28 +97,9 @@ void MemInputStream::Read(void* a_Data, unsigned int a_Size)
 	numBytesRead += a_Size;
 }
 
-unsigned long long GetFileSize(const char* filename)
-{
-	HANDLE hFile = CreateFile(filename, GENERIC_READ, 
-        FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 
-        FILE_ATTRIBUTE_NORMAL, NULL);
-    if (hFile==INVALID_HANDLE_VALUE)
-        return -1; // error condition, could call GetLastError to find out more
-
-    LARGE_INTEGER size;
-    if (!GetFileSizeEx(hFile, &size))
-    {
-        CloseHandle(hFile);
-        return -1; // error condition, could call GetLastError to find out more
-    }
-
-    CloseHandle(hFile);
-    return size.QuadPart;
-}
-
 IInStream* OpenFile(const char* filename)
 {
-	if(GetFileSize(filename) < 1024 * 1024 * 512)
+	if(boost::filesystem::file_size(filename) < 1024 * 1024 * 512)
 		return new MemInputStream(filename);
 	else return new InputStream(filename);
 	return 0;
@@ -139,27 +108,23 @@ IInStream* OpenFile(const char* filename)
 OutputStream::OutputStream(const char* a_Name)
 {
 	numBytesWrote = 0;
-	H = CreateFile(a_Name, GENERIC_WRITE, FILE_SHARE_WRITE, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+	H = fopen(a_Name, "wb");
+	if (!H)
+		throw std::runtime_error("Could not open file!");
 }
 
 void OutputStream::_Write(const void* data, unsigned int size)
 {
-	DWORD a;
-	BOOL b = WriteFile(H, data, size, &a, 0);
-	if(!b || a != size)
-		throw std::runtime_error("Writing to file failed!");
+	size_t i = fwrite(data, 1, size, (FILE*)H);
+	if (i != size)
+		throw std::runtime_error("Could not write to file!");
 	numBytesWrote += size;
 }
 
 void OutputStream::Close()
 {
 	if (H)
-		CloseHandle(H);
+		if (fclose((FILE*)H))
+			throw std::runtime_error("Could not close file!");
 	H = 0;
 }
-
-/*
-
-
-
-*/

@@ -60,19 +60,20 @@ public:
 	k_BlockSampler(e_Image* img)
 		: img(img)
 	{
+		unsigned int nBlocks = totalNumBlocks();
 		CUDA_MALLOC(&m_pLumData, img->getWidth() * img->getHeight() * sizeof(k_SamplerpixelData));
-		CUDA_MALLOC(&m_pDeviceBlockData, totalNumBlocks() * sizeof(float));
-		CUDA_MALLOC(&m_pDeviceIndexData, totalNumBlocks() * sizeof(unsigned int));
-		CUDA_MALLOC(&m_pDeviceSamplesData, totalNumBlocks() * sizeof(unsigned int));
-		CUDA_MALLOC(&m_pDeviceContribPixels, totalNumBlocks() * sizeof(unsigned int));
-		CUDA_MALLOC(&m_pDeviceWeight, totalNumBlocks() * sizeof(float));
-		m_pHostIndexData = new unsigned int[totalNumBlocks()];
-		m_pHostBlockData = new float[totalNumBlocks()];
-		m_pHostSamplesData = new unsigned int[totalNumBlocks()];
-		m_pHostContribPixels = new unsigned int[totalNumBlocks()];
-		m_pHostWeight = new float[totalNumBlocks()];
+		CUDA_MALLOC(&m_pDeviceBlockData, nBlocks * sizeof(float));
+		CUDA_MALLOC(&m_pDeviceIndexData, nBlocks * sizeof(unsigned int));
+		CUDA_MALLOC(&m_pDeviceSamplesData, nBlocks * sizeof(unsigned int));
+		CUDA_MALLOC(&m_pDeviceContribPixels, nBlocks * sizeof(unsigned int));
+		CUDA_MALLOC(&m_pDeviceWeight, nBlocks * sizeof(float));
+		m_pHostIndexData = new unsigned int[nBlocks];
+		m_pHostBlockData = new float[nBlocks];
+		m_pHostSamplesData = new unsigned int[nBlocks];
+		m_pHostContribPixels = new unsigned int[nBlocks];
+		m_pHostWeight = new float[nBlocks];
 		Clear();
-		for (unsigned int i = 0; i < totalNumBlocks(); i++)
+		for (unsigned int i = 0; i < nBlocks; i++)
 			m_pHostWeight[i] = 1;
 	}
 	~k_BlockSampler()

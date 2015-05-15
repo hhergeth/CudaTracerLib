@@ -1,6 +1,9 @@
 #include <StdAfx.h>
 #include "k_PmmTracer.h"
 #include <sstream>      // std::istringstream
+#ifdef ISWINDOWS
+#include <Windows.h>
+#endif
 
 k_PmmTracer::k_PmmTracer()
 	: sMap(100, 10000), dMap(20)
@@ -9,6 +12,7 @@ k_PmmTracer::k_PmmTracer()
 
 void toClipboard(std::string str)
 {
+#ifdef ISWINDOWS
 	const char* output = str.c_str();
 	const size_t len = strlen(output) + 1;
 	HGLOBAL hMem =  GlobalAlloc(GMEM_MOVEABLE, len);
@@ -18,6 +22,7 @@ void toClipboard(std::string str)
 	EmptyClipboard();
 	SetClipboardData(CF_TEXT, hMem);
 	CloseClipboard();
+#endif
 }
 
 void plotPoints(Vec3f* dirs, unsigned int N)

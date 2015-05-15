@@ -121,7 +121,7 @@ template<int N> struct diff_helper
 	{
 		if (N == P.k() + 1)
 		{
-			const int k = N - 1, n = 3 + 2 * (k - 1);
+			const size_t k = N - 1, n = 3 + 2 * (k - 1);
 			float* a = (float*)alloca(sizeof(float) * n);
 			a[0] = P.I().average(); a[1] = PathVertex::G(P.vertices[0], P.vertices[1]); a[2] = P.L_e().average();
 			for (size_t j = 1; j < k; j++)

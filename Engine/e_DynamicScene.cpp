@@ -6,6 +6,11 @@
 #include "e_Terrain.h"
 #include "..\Base\StringUtils.h"
 #include "e_AnimatedMesh.h"
+#include <boost/filesystem.hpp>
+#include <boost/algorithm/string.hpp>
+
+using namespace boost::filesystem;
+using namespace boost::algorithm;
 
 struct textureLoader
 {
@@ -93,7 +98,8 @@ e_DynamicScene::~e_DynamicScene()
 e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_Token, IInStream& in, bool force_recompile)
 {
 	m_uModified = 1;
-	std::string token = toLower(a_Token);
+	std::string token(a_Token);
+	boost::algorithm::to_lower(token);
 	bool load;
 	e_BufferReference<e_Mesh, e_KernelMesh> M = m_pMeshBuffer->LoadCached(token.c_str(), &load);
 	if (load || force_recompile)
@@ -101,21 +107,21 @@ e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_Token, IInStr
 		IInStream* xmshStream = 0;
 		if(token.find(".xmsh") == std::string::npos)
 		{
-			std::string t0 = std::string(m_pCompilePath) + std::string(a_Token), cmpPath = t0.substr(0, t0.rfind('.')) + std::string(".xmsh");
-			boost::filesystem::create_directories(getDirName(cmpPath));
-			boost::uintmax_t si = boost::filesystem::file_size(cmpPath);
-			time_t cmpStamp = boost::filesystem::last_write_time(cmpPath);
-			time_t rawStamp = boost::filesystem::exists(in.getFilePath()) ? boost::filesystem::last_write_time(in.getFilePath()) : rawStamp;
-			if (si <= 4 || !boost::filesystem::exists(cmpPath) || rawStamp != cmpStamp)
+			path cmpFilePath = path(m_pCompilePath) / path(a_Token).replace_extension(".xmsh");
+			create_directories(cmpFilePath.parent_path());
+			boost::uintmax_t si = exists(cmpFilePath) ? file_size(cmpFilePath) : 0;
+			time_t cmpStamp = si != 0 ? last_write_time(cmpFilePath) : time(0);
+			time_t rawStamp = exists(in.getFilePath()) ? last_write_time(in.getFilePath()) : 0;
+			if (si <= 4 || rawStamp != cmpStamp)
 			{
 				std::cout << "Started compiling mesh : " << a_Token << "\n";
-				OutputStream a_Out(cmpPath.c_str());
+				OutputStream a_Out(cmpFilePath.string().c_str());
 				e_MeshCompileType t;
 				m_sCmpManager.Compile(in, token.c_str(), a_Out, &t);
 				a_Out.Close();
-				boost::filesystem::last_write_time(cmpPath, rawStamp);
+				boost::filesystem::last_write_time(cmpFilePath, rawStamp);
 			}
-			xmshStream = OpenFile(cmpPath.c_str());
+			xmshStream = OpenFile(cmpFilePath.string().c_str());
 		}
 		else xmshStream = &in;
 		IInStream& str = *xmshStream;
@@ -159,7 +165,7 @@ e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_Token, IInStr
 e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_MeshFile2, bool force_recompile)
 {
 	IInStream& in = *OpenFile(a_MeshFile2);
-	e_StreamReference(e_Node) n = CreateNode(getFileName(std::string(a_MeshFile2)).c_str(), in, force_recompile);
+	e_StreamReference(e_Node) n = CreateNode(boost::filesystem::path(std::string(a_MeshFile2)).filename().string().c_str(), in, force_recompile);
 	in.Close();
 	return n;
 }
@@ -199,27 +205,25 @@ void e_DynamicScene::DeleteNode(e_StreamReference(e_Node) ref)
 
 e_BufferReference<e_MIPMap, e_KernelMIPMap> e_DynamicScene::LoadTexture(const char* file, bool a_MipMap)
 {
-	std::string a = boost::filesystem::exists(file) ? std::string(file) : std::string(m_pTexturePath) + std::string(file);
-	if (!boost::filesystem::exists(a))
+	path rawFilePath = exists(file) ? path(file) : path(m_pTexturePath) / path(file);
+	if (!exists(rawFilePath))
 		return LoadTexture((std::string(m_pTexturePath) + "404.jpg").c_str(), a_MipMap);
-	if(a[a.size() - 1] == '\n')
-		a = a.substr(0, a.size() - 1);
 	bool load;
-	e_BufferReference<e_MIPMap, e_KernelMIPMap> T = m_pTextureBuffer->LoadCached(a.c_str(), &load);
+	e_BufferReference<e_MIPMap, e_KernelMIPMap> T = m_pTextureBuffer->LoadCached(rawFilePath.string().c_str(), &load);
 	if(load)
 	{
-		std::string a2 = std::string(m_pCompilePath) + "Images\\" + getFileName(a), b = a2 + ".xtex";
-		boost::filesystem::create_directories(getDirName(b).c_str());
-		time_t rawStamp = boost::filesystem::last_write_time(a);
-		time_t cmpStamp = boost::filesystem::last_write_time(b);
-		if (!boost::filesystem::exists(b) || rawStamp != cmpStamp)
+		path cmpFilePath = path(m_pCompilePath) / "Images/" / rawFilePath.filename() / ".xtex";
+		create_directories(path(cmpFilePath).parent_path());
+		time_t rawStamp = exists(rawFilePath) ? last_write_time(rawFilePath) : time(0);
+		time_t cmpStamp = exists(cmpFilePath) ? last_write_time(cmpFilePath) : 0;
+		if (cmpStamp == 0 || rawStamp != cmpStamp)
 		{
-			OutputStream a_Out(b.c_str());
-			e_MIPMap::CompileToBinary(a.c_str(), a_Out, a_MipMap);
+			OutputStream a_Out(cmpFilePath.string().c_str());
+			e_MIPMap::CompileToBinary(rawFilePath.string().c_str(), a_Out, a_MipMap);
 			a_Out.Close();
-			boost::filesystem::last_write_time(b, rawStamp);
+			boost::filesystem::last_write_time(cmpFilePath, rawStamp);
 		}
-		InputStream I(b.c_str());
+		InputStream I(cmpFilePath.string().c_str());
 		new(T) e_MIPMap(I);
 		I.Close();
 		T.Invalidate();
@@ -491,9 +495,9 @@ void e_DynamicScene::recalculateAreaLights(e_StreamReference(e_Node) Node)
 void e_DynamicScene::printStatus(char* dest)
 {
 	sprintf(dest, "Triangle intersectors : %d/%d\nBVH nodes : %d/%d\nBVH indices : %d/%d\nMaterials : %d/%d\nTextures : %d/%d\nMeshes : %d/%d\nNodes : %d/%d\nLights : %d/%d\n"
-		, m_pTriIntStream->UsedElements(), m_pTriIntStream->getLength(), m_pBVHStream->UsedElements(), m_pBVHStream->getLength(), m_pBVHIndicesStream->UsedElements(), m_pBVHIndicesStream->getLength()
-		, m_pMaterialBuffer->UsedElements(), m_pMaterialBuffer->getLength(), m_pTextureBuffer->UsedElements(), m_pTextureBuffer->getLength(), m_pMeshBuffer->UsedElements(), m_pMeshBuffer->getLength()
-		, m_pNodeStream->UsedElements(), m_pNodeStream->getLength(), m_pLightStream->UsedElements(), m_pLightStream->getLength());
+		, m_pTriIntStream->UsedElements().getLength(), m_pTriIntStream->getLength(), m_pBVHStream->UsedElements().getLength(), m_pBVHStream->getLength(), m_pBVHIndicesStream->UsedElements().getLength(), m_pBVHIndicesStream->getLength()
+		, m_pMaterialBuffer->UsedElements().getLength(), m_pMaterialBuffer->getLength(), m_pTextureBuffer->UsedElements().getLength(), m_pTextureBuffer->getLength(), m_pMeshBuffer->UsedElements().getLength(), m_pMeshBuffer->getLength()
+		, m_pNodeStream->UsedElements().getLength(), m_pNodeStream->getLength(), m_pLightStream->UsedElements().getLength(), m_pLightStream->getLength());
 }
 
 e_Terrain* e_DynamicScene::getTerrain()

@@ -223,11 +223,11 @@ public:
 		size_t dXSize = k() + 1;
 		const Vec2f* dX = (const Vec2f*)dXF;
 		Vec3f* pos = (Vec3f*)alloca(sizeof(Vec3f) * dXSize);
-		unsigned long long x_i_changed = 0;
+		size_t x_i_changed = 0;
 		for (size_t i = 0; i < dXSize; i++)
 		{
 			pos[i] = vertices[i]->getPos_uv(dX[i]);
-			x_i_changed |= (dX[i].lenSqr() != 0) << i;
+			x_i_changed |= size_t(dX[i].lenSqr() != 0) << i;
 		}
 		for (size_t i = 0; i < dXSize - 1; i++)
 		{

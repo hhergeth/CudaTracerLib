@@ -1,9 +1,16 @@
 #include "StdAfx.h"
 #include "e_Image.h"
-#define FREEIMAGE_LIB
-#include <FreeImage.h>
 #include <stdexcept>
 #include <iostream>
+
+#ifdef ISWINDOWS
+#include <windows.h>
+#include <cuda_gl_interop.h>
+#include <cuda_d3d11_interop.h>
+#endif
+
+#define FREEIMAGE_LIB
+#include <FreeImage.h>
 
 e_Image::e_Image(int xRes, int yRes, unsigned int viewGLTexture)
 	: xResolution(xRes), yResolution(yRes), lastSplatVal(0)

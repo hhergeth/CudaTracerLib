@@ -1,9 +1,12 @@
 #include "StdAfx.h"
 #include "Defines.h"
 #include <stdio.h>
-#include <Windows.h>
 #include <stdexcept>
 #include <cuda_runtime.h>
+
+#ifdef ISWINDOWS
+#include <Windows.h>
+#endif
 
 void fail(const char* format, ...)
 {
@@ -12,8 +15,10 @@ void fail(const char* format, ...)
 	vprintf(format, arglist);
 	va_end(arglist);
 
+#ifdef ISWINDOWS
 	if (IsDebuggerPresent())
 		__debugbreak();
+#endif
 
 	// Kill the app.
 

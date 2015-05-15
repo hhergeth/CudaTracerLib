@@ -4,7 +4,6 @@
 #include <fstream>
 #include <MathTypes.h>
 #include "FixedString.h"
-#include <boost/filesystem.hpp>
 
 #define DCL_IN(TYPE) \
 	IInStream& operator>>(TYPE& rhs) \

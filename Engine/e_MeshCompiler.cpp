@@ -12,7 +12,7 @@ using namespace boost::filesystem;
 bool hasEnding (std::string const &fullString, std::string const &_ending)
 {
 	std::string ending = _ending;
-	toLower(ending);
+	boost::algorithm::to_lower(ending);
     if (fullString.length() >= ending.length()) {
         return (0 == fullString.compare (fullString.length() - ending.length(), ending.length(), ending));
     } else {

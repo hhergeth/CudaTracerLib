@@ -1,6 +1,12 @@
 #include "e_Image.h"
 #include <cuda_surface_types.h>
 
+#ifdef ISWINDOWS
+#include <windows.h>
+#include <cuda_gl_interop.h>
+#include <cuda_d3d11_interop.h>
+#endif
+
 void e_Image::AddSample(float sx, float sy, const Spectrum &_L)
 {
 	if (_L.isNaN() || !_L.isValid())

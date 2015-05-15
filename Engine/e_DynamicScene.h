@@ -140,8 +140,10 @@ public:
 	unsigned int getLightCount(e_StreamReference(e_Node) n)
 	{
 		int i = 0;
-		while (n->m_uLightIndices[i] != 0xffffffff && i < MAX_AREALIGHT_NUM)
+		while (i < MAX_AREALIGHT_NUM && n->m_uLightIndices[i] != 0xffffffff)
 			i++;
+		if (i == MAX_AREALIGHT_NUM)
+			throw std::runtime_error("Could not allocate light slot!");
 		return i;
 	}
 	e_StreamReference(e_KernelLight) getLight(e_StreamReference(e_Node) n, unsigned int i)

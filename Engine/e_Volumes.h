@@ -26,7 +26,7 @@ CUDA_FUNC_IN bool sampleDistanceHomogenous(const Ray& ray, float minT, float max
 		m_mediumSamplingWeight = albedo[i];
 	if (m_mediumSamplingWeight > 0)
 		m_mediumSamplingWeight = max(m_mediumSamplingWeight, 0.5f);
-	float sampledDistance;
+	float sampledDistance = FLT_MAX;
 	int channel = int(rand * SPECTRUM_SAMPLES);
 	rand = (rand - channel * 1.0f / SPECTRUM_SAMPLES) * SPECTRUM_SAMPLES;
 	if (rand < m_mediumSamplingWeight)

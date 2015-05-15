@@ -1,59 +1,22 @@
 #pragma once
 
-#ifdef ISWINDOWS
-#include <Windows.h>
+#include <chrono>
 class cTimer
 {
-private:
-	LARGE_INTEGER frequency;
-	LARGE_INTEGER start;
-    LARGE_INTEGER stop;
+	std::chrono::high_resolution_clock::time_point start;
+	std::chrono::high_resolution_clock::time_point stop;
 public:
-	cTimer()
-	{
-		QueryPerformanceFrequency( &frequency ) ;
-	}
 	void StartTimer()
 	{
-		QueryPerformanceCounter(&start);
+		start = std::chrono::high_resolution_clock::now();
 	}
 	double EndTimer()
 	{
-		QueryPerformanceCounter(&stop);
+		stop = std::chrono::high_resolution_clock::now();
 		return getElapsedTime();
 	}
 	double getElapsedTime()
 	{
-		LARGE_INTEGER time;
-		time.QuadPart = stop.QuadPart - start.QuadPart;
-		return (double)time.QuadPart / (double)frequency.QuadPart;
+		return (double)std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count() / 1000.0;
 	}
 };
-#else
-#include <time.h>
-class cTimer
-{
-private:
-	int frequency;
-	int start;
-    int stop;
-public:
-	cTimer()
-	{
-		frequency = clock_getres( CLOCK_MONOTONIC ) ;
-	}
-	void StartTimer()
-	{
-		start = clock_gettime(CLOCK_MONOTONIC);
-	}
-	double EndTimer()
-	{
-		stop = clock_gettime(CLOCK_MONOTONIC);
-		return getElapsedTime();
-	}
-	double getElapsedTime()
-	{
-		return double(stop - start) / double(frequency);
-	}
-};
-#endif

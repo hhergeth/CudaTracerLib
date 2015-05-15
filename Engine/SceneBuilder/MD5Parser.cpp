@@ -1,6 +1,6 @@
 #include "StdAfx.h"
 #include "MD5Parser.h"
-
+#include <boost\algorithm\string.hpp>
 
 // MD5 Loader, by A.J. Tavakoli
 
@@ -208,7 +208,7 @@ void MD5Model::readAnimElements(std::ifstream &fin, Anim &anim) {
   while ( !fin.eof() ) {
     std::string str;
     TOKEN tok = getNextToken(fin, &str);
-	toLower(str);
+	boost::algorithm::to_lower(str);
 
     // token is TOKEN_INVALID when end of file is reached
     if ( TOKEN_INVALID == tok )

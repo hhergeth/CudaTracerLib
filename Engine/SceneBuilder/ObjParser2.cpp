@@ -15,6 +15,8 @@
 #include "..\e_Mesh.h"
 #include "..\e_TriangleData.h"
 #include "tiny_obj_loader.h"
+#include <boost\algorithm\string.hpp>
+#include <boost\filesystem.hpp>
 
 e_KernelMaterial cnvMat(tinyobj::material_t M, e_MeshPartLight* lights, unsigned int* lightIndex)
 {
@@ -54,7 +56,7 @@ e_KernelMaterial cnvMat(tinyobj::material_t M, e_MeshPartLight* lights, unsigned
 void compileobj3(const char* a_InputFile, OutputStream& a_Out)
 {
 	std::vector<tinyobj::shape_t> shapes;
-	std::string err = tinyobj::LoadObj(shapes, a_InputFile, getDirName(a_InputFile).c_str());
+	std::string err = tinyobj::LoadObj(shapes, a_InputFile, boost::filesystem::path(a_InputFile).parent_path().string().c_str());
 
 	Vec3f p[3];
 	Vec3f n[3];
