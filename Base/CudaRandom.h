@@ -320,6 +320,7 @@ public:
 	//curandSetGeneratorOffset(GENERATOR[i], i * a_Offset);
 	CudaRNGBuffer_cuRAND(unsigned int a_Length, unsigned int a_Spacing = 1234, unsigned int a_Offset = 0);
 	CudaRNGBuffer_cuRAND(){}
+	void Free();
 	CUDA_DEVICE CUDA_HOST k_TracerRNG_cuRAND operator()();
 	CUDA_DEVICE CUDA_HOST void operator()(k_TracerRNG_cuRAND& val);
 	void NextPass();

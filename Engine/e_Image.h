@@ -6,6 +6,7 @@
 #ifdef ISWINDOWS
 #include <windows.h>
 #include <cuda_gl_interop.h>
+#include <cuda_d3d11_interop.h>
 #endif
 
 #define FILTER_TABLE_SIZE 16

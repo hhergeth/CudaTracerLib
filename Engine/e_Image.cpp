@@ -25,7 +25,6 @@ e_Image::e_Image(int xRes, int yRes, unsigned int viewGLTexture)
 }
 
 #ifdef ISWINDOWS
-#include <cuda_d3d11_interop.h>
 e_Image::e_Image(int xRes, int yRes, ID3D11Resource *pD3DResource)
 	: xResolution(xRes), yResolution(yRes), lastSplatVal(0)
 {

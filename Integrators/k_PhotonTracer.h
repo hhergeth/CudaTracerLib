@@ -14,7 +14,8 @@ public:
 	virtual void PrintStatus(std::vector<std::string>& a_Buf) const
 	{
 		double pC = floor((double)(m_uPassesDone * w * h) / 1000000.0);
-		a_Buf.push_back(format("Photons emitted : %d[Mil]", (int)pC));
+		int q = (int)pC;
+		a_Buf.push_back(format("Photons emitted : %d[Mil]", q));
 	}
 protected:
 	virtual void DoRender(e_Image* I);

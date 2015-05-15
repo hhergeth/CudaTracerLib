@@ -37,6 +37,13 @@ CudaRNGBuffer_cuRAND::CudaRNGBuffer_cuRAND(unsigned int a_Length, unsigned int a
 	createGenerators(a_Spacing, a_Offset);
 }
 
+void CudaRNGBuffer_cuRAND::Free()
+{
+	std::cout << "~CudaRNGBuffer_cuRAND called!\n";
+	CUDA_FREE(m_pDeviceGenerators);
+	delete[] m_pHostGenerators;
+}
+
 void CudaRNGBuffer_cuRAND::createGenerators(unsigned int a_Spacing, unsigned int a_Offset)
 {
 	for(unsigned int i = 0; i < m_uNumGenerators; i++)

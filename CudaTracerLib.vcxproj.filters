@@ -271,6 +271,15 @@
     <ClInclude Include="Base\FixedString.h">
       <Filter>Base</Filter>
     </ClInclude>
+    <ClInclude Include="Integrators\k_GradientDescent.h">
+      <Filter>Integrators</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\PathDifferientials.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\qMatrixWrapper.h">
+      <Filter>Math</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Base\BVHBuilder.cpp">

@@ -4,6 +4,8 @@
 
 void InitializeCuda4Tracer(const char* dataPath);
 
+void DeInitializeCuda4Tracer();
+
 void ThrowCudaErrors();
 
 void ThrowCudaErrors(cudaError_t r);

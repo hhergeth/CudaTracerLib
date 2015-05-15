@@ -1,7 +1,6 @@
 #include <StdAfx.h>
 #include "k_PmmTracer.h"
 #include <sstream>      // std::istringstream
-#include "k_PmmHelper.h"
 
 k_PmmTracer::k_PmmTracer()
 	: sMap(100, 10000), dMap(20)

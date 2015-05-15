@@ -117,17 +117,23 @@ public:
 	{
 		
 	}
+	~k_FastTracer()
+	{
+		Free();
+	}
+	void Free()
+	{
+		bufA->Free();
+		bufB->Free();
+		delete bufA;
+		delete bufB;
+	}
 	virtual void Resize(unsigned int w, unsigned int h)
 	{
 		k_Tracer<false, true>::Resize(w, h);
 		ThrowCudaErrors();
-		if(bufA)
-		{
-			bufA->Free();
-			bufB->Free();
-			delete bufA;
-			delete bufB;
-		}
+		if (bufA)
+			Free();
 		bufA = new k_PTDBuffer(w * h);
 		bufB = new k_PTDBuffer(w * h);
 		ThrowCudaErrors();

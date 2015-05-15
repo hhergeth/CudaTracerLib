@@ -1,7 +1,6 @@
 #include "k_PmmTracer.h"
 #include "..\Kernel\k_TraceHelper.h"
 #include "..\Kernel\k_TraceAlgorithms.h"
-#include "k_PmmHelper.h"
 
 CUDA_DEVICE e_SpatialLinkedMap<SpatialEntry> g_sMap;
 CUDA_DEVICE e_SpatialSet<DirectionModel> g_dMap;

@@ -98,7 +98,6 @@ MemInputStream::MemInputStream(const char* a_Name)
 	numBytesRead = 0;
 	m_uFileSize = in.getFileSize();
 	buf = in.ReadToEnd();
-	in.Close();
 	path = a_Name;
 }
 
@@ -131,71 +130,10 @@ unsigned long long GetFileSize(const char* filename)
 
 IInStream* OpenFile(const char* filename)
 {
-	if(GetFileSize(filename) < 1024 * 1024 * 1024)
+	if(GetFileSize(filename) < 1024 * 1024 * 512)
 		return new MemInputStream(filename);
 	else return new InputStream(filename);
 	return 0;
-}
-
-void CreateDirectoryRecursively(const std::string &directory)
-{
-  static const std::string separators("\\/");
- 
-  // If the specified directory name doesn't exist, do our thing
-  DWORD fileAttributes = ::GetFileAttributes(directory.c_str());
-  if(fileAttributes == INVALID_FILE_ATTRIBUTES) {
- 
-    // Recursively do it all again for the parent directory, if any
-    std::size_t slashIndex = directory.find_last_of(separators);
-    if(slashIndex != std::wstring::npos) {
-      CreateDirectoryRecursively(directory.substr(0, slashIndex));
-    }
- 
-    // Create the last directory on the path (the recursive calls will have taken
-    // care of the parent directories by now)
-    BOOL result = ::CreateDirectory(directory.c_str(), nullptr);
-    if(result == FALSE) {
-      throw std::runtime_error("Could not create directory");
-    }
- 
-  } else { // Specified directory name already exists as a file or directory
- 
-    bool isDirectoryOrJunction =
-      ((fileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) ||
-      ((fileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0);
- 
-    if(!isDirectoryOrJunction) {
-      throw std::runtime_error(
-        "Could not create directory because a file with the same name exists"
-      );
-    }
- 
-  }
-}
-
-unsigned long long GetTimeStamp(const char* filename)
-{
-	WIN32_FILE_ATTRIBUTE_DATA r;
-	GetFileAttributesEx(filename, GetFileExInfoStandard, &r);
-ULARGE_INTEGER    lv_Large ;
-
-lv_Large.LowPart  = r.ftLastWriteTime.dwLowDateTime   ;
-  lv_Large.HighPart = r.ftLastWriteTime.dwHighDateTime  ;
-
-  return lv_Large.QuadPart ;
-}
-
-void SetTimeStamp(const char* filename, unsigned long long val)
-{
-	HANDLE Handle = CreateFile(filename, GENERIC_WRITE, FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
-	if(Handle == INVALID_HANDLE_VALUE)
-		throw std::runtime_error("Invalid handle!");
-	FILETIME f;
-	f.dwHighDateTime = val >> 32;
-	f.dwLowDateTime = val & 0xffffffff;
-	if(!SetFileTime(Handle, &f, &f, &f))
-		throw std::runtime_error("Setting time stamp failed!");
-	CloseHandle(Handle);
 }
 
 OutputStream::OutputStream(const char* a_Name)
@@ -215,7 +153,9 @@ void OutputStream::_Write(const void* data, unsigned int size)
 
 void OutputStream::Close()
 {
-	CloseHandle(H);
+	if (H)
+		CloseHandle(H);
+	H = 0;
 }
 
 /*

@@ -66,6 +66,7 @@ public:
 	virtual ~k_sPpmTracer()
 	{
 		m_sMaps.Free();
+		CUDA_FREE(m_pEntries);
 	}
 	virtual void Resize(unsigned int _w, unsigned int _h);
 	virtual void Debug(e_Image* I, const Vec2i& pixel, ITracerDebugger* debugger = 0);

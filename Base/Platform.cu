@@ -1,5 +1,6 @@
 #include <StdAfx.h>
 #include "Platform.h"
+#include <string.h>
 
 #ifdef ISWINDOWS
 #include <Windows.h>
@@ -59,12 +60,7 @@ float Platform::Add(float* add, float val)
 
 void Platform::SetMemory(void* dest, unsigned long long length, unsigned int val)
 {
-#if defined(ISWINDOWS)
-	//ZeroMemory(dest, length); looool
 	memset(dest, val, length);
-#elif defined(ISUNIX)
-
-#endif
 }
 
 void Platform::OutputDebug(const char* msg)

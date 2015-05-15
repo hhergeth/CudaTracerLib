@@ -40,7 +40,7 @@ private:
 public:
 	cTimer()
 	{
-		clock_getres( CLOCK_MONOTONIC ) ;
+		frequency = clock_getres( CLOCK_MONOTONIC ) ;
 	}
 	void StartTimer()
 	{

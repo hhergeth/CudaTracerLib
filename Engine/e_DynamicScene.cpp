@@ -66,8 +66,8 @@ e_DynamicScene::e_DynamicScene(e_Sensor* C, e_SceneInitData a_Data, const char* 
 }
 
 void e_DynamicScene::Free()
-{//x->Free(); 
-#define DEALLOC(x) delete x;
+{ 
+#define DEALLOC(x) { delete x; }
 	DEALLOC(m_pTriDataStream)
 	DEALLOC(m_pTriIntStream)
 	DEALLOC(m_pBVHStream)
@@ -102,15 +102,18 @@ e_StreamReference(e_Node) e_DynamicScene::CreateNode(const char* a_Token, IInStr
 		if(token.find(".xmsh") == std::string::npos)
 		{
 			std::string t0 = std::string(m_pCompilePath) + std::string(a_Token), cmpPath = t0.substr(0, t0.rfind('.')) + std::string(".xmsh");
-			CreateDirectoryRecursively(getDirName(cmpPath).c_str());
-			unsigned long long si = GetFileSize(cmpPath.c_str());
-			if(si <= 4 || si == -1 )
+			boost::filesystem::create_directories(getDirName(cmpPath));
+			boost::uintmax_t si = boost::filesystem::file_size(cmpPath);
+			time_t cmpStamp = boost::filesystem::last_write_time(cmpPath);
+			time_t rawStamp = boost::filesystem::exists(in.getFilePath()) ? boost::filesystem::last_write_time(in.getFilePath()) : rawStamp;
+			if (si <= 4 || !boost::filesystem::exists(cmpPath) || rawStamp != cmpStamp)
 			{
 				std::cout << "Started compiling mesh : " << a_Token << "\n";
 				OutputStream a_Out(cmpPath.c_str());
 				e_MeshCompileType t;
 				m_sCmpManager.Compile(in, token.c_str(), a_Out, &t);
 				a_Out.Close();
+				boost::filesystem::last_write_time(cmpPath, rawStamp);
 			}
 			xmshStream = OpenFile(cmpPath.c_str());
 		}
@@ -196,8 +199,8 @@ void e_DynamicScene::DeleteNode(e_StreamReference(e_Node) ref)
 
 e_BufferReference<e_MIPMap, e_KernelMIPMap> e_DynamicScene::LoadTexture(const char* file, bool a_MipMap)
 {
-	std::string a = GetFileSize(file) != -1 ? std::string(file) : std::string(m_pTexturePath) + std::string(file);
-	if ((int)GetFileSize(a.c_str()) <= 0)
+	std::string a = boost::filesystem::exists(file) ? std::string(file) : std::string(m_pTexturePath) + std::string(file);
+	if (!boost::filesystem::exists(a))
 		return LoadTexture((std::string(m_pTexturePath) + "404.jpg").c_str(), a_MipMap);
 	if(a[a.size() - 1] == '\n')
 		a = a.substr(0, a.size() - 1);
@@ -206,15 +209,15 @@ e_BufferReference<e_MIPMap, e_KernelMIPMap> e_DynamicScene::LoadTexture(const ch
 	if(load)
 	{
 		std::string a2 = std::string(m_pCompilePath) + "Images\\" + getFileName(a), b = a2 + ".xtex";
-		CreateDirectoryRecursively(getDirName(b).c_str());
-		unsigned long long rawStamp = GetTimeStamp(a.c_str());
-		unsigned long long cmpStamp = GetTimeStamp(b.c_str());
-		if((int)GetFileSize(b.c_str()) <= 0 || rawStamp != cmpStamp)
+		boost::filesystem::create_directories(getDirName(b).c_str());
+		time_t rawStamp = boost::filesystem::last_write_time(a);
+		time_t cmpStamp = boost::filesystem::last_write_time(b);
+		if (!boost::filesystem::exists(b) || rawStamp != cmpStamp)
 		{
 			OutputStream a_Out(b.c_str());
 			e_MIPMap::CompileToBinary(a.c_str(), a_Out, a_MipMap);
 			a_Out.Close();
-			SetTimeStamp(b.c_str(), rawStamp);
+			boost::filesystem::last_write_time(b, rawStamp);
 		}
 		InputStream I(b.c_str());
 		new(T) e_MIPMap(I);

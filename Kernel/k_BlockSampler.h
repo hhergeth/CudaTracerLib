@@ -75,6 +75,10 @@ public:
 		for (unsigned int i = 0; i < totalNumBlocks(); i++)
 			m_pHostWeight[i] = 1;
 	}
+	~k_BlockSampler()
+	{
+		Free();
+	}
 	void Free()
 	{
 		CUDA_FREE(m_pLumData);

@@ -44,14 +44,14 @@
     <OutDir>Build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>Build\$(Platform)\$(Configuration)\</IntDir>
     <TargetExt>.lib</TargetExt>
-    <IncludePath>$(ProjectDir);$(SolutionDir)Libs/Include;$(SolutionDir)../qMatrixLib/qMatrixLib;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(SolutionDir)Libs/Include;$(SolutionDir)../qMatrixLib/qMatrixLib;$(SolutionDir)Libs/boost_1_58_0;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)Libs/Lib/$(Configuration);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>Build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>Build\$(Platform)\$(Configuration)\</IntDir>
     <TargetExt>.lib</TargetExt>
-    <IncludePath>$(ProjectDir);$(SolutionDir)Libs/Include;$(SolutionDir)../qMatrixLib/qMatrixLib;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(SolutionDir)Libs/Include;$(SolutionDir)../qMatrixLib/qMatrixLib;$(SolutionDir)Libs/boost_1_58_0;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)Libs/Lib/$(Configuration);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -129,6 +129,9 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClCompile Include="Engine\SceneBuilder\PlyParser.cpp" />
     <ClCompile Include="Engine\SceneBuilder\SplitBVHBuilder.cpp" />
     <ClCompile Include="Engine\SceneBuilder\tiny_obj_loader.cpp" />
+    <ClInclude Include="Integrators\k_GradientDescent.h">
+      <FileType>CppCode</FileType>
+    </ClInclude>
     <ClCompile Include="Integrators\k_GradientDescent.cpp" />
     <ClCompile Include="Integrators\k_PmmTracer.cpp" />
     <ClCompile Include="Integrators\k_sPpmTracer.cpp" />
@@ -216,6 +219,8 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="Math\Int24.h" />
     <ClInclude Include="Math\Integrator.h" />
     <ClInclude Include="Math\MathFunc.h" />
+    <ClInclude Include="Math\PathDifferientials.h" />
+    <ClInclude Include="Math\qMatrixWrapper.h" />
     <ClInclude Include="Math\Quaternion.h" />
     <ClInclude Include="Math\Ray.h" />
     <ClInclude Include="Math\Sampling.h" />

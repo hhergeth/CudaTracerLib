@@ -3,6 +3,7 @@
 #include "..\Kernel\k_Tracer.h"
 #include "..\Base\CudaRandom.h"
 #include "..\Engine\e_SpatialGrid.h"
+#include "k_PmmHelper.h"
 
 void plotPoints(Vec3f* dirs, unsigned int N);
 
@@ -13,6 +14,11 @@ class k_PmmTracer : public k_Tracer<false, true>
 {
 public:
 	k_PmmTracer();
+	~k_PmmTracer()
+	{
+		sMap.Free();
+		dMap.Free();
+	}
 	virtual void Debug(e_Image* I, const Vec2i& pixel, ITracerDebugger* debugger = 0);
 protected:
 	virtual void DoRender(e_Image* I);

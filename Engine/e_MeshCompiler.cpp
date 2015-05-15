@@ -4,6 +4,10 @@
 #include <algorithm>
 #include <string>
 #include "..\Base\StringUtils.h"
+#define BOOST_FILESYSTEM_DEPRECATED
+#include <boost/filesystem.hpp>
+#include <boost/algorithm/string.hpp>
+using namespace boost::filesystem;
 
 bool hasEnding (std::string const &fullString, std::string const &_ending)
 {
@@ -37,48 +41,22 @@ bool e_Md5Compiler::IsApplicable(const char* a_InputFile, IInStream& in, e_MeshC
 	return b;
 }
 
-#if defined(ISWINDOWS)
-#include <Windows.h>
 void e_Md5Compiler::Compile(IInStream& in, OutputStream& a_Out)
 {
-	std::vector<std::string> A;
-	char dir[255];
-	ZeroMemory(dir, sizeof(dir));
-	char drive[255];
-	ZeroMemory(drive, sizeof(drive));
-	_splitpath(in.getFilePath(), drive, dir, 0, 0);
-	WIN32_FIND_DATA dat;
-	HANDLE hFind = FindFirstFile((std::string(drive) + std::string(dir) + "\\*.md5anim").c_str(), &dat);
-	while(hFind != INVALID_HANDLE_VALUE)
+	std::vector<std::string> animFiles;
+	boost::filesystem::path p_file(in.getFilePath());
+	for (directory_iterator it(p_file.parent_path()); it != directory_iterator(); ++it)
 	{
-		A.push_back(std::string(drive) + std::string(dir) + std::string(dat.cFileName));
-		if(!FindNextFile(hFind, &dat))
-			break;
+		if (!is_directory(*it))
+		{
+			std::string ext = it->path().extension().string();
+			boost::algorithm::to_lower(ext);
+			if (ext == ".md5anim")
+				animFiles.push_back(it->path().string());
+		}
 	}
-	e_AnimatedMesh::CompileToBinary(in.getFilePath(), A, a_Out);
-	FindClose(hFind);
+	e_AnimatedMesh::CompileToBinary(in.getFilePath(), animFiles, a_Out);
 }
-#elif defined(ISUNIX)
-#include <dirent.h>
-void e_Md5Compiler::Compile(const char* a_InputFile, OutputStream& a_Out)
-{
-	c_StringArray A;
-	char dir[255];
-	ZeroMemory(dir, sizeof(dir));
-	_splitpath(a_InputFile, 0, dir, 0, 0);
-	struct dirent **namelist;
-	int n;
-    n = scandir(".*md5anim", &namelist, 0, alphasort); 
-	while(n--)
-	{ 
-        A(std::string(dir) + std::string(namelist[n]->d_name)); 
-        free(namelist[n]); 
-    }
-	e_AnimatedMesh::CompileToBinary(a_InputFile, A, a_Out);
-}
-#endif
-
-
 
 bool e_PlyCompiler::IsApplicable(const char* a_InputFile, IInStream& in, e_MeshCompileType* out)
 {

@@ -1,222 +1,7 @@
 #include <StdAfx.h>
-#include "..\Kernel\k_TraceHelper.h"
-#include "..\Kernel\k_TraceAlgorithms.h"
-#include "k_PrimTracer.h"
-
-class PathVertex
-{
-public:
-	virtual Vec3f getPos() const = 0;
-	virtual Vec3f getNor() const = 0;
-	virtual Spectrum eval(const PathVertex* prev, const PathVertex* next) = 0;
-	virtual Vec3f getPos_uv(const Vec2f& uv) const
-	{
-		Frame sys(getNor());
-		return getPos() + sys.toWorld(Vec3f(uv, 0));
-	}
-	virtual bool sameSurface(const TraceResult& r2) const = 0;
-
-	static float G(const PathVertex* v1, const PathVertex* v2)
-	{
-		return ::G(v1->getNor(), v2->getNor(), v1->getPos(), v2->getPos());
-		//Vec3f w = v2->getPos() - v1->getPos();
-		//float l = length(w);
-		//w /= l;
-		//float cos1 = dot(w, v1->getNor()), cos2 = -dot(w, v2->getNor());
-		//return cos1 * cos2 / (l * l);
-	}
-}; 
-
-class SurfacePathVertex : public PathVertex
-{
-public:
-	DifferentialGeometry dg;
-	bool hasSampledDelta;
-	TraceResult res;
-
-	SurfacePathVertex(const TraceResult& r)
-		: res(r)
-	{
-		
-	}
-
-	virtual bool sameSurface(const TraceResult& r2) const
-	{
-		return res.getNodeIndex() == r2.getNodeIndex() && res.getTriIndex() == r2.getTriIndex();
-	}
-
-	virtual Vec3f getPos() const
-	{
-		return dg.P;
-	}
-
-	virtual Vec3f getNor() const
-	{
-		return dg.sys.n;
-	}
-
-	virtual Vec3f getPos_uv(const Vec2f& uv) const
-	{
-		return dg.P + dg.sys.toWorld(Vec3f(uv, 0));
-	}
-
-	virtual Spectrum eval(const PathVertex* prev, const PathVertex* next)
-	{
-		BSDFSamplingRecord bRec(dg);
-		bRec.eta = 1.0f;
-		bRec.sampledType = 0;
-		bRec.typeMask = ETypeCombinations::EAll;
-		Vec3f wi = normalize(prev->getPos() - dg.P), wo = normalize(next->getPos() - dg.P);
-		bRec.wi = normalize(bRec.dg.toLocal(-wi));
-		bRec.wo = normalize(bRec.dg.toLocal(wo));
-		return res.getMat().bsdf.f(bRec, hasSampledDelta ? EDiscrete : ESolidAngle);
-	}
-};
-
-class LightPathVertex : public PathVertex
-{
-public:
-	const e_KernelLight* light;
-	Vec3f p, n;
-
-	LightPathVertex()
-	{
-
-	}
-
-	virtual bool sameSurface(const TraceResult& r2) const
-	{
-		if (!light->Is<e_DiffuseLight>())
-			return false;
-		return r2.getNodeIndex() == light->As<e_DiffuseLight>()->m_uNodeIdx;
-	}
-
-	virtual Vec3f getPos() const
-	{
-		return p;
-	}
-
-	virtual Vec3f getNor() const
-	{
-		return n;
-	}
-
-	virtual Spectrum eval(const PathVertex* prev, const PathVertex* next)
-	{
-		PositionSamplingRecord pRec(p, n, 0);
-		DirectionSamplingRecord dRec(normalize(next->getPos() - p));
-		return light->evalPosition(pRec) * light->evalDirection(dRec, pRec);
-	}
-};
-
-class CameraPathVertex : public PathVertex
-{
-public:
-	const e_Sensor* sensor;
-	Vec3f p, n;
-
-	CameraPathVertex()
-	{
-
-	}
-
-	virtual bool sameSurface(const TraceResult& r2) const
-	{
-		return false;
-	}
-
-	virtual Vec3f getPos() const
-	{
-		return p;
-	}
-
-	virtual Vec3f getNor() const
-	{
-		return n;
-	}
-
-	virtual Spectrum eval(const PathVertex* prev, const PathVertex* next)
-	{
-		PositionSamplingRecord pRec(p, n, 0, EDiscrete);
-		DirectionSamplingRecord dRec(normalize(next->getPos() - p));
-		return sensor->evalPosition(pRec) * sensor->evalDirection(dRec, pRec);
-	}
-};
-
-class Path
-{
-public:
-	std::vector<PathVertex*> vertices;
-
-	CameraPathVertex* cameraVertex() const
-	{
-		return (CameraPathVertex*)vertices[0];
-	}
-
-	LightPathVertex* lightVertex() const
-	{
-		return (LightPathVertex*)vertices.back();
-	}
-
-	size_t k() const
-	{
-		return vertices.size() - 1;
-	}
-
-	Spectrum f() const
-	{
-		Spectrum s = cameraVertex()->eval(0, vertices[1]) * PathVertex::G(vertices[0], vertices[1]);
-		for (int i = 1; i < k() - 1; i++)
-		{
-			s *= vertices[i]->eval(vertices[i - 1], vertices[i + 1]) * PathVertex::G(vertices[i], vertices[i + 1]);
-		}
-		return s * lightVertex()->eval(0, vertices[k() - 1]);
-	}
-
-	void applyDiffX(const std::vector<Vec2f>& dX)
-	{
-		if (dX.size() != k() - 1 || dX.size() > 64)
-			throw std::runtime_error("invalid dX!");
-		Vec3f* pos = (Vec3f*)alloca(sizeof(Vec3f) * dX.size());
-		unsigned long long x_i_changed = 0;
-		for (size_t i = 0; i < dX.size() - 1; i++)
-		{
-			pos[i] = vertices[i]->getPos_uv(dX[i]);
-			x_i_changed |= (dX[i].lenSqr() != 0) << i;
-		}
-		for (size_t i = 0; i < dX.size() - 1; i++)
-		{
-			if ((x_i_changed >> i) & 3 == 0)
-				continue;
-			Ray r(pos[i], normalize(pos[i + 1] - pos[i]));
-			TraceResult r2 = k_TraceRay(r);
-			float rho = length(r(r2.m_fDist) - pos[i + 1]);//diff to proposed
-			if (rho > r2.m_fDist / 2 || !vertices[i + 1]->sameSurface(r2))
-			{
-				pos[i + 1] = vertices[i + 1]->getPos();
-				continue;
-			}
-
-			if (rho > 1e-3f)
-			{
-				if (i == dX.size() - 2)//modifying light vertex
-				{
-					DifferentialGeometry dg;
-					r2.fillDG(dg);
-					LightPathVertex* v = (LightPathVertex*)vertices[i + 1];
-					v->n = dg.sys.n;
-					v->p = dg.P;
-				}
-				else
-				{
-					SurfacePathVertex* v = (SurfacePathVertex*)vertices[i + 1];
-					v->res = r2;
-					r2.fillDG(v->dg);
-				}
-			}
-		}
-	}
-};
+#include "k_GradientDescent.h"
+#include "../Math/PathDifferientials.h"
+#include <assert.h>
 
 void TracePath(Ray r, std::vector<PathVertex*>& p, int N2, ETransportMode mode, CudaRNG& rng)
 {
@@ -237,7 +22,7 @@ void TracePath(Ray r, std::vector<PathVertex*>& p, int N2, ETransportMode mode, 
 	}
 }
 
-Path ConnectPaths(const std::vector<PathVertex*>& cameraPath, const std::vector<PathVertex*>& emitterPath)
+Path ConnectPaths(const std::vector<PathVertex*>& cameraPath, const std::vector<PathVertex*>& emitterPath, int s, int t)
 {
 	Path p;
 	for (std::vector<PathVertex*>::const_iterator it1 = cameraPath.begin(); it1 != cameraPath.end(); ++it1)
@@ -245,7 +30,8 @@ Path ConnectPaths(const std::vector<PathVertex*>& cameraPath, const std::vector<
 		p.vertices.push_back(*it1);
 		for (std::vector<PathVertex*>::const_iterator it2 = emitterPath.begin(); it2 != emitterPath.end(); ++it2)
 		{
-			if (::V((*it1)->getPos(), (*it2)->getPos()))
+			bool b1 = s == -1 || it1 - cameraPath.begin() == s, b2 = t == -1 || it2 - emitterPath.begin() == t;
+			if (::V((*it1)->getPos(), (*it2)->getPos()) && p.vertices.size() > 1 && b1 && b2)
 			{
 				int i = it2 - emitterPath.begin();
 				for (int j = i; j >= 0; j--)
@@ -257,7 +43,7 @@ Path ConnectPaths(const std::vector<PathVertex*>& cameraPath, const std::vector<
 	return p;
 }
 
-void ConstructPath(const Vec2i& pixel, Path& P)
+void ConstructPath(const Vec2i& pixel, Path& P, int s, int t)
 {
 	CudaRNG rng = g_RNGData();
 	int maxSubPathLength = 6;
@@ -270,33 +56,239 @@ void ConstructPath(const Vec2i& pixel, Path& P)
 	c_v->n = r.direction;
 	r = g_SceneData.GenerateSensorRay(pixel.x, pixel.y);
 	c_v->p = r.origin;
-	c_v->sensor = &g_SceneData.m_Camera;
+	c_v->sensor = g_SceneData.m_Camera;
 	sensorPath.push_back(c_v);
 	TracePath(r, sensorPath, maxSubPathLength, ETransportMode::ERadiance, rng);
 
 	float f = rng.randomFloat();
 	Vec2f f2 = rng.randomFloat2();
 	LightPathVertex* l_v = new LightPathVertex();
-	l_v->light = g_SceneData.sampleLight(f, f2);
+	l_v->light = *g_SceneData.sampleLight(f, f2);
 	PositionSamplingRecord pRec;
 	DirectionSamplingRecord dRec;
-	l_v->light->samplePosition(pRec, rng.randomFloat2());
-	l_v->light->sampleDirection(dRec, pRec, rng.randomFloat2());
+	l_v->light.samplePosition(pRec, Vec2f(1.0f / 3.0f));
+	l_v->light.sampleDirection(dRec, pRec, rng.randomFloat2());
 	l_v->n = pRec.n;
 	l_v->p = pRec.p;
 	emitterPath.push_back(l_v);
 	TracePath(Ray(pRec.p, dRec.d), emitterPath, maxSubPathLength, ETransportMode::EImportance, rng);
 
-	P = ConnectPaths(sensorPath, emitterPath);
+	P = ConnectPaths(sensorPath, emitterPath, s, t);
 
 	g_RNGData(rng);
 }
 
-void VisualizePath(Path& P, ITracerDebugger* debugger)
+qMatrix<float, 1, 4> dG_du12_v12(const Path& P, size_t i)
 {
-	debugger->StartNewPath(P.cameraVertex()->sensor, P.cameraVertex()->getPos(), Spectrum(1.0f));
-	for (size_t i = 1; i < P.vertices.size() - 1; i++)
+	return ::dG_du12_v12(P.vertices[i]->getPos(), P.vertices[i + 1]->getPos(), P.vertices[i]->getSys(), P.vertices[i + 1]->getSys());
+}
+
+qMatrix<float, 1, 4> dI_du12_v12(const Path& P)
+{
+	return qMatrix<float, 1, 4>::Zero();
+}
+
+qMatrix<float, 1, 4> dLe_du12_v12(const Path& P)
+{
+	return qMatrix<float, 1, 4>::Zero();
+}
+
+qMatrix<float, 1, 6> dfi_du123_v123(const Path& P, size_t i)
+{
+	return ::dfi_diffuse_du123_v123(P.vertices[i - 1]->getPos(), P.vertices[i]->getPos(), P.vertices[i + 1]->getPos(), P.vertices[i - 1]->getSys(), P.vertices[i]->getSys(), P.vertices[i + 1]->getSys(), 1);
+}
+
+template<typename MAT, int L> inline void set(MAT& M, const qMatrix<float, 1, L>& v, size_t i, size_t j)
+{
+	for (int k = 0; k < L; k++)
 	{
-		debugger->AppendVertex(ITracerDebugger::PathType::Camera, P.vertices[i]->getPos());
+		M(i, j + k) = v(k);
 	}
+}
+template<typename VEC> inline std::vector<Vec2f> to_vec(const VEC& v)
+{
+	std::vector<Vec2f> r;
+	int N = VEC::SIZE::DIM;
+	r.resize(N);
+	for (int i = 0; i < N / 2; i++)
+		r[i] = Vec2f(v(2 * i + 0), v(2 * i + 1));
+	return r;
+}
+
+template<int N> struct diff_helper
+{
+	static std::vector<Vec2f> exec(Path& P)
+	{
+		if (N == P.k() + 1)
+		{
+			const int k = N - 1, n = 3 + 2 * (k - 1);
+			float* a = (float*)alloca(sizeof(float) * n);
+			a[0] = P.I().average(); a[1] = PathVertex::G(P.vertices[0], P.vertices[1]); a[2] = P.L_e().average();
+			for (size_t j = 1; j < k; j++)
+			{
+				a[3 + 2 * (j - 1) + 0] = ((SurfacePathVertex*)P.vertices[j])->hasSampledDelta ? 1.0f : P.f_i(j).average();
+				a[3 + 2 * (j - 1) + 1] = PathVertex::G(P.vertices[j], P.vertices[j +1]);
+			}
+			float lhs = 1, rhs = 1;
+			for (size_t i = 1; i <= n - 1; i++)
+				rhs *= a[i];
+			qMatrix<float, 1, n> A;
+			A.zero();
+			for (int i = 0; i <= n - 1; i++)
+			{
+				rhs /= a[i];
+				lhs *= a[i];
+				A(i) = lhs * rhs;
+			}
+
+			qMatrix<float, n, (k + 1) * 2> M;
+			M.zero();
+			set(M, dI_du12_v12(P), 0, 0);
+			set(M, dG_du12_v12(P, 0), 1, 0);
+			set(M, dLe_du12_v12(P), 2, 2 * (k - 2));
+			//std::cout << M.ToString("M") << "\n";
+			for (size_t j = 1; j <= k - 1; j++)
+			{
+				set(M, dfi_du123_v123(P, j), 3 + 2 * (j - 1) + 0, 2 * (j - 1));
+				set(M, dG_du12_v12(P, j), 3 + 2 * (j-1) + 1, 2 * j);
+			}
+			//std::cout << M.ToString("M") << "\n";
+
+			qMatrix<float, 1, (k + 1) * 2> dX = A * M;
+			//std::cout << dX.ToString("dX") << "\n";
+			return to_vec(dX);
+		}
+		else return diff_helper<N - 1>::exec(P);
+	}
+};
+
+template<> struct diff_helper < 0 >
+{
+	static std::vector<Vec2f> exec(Path& P)
+	{
+		return std::vector<Vec2f>();
+	}
+};
+
+typedef int FORTRAN_INTEGER_TYPE;
+#include <coin\IpTNLP.hpp>
+#include <coin\IpIpoptApplication.hpp>
+using namespace Ipopt;
+
+std::vector<Vec2f> DifferientiatePath(Path& P)
+{
+	diff_helper<16> h;
+	return h.exec(P);
+}
+
+void OptimizePath(Path& P)
+{
+	class ipprob : public TNLP
+	{
+		Path& P;
+		const float bounds;
+	public:
+		ipprob(Path& p)
+			: P(p), bounds(10)
+		{
+
+		}
+		virtual bool get_nlp_info(Index& n, Index& m, Index& nnz_jac_g,
+			Index& nnz_h_lag, IndexStyleEnum& index_style)
+		{
+			n = P.vertices.size() * 2;
+			m = 1;
+			nnz_jac_g = 1;
+			nnz_h_lag = n* n;
+			index_style = IndexStyleEnum::C_STYLE;
+			return true;
+		}
+		virtual bool get_bounds_info(Index n, Number* x_l, Number* x_u,
+			Index m, Number* g_l, Number* g_u)
+		{
+			for (int i = 0; i < n; i++) {
+				x_l[i] = -bounds;
+				x_u[i] = +bounds;
+			}
+			g_l[0] = g_u[0] = 0;
+			return true;
+		}
+		virtual bool get_starting_point(Index n, bool init_x, Number* x,
+			bool init_z, Number* z_L, Number* z_U,
+			Index m, bool init_lambda,
+			Number* lambda)
+		{
+			if (init_x)
+				for (int i = 0; i < n; i++)
+					x[i] = 0;
+			assert(init_z == false && init_lambda == false);
+
+			return true;
+		}
+		virtual bool eval_f(Index n, const Number* x, bool new_x,
+			Number& obj_value)
+		{
+			Path p = P.Clone();
+			float* d = (float*)alloca(sizeof(float) * n);
+			for (int i = 0; i < n; i++)
+				d[i] = (float)x[i];
+			p.applyDiffX(d);
+			obj_value = p.f().average();
+			return true;
+		}
+		virtual bool eval_grad_f(Index n, const Number* x, bool new_x,
+			Number* grad_f)
+		{
+			Path p = P.Clone();
+			float* d = (float*)alloca(sizeof(float) * n);
+			for (int i = 0; i < n; i++)
+				d[i] = (float)x[i];
+			p.applyDiffX(d);
+			std::vector<Vec2f> g = DifferientiatePath(p);
+			assert(g.size() == 2 * n);
+			for (size_t i = 0; i < g.size(); i++)
+			{
+				grad_f[2 * i + 0] = g[i].x;
+				grad_f[2 * i + 1] = g[i].y;
+			}
+			return true;
+		}
+		virtual bool eval_g(Index n, const Number* x, bool new_x,
+			Index m, Number* g)
+		{
+			assert(m == 1);
+			g[0] = 0;
+			return true;
+		}
+		virtual bool eval_jac_g(Index n, const Number* x, bool new_x,
+			Index m, Index nele_jac, Index* iRow,
+			Index *jCol, Number* values)
+		{
+			assert(m == 1);
+			if (values == 0)
+				iRow[0] = jCol[0] = 0;
+			else values[0] = 0;
+			return true;
+		}
+		virtual void finalize_solution(SolverReturn status,
+			Index n, const Number* x, const Number* z_L, const Number* z_U,
+			Index m, const Number* g, const Number* lambda,
+			Number obj_value,
+			const IpoptData* ip_data,
+			IpoptCalculatedQuantities* ip_cq)
+		{
+			float* d = (float*)alloca(sizeof(float) * n);
+			for (int i = 0; i < n; i++)
+				d[i] = (float)x[i];
+			P.applyDiffX(d);
+		}
+	};
+
+	ipprob p(P);
+	SmartPtr<IpoptApplication> app = IpoptApplicationFactory();
+	app->Options()->SetNumericValue("tol", 1e-9);
+	app->Options()->SetStringValue("mu_strategy", "adaptive");
+	app->Options()->SetStringValue("output_file", "ipopt.out");
+	Ipopt::ApplicationReturnStatus status = app->Initialize();
+	status = app->OptimizeTNLP(&p);
 }

@@ -9,10 +9,11 @@
 
 inline std::string vformat (const char *fmt, va_list ap)
 {
-	int l = _vscprintf(fmt, ap);
-	char* c = new char[l];
-	vsprintf_s(c, l + 1, fmt, ap);
-	return std::string(c);
+	int l = _vscprintf(fmt, ap) + 1;
+	std::string str;
+	str.resize(l);
+	vsprintf_s((char*)str.c_str(), l, fmt, ap);
+	return str;
 }
 
 inline std::string format (const char *fmt, ...)

@@ -4,6 +4,7 @@
 #include <fstream>
 #include <MathTypes.h>
 #include "FixedString.h"
+#include <boost/filesystem.hpp>
 
 #define DCL_IN(TYPE) \
 	IInStream& operator>>(TYPE& rhs) \
@@ -110,6 +111,10 @@ private:
 	std::string path;
 public:
 	InputStream(const char* a_Name);
+	~InputStream()
+	{
+		Close();
+	}
 	virtual void Close();
 	virtual unsigned long long getPos()
 	{
@@ -133,9 +138,15 @@ public:
 	MemInputStream(const unsigned char* buf, unsigned int length, bool canKeep = false);
 	MemInputStream(InputStream& in);
 	MemInputStream(const char* a_Name);
+	~MemInputStream()
+	{
+		Close();
+	}
 	virtual void Close()
 	{
-		delete [] buf;
+		if (buf)
+			free((void*)buf);
+		buf = 0;
 	}
 	virtual unsigned long long getPos()
 	{
@@ -152,15 +163,7 @@ public:
 	}
 };
 
-unsigned long long GetFileSize(const char* filename);
-
 IInStream* OpenFile(const char* filename);
-
-void CreateDirectoryRecursively(const std::string &directory);
-
-unsigned long long GetTimeStamp(const char* filename);
-
-void SetTimeStamp(const char* filename, unsigned long long);
 
 class OutputStream
 {
@@ -170,6 +173,10 @@ private:
 	void _Write(const void* data, unsigned int size);
 public:
 	OutputStream(const char* a_Name);
+	~OutputStream()
+	{
+		Close();
+	}
 	void Close();
 	unsigned int GetNumBytesWritten()
 	{

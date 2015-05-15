@@ -28,6 +28,11 @@ public:
 		CUDA_MALLOC(&deviceData, sizeof(linkedEntry) * numData);
 		CUDA_MALLOC(&deviceMap, sizeof(unsigned int) * gridSize * gridSize * gridSize);
 	}
+	void Free()
+	{
+		CUDA_FREE(deviceData);
+		CUDA_FREE(deviceMap);
+	}
 
 	void SetSceneDimensions(const AABB& box, float initialRadius)
 	{
@@ -165,6 +170,11 @@ public:
 		: gridSize(gridSize)
 	{
 		CUDA_MALLOC(&deviceData, sizeof(T) * gridSize * gridSize * gridSize);
+	}
+	
+	void Free()
+	{
+		CUDA_FREE(deviceData);
 	}
 
 	void SetSceneDimensions(const AABB& box, float initialRadius)

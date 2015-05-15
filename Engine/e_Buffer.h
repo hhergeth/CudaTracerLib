@@ -45,6 +45,10 @@ public:
 		deviceMapped = (D*)::malloc(a_NumElements * sizeof(D));
 		memset(deviceMapped, 0, sizeof(D) * a_NumElements);
 	}
+	~e_Buffer()
+	{
+		Free();
+	}
 	void Free()
 	{
 		free(host);
@@ -442,6 +446,10 @@ public:
 		CUDA_MALLOC(&device, sizeof(T) * N);
 		cudaMemset(device, 0, sizeof(T) * N);
 		deviceMapped = 0;
+	}
+	~e_Buffer()
+	{
+		Free();
 	}
 	void Free()
 	{
