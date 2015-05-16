@@ -137,7 +137,7 @@ void sort(void* data, int start, int end, SortCompareFunc compareFunc, SortSwapF
 
 //------------------------------------------------------------------------
 
-SplitBVHBuilder::SplitBVHBuilder(IBVHBuilderCallback* clb, const BVHBuilder::Platform& P, const BVHBuilder::BuildParams& stats)
+SplitBVHBuilder::SplitBVHBuilder(IBVHBuilderCallback* clb, const Platform& P, const BuildParams& stats)
 	: m_pClb(clb),
     m_platform      (P),
 	m_params(stats),
@@ -161,9 +161,11 @@ int handleNode(BVHNode* n, IBVHBuilderCallback* clb, std::vector<int>& m_Indices
 {
 	if (n->isLeaf())
 	{
+		LeafNode* leaf = (LeafNode*)n;
+		if (leaf->getNumTriangles() == 0)
+			return -214783648;
 		if (level)
 		{
-			LeafNode* leaf = (LeafNode*)n;
 			int idx = clb->handleLeafObjects(m_Indices[leaf->m_lo]);
 			for (int j = leaf->m_lo + 1; j < leaf->m_hi; j++)
 				clb->handleLeafObjects(m_Indices[j]);
@@ -174,8 +176,6 @@ int handleNode(BVHNode* n, IBVHBuilderCallback* clb, std::vector<int>& m_Indices
 		{
 			int idx;
 			e_BVHNodeData* node = clb->HandleNodeAllocation(&idx);
-
-			LeafNode* leaf = (LeafNode*)n;
 			int idx2 = clb->handleLeafObjects(m_Indices[leaf->m_lo]);
 			for (int j = leaf->m_lo + 1; j < leaf->m_hi; j++)
 				clb->handleLeafObjects(m_Indices[j]);
@@ -202,7 +202,7 @@ int handleNode(BVHNode* n, IBVHBuilderCallback* clb, std::vector<int>& m_Indices
 	}
 }
 
-BVHNode* SplitBVHBuilder::run(void)
+void SplitBVHBuilder::run(void)
 {
     // Initialize reference stack and determine root bounds.
 
@@ -237,7 +237,7 @@ BVHNode* SplitBVHBuilder::run(void)
 	m_pClb->HandleBoundingBox(rootSpec.bounds);
 	m_pClb->HandleStartNode(handleNode(root, m_pClb, m_Indices));
 
-    return root;
+    delete root;
 }
 
 //------------------------------------------------------------------------

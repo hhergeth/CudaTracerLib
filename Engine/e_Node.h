@@ -19,7 +19,7 @@ public:
 #endif
 public:
 	e_Node() {}
-	e_Node(unsigned int MeshIndex, e_Mesh* mesh, const char* file, e_StreamReference(e_KernelMaterial) mat);
+	e_Node(unsigned int MeshIndex, e_Mesh* mesh, const std::string& file, e_StreamReference(e_KernelMaterial) mat);
 	void setLightData( unsigned int* li, unsigned int lic)
 	{
 		for(unsigned int i = 0; i < lic; i++)

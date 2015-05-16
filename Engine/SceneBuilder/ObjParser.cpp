@@ -16,6 +16,7 @@
 #include "..\e_TriangleData.h"
 #include <boost\algorithm\string.hpp>
 #include <boost\filesystem.hpp>
+#include <map>
 
 #define FW_HASH_MAGIC   (0x9e3779b9u)
 
@@ -221,49 +222,6 @@ struct TextureSpec
     float                     gain;
 };
 
-template<typename K, typename V, int N> struct HashTable
-{
-	struct HashTableEntry
-	{
-		K key;
-		V value;
-	};
-	HashTableEntry data[N];
-	unsigned int i;
-
-	HashTable()
-	{
-		i = 0;
-	}
-
-	void add(K& k, V& v)
-	{
-		data[i].key = k;
-		data[i++].value = v;
-	}
-	unsigned int contains(K& k)
-	{
-		for(unsigned int i = 0; i < this->i; i++)
-			if(data[i].key == k)
-				return 1;
-		return 0;
-	}
-	V* search(K& k)
-	{
-		for(unsigned int i = 0; i < this->i; i++)
-			if(data[i].key == k)
-				return &data[i].value;
-		return 0;
-	}
-	int searchi(K& k)
-	{
-		for(unsigned int i = 0; i < this->i; i++)
-			if(data[i].key == k)
-				return i;
-		return -1;
-	}
-};
-
 bool parseFloats(const char*& ptr, float* values, int num)
 {
     const char* tmp = ptr;
@@ -354,13 +312,35 @@ bool parseTexture(const char*& ptr, TextureSpec& value, const std::string& dirNa
     return true;
 }
 
+struct MatHash
+{
+	std::vector<Material> vec;
+	std::map<std::string, int> map;
+
+	void add(const std::string& name, const Material& mat)
+	{
+		map[name] = (int)vec.size();
+		vec.push_back(mat);
+	}
+
+	bool contains(const std::string& name)
+	{
+		return map.find(name) != map.end();
+	}
+
+	int index(const std::string& name)
+	{
+		std::map<std::string, int>::iterator it = map.find(name);
+		return it == map.end() ? -1 : it->second;
+	}
+};
+
 struct ImportState
 {
 	std::vector<Vec3f>						positions;
 	std::vector<Vec3f>						normals;
     std::vector<Vec2f>						texCoords;
-
-	HashTable<std::string, Material, 1<<12> materialHash;
+	MatHash materials;
 };
 
 void loadMtl(ImportState& s, IInStream& mtlIn, const std::string& dirName)
@@ -382,8 +362,8 @@ void loadMtl(ImportState& s, IInStream& mtlIn, const std::string& dirName)
         else if (parseLiteral(ptr, "newmtl ") && parseSpace(ptr) && *ptr) // material name
         {
 			if(mat != 0)
-				s.materialHash.add(std::string(ptrLast), *mat);
-            if (!s.materialHash.contains(std::string(ptr)))
+				s.materials.add(std::string(ptrLast), *mat);
+			if (!s.materials.contains(std::string(ptr)))
             {
 				mat = new Material();
 				Platform::SetMemory(ptrLast, sizeof(ptrLast));
@@ -508,7 +488,7 @@ void loadMtl(ImportState& s, IInStream& mtlIn, const std::string& dirName)
         }
     }
 	if(mat != 0)
-		s.materialHash.add(std::string(ptrLast), *mat);
+		s.materials.add(std::string(ptrLast), *mat);
 }
 
 struct SubMesh
@@ -626,7 +606,7 @@ void compileobj(IInStream& in, OutputStream& a_Out)
         }
         else if (parseLiteral(ptr, "usemtl ") && parseSpace(ptr)) // material name
         {
-			int mat = s.materialHash.searchi(std::string(ptr));
+			int mat = s.materials.index(std::string(ptr));
             if (submesh != -1)
             {
 				submesh = -1;
@@ -644,7 +624,7 @@ void compileobj(IInStream& in, OutputStream& a_Out)
 			if (dirName.size())
             {
 				boost::algorithm::trim(std::string(ptr));
-				std::string fileName = dirName + ptr;
+				std::string fileName = dirName + "/" + ptr;
                 MemInputStream mtlIn(fileName.c_str());
 				loadMtl(s, mtlIn, dirName);
 				mtlIn.Close();
@@ -691,28 +671,28 @@ void compileobj(IInStream& in, OutputStream& a_Out)
 	Platform::SetMemory(m_sLights, sizeof(m_sLights));
 	int c = 0, lc = 0;
     std::vector<e_KernelMaterial> matData;
-	matData.reserve(s.materialHash.i);
-	for(unsigned int i = 0; i < s.materialHash.i; i++)
+	matData.reserve(s.materials.vec.size());
+	for (std::map<std::string, int>::iterator it = s.materials.map.begin(); it != s.materials.map.end(); ++it)
 	{
-		Material M = s.materialHash.data[i].value;
+		const Material& M = s.materials.vec[it->second];
 		e_KernelMaterial mat(M.Name.c_str());
 		float f = 0.0f;
-		if(M.IlluminationModel == 2)
+		if (M.IlluminationModel == 2)
 		{
 			diffuse d;
 			d.m_reflectance = CreateTexture(M.textures[0].c_str(), Spectrum(M.diffuse.x, M.diffuse.y, M.diffuse.z));
 			mat.bsdf.SetData(d);
 		}
-		else if(M.IlluminationModel == 5)
+		else if (M.IlluminationModel == 5)
 		{/*
-			dielectric d;
-			d.m_invEta = d.m_eta = 1;
-			d.m_specularReflectance = CreateTexture(0, Spectrum(M.specular));
-			d.m_specularTransmittance = CreateTexture(0, Spectrum(0.0f));
-			mat.bsdf.SetData(d);*/
+		 dielectric d;
+		 d.m_invEta = d.m_eta = 1;
+		 d.m_specularReflectance = CreateTexture(0, Spectrum(M.specular));
+		 d.m_specularTransmittance = CreateTexture(0, Spectrum(0.0f));
+		 mat.bsdf.SetData(d);*/
 			mat.bsdf.SetData(conductor(Spectrum(0.0f), Spectrum(1.0f)));
 		}
-		else if(M.IlluminationModel == 7)
+		else if (M.IlluminationModel == 7)
 		{
 			dielectric d;
 			d.m_eta = M.IndexOfRefraction;
@@ -721,7 +701,7 @@ void compileobj(IInStream& in, OutputStream& a_Out)
 			d.m_specularTransmittance = CreateTexture(0, Spectrum(M.Tf.x, M.Tf.y, M.Tf.z));
 			mat.bsdf.SetData(d);
 		}
-		else if(M.IlluminationModel == 9)
+		else if (M.IlluminationModel == 9)
 		{
 			dielectric d;
 			d.m_eta = M.IndexOfRefraction;
@@ -737,37 +717,37 @@ void compileobj(IInStream& in, OutputStream& a_Out)
 		/*
 		if(0&&M.textures[3].c_str().size())
 		{
-			char* c = new char[M.textures[3].getID().getLength()+1];
-			ZeroMemory(c, M.textures[3].getID().getLength()+1);
-			memcpy(c, M.textures[3].getID().getPtr(), M.textures[3].getID().getLength());
-			OutputDebugString(c);
-			OutputDebugString(M.textures[3].getID().getPtr());
-			mat.SetHeightMap(CreateTexture(c, make_float3(0)));
-			mat.HeightScale = 0.5f;
+		char* c = new char[M.textures[3].getID().getLength()+1];
+		ZeroMemory(c, M.textures[3].getID().getLength()+1);
+		memcpy(c, M.textures[3].getID().getPtr(), M.textures[3].getID().getLength());
+		OutputDebugString(c);
+		OutputDebugString(M.textures[3].getID().getPtr());
+		mat.SetHeightMap(CreateTexture(c, make_float3(0)));
+		mat.HeightScale = 0.5f;
 		}
-		
-#ifdef EXT_TRI
+
+		#ifdef EXT_TRI
 		if(M.textures[0].hasData())
-			memcpy(m.m_cDiffusePath, M.textures[0].getID().getPtr(), M.textures[0].getID().getLength());
+		memcpy(m.m_cDiffusePath, M.textures[0].getID().getPtr(), M.textures[0].getID().getLength());
 		if(M.textures[3].hasData())
-			memcpy(m.m_cNormalPath, M.textures[3].getID().getPtr(), M.textures[3].getID().getLength());
-#endif
+		memcpy(m.m_cNormalPath, M.textures[3].getID().getPtr(), M.textures[3].getID().getLength());
+		#endif
 		*/
 		/*		Material M = s.materialHash.data[matIndex].value;
 		if(length(M.emission) != 0)
 		{
-			//duplicate material
-			matData.push_back(matData[matIndex]);
-			matIndex = matData.size() - 1;
-			std::cout << "duplicating material : " << matData[matIndex].Name << "\n";
+		//duplicate material
+		matData.push_back(matData[matIndex]);
+		matIndex = matData.size() - 1;
+		std::cout << "duplicating material : " << matData[matIndex].Name << "\n";
 
-			Platform::SetMemory(m_sLights + lc, sizeof(e_MeshPartLight));
-			m_sLights[lc].L = M.emission;
-			strcpy(m_sLights[lc].MatName, M.Name.c_str());
-			matData[matIndex].NodeLightIndex = lc++;
+		Platform::SetMemory(m_sLights + lc, sizeof(e_MeshPartLight));
+		m_sLights[lc].L = M.emission;
+		strcpy(m_sLights[lc].MatName, M.Name.c_str());
+		matData[matIndex].NodeLightIndex = lc++;
 		}
 		*/
-		if(length(M.emission))
+		if (length(M.emission))
 		{
 			m_sLights[lc].L = Spectrum(M.emission.x, M.emission.y, M.emission.z);
 			m_sLights[lc].MatName = M.Name;

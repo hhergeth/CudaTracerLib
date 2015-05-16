@@ -105,7 +105,6 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Base\BVHBuilder.cpp" />
     <ClCompile Include="Base\FileStream.cpp" />
     <ClCompile Include="Defines.cpp" />
     <ClCompile Include="Engine\e_AnimatedMesh.cpp" />
@@ -121,7 +120,6 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClCompile Include="Engine\e_Node.cpp" />
     <ClCompile Include="Engine\e_SceneBVH.cpp" />
     <ClCompile Include="Engine\e_ShapeSet.cpp" />
-    <ClCompile Include="Engine\e_Terrain.cpp" />
     <ClCompile Include="Engine\SceneBuilder\Importer.cpp" />
     <ClCompile Include="Engine\SceneBuilder\MD5Parser.cpp" />
     <ClCompile Include="Engine\SceneBuilder\ObjParser.cpp" />
@@ -142,7 +140,6 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Base\BVHBuilder.h" />
     <ClInclude Include="Base\CudaRandom.h" />
     <ClInclude Include="Base\FileStream.h" />
     <ClInclude Include="Base\FixedString.h" />
@@ -185,8 +182,6 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="Engine\e_Sensor.h" />
     <ClInclude Include="Engine\e_ShapeSet.h" />
     <ClInclude Include="Engine\e_SpatialGrid.h" />
-    <ClInclude Include="Engine\e_Terrain.h" />
-    <ClInclude Include="Engine\e_TerrainHeader.h" />
     <ClInclude Include="Engine\e_TriangleData.h" />
     <ClInclude Include="Engine\e_Volumes.h" />
     <ClInclude Include="Engine\SceneBuilder\Importer.h" />
@@ -229,7 +224,6 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="Math\Vector.h" />
     <ClInclude Include="Math\Warp.h" />
     <ClInclude Include="StdAfx.h" />
-    <ClInclude Include="VirtualFuncType.h" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="Base\CudaRandom.cu" />
@@ -237,7 +231,6 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <CudaCompile Include="Engine\e_AnimatedMesh.cu" />
     <CudaCompile Include="Engine\e_BSDF_Complex.cu" />
     <CudaCompile Include="Engine\e_BSDF_Simple.cu" />
-    <CudaCompile Include="Engine\e_Core.cu" />
     <CudaCompile Include="Engine\e_DifferentialGeometry.cu" />
     <CudaCompile Include="Engine\e_FileTexture.cu" />
     <CudaCompile Include="Engine\e_Image.cu" />

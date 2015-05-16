@@ -267,35 +267,13 @@ template<typename T> inline void ZeroMemoryCuda(T* cudaVar)
 	CALL_TYPE(_TYPE15_, func) \
 	CALL_TYPE(_TYPE16_, func)
 
-/*template<int ID> struct e_BaseTypeHelper
-{
-	static CUDA_FUNC_IN unsigned int BASE_TYPE()
-	{
-		return ID << 1;
-	}
-};
-
-template<int ID> struct e_DerivedTypeHelper
-{
-	static CUDA_FUNC_IN unsigned int TYPE()
-	{
-		return ID;
-	}
-};*/
-
 #define TYPE_FUNC(id) \
 	static CUDA_FUNC_IN unsigned int TYPE() \
 	{ \
 		return id; \
 	}
 
-
-/*struct VC13_ClassLayouter
-{
-	virtual ~VC13_ClassLayouter() {}
-};*/
-
-struct e_BaseType// : public VC13_ClassLayouter
+struct e_BaseType
 {
 	virtual void Update()
 	{
@@ -412,7 +390,7 @@ public:
 		host = (T*)r.operator->();
 		device = (T*)r.getDevice();
 	}*/
-	e_Variable(T* h, T* d)
+	CUDA_FUNC_IN e_Variable(T* h, T* d)
 		: host(h), device(d)
 	{
 
@@ -440,5 +418,9 @@ public:
 #else
 		return host;
 #endif
+	}
+	template<typename T> CUDA_FUNC_IN e_Variable<T> As() const
+	{
+		return e_Variable<T>((T*)host, (T*)device);
 	}
 };

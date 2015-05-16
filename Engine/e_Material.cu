@@ -14,7 +14,7 @@ e_KernelMaterial::e_KernelMaterial()
 	AlphaMap.used = NormalMap.used = HeightMap.used = 0;
 }
 
-e_KernelMaterial::e_KernelMaterial(const char* name)
+e_KernelMaterial::e_KernelMaterial(const std::string& name)
 {
 	parallaxMinSamples = 10;
 	parallaxMaxSamples = 50;

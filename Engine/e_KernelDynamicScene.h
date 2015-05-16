@@ -3,7 +3,6 @@
 #include <MathTypes.h>
 #include "e_Buffer.h"
 #include "e_SceneBVH.h"
-#include "e_TerrainHeader.h"
 #include "e_Volumes.h"
 #include "..\Math\Sampling.h"
 #include "e_Sensor.h"
@@ -35,7 +34,6 @@ struct e_KernelDynamicScene
 	e_KernelBuffer<e_KernelLight> m_sLightData;
 	e_KernelBuffer<char> m_sAnimData;
 	e_KernelSceneBVH m_sSceneBVH;
-	e_KernelTerrainData m_sTerrain;
 	e_KernelAggregateVolume m_sVolume;
 	unsigned int m_uEnvMapIndex;
 	Distribution1D<max_LIGHT_COUNT> m_emitterPDF;

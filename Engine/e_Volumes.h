@@ -1,8 +1,9 @@
 #pragma once
-
+#include "../Defines.h"
 #include "..\Math\AABB.h"
-#include "e_Buffer.h"
 #include "e_PhaseFunction.h"
+
+template<typename T> class e_Stream;
 
 struct MediumSamplingRecord
 {
@@ -148,30 +149,35 @@ public:
 	float4x4 WorldToVolume;
 };
 
-template<typename T> struct e_DenseVolGrid
+struct e_DenseVolGridBaseType
 {
-private:
-	e_Variable<T> data;
-	e_StreamReference(char) streamRef;
+	e_Variable<char> data;
+	e_DenseVolGridBaseType()
+	{
+	}
+	e_DenseVolGridBaseType(e_Stream<char>* a_Buffer, Vec3u dim, size_t sizePerElement);
+	void InvalidateDeviceData(e_Stream<char>* a_Buffer);
+	template<typename T> CUDA_FUNC_IN e_Variable<T> getVar() const
+	{
+		return data.As<T>();
+	}
+};
+
+template<typename T> struct e_DenseVolGrid : public e_DenseVolGridBaseType
+{
 public:
 	Vec3u dim;
 	Vec3f dimF;
 	e_DenseVolGrid(){}
 	e_DenseVolGrid(e_Stream<char>* a_Buffer, Vec3u dim)
-		: dim(dim)
+		: e_DenseVolGridBaseType(a_Buffer, dim, sizeof(T)), dim(dim)
 	{
 		dimF = Vec3f(dim.x, dim.y, dim.z);
-		streamRef = a_Buffer->malloc(dim.x * dim.y * dim.z * sizeof(T));
-		data = streamRef.AsVar<T>();
 	}
 	void Clear()
 	{
 		memset(data.host, 0, sizeof(T)* dim.x * dim.y * dim.z);
 		cudaMemset(data.device, 0, sizeof(T)* dim.x * dim.y * dim.z);
-	}
-	void InvalidateDeviceData()
-	{
-		streamRef.Invalidate();
 	}
 	void Set(const T& val)
 	{
@@ -190,11 +196,11 @@ public:
 	}
 	CUDA_FUNC_IN T& value(unsigned int i, unsigned int j, unsigned int k)
 	{
-		return data[idx(i, j, k)];
+		return getVar<T>()[idx(i, j, k)];
 	}
 	CUDA_FUNC_IN const T& value(unsigned int i, unsigned int j, unsigned int k) const
 	{
-		return data[idx(i, j, k)];
+		return getVar<T>()[idx(i, j, k)];
 	}
 	CUDA_FUNC_IN T sampleTrilinear(const Vec3f& vsP) const
 	{
@@ -403,14 +409,7 @@ public:
 	{
 
 	}
-	e_KernelAggregateVolume(e_Stream<e_VolumeRegion>* D, bool devicePointer = true)
-	{
-		m_uVolumeCount = D->UsedElements().getLength();
-		m_pVolumes = D->getKernelData(devicePointer).Data;
-		box = AABB::Identity();
-		for(unsigned int i = 0; i < m_uVolumeCount; i++)
-			box.Enlarge(D->operator()(i)->WorldBound());
-	}
+	e_KernelAggregateVolume(e_Stream<e_VolumeRegion>* D, bool devicePointer = true);
 
 	///Calculates the intersection of the ray with the bound of the volume
 	CUDA_DEVICE CUDA_HOST bool IntersectP(const Ray &ray, float minT, float maxT, float *t0, float *t1, unsigned int a_NodeIndex = 0xffffffff) const;

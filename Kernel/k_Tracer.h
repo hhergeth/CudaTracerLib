@@ -14,80 +14,6 @@ CUDA_FUNC_IN float CalcZBufferDepth(float n, float f, float z)
 	return (f / (f - n) * z - f * n / (f - n)) / z;
 }
 
-class ITracerDebugger
-{
-public:
-
-	enum PathType
-	{
-		Camera,
-		Light
-	};
-
-	CUDA_FUNC_IN virtual void StartNewPath(const e_KernelLight* l, const Vec3f& pos, const Spectrum& col) = 0;
-	CUDA_FUNC_IN virtual void StartNewPath(const e_Sensor* c, const Vec3f& pos, const Spectrum& col) = 0;
-	CUDA_FUNC_IN virtual void AppendVertex(ITracerDebugger::PathType t, const Vec3f& pos) = 0;
-	CUDA_FUNC_IN virtual void AppendVertex(ITracerDebugger::PathType t, const Ray& ray, const TraceResult& res) = 0;
-
-};
-
-struct k_KernelTracerDebugger_NO_OP
-{
-	CUDA_FUNC_IN void StartNewPath(const e_KernelLight* l, const Vec3f& pos, const Spectrum& col)
-	{
-
-	}
-
-	CUDA_FUNC_IN void StartNewPath(const e_Sensor* c, const Vec3f& pos, const Spectrum& col)
-	{
-
-	}
-
-	CUDA_FUNC_IN void AppendVertex(ITracerDebugger::PathType t, const Vec3f& pos)
-	{
-
-	}
-
-	CUDA_FUNC_IN void AppendVertex(ITracerDebugger::PathType t, const Ray& ray, const TraceResult& res)
-	{
-
-	}
-};
-
-struct k_KernelTracerDebugger
-{
-	ITracerDebugger* wrapped;
-
-	k_KernelTracerDebugger(ITracerDebugger* debugger)
-		: wrapped(debugger)
-	{
-	}
-
-	CUDA_FUNC_IN void StartNewPath(const e_KernelLight* l, const Vec3f& pos, const Spectrum& col)
-	{
-		if (wrapped)
-			wrapped->StartNewPath(l, pos, col);
-	}
-
-	CUDA_FUNC_IN void StartNewPath(const e_Sensor* c, const Vec3f& pos, const Spectrum& col)
-	{
-		if (wrapped)
-			wrapped->StartNewPath(c, pos, col);
-	}
-
-	CUDA_FUNC_IN void AppendVertex(ITracerDebugger::PathType t, const Vec3f& pos)
-	{
-		if (wrapped)
-			wrapped->AppendVertex(t, pos);
-	}
-
-	CUDA_FUNC_IN void AppendVertex(ITracerDebugger::PathType t, const Ray& ray, const TraceResult& res)
-	{
-		if (wrapped)
-			wrapped->AppendVertex(t, ray, res);
-	}
-};
-
 class k_TracerBase
 {
 public:
@@ -121,7 +47,7 @@ public:
 	}
 	virtual void Resize(unsigned int _w, unsigned int _h) = 0;
 	virtual void DoPass(e_Image* I, bool a_NewTrace) = 0;
-	virtual void Debug(e_Image* I, const Vec2i& pixel, ITracerDebugger* debugger = 0)
+	virtual void Debug(e_Image* I, const Vec2i& pixel)
 	{
 
 	}

@@ -28,12 +28,8 @@ template<int LENGTH> struct FixedString
 	}
 	operator std::string() const
 	{
-		std::string str(u_array, buffer + length);
+		std::string str(buffer, buffer + length);
 		return str;
-	}
-	operator const char*() const
-	{
-		return buffer;
 	}
 	size_t size() const
 	{

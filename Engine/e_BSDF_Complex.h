@@ -14,25 +14,27 @@ struct coating : public BSDF//, public e_DerivedTypeHelper<13>
 	e_Texture m_specularReflectance;
 	float m_thickness;
 	coating()
-		: BSDF(EDeltaReflection, 0, &m_sigmaA, &m_specularReflectance)
+		: BSDF(EDeltaReflection)
 	{
+		BSDF::initTextureOffsets(m_sigmaA, m_specularReflectance);
 	}
 	coating(BSDFFirst& nested, float eta, float thickness, const e_Texture& sig)
-		: BSDF(EBSDFType(EDeltaReflection | nested.getType()), new std::vector<e_Texture*>(nested.As()->getTextureList()), &m_sigmaA, &m_specularReflectance), m_nested(nested), m_eta(eta), m_invEta(1.0f / eta), m_thickness(thickness), m_sigmaA(sig)
+		: BSDF(EBSDFType(EDeltaReflection | nested.getType())), m_nested(nested), m_eta(eta), m_invEta(1.0f / eta), m_thickness(thickness), m_sigmaA(sig), m_specularReflectance(CreateTexture(Spectrum(1.0f)))
 	{
-		m_specularReflectance = CreateTexture(Spectrum(1.0f));
+		BSDF::initTextureOffsets2(nested.As()->getTextureList(), m_sigmaA, m_specularReflectance);
 		float avgAbsorption = (m_sigmaA.Average()*(-2*m_thickness)).exp().average();
 		m_specularSamplingWeight = 1.0f / (avgAbsorption + 1.0f);
 	}
 	coating(BSDFFirst& nested, float eta, float thickness, const e_Texture& sig, const e_Texture& specular)
-		: BSDF(EBSDFType(EDeltaReflection | nested.getType()), new std::vector<e_Texture*>(nested.As()->getTextureList()), &m_sigmaA, &m_specularReflectance), m_nested(nested), m_eta(eta), m_invEta(1.0f / eta), m_thickness(thickness), m_sigmaA(sig)
+		: BSDF(EBSDFType(EDeltaReflection | nested.getType())), m_nested(nested), m_eta(eta), m_invEta(1.0f / eta), m_thickness(thickness), m_sigmaA(sig), m_specularReflectance(specular)
 	{
-		m_specularReflectance = specular;
+		BSDF::initTextureOffsets2(nested.As()->getTextureList(), m_sigmaA, m_specularReflectance);
 		float avgAbsorption = (m_sigmaA.Average()*(-2*m_thickness)).exp().average();
 		m_specularSamplingWeight = 1.0f / (avgAbsorption + 1.0f);
 	}
 	virtual void Update()
 	{
+		BSDF::initTextureOffsets2(m_nested.As()->getTextureList(), m_sigmaA, m_specularReflectance);
 		this->m_combinedType = EDeltaReflection | m_nested.getType();
 		m_invEta = 1.0f / m_eta;
 		float avgAbsorption = (m_sigmaA.Average()*(-2*m_thickness)).exp().average();
@@ -82,19 +84,21 @@ struct roughcoating : public BSDF//, public e_DerivedTypeHelper<14>
 	float m_eta, m_invEta;
 	float m_thickness;
 	roughcoating()
-		: BSDF(EGlossyReflection, 0, &m_sigmaA, &m_specularReflectance, &m_alpha)
+		: BSDF(EGlossyReflection)
 	{
+		initTextureOffsets(m_sigmaA, m_specularReflectance, m_alpha);
 	}
 	roughcoating(BSDFFirst& nested, MicrofacetDistribution::EType type, float eta, float thickness, e_Texture& sig, e_Texture& alpha, e_Texture& specular)
-		: BSDF(EBSDFType(EGlossyReflection | nested.getType()), new std::vector<e_Texture*>(nested.As()->getTextureList()), &m_sigmaA, &m_specularReflectance, &m_alpha), m_nested(nested), m_eta(eta), m_invEta(1.0f / eta), m_thickness(thickness), m_sigmaA(sig), m_alpha(alpha)
+		: BSDF(EBSDFType(EGlossyReflection | nested.getType())), m_nested(nested), m_eta(eta), m_invEta(1.0f / eta), m_thickness(thickness), m_sigmaA(sig), m_alpha(alpha), m_specularReflectance(specular)
 	{
+		initTextureOffsets2(nested.As()->getTextureList(), m_sigmaA, m_specularReflectance, m_alpha);
 		m_distribution.m_type = type;
-		m_specularReflectance = specular;
 		float avgAbsorption = (m_sigmaA.Average()*(-2*m_thickness)).exp().average();
 		m_specularSamplingWeight = 1.0f / (avgAbsorption + 1.0f);
 	}
 	virtual void Update()
 	{
+		initTextureOffsets2(m_nested.As()->getTextureList(), m_sigmaA, m_specularReflectance, m_alpha);
 		this->m_combinedType = EGlossyReflection | m_nested.getType();
 		m_invEta = 1.0f / m_eta;
 		float avgAbsorption = (m_sigmaA.Average()*(-2*m_thickness)).exp().average();
@@ -152,24 +156,26 @@ public:
 struct blend : public BSDF//, public e_DerivedTypeHelper<16>
 {
 	TYPE_FUNC(15)
-	static std::vector<e_Texture*>* join(const BSDFFirst& nested1, const BSDFFirst& nested2)
+	static std::vector<e_Texture*> join(const BSDFFirst& nested1, const BSDFFirst& nested2)
 	{
 		std::vector<e_Texture*> q, a = nested1.As()->getTextureList(), b = nested2.As()->getTextureList();
 		q.insert(q.end(), a.begin(), a.end());
 		q.insert(q.end(), b.begin(), b.end());
-		return new std::vector<e_Texture*>(q);
+		return q;
 	}
 
 	BSDFFirst bsdfs[2];
 	e_Texture weight;
 public:
 	blend()
-		: BSDF(EBSDFType(0), 0, &weight)
+		: BSDF(EBSDFType(0))
 	{
+		initTextureOffsets(weight);
 	}
 	blend(const BSDFFirst& nested1, const BSDFFirst& nested2, const e_Texture& _weight)
-		: BSDF(EBSDFType(nested1.getType() | nested2.getType()), join(nested1, nested2), &weight), weight(_weight)
+		: BSDF(EBSDFType(nested1.getType() | nested2.getType())), weight(_weight)
 	{
+		initTextureOffsets2(join(nested1, nested2), weight);
 		bsdfs[0] = nested1;
 		bsdfs[1] = nested2;
 	}
@@ -182,5 +188,9 @@ public:
 		n1.SetData(a);
 		n2.SetData(b);
 		return blend(n1, n2, weight);
+	}
+	virtual void Update()
+	{
+		initTextureOffsets2(join(bsdfs[0], bsdfs[1]), weight);
 	}
 };

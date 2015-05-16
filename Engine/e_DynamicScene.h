@@ -6,13 +6,11 @@
 #include "e_Mesh.h"
 #include "e_SceneBVH.h"
 #include "e_Light.h"
-#include "e_TerrainHeader.h"
 #include "e_Material.h"
 #include "e_Volumes.h"
 #include "e_KernelDynamicScene.h"
 #include "e_MeshCompiler.h"
 
-class e_Terrain;
 struct e_TmpVertex;
 class e_AnimatedMesh;
 
@@ -37,22 +35,21 @@ public:
 	e_Stream<e_KernelLight>* m_pLightStream;
 	e_SceneBVH* m_pBVH;
 	e_TmpVertex* m_pDeviceTmpFloats;
-	e_Terrain* m_pTerrain;
-	const char* m_pTexturePath;
-	const char* m_pCompilePath;
+	const std::string m_pTexturePath;
+	const std::string m_pCompilePath;
 	e_MeshCompilerManager m_sCmpManager;
 	e_Sensor* m_pCamera;
 	unsigned int m_uEnvMapIndex;
 public:
-	e_DynamicScene(e_Sensor* C, e_SceneInitData a_Data, const char* texPath, const char* cmpPath, const char* dataPath);
+	e_DynamicScene(e_Sensor* C, e_SceneInitData a_Data, const std::string& texPath, const std::string& cmpPath, const std::string& dataPath);
 	~e_DynamicScene();
 	void Free();
-	e_StreamReference(e_Node) CreateNode(const char* a_MeshFile, bool force_recompile = false);
-	e_StreamReference(e_Node) CreateNode(const char* a_MeshFile, IInStream& in, bool force_recompile = false);
+	e_StreamReference(e_Node) CreateNode(const std::string& a_MeshFile, bool force_recompile = false);
+	e_StreamReference(e_Node) CreateNode(const std::string& a_MeshFile, IInStream& in, bool force_recompile = false);
 	e_StreamReference(e_Node) CreateNode(unsigned int a_TriangleCount, unsigned int a_MaterialCount);
 	void DeleteNode(e_StreamReference(e_Node) ref);
 	///Do not use this! Just invalidate and update the material
-	e_BufferReference<e_MIPMap, e_KernelMIPMap> LoadTexture(const char* file, bool a_MipMap);
+	e_BufferReference<e_MIPMap, e_KernelMIPMap> LoadTexture(const std::string& file, bool a_MipMap);
 	void UnLoadTexture(e_BufferReference<e_MIPMap, e_KernelMIPMap> ref);
 	void ReloadTextures();
 	float4x4 GetNodeTransform(e_StreamReference(e_Node) n)
@@ -99,8 +96,7 @@ public:
 	e_AnimatedMesh* AccessAnimatedMesh(e_StreamReference(e_Node) n);
 	unsigned int getCudaBufferSize();
 	unsigned int getTriangleCount();
-	void setTerrain(e_Terrain* T);
-	void printStatus(char* dest);
+	std::string printStatus();
 	void setCamera(e_Sensor* C)
 	{
 		m_pCamera = C;
@@ -109,18 +105,17 @@ public:
 	{
 		return m_pCamera;
 	}
-	e_Terrain* getTerrain();
 	e_StreamReference(e_VolumeRegion) AddVolume(e_VolumeRegion& r);
 	e_StreamReference(e_VolumeRegion) AddVolume(int w, int h, int d, const float4x4& worldToVol, const e_PhaseFunction& p);
 	e_StreamReference(e_VolumeRegion) AddVolume(int wA, int hA, int dA,
 												int wS, int hS, int dS,
 												int wL, int hL, int dL, const float4x4& worldToVol, const e_PhaseFunction& p);
 	e_StreamReference(e_VolumeRegion) getVolumes();
-	AABB getAABB(e_StreamReference(e_Node) Node, const char* name, unsigned int* a_Mi = 0);
+	AABB getAABB(e_StreamReference(e_Node) Node, const std::string& name, unsigned int* a_Mi = 0);
 	e_BufferReference<e_Mesh, e_KernelMesh> getMesh(e_StreamReference(e_Node) n);
 	e_StreamReference(e_KernelMaterial) getMats(e_StreamReference(e_Node) n);
-	e_StreamReference(e_KernelMaterial) getMat(e_StreamReference(e_Node) n, const char* name);
-	ShapeSet CreateShape(e_StreamReference(e_Node) Node, const char* name, unsigned int* a_Mi = 0);
+	e_StreamReference(e_KernelMaterial) getMat(e_StreamReference(e_Node) n, const std::string& name);
+	ShapeSet CreateShape(e_StreamReference(e_Node) Node, const std::string& name, unsigned int* a_Mi = 0);
 	template<typename T> e_StreamReference(e_KernelLight) createLight(T& val)
 	{
 		e_StreamReference(e_KernelLight) r = m_pLightStream->malloc(1);
@@ -128,11 +123,11 @@ public:
 		return r();
 	}
 	AABB getBox(e_StreamReference(e_Node) n);
-	e_StreamReference(e_KernelLight) createLight(e_StreamReference(e_Node) Node, const char* materialName, Spectrum& L);
+	e_StreamReference(e_KernelLight) createLight(e_StreamReference(e_Node) Node, const std::string& materialName, Spectrum& L);
 	void removeLight(e_StreamReference(e_Node) Node, unsigned int mi);
 	void removeAllLights(e_StreamReference(e_Node) Node);
 	void recalculateAreaLights(e_StreamReference(e_Node) Node);
-	e_StreamReference(e_KernelLight) setEnvironementMap(const Spectrum& power, const char* file);
+	e_StreamReference(e_KernelLight) setEnvironementMap(const Spectrum& power, const std::string& file);
 	void InvalidateSceneBVH()
 	{
 		m_uModified = 1;

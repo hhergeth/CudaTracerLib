@@ -45,7 +45,7 @@ public:
 	mpHlp AlphaMap;
 public:
 	e_KernelMaterial();
-	e_KernelMaterial(const char* name);
+	e_KernelMaterial(const std::string& name);
 	CUDA_DEVICE CUDA_HOST bool SampleNormalMap(DifferentialGeometry& uv, const Vec3f& wi) const;
 	CUDA_DEVICE CUDA_HOST float SampleAlphaMap(const DifferentialGeometry& uv) const;
 	CUDA_DEVICE CUDA_HOST bool GetBSSRDF(const DifferentialGeometry& uv, const e_KernelBSSRDF** res) const;
@@ -61,34 +61,32 @@ public:
 	}
 	void SetNormalMap(const e_Texture& tex)
 	{
-		if(HeightMap.used)
-			throw 1;
+		if (HeightMap.used)
+			throw std::runtime_error("Cannot set both height and normal map!");
 		NormalMap.used = true;
 		NormalMap.tex = tex;
 	}
-	void SetNormalMap(const char* path)
+	void SetNormalMap(const std::string& path)
 	{
 		SetNormalMap(CreateTexture(path));
 	}
 	void SetHeightMap(const e_Texture& tex)
 	{
 		if(NormalMap.used)
-			throw 1;
+			throw std::runtime_error("Cannot set both height and normal map!");
 		HeightMap.used = true;
 		HeightMap.tex = tex;
 	}
-	void SetHeightMap(const char* path)
+	void SetHeightMap(const std::string& path)
 	{
 		SetHeightMap(CreateTexture(path));
 	}
 	void SetAlphaMap(const e_Texture& tex)
 	{
-		if(AlphaMap.used)
-			throw 1;
 		AlphaMap.used = true;
 		AlphaMap.tex = tex;
 	}
-	void SetAlphaMap(const char* path)
+	void SetAlphaMap(const std::string& path)
 	{
 		SetAlphaMap(CreateTexture(path));
 	}

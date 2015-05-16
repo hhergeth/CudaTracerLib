@@ -2,7 +2,6 @@
 
 #include "e_FileTexture.h"
 #include "e_DifferentialGeometry.h"
-#include "e_Buffer.h"
 #include "../Base/FixedString.h"
 
 struct e_TextureMapping2D
@@ -118,7 +117,7 @@ struct e_ImageTexture : public e_TextureBase//, public e_DerivedTypeHelper<4>
 {
 	TYPE_FUNC(4)
 	e_ImageTexture(){}
-	e_ImageTexture(const e_TextureMapping2D& m, const char* _file)
+	e_ImageTexture(const e_TextureMapping2D& m, const std::string& _file)
 		: mapping(m), file(_file)
 	{
 	}
@@ -138,10 +137,8 @@ struct e_ImageTexture : public e_TextureBase//, public e_DerivedTypeHelper<4>
 	}
 	template<typename L> void LoadTextures(L callback)
 	{
-		texRef = callback(file, true);
-		tex = texRef.AsVar();
+		tex = callback(file, true);
 	}
-	e_BufferReference<e_MIPMap, e_KernelMIPMap> texRef;
 	e_Variable<e_KernelMIPMap> tex;
 	e_TextureMapping2D mapping;
 	FixedString<64> file;
@@ -240,7 +237,7 @@ static e_Texture CreateTexture(const Spectrum& col)
 	return r;
 }
 
-static e_Texture CreateTexture(const char* p)
+static e_Texture CreateTexture(const std::string& p)
 {
 	e_ImageTexture f(e_TextureMapping2D(), p);
 	e_Texture r;

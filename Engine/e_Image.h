@@ -55,7 +55,7 @@ public:
 	}
 	CUDA_DEVICE CUDA_HOST void SetSample(int sx, int sy, RGBCOL c);
 	CUDA_DEVICE CUDA_HOST void Splat(float sx, float sy, const Spectrum &L);
-    void WriteDisplayImage(const char* fileName);
+	void WriteDisplayImage(const std::string& fileName);
 	void StartRendering();
 	void EndRendering();
 	void Clear();

@@ -117,7 +117,7 @@ void k_BDPT::RenderBlock(e_Image* I, int x, int y, int blockW, int blockH)
 	pathKernel << < numBlocks, threadsPerBlock >> >(w, h, x, y, m_pBlockSampler->getBlockImage(), use_mis, force_s, force_t, LScale);
 }
 
-void k_BDPT::Debug(e_Image* I, const Vec2i& pixel, ITracerDebugger* debugger)
+void k_BDPT::Debug(e_Image* I, const Vec2i& pixel)
 {
 	k_INITIALIZE(m_pScene, g_sRngs);
 	//Li(*gI, g_RNGData(), pixel.x, pixel.y);

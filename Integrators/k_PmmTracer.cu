@@ -126,7 +126,7 @@ void k_PmmTracer::StartNewTrace(e_Image* I)
 	g_RNGData(rng);
 }
 
-void k_PmmTracer::Debug(e_Image* I, const Vec2i& p, ITracerDebugger* debugger)
+void k_PmmTracer::Debug(e_Image* I, const Vec2i& p)
 {
 	/*k_INITIALIZE(m_pScene, g_sRngs);
 	float3* deviceDirs;

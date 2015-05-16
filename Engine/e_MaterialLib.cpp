@@ -52,19 +52,14 @@ static MaterialEntry materialData[] = {
 	{ "Salt Powder",                { 0.2485, 0.2822, 0.3216 }, { 0.5115, 0.5863, 0.6147 }, { 0.8020, 0.7930, 0.8210 }, 1.33f },
 	{ "Sugar Powder",               { 0.0145, 0.0162, 0.0202 }, { 0.0650, 0.1597, 0.2578 }, { 0.9210, 0.9190, 0.9310 }, 1.33f },
 	{ "Suisse Mocha",               { 0.3223, 0.3583, 0.4148 }, { 0.1875, 0.2893, 0.3796 }, { 0.9070, 0.8940, 0.8880 }, 1.33f },
-
-	{ NULL,                         { 0.0f,  0.0f,   0.0f   }, { 0.0f,   0.0f,   0.0f   }, { 0.0f,   0.0f,  0.0f   }, 0.0f  }
 };
 
-MaterialEntry* e_MaterialLibrary::getMat(const char* name)
+MaterialEntry* e_MaterialLibrary::getMat(const std::string& name)
 {
 	MaterialEntry *matEntry = materialData;
-	while (matEntry->name)
-	{
-		if(!strcmp(name, matEntry->name))
-			return matEntry;
-		else matEntry++;
-	}
+	for (int i = 0; i < sizeof(materialData) / sizeof(MaterialEntry); i++)
+		if (materialData[i].name == name)
+			return materialData + i;
 	return 0;
 }
 
@@ -73,7 +68,7 @@ size_t e_MaterialLibrary::getNumMats()
 	return sizeof(materialData) / sizeof(materialData[0]);
 }
 
-const char* e_MaterialLibrary::getMatName(size_t idx)
+const std::string& e_MaterialLibrary::getMatName(size_t idx)
 {
 	return materialData[idx].name;
 }

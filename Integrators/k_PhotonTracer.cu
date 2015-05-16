@@ -28,7 +28,7 @@ CUDA_FUNC_IN void handleSurfaceInteraction(const Spectrum& weight, BSDFSamplingR
 	}
 }
 
-template<typename DEBUGGER> CUDA_FUNC_IN void doWork(e_Image& g_Image, CudaRNG& rng, DEBUGGER& dbg)
+CUDA_FUNC_IN void doWork(e_Image& g_Image, CudaRNG& rng)
 {
 	PositionSamplingRecord pRec;
 	Spectrum power = g_SceneData.sampleEmitterPosition(pRec, rng.randomFloat2()), throughput = Spectrum(1.0f);
@@ -37,7 +37,6 @@ template<typename DEBUGGER> CUDA_FUNC_IN void doWork(e_Image& g_Image, CudaRNG& 
 
 	DirectionSamplingRecord dRec;
 	power *= ((const e_KernelLight*)pRec.object)->sampleDirection(dRec, pRec, rng.randomFloat2());
-	dbg.StartNewPath((const e_KernelLight*)pRec.object, pRec.p, power);
 	Ray r(pRec.p, dRec.d);
 	TraceResult r2;
 	r2.Init();
@@ -51,7 +50,6 @@ template<typename DEBUGGER> CUDA_FUNC_IN void doWork(e_Image& g_Image, CudaRNG& 
 		handleSurfaceInteraction(power * throughput, bRec, r2, g_Image, rng);
 
 		Spectrum bsdfWeight = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
-		dbg.AppendVertex(ITracerDebugger::PathType::Light, r, r2);
 		r = Ray(bRec.dg.P, bRec.getOutgoing());
 		r2.Init();
 		if(bsdfWeight.isZero())
@@ -92,7 +90,7 @@ __global__ void pathKernel(unsigned int N, e_Image g_Image)
                 break;
 		}
 
-		doWork(g_Image, rng, k_KernelTracerDebugger_NO_OP());
+		doWork(g_Image, rng);
 	}
 	while(true);
 	g_RNGData(rng);
@@ -106,10 +104,10 @@ void k_PhotonTracer::DoRender(e_Image* I)
 	pathKernel<<< 180, dim3(32, 4, 1)>>>(w * h, *I);
 }
 
-void k_PhotonTracer::Debug(e_Image* I, const Vec2i& pixel, ITracerDebugger* debugger)
+void k_PhotonTracer::Debug(e_Image* I, const Vec2i& pixel)
 {
 	k_INITIALIZE(m_pScene, g_sRngs);
 	CudaRNG rng = g_RNGData();
-	doWork(*I, rng, k_KernelTracerDebugger(debugger));
+	doWork(*I, rng);
 	g_RNGData(rng);
 }

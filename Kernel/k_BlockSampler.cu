@@ -207,7 +207,7 @@ void k_BlockSampler::AddPass()
 	}
 
 	//img->disableUpdate();
-	int f = 3, r = 10;
+	//int f = 3, r = 10;
 	//nlmeans << <dim3(img->getWidth() / nlBlockSize + 1, img->getHeight() / nlBlockSize + 1), dim3(nlBlockSize + f + r, nlBlockSize + f + r) >> > (f, r, *img, m_pLumData);
 }
 

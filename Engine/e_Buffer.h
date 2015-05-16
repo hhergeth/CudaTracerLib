@@ -235,7 +235,7 @@ public:
 	}
 	e_BufferReference<H, D> UsedElements()
 	{
-		return e_BufferReference<H, D>(this, 0, m_uLength - m_uPos);
+		return e_BufferReference<H, D>(this, 0, m_uPos);
 	}
 	unsigned int getSizeInBytes() const
 	{
@@ -264,6 +264,11 @@ public:
 	D* getDeviceMapped(int i) const
 	{
 		return deviceMapped + i;
+	}
+	e_BufferReference<H, D> translate(const e_Variable<D>& var)
+	{
+		unsigned int idx = var.device - device;
+		return e_BufferReference<H, D>(this, idx, 1);
 	}
 };
 
@@ -386,16 +391,16 @@ public:
 	{
 		
 	}
-	e_BufferReference<H, D> LoadCached(const std::string file, bool* load)
+	e_BufferReference<H, D> LoadCached(const std::string& file, bool& load)
 	{
 		for(unsigned int i = 0; i < m_sEntries.size(); i++)
 			if (m_sEntries[i].file == file)
 			{
 				m_sEntries[i].count++;
-				*load = false;
+				load = false;
 				return e_BufferReference<H, D>(this, i, 1);
 			}
-		*load = true;
+		load = true;
 		entry e;
 		e.count = 1;
 		e.file = file;
@@ -646,6 +651,11 @@ public:
 	T* getDeviceMapped(int i) const
 	{
 		return host + i;
+	}
+	e_BufferReference<T, T> translate(const e_Variable<T>& var)
+	{
+		unsigned int idx = var.device - device;
+		return e_BufferReference<T, T>(this, idx, 1);
 	}
 };
 

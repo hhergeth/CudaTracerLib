@@ -82,9 +82,9 @@ void e_Image::Free()
 		cudaGraphicsUnregisterResource(viewCudaResource);
 }
 
-void e_Image::WriteDisplayImage(const char* fileName)
+void e_Image::WriteDisplayImage(const std::string& fileName)
 {
-	FREE_IMAGE_FORMAT ff = FreeImage_GetFIFFromFilename(fileName);
+	FREE_IMAGE_FORMAT ff = FreeImage_GetFIFFromFilename(fileName.c_str());
 
 	RGBCOL* colData = new RGBCOL[xResolution * yResolution];
 	if(outState == 1)
@@ -120,7 +120,7 @@ void e_Image::WriteDisplayImage(const char* fileName)
 		off += pitch;
 	}
 	delete [] colData;
-	bool b = FreeImage_Save(ff, bitmap, fileName);
+	bool b = FreeImage_Save(ff, bitmap, fileName.c_str());
 	if (!b)
 		throw std::runtime_error("Failed saving Screenshot!");
 	FreeImage_Unload(bitmap);

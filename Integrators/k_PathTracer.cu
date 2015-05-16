@@ -5,7 +5,7 @@
 
 CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_NextRayCounter;
 
-template<bool DIRECT, typename DEBUGGER> CUDA_FUNC_IN Spectrum PathTrace(Ray& r, const Ray& rX, const Ray& rY, CudaRNG& rnd, DEBUGGER& dbg)
+template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(Ray& r, const Ray& rX, const Ray& rY, CudaRNG& rnd)
 {
 	TraceResult r2;
 	r2.Init();
@@ -15,7 +15,6 @@ template<bool DIRECT, typename DEBUGGER> CUDA_FUNC_IN Spectrum PathTrace(Ray& r,
 	bool specularBounce = false;
 	DifferentialGeometry dg;
 	BSDFSamplingRecord bRec(dg);
-	dbg.StartNewPath(&g_SceneData.m_Camera, r.origin, cf);
 	while (k_TraceRay(r.direction, r.origin, &r2) && depth++ < 7)
 	{
 		r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rnd);// return (Spectrum(bRec.map.sys.n) + Spectrum(1)) / 2.0f; //return bRec.map.sys.n;
@@ -24,7 +23,6 @@ template<bool DIRECT, typename DEBUGGER> CUDA_FUNC_IN Spectrum PathTrace(Ray& r,
 		if (!DIRECT || (depth == 1 || specularBounce))
 			cl += cf * r2.Le(bRec.dg.P, bRec.dg.sys, -r.direction);
 		Spectrum f = r2.getMat().bsdf.sample(bRec, rnd.randomFloat2());
-		dbg.AppendVertex(ITracerDebugger::PathType::Camera, r, r2);
 		if (DIRECT)
 			cl += cf * UniformSampleAllLights(bRec, r2.getMat(), 1, rnd);
 		specularBounce = (bRec.sampledType & EDelta) != 0;
@@ -44,7 +42,7 @@ template<bool DIRECT, typename DEBUGGER> CUDA_FUNC_IN Spectrum PathTrace(Ray& r,
 	return cl;
 }
 
-template<bool DIRECT, typename DEBUGGER> CUDA_FUNC_IN Spectrum PathTraceRegularization(Ray& r, const Ray& rX, const Ray& rY, CudaRNG& rnd, DEBUGGER& dbg, float g_fRMollifier)
+template<bool DIRECT, typename DEBUGGER> CUDA_FUNC_IN Spectrum PathTraceRegularization(Ray& r, const Ray& rX, const Ray& rY, CudaRNG& rnd, float g_fRMollifier)
 {
 	TraceResult r2;
 	r2.Init();
@@ -54,8 +52,7 @@ template<bool DIRECT, typename DEBUGGER> CUDA_FUNC_IN Spectrum PathTraceRegulari
 	bool specularBounce = false;
 	DifferentialGeometry dg;
 	BSDFSamplingRecord bRec(dg);
-	dbg.StartNewPath(&g_SceneData.m_Camera, r.origin, cf);
-	bool hadDelta = false;
+	//bool hadDelta = false;
 	while (k_TraceRay(r.direction, r.origin, &r2) && depth++ < 7)
 	{
 		r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rnd);// return (Spectrum(bRec.map.sys.n) + Spectrum(1)) / 2.0f; //return bRec.map.sys.n;
@@ -64,12 +61,11 @@ template<bool DIRECT, typename DEBUGGER> CUDA_FUNC_IN Spectrum PathTraceRegulari
 		if (!DIRECT || (depth == 1 || specularBounce))
 			cl += cf * r2.Le(bRec.dg.P, bRec.dg.sys, -r.direction);
 		Spectrum f = r2.getMat().bsdf.sample(bRec, rnd.randomFloat2());
-		dbg.AppendVertex(ITracerDebugger::PathType::Camera, r, r2);
 		if (DIRECT)
 		{
 			if (r2.getMat().bsdf.As()->hasComponent(ETypeCombinations::EDelta))
 			{
-				hadDelta = true;
+				//hadDelta = true;
 				PositionSamplingRecord pRec;
 				Spectrum l_s = g_SceneData.sampleEmitterPosition(pRec, rnd.randomFloat2());
 				e_KernelLight* l = (e_KernelLight*)pRec.object;
@@ -104,13 +100,13 @@ template<bool DIRECT, typename DEBUGGER> CUDA_FUNC_IN Spectrum PathTraceRegulari
 	return cl;
 }
 
-void k_PathTracer::Debug(e_Image* I, const Vec2i& p, ITracerDebugger* debugger)
+void k_PathTracer::Debug(e_Image* I, const Vec2i& p)
 {
 	float m = 1.0f*pow(this->m_uPassesDone, -1.0f / 6);
 	k_INITIALIZE(m_pScene, g_sRngs);
 	CudaRNG rng = g_RNGData();
 	Ray r = g_SceneData.GenerateSensorRay(p.x, p.y);	
-	PathTrace<true, k_KernelTracerDebugger>(r, r, r, rng, k_KernelTracerDebugger(debugger));
+	PathTrace<true>(r, r, r, rng);
 }
 
 template<bool DIRECT> __global__ void pathKernel2(unsigned int w, unsigned int h, unsigned int xoff, unsigned int yoff, k_BlockSampleImage img, float m)
@@ -121,7 +117,7 @@ template<bool DIRECT> __global__ void pathKernel2(unsigned int w, unsigned int h
 	{
 		Ray r;
 		Spectrum imp = g_SceneData.sampleSensorRay(r, Vec2f(pixel.x, pixel.y), rng.randomFloat2());
-		Spectrum col = imp * PathTrace<DIRECT, k_KernelTracerDebugger_NO_OP>(r, r, r, rng, k_KernelTracerDebugger_NO_OP());
+		Spectrum col = imp * PathTrace<DIRECT>(r, r, r, rng);
 		img.Add(pixel.x, pixel.y, col);
 	}
 	g_RNGData(rng);

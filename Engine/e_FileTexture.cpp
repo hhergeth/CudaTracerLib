@@ -2,8 +2,9 @@
 #include "e_FileTexture.h"
 #include "e_ErrorHandler.h"
 #include "e_FileTextureHelper.h"
+#include "..\Base\FileStream.h"
 
-e_MIPMap::e_MIPMap(InputStream& a_In)
+e_MIPMap::e_MIPMap(IInStream& a_In)
 {
 	a_In >> m_uWidth;
 	a_In >> m_uHeight;
@@ -25,6 +26,13 @@ e_MIPMap::e_MIPMap(InputStream& a_In)
 		BAD_HOST_DEVICE_COPY(m_pDeviceData, m_uSize)
 	a_In.Read(m_sOffsets, sizeof(m_sOffsets));
 	a_In.Read(m_weightLut, sizeof(m_weightLut));
+}
+
+void e_MIPMap::CompileToBinary(const std::string& in, const std::string& out, bool a_MipMap)
+{
+	OutputStream o(out);
+	CompileToBinary(in, o, a_MipMap);
+	o.Close();
 }
 
 struct sampleHelper
@@ -49,7 +57,7 @@ struct sampleHelper
 	}
 };
 
-void e_MIPMap::CompileToBinary(const char* a_InputFile, OutputStream& a_Out, bool a_MipMap)
+void e_MIPMap::CompileToBinary(const std::string& a_InputFile, OutputStream& a_Out, bool a_MipMap)
 {
 	imgData data;
 	if(!parseImage(a_InputFile, &data))

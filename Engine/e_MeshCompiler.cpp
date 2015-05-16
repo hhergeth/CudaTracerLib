@@ -20,7 +20,7 @@ bool hasEnding (std::string const &fullString, std::string const &_ending)
     }
 }
 
-bool e_ObjCompiler::IsApplicable(const char* a_InputFile, IInStream& in, e_MeshCompileType* out)
+bool e_ObjCompiler::IsApplicable(const std::string& a_InputFile, IInStream& in, e_MeshCompileType* out)
 {
 	bool b = hasEnding(a_InputFile, ".obj");
 	if(out && b)
@@ -33,7 +33,7 @@ void e_ObjCompiler::Compile(IInStream& in, OutputStream& a_Out)
 	compileobj(in, a_Out);
 }
 
-bool e_Md5Compiler::IsApplicable(const char* a_InputFile, IInStream& in, e_MeshCompileType* out)
+bool e_Md5Compiler::IsApplicable(const std::string& a_InputFile, IInStream& in, e_MeshCompileType* out)
 {
 	bool b = hasEnding(a_InputFile, ".md5mesh");
 	if(out && b)
@@ -58,7 +58,7 @@ void e_Md5Compiler::Compile(IInStream& in, OutputStream& a_Out)
 	e_AnimatedMesh::CompileToBinary(in.getFilePath(), animFiles, a_Out);
 }
 
-bool e_PlyCompiler::IsApplicable(const char* a_InputFile, IInStream& in, e_MeshCompileType* out)
+bool e_PlyCompiler::IsApplicable(const std::string& a_InputFile, IInStream& in, e_MeshCompileType* out)
 {
 	bool b = hasEnding(a_InputFile, ".ply");
 	if(b)
@@ -79,7 +79,7 @@ void e_PlyCompiler::Compile(IInStream& in, OutputStream& a_Out)
 	compileply(in, a_Out);
 }
 
-void e_MeshCompilerManager::Compile(IInStream& in, const char* a_InputFile, OutputStream& a_Out, e_MeshCompileType* out)
+void e_MeshCompilerManager::Compile(IInStream& in, const std::string& a_InputFile, OutputStream& a_Out, e_MeshCompileType* out)
 {
 	e_MeshCompileType t;
 	for(unsigned int i = 0; i < m_sCompilers.size(); i++)

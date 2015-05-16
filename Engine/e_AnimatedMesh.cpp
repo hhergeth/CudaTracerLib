@@ -62,10 +62,10 @@ e_AnimatedMesh::e_AnimatedMesh(IInStream& a_In, e_Stream<e_TriIntersectorData>* 
 	a_Stream5->UpdateInvalidated();
 }
 
-void e_AnimatedMesh::CompileToBinary(const char* a_InputFile, std::vector<std::string>& a_Anims, OutputStream& a_Out)
+void e_AnimatedMesh::CompileToBinary(const std::string& a_InputFile, std::vector<std::string>& a_Anims, OutputStream& a_Out)
 {
 	MD5Model M;
-	M.loadMesh(a_InputFile);
+	M.loadMesh(a_InputFile.c_str());
 	for(unsigned int i = 0; i < a_Anims.size(); i++)
 		M.loadAnim(a_Anims[i].c_str());
 	AABB box;

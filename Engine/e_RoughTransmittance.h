@@ -1,6 +1,5 @@
 #pragma once
 
-#include "..\Base\FileStream.h"
 #include "e_MicrofacetDistribution.h"
 
 class e_RoughTransmittance

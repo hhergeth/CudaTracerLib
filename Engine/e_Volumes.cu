@@ -1,4 +1,5 @@
 #include "e_Volumes.h"
+#include "e_Buffer.h"
 
 bool e_HomogeneousVolumeDensity::IntersectP(const Ray &ray, const float minT, const float maxT, float *t0, float *t1) const
 {
@@ -23,6 +24,17 @@ Spectrum e_HomogeneousVolumeDensity::tau(const Ray &ray, const float minT, const
 bool e_HomogeneousVolumeDensity::sampleDistance(const Ray& ray, float minT, float maxT, float rand, MediumSamplingRecord& mRec) const
 {
 	return sampleDistanceHomogenous(ray, minT, maxT, rand, mRec, sig_a, sig_s);
+}
+
+e_DenseVolGridBaseType::e_DenseVolGridBaseType(e_Stream<char>* a_Buffer, Vec3u dim, size_t sizePerElement)
+{
+	e_StreamReference(char) streamRef = a_Buffer->malloc(dim.x * dim.y * dim.z * sizePerElement);
+	data = streamRef.AsVar<char>();
+}
+
+void e_DenseVolGridBaseType::InvalidateDeviceData(e_Stream<char>* a_Buffer)
+{
+	a_Buffer->translate(data).Invalidate();
 }
 
 e_VolumeGrid::e_VolumeGrid(const e_PhaseFunction& func, const float4x4 volToWorld, e_Stream<char>* a_Buffer, Vec3u dim)
@@ -377,4 +389,13 @@ bool e_KernelAggregateVolume::sampleDistance(const Ray& ray, float minT, float m
 	int nth = int(sample * n);
 	int i = ffsn(flag, nth);
 	return m_pVolumes[i].sampleDistance(ray, minT, maxT, rng.randomFloat(), mRec);
+}
+
+e_KernelAggregateVolume::e_KernelAggregateVolume(e_Stream<e_VolumeRegion>* D, bool devicePointer)
+{
+	m_uVolumeCount = D->UsedElements().getLength();
+	m_pVolumes = D->getKernelData(devicePointer).Data;
+	box = AABB::Identity();
+	for (unsigned int i = 0; i < m_uVolumeCount; i++)
+		box.Enlarge(D->operator()(i)->WorldBound());
 }

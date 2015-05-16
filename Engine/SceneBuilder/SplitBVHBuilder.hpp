@@ -1,6 +1,29 @@
 #pragma once
 #include "..\..\MathTypes.h"
-#include "..\..\Base\BVHBuilder.h"
+#include "..\e_IntersectorData.h"
+
+class IBVHBuilderCallback
+{
+public:
+	virtual void getBox(unsigned int index, AABB* out) const = 0;
+	virtual unsigned int handleLeafObjects(unsigned int pNode)
+	{
+		return pNode;
+	}
+	virtual void handleLastLeafObject()
+	{
+	}
+	virtual unsigned int Count() const = 0;
+	virtual void HandleBoundingBox(const AABB& box)
+	{
+	}
+	virtual e_BVHNodeData* HandleNodeAllocation(int* index) = 0;
+	virtual void HandleStartNode(int startNode) = 0;
+	virtual bool SplitNode(unsigned int index, int dim, float pos, AABB& lBox, AABB& rBox, const AABB& refBox) const
+	{
+		return false;
+	}
+};
 
 	enum BVH_STAT
 	{
@@ -46,6 +69,13 @@
 	{
 	public:
 		InnerNode(const AABB& bounds, BVHNode* child0, BVHNode* child1)   { m_bounds = bounds; m_children[0] = child0; m_children[1] = child1; }
+		~InnerNode()
+		{
+			if (m_children[0])
+				delete m_children[0];
+			if (m_children[1])
+				delete m_children[1];
+		}
 
 		bool        isLeaf() const                  { return false; }
 		int         getNumChildNodes() const        { return 2; }
@@ -85,7 +115,7 @@ private:
         int                 triIdx;
         AABB                bounds;
 
-        Reference(void) : triIdx(-1) {}
+		Reference(void) : triIdx(-1) { bounds = AABB::Identity(); }
     };
 
     struct NodeSpec
@@ -124,10 +154,75 @@ private:
     };
 
 public:
-	SplitBVHBuilder(IBVHBuilderCallback* clb, const BVHBuilder::Platform& P, const BVHBuilder::BuildParams& stats);
+
+	class Platform
+	{
+	public:
+		Platform()                                                                                                          { m_SAHNodeCost = 1.f; m_SAHTriangleCost = 1.f; m_nodeBatchSize = 1; m_triBatchSize = 1; m_minLeafSize = 1; m_maxLeafSize = 0x7FFFFFF; }
+		//Platform(float nodeCost=1.f, float triCost=1.f, int nodeBatchSize=1, int triBatchSize=1) { m_SAHNodeCost = nodeCost; m_SAHTriangleCost = triCost; m_nodeBatchSize = nodeBatchSize; m_triBatchSize = triBatchSize; m_minLeafSize=1; m_maxLeafSize=0x7FFFFFF; }
+
+
+		// SAH weights
+		float getSAHTriangleCost() const                    { return m_SAHTriangleCost; }
+		float getSAHNodeCost() const                        { return m_SAHNodeCost; }
+
+		// SAH costs, raw and batched
+		float getCost(int numChildNodes, int numTris) const  { return getNodeCost(numChildNodes) + getTriangleCost(numTris); }
+		float getTriangleCost(int n) const                  { return roundToTriangleBatchSize(n) * m_SAHTriangleCost; }
+		float getNodeCost(int n) const                      { return roundToNodeBatchSize(n) * m_SAHNodeCost; }
+
+		// batch processing (how many ops at the price of one)
+		int   getTriangleBatchSize() const                  { return m_triBatchSize; }
+		int   getNodeBatchSize() const                      { return m_nodeBatchSize; }
+		void  setTriangleBatchSize(int triBatchSize)        { m_triBatchSize = triBatchSize; }
+		void  setNodeBatchSize(int nodeBatchSize)           { m_nodeBatchSize = nodeBatchSize; }
+		int   roundToTriangleBatchSize(int n) const         { return ((n + m_triBatchSize - 1) / m_triBatchSize)*m_triBatchSize; }
+		int   roundToNodeBatchSize(int n) const             { return ((n + m_nodeBatchSize - 1) / m_nodeBatchSize)*m_nodeBatchSize; }
+
+		// leaf preferences
+		void  setLeafPreferences(int minSize, int maxSize)   { m_minLeafSize = minSize; m_maxLeafSize = maxSize; }
+		int   getMinLeafSize() const                        { return m_minLeafSize; }
+		int   getMaxLeafSize() const                        { return m_maxLeafSize; }
+
+	public:
+		float   m_SAHNodeCost;
+		float   m_SAHTriangleCost;
+		int     m_triBatchSize;
+		int     m_nodeBatchSize;
+		int     m_minLeafSize;
+		int     m_maxLeafSize;
+	};
+	struct Stats
+	{
+		Stats()             { clear(); }
+		void clear()        { memset(this, 0, sizeof(Stats)); }
+		void print() const  { printf("Tree stats: [bfactor=%d] %d nodes (%d+%d), %.2f SAHCost, %.1f children/inner, %.1f tris/leaf\n", branchingFactor, numLeafNodes + numInnerNodes, numLeafNodes, numInnerNodes, SAHCost, 1.f*numChildNodes / max(numInnerNodes, 1), 1.f*numTris / max(numLeafNodes, 1)); }
+
+		float   SAHCost;
+		int     branchingFactor;
+		int     numInnerNodes;
+		int     numLeafNodes;
+		int     numChildNodes;
+		int     numTris;
+	};
+	struct BuildParams
+	{
+		Stats*      stats;
+		bool        enablePrints;
+		float       splitAlpha;     // spatial split area threshold
+
+		BuildParams(void)
+		{
+			stats = NULL;
+			enablePrints = true;
+			splitAlpha = 1.0e-5f;
+		}
+	};
+
+	SplitBVHBuilder(IBVHBuilderCallback* clb, const Platform& P, const BuildParams& stats);
                             ~SplitBVHBuilder    (void);
 
-    BVHNode*                run                 (void);
+    void                run                 (void);
 
 private:
     static bool             sortCompare         (void* data, int idxA, int idxB);
@@ -149,8 +244,8 @@ private:
 
 private:
 	IBVHBuilderCallback*	m_pClb;
-	const BVHBuilder::Platform& m_platform;
-	BVHBuilder::BuildParams	m_params;
+	const Platform& m_platform;
+	BuildParams	m_params;
 
     std::vector<Reference>  m_refStack;
 	float                   m_minOverlap;

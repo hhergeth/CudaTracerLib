@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdexcept>
+
 #if defined(ISCUDA)
 	#define BAD_EXCEPTION(...) { }
 #else
@@ -8,7 +10,7 @@
 			char* buf = new char[256]; \
 			sprintf(buf, ##__VA_ARGS__); \
 			std::cout << buf; \
-			throw 1; \
+			throw std::runtime_error(buf); \
 		}
 #endif
 

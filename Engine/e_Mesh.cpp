@@ -58,7 +58,7 @@ void e_Mesh::Free(e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_Triangle
 	a_Stream4->dealloc(m_sMatInfo);
 }
 
-e_SceneInitData e_Mesh::ParseBinary(const char* a_InputFile)
+e_SceneInitData e_Mesh::ParseBinary(const std::string& a_InputFile)
 {
 	InputStream a_In(a_InputFile);
 	AABB m_sLocalBox;

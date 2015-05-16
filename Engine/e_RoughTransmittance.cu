@@ -1,5 +1,6 @@
 #include "e_RoughTransmittance.h"
 #include "..\Math\Spline.h"
+#include "..\Base\FileStream.h"
 
 e_RoughTransmittance::e_RoughTransmittance(const std::string& name)
 {
@@ -8,7 +9,7 @@ e_RoughTransmittance::e_RoughTransmittance(const std::string& name)
 	char *fileHeader = (char *) alloca(strlen(header));
 	I.Read(fileHeader, (unsigned int)strlen(header));
 	if (memcmp(fileHeader, header, strlen(header)) != 0)
-		throw 1;
+		throw std::runtime_error("Invalid filetype for rough transmittance!");
 	I >> m_etaSamples;
 	I >> m_alphaSamples;
 	I >> m_thetaSamples;

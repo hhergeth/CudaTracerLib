@@ -2,6 +2,7 @@
 #include "e_FileTexture.h"
 #include "e_ErrorHandler.h"
 #include "e_FileTextureHelper.h"
+#include "../Base/FileStream.h"
 
 /// Integer floor function (single precision)
 template <typename Scalar> CUDA_FUNC_IN int floorToInt(Scalar value) { return (int)floor(value); }
@@ -306,7 +307,7 @@ __global__ void generateSkydome(unsigned int w, unsigned int h, Vec3f* Target)
 	}
 }
 
-void e_MIPMap::CreateSphericalSkydomeTexture(const char* front, const char* back, const char* left, const char* right, const char* top, const char* bottom, const char* outFile)
+void e_MIPMap::CreateSphericalSkydomeTexture(const std::string& front, const std::string& back, const std::string& left, const std::string& right, const std::string& top, const std::string& bottom, const std::string& outFile)
 {
 	imgData maps[6];
 	parseImage(front, maps + 5);
@@ -349,7 +350,7 @@ void e_MIPMap::CreateSphericalSkydomeTexture(const char* front, const char* back
 				B[y * w + xp] = c;
 			}
 	}
-	bool b = FreeImage_Save(FIF_EXR, bitmap, outFile);
+	bool b = FreeImage_Save(FIF_EXR, bitmap, outFile.c_str());
 	FreeImage_Unload(bitmap);
 	for(int i = 0; i < 6; i++)
 		free(maps[i].data);
@@ -436,7 +437,7 @@ template<int SEARCH_STEPS> __global__ void generateRelaxedConeMap(imgData img, f
 	}
 }
 
-void e_MIPMap::CreateRelaxedConeMap(const char* a_InputFile, OutputStream& a_Out)
+void e_MIPMap::CreateRelaxedConeMap(const std::string& a_InputFile, OutputStream& a_Out)
 {
 	imgData data;
 	if (!parseImage(a_InputFile, &data))
@@ -492,8 +493,8 @@ void e_MIPMap::CreateRelaxedConeMap(const char* a_InputFile, OutputStream& a_Out
 	a_Out << data.w * data.h * 8;
 
 	float2* imgData = new float2[data.w * data.h];
-	for (int i = 0; i < data.w; i++)
-		for (int j = 0; j < data.h; j++)
+	for (unsigned int i = 0; i < data.w; i++)
+		for (unsigned int j = 0; j < data.h; j++)
 		{
 			float xs = float(i) / data.w * oldw, ys = float(j) / data.h * oldh;
 			Spectrum s;

@@ -45,10 +45,9 @@ void e_SceneBVH::Build(e_StreamReference(e_Node) a_Nodes, e_BufferReference<e_Me
 	if(a_Nodes.getLength())
 	{
 		clb b(a_Nodes, a_Meshes, this);
-		BVHBuilder::Platform Pq;
+		SplitBVHBuilder::Platform Pq;
 		Pq.m_maxLeafSize = 1;
-		BVHBuilder::BuildBVH(&b, Pq);
-		//SplitBVHBuilder bu(&b, Pq, BVHBuilder::BuildParams()); bu.run();
+		SplitBVHBuilder bu(&b, Pq, SplitBVHBuilder::BuildParams()); bu.run();
 	}
 	m_pNodes->Invalidate();
 	m_pNodes->UpdateInvalidated();

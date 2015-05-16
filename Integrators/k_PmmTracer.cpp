@@ -10,7 +10,7 @@ k_PmmTracer::k_PmmTracer()
 {
 }
 
-void toClipboard(std::string str)
+void toClipboard(const std::string& str)
 {
 #ifdef ISWINDOWS
 	const char* output = str.c_str();

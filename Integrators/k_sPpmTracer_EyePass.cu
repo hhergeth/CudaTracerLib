@@ -354,7 +354,7 @@ void k_sPpmTracer::RenderBlock(e_Image* I, int x, int y, int blockW, int blockH)
 	}
 }
 
-void k_sPpmTracer::Debug(e_Image* I, const Vec2i& pixel, ITracerDebugger* debugger)
+void k_sPpmTracer::Debug(e_Image* I, const Vec2i& pixel)
 {
 	/*if(m_uPhotonsEmitted == (unsigned long long)-1)
 		return;

@@ -230,8 +230,8 @@ __global__ void debugPixe2l(unsigned int width, unsigned int height, Vec2i p)
 	Spectrum q =  trace(r, r, r, rng, d);
 }
 
-static e_KernelMIPMap mimMap;
-static size_t pitch;
+//static e_KernelMIPMap mimMap;
+//static size_t pitch;
 void k_PrimTracer::DoRender(e_Image* I)
 {
 	if (depthImage)
@@ -253,7 +253,7 @@ void k_PrimTracer::DoRender(e_Image* I)
 		depthImage->EndRendering();
 }
 
-void k_PrimTracer::Debug(e_Image* I, const Vec2i& pixel, ITracerDebugger* debugger)
+void k_PrimTracer::Debug(e_Image* I, const Vec2i& pixel)
 {
 	k_INITIALIZE(m_pScene, g_sRngs);
 	//debugPixe2l<<<1,1>>>(w,h,pixel);
@@ -272,7 +272,7 @@ void k_PrimTracer::CreateSliders(SliderCreateCallback a_Callback) const
 k_PrimTracer::k_PrimTracer()
 	: m_bDirect(false), depthImage(0)
 {
-	const char* QQ = "../Data/tmp.dat";
+	//const char* QQ = "../Data/tmp.dat";
 	//OutputStream out(QQ);
 	//e_MIPMap::CreateRelaxedConeMap("../Data/1.bmp", out);
 	//out.Close();

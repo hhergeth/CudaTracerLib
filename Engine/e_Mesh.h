@@ -4,7 +4,6 @@
 #include "e_TriangleData.h"
 #include "e_Material.h"
 #include "e_Buffer.h"
-#include "..\Base\BVHBuilder.h"
 #include "e_IntersectorData.h"
 
 struct e_KernelMesh
@@ -61,5 +60,5 @@ public:
 	}
 	static void CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2f* uvs, const unsigned int* indices, unsigned int nIndices, const e_KernelMaterial& mat, const Spectrum& Le, OutputStream& out);
 	static void CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2f** uvs, unsigned int nUV_Sets, const unsigned int* indices, unsigned int nIndices, const std::vector<e_KernelMaterial>& mats, const std::vector<Spectrum>& Le, const std::vector<unsigned int>& subMeshes, const unsigned char* extraData, OutputStream& out);
-	static e_SceneInitData ParseBinary(const char* a_InputFile);
+	static e_SceneInitData ParseBinary(const std::string& a_InputFile);
 };

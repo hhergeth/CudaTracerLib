@@ -19,7 +19,7 @@ public:
 		sMap.Free();
 		dMap.Free();
 	}
-	virtual void Debug(e_Image* I, const Vec2i& pixel, ITracerDebugger* debugger = 0);
+	virtual void Debug(e_Image* I, const Vec2i& pixel);
 protected:
 	virtual void DoRender(e_Image* I);
 	virtual void StartNewTrace(e_Image* I);

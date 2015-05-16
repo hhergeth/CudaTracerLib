@@ -21,9 +21,9 @@ unsigned char* IInStream::ReadToEnd()
 	return (unsigned char*)v;
 }
 
-InputStream::InputStream(const char* a_Name)
+InputStream::InputStream(const std::string& a_Name)
+	: path(a_Name)
 {
-	path = std::string(a_Name);
 	numBytesRead = 0;
 	H = new boost::iostreams::mapped_file(a_Name, boost::iostreams::mapped_file::readonly);
 	boost::iostreams::mapped_file& mmap = *(boost::iostreams::mapped_file*)H;
@@ -34,8 +34,9 @@ void InputStream::Close()
 {
 	if (H)
 	{
-		boost::iostreams::mapped_file& mmap = *(boost::iostreams::mapped_file*)H;
-		mmap.close();
+		boost::iostreams::mapped_file* mmap = (boost::iostreams::mapped_file*)H;
+		mmap->close();
+		delete mmap;
 		H = 0;
 	}
 }
@@ -80,7 +81,7 @@ MemInputStream::MemInputStream(InputStream& in)
 	path = in.getFilePath();
 }
 
-MemInputStream::MemInputStream(const char* a_Name)
+MemInputStream::MemInputStream(const std::string& a_Name)
 {
 	InputStream in(a_Name);
 	numBytesRead = 0;
@@ -97,7 +98,7 @@ void MemInputStream::Read(void* a_Data, unsigned int a_Size)
 	numBytesRead += a_Size;
 }
 
-IInStream* OpenFile(const char* filename)
+IInStream* OpenFile(const std::string& filename)
 {
 	if(boost::filesystem::file_size(filename) < 1024 * 1024 * 512)
 		return new MemInputStream(filename);
@@ -105,10 +106,10 @@ IInStream* OpenFile(const char* filename)
 	return 0;
 }
 
-OutputStream::OutputStream(const char* a_Name)
+OutputStream::OutputStream(const std::string& a_Name)
 {
 	numBytesWrote = 0;
-	H = fopen(a_Name, "wb");
+	H = fopen(a_Name.c_str(), "wb");
 	if (!H)
 		throw std::runtime_error("Could not open file!");
 }

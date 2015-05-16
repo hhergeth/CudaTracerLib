@@ -38,16 +38,16 @@ inline void resize(imgData* d)
 	d->h = h;
 }
 
-inline bool parseImage(const char* a_InputFile, imgData* data)
+inline bool parseImage(const std::string& a_InputFile, imgData* data)
 {
-	FREE_IMAGE_FORMAT fif = FreeImage_GetFileType(a_InputFile, 0);
+	FREE_IMAGE_FORMAT fif = FreeImage_GetFileType(a_InputFile.c_str(), 0);
 	if(fif == FIF_UNKNOWN)
 	{
-		fif = FreeImage_GetFIFFromFilename(a_InputFile);
+		fif = FreeImage_GetFIFFromFilename(a_InputFile.c_str());
 	}
 	if((fif != FIF_UNKNOWN) && FreeImage_FIFSupportsReading(fif))
 	{
-		FIBITMAP *dib = FreeImage_Load(fif, a_InputFile, 0);
+		FIBITMAP *dib = FreeImage_Load(fif, a_InputFile.c_str(), 0);
 		if(!dib)
 			return false;
 		unsigned int w = FreeImage_GetWidth(dib);

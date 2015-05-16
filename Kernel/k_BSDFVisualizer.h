@@ -30,7 +30,7 @@ public:
 		if (m_pLight)
 			delete m_pLight;
 	}
-	virtual void Debug(e_Image* I, const Vec2i& pixel, ITracerDebugger* debugger = 0);
+	virtual void Debug(e_Image* I, const Vec2i& pixel);
 	void DrawRegion(e_Image* I, const Vec2i& off, const Vec2i& size);
 	void setSkydome(const char* compiledPath);
 protected:

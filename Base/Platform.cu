@@ -63,10 +63,10 @@ void Platform::SetMemory(void* dest, unsigned long long length, unsigned int val
 	memset(dest, val, length);
 }
 
-void Platform::OutputDebug(const char* msg)
+void Platform::OutputDebug(const std::string& msg)
 {
 #if defined(ISWINDOWS)
-	OutputDebugString(msg);
+	OutputDebugString(msg.c_str());
 #elif defined(ISUNIX)
 
 #endif

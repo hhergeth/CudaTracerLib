@@ -110,7 +110,7 @@ void k_BSDFVisualizer::DoRender(e_Image* I)
 	DrawRegion(I, Vec2i(0, 0), Vec2i(w, h));
 }
 
-void k_BSDFVisualizer::Debug(e_Image* I, const Vec2i& p, ITracerDebugger* debugger)
+void k_BSDFVisualizer::Debug(e_Image* I, const Vec2i& p)
 {
 	g_RNGDataHost = k_Tracer::g_sRngs;
 	CudaRNG rng = g_RNGData();

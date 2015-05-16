@@ -24,6 +24,10 @@ class IInStream
 protected:
 	unsigned long long m_uFileSize;
 public:
+	virtual ~IInStream()
+	{
+
+	}
 	virtual void Read(void* a_Out, unsigned int a_Size) = 0;
 	virtual unsigned long long getPos() = 0;
 	unsigned long long getFileSize()
@@ -74,7 +78,7 @@ public:
 	{
 		Read((char*)&a, sizeof(T));
 	}
-	virtual const char* getFilePath() const = 0;
+	virtual const std::string& getFilePath() const = 0;
 	template<int N> void Read(FixedString<N>& str)
 	{
 		Read((char*)&str, sizeof(FixedString<N>));
@@ -109,7 +113,7 @@ private:
 	void* H;
 	std::string path;
 public:
-	InputStream(const char* a_Name);
+	InputStream(const std::string& a_Name);
 	~InputStream()
 	{
 		Close();
@@ -121,9 +125,9 @@ public:
 	}
 	virtual void Read(void* a_Data, unsigned int a_Size);
 	void Move(int off);
-	virtual const char* getFilePath() const
+	virtual const std::string& getFilePath() const
 	{
-		return path.c_str();
+		return path;
 	}
 };
 
@@ -136,7 +140,7 @@ private:
 public:
 	MemInputStream(const unsigned char* buf, unsigned int length, bool canKeep = false);
 	MemInputStream(InputStream& in);
-	MemInputStream(const char* a_Name);
+	MemInputStream(const std::string& a_Name);
 	~MemInputStream()
 	{
 		Close();
@@ -156,13 +160,13 @@ public:
 	{
 		numBytesRead += off;
 	}
-	virtual const char* getFilePath() const
+	virtual const std::string& getFilePath() const
 	{
-		return path.c_str();
+		return path;
 	}
 };
 
-IInStream* OpenFile(const char* filename);
+IInStream* OpenFile(const std::string& filename);
 
 class OutputStream
 {
@@ -171,8 +175,8 @@ private:
 	void* H;
 	void _Write(const void* data, unsigned int size);
 public:
-	OutputStream(const char* a_Name);
-	~OutputStream()
+	OutputStream(const std::string& a_Name);
+	virtual ~OutputStream()
 	{
 		Close();
 	}
