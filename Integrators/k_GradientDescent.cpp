@@ -170,17 +170,12 @@ template<> struct diff_helper < 0 >
 	}
 };
 
-typedef int FORTRAN_INTEGER_TYPE;
-#include <coin\IpTNLP.hpp>
-#include <coin\IpIpoptApplication.hpp>
-using namespace Ipopt;
-
 std::vector<Vec2f> DifferientiatePath(Path& P)
 {
 	diff_helper<16> h;
 	return h.exec(P);
 }
-
+/*
 void OptimizePath(Path& P)
 {
 	class ipprob : public TNLP
@@ -292,3 +287,4 @@ void OptimizePath(Path& P)
 	Ipopt::ApplicationReturnStatus status = app->Initialize();
 	status = app->OptimizeTNLP(&p);
 }
+*/

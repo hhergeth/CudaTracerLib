@@ -1,6 +1,7 @@
 #pragma once
 #include "..\..\MathTypes.h"
 #include "..\e_IntersectorData.h"
+#include "../../Base/Timer.h"
 
 class IBVHBuilderCallback
 {
@@ -256,4 +257,6 @@ private:
     int                     m_numDuplicates;
 
 	std::vector<int> m_Indices;
+
+	cTimer m_Timer;
 };

@@ -223,6 +223,7 @@ void SplitBVHBuilder::run(void)
     m_minOverlap = rootSpec.bounds.Area() * m_params.splitAlpha;
 	m_rightBounds.resize(max(rootSpec.numRef, (int)NumSpatialBins));
     m_numDuplicates = 0;
+	m_Timer.StartTimer();
 
     // Build recursively.
 
@@ -230,7 +231,6 @@ void SplitBVHBuilder::run(void)
 
     // Done.
 	*(bool*)&m_params.enablePrints = false;
-    if (m_params.enablePrints)
         printf("SplitBVHBuilder: progress %.0f%%, duplicates %.0f%%\n",
 		100.0f, (float)m_numDuplicates / (float)m_pClb->Count() * 100.0f);
 
@@ -267,12 +267,12 @@ BVHNode* SplitBVHBuilder::buildNode(NodeSpec spec, int level, float progressStar
 {
     // Display progress.
 
-    /*if (m_params.enablePrints && m_progressTimer.getElapsed() >= 1.0f)
+    if ( m_Timer.EndTimer() >= 1.0f)
     {
         printf("SplitBVHBuilder: progress %.0f%%, duplicates %.0f%%\r",
-            progressStart * 100.0f, (F32)m_numDuplicates / (F32)m_bvh.getScene()->getNumTriangles() * 100.0f);
-        m_progressTimer.start();
-    }*/
+			progressStart * 100.0f, (float)m_numDuplicates / (float)m_pClb->Count() * 100.0f);
+		m_Timer.StartTimer();
+    }
 
     // Remove degenerates.
     {
