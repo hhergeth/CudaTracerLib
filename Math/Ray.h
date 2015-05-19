@@ -1,7 +1,7 @@
 #pragma once
 #include <MathTypes.h>
 
-class Ray
+struct Ray
 {
 public: 
   Vec3f origin;

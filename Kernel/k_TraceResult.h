@@ -1,11 +1,16 @@
 #pragma once
 
 #include <MathTypes.h>
-#include "../Engine/e_Node.h"
-#include "../Engine/e_TriangleData.h"
 
 struct BSDFSamplingRecord;
 struct DifferentialGeometry;
+class e_Node;
+struct e_TriangleData;
+struct e_KernelMaterial;
+struct BSDFSamplingRecord;
+enum ETransportMode;
+struct CudaRNG;
+
 struct TraceResult
 {
 	float m_fDist;
@@ -22,10 +27,7 @@ struct TraceResult
 		m_pNode = 0;
 		m_pTri = 0;
 	}
-	CUDA_FUNC_IN unsigned int getMatIndex() const
-	{
-		return m_pTri->getMatIndex(m_pNode->m_uMaterialOffset);
-	}
+	CUDA_DEVICE CUDA_HOST unsigned int getMatIndex() const;
 	CUDA_DEVICE CUDA_HOST Spectrum Le(const Vec3f& p, const Frame& sys, const Vec3f& w) const;
 	CUDA_DEVICE CUDA_HOST unsigned int LightIndex() const;
 	CUDA_DEVICE CUDA_HOST const e_KernelMaterial& getMat() const;

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "..\Kernel\k_Tracer.h"
-#include "..\Base\CudaRandom.h"
 
 class k_PathTracer : public k_Tracer<true, true>
 {

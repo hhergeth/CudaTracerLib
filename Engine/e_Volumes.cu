@@ -1,5 +1,7 @@
 #include "e_Volumes.h"
 #include "e_Buffer.h"
+#include "../Base/CudaRandom.h"
+#include "e_Samples.h"
 
 bool e_HomogeneousVolumeDensity::IntersectP(const Ray &ray, const float minT, const float maxT, float *t0, float *t1) const
 {
@@ -28,7 +30,7 @@ bool e_HomogeneousVolumeDensity::sampleDistance(const Ray& ray, float minT, floa
 
 e_DenseVolGridBaseType::e_DenseVolGridBaseType(e_Stream<char>* a_Buffer, Vec3u dim, size_t sizePerElement)
 {
-	e_StreamReference(char) streamRef = a_Buffer->malloc(dim.x * dim.y * dim.z * sizePerElement);
+	e_StreamReference(char) streamRef = a_Buffer->malloc(dim.x * dim.y * dim.z * (int)sizePerElement);
 	data = streamRef.AsVar<char>();
 }
 

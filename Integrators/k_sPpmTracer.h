@@ -1,9 +1,6 @@
 #pragma once
 
 #include "..\Kernel\k_Tracer.h"
-#include "..\Base\CudaRandom.h"
-#include "..\Base\Timer.h"
-#include <time.h>
 #include "k_PhotonMapHelper.h"
 
 struct k_AdaptiveEntry

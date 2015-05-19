@@ -2,6 +2,8 @@
 #include "k_TraceHelper.h"
 #include "..\Engine\e_Core.h"
 #include "k_TraceAlgorithms.h"
+#include "../Engine/e_DynamicScene.h"
+#include "../Engine/e_Light.h"
 
 CUDA_DEVICE uint3 g_EyeHitBoxMin;
 CUDA_DEVICE uint3 g_EyeHitBoxMax;
@@ -58,7 +60,7 @@ AABB k_TracerBase::GetEyeHitPointBox(e_DynamicScene* m_pScene, bool recursive)
 	AABB m_sEyeBox;
 	m_sEyeBox.minV = Vec3f(float(minU.x), float(minU.y), float(minU.z)) / float(UINT_MAX);
 	m_sEyeBox.maxV = Vec3f(float(maxU.x), float(maxU.y), float(maxU.z)) / float(UINT_MAX);
-	AABB box = m_pScene->getSceneBVH()->m_sBox;
+	AABB box = g_SceneData.m_sBox;
 	m_sEyeBox.maxV = math::lerp(box.minV, box.maxV, m_sEyeBox.maxV);
 	m_sEyeBox.minV = math::lerp(box.minV, box.maxV, m_sEyeBox.minV);
 	return m_sEyeBox;

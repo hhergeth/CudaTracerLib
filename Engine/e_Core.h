@@ -1,8 +1,10 @@
 #pragma once
-
-#include "cuda_runtime.h"
-
 #include <string>
+#include <map>
+#include <vector>
+#include <stdlib.h>
+#include "cuda_runtime.h"
+#include "cuda.h"
 
 void InitializeCuda4Tracer(const std::string& dataPath);
 
@@ -12,9 +14,7 @@ void ThrowCudaErrors();
 
 void ThrowCudaErrors(cudaError_t r);
 
-#include <map>
-#include <vector>
-#include <string>
+
 struct CudaMemoryEntry
 {
 	void* address;
@@ -40,5 +40,9 @@ public:
 	}
 };
 
+cudaError_t cudamemcpy(void* dest, void* src, size_t len, cudaMemcpyKind k);
+
 #define CUDA_MALLOC(v,i) CudaMemoryManager::Cuda_malloc_managed(v, i, std::string(__FUNCSIG__))
 #define CUDA_FREE(v) CudaMemoryManager::Cuda_free_managed(v, std::string(__FUNCSIG__))
+#define CUDA_MEMCPY_TO_HOST(dest,src,length) cudamemcpy(dest, src, length, cudaMemcpyDeviceToHost)
+#define CUDA_MEMCPY_TO_DEVICE(dest,src,length) cudamemcpy(dest, src, length, cudaMemcpyHostToDevice)

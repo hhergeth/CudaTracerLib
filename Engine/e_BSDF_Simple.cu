@@ -1,4 +1,6 @@
 #include "e_BSDF.h"
+#include "../Base/CudaRandom.h"
+#include "e_RoughTransmittance.h"
 
 Spectrum roughdiffuse::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 {
@@ -478,7 +480,8 @@ Spectrum roughdielectric::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec
 	float F = MonteCarlo::fresnelDielectricExt(dot(bRec.wi, m), cosThetaT, m_eta);
 
 	if (hasReflection && hasTransmission) {
-		if (bRec.rng->randomFloat() > F) {
+		CudaRNG* rng = bRec.rng;
+		if (rng->randomFloat() > F) {
 			sampleReflection = false;
 			pdf *= 1 - F;
 		}

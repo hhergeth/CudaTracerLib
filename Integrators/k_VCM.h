@@ -1,7 +1,6 @@
 #pragma once
 
 #include "..\Kernel\k_Tracer.h"
-#include "..\Base\CudaRandom.h"
 #include "k_PhotonMapHelper.h"
 
 class k_VCM : public k_Tracer<true, true>

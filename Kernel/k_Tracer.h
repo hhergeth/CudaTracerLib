@@ -1,11 +1,11 @@
 #pragma once
 
-#include "..\Engine\e_DynamicScene.h"
-#include "..\Engine\e_Sensor.h"
-#include <vector>
-#include "..\Engine\e_Image.h"
-#include "k_BlockSampler.h"
 #include "k_TraceHelper.h"
+#include "k_BlockSampler_device.h"
+#include "../Engine/e_Material.h"
+
+class e_DynamicScene;
+class k_BlockSampler;
 
 typedef void (*SliderCreateCallback)(float, float, bool, float*, std::string);
 
@@ -59,7 +59,6 @@ public:
 	{
 
 	}
-	virtual k_BlockSampler* getBlockSampler() const = 0;
 	virtual bool isMultiPass() const = 0;
 	virtual bool usesBlockSampler() const = 0;
 	virtual unsigned int getNumPassesDone() const
@@ -82,6 +81,11 @@ public:
 	{
 		return m_fAccRuntime;
 	}
+	virtual IBlockSampler* getBlockSampler() const
+	{
+		return m_pBlockSampler;
+	}
+	k_BlockSampleImage getDeviceBlockSampler() const;
 protected:
 	float m_fLastRuntime;
 	unsigned int m_uLastNumRaysTraced;
@@ -90,8 +94,9 @@ protected:
 	unsigned int m_uPassesDone;
 	unsigned int w, h;
 	e_DynamicScene* m_pScene;
-	k_BlockSampler* m_pBlockSampler;
 	cudaEvent_t start, stop;
+	IBlockSampler* m_pBlockSampler;
+	void allocateBlockSampler(e_Image* I);
 };
 
 template<bool USE_BLOCKSAMPLER, bool PROGRESSIVE> class k_Tracer : public k_TracerBase
@@ -114,7 +119,7 @@ public:
 	virtual void DoPass(e_Image* I, bool a_NewTrace)
 	{
 		if (USE_BLOCKSAMPLER && !m_pBlockSampler)
-			m_pBlockSampler = new k_BlockSampler(I);
+			allocateBlockSampler(I);
 		g_sRngs.NextPass();
 		cudaEventRecord(start, 0);
 		if (a_NewTrace || !PROGRESSIVE)
@@ -141,10 +146,6 @@ public:
 		m_uLastNumRaysTraced = k_getNumRaysTraced();
 		m_fAccRuntime += m_fLastRuntime;
 		m_uAccNumRaysTraced += m_uLastNumRaysTraced;
-	}
-	virtual k_BlockSampler* getBlockSampler() const
-	{
-		return m_pBlockSampler;
 	}
 	virtual bool isMultiPass() const
 	{

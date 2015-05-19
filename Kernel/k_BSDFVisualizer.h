@@ -1,9 +1,11 @@
 #pragma once
 
 #include "..\Kernel\k_Tracer.h"
-#include "..\Base\CudaRandom.h"
-#include "..\Engine\e_BSDF.h"
-#include "..\Engine\e_Light.h"
+#include "../Engine/e_Buffer.h"
+#include "../Engine/e_Light.h"
+
+struct e_KernelMIPMap;
+class e_MIPMap;
 
 class k_BSDFVisualizer : public k_Tracer<false, true>
 {

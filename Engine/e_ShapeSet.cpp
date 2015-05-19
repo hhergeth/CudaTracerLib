@@ -1,5 +1,7 @@
 #include <StdAfx.h>
 #include "e_ShapeSet.h"
+#include "e_Buffer.h"
+#include "e_IntersectorData.h"
 
 AABB ShapeSet::triData::box() const
 {
@@ -21,19 +23,19 @@ void ShapeSet::triData::Recalculate(const float4x4& mat)
 ShapeSet::ShapeSet(e_StreamReference(e_TriIntersectorData)* indices, unsigned int indexCount, float4x4& mat, e_Stream<char>* buffer)
 {
 	count = indexCount;
-	buffer1 = buffer->malloc((count + 1) * sizeof(float));
-	buffer2 = buffer->malloc(count * sizeof(triData));
+	e_StreamReference(char) buffer1 = buffer->malloc((count + 1) * sizeof(float));
+	e_StreamReference(char) buffer2 = buffer->malloc(count * sizeof(triData));
 	areaDistribution = buffer1.AsVar<float>();
 	triangles = buffer2.AsVar<triData>();
 	for (unsigned int i = 0; i < count; i++)
 		triangles[i].iDat = indices[i].AsVar();
-	Recalculate(mat);
+	Recalculate(mat, buffer);
 }
 
-void ShapeSet::Recalculate(const float4x4& mat)
+void ShapeSet::Recalculate(const float4x4& mat, e_Stream<char>* buffer)
 {
-	buffer1.Invalidate();
-	buffer2.Invalidate();
+	buffer->translate(areaDistribution).Invalidate();
+	buffer->translate(triangles).Invalidate();
 	sumArea = 0;
 	areaDistribution[0] = 0.0f;
 	for (unsigned int i = 0; i < count; i++)

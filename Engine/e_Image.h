@@ -1,7 +1,6 @@
 #pragma once
 
 #include "e_Filter.h"
-#include "e_Samples.h"
 
 enum ImageDrawType
 {
@@ -100,10 +99,7 @@ public:
 	{
 		m_bDoUpdate = false;
 	}
-	void copyToHost()
-	{
-		cudaMemcpy(hostPixels, cudaPixels, sizeof(Pixel) * xResolution * yResolution, cudaMemcpyDeviceToHost);
-	}
+	void copyToHost();
 	static void ComputeDiff(const e_Image& A, const e_Image& B, e_Image& dest, float scale);
 private:
 	void InternalUpdateDisplay();

@@ -1,21 +1,24 @@
 #pragma once
 
 #include <MathTypes.h>
-#include "e_Buffer.h"
-#include "e_Node.h"
-#include "e_Mesh.h"
-#include "e_SceneBVH.h"
-#include "e_Light.h"
-#include "e_Material.h"
-#include "e_Volumes.h"
 #include "e_KernelDynamicScene.h"
 #include "e_MeshCompiler.h"
+#include "e_SceneInitData.h"
+#include "e_ShapeSet.h"
 
 struct e_TmpVertex;
 class e_AnimatedMesh;
-
-#include "e_SceneInitData.h"
-#include "e_Sensor.h"
+template<typename H, typename D> class e_BufferReference;
+template<typename T> class e_Stream;
+template<typename H, typename D> class e_CachedBuffer;
+class e_SceneBVH;
+struct e_Sensor;
+struct e_KernelMIPMap;
+class e_MIPMap;
+class e_Mesh;
+#ifndef e_StreamReference
+#define e_StreamReference(T) e_BufferReference<T, T>
+#endif
 
 class e_DynamicScene
 {
@@ -52,46 +55,18 @@ public:
 	e_BufferReference<e_MIPMap, e_KernelMIPMap> LoadTexture(const std::string& file, bool a_MipMap);
 	void UnLoadTexture(e_BufferReference<e_MIPMap, e_KernelMIPMap> ref);
 	void ReloadTextures();
-	float4x4 GetNodeTransform(e_StreamReference(e_Node) n)
-	{
-		if (n.getIndex() >= m_pNodeStream->getLength())
-			throw std::runtime_error("Invalid idx!");
-		return *m_pBVH->m_pTransforms[0](n.getIndex());
-	}
+	float4x4 GetNodeTransform(e_StreamReference(e_Node) n);
 	void SetNodeTransform(const float4x4& mat, e_StreamReference(e_Node) n);
-	template<typename MAT> void setMat(e_StreamReference(e_Node) N, unsigned int mi, MAT& m)
-	{
-		m_pMaterialBuffer->operator()(N->m_uMaterialOffset + mi)->bsdf.SetData(m);
-		m_pMaterialBuffer->operator()(N->m_uMaterialOffset + mi).Invalidate();
-	}
 	void AnimateMesh(e_StreamReference(e_Node) n, float t, unsigned int anim);
 	bool UpdateScene();
 	e_KernelDynamicScene getKernelSceneData(bool devicePointer = true)  const;
 	//void UpdateMaterial(e_StreamReference(e_KernelMaterial) m);
-	e_StreamReference(e_Node) getNodes()
-	{
-		return m_pNodeStream->UsedElements();
-	}
-	unsigned int getNodeCount()
-	{
-		return m_pNodeStream->NumUsedElements();
-	}
-	unsigned int getLightCount()
-	{
-		return m_pLightStream->NumUsedElements();
-	}
-	e_StreamReference(e_KernelLight) getLights()
-	{
-		return m_pLightStream->UsedElements();
-	}
-	unsigned int getMaterialCount()
-	{
-		return m_pMaterialBuffer->NumUsedElements();
-	}
-	e_StreamReference(e_KernelMaterial) getMaterials()
-	{
-		return m_pMaterialBuffer->UsedElements();
-	}
+	e_StreamReference(e_Node) getNodes();
+	unsigned int getNodeCount();
+	unsigned int getLightCount();
+	e_StreamReference(e_KernelLight) getLights();
+	unsigned int getMaterialCount();
+	e_StreamReference(e_KernelMaterial) getMaterials();
 	e_SceneBVH* getSceneBVH();
 	e_AnimatedMesh* AccessAnimatedMesh(e_StreamReference(e_Node) n);
 	unsigned int getCudaBufferSize();
@@ -116,12 +91,6 @@ public:
 	e_StreamReference(e_KernelMaterial) getMats(e_StreamReference(e_Node) n);
 	e_StreamReference(e_KernelMaterial) getMat(e_StreamReference(e_Node) n, const std::string& name);
 	ShapeSet CreateShape(e_StreamReference(e_Node) Node, const std::string& name, unsigned int* a_Mi = 0);
-	template<typename T> e_StreamReference(e_KernelLight) createLight(T& val)
-	{
-		e_StreamReference(e_KernelLight) r = m_pLightStream->malloc(1);
-		r()->SetData(val);
-		return r();
-	}
 	AABB getBox(e_StreamReference(e_Node) n);
 	e_StreamReference(e_KernelLight) createLight(e_StreamReference(e_Node) Node, const std::string& materialName, Spectrum& L);
 	void removeLight(e_StreamReference(e_Node) Node, unsigned int mi);
@@ -132,18 +101,7 @@ public:
 	{
 		m_uModified = 1;
 	}
-	unsigned int getLightCount(e_StreamReference(e_Node) n)
-	{
-		int i = 0;
-		while (i < MAX_AREALIGHT_NUM && n->m_uLightIndices[i] != 0xffffffff)
-			i++;
-		if (i == MAX_AREALIGHT_NUM)
-			throw std::runtime_error("Could not allocate light slot!");
-		return i;
-	}
-	e_StreamReference(e_KernelLight) getLight(e_StreamReference(e_Node) n, unsigned int i)
-	{
-		return m_pLightStream->operator()(n->m_uLightIndices[i], 1);
-	}
+	unsigned int getLightCount(e_StreamReference(e_Node) n);
+	e_StreamReference(e_KernelLight) getLight(e_StreamReference(e_Node) n, unsigned int i);
 	void instanciateNodeMaterials(e_StreamReference(e_Node) n);
 };

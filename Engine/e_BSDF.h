@@ -3,11 +3,11 @@
 //this architecture and the implementations are completly copied from mitsuba!
 
 #include <MathTypes.h>
-#include "Engine\e_KernelTexture.h"
+#include "Engine/e_KernelTexture.h"
 #include "Engine/e_Samples.h"
-#include "Engine\e_PhaseFunction.h"
+#include "Engine/e_PhaseFunction.h"
 #include "e_MicrofacetDistribution.h"
-#include "e_RoughTransmittance.h"
+#include "../Math/Sampling.h"
 
 #define NUM_TEX_PER_BSDF 10
 

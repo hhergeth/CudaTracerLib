@@ -45,14 +45,14 @@
     <IntDir>Build\$(Platform)\$(Configuration)\</IntDir>
     <TargetExt>.lib</TargetExt>
     <IncludePath>$(ProjectDir);$(SolutionDir)Libs/Include;$(SolutionDir)../qMatrixLib/qMatrixLib;$(SolutionDir)Libs/boost_1_58_0;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)Libs/Lib/$(Configuration);$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(SolutionDir)Libs/Lib/$(Configuration);$(SolutionDir)Libs/boost_1_58_0/stage/lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>Build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>Build\$(Platform)\$(Configuration)\</IntDir>
     <TargetExt>.lib</TargetExt>
     <IncludePath>$(ProjectDir);$(SolutionDir)Libs/Include;$(SolutionDir)../qMatrixLib/qMatrixLib;$(SolutionDir)Libs/boost_1_58_0;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)Libs/Lib/$(Configuration);$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(SolutionDir)Libs/Lib/$(Configuration);$(SolutionDir)Libs/boost_1_58_0/stage/lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -64,7 +64,7 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>cudart.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>cudart.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;FreeImage.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>echo copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"
@@ -91,7 +91,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>cudart.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>cudart.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;FreeImage.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>echo copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"
@@ -127,6 +127,9 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClCompile Include="Engine\SceneBuilder\PlyParser.cpp" />
     <ClCompile Include="Engine\SceneBuilder\SplitBVHBuilder.cpp" />
     <ClCompile Include="Engine\SceneBuilder\tiny_obj_loader.cpp" />
+    <ClInclude Include="Engine\e_Buffer_device.h" />
+    <ClInclude Include="Engine\e_FileTexture_device.h" />
+    <ClInclude Include="Engine\e_SceneBVH_device.h" />
     <ClInclude Include="Integrators\k_GradientDescent.h">
       <FileType>CppCode</FileType>
     </ClInclude>
@@ -200,6 +203,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="Integrators\k_VCM.h" />
     <ClInclude Include="Integrators\k_VCMHelper.h" />
     <ClInclude Include="Kernel\k_BlockSampler.h" />
+    <ClInclude Include="Kernel\k_BlockSampler_device.h" />
     <ClInclude Include="Kernel\k_BSDFVisualizer.h" />
     <ClInclude Include="Kernel\k_TraceAlgorithms.h" />
     <ClInclude Include="Kernel\k_TraceHelper.h" />
@@ -208,6 +212,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="MathTypes.h" />
     <ClInclude Include="Math\AABB.h" />
     <ClInclude Include="Math\Compression.h" />
+    <ClInclude Include="Math\Distribution.h" />
     <ClInclude Include="Math\float4x4.h" />
     <ClInclude Include="Math\Frame.h" />
     <ClInclude Include="Math\half.h" />
@@ -241,9 +246,11 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <CudaCompile Include="Engine\e_MicrofacetDistribution.cu" />
     <CudaCompile Include="Engine\e_PhaseFunction.cu" />
     <CudaCompile Include="Engine\e_RoughTransmittance.cu" />
+    <CudaCompile Include="Engine\e_Samples.cu" />
     <CudaCompile Include="Engine\e_Sensor.cu" />
     <CudaCompile Include="Engine\e_ShapeSet.cu" />
     <CudaCompile Include="Engine\e_TriangleData.cu" />
+    <CudaCompile Include="Engine\e_TriIntersectorData.cu" />
     <CudaCompile Include="Engine\e_Volumes.cu" />
     <CudaCompile Include="Integrators\k_BDPT.cu" />
     <CudaCompile Include="Integrators\k_FastTracer.cu" />
@@ -262,6 +269,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <CudaCompile Include="Kernel\k_TraceResult.cu" />
     <CudaCompile Include="Math\float4x4.cu" />
     <CudaCompile Include="Math\Integrator.cu" />
+    <CudaCompile Include="Math\Sampling.cu" />
     <CudaCompile Include="Math\Spectrum.cu" />
     <CudaCompile Include="Math\Spline.cu" />
   </ItemGroup>

@@ -1,8 +1,9 @@
 #pragma once
 
-#include "..\Math\AABB.h"
-#include "..\Base\CudaRandom.h"
-#include "e_Samples.h"
+#include "../MathTypes.h"
+
+struct PhaseFunctionSamplingRecord;
+struct CudaRNG;
 
 //this architecture and the implementations are completly copied from mitsuba!
 

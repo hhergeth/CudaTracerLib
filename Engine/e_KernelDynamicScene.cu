@@ -1,5 +1,6 @@
 #include "e_KernelDynamicScene.h"
 #include "..\Kernel\k_TraceHelper.h"
+#include "e_Light.h"
 
 const e_KernelLight* e_KernelDynamicScene::sampleLight(float& emPdf, Vec2f& sample) const
 {

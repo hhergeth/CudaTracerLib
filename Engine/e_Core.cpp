@@ -1,18 +1,12 @@
 #include <StdAfx.h>
 #include "e_Core.h"
-#include "..\MathTypes.h"
-
-#include "e_Core.h"
-
+#include "cuda_runtime.h"
 #include "..\MathTypes.h"
 #include "e_RoughTransmittance.h"
-
 #define FREEIMAGE_LIB
 #include <FreeImage.h>
-
 #include "e_FileTexture.h"
 #include <crtdbg.h>
-
 #include "../Kernel/k_Tracer.h"
 
 void InitializeCuda4Tracer(const std::string& dataPath)
@@ -91,4 +85,9 @@ cudaError_t CudaMemoryManager::Cuda_free_managed(void* v, const std::string& cal
 	cudaError_t r = cudaFree(v);
 	ThrowCudaErrors(r);
 	return r;
+}
+
+cudaError_t cudamemcpy(void* dest, void* src, size_t len, cudaMemcpyKind k)
+{
+	return cudaMemcpy(dest, src, len, k);
 }

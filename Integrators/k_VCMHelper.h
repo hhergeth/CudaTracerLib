@@ -2,6 +2,7 @@
 
 #include "..\MathTypes.h"
 #include "..\Kernel\k_TraceAlgorithms.h"
+#include "../Engine/e_Light.h"
 #define NUM_V_PER_PATH 5
 #define MAX_SUB_PATH_LENGTH 10
 

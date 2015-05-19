@@ -1,4 +1,6 @@
 #include "e_PhaseFunction.h"
+#include "..\Base\CudaRandom.h"
+#include "e_Samples.h"
 
 float e_HGPhaseFunction::Evaluate(const PhaseFunctionSamplingRecord &pRec) const
 {

@@ -1,6 +1,7 @@
 #include <StdAfx.h>
 #include "k_Tracer.h"
 #include "k_TraceHelper.h"
+#include "k_BlockSampler.h"
 
 CudaRNGBuffer k_TracerBase::g_sRngs;
 static bool initrng = false;
@@ -20,4 +21,14 @@ k_TracerBase::k_TracerBase()
 	InitRngs(1024 * 768);
 	cudaEventCreate(&start);
 	cudaEventCreate(&stop);
+}
+
+k_BlockSampleImage k_TracerBase::getDeviceBlockSampler() const
+{
+	return getBlockSampler()->getBlockImage();
+}
+
+void k_TracerBase::allocateBlockSampler(e_Image* I)
+{
+	m_pBlockSampler = new k_BlockSampler(I);
 }

@@ -1,4 +1,7 @@
 #include "k_TraceAlgorithms.h"
+#include "../Engine/e_Samples.h"
+#include "../Engine/e_Material.h"
+#include "../Engine/e_Light.h"
 
 //#define EXT_EST
 

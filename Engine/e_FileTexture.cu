@@ -506,7 +506,7 @@ void e_MIPMap::CreateRelaxedConeMap(const std::string& a_InputFile, OutputStream
 	a_Out.Write(imgData, data.w * data.h * sizeof(float2));
 	delete [] imgData;
 	
-	unsigned int m_sOffsets[max_MIPS];
+	unsigned int m_sOffsets[MAX_MIPS];
 	a_Out.Write(m_sOffsets, sizeof(m_sOffsets));
 	for (int i = 0; i<MTS_MIPMAP_LUT_SIZE; ++i)
 	{

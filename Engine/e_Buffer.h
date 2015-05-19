@@ -3,18 +3,8 @@
 #include <MathTypes.h>
 #include <vector>
 #include "e_ErrorHandler.h"
-#include "..\Base\FileStream.h"
-
-template<typename T> struct e_KernelBuffer
-{
-	T* Data;
-	unsigned int UsedCount;
-	unsigned int Length;
-	CUDA_FUNC_IN T& operator[](unsigned int i) const
-	{
-		return Data[i];
-	}
-};
+#include "e_Buffer_device.h"
+#include "../Base/FileStream.h"
 
 template<typename H, typename D> class e_BufferReference;
 template<typename H, typename D> class e_Buffer
@@ -269,6 +259,11 @@ public:
 	{
 		unsigned int idx = var.device - device;
 		return e_BufferReference<H, D>(this, idx, 1);
+	}
+	template<typename T> e_BufferReference<H, D> translate(const e_Variable<T>& var)
+	{
+		unsigned int idx = var.device - device;
+		return e_BufferReference<H, D>(this, idx, unsigned int(sizeof(T) / sizeof(D)));
 	}
 };
 
@@ -656,6 +651,11 @@ public:
 	{
 		unsigned int idx = var.device - device;
 		return e_BufferReference<T, T>(this, idx, 1);
+	}
+	template<typename T2> e_BufferReference<T, T> translate(const e_Variable<T2>& var)
+	{
+		unsigned int idx = (T*)var.device - device;
+		return e_BufferReference<T, T>(this, idx, unsigned int(sizeof(T2) / sizeof(T)));
 	}
 };
 

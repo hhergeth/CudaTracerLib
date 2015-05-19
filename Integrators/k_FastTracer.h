@@ -1,9 +1,6 @@
 #pragma once
 
 #include "..\Kernel\k_Tracer.h"
-#include "..\Base\CudaRandom.h"
-#include "..\Kernel\k_TraceHelper.h"
-#include "..\Engine\e_Core.h"
 
 template<typename T, int N> struct k_RayBuffer
 {

@@ -8,7 +8,6 @@
 #include "Math/Ray.h"
 #include "Math/Warp.h"
 #include "Math/Frame.h"
-#include "Math\Sampling.h"
 
 #include "Base\Platform.h"
 #include "Engine\e_Core.h"

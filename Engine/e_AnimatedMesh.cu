@@ -99,8 +99,6 @@ __global__ void g_ComputeBVHState(e_TriIntersectorData* a_BVHIntersectionData, e
 	}
 }
 
-#include "e_Core.h"
-
 void e_AnimatedMesh::k_ComputeState(unsigned int a_Anim, unsigned int a_Frame, float a_lerp, e_KernelDynamicScene a_Data, e_Stream<e_BVHNodeData>* a_BVHNodeStream, e_TmpVertex* a_DeviceTmp)
 {
 	unsigned int n = (a_Frame + 1) % m_pAnimations[a_Anim].m_pFrames.size();

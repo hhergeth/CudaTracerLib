@@ -1,8 +1,7 @@
 #include "CudaRandom.h"
-
 #include "..\MathTypes.h"
 
-float k_TracerRNG_cuRAND::randomFloat()
+float CudaRNG::randomFloat()
 {
 #ifdef ISCUDA
 	return curand_uniform(&state);
@@ -11,7 +10,7 @@ float k_TracerRNG_cuRAND::randomFloat()
 #endif
 }
 
-unsigned long k_TracerRNG_cuRAND::randomUint()
+unsigned long CudaRNG::randomUint()
 {
 #ifdef ISCUDA
 	return curand(&state);
@@ -20,7 +19,7 @@ unsigned long k_TracerRNG_cuRAND::randomUint()
 #endif
 }
 
-void k_TracerRNG_cuRAND::Initialize(unsigned int a_Index, unsigned int a_Spacing, unsigned int a_Offset)
+void CudaRNG::Initialize(unsigned int a_Index, unsigned int a_Spacing, unsigned int a_Offset)
 {
 #ifdef ISCUDA
 	curand_init(a_Index * a_Spacing, a_Index * a_Offset, 0, &state);
@@ -29,28 +28,28 @@ void k_TracerRNG_cuRAND::Initialize(unsigned int a_Index, unsigned int a_Spacing
 #endif
 }
 
-CudaRNGBuffer_cuRAND::CudaRNGBuffer_cuRAND(unsigned int a_Length, unsigned int a_Spacing, unsigned int a_Offset)
+CudaRNGBuffer::CudaRNGBuffer(unsigned int a_Length, unsigned int a_Spacing, unsigned int a_Offset)
 {
 	m_uNumGenerators = a_Length;
-	CUDA_MALLOC(&m_pDeviceGenerators, a_Length * sizeof(k_TracerRNG_cuRAND));
-	m_pHostGenerators = new k_TracerRNG_cuRAND[a_Length];
+	CUDA_MALLOC(&m_pDeviceGenerators, a_Length * sizeof(CudaRNG));
+	m_pHostGenerators = new CudaRNG[a_Length];
 	createGenerators(a_Spacing, a_Offset);
 }
 
-void CudaRNGBuffer_cuRAND::Free()
+void CudaRNGBuffer::Free()
 {
 	std::cout << "~CudaRNGBuffer_cuRAND called!\n";
 	CUDA_FREE(m_pDeviceGenerators);
 	delete[] m_pHostGenerators;
 }
 
-void CudaRNGBuffer_cuRAND::createGenerators(unsigned int a_Spacing, unsigned int a_Offset)
+void CudaRNGBuffer::createGenerators(unsigned int a_Spacing, unsigned int a_Offset)
 {
 	for(unsigned int i = 0; i < m_uNumGenerators; i++)
 	{
 		(m_pHostGenerators + i)->Initialize(i, a_Spacing, a_Offset);
 	}
-	cudaMemcpy(m_pDeviceGenerators, m_pHostGenerators, sizeof(k_TracerRNG_cuRAND) * m_uNumGenerators, cudaMemcpyHostToDevice);
+	CUDA_MEMCPY_TO_DEVICE(m_pDeviceGenerators, m_pHostGenerators, sizeof(CudaRNG) * m_uNumGenerators);
 }
 
 CUDA_FUNC_IN unsigned int getGlobalIdx_2D_2D()
@@ -65,16 +64,16 @@ CUDA_FUNC_IN unsigned int getGlobalIdx_2D_2D()
 }
 
 
-k_TracerRNG_cuRAND CudaRNGBuffer_cuRAND::operator()()
+CudaRNG CudaRNGBuffer::operator()()
 {
 	unsigned int idx = getGlobalIdx_2D_2D();
 	unsigned int i = idx % m_uNumGenerators;
-	k_TracerRNG_cuRAND rng;
+	CudaRNG rng;
 #ifdef ISCUDA
 	rng = m_pDeviceGenerators[i];
 	if (idx >= m_uNumGenerators)
 	{
-		skipahead_sequence(idx / m_uNumGenerators, &rng.state);
+		//skipahead_sequence(idx / m_uNumGenerators, &rng.state);
 	}
 #else
 	rng = m_pHostGenerators[i];
@@ -82,7 +81,7 @@ k_TracerRNG_cuRAND CudaRNGBuffer_cuRAND::operator()()
 	return rng;
 }
 
-void CudaRNGBuffer_cuRAND::operator()(k_TracerRNG_cuRAND& val)
+void CudaRNGBuffer::operator()(CudaRNG& val)
 {
 	unsigned int i = getGlobalIdx_2D_2D();
 #ifdef ISCUDA
@@ -93,7 +92,7 @@ void CudaRNGBuffer_cuRAND::operator()(k_TracerRNG_cuRAND& val)
 #endif
 }
 
-void CudaRNGBuffer_cuRAND::NextPass()
+void CudaRNGBuffer::NextPass()
 {
 
 }

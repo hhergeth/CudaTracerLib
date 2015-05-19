@@ -2,20 +2,11 @@
 
 #include "e_Buffer.h"
 #include <MathTypes.h>
+#include "e_SceneBVH_device.h"
 
 class e_Node;
-struct e_BVHNodeData;
 class e_Mesh;
 struct e_KernelMesh;
-
-struct e_KernelSceneBVH
-{
-	int m_sStartNode;
-	e_BVHNodeData* m_pNodes;
-	float4x4* m_pNodeTransforms;
-	float4x4* m_pInvNodeTransforms;
-};
-
 
 class e_SceneBVH
 {

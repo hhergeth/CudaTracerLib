@@ -2,6 +2,8 @@
 #include "../Engine/e_TriangleData.h"
 #include "../Engine/e_Node.h"
 #include "k_TraceHelper.h"
+#include "../Engine/e_Light.h"
+#include "../Engine/e_Samples.h"
 
 void TraceResult::getBsdfSample(const Ray& r, BSDFSamplingRecord& bRec, ETransportMode mode, CudaRNG* rng, const Vec3f* wo) const
 {
@@ -61,4 +63,9 @@ unsigned int TraceResult::getTriIndex() const
 void TraceResult::fillDG(DifferentialGeometry& dg) const
 {
 	::fillDG(m_fBaryCoords, m_pTri, m_pNode, dg);
+}
+
+unsigned int TraceResult::getMatIndex() const
+{
+	return m_pTri->getMatIndex(m_pNode->m_uMaterialOffset);
 }

@@ -5,6 +5,7 @@
 #include "e_Material.h"
 #include "e_Buffer.h"
 #include "e_IntersectorData.h"
+#include "e_SceneInitData.h"
 
 struct e_KernelMesh
 {
@@ -14,10 +15,6 @@ struct e_KernelMesh
 	unsigned int m_uBVHIndicesOffset;
 	unsigned int m_uStdMaterialOffset;
 };
-
-#include "cuda_runtime.h"
-#include "..\Base\FileStream.h"
-#include "e_SceneInitData.h"
 
 struct e_MeshPartLight
 {

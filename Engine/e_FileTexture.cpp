@@ -83,7 +83,7 @@ void e_MIPMap::CompileToBinary(const std::string& a_InputFile, OutputStream& a_O
 	a_Out << size;
 	a_Out.Write(data.data, data.w * data.h * sizeof(RGBCOL));
 
-	unsigned int m_sOffsets[max_MIPS];
+	unsigned int m_sOffsets[MAX_MIPS];
 	m_sOffsets[0] = 0;
 	unsigned int off = data.w * data.h;
 	for(unsigned int i = 1, j = data.w / 2, k = data.h / 2; i < nLevels; i++, j >>= 1, k >>= 1)

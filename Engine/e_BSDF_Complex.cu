@@ -1,4 +1,5 @@
 #include "e_BSDF.h"
+#include "e_RoughTransmittance.h"
 
 Spectrum coating::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &_sample) const
 {

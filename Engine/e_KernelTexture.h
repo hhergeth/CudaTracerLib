@@ -1,6 +1,6 @@
 #pragma once
 
-#include "e_FileTexture.h"
+#include "e_FileTexture_device.h"
 #include "e_DifferentialGeometry.h"
 #include "../Base/FixedString.h"
 

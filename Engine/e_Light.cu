@@ -1,5 +1,7 @@
 #include "e_Light.h"
 #include "e_Mesh.h"
+#include "e_FileTexture.h"
+#include "../Math/Distribution.h"
 
 Spectrum e_PointLight::sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const
 {
@@ -138,7 +140,7 @@ float e_DiffuseLight::pdfDirect(const DirectSamplingRecord &dRec) const
 		if (m_bOrthogonal)
 			return dRec.measure == EDiscrete ? 1.0f / float(shapeSet.numTriangles()) : 0.0f;
 
-		float pdfPos = shapeSet.Pdf(dRec);
+		float pdfPos = shapeSet.Pdf();
 
 		if (dRec.measure == ESolidAngle)
 			return pdfPos * (dRec.dist * dRec.dist) / absdot(dRec.d, dRec.n);

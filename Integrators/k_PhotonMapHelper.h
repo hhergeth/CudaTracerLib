@@ -1,9 +1,9 @@
 #pragma once
 
-#include "..\Kernel\k_Tracer.h"
-#include "..\Base\CudaRandom.h"
-#include "..\Engine\e_Grid.h"
+#include "../Kernel/k_Tracer.h"
+#include "../Engine/e_Grid.h"
 #include "../Math//Compression.h"
+#include "../Base/FileStream.h"
 
 #define ALPHA (2.0f / 3.0f)
 

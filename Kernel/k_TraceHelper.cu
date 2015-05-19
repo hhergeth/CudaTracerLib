@@ -1,5 +1,11 @@
 #include "k_TraceHelper.h"
 #include "../Math/Compression.h"
+#include "../Math/half.h"
+#include "cuda_runtime.h"
+#include "../Engine/e_Sensor.h"
+#include "../Engine/e_DynamicScene.h"
+#include "../Engine/e_Mesh.h"
+#include "../Engine/e_Node.h"
 
 //#define SKIP_OUTER_TREE
 
@@ -22,6 +28,14 @@ texture<float4, 1>		t_NodeInvTransforms;
 
 texture<int2, 1> t_TriDataA;
 texture<float4, 1> t_TriDataB;
+
+void traversalResult::toResult(TraceResult* tR, e_KernelDynamicScene& data)
+{
+	tR->m_fDist = dist;
+	tR->m_fBaryCoords = ((half2*)&bCoords)->ToFloat2();
+	tR->m_pNode = data.m_sNodeData.Data + nodeIdx;
+	tR->m_pTri = data.m_sTriData.Data + triIdx;
+}
 
 CUDA_FUNC_IN void loadModl(int i, float4x4* o)
 {

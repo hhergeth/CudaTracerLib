@@ -2,6 +2,7 @@
 #include "..\Kernel\k_TraceHelper.h"
 #include <time.h>
 #include "..\Kernel\k_TraceAlgorithms.h"
+#include "../Engine/e_Light.h"
 
 CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_NextRayCounter;
 
@@ -125,7 +126,7 @@ template<bool DIRECT> __global__ void pathKernel2(unsigned int w, unsigned int h
 
 void k_PathTracer::RenderBlock(e_Image* I, int x, int y, int blockW, int blockH)
 {
-	AABB m_sEyeBox = m_pScene->getSceneBVH()->m_sBox;
+	AABB m_sEyeBox = g_SceneData.m_sBox;
 	float m_fInitialRadius = (m_sEyeBox.maxV - m_sEyeBox.minV).sum() / 100;
 	float ALPHA = 0.75f;
 	float radius2 = math::pow(math::pow(m_fInitialRadius, float(2)) / math::pow(float(m_uPassesDone), 0.5f * (1 - ALPHA)), 1.0f / 2.0f);

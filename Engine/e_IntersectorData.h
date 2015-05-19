@@ -1,5 +1,10 @@
 #pragma once
 
+#include "../Math/Vector.h"
+#include "../Math/AABB.h"
+
+struct Ray;
+
 #define MAX_AREALIGHT_NUM 2
 
 struct e_TriIntersectorData2

@@ -1,7 +1,6 @@
 #include "k_PrimTracer.h"
 #include "..\Kernel\k_TraceHelper.h"
 #include "..\Kernel\k_TraceAlgorithms.h"
-#include "..\Engine\e_Core.h"
 
 CUDA_DEVICE e_Image g_DepthImage2;
 CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_NextRayCounter2;

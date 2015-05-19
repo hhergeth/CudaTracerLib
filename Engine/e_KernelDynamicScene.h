@@ -1,10 +1,10 @@
 #pragma once
 
 #include <MathTypes.h>
-#include "e_Buffer.h"
-#include "e_SceneBVH.h"
+#include "e_Buffer_device.h"
+#include "e_SceneBVH_device.h"
 #include "e_Volumes.h"
-#include "..\Math\Sampling.h"
+#include "..\Math\Distribution.h"
 #include "e_Sensor.h"
 
 struct e_KernelLight;
@@ -20,7 +20,7 @@ struct e_KernelMaterial;
 struct e_KernelMIPMap;
 struct TraceResult;
 
-#define max_LIGHT_COUNT 32
+#define MAX_LIGHT_COUNT 32
 struct e_KernelDynamicScene
 {
 	e_KernelBuffer<e_TriangleData> m_sTriData;
@@ -36,8 +36,8 @@ struct e_KernelDynamicScene
 	e_KernelSceneBVH m_sSceneBVH;
 	e_KernelAggregateVolume m_sVolume;
 	unsigned int m_uEnvMapIndex;
-	Distribution1D<max_LIGHT_COUNT> m_emitterPDF;
-	unsigned int m_uEmitterIndices[max_LIGHT_COUNT];
+	Distribution1D<MAX_LIGHT_COUNT> m_emitterPDF;
+	unsigned int m_uEmitterIndices[MAX_LIGHT_COUNT];
 	unsigned int m_uEmitterCount;
 	AABB m_sBox;
 	e_Sensor m_Camera;

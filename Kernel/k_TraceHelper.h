@@ -1,7 +1,7 @@
 #pragma once
-#include "..\Engine\e_Sensor.h"
-#include "..\Engine\e_DynamicScene.h"
 #include "k_TraceResult.h"
+#include "../Base/CudaRandom.h"
+#include "../Engine/e_KernelDynamicScene.h"
 
 enum
 {
@@ -58,13 +58,7 @@ struct CUDA_ALIGN(16) traversalResult
 	int nodeIdx;
 	int triIdx;
 	int bCoords;//half2
-	CUDA_FUNC_IN void toResult(TraceResult* tR, e_KernelDynamicScene& g_SceneData)
-	{
-		tR->m_fDist = dist;
-		tR->m_fBaryCoords = ((half2*)&bCoords)->ToFloat2();
-		tR->m_pNode = g_SceneData.m_sNodeData.Data + nodeIdx;
-		tR->m_pTri = g_SceneData.m_sTriData.Data + triIdx;
-	}
+	CUDA_DEVICE CUDA_HOST void toResult(TraceResult* tR, e_KernelDynamicScene& g_SceneData);
 };
 
 void __internal__IntersectBuffers(int N, traversalRay* a_RayBuffer, traversalResult* a_ResBuffer, bool SKIP_OUTER, bool ANY_HIT);

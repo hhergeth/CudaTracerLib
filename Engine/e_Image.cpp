@@ -2,6 +2,7 @@
 #include "e_Image.h"
 #include <stdexcept>
 #include <iostream>
+#include "cuda_runtime.h"
 
 #ifdef ISWINDOWS
 #include <windows.h>
@@ -80,6 +81,11 @@ void e_Image::Free()
 		CUDA_FREE(viewTarget);
 	if(outState == 1)
 		cudaGraphicsUnregisterResource(viewCudaResource);
+}
+
+void e_Image::copyToHost()
+{
+	cudaMemcpy(hostPixels, cudaPixels, sizeof(Pixel) * xResolution * yResolution, cudaMemcpyDeviceToHost);
 }
 
 void e_Image::WriteDisplayImage(const std::string& fileName)

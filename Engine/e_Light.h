@@ -1,11 +1,15 @@
 #pragma once
 
-#include "..\Base\CudaRandom.h"
 #include <MathTypes.h>
 #include "e_ShapeSet.h"
-#include "e_KernelDynamicScene.h"
-#include "e_FileTexture.h"
+#include "e_FileTexture_device.h"
 #include "e_AbstractEmitter.h"
+#include "e_Samples.h"
+
+template<typename H, typename D> class e_BufferReference;
+template<typename T> class e_Stream;
+struct e_KernelMIPMap;
+class e_MIPMap;
 
 struct e_LightBase : public e_AbstractEmitter//, public e_BaseTypeHelper<5523276>
 {
@@ -111,9 +115,9 @@ struct e_DiffuseLight : public e_LightBase//, public e_DerivedTypeHelper<2>
 		setEmit(m_radiance * L);
 	}
 
-	void Recalculate(const float4x4& mat)
+	void Recalculate(const float4x4& mat, e_Stream<char>* buffer)
 	{
-		shapeSet.Recalculate(mat);
+		shapeSet.Recalculate(mat, buffer);
 		Update();
 	}
 
@@ -135,7 +139,7 @@ struct e_DiffuseLight : public e_LightBase//, public e_DerivedTypeHelper<2>
 
 	CUDA_FUNC_IN float pdfPosition(const PositionSamplingRecord &pRec) const
 	{
-		return shapeSet.Pdf(pRec);
+		return shapeSet.Pdf();
 	}
 
 	CUDA_DEVICE CUDA_HOST Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const;

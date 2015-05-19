@@ -1,16 +1,8 @@
 #include "e_ShapeSet.h"
-
-//unsigned int index = min(unsigned int(size - 2U), max(0U, unsigned int(entry - cdf - 1)));
-//const float *ptr = STL_lower_bound(cdf, cdf + size, sample);
-//unsigned int index = (unsigned int)min(int(size - 2U), max(0, int(ptr - cdf) - 1));
-unsigned int sampleReuse(float *cdf, unsigned int size, float &sample, float& pdf)
-{
-	const float *entry = STL_lower_bound(cdf, cdf + size + 1, sample);
-	unsigned int index = (unsigned int)min(max(0, int(entry - cdf) - 1), int(size - 1));
-	pdf = cdf[index + 1] - cdf[index];
-	sample = (sample - cdf[index]) / pdf;
-	return index;
-}
+#include "..\Math\Sampling.h"
+#include "e_Samples.h"
+#include "e_IntersectorData.h"
+#include "../Math/Distribution.h"
 
 void ShapeSet::SamplePosition(PositionSamplingRecord& pRec, const Vec2f& spatialSample) const
 {

@@ -115,7 +115,7 @@ public:
 	}
 };
 
-struct k_TracerRNG_cuRAND
+struct CudaRNG
 {
 	curandState state;
 private:
@@ -215,7 +215,6 @@ private:
 		for(int i = 0; i < n; i++) {
 			state->v[i] = vector[i];
 		}
-		/* No update of state->d needed, guaranteed to be a multiple of 2^32 */
 	}
 	template <typename T, int n> void _skipahead_scratch(unsigned long long x, T *state, unsigned int *scratch)
 	{
@@ -310,23 +309,20 @@ public:
 	}
 };
 
-class CudaRNGBuffer_cuRAND
+class CudaRNGBuffer
 {
 private:
 	unsigned int m_uNumGenerators;
-	k_TracerRNG_cuRAND* m_pHostGenerators;
-	k_TracerRNG_cuRAND* m_pDeviceGenerators;
+	CudaRNG* m_pHostGenerators;
+	CudaRNG* m_pDeviceGenerators;
 public:
 	//curandSetGeneratorOffset(GENERATOR[i], i * a_Offset);
-	CudaRNGBuffer_cuRAND(unsigned int a_Length, unsigned int a_Spacing = 1234, unsigned int a_Offset = 0);
-	CudaRNGBuffer_cuRAND(){}
+	CudaRNGBuffer(unsigned int a_Length, unsigned int a_Spacing = 1234, unsigned int a_Offset = 0);
+	CudaRNGBuffer(){}
 	void Free();
-	CUDA_DEVICE CUDA_HOST k_TracerRNG_cuRAND operator()();
-	CUDA_DEVICE CUDA_HOST void operator()(k_TracerRNG_cuRAND& val);
+	CUDA_DEVICE CUDA_HOST CudaRNG operator()();
+	CUDA_DEVICE CUDA_HOST void operator()(CudaRNG& val);
 	void NextPass();
 private:
 	void createGenerators(unsigned int a_Spacing, unsigned int a_Offset);
 };
-
-typedef k_TracerRNG_cuRAND CudaRNG;
-typedef CudaRNGBuffer_cuRAND CudaRNGBuffer;

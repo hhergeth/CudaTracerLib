@@ -1,114 +1,9 @@
 #pragma once
 
 #include "Vector.h"
-#include "..\Base\CudaRandom.h"
-#include "..\Base\STL.h"
+#include "Spectrum.h"
 
-CUDA_DEVICE CUDA_HOST unsigned int sampleReuse(float *cdf, unsigned int size, float &sample, float& pdf);
-
-template<int N> struct Distribution1D
-{
-	CUDA_FUNC_IN Distribution1D()
-	{
-
-	}
-    Distribution1D(const float *f, unsigned int n)
-	{
-		if(n > N)
-			throw 1;
-        m_cdf[0] = 0.0f;
-		count = 1;
-#define append(pdfValue) {m_cdf[count] = m_cdf[count - 1] + pdfValue; count++;}
-        for (unsigned int i = 0; i < n; i++)
-            append(f[i])
-#undef append
-		Normalize();//questionable, removing it would break code
-    }
-	CUDA_FUNC_IN float operator[](unsigned int entry) const
-	{
-		return m_cdf[entry+1] - m_cdf[entry];
-	}
-	CUDA_FUNC_IN float Normalize()
-	{
-		m_sum = m_cdf[count-1];
-		if(m_sum > 0.0f)
-		{
-			m_normalization = 1.0f / m_sum;
-			for(unsigned int i = 0; i < count; i++)
-				m_cdf[i] *= m_normalization;
-			m_cdf[count - 1] = 1.0f;
-		}
-		else m_normalization = 0.0f;
-		return m_sum;
-	}
-    CUDA_FUNC_IN unsigned int SampleDiscrete(float u, float *pdf = 0) const
-	{
-		if (count == 1)
-		{
-			*pdf = 0;
-			return 0xffffffff;
-		}
-        const float *ptr = STL_lower_bound(m_cdf, m_cdf+count, u);
-		unsigned int index = min(unsigned int(count - 2U), max(0U, unsigned int(ptr - m_cdf - 1)));
-		while (operator[](index) == 0 && index < count-1)
-			++index;
-        if (pdf)
-			*pdf = operator[](index);
-        return index;
-    }
-	CUDA_FUNC_IN unsigned int SampleReuse(float &sampleValue, float &pdf) const
-	{
-		unsigned int index = SampleDiscrete(sampleValue, &pdf);
-		if (index == 0xffffffff)
-			return index;
-		sampleValue = (sampleValue - m_cdf[index]) / (m_cdf[index + 1] - m_cdf[index]);
-		return index;
-	}
-public:
-	float m_cdf[N];
-    float m_sum, m_normalization;
-    unsigned int count;
-};
-
-template<int NU, int NV> struct Distribution2D
-{
-	CUDA_FUNC_IN Distribution2D()
-	{
-
-	}
-
-    Distribution2D(const float *data, unsigned int nu, unsigned int nv)
-	{
-		Initialize(data, nu, nv);
-	}
-
-	void Initialize(const float *data, unsigned int nu, unsigned int nv)
-	{
-		this->nu = nu;
-		this->nv = nv;
-		float marginalFunc[NV];
-		for (unsigned int v = 0; v < nv; ++v)
-		{
-			pConditionalV[v] = Distribution1D<NU>(&data[v*nu], nu);
-			marginalFunc[v] = pConditionalV[v].Normalize();
-		}
-		pMarginal = Distribution1D<NV>(&marginalFunc[0], nv);
-		pMarginal.Normalize();
-	}
-
-	CUDA_FUNC_IN float Pdf(float u, float v) const
-	{
-		int iu = math::clamp(Float2Int(u * pConditionalV[0].count), 0, pConditionalV[0].count-1);
-        int iv = math::clamp(Float2Int(v * pMarginal.count), 0, pMarginal.count-1);
-        if (pConditionalV[iv].m_sum * pMarginal.m_sum == 0.f)
-			return 0.f;
-        return (pConditionalV[iv][iu] * pMarginal[iv]) / (pConditionalV[iv].m_sum * pMarginal.m_sum);
-	}
-private:
-	Distribution1D<NU> pConditionalV[NV];
-	Distribution1D<NV> pMarginal;
-	unsigned int nu, nv;
-};
+struct CudaRNG;
 
 class MonteCarlo
 {
@@ -130,16 +25,7 @@ public:
 			swapk(t0, t1);
 		return true;
 	}
-	CUDA_FUNC_IN static void RejectionSampleDisk(float *x, float *y, CudaRNG &rng)
-	{
-		float sx, sy;
-		do {
-			sx = 1.f - 2.f * rng.randomFloat();
-			sy = 1.f - 2.f * rng.randomFloat();
-		} while (sx*sx + sy*sy > 1.f);
-		*x = sx;
-		*y = sy;
-	}
+	CUDA_DEVICE CUDA_HOST static void RejectionSampleDisk(float *x, float *y, CudaRNG &rng);
 	CUDA_FUNC_IN static Vec3f UniformSampleHemisphere(float u1, float u2)
 	{
 		float z = u1;
@@ -245,28 +131,9 @@ public:
 	{
 		return costheta / PI;
 	}
-	CUDA_FUNC_IN static void StratifiedSample1D(float *samples, int nSamples, CudaRNG &rng, bool jitter = true)
-	{
-		float invTot = 1.f / nSamples;
-		for (int i = 0;  i < nSamples; ++i)
-		{
-			float delta = jitter ? rng.randomFloat() : 0.5f;
-			*samples++ = min((i + delta) * invTot, ONE_minUS_EPS);
-		}
-	}
-	CUDA_FUNC_IN static void StratifiedSample2D(float *samples, int nx, int ny, CudaRNG &rng, bool jitter = true)
-	{
-		float dx = 1.f / nx, dy = 1.f / ny;
-		for (int y = 0; y < ny; ++y)
-			for (int x = 0; x < nx; ++x)
-			{
-				float jx = jitter ? rng.randomFloat() : 0.5f;
-				float jy = jitter ? rng.randomFloat() : 0.5f;
-				*samples++ = min((x + jx) * dx, ONE_minUS_EPS);
-				*samples++ = min((y + jy) * dy, ONE_minUS_EPS);
-			}
-	}
-	template <typename T> CUDA_FUNC_IN static void Shuffle(T *samp, unsigned int count, unsigned int dims, CudaRNG &rng)
+	CUDA_DEVICE CUDA_HOST static void StratifiedSample1D(float *samples, int nSamples, CudaRNG &rng, bool jitter = true);
+	CUDA_DEVICE CUDA_HOST static void StratifiedSample2D(float *samples, int nx, int ny, CudaRNG &rng, bool jitter = true);
+	/*template <typename T> CUDA_FUNC_IN static void Shuffle(T *samp, unsigned int count, unsigned int dims, CudaRNG &rng)
 	{
 		for (unsigned int i = 0; i < count; ++i)
 		{
@@ -274,7 +141,7 @@ public:
 			for (unsigned int j = 0; j < dims; ++j)
 				swapk(samp[dims*i + j], samp[dims*other + j]);
 		}
-	}
+	}*/
 
 	CUDA_FUNC_IN static float SphericalTheta(const Vec3f &v)
 	{
@@ -338,46 +205,11 @@ public:
 		return true;
 	}
 
-	CUDA_FUNC_IN static void stratifiedSample1D(CudaRNG& random, float *dest, int count, bool jitter)
-	{
-		float invCount = 1.0f / count;
+	CUDA_DEVICE CUDA_HOST static void stratifiedSample1D(CudaRNG& random, float *dest, int count, bool jitter);
 
-		for (int i=0; i<count; i++) {
-			float offset = jitter ? random.randomFloat() : 0.5f;
-			*dest++ = (i + offset) * invCount;
-		}
-	}
+	CUDA_DEVICE CUDA_HOST static void stratifiedSample2D(CudaRNG& random, Vec2f *dest, int countX, int countY, bool jitter);
 
-	CUDA_FUNC_IN static void stratifiedSample2D(CudaRNG& random, Vec2f *dest, int countX, int countY, bool jitter)
-	{
-		float invCountX = 1.0f / countX;
-		float invCountY = 1.0f / countY;
-
-		for (int x=0; x<countX; x++) {
-			for (int y=0; y<countY; y++) {
-				float offsetX = jitter ? random.randomFloat() : 0.5f;
-				float offsetY = jitter ? random.randomFloat() : 0.5f;
-				*dest++ = Vec2f(
-					(x + offsetX) * invCountX,
-					(y + offsetY) * invCountY
-				);
-			}
-		}
-	}
-
-	CUDA_FUNC_IN static void latinHypercube(CudaRNG& random, float *dest, unsigned int nSamples, size_t nDim)
-	{
-		float delta = 1 / (float) nSamples;
-		for (size_t i = 0; i < nSamples; ++i)
-			for (size_t j = 0; j < nDim; ++j)
-				dest[nDim * i + j] = (i + random.randomFloat()) * delta;
-		for (size_t i = 0; i < nDim; ++i) {
-			for (size_t j = 0; j < nSamples; ++j) {
-				unsigned int other = math::Floor2Int(float(nSamples) * random.randomFloat());
-				swapk(dest + nDim * j + i, dest + nDim * other + i);
-			}
-		}
-	}
+	CUDA_DEVICE CUDA_HOST static void latinHypercube(CudaRNG& random, float *dest, unsigned int nSamples, size_t nDim);
 
 	CUDA_FUNC_IN static float fresnelDielectric(float cosThetaI, float cosThetaT, float eta) {
 		if (eta == 1)
@@ -547,6 +379,9 @@ public:
 		return n * (eta * cosThetaI + cosThetaT) - wi * eta;
 	}
 
-	CUDA_FUNC_IN static float fresnelDielectricExt(float cosThetaI, float eta) { float cosThetaT;
-	return MonteCarlo::fresnelDielectricExt(cosThetaI, cosThetaT, eta); }
+	CUDA_FUNC_IN static float fresnelDielectricExt(float cosThetaI, float eta)
+	{
+		float cosThetaT;
+		return MonteCarlo::fresnelDielectricExt(cosThetaI, cosThetaT, eta);
+	}
 };

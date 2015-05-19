@@ -2,7 +2,7 @@
 
 #include "Vector.h"
 
-class CUDA_ALIGN(16) float4x4
+struct CUDA_ALIGN(16) float4x4
 {
 	float data[16];
 	CUDA_FUNC_IN int idx(int i, int j) const

@@ -1,11 +1,12 @@
 #pragma once
 
 #include <MathTypes.h>
-#include "e_Material.h"
-#include "e_Buffer.h"
 #include "e_IntersectorData.h"
 
 class e_Mesh;
+struct e_KernelMaterial;
+template<typename H, typename D> class e_BufferReference;
+
 class e_Node
 {
 public:
@@ -19,7 +20,7 @@ public:
 #endif
 public:
 	e_Node() {}
-	e_Node(unsigned int MeshIndex, e_Mesh* mesh, const std::string& file, e_StreamReference(e_KernelMaterial) mat);
+	e_Node(unsigned int MeshIndex, e_Mesh* mesh, const std::string& file, e_BufferReference<e_KernelMaterial, e_KernelMaterial> mat);
 	void setLightData( unsigned int* li, unsigned int lic)
 	{
 		for(unsigned int i = 0; i < lic; i++)

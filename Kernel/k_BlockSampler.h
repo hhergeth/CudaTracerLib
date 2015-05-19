@@ -1,18 +1,7 @@
 #pragma once
 
-#include "..\Base\CudaRandom.h"
 #include "..\MathTypes.h"
-#include "..\Engine\e_Image.h"
-
-#ifdef _DEBUG
-#define BLOCK_FACTOR 2
-#else
-	#define BLOCK_FACTOR 4
-#endif
-
-#define threadsPerBlock dim3(16, 8)
-#define numBlocks dim3(2 * BLOCK_FACTOR, 4 * BLOCK_FACTOR)
-#define blockSize (32 * BLOCK_FACTOR)
+#include "k_BlockSampler_device.h"
 
 struct k_SamplerpixelData
 {
@@ -22,23 +11,7 @@ struct k_SamplerpixelData
 	unsigned int flag;
 };
 
-struct k_BlockSampleImage
-{
-	e_Image img;
-	k_SamplerpixelData* m_pLumData;
-	unsigned int w;
-
-	k_BlockSampleImage(e_Image* img, k_SamplerpixelData* lumData)
-		: img(*img), m_pLumData(lumData)
-	{
-		unsigned int y;
-		img->getExtent(w, y);
-	}
-
-	CUDA_DEVICE CUDA_HOST void Add(int x, int y, const Spectrum& c);
-};
-
-class k_BlockSampler
+class k_BlockSampler : public IBlockSampler
 {
 	k_SamplerpixelData* m_pLumData;
 	e_Image* img;
@@ -76,11 +49,11 @@ public:
 		for (unsigned int i = 0; i < nBlocks; i++)
 			m_pHostWeight[i] = 1;
 	}
-	~k_BlockSampler()
+	virtual ~k_BlockSampler()
 	{
 		Free();
 	}
-	void Free()
+	virtual void Free()
 	{
 		CUDA_FREE(m_pLumData);
 		CUDA_FREE(m_pDeviceIndexData);
@@ -98,9 +71,9 @@ public:
 	{
 		return m_pHostBlockData[idx];
 	}
-	void AddPass();
-	void Clear();
-	unsigned int NumBlocks() const
+	virtual void AddPass();
+	virtual void Clear();
+	virtual unsigned int NumBlocks() const
 	{
 		if (hasValidData)
 			return m_uNumBlocksToLaunch;
@@ -114,7 +87,7 @@ public:
 	{
 		return (img->getWidth() + blockSize - 1) / blockSize;
 	}
-	void getBlockCoords(unsigned int idx, unsigned int& x, unsigned int& y, unsigned int& w, unsigned int& h, bool ignoreData = false) const
+	virtual void getBlockCoords(unsigned int idx, unsigned int& x, unsigned int& y, unsigned int& w, unsigned int& h, bool ignoreData = false) const
 	{
 		if (hasValidData && !ignoreData)
 			idx = m_pHostIndexData[idx];
@@ -131,7 +104,7 @@ public:
 		return hasValidData ? m_pHostIndexData[idx] : idx;
 	}
 
-	k_BlockSampleImage getBlockImage() const
+	virtual k_BlockSampleImage getBlockImage() const
 	{
 		return k_BlockSampleImage(img, m_pLumData);
 	}

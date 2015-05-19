@@ -1,7 +1,9 @@
 #pragma once
 
 #include <MathTypes.h>
-#include "e_DifferentialGeometry.h"
+
+struct CudaRNG;
+struct DifferentialGeometry;
 
 enum EMeasure {
 	/// Invalid measure
@@ -175,8 +177,5 @@ struct BSDFSamplingRecord
 	unsigned int typeMask;
 	unsigned int sampledType;
 	CUDA_FUNC_IN BSDFSamplingRecord(DifferentialGeometry& dg) : dg(dg) {}
-	CUDA_FUNC_IN Vec3f getOutgoing()
-	{
-		return normalize(dg.toWorld(wo));
-	}
+	CUDA_DEVICE CUDA_HOST Vec3f getOutgoing();
 };

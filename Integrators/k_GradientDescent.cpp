@@ -98,7 +98,7 @@ qMatrix<float, 1, 6> dfi_du123_v123(const Path& P, size_t i)
 	return ::dfi_diffuse_du123_v123(P.vertices[i - 1]->getPos(), P.vertices[i]->getPos(), P.vertices[i + 1]->getPos(), P.vertices[i - 1]->getSys(), P.vertices[i]->getSys(), P.vertices[i + 1]->getSys(), 1);
 }
 
-template<typename MAT, int L> inline void set(MAT& M, const qMatrix<float, 1, L>& v, size_t i, size_t j)
+template<typename MAT, int L> inline void set(MAT& M, const qMatrix<float, 1, L>& v, int i, int j)
 {
 	for (int k = 0; k < L; k++)
 	{
@@ -121,16 +121,16 @@ template<int N> struct diff_helper
 	{
 		if (N == P.k() + 1)
 		{
-			const size_t k = N - 1, n = 3 + 2 * (k - 1);
+			const int k = N - 1, n = 3 + 2 * (k - 1);
 			float* a = (float*)alloca(sizeof(float) * n);
 			a[0] = P.I().average(); a[1] = PathVertex::G(P.vertices[0], P.vertices[1]); a[2] = P.L_e().average();
-			for (size_t j = 1; j < k; j++)
+			for (int j = 1; j < k; j++)
 			{
 				a[3 + 2 * (j - 1) + 0] = ((SurfacePathVertex*)P.vertices[j])->hasSampledDelta ? 1.0f : P.f_i(j).average();
 				a[3 + 2 * (j - 1) + 1] = PathVertex::G(P.vertices[j], P.vertices[j +1]);
 			}
 			float lhs = 1, rhs = 1;
-			for (size_t i = 1; i <= n - 1; i++)
+			for (int i = 1; i <= n - 1; i++)
 				rhs *= a[i];
 			qMatrix<float, 1, n> A;
 			A.zero();
@@ -147,7 +147,7 @@ template<int N> struct diff_helper
 			set(M, dG_du12_v12(P, 0), 1, 0);
 			set(M, dLe_du12_v12(P), 2, 2 * (k - 2));
 			//std::cout << M.ToString("M") << "\n";
-			for (size_t j = 1; j <= k - 1; j++)
+			for (int j = 1; j <= k - 1; j++)
 			{
 				set(M, dfi_du123_v123(P, j), 3 + 2 * (j - 1) + 0, 2 * (j - 1));
 				set(M, dG_du12_v12(P, j), 3 + 2 * (j-1) + 1, 2 * j);
@@ -172,8 +172,7 @@ template<> struct diff_helper < 0 >
 
 std::vector<Vec2f> DifferientiatePath(Path& P)
 {
-	diff_helper<16> h;
-	return h.exec(P);
+	return diff_helper<16>::exec(P);
 }
 /*
 void OptimizePath(Path& P)
