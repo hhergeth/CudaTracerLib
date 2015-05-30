@@ -38,9 +38,6 @@
     <ClInclude Include="Base\StringUtils.h">
       <Filter>Base</Filter>
     </ClInclude>
-    <ClInclude Include="Base\TangentSpace.h">
-      <Filter>Base</Filter>
-    </ClInclude>
     <ClInclude Include="Base\Timer.h">
       <Filter>Base</Filter>
     </ClInclude>
@@ -99,9 +96,6 @@
       <Filter>Engine\SceneBuilder</Filter>
     </ClInclude>
     <ClInclude Include="Engine\SceneBuilder\MD5Parser.h">
-      <Filter>Engine\SceneBuilder</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\SceneBuilder\tiny_obj_loader.h">
       <Filter>Engine\SceneBuilder</Filter>
     </ClInclude>
     <ClInclude Include="Engine\e_Volumes.h">
@@ -285,6 +279,9 @@
     <ClInclude Include="Math\Distribution.h">
       <Filter>Math</Filter>
     </ClInclude>
+    <ClInclude Include="Engine\SceneBuilder\TangentSpaceHelper.h">
+      <Filter>Engine\SceneBuilder</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Base\FileStream.cpp">
@@ -302,13 +299,7 @@
     <ClCompile Include="Engine\SceneBuilder\ObjParser.cpp">
       <Filter>Engine\SceneBuilder</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\SceneBuilder\ObjParser2.cpp">
-      <Filter>Engine\SceneBuilder</Filter>
-    </ClCompile>
     <ClCompile Include="Engine\SceneBuilder\PlyParser.cpp">
-      <Filter>Engine\SceneBuilder</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\SceneBuilder\tiny_obj_loader.cpp">
       <Filter>Engine\SceneBuilder</Filter>
     </ClCompile>
     <ClCompile Include="Engine\e_AnimatedMesh.cpp">
@@ -357,6 +348,9 @@
     </ClCompile>
     <ClCompile Include="Integrators\k_GradientDescent.cpp">
       <Filter>Integrators</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\SceneBuilder\TangentSpaceHelper.cpp">
+      <Filter>Engine\SceneBuilder</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -1,32 +1,18 @@
 #include <StdAfx.h>
 #include "..\e_Mesh.h"
-#include <fstream>
-#include <iostream>
-#include <istream>
-#include <sstream>
-#include <string>
-#include <vector>
-#include <cctype>
-#include <intrin.h>
-#define TS_DEC_FRAMEWORK
-#include <Base\TangentSpace.h>
+#include "TangentSpaceHelper.h"
 #include <Engine\SceneBuilder\Importer.h>
-#include "..\..\Base\StringUtils.h"
-#include "..\e_Mesh.h"
-#include "..\e_TriangleData.h"
 #include <boost\algorithm\string.hpp>
 #include <boost\filesystem.hpp>
 
-#define FW_HASH_MAGIC   (0x9e3779b9u)
-
-inline bool parseSpace(const char*& ptr)
+bool parseSpace(const char*& ptr)
 {
 	while (*ptr == ' ' || *ptr == '\t')
 		ptr++;
 	return true;
 }
 
-inline bool parseChar(const char*& ptr, char chr)
+bool parseChar(const char*& ptr, char chr)
 {
 	if (*ptr != chr)
 		return false;
@@ -34,7 +20,7 @@ inline bool parseChar(const char*& ptr, char chr)
 	return true;
 }
 
-inline bool parseLiteral(const char*& ptr, const char* str)
+bool parseLiteral(const char*& ptr, const char* str)
 {
 	const char* tmp = ptr;
 
@@ -50,7 +36,7 @@ inline bool parseLiteral(const char*& ptr, const char* str)
 	return true;
 }
 
-inline bool parseInt(const char*& ptr, int& value)
+bool parseInt(const char*& ptr, int& value)
 {
 	const char* tmp = ptr;
 	int v = 0;
@@ -65,7 +51,7 @@ inline bool parseInt(const char*& ptr, int& value)
 	return true;
 }
 
-inline bool parseInt(const char*& ptr, long long& value)
+bool parseInt(const char*& ptr, long long& value)
 {
 	const char* tmp = ptr;
 	long long v = 0;
@@ -80,7 +66,7 @@ inline bool parseInt(const char*& ptr, long long& value)
 	return true;
 }
 
-inline bool parseHex(const char*& ptr, unsigned int& value)
+bool parseHex(const char*& ptr, unsigned int& value)
 {
 	const char* tmp = ptr;
 	unsigned int v = 0;
@@ -100,7 +86,7 @@ inline bool parseHex(const char*& ptr, unsigned int& value)
 	return true;
 }
 
-inline bool parseFloat(const char*& ptr, float& value)
+bool parseFloat(const char*& ptr, float& value)
 {
 #define bitsToFloat(x) (*(float*)&x)
 	const char* tmp = ptr;
@@ -159,24 +145,6 @@ inline bool parseFloat(const char*& ptr, float& value)
 #undef bitsToFloat
 }
 
-// By Bob Jenkins, 1996. bob_jenkins@burtleburtle.net.
-#define FW_JENKINS_MIX(a, b, c)   \
-    a -= b; a -= c; a ^= (c>>13); \
-    b -= c; b -= a; b ^= (a<<8);  \
-    c -= a; c -= b; c ^= (b>>13); \
-    a -= b; a -= c; a ^= (c>>12); \
-    b -= c; b -= a; b ^= (a<<16); \
-    c -= a; c -= b; c ^= (b>>5);  \
-    a -= b; a -= c; a ^= (c>>3);  \
-    b -= c; b -= a; b ^= (a<<10); \
-    c -= a; c -= b; c ^= (b>>15);
-
-inline unsigned int          floatToBits(float a)         { return *(unsigned int*)&a; }
-inline unsigned int  hashBits(unsigned int a, unsigned int b = FW_HASH_MAGIC, unsigned int c = 0)                   { c += FW_HASH_MAGIC; FW_JENKINS_MIX(a, b, c); return c; }
-template <class T>  inline unsigned int  hash(const T& value)                        { return 0; }
-template <> inline unsigned int  hash<Vec2f>(const Vec2f& value)                { return hashBits(floatToBits(value.x), floatToBits(value.y)); }
-template <> inline unsigned int  hash<Vec3f>(const Vec3f& value)                { return hashBits(floatToBits(value.x), floatToBits(value.y), floatToBits(value.z)); }
-
 enum TextureType
 {
 	TextureType_Diffuse = 0,    // Diffuse color map.
@@ -220,49 +188,6 @@ struct TextureSpec
 	float                     base;
 	float                     gain;
 };
-/*
-template<typename K, typename V, int N> struct HashTable
-{
-	struct HashTableEntry
-	{
-		K key;
-		V value;
-	};
-	HashTableEntry data[N];
-	unsigned int i;
-
-	HashTable()
-	{
-		i = 0;
-	}
-
-	void add(K& k, V& v)
-	{
-		data[i].key = k;
-		data[i++].value = v;
-	}
-	unsigned int contains(K& k)
-	{
-		for (unsigned int i = 0; i < this->i; i++)
-			if (data[i].key == k)
-				return 1;
-		return 0;
-	}
-	V* search(K& k)
-	{
-		for (unsigned int i = 0; i < this->i; i++)
-			if (data[i].key == k)
-				return &data[i].value;
-		return 0;
-	}
-	int searchi(K& k)
-	{
-		for (unsigned int i = 0; i < this->i; i++)
-			if (data[i].key == k)
-				return i;
-		return -1;
-	}
-};*/
 
 struct MatHash
 {

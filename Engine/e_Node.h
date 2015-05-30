@@ -14,13 +14,9 @@ public:
 	unsigned int m_uMaterialOffset;
 	unsigned int m_uInstanciatedMaterial;
 	unsigned int m_uLightIndices[MAX_AREALIGHT_NUM];
-#ifdef _DEBUG
-public:
-	FixedString<64> m_FilePath;
-#endif
 public:
 	e_Node() {}
-	e_Node(unsigned int MeshIndex, e_Mesh* mesh, const std::string& file, e_BufferReference<e_KernelMaterial, e_KernelMaterial> mat);
+	e_Node(unsigned int MeshIndex, e_Mesh* mesh, e_BufferReference<e_KernelMaterial, e_KernelMaterial> mat);
 	void setLightData( unsigned int* li, unsigned int lic)
 	{
 		for(unsigned int i = 0; i < lic; i++)

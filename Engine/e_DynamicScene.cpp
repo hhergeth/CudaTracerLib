@@ -24,23 +24,78 @@ struct textureLoader
 	{
 		S = A;
 	}
-	e_Variable<e_KernelMIPMap> operator()(const std::string& file, bool a_MipMap)
+	e_Variable<e_KernelMIPMap> operator()(const std::string& file, e_Variable<e_KernelMIPMap>& lastVal)
 	{
-		return S->LoadTexture(file, a_MipMap).AsVar();
+		if (lastVal.host)
+		{
+			e_BufferReference<e_MIPMap, e_KernelMIPMap> ref = S->m_pTextureBuffer->translate(lastVal);
+			if (ref->m_pPath == file)
+				return lastVal;
+			S->m_pTextureBuffer->Release(ref->m_pPath);
+		}
+		return S->LoadTexture(file, true).AsVar();
 	};
 };
 
-struct matUpdater
+class e_DynamicScene::MatStream : public e_Stream<e_KernelMaterial>
 {
-	e_DynamicScene* S;
-	matUpdater(e_DynamicScene* A)
+	std::vector<int> refCounter;
+	std::vector<e_StreamReference(e_KernelMaterial)> unusedRefs;
+
+	struct matUpdater
 	{
-		S = A;
+		textureLoader L;
+		matUpdater(const textureLoader& l)
+			: L(l)
+		{
+		}
+		void operator()(e_StreamReference(e_KernelMaterial) m)
+		{
+			m->LoadTextures(L);
+			m->bsdf.As()->Update();
+		}
+	};
+
+public:
+	MatStream(int L)
+		: e_Stream<e_KernelMaterial>(L)
+	{
+		refCounter.resize(L);
 	}
-	void operator()(e_StreamReference(e_KernelMaterial) m)
+
+	void UpdateMaterials(textureLoader& loader)
 	{
-		m->LoadTextures(textureLoader(S));
-		m->bsdf.As()->Update();
+		matUpdater upd(loader);
+		UpdateInvalidatedCB(upd);
+	}
+
+	void IncrementRef(e_StreamReference(e_KernelMaterial) mats)
+	{
+		for (unsigned int i = 0; i < mats.getLength(); i++)
+			refCounter[mats(i).getIndex()] += 1;
+	}
+
+	void DecrementRef(e_StreamReference(e_KernelMaterial) mats)
+	{
+		for (unsigned int i = 0; i < mats.getLength(); i++)
+		{
+			e_StreamReference(e_KernelMaterial) ref = mats(i);
+			refCounter[ref.getIndex()] -= 1;
+			if (refCounter[ref.getIndex()] == 0)
+				unusedRefs.push_back(ref);
+		}
+	}
+
+	std::vector<e_StreamReference(e_KernelMaterial)> getUnreferenced()
+	{
+		return unusedRefs;
+	}
+
+	void ClearUnreferenced()
+	{
+		for (size_t i = 0; i < unusedRefs.size(); i++)
+			dealloc(unusedRefs[i]);
+		unusedRefs.clear();
 	}
 };
 
@@ -51,33 +106,24 @@ template<typename T> e_StreamReference(e_KernelLight) createLight(T& val, e_Stre
 	return r();
 }
 
-
-template<typename T> e_Stream<T>* LL(int i)
-{
-	e_Stream<T>* r = new e_Stream<T>(i);
-	//OutputDebugString(format("%d [MB]\n", r->getSizeInBytes() / (1024 * 1024)).c_str());
-	return r;
-}
-
 e_DynamicScene::e_DynamicScene(e_Sensor* C, e_SceneInitData a_Data, const std::string& texPath, const std::string& cmpPath, const std::string& dataPath)
 	: m_uEnvMapIndex(0xffffffff), m_pCamera(C), m_pCompilePath(cmpPath), m_pTexturePath(texPath)
 {
 	int nodeC = 1 << 16, tCount = 1 << 16;
 	m_uModified = 1;
-	m_pAnimStream = LL<char>(a_Data.m_uSizeAnimStream + (a_Data.m_bSupportEnvironmentMap ? sizeof(Distribution2D<4096, 4096>) : 0));
-	m_pTriDataStream = LL<e_TriangleData>(a_Data.m_uNumTriangles);
-	m_pTriIntStream = LL<e_TriIntersectorData>(a_Data.m_uNumInt);
-	m_pBVHStream = LL<e_BVHNodeData>(a_Data.m_uNumBvhNodes);
-	m_pBVHIndicesStream = LL<e_TriIntersectorData2>(a_Data.m_uNumBvhIndices);
-	m_pMaterialBuffer = LL<e_KernelMaterial>(a_Data.m_uNumMaterials);
+	m_pAnimStream = new e_Stream<char>(a_Data.m_uSizeAnimStream + (a_Data.m_bSupportEnvironmentMap ? sizeof(Distribution2D<4096, 4096>) : 0));
+	m_pTriDataStream = new e_Stream<e_TriangleData>(a_Data.m_uNumTriangles);
+	m_pTriIntStream = new e_Stream<e_TriIntersectorData>(a_Data.m_uNumInt);
+	m_pBVHStream = new e_Stream<e_BVHNodeData>(a_Data.m_uNumBvhNodes);
+	m_pBVHIndicesStream = new e_Stream<e_TriIntersectorData2>(a_Data.m_uNumBvhIndices);
+	m_pMaterialBuffer = new MatStream(a_Data.m_uNumMaterials);
 	m_pMeshBuffer = new e_CachedBuffer<e_Mesh, e_KernelMesh>(a_Data.m_uNumMeshes, sizeof(e_AnimatedMesh));
-	m_pNodeStream = LL<e_Node>(a_Data.m_uNumNodes);
+	m_pNodeStream = new e_Stream<e_Node>(a_Data.m_uNumNodes);
 	m_pTextureBuffer = new e_CachedBuffer<e_MIPMap, e_KernelMIPMap>(a_Data.m_uNumTextures);
-	m_pLightStream = LL<e_KernelLight>(a_Data.m_uNumLights);
-	m_pVolumes = LL<e_VolumeRegion>(128);
+	m_pLightStream = new e_Stream<e_KernelLight>(a_Data.m_uNumLights);
+	m_pVolumes = new e_Stream<e_VolumeRegion>(128);
 	m_pBVH = new e_SceneBVH(a_Data.m_uNumNodes);
-	//if(a_Data.m_uSizeAnimStream > 1024)
-		CUDA_MALLOC(&m_pDeviceTmpFloats, sizeof(e_TmpVertex) * (1 << 16));
+	CUDA_MALLOC(&m_pDeviceTmpFloats, sizeof(e_TmpVertex) * (1 << 16));
 }
 
 void e_DynamicScene::Free()
@@ -138,9 +184,9 @@ e_StreamReference(e_Node) e_DynamicScene::CreateNode(const std::string& a_Token,
 		unsigned int t;
 		*xmshStream >> t;
 		if(t == (unsigned int)e_MeshCompileType::Static)
-			new(M(0)) e_Mesh(*xmshStream, m_pTriIntStream, m_pTriDataStream, m_pBVHStream, m_pBVHIndicesStream, m_pMaterialBuffer);
+			new(M(0)) e_Mesh(token, *xmshStream, m_pTriIntStream, m_pTriDataStream, m_pBVHStream, m_pBVHIndicesStream, m_pMaterialBuffer);
 		else if(t == (unsigned int)e_MeshCompileType::Animated) 
-			new(M(0)) e_AnimatedMesh(*xmshStream, m_pTriIntStream, m_pTriDataStream, m_pBVHStream, m_pBVHIndicesStream, m_pMaterialBuffer, m_pAnimStream);
+			new(M(0)) e_AnimatedMesh(token, *xmshStream, m_pTriIntStream, m_pTriDataStream, m_pBVHStream, m_pBVHIndicesStream, m_pMaterialBuffer, m_pAnimStream);
 		else throw std::runtime_error("Mesh file parser error.");
 		if (freeStream)
 			delete xmshStream;
@@ -157,7 +203,9 @@ e_StreamReference(e_Node) e_DynamicScene::CreateNode(const std::string& a_Token,
 	e_StreamReference(e_Node) N = m_pNodeStream->malloc(1);
 	e_StreamReference(e_KernelMaterial) m2 = M->m_sMatInfo;
 	m2.Invalidate();
-	new(N.operator->()) e_Node(M.getIndex(), M.operator->(), token.c_str(), m2);
+	new(N.operator->()) e_Node(M.getIndex(), M.operator->(), m2);
+	if (!(load || force_recompile))
+		m_pMaterialBuffer->IncrementRef(m2);
 	unsigned int li[MAX_AREALIGHT_NUM];
 	Platform::SetMemory(li, sizeof(li));
 	for(unsigned int i = 0; i < M->m_uUsedLights; i++)
@@ -168,8 +216,7 @@ e_StreamReference(e_Node) e_DynamicScene::CreateNode(const std::string& a_Token,
 	N->setLightData(li, M->m_uUsedLights);
 	N.Invalidate();
 
-	m_pMaterialBuffer->UpdateInvalidatedCB(matUpdater(this));
-	m_pTextureBuffer->UpdateInvalidated();
+	ReloadTextures();
 
 	return N;
 }
@@ -199,20 +246,16 @@ e_StreamReference(e_Node) e_DynamicScene::CreateNode(unsigned int a_TriangleCoun
 	M->m_sTriInfo = m_pTriDataStream->malloc(a_TriangleCount);
 	M->m_uType = MESH_STATIC_TOKEN;
 	M->m_uUsedLights = 0;
+	M->m_uPath = "";
 	N->setLightData(0, 0);
-	new(N.operator->()) e_Node(M.getIndex(), M.operator->(), "auto generated node", m2);
+	new(N.operator->()) e_Node(M.getIndex(), M.operator->(), m2);
 	N.Invalidate();
 	return N;
 }
 
-//free material -> free textures, do not load textures twice!
 void e_DynamicScene::DeleteNode(e_StreamReference(e_Node) ref)
 {
-	if(m_pMeshBuffer->Release(getMesh(ref)))
-	{
-		getMesh(ref)->Free(m_pTriIntStream, m_pTriDataStream, m_pBVHStream, m_pBVHIndicesStream, m_pMaterialBuffer);
-	}
-	m_pNodeStream->dealloc(ref);
+	m_sRemovedNodes.push_back(ref);
 }
 
 e_BufferReference<e_MIPMap, e_KernelMIPMap> e_DynamicScene::LoadTexture(const std::string& file, bool a_MipMap)
@@ -236,7 +279,7 @@ e_BufferReference<e_MIPMap, e_KernelMIPMap> e_DynamicScene::LoadTexture(const st
 			boost::filesystem::last_write_time(cmpFilePath, rawStamp);
 		}
 		InputStream I(cmpFilePath.string().c_str());
-		new(T) e_MIPMap(I);
+		new(T)e_MIPMap(rawFilePath.string(), I);
 		I.Close();
 		T.Invalidate();
 	}
@@ -244,14 +287,6 @@ e_BufferReference<e_MIPMap, e_KernelMIPMap> e_DynamicScene::LoadTexture(const st
 		throw 1;
 	m_pTextureBuffer->UpdateInvalidated();
 	return T;
-}
-
-void e_DynamicScene::UnLoadTexture(e_BufferReference<e_MIPMap, e_KernelMIPMap> ref)
-{
-	if(m_pTextureBuffer->Release(ref))
-	{
-		ref->Free();
-	}
 }
 
 void e_DynamicScene::SetNodeTransform(const float4x4& mat, e_StreamReference(e_Node) n)
@@ -265,12 +300,67 @@ void e_DynamicScene::SetNodeTransform(const float4x4& mat, e_StreamReference(e_N
 
 void e_DynamicScene::ReloadTextures()
 {
-	m_pMaterialBuffer->UpdateInvalidatedCB(matUpdater(this));
+	m_pMaterialBuffer->UpdateMaterials(textureLoader(this));
 	m_pTextureBuffer->UpdateInvalidated();
 }
 
 bool e_DynamicScene::UpdateScene()
 {
+	//free material -> free textures, do not load textures twice!
+	for (size_t n_idx = 0; n_idx < m_sRemovedNodes.size(); n_idx++)
+	{
+		e_StreamReference(e_Node) ref = m_sRemovedNodes[n_idx];
+
+		m_pMeshBuffer->Release(getMesh(ref)->m_uPath);
+
+		//remove all area lights
+		int l_idx = 0;
+		while (l_idx < MAX_AREALIGHT_NUM && ref->m_uLightIndices[l_idx] != 0xffffffff)
+			removeLight(ref, l_idx);
+
+		//deal with material
+		m_pMaterialBuffer->DecrementRef(getMats(ref));
+
+		m_pNodeStream->dealloc(ref);
+	}
+
+	for (size_t i = 0; i < m_pMeshBuffer->m_UnusedEntries.size(); i++)
+	{
+		e_BufferReference<e_Mesh, e_KernelMesh> ref = m_pMeshBuffer->m_UnusedEntries[i];
+		ref->Free(m_pTriIntStream, m_pTriDataStream, m_pBVHStream, m_pBVHIndicesStream, m_pMaterialBuffer);
+		m_pMeshBuffer->dealloc(ref);
+	}
+	m_pMeshBuffer->m_UnusedEntries.clear();
+
+	struct texUnloader
+	{
+		e_CachedBuffer<e_MIPMap, e_KernelMIPMap>* m_pTextureBuffer;
+		texUnloader(e_CachedBuffer<e_MIPMap, e_KernelMIPMap>* m_pTextureBuffer)
+			: m_pTextureBuffer(m_pTextureBuffer)
+		{
+
+		}
+		void operator()(const std::string& path, e_Variable<e_KernelMIPMap> var)
+		{
+			m_pTextureBuffer->Release(path);
+		}
+	};
+	texUnloader tUnloader(m_pTextureBuffer);
+	std::vector<e_StreamReference(e_KernelMaterial)> unusedMats = m_pMaterialBuffer->getUnreferenced();
+	for (size_t i = 0; i < unusedMats.size(); i++)
+	{
+		unusedMats[i]->UnloadTextures(tUnloader);
+	}
+	m_pMaterialBuffer->ClearUnreferenced();
+
+	for (size_t i = 0; i < m_pTextureBuffer->m_UnusedEntries.size(); i++)
+	{
+		e_BufferReference<e_MIPMap, e_KernelMIPMap> ref = m_pTextureBuffer->m_UnusedEntries[i];
+		ref->Free();
+		m_pTextureBuffer->dealloc(ref);
+	}
+	m_pTextureBuffer->m_UnusedEntries.clear();
+
 	m_pNodeStream->UpdateInvalidated();
 	m_pTriIntStream->UpdateInvalidated();
 	m_pTriDataStream->UpdateInvalidated();
@@ -343,11 +433,12 @@ e_KernelDynamicScene e_DynamicScene::getKernelSceneData(bool devicePointer) cons
 
 void e_DynamicScene::instanciateNodeMaterials(e_StreamReference(e_Node) n)
 {
-	auto M = getMesh(n);
-	//if (m_pMaterialBuffer->NumUsedElements() + M->m_sMatInfo.getLength() < m_pMaterialBuffer->getLength() - 1)
+	e_BufferReference<e_Mesh, e_KernelMesh> M = getMesh(n);
+	if (m_pMaterialBuffer->NumUsedElements() + M->m_sMatInfo.getLength() < m_pMaterialBuffer->getLength() - 1)
 	{
 		e_StreamReference(e_KernelMaterial) m2 = m_pMaterialBuffer->malloc(M->m_sMatInfo);
 		m2.Invalidate();
+		m_pMaterialBuffer->DecrementRef(getMats(n));
 		n->m_uMaterialOffset = m2.getIndex();
 		n->m_uInstanciatedMaterial = true;
 		n.Invalidate();
@@ -385,24 +476,21 @@ e_StreamReference(e_KernelLight) e_DynamicScene::createLight(e_StreamReference(e
 {
 	unsigned int mi;
 	ShapeSet s = CreateShape(Node, materialName, &mi);
-	e_Node* np = Node.operator e_Node *();
-	e_KernelMaterial* mp = m_pMaterialBuffer->operator()(Node->m_uMaterialOffset + mi).operator e_KernelMaterial *();
-	unsigned int* a = &m_pMaterialBuffer->operator()(Node->m_uMaterialOffset + mi)->NodeLightIndex;
-	if(*a != -1)
+	e_StreamReference(e_KernelMaterial) matRef = getMats(Node)(mi);
+	if (matRef->NodeLightIndex != -1)
 	{
-		e_StreamReference(e_KernelLight) c = m_pLightStream->operator()(Node->m_uLightIndices[*a]);
+		e_StreamReference(e_KernelLight) c = m_pLightStream->operator()(Node->m_uLightIndices[matRef->NodeLightIndex]);
 		c->SetData(e_DiffuseLight(L, s, Node.getIndex()));
 		c.Invalidate();
 		return c;
 	}
 	else
 	{
-		unsigned int b = Node->getNextFreeLightIndex();
-		if(b == -1)
-			throw 1;
-		*a = b;
+		matRef->NodeLightIndex = Node->getNextFreeLightIndex();
+		if (matRef->NodeLightIndex == -1)
+			throw std::runtime_error("Node already has maximum number of area lights!");
 		e_StreamReference(e_KernelLight) c = m_pLightStream->malloc(1);
-		Node->m_uLightIndices[b] = c.getIndex();
+		Node->m_uLightIndices[matRef->NodeLightIndex] = c.getIndex();
 		c->SetData(e_DiffuseLight(L, s, Node.getIndex()));
 		return c;
 	}
@@ -458,10 +546,11 @@ ShapeSet e_DynamicScene::CreateShape(e_StreamReference(e_Node) Node, const std::
 
 void e_DynamicScene::removeLight(e_StreamReference(e_Node) Node, unsigned int mi)
 {
-	unsigned int a = m_pMaterialBuffer->operator()(Node->m_uMaterialOffset + mi)->NodeLightIndex;
-	if(a == -1)
+	unsigned int* a = &getMats(Node)(mi)->NodeLightIndex;
+	if(*a == -1)
 		return;
-	unsigned int* b = Node->m_uLightIndices + a;
+	unsigned int* b = Node->m_uLightIndices + *a;
+	*a = -1;
 	//m_pLightStream->dealloc(m_pLightStream->operator()(*b));
 	m_pLightStream->operator()(*b)->As()->IsRemoved = true;
 	*b = -1;
@@ -469,9 +558,9 @@ void e_DynamicScene::removeLight(e_StreamReference(e_Node) Node, unsigned int mi
 
 void e_DynamicScene::removeAllLights(e_StreamReference(e_Node) Node)
 {
-	e_BufferReference<e_Mesh, e_KernelMesh> m = getMesh(Node);
-	for(unsigned int i = 0; i < m->m_sMatInfo.getLength(); i++)
-		m_pMaterialBuffer->operator()(Node->m_uMaterialOffset + i)->NodeLightIndex = -1;
+	e_StreamReference(e_KernelMaterial) matRef = getMats(Node);
+	for (unsigned int j = 0; j < matRef.getLength(); j++)
+		matRef(j)->NodeLightIndex = -1;
 	int i = 0;
 	while (i < MAX_AREALIGHT_NUM && Node->m_uLightIndices[i] != -1)
 	{
@@ -656,4 +745,9 @@ unsigned int e_DynamicScene::getMaterialCount()
 e_StreamReference(e_KernelMaterial) e_DynamicScene::getMaterials()
 {
 	return m_pMaterialBuffer->UsedElements();
+}
+
+e_Stream<e_KernelMaterial>* e_DynamicScene::getMatBuffer()
+{
+	return m_pMaterialBuffer;
 }

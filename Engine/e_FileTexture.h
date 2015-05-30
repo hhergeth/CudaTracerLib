@@ -1,5 +1,6 @@
 #pragma once
 #include "e_FileTexture_device.h"
+#include "../Base/FixedString.h"
 
 class IInStream;
 class OutputStream;
@@ -19,8 +20,9 @@ class e_MIPMap
 	float m_weightLut[MTS_MIPMAP_LUT_SIZE];
 public:
 	e_ImageFilter m_uFilterMode;
+	std::string m_pPath;
 	e_MIPMap() {m_pDeviceData = 0; m_uWidth = m_uHeight = m_uBpp = 0xffffffff;}
-	e_MIPMap(IInStream& a_In);
+	e_MIPMap(const std::string& a_InputFile, IInStream& a_In);
 	void Free()
 	{
 		CUDA_FREE(m_pDeviceData);

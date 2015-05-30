@@ -412,8 +412,8 @@ void k_setNumRaysTraced(unsigned int i)
 	cudaMemcpyToSymbol(g_RayTracedCounterDevice, &i, sizeof(unsigned int));
 }
 
-const int DYNAMIC_FETCH_THRESHOLD = 20;
-const int STACK_SIZE = 32;
+#define DYNAMIC_FETCH_THRESHOLD 20
+#define STACK_SIZE 32
 __device__ int g_warpCounter;
 __device__ __inline__ int   min_min2   (int a, int b, int c) { int v; asm("vmin.s32.s32.s32.min %0, %1, %2, %3;" : "=r"(v) : "r"(a), "r"(b), "r"(c)); return v; }
 __device__ __inline__ int   min_max2   (int a, int b, int c) { int v; asm("vmin.s32.s32.s32.max %0, %1, %2, %3;" : "=r"(v) : "r"(a), "r"(b), "r"(c)); return v; }

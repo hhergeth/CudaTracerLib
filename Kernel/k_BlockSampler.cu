@@ -1,8 +1,9 @@
 #include "k_BlockSampler.h"
-#include <thrust/device_ptr.h>
+#include <numeric>
+/*#include <thrust/device_ptr.h>
 #include <thrust/sort.h>
 #include <thrust/device_vector.h>
-#include <numeric>
+#include <numeric>*/
 
 #define MAX_R 16
 #define MAX_F 8
@@ -180,7 +181,7 @@ void k_BlockSampler::AddPass()
 		cudaMemcpy(m_pHostSamplesData, m_pDeviceSamplesData, sizeof(unsigned int) * totalNumBlocks(), cudaMemcpyDeviceToHost);
 		cudaMemcpy(m_pDeviceIndexData, &g_IndicesH[0], totalNumBlocks() * sizeof(unsigned int), cudaMemcpyHostToDevice);
 		cudaMemcpy(m_pHostContribPixels, m_pDeviceContribPixels, sizeof(unsigned int) * totalNumBlocks(), cudaMemcpyDeviceToHost);
-		thrust::sort(thrust::device_ptr<unsigned int>(m_pDeviceIndexData), thrust::device_ptr<unsigned int>(m_pDeviceIndexData + totalNumBlocks()), order(m_pDeviceBlockData, m_pDeviceContribPixels));
+		//thrust::sort(thrust::device_ptr<unsigned int>(m_pDeviceIndexData), thrust::device_ptr<unsigned int>(m_pDeviceIndexData + totalNumBlocks()), order(m_pDeviceBlockData, m_pDeviceContribPixels));
 		hasValidData = true;
 		cudaMemcpy(m_pHostIndexData, m_pDeviceIndexData, sizeof(unsigned int) * totalNumBlocks(), cudaMemcpyDeviceToHost);
 		//m_uNumBlocksToLaunch = totalNumBlocks() / 2;

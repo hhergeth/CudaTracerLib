@@ -5,6 +5,7 @@
 #include "../Engine/e_BSDF.h"
 #include "../Engine/e_Light.h"
 #include "../Engine/e_FileTexture.h"
+#include "../Engine/e_Buffer.h"
 
 CUDA_FUNC_IN Vec3f hemishphere(const Vec2f& q)
 {
@@ -132,7 +133,17 @@ void k_BSDFVisualizer::setSkydome(const char* compiledPath)
 	m_pBuffer2 = new e_Buffer<e_MIPMap, e_KernelMIPMap>(3);
 	InputStream in = InputStream(compiledPath);
 	e_BufferReference<e_MIPMap, e_KernelMIPMap> mip = m_pBuffer2->malloc(1); 
-	m_pMipMap = new (mip.operator->())e_MIPMap(in);
+	m_pMipMap = new (mip.operator->())e_MIPMap(in.getFilePath(), in);
 	in.Close();	
 	m_pLight = new e_InfiniteLight(m_pBuffer, mip, Spectrum(1.0f), AABB(Vec3f(0), Vec3f(1)));
+}
+
+k_BSDFVisualizer::~k_BSDFVisualizer()
+{
+	if (m_pBuffer)
+		m_pBuffer->Free();
+	if (m_pBuffer2)
+		m_pBuffer2->Free();
+	if (m_pLight)
+		delete m_pLight;
 }

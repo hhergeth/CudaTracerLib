@@ -20,16 +20,20 @@ class e_Mesh;
 #define e_StreamReference(T) e_BufferReference<T, T>
 #endif
 
+struct textureLoader;
+
 class e_DynamicScene
 {
+	class MatStream;
 private:
 	unsigned int m_uModified;
+	std::vector<e_StreamReference(e_Node)> m_sRemovedNodes;
 public:
 	e_Stream<e_TriangleData>* m_pTriDataStream;
 	e_Stream<e_TriIntersectorData>* m_pTriIntStream;
 	e_Stream<e_BVHNodeData>* m_pBVHStream;
 	e_Stream<e_TriIntersectorData2>* m_pBVHIndicesStream;
-	e_Stream<e_KernelMaterial>* m_pMaterialBuffer;
+	MatStream* m_pMaterialBuffer;
 	e_CachedBuffer<e_MIPMap, e_KernelMIPMap>* m_pTextureBuffer;
 	e_CachedBuffer<e_Mesh, e_KernelMesh>* m_pMeshBuffer;
 	e_Stream<e_Node>* m_pNodeStream;
@@ -43,6 +47,9 @@ public:
 	e_MeshCompilerManager m_sCmpManager;
 	e_Sensor* m_pCamera;
 	unsigned int m_uEnvMapIndex;
+protected:
+	friend struct textureLoader;
+	e_BufferReference<e_MIPMap, e_KernelMIPMap> LoadTexture(const std::string& file, bool a_MipMap);
 public:
 	e_DynamicScene(e_Sensor* C, e_SceneInitData a_Data, const std::string& texPath, const std::string& cmpPath, const std::string& dataPath);
 	~e_DynamicScene();
@@ -51,9 +58,6 @@ public:
 	e_StreamReference(e_Node) CreateNode(const std::string& a_MeshFile, IInStream& in, bool force_recompile = false);
 	e_StreamReference(e_Node) CreateNode(unsigned int a_TriangleCount, unsigned int a_MaterialCount);
 	void DeleteNode(e_StreamReference(e_Node) ref);
-	///Do not use this! Just invalidate and update the material
-	e_BufferReference<e_MIPMap, e_KernelMIPMap> LoadTexture(const std::string& file, bool a_MipMap);
-	void UnLoadTexture(e_BufferReference<e_MIPMap, e_KernelMIPMap> ref);
 	void ReloadTextures();
 	float4x4 GetNodeTransform(e_StreamReference(e_Node) n);
 	void SetNodeTransform(const float4x4& mat, e_StreamReference(e_Node) n);
@@ -104,4 +108,5 @@ public:
 	unsigned int getLightCount(e_StreamReference(e_Node) n);
 	e_StreamReference(e_KernelLight) getLight(e_StreamReference(e_Node) n, unsigned int i);
 	void instanciateNodeMaterials(e_StreamReference(e_Node) n);
+	e_Stream<e_KernelMaterial>* getMatBuffer();
 };

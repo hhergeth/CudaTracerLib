@@ -4,7 +4,8 @@
 #include "e_FileTextureHelper.h"
 #include "..\Base\FileStream.h"
 
-e_MIPMap::e_MIPMap(IInStream& a_In)
+e_MIPMap::e_MIPMap(const std::string& a_InputFile, IInStream& a_In)
+	: m_pPath(a_InputFile)
 {
 	a_In >> m_uWidth;
 	a_In >> m_uHeight;

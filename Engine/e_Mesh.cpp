@@ -1,13 +1,12 @@
 #include "StdAfx.h"
 #include "e_Mesh.h"
-#define TS_DEC_FRAMEWORK
-#include "..\Base\TangentSpace.h"
-#undef TS_DEC_FRAMEWORK
+#include "SceneBuilder\TangentSpaceHelper.h"
 #include "e_Volumes.h"
 #include "e_Light.h"
 #include "SceneBuilder\Importer.h"
 
-e_Mesh::e_Mesh(IInStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4)
+e_Mesh::e_Mesh(const std::string& path, IInStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4)
+	: m_uPath(path)
 {
 	m_uType = MESH_STATIC_TOKEN;
 	int abc = sizeof(e_TriangleData), abc2 = sizeof(m_sLights);

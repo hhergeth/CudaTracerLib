@@ -373,14 +373,15 @@ private:
 	struct entry
 	{
 		unsigned int count;
-		std::string file;
+		e_BufferReference<H, D> ref;
 		entry()
 		{
 			count = 0;
 		}
 	};
-	std::vector<entry> m_sEntries;
+	std::map<std::string, entry> m_sEntries;
 public:
+	std::vector<e_BufferReference<H, D>> m_UnusedEntries;
 	e_CachedBuffer(unsigned int a_Count, unsigned int a_ElementSize = 0xffffffff)
 		: e_Buffer<H, D>(a_Count, a_ElementSize)
 	{
@@ -388,35 +389,31 @@ public:
 	}
 	e_BufferReference<H, D> LoadCached(const std::string& file, bool& load)
 	{
-		for(unsigned int i = 0; i < m_sEntries.size(); i++)
-			if (m_sEntries[i].file == file)
-			{
-				m_sEntries[i].count++;
-				load = false;
-				return e_BufferReference<H, D>(this, i, 1);
-			}
+		typename std::map<std::string, entry>::iterator it = m_sEntries.find(file);
+		if (it != m_sEntries.end())
+		{
+			it->second.count++;
+			load = false;
+			return it->second.ref;
+		}
 		load = true;
 		entry e;
 		e.count = 1;
-		e.file = file;
-		e_BufferReference<H, D> ref = malloc(1);
-		if(m_sEntries.size() <= ref.getIndex())
-			m_sEntries.push_back(e);
-		else m_sEntries[ref.getIndex()] = e;
-		return ref;
+		e.ref = malloc(1);
+		m_sEntries[file] = e;
+		return e.ref;
 	}
-	///Returns true noting free
-	bool Release(e_BufferReference<H, D> ref)
+	void Release(const std::string& file)
 	{
-		unsigned int i = ref.getIndex();
-		m_sEntries[i].count--;
-		if(!m_sEntries[i].count)
+		typename std::map<std::string, entry>::iterator it = m_sEntries.find(file);
+		if (it == m_sEntries.end())
+			throw std::runtime_error(std::string(__FUNCTION__) + " : Entry not found!");
+		it->second.count--;
+		if (it->second.count == 0)
 		{
-			this->dealloc(i);
-			//m_sData.erase(i, i);//do not erase
-			return true;
+			m_sEntries.erase(it);
+			m_UnusedEntries.push_back(it->second.ref);
 		}
-		return false;
 	}
 };
 

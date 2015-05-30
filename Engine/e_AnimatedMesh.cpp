@@ -3,9 +3,7 @@
 #include <MathTypes.h>
 #include "SceneBuilder/MD5Parser.h"
 #include "SceneBuilder/Importer.h"
-#define TS_DEC_MD5
-#include "..\Base\TangentSpace.h"
-#undef TS_DEC_MD5
+#include "SceneBuilder\TangentSpaceHelper.h"
 
 void build_e_Animation(Anim* A, MD5Model* M, e_Animation& res, const std::string& name, const std::vector<float4x4>& inverseJoints)
 {
@@ -42,8 +40,8 @@ e_BufferReference<char, char> malloc_aligned(e_Stream<char>* stream, unsigned in
 	else return ref;
 }
 
-e_AnimatedMesh::e_AnimatedMesh(IInStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4, e_Stream<char>* a_Stream5)
-	: e_Mesh(a_In, a_Stream0, a_Stream1, a_Stream2, a_Stream3, a_Stream4)
+e_AnimatedMesh::e_AnimatedMesh(const std::string& path, IInStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4, e_Stream<char>* a_Stream5)
+	: e_Mesh(path, a_In, a_Stream0, a_Stream1, a_Stream2, a_Stream3, a_Stream4)
 {
 	m_uType = MESH_ANIMAT_TOKEN;
 	a_In.Read(&k_Data, sizeof(k_Data));

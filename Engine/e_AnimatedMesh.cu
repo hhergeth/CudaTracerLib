@@ -1,5 +1,5 @@
 #include "e_AnimatedMesh.h"
-#include "e_DynamicScene.h"
+#include "e_KernelDynamicScene.h"
 
 //low...high
 //x=(0,1,2,3), y=(4,5,6,7)

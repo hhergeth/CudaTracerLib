@@ -127,15 +127,13 @@ void k_sPpmTracer::StartNewTrace(e_Image* I)
 	for (unsigned int i = 0; i < m_pScene->getNodeCount(); i++)
 	{
 		e_StreamReference(e_Node) n = m_pScene->getNodes()(i);
-		e_BufferReference<e_Mesh, e_KernelMesh> m = m_pScene->getMesh(n);
-		unsigned int s = n->m_uMaterialOffset, l = m_pScene->getMesh(n)->m_sMatInfo.getLength();
-		for (unsigned int j = 0; j < l; j++)
+		e_StreamReference(e_KernelMaterial) mats = m_pScene->getMats(n);
+		for (unsigned int j = 0; j < mats.getLength(); j++)
 		{
-			e_StreamReference(e_KernelMaterial) mat = m_pScene->m_pMaterialBuffer->operator()(s + j, 1);
 			const e_KernelBSSRDF* bssrdf;
 			DifferentialGeometry dg;
 			ZERO_MEM(dg);
-			if (mat->GetBSSRDF(dg, &bssrdf))
+			if (mats(j)->GetBSSRDF(dg, &bssrdf))
 			{
 				volBox.Enlarge(m_pScene->getBox(n));
 				m_bLongRunning |= 1;

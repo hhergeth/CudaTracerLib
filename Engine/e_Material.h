@@ -49,15 +49,31 @@ public:
 	CUDA_DEVICE CUDA_HOST bool SampleNormalMap(DifferentialGeometry& uv, const Vec3f& wi) const;
 	CUDA_DEVICE CUDA_HOST float SampleAlphaMap(const DifferentialGeometry& uv) const;
 	CUDA_DEVICE CUDA_HOST bool GetBSSRDF(const DifferentialGeometry& uv, const e_KernelBSSRDF** res) const;
-	template<typename L> void LoadTextures(L callback)
+	template<typename L> void LoadTextures(L& callback)
 	{
-		if(NormalMap.used)
-			NormalMap.tex.LoadTextures(callback);
-		if(HeightMap.used)
-			HeightMap.tex.LoadTextures(callback);
-		if(AlphaMap.used)
-			AlphaMap.tex.LoadTextures(callback);
-		bsdf.LoadTextures(callback);
+		if(NormalMap.used && NormalMap.tex.Is<e_ImageTexture>())
+			NormalMap.tex.As<e_ImageTexture>()->LoadTextures(callback);
+		if (HeightMap.used && HeightMap.tex.Is<e_ImageTexture>())
+			HeightMap.tex.As<e_ImageTexture>()->LoadTextures(callback);
+		if (AlphaMap.used && AlphaMap.tex.Is<e_ImageTexture>())
+			AlphaMap.tex.As<e_ImageTexture>()->LoadTextures(callback);
+		std::vector<e_Texture*> T = bsdf.As()->getTextureList();
+		for (size_t i = 0; i < T.size(); i++)
+			if (T[i]->Is<e_ImageTexture>())
+				T[i]->As<e_ImageTexture>()->LoadTextures(callback);
+	}
+	template<typename L> void UnloadTextures(L& callback)
+	{
+		if (NormalMap.used && NormalMap.tex.Is<e_ImageTexture>())
+			NormalMap.tex.As<e_ImageTexture>()->UnloadTexture(callback);
+		if (HeightMap.used && HeightMap.tex.Is<e_ImageTexture>())
+			HeightMap.tex.As<e_ImageTexture>()->UnloadTexture(callback);
+		if (AlphaMap.used && AlphaMap.tex.Is<e_ImageTexture>())
+			AlphaMap.tex.As<e_ImageTexture>()->UnloadTexture(callback);
+		std::vector<e_Texture*> T = bsdf.As()->getTextureList();
+		for (size_t i = 0; i < T.size(); i++)
+			if (T[i]->Is<e_ImageTexture>())
+				T[i]->As<e_ImageTexture>()->UnloadTexture(callback);
 	}
 	void SetNormalMap(const e_Texture& tex)
 	{

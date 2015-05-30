@@ -50,9 +50,6 @@ struct e_BilerpTexture : public e_TextureBase//, public e_DerivedTypeHelper<1>
 	{
 		return (v00+v01+v10+v11) * 0.25f;
 	}
-	template<typename L> void LoadTextures(L callback)
-	{
-	}
 	e_TextureMapping2D mapping;
 	Spectrum v00, v01, v10, v11;
 };
@@ -73,10 +70,6 @@ struct e_ConstantTexture : public e_TextureBase//, public e_DerivedTypeHelper<2>
 	CUDA_FUNC_IN Spectrum Average()
 	{
 		return val;
-	}
-	template<typename L> void LoadTextures(L callback)
-	{
-
 	}
 	Spectrum val;
 };
@@ -105,10 +98,6 @@ struct e_CheckerboardTexture : public e_TextureBase//, public e_DerivedTypeHelpe
 	{
 		return (val0 + val1) / 2.0f;
 	}
-	template<typename L> void LoadTextures(L callback)
-	{
-
-	}
 	Spectrum val0, val1;
 	e_TextureMapping2D mapping;
 };
@@ -135,9 +124,13 @@ struct e_ImageTexture : public e_TextureBase//, public e_DerivedTypeHelper<4>
 			return tex->Sample(Vec2f(0), 1);
 		else return Spectrum(0.0f);
 	}
-	template<typename L> void LoadTextures(L callback)
+	template<typename L> void LoadTextures(L& callback)
 	{
-		tex = callback(file, true);
+		tex = callback(file, tex);
+	}
+	template<typename L> void UnloadTexture(L& callback)
+	{
+		callback(file, tex);
 	}
 	e_Variable<e_KernelMIPMap> tex;
 	e_TextureMapping2D mapping;
@@ -161,9 +154,6 @@ struct e_UVTexture : public e_TextureBase//, public e_DerivedTypeHelper<5>
 	{
 		return Spectrum(0.5f);
 	}
-	template<typename L> void LoadTextures(L callback)
-	{
-	}
 	e_TextureMapping2D mapping;
 };
 
@@ -184,9 +174,6 @@ struct e_WireframeTexture : public e_TextureBase//, public e_DerivedTypeHelper<6
 	{
 		return Spectrum(0.1f);
 	}
-	template<typename L> void LoadTextures(L callback)
-	{
-	}
 	Spectrum interiorColor, edgeColor;
 	float width;
 };
@@ -201,9 +188,6 @@ struct e_ExtraDataTexture : public e_TextureBase//, public e_DerivedTypeHelper<7
 	CUDA_FUNC_IN Spectrum Average()
 	{
 		return Spectrum(0.0f);
-	}
-	template<typename L> void LoadTextures(L callback)
-	{
 	}
 };
 
@@ -222,10 +206,6 @@ public:
 	{
 		CALL_FUNC7(e_BilerpTexture, e_ConstantTexture, e_ImageTexture, e_UVTexture, e_CheckerboardTexture, e_WireframeTexture, e_ExtraDataTexture, Average())
 		return Spectrum(0.0f);
-	}
-	template<typename L> void LoadTextures(L callback)
-	{
-		CALL_FUNC7(e_BilerpTexture, e_ConstantTexture, e_ImageTexture, e_UVTexture, e_CheckerboardTexture, e_WireframeTexture, e_ExtraDataTexture, LoadTextures(callback))
 	}
 };
 

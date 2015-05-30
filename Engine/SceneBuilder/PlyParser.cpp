@@ -8,8 +8,7 @@
 #include <vector>
 #include <cctype>
 #include <intrin.h>
-#define TS_DEC_FRAMEWORK
-#include <Base\TangentSpace.h>
+#include "TangentSpaceHelper.h"
 #include <Engine\SceneBuilder\Importer.h>
 
 typedef int format_type;

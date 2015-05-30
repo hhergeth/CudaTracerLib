@@ -77,12 +77,6 @@ public:
 			texs.push_back((e_Texture*)((unsigned long long)this + m_uTextureOffsets[n++]));
 		return texs;
 	}
-	template<typename T> void LoadTextures(T clb)
-	{
-		std::vector<e_Texture*> T = getTextureList();
-		for (size_t i = 0; i < T.size(); i++)
-			T[i]->LoadTextures(clb);
-	}
 };
 
 #include "e_BSDF_Simple.h"
@@ -109,10 +103,6 @@ public:
 	{
 		CALL_FUNC12(diffuse,roughdiffuse,dielectric,thindielectric,roughdielectric,conductor,roughconductor,plastic,roughplastic,phong,ward,hk, pdf(bRec, measure));
 		return 0.0f;
-	}
-	template<typename T> void LoadTextures(T callback) const
-	{
-		As()->LoadTextures(callback);
 	}
 	CUDA_FUNC_IN unsigned int getType() const
 	{
@@ -150,10 +140,6 @@ public:
 	{
 		CALL_FUNC15(diffuse, roughdiffuse, dielectric, thindielectric, roughdielectric, conductor, roughconductor, plastic, roughplastic, phong, ward, hk, coating, roughcoating, blend, pdf(bRec, measure));
 		return 0.0f;
-	}
-	template<typename T> void LoadTextures(T callback) const
-	{
-		As()->LoadTextures(callback);
 	}
 	CUDA_FUNC_IN unsigned int getType() const
 	{

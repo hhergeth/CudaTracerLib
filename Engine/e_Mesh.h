@@ -6,6 +6,7 @@
 #include "e_Buffer.h"
 #include "e_IntersectorData.h"
 #include "e_SceneInitData.h"
+#include "../Base/FixedString.h"
 
 struct e_KernelMesh
 {
@@ -38,8 +39,9 @@ public:
 	e_StreamReference(e_TriIntersectorData2) m_sIndicesInfo;
 	e_MeshPartLight m_sLights[MAX_AREALIGHT_NUM];
 	unsigned int m_uUsedLights;
+	FixedString<64> m_uPath;
 public:
-	e_Mesh(IInStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4);
+	e_Mesh(const std::string& path, IInStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4);
 	void Free(e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4);
 	e_KernelMesh getKernelData()
 	{

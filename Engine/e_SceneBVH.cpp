@@ -106,3 +106,8 @@ e_KernelSceneBVH e_SceneBVH::getData(bool devicePointer)
 	q.m_pInvNodeTransforms = m_pInvTransforms->getKernelData(devicePointer).Data;
 	return q;
 }
+
+unsigned int e_SceneBVH::getSizeInBytes()
+{
+	return m_pNodes->getSizeInBytes();
+}

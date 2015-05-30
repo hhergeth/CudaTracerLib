@@ -1,12 +1,13 @@
 #pragma once
 
-#include "e_Buffer.h"
 #include <MathTypes.h>
 #include "e_SceneBVH_device.h"
 
 class e_Node;
 class e_Mesh;
 struct e_KernelMesh;
+template<typename T> class e_Stream;
+template<typename H, typename D> class e_BufferReference;
 
 class e_SceneBVH
 {
@@ -19,12 +20,9 @@ public:
 public:
 	e_SceneBVH(unsigned int a_NodeCount);
 	~e_SceneBVH();
-	void Build(e_StreamReference(e_Node), e_BufferReference<e_Mesh, e_KernelMesh> a_Meshes);
+	void Build(e_BufferReference<e_Node, e_Node>, e_BufferReference<e_Mesh, e_KernelMesh> a_Meshes);
 	e_KernelSceneBVH getData(bool devicePointer = true);
-	unsigned int getSizeInBytes()
-	{
-		return m_pNodes->getSizeInBytes();
-	}
+	unsigned int getSizeInBytes();
 	void setTransform(unsigned int nodeIdx, const float4x4& mat);
 	void UpdateInvalidated();
 private:
