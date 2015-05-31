@@ -103,7 +103,7 @@ Spectrum UniformSampleAllLights(const BSDFSamplingRecord& bRec, const e_KernelMa
 		}
 		L += Ld / float(nSamples);
 	}
-	return L * float(g_SceneData.m_sLightData.UsedCount) / float(g_SceneData.m_uEmitterCount);
+	return L;
 }
 
 Spectrum UniformSampleOneLight(const BSDFSamplingRecord& bRec, const e_KernelMaterial& mat, CudaRNG& rng)
@@ -112,5 +112,5 @@ Spectrum UniformSampleOneLight(const BSDFSamplingRecord& bRec, const e_KernelMat
 		return Spectrum(0.0f);
 	float emitpdf;
 	unsigned int index = g_SceneData.m_uEmitterIndices[g_SceneData.m_emitterPDF.SampleDiscrete(rng.randomFloat(), &emitpdf)];
-	return float(g_SceneData.m_sLightData.UsedCount) * EstimateDirect((BSDFSamplingRecord&)bRec, mat, g_SceneData.m_sLightData.Data + index, index, EBSDFType(EAll & ~EDelta), rng);
+	return float(g_SceneData.m_uEmitterCount) * EstimateDirect((BSDFSamplingRecord&)bRec, mat, g_SceneData.m_sLightData.Data + index, index, EBSDFType(EAll & ~EDelta), rng);
 }

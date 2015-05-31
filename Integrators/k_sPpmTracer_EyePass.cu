@@ -249,7 +249,7 @@ template<bool DIRECT, bool FINAL_GATHER> CUDA_FUNC_IN void k_EyePassF(int x, int
 			}
 		}
 		if(DIRECT)
-			L += throughput * UniformSampleAllLights(bRec, r2.getMat(), 1, rng);
+			L += throughput * UniformSampleOneLight(bRec, r2.getMat(), rng);
 		L += throughput * r2.Le(bRec.dg.P, bRec.dg.sys, -r.direction);//either it's the first bounce -> account or it's a specular reflection -> ...
 		const e_KernelBSSRDF* bssrdf;
 		if (r2.getMat().GetBSSRDF(bRec.dg, &bssrdf))

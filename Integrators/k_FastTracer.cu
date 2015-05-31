@@ -5,6 +5,11 @@
 
 CUDA_DEVICE e_Image g_DepthImage;
 
+enum
+{
+	MaxBlockHeight = 6,
+};
+
 CUDA_DEVICE int g_NextRayCounterFT;
 __global__ void pathCreateKernel(unsigned int w, unsigned int h, k_PTDBuffer g_Intersector)
 {

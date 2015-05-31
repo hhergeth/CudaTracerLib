@@ -2,6 +2,11 @@
 #include "..\Kernel\k_TraceHelper.h"
 #include "..\Kernel\k_TraceAlgorithms.h"
 
+enum
+{
+	MaxBlockHeight = 6,
+};
+
 CUDA_DEVICE e_Image g_DepthImage2;
 CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_NextRayCounter2;
 

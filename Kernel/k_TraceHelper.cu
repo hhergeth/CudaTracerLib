@@ -9,6 +9,12 @@
 
 //#define SKIP_OUTER_TREE
 
+enum
+{
+	MaxBlockHeight = 6,            // Upper bound for blockDim.y.
+	EntrypointSentinel = 0x76543210,   // Bottom-most stack entry, indicating the end of traversal.
+};
+
 e_KernelDynamicScene g_SceneDataDevice;
 unsigned int g_RayTracedCounterDevice;
 e_Sensor g_CameraDataDevice;
@@ -792,7 +798,10 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 		((int4*)a_ResBuffer)[rayidx] = res;
 		nodeAddr = EntrypointSentinel;*/
 
-        while(nodeAddr != EntrypointSentinel)
+		if (g_SceneData.m_sNodeData.UsedCount == 0)
+			nodeAddr = EntrypointSentinel;
+
+		while (nodeAddr != EntrypointSentinel)
         {
 			nodeAddr = nodeAddr == EntrypointSentinel - 1 ? EntrypointSentinel : nodeAddr;
             // Traverse internal nodes until all SIMD lanes have found a leaf.

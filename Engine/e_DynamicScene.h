@@ -26,8 +26,10 @@ class e_DynamicScene
 {
 	class MatStream;
 private:
-	unsigned int m_uModified;
 	std::vector<e_StreamReference(e_Node)> m_sRemovedNodes;
+	e_SceneBVH* m_pBVH;
+	e_TmpVertex* m_pDeviceTmpFloats;
+	unsigned int m_uEnvMapIndex;
 public:
 	e_Stream<e_TriangleData>* m_pTriDataStream;
 	e_Stream<e_TriIntersectorData>* m_pTriIntStream;
@@ -40,13 +42,10 @@ public:
 	e_Stream<e_VolumeRegion>* m_pVolumes;
 	e_Stream<char>* m_pAnimStream;
 	e_Stream<e_KernelLight>* m_pLightStream;
-	e_SceneBVH* m_pBVH;
-	e_TmpVertex* m_pDeviceTmpFloats;
 	const std::string m_pTexturePath;
 	const std::string m_pCompilePath;
 	e_MeshCompilerManager m_sCmpManager;
 	e_Sensor* m_pCamera;
-	unsigned int m_uEnvMapIndex;
 protected:
 	friend struct textureLoader;
 	e_BufferReference<e_MIPMap, e_KernelMIPMap> LoadTexture(const std::string& file, bool a_MipMap);
@@ -71,7 +70,6 @@ public:
 	e_StreamReference(e_KernelLight) getLights();
 	unsigned int getMaterialCount();
 	e_StreamReference(e_KernelMaterial) getMaterials();
-	e_SceneBVH* getSceneBVH();
 	e_AnimatedMesh* AccessAnimatedMesh(e_StreamReference(e_Node) n);
 	unsigned int getCudaBufferSize();
 	unsigned int getTriangleCount();
@@ -101,12 +99,11 @@ public:
 	void removeAllLights(e_StreamReference(e_Node) Node);
 	void recalculateAreaLights(e_StreamReference(e_Node) Node);
 	e_StreamReference(e_KernelLight) setEnvironementMap(const Spectrum& power, const std::string& file);
-	void InvalidateSceneBVH()
-	{
-		m_uModified = 1;
-	}
 	unsigned int getLightCount(e_StreamReference(e_Node) n);
 	e_StreamReference(e_KernelLight) getLight(e_StreamReference(e_Node) n, unsigned int i);
 	void instanciateNodeMaterials(e_StreamReference(e_Node) n);
 	e_Stream<e_KernelMaterial>* getMatBuffer();
+	void InvalidateNodesInBVH(e_StreamReference(e_Node) n);
+	void InvalidateMeshesInBVH(e_BufferReference<e_Mesh, e_KernelMesh> m);
+	e_BVHNodeData& getSceneBVHNode(unsigned int idx);
 };

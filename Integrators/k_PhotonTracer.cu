@@ -4,6 +4,11 @@
 #include "../Engine/e_Light.h"
 #include "../Engine/e_Sensor.h"
 
+enum
+{
+	MaxBlockHeight = 6,
+};
+
 CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_NextRayCounter3;
 
 CUDA_FUNC_IN void handleEmission(const Spectrum& weight, const PositionSamplingRecord& pRec, e_Image& g_Image, CudaRNG& rng)
@@ -103,7 +108,7 @@ void k_PhotonTracer::DoRender(e_Image* I)
 	unsigned int zero = 0;
 	cudaMemcpyToSymbol(g_NextRayCounter3, &zero, sizeof(unsigned int));
 	k_INITIALIZE(m_pScene, g_sRngs);
-	pathKernel<<< 180, dim3(32, 4, 1)>>>(w * h, *I);
+	pathKernel << < 180, dim3(32, MaxBlockHeight, 1) >> >(w * h, *I);
 }
 
 void k_PhotonTracer::Debug(e_Image* I, const Vec2i& pixel)

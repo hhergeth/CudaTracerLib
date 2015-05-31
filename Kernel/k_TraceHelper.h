@@ -3,12 +3,6 @@
 #include "../Base/CudaRandom.h"
 #include "../Engine/e_KernelDynamicScene.h"
 
-enum
-{
-    MaxBlockHeight      = 6,            // Upper bound for blockDim.y.
-    EntrypointSentinel  = 0x76543210,   // Bottom-most stack entry, indicating the end of traversal.
-};
-
 extern CUDA_ALIGN(16) CUDA_CONST e_KernelDynamicScene g_SceneDataDevice;
 extern CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_RayTracedCounterDevice;
 extern CUDA_ALIGN(16) CUDA_CONST CudaRNGBuffer g_RNGDataDevice;
@@ -26,8 +20,6 @@ extern CUDA_ALIGN(16) CudaRNGBuffer g_RNGDataHost;
 #define g_RayTracedCounter g_RayTracedCounterHost
 #define g_RNGData g_RNGDataHost
 #endif
-
-//__device__ __host__ bool k_TraceRayNode(const float3& dir, const float3& ori, TraceResult* a_Result, const e_Node* N, int ln);
 
 __device__ __host__ bool k_TraceRay(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result);
 

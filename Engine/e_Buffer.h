@@ -411,8 +411,8 @@ public:
 		it->second.count--;
 		if (it->second.count == 0)
 		{
-			m_sEntries.erase(it);
 			m_UnusedEntries.push_back(it->second.ref);
+			m_sEntries.erase(it);
 		}
 	}
 };

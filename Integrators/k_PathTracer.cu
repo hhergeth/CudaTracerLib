@@ -25,7 +25,7 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(Ray& r, const Ray& rX, con
 			cl += cf * r2.Le(bRec.dg.P, bRec.dg.sys, -r.direction);
 		Spectrum f = r2.getMat().bsdf.sample(bRec, rnd.randomFloat2());
 		if (DIRECT)
-			cl += cf * UniformSampleAllLights(bRec, r2.getMat(), 1, rnd);
+			cl += cf * UniformSampleOneLight(bRec, r2.getMat(), rnd);
 		specularBounce = (bRec.sampledType & EDelta) != 0;
 		if (depth > 5)
 		{
