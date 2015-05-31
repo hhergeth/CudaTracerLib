@@ -482,7 +482,7 @@ AABB e_DynamicScene::getBox(e_StreamReference(e_Node) n)
 		return m_pBVH->m_sBox;
 	AABB r = AABB::Identity();
 	for(unsigned int i = 0; i < n.getLength(); i++)
-		r.Enlarge(n(i)->getWorldBox(getMesh(n(i)), GetNodeTransform(n)));
+		r.Enlarge(n(i)->getWorldBox(getMesh(n(i)), GetNodeTransform(n(i))));
 	return r;
 }
 
@@ -745,9 +745,4 @@ e_StreamReference(e_KernelMaterial) e_DynamicScene::getMaterials()
 e_Stream<e_KernelMaterial>* e_DynamicScene::getMatBuffer()
 {
 	return m_pMaterialBuffer;
-}
-
-e_BVHNodeData* e_DynamicScene::getSceneBVHNode(unsigned int idx)
-{
-	return m_pBVH->getBVHNode(idx);
 }

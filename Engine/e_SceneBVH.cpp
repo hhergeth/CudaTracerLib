@@ -200,18 +200,22 @@ public:
 
 void e_SceneBVH::setChild(BVHIndex nodeIdx, BVHIndex childIdx, int localIdxToSetTo)
 {
-	AABB box;
 	if (childIdx.isLeaf())
-	{
-		box = getWorldNodeBox(info->a_Nodes(childIdx.leafIdx()));
 		nodeToBVHNode[childIdx.leafIdx()] = nodeIdx;
-	}
-	else
-	{
-		box = m_pNodes->operator()(childIdx.innerIdx())->getBox();
-		bvhNodeData[childIdx.innerIdx()].parent = nodeIdx;
-	}
-	m_pNodes->operator()(nodeIdx.innerIdx())->setChild(localIdxToSetTo, childIdx.ToNative(), box);
+	else bvhNodeData[childIdx.innerIdx()].parent = nodeIdx;
+	m_pNodes->operator()(nodeIdx.innerIdx())->setChild(localIdxToSetTo, childIdx.ToNative(), getBox(childIdx));
+}
+
+void e_SceneBVH::propagateBBChange(BVHIndex idx, const AABB& box, int localChildIdx)
+{
+	e_BVHNodeData* node = m_pNodes->operator()(idx.innerIdx());
+	if (localChildIdx == 0)
+		node->setLeft(box);
+	else node->setRight(box);
+	BVHIndex p = bvhNodeData[idx.innerIdx()].parent;
+	if (p.isValid())
+		propagateBBChange(p, node->getBox(), getChildIdxInLocal(p, idx));
+	else m_sBox = node->getBox();
 }
 
 void e_SceneBVH::removeNodeAndCollapse(BVHIndex nodeIdx, BVHIndex childIdx)
@@ -220,6 +224,7 @@ void e_SceneBVH::removeNodeAndCollapse(BVHIndex nodeIdx, BVHIndex childIdx)
 	e_BVHNodeData* node = m_pNodes->operator()(nodeIdx.innerIdx());
 	BVHIndexTuple children = FromChildren(node);
 	node->setChild(childIdxLocal, NO_NODE, AABB::Identity());
+	propagateBBChange(nodeIdx, AABB::Identity(), childIdxLocal);
 	bvhNodeData[nodeIdx.innerIdx()].changeCount(bvhNodeData , - 1);
 	BVHIndex grandpaIdx = bvhNodeData[nodeIdx.innerIdx()].parent;
 	if (children[1 - childIdxLocal].NoNode() && grandpaIdx.isValid())
@@ -227,45 +232,63 @@ void e_SceneBVH::removeNodeAndCollapse(BVHIndex nodeIdx, BVHIndex childIdx)
 		//remove this node and propagate?
 		removeNodeAndCollapse(grandpaIdx, nodeIdx);
 	}
-	else if (grandpaIdx.isValid())//there has to be one inner node in the tree
+	else 
 	{
-		int parentLocal = getChildIdxInLocal(grandpaIdx, nodeIdx);
-		setChild(grandpaIdx, children[1 - childIdxLocal], parentLocal);
+		BVHIndex otherChild = children[1 - childIdxLocal];
+		if (!grandpaIdx.isValid())
+		{
+			if (!otherChild.isLeaf())//there has to be one inner node in the tree
+			{
+				startNode = otherChild.ToNative();
+				m_sBox = m_pNodes->operator()(otherChild.innerIdx())->getBox();
+				bvhNodeData[otherChild.innerIdx()].parent = INVALID;
+			}
+			else
+			{
+				m_sBox = getWorldNodeBox(info->a_Nodes(otherChild.leafIdx()));
+			}
+		}
+		else if (grandpaIdx.isValid())
+		{
+			int parentLocal = getChildIdxInLocal(grandpaIdx, nodeIdx);
+			setChild(grandpaIdx, otherChild, parentLocal);
+			propagateBBChange(grandpaIdx, getBox(nodeIdx), parentLocal);
+		}
 	}
 }
 
-void e_SceneBVH::insertNode(BVHIndex bvhNodeIdx, BVHIndex nodeIdx, const AABB& nodeWorldBox)
+void e_SceneBVH::insertNode(BVHIndex bvhNodeIdx, unsigned int nodeIdx, const AABB& nodeWorldBox)
 {
-	/*if (bvhNodeIdx < 0)//split leaf
+	if (bvhNodeIdx.isLeaf())//split leaf
 	{
-		e_BVHNodeData* node = m_pNodes->operator()(m_sBvhNodeCount);
-		setChild(m_sBvhNodeCount, nodeIdx, 0);
-		setChild(m_sBvhNodeCount, bvhNodeIdx, 1);
-		int parentIdx = nodeToBVHNode[bvhNodeIdx];
-		bvhNodeData[m_sBvhNodeCount] = BVHNodeInfo(parentIdx, 1);//only set one so we can increment
-		setChild(parentIdx, m_sBvhNodeCount, getChildIdxInLocal(parentIdx, bvhNodeIdx));
-		bvhNodeData[m_sBvhNodeCount].changeCount(bvhNodeData, +1);
-		nodeToBVHNode[nodeIdx] = m_sBvhNodeCount;
-		nodeToBVHNode[~bvhNodeIdx] = m_sBvhNodeCount;
-		m_sBvhNodeCount++;
+		e_StreamReference(e_BVHNodeData) node = m_pNodes->operator()(m_sBvhNodeCount++);
+		BVHIndex idx = BVHIndex::FromBVHNode(node);
+		setChild(idx, BVHIndex::FromSceneNode(info->a_Nodes(nodeIdx)), 0);
+		setChild(idx, bvhNodeIdx, 1);
+		BVHIndex parentIdx = nodeToBVHNode[bvhNodeIdx.leafIdx()];
+		bvhNodeData[idx.innerIdx()] = BVHNodeInfo(parentIdx, 1);//only set one so we can increment
+		setChild(parentIdx, idx, getChildIdxInLocal(parentIdx, bvhNodeIdx));
+		bvhNodeData[idx.innerIdx()].changeCount(bvhNodeData, +1);
+		nodeToBVHNode[nodeIdx] = idx;
+		nodeToBVHNode[bvhNodeIdx.leafIdx()] = idx;
 	}
 	else
 	{
-		e_BVHNodeData* node = m_pNodes->operator()(bvhNodeIdx);
-		Vec2i& c = node->getChildren();
-		if (c.x == NO_NODE || c.y == NO_NODE)//insert into one child
+		e_BVHNodeData* node = m_pNodes->operator()(bvhNodeIdx.innerIdx());
+		BVHIndexTuple c = FromChildren(node);
+		if (c[0].NoNode() || c[1].NoNode())//insert into one child
 		{
-			node->setChild(c.y == NO_NODE, TO_CHILD(nodeIdx), getWorldNodeBox(info->a_Nodes(nodeIdx)));
-			bvhNodeData[bvhNodeIdx].increaseCount(bvhNodeData);
+			node->setChild(c[1].NoNode() == NO_NODE, ~nodeIdx, getWorldNodeBox(info->a_Nodes(nodeIdx)));
+			bvhNodeData[bvhNodeIdx.innerIdx()].changeCount(bvhNodeData, +1);
 			nodeToBVHNode[nodeIdx] = bvhNodeIdx;
 		}
 		else
 		{
 			float left_sah, right_sah;
 			sahModified(bvhNodeIdx, nodeWorldBox, left_sah, right_sah);
-			insertNode(left_sah < right_sah ? c.x : c.y, nodeIdx, nodeWorldBox);
+			insertNode(left_sah < right_sah ? c[0] : c[1], nodeIdx, nodeWorldBox);
 		}
-	}*/
+	}
 }
 
 bool e_SceneBVH::Build(e_StreamReference(e_Node) a_Nodes, e_BufferReference<e_Mesh, e_KernelMesh> a_Meshes)
@@ -283,23 +306,25 @@ bool e_SceneBVH::Build(e_StreamReference(e_Node) a_Nodes, e_BufferReference<e_Me
 			Pq.m_maxLeafSize = 1;
 			SplitBVHBuilder bu(&b, Pq, SplitBVHBuilder::BuildParams());
 			bu.run();
-			b.buildInfoTree(BVHIndex::FromBVHNode(m_pNodes->operator()(startNode)), INVALID);
-			validateTree(BVHIndex::FromBVHNode(m_pNodes->operator()(startNode)), INVALID);
+			b.buildInfoTree(BVHIndex::FromNative(startNode), INVALID);
+			validateTree(BVHIndex::FromNative(startNode), INVALID);
 		}
 		else
 		{
 			for (size_t i = 0; i < nodesToRemove.size(); i++)
 				removeNodeAndCollapse(nodeToBVHNode[nodesToRemove[i].getIndex()], BVHIndex::FromSceneNode(nodesToRemove[i]));
-			m_sBox = m_pNodes->operator()(0)->getBox();
 			for (size_t i = 0; i < nodesToInsert.size(); i++)
-				insertNode(BVHIndex::FromBVHNode(m_pNodes->operator()(startNode)), BVHIndex::FromSceneNode(nodesToRemove[i]), getWorldNodeBox(nodesToRemove[i]));
-			m_sBox = m_pNodes->operator()(0)->getBox();
+				insertNode(BVHIndex::FromNative(startNode), nodesToInsert[i].getIndex(), getWorldNodeBox(nodesToInsert[i]));
 
-			validateTree(BVHIndex::FromBVHNode(m_pNodes->operator()(startNode)), INVALID);
+			validateTree(BVHIndex::FromNative(startNode), INVALID);
+			printGraph("1.txt", a_Nodes);
 		}
 	}
 	if (!a_Nodes.getLength())
+	{
 		startNode = -1;
+		m_sBvhNodeCount = 0;
+	}
 	m_pNodes->Invalidate();
 	m_pNodes->UpdateInvalidated();
 	m_pTransforms->Invalidate();
@@ -376,6 +401,8 @@ const float4x4& e_SceneBVH::getNodeTransform(e_BufferReference<e_Node, e_Node> n
 
 e_BVHNodeData* e_SceneBVH::getBVHNode(unsigned int i)
 {
+	if ((int)i >= m_sBvhNodeCount)
+		return 0;
 	e_StreamReference(e_BVHNodeData) n = m_pNodes->operator()(i);
 	e_BVHNodeData* n2 = n.operator e_BVHNodeData *();
 	return n2;
@@ -417,12 +444,13 @@ void e_SceneBVH::sahModified(BVHIndex nodeIdx, const AABB& box, float& leftSAH, 
 	AABB left, right;
 	e_BVHNodeData* node = m_pNodes->operator()(nodeIdx.innerIdx());
 	node->getBox(left, right);
+	BVHIndexTuple c = FromChildren(node);
 	float lA = left.Area(), rA = right.Area();
 	left.Enlarge(box);
 	right.Enlarge(box);
 	float lAd = left.Area(), rAd = right.Area();
-	int lN = bvhNodeData[node->getChildren().x].numLeafs;
-	int rN = bvhNodeData[node->getChildren().y].numLeafs;
+	int lN = c[0].isLeaf() ? 1 : bvhNodeData[c[0].innerIdx()].numLeafs;
+	int rN = c[1].isLeaf() ? 1 : bvhNodeData[c[1].innerIdx()].numLeafs;
 	leftSAH = lAd * (lN + 1) + rA * rN;
 	rightSAH = lA * lN + rAd * (rN + 1);
 }
@@ -448,4 +476,11 @@ int e_SceneBVH::validateTree(BVHIndex idx, BVHIndex parent)
 			throw std::runtime_error(__FUNCTION__);
 		return s;
 	}
+}
+
+AABB e_SceneBVH::getBox(BVHIndex idx)
+{
+	if (idx.isLeaf())
+		return getWorldNodeBox(info->a_Nodes(idx.leafIdx()));
+	else return m_pNodes->operator()(idx.innerIdx())->getBox();
 }

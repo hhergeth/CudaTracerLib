@@ -352,6 +352,9 @@
     <ClCompile Include="Engine\SceneBuilder\TangentSpaceHelper.cpp">
       <Filter>Engine\SceneBuilder</Filter>
     </ClCompile>
+    <ClCompile Include="Engine\e_SceneBVHVisualize.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="Base\CudaRandom.cu">

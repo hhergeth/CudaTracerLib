@@ -803,7 +803,7 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 
 		while (nodeAddr != EntrypointSentinel)
         {
-			nodeAddr = nodeAddr == EntrypointSentinel - 1 ? EntrypointSentinel : nodeAddr;
+			//nodeAddr = nodeAddr == EntrypointSentinel - 1 ? EntrypointSentinel : nodeAddr;
             // Traverse internal nodes until all SIMD lanes have found a leaf.
 
             while (unsigned int(nodeAddr) < unsigned int(EntrypointSentinel))   // functionally equivalent, but faster

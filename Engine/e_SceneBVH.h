@@ -46,12 +46,15 @@ public:
 	const float4x4& getNodeTransform(e_BufferReference<e_Node, e_Node> n);
 	e_BVHNodeData* getBVHNode(unsigned int i);
 	bool needsBuild();
+	void printGraph(const std::string& path, e_BufferReference<e_Node, e_Node> a_Nodes);
 private:
 	void removeNodeAndCollapse(BVHIndex nodeIdx, BVHIndex childIdx);
-	void insertNode(BVHIndex bvhNodeIdx, BVHIndex nodeIdx, const AABB& nodeWorldBox);
+	void insertNode(BVHIndex bvhNodeIdx, unsigned int nodeIdx, const AABB& nodeWorldBox);
 	int getChildIdxInLocal(BVHIndex nodeIdx, BVHIndex childIdx);
 	void setChild(BVHIndex nodeIdx, BVHIndex childIdx, int localIdxToSetTo);
 	AABB getWorldNodeBox(e_BufferReference<e_Node, e_Node> ref);
 	void sahModified(BVHIndex nodeIdx, const AABB& box, float& leftSAH, float& rightSAH);
 	int validateTree(BVHIndex idx, BVHIndex parent);
+	void propagateBBChange(BVHIndex idx, const AABB& box, int localChildIdx);
+	AABB getBox(BVHIndex idx);
 };

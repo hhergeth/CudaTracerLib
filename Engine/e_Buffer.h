@@ -5,6 +5,7 @@
 #include "e_ErrorHandler.h"
 #include "e_Buffer_device.h"
 #include "../Base/FileStream.h"
+#include <algorithm>
 
 template<typename H, typename D> class e_BufferReference;
 template<typename H, typename D> class e_Buffer
@@ -146,6 +147,36 @@ public:
 				}
 			m_sDeallocated.push_back(std::make_pair(a_Ref.getIndex(), a_Ref.getLength()));
 		}
+
+		if (m_sDeallocated.size())
+		{
+			std::vector<part > result;
+			std::sort(m_sDeallocated.begin(), m_sDeallocated.end());
+			std::vector<part >::iterator it = m_sDeallocated.begin();
+			part current = *(it)++;
+			while (it != m_sDeallocated.end()){
+				if (current.first + current.second >= it->first){ // you might want to change it to >=
+					current.second = max(current.first + current.second, it->first + it->second) - current.first;
+				}
+				else {
+					result.push_back(current);
+					current = *(it);
+				}
+				it++;
+			}
+			result.push_back(current);
+			m_sDeallocated = result;
+		}
+
+		if (m_sDeallocated.size())
+		{
+			part last = m_sDeallocated.back();
+			if (last.first + last.second == m_uPos)
+			{
+				m_sDeallocated.erase(m_sDeallocated.end() - 1);
+				m_uPos -= last.second;
+			}
+		}
 	}
 	void dealloc(unsigned int i, unsigned int j = 1)
 	{
@@ -221,11 +252,11 @@ public:
 	}
 	unsigned int NumUsedElements() const
 	{
-		return m_uPos;
+		return UsedElements().getLength();
 	}
-	e_BufferReference<H, D> UsedElements()
+	e_BufferReference<H, D> UsedElements() const
 	{
-		return e_BufferReference<H, D>(this, 0, m_uPos);
+		return e_BufferReference<H, D>((e_Buffer<H, D>*)this, 0, m_uPos);
 	}
 	unsigned int getSizeInBytes() const
 	{
@@ -555,6 +586,36 @@ public:
 					return;
 				}
 			m_sDeallocated.push_back(std::make_pair(a_Ref.getIndex(), a_Ref.getLength()));
+		}
+
+		if (m_sDeallocated.size())
+		{
+			std::vector<part > result;
+			std::sort(m_sDeallocated.begin(), m_sDeallocated.end());
+			std::vector<part >::iterator it = m_sDeallocated.begin();
+			part current = *(it)++;
+			while (it != m_sDeallocated.end()){
+				if (current.first + current.second >= it->first){ // you might want to change it to >=
+					current.second = max(current.first + current.second, it->first + it->second) - current.first;
+				}
+				else {
+					result.push_back(current);
+					current = *(it);
+				}
+				it++;
+			}
+			result.push_back(current);
+			m_sDeallocated = result;
+		}
+
+		if (m_sDeallocated.size())
+		{
+			part last = m_sDeallocated.back();
+			if (last.first + last.second == m_uPos)
+			{
+				m_sDeallocated.erase(m_sDeallocated.end() - 1);
+				m_uPos -= last.second;
+			}
 		}
 	}
 	void dealloc(unsigned int i, unsigned int j = 1)

@@ -27,10 +27,10 @@ class e_DynamicScene
 	class MatStream;
 private:
 	std::vector<e_StreamReference(e_Node)> m_sRemovedNodes;
-	e_SceneBVH* m_pBVH;
 	e_TmpVertex* m_pDeviceTmpFloats;
 	unsigned int m_uEnvMapIndex;
 public:
+	e_SceneBVH* m_pBVH;
 	e_Stream<e_TriangleData>* m_pTriDataStream;
 	e_Stream<e_TriIntersectorData>* m_pTriIntStream;
 	e_Stream<e_BVHNodeData>* m_pBVHStream;
@@ -105,5 +105,4 @@ public:
 	e_Stream<e_KernelMaterial>* getMatBuffer();
 	void InvalidateNodesInBVH(e_StreamReference(e_Node) n);
 	void InvalidateMeshesInBVH(e_BufferReference<e_Mesh, e_KernelMesh> m);
-	e_BVHNodeData* getSceneBVHNode(unsigned int idx);
 };
