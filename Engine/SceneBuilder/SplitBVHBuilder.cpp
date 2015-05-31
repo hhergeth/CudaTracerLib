@@ -163,7 +163,7 @@ int handleNode(BVHNode* n, IBVHBuilderCallback* clb, std::vector<int>& m_Indices
 	{
 		LeafNode* leaf = (LeafNode*)n;
 		if (leaf->getNumTriangles() == 0)
-			return -214783648;
+			return 0x76543210;
 		if (level)
 		{
 			int idx = clb->handleLeafObjects(m_Indices[leaf->m_lo]);

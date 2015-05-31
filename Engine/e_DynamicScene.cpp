@@ -747,7 +747,7 @@ e_Stream<e_KernelMaterial>* e_DynamicScene::getMatBuffer()
 	return m_pMaterialBuffer;
 }
 
-e_BVHNodeData& e_DynamicScene::getSceneBVHNode(unsigned int idx)
+e_BVHNodeData* e_DynamicScene::getSceneBVHNode(unsigned int idx)
 {
 	return m_pBVH->getBVHNode(idx);
 }

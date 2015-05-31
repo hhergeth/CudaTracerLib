@@ -105,5 +105,5 @@ public:
 	e_Stream<e_KernelMaterial>* getMatBuffer();
 	void InvalidateNodesInBVH(e_StreamReference(e_Node) n);
 	void InvalidateMeshesInBVH(e_BufferReference<e_Mesh, e_KernelMesh> m);
-	e_BVHNodeData& getSceneBVHNode(unsigned int idx);
+	e_BVHNodeData* getSceneBVHNode(unsigned int idx);
 };

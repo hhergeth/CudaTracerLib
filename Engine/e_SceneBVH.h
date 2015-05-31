@@ -11,7 +11,10 @@ template<typename H, typename D> class e_BufferReference;
 
 class e_SceneBVH
 {
+public:
+	struct BVHIndex;
 private:
+	int m_sBvhNodeCount;
 	e_Stream<e_BVHNodeData>* m_pNodes;
 	e_Stream<float4x4>* m_pTransforms;
 	e_Stream<float4x4>* m_pInvTransforms;
@@ -19,13 +22,16 @@ private:
 
 	struct BVHNodeInfo;
 	class BuilderCLB;
+	struct SceneInfo;
 
 	std::vector<BVHNodeInfo> bvhNodeData;
-	std::vector<int> nodeToBVHNode;
+	std::vector<BVHIndex> nodeToBVHNode;
 
 	std::vector<e_BufferReference<e_Node, e_Node>> nodesToRecompute;
 	std::vector<e_BufferReference<e_Node, e_Node>> nodesToInsert;
 	std::vector<e_BufferReference<e_Node, e_Node>> nodesToRemove;
+
+	SceneInfo* info;
 public:
 	AABB m_sBox;
 	e_SceneBVH(unsigned int a_NodeCount);
@@ -38,8 +44,14 @@ public:
 	void addNode(e_BufferReference<e_Node, e_Node> n);
 	void removeNode(e_BufferReference<e_Node, e_Node> n);
 	const float4x4& getNodeTransform(e_BufferReference<e_Node, e_Node> n);
-	e_BVHNodeData& getBVHNode(unsigned int i);
+	e_BVHNodeData* getBVHNode(unsigned int i);
 	bool needsBuild();
 private:
-
+	void removeNodeAndCollapse(BVHIndex nodeIdx, BVHIndex childIdx);
+	void insertNode(BVHIndex bvhNodeIdx, BVHIndex nodeIdx, const AABB& nodeWorldBox);
+	int getChildIdxInLocal(BVHIndex nodeIdx, BVHIndex childIdx);
+	void setChild(BVHIndex nodeIdx, BVHIndex childIdx, int localIdxToSetTo);
+	AABB getWorldNodeBox(e_BufferReference<e_Node, e_Node> ref);
+	void sahModified(BVHIndex nodeIdx, const AABB& box, float& leftSAH, float& rightSAH);
+	int validateTree(BVHIndex idx, BVHIndex parent);
 };

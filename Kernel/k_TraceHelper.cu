@@ -270,7 +270,7 @@ bool k_TraceRay(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result)
 	while(at)
 	{
 		int nodeAddrOuter = traversalStackOuter[--at];
-		while (nodeAddrOuter >= 0)
+		while (nodeAddrOuter >= 0 && nodeAddrOuter != EntrypointSentinel)
 		{
 #ifdef ISCUDA
 			const float4 n0xy = tex1Dfetch(t_SceneNodes, nodeAddrOuter + 0); // (c0.lo.x, c0.hi.x, c0.lo.y, c0.hi.y)
