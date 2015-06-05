@@ -22,11 +22,11 @@ void write(int idx, e_BVHNodeData* nodes, int parent, std::ofstream& f, int& lea
 	if (c.x > 0 && c.x != NO_NODE)
 		write(c.x / 4, nodes, idx, f, leafC);
 	else if (c.x < 0)
-		f << idx << " -> " << c.x << ";\n";
+		f << idx << " -> " << c.x << "[style=dotted];\n";
 	if (c.y > 0 && c.y != NO_NODE)
 		write(c.y / 4, nodes, idx, f, leafC);
 	else if (c.y < 0)
-		f << idx << " -> " << c.y << ";\n";
+		f << idx << " -> " << c.y << "[style=dotted];\n";
 }
 
 void e_SceneBVH::printGraph(const std::string& path, e_BufferReference<e_Node, e_Node> a_Nodes)

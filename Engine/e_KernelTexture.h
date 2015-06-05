@@ -134,7 +134,7 @@ struct e_ImageTexture : public e_TextureBase//, public e_DerivedTypeHelper<4>
 	}
 	e_Variable<e_KernelMIPMap> tex;
 	e_TextureMapping2D mapping;
-	FixedString<64> file;
+	FixedString<128> file;
 };
 
 struct e_UVTexture : public e_TextureBase//, public e_DerivedTypeHelper<5>

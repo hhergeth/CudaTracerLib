@@ -65,6 +65,11 @@ namespace bvh_helper
 				throw std::runtime_error("Not enough space for nodes!");
 			return nodes + *index / 4;
 		}
+		void setSibling(int idx, int sibling)
+		{
+			if (idx >= 0)
+				nodes[idx / 4].setSibling(sibling);
+		}
 		virtual unsigned int handleLeafObjects(unsigned int pNode)
 		{
 			unsigned int c = triIndex++;
@@ -76,7 +81,7 @@ namespace bvh_helper
 			indices[c].setIndex(pNode);
 			return c;
 		}
-		virtual void handleLastLeafObject()
+		virtual void handleLastLeafObject(int parent)
 		{
 			//*(int*)&tris[triIndex].x = 0x80000000;
 			//indices[triIndex] = -1;
@@ -84,6 +89,7 @@ namespace bvh_helper
 			//if(triIndex > L1)
 			//	throw 1;
 			indices[triIndex - 1].setFlag(true);
+			*(int*)(indices + triIndex++) = parent;
 		}
 		virtual void HandleStartNode(int startNode)
 		{

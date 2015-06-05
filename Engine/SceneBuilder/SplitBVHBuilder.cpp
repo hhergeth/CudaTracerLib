@@ -157,7 +157,7 @@ SplitBVHBuilder::~SplitBVHBuilder(void)
 
 //------------------------------------------------------------------------
 
-int handleNode(BVHNode* n, IBVHBuilderCallback* clb, std::vector<int>& m_Indices, int level = 0)
+int handleNode(BVHNode* n, IBVHBuilderCallback* clb, std::vector<int>& m_Indices, int level = 0, unsigned int parent = -1)
 {
 	if (n->isLeaf())
 	{
@@ -169,7 +169,7 @@ int handleNode(BVHNode* n, IBVHBuilderCallback* clb, std::vector<int>& m_Indices
 			int idx = clb->handleLeafObjects(m_Indices[leaf->m_lo]);
 			for (int j = leaf->m_lo + 1; j < leaf->m_hi; j++)
 				clb->handleLeafObjects(m_Indices[j]);
-			clb->handleLastLeafObject();
+			clb->handleLastLeafObject(parent);
 			return ~idx;
 		}
 		else
@@ -179,9 +179,11 @@ int handleNode(BVHNode* n, IBVHBuilderCallback* clb, std::vector<int>& m_Indices
 			int idx2 = clb->handleLeafObjects(m_Indices[leaf->m_lo]);
 			for (int j = leaf->m_lo + 1; j < leaf->m_hi; j++)
 				clb->handleLeafObjects(m_Indices[j]);
-			clb->handleLastLeafObject();
+			clb->handleLastLeafObject(parent);
 
 			node->setChildren(Vec2i(~idx2, 0x76543210));
+			node->setParent(-1);
+			node->setSibling(-1);
 			node->setLeft(n->m_bounds);
 			node->setRight(AABB(Vec3f(0.0f), Vec3f(0.0f)));
 			return idx;
@@ -193,9 +195,12 @@ int handleNode(BVHNode* n, IBVHBuilderCallback* clb, std::vector<int>& m_Indices
 		int idx;
 		e_BVHNodeData* node = clb->HandleNodeAllocation(&idx);
 		InnerNode* n2 = (InnerNode*)n;
-		int a = handleNode(n2->getChildNode(0), clb, m_Indices, level + 1);
-		int b = handleNode(n2->getChildNode(1), clb, m_Indices, level + 1);
+		int a = handleNode(n2->getChildNode(0), clb, m_Indices, level + 1, idx);
+		int b = handleNode(n2->getChildNode(1), clb, m_Indices, level + 1, idx);
+		clb->setSibling(a, b);
+		clb->setSibling(b, a);
 		node->setChildren(Vec2i(a, b));
+		node->setParent(parent);
 		node->setLeft(n2->getChildNode(0)->m_bounds);
 		node->setRight(n2->getChildNode(1)->m_bounds);
 		return idx;
@@ -215,6 +220,7 @@ void SplitBVHBuilder::run(void)
     {
         m_refStack[i].triIdx = i;
 		m_pClb->getBox(i, &m_refStack[i].bounds);
+		m_refStack[i].bounds = m_refStack[i].bounds.Inflate();
         rootSpec.bounds.Enlarge(m_refStack[i].bounds);
     }
 
@@ -235,7 +241,9 @@ void SplitBVHBuilder::run(void)
 		100.0f, (float)m_numDuplicates / (float)m_pClb->Count() * 100.0f);
 
 	m_pClb->HandleBoundingBox(rootSpec.bounds);
-	m_pClb->HandleStartNode(handleNode(root, m_pClb, m_Indices));
+	int rootIdx = handleNode(root, m_pClb, m_Indices);
+	m_pClb->setSibling(rootIdx, 0x76543210);
+	m_pClb->HandleStartNode(rootIdx);
 
     delete root;
 }
@@ -581,7 +589,11 @@ void SplitBVHBuilder::performSpatialSplit(NodeSpec& left, NodeSpec& right, const
 
 void SplitBVHBuilder::splitReference(Reference& left, Reference& right, const Reference& ref, int dim, float pos)
 {
-	m_pClb->SplitNode(ref.triIdx, dim, pos, left.bounds, right.bounds, ref.bounds);
+	if (!m_pClb->SplitNode(ref.triIdx, dim, pos, left.bounds, right.bounds, ref.bounds))
+	{
+		left.bounds = ref.bounds;
+		right.bounds = ref.bounds;
+	}
 	left.triIdx = right.triIdx = ref.triIdx;
 }
 

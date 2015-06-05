@@ -42,8 +42,8 @@ public:
 	e_Stream<e_VolumeRegion>* m_pVolumes;
 	e_Stream<char>* m_pAnimStream;
 	e_Stream<e_KernelLight>* m_pLightStream;
-	const std::string m_pTexturePath;
-	const std::string m_pCompilePath;
+	std::string m_pTexturePath;
+	std::string m_pCompilePath;
 	e_MeshCompilerManager m_sCmpManager;
 	e_Sensor* m_pCamera;
 protected:

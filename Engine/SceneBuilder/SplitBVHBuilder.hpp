@@ -11,7 +11,7 @@ public:
 	{
 		return pNode;
 	}
-	virtual void handleLastLeafObject()
+	virtual void handleLastLeafObject(int parent)
 	{
 	}
 	virtual unsigned int Count() const = 0;
@@ -24,6 +24,7 @@ public:
 	{
 		return false;
 	}
+	virtual void setSibling(int idx, int sibling) = 0;
 };
 
 	enum BVH_STAT

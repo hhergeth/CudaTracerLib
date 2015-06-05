@@ -271,7 +271,9 @@ e_BufferReference<e_MIPMap, e_KernelMIPMap> e_DynamicScene::LoadTexture(const st
 	if (!exists(rawFilePath))
 		return LoadTexture((std::string(m_pTexturePath) + "404.jpg").c_str(), a_MipMap);
 	bool load;
-	e_BufferReference<e_MIPMap, e_KernelMIPMap> T = m_pTextureBuffer->LoadCached(rawFilePath.string(), load);
+	if (file.find("../MOW Data/texture/") != -1)
+		std::cout << "A\n";
+	e_BufferReference<e_MIPMap, e_KernelMIPMap> T = m_pTextureBuffer->LoadCached(file, load);
 	if(load)
 	{
 		path cmpFilePath = path(m_pCompilePath) / "Images/" / rawFilePath.filename() / ".xtex";
@@ -286,7 +288,7 @@ e_BufferReference<e_MIPMap, e_KernelMIPMap> e_DynamicScene::LoadTexture(const st
 			boost::filesystem::last_write_time(cmpFilePath, rawStamp);
 		}
 		InputStream I(cmpFilePath.string().c_str());
-		new(T)e_MIPMap(rawFilePath.string(), I);
+		new(T)e_MIPMap(file, I);
 		I.Close();
 		T.Invalidate();
 	}

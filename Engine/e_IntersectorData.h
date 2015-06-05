@@ -92,6 +92,14 @@ struct e_BVHNodeData
 	{
 		*(Vec2i*)&d = c;
 	}
+	CUDA_FUNC_IN void setParent(unsigned int parent)
+	{
+		*(unsigned int*)&d.z = parent;
+	}
+	CUDA_FUNC_IN void setSibling(unsigned int sibling)
+	{
+		*(unsigned int*)&d.w = sibling;
+	}
 	CUDA_FUNC_IN void setDummy()
 	{
 		AABB std(Vec3f(0), Vec3f(0));

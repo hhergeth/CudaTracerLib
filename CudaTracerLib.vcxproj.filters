@@ -282,6 +282,9 @@
     <ClInclude Include="Engine\SceneBuilder\TangentSpaceHelper.h">
       <Filter>Engine\SceneBuilder</Filter>
     </ClInclude>
+    <ClInclude Include="Engine\e_BVHRebuilder.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Base\FileStream.cpp">
@@ -353,6 +356,9 @@
       <Filter>Engine\SceneBuilder</Filter>
     </ClCompile>
     <ClCompile Include="Engine\e_SceneBVHVisualize.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\e_BVHRebuilder.cpp">
       <Filter>Engine</Filter>
     </ClCompile>
   </ItemGroup>

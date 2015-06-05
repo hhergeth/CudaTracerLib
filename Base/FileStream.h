@@ -148,7 +148,10 @@ public:
 	virtual void Close()
 	{
 		if (buf)
+		{
 			free((void*)buf);
+			buf = 0;
+		}
 		buf = 0;
 	}
 	virtual unsigned long long getPos()

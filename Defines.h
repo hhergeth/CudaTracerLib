@@ -4,7 +4,7 @@
 #include <stdlib.h>
 
 #define EXT_TRI
-#define NUM_UV_SETS 1
+#define NUM_UV_SETS 2
 
 #ifdef _MSC_VER
 #define ISWINDOWS

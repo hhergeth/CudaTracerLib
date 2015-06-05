@@ -336,9 +336,9 @@ public:
 	{
 		return e_BufferReference<H, D>(m_pStream, m_uIndex + i, 1);
 	}
-	operator bool() const
+	bool operator<(const e_BufferReference<H, D>& rhs)
 	{
-		return m_uLength;
+		return m_uIndex < rhs.m_uIndex;
 	}
 	e_BufferReference<H, D>& operator= (const H &r)
 	{

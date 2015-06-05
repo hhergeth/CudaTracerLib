@@ -5,6 +5,37 @@
 #include "e_Light.h"
 #include "SceneBuilder\Importer.h"
 
+#define NO_NODE 0x76543210
+void write(int idx, const e_BVHNodeData* nodes, int parent, std::ofstream& f, int& leafC)
+{
+	if (parent != -1)
+		f << parent << " -> " << idx << ";\n";
+	Vec2i c = nodes[idx].getChildren();
+	int p = *(int*)&nodes[idx].d.z;
+	if (p != -1 && p != parent * 4)
+		throw std::runtime_error("");
+	if (p != -1)
+		f << idx << " -> " << p / 4 << ";\n";
+	if (c.x > 0 && c.x != NO_NODE)
+		write(c.x / 4, nodes, idx, f, leafC);
+	else if (c.x < 0)
+		f << idx << " -> " << c.x << "[style=dotted];\n";
+	if (c.y > 0 && c.y != NO_NODE)
+		write(c.y / 4, nodes, idx, f, leafC);
+	else if (c.y < 0)
+		f << idx << " -> " << c.y << "[style=dotted];\n";
+}
+void printBVHData(const e_BVHNodeData* bvh, const std::string& path)
+{
+	std::ofstream file;
+	file.open(path);
+	file << "digraph SceneBVH {\nnode [fontname=\"Arial\"];\n";
+	int leafC = 0;
+	write(0, bvh, -1, file, leafC);
+	file << "}";
+	file.close();
+}
+
 e_Mesh::e_Mesh(const std::string& path, IInStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4)
 	: m_uPath(path)
 {
@@ -46,6 +77,8 @@ e_Mesh::e_Mesh(const std::string& path, IInStream& a_In, e_Stream<e_TriIntersect
 	m_sIndicesInfo = a_Stream3->malloc(m_uIndicesSize);
 	a_In.Read(m_sIndicesInfo(0), m_uIndicesSize * sizeof(e_TriIntersectorData2));
 	m_sIndicesInfo.Invalidate();
+
+	printBVHData(m_sNodeInfo(0), "mesh.txt");
 }
 
 void e_Mesh::Free(e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4)

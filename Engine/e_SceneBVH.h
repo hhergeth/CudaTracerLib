@@ -2,6 +2,7 @@
 
 #include <MathTypes.h>
 #include "e_SceneBVH_device.h"
+#include <set>
 
 class e_Node;
 class e_Mesh;
@@ -13,6 +14,7 @@ class e_SceneBVH
 {
 public:
 	struct BVHIndex;
+	struct BVHIndexTuple;
 private:
 	int m_sBvhNodeCount;
 	e_Stream<e_BVHNodeData>* m_pNodes;
@@ -27,9 +29,10 @@ private:
 	std::vector<BVHNodeInfo> bvhNodeData;
 	std::vector<BVHIndex> nodeToBVHNode;
 
-	std::vector<e_BufferReference<e_Node, e_Node>> nodesToRecompute;
-	std::vector<e_BufferReference<e_Node, e_Node>> nodesToInsert;
-	std::vector<e_BufferReference<e_Node, e_Node>> nodesToRemove;
+	std::set<e_BufferReference<e_Node, e_Node>> nodesToRecompute;
+	std::set<e_BufferReference<e_Node, e_Node>> nodesToInsert;
+	std::set<e_BufferReference<e_Node, e_Node>> nodesToRemove;
+	std::vector<bool> flaggedBVHNodes, flaggedSceneNodes;
 
 	SceneInfo* info;
 public:
@@ -50,6 +53,7 @@ public:
 private:
 	void removeNodeAndCollapse(BVHIndex nodeIdx, BVHIndex childIdx);
 	void insertNode(BVHIndex bvhNodeIdx, unsigned int nodeIdx, const AABB& nodeWorldBox);
+	void recomputeNode(BVHIndex bvhNodeIdx, AABB& newBox);
 	int getChildIdxInLocal(BVHIndex nodeIdx, BVHIndex childIdx);
 	void setChild(BVHIndex nodeIdx, BVHIndex childIdx, int localIdxToSetTo);
 	AABB getWorldNodeBox(e_BufferReference<e_Node, e_Node> ref);
@@ -57,4 +61,11 @@ private:
 	int validateTree(BVHIndex idx, BVHIndex parent);
 	void propagateBBChange(BVHIndex idx, const AABB& box, int localChildIdx);
 	AABB getBox(BVHIndex idx);
+	void propagateFlag(BVHIndex idx);
+	int numberGrandchildren(BVHIndex idx, int localChildIdx);
+	float sah(BVHIndex lhs, BVHIndex rhs);
+	float sah(BVHIndex lhs, int localChildIdx, int localGrandChildIdx);
+	BVHIndexTuple children(BVHIndex idx);
+	void swapChildren(BVHIndex idx, int localChildIdx, int localGrandChildIdx);
+	int numLeafs(BVHIndex idx);
 };
