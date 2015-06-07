@@ -33,7 +33,7 @@ CUDA_FUNC_IN TraceResult k_TraceRay(const Ray& r)
 
 CUDA_DEVICE CUDA_HOST void fillDG(const Vec2f& bary, const e_TriangleData* tri, const e_Node* node, DifferentialGeometry& dg);
 
-void k_INITIALIZE(const e_DynamicScene* a_Scene, const CudaRNGBuffer& a_RngBuf);
+void k_INITIALIZE(e_DynamicScene* a_Scene, const CudaRNGBuffer& a_RngBuf);
 
 unsigned int k_getNumRaysTraced();
 void k_setNumRaysTraced(unsigned int i);

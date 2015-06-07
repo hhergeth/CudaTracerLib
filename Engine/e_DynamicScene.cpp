@@ -132,7 +132,7 @@ e_DynamicScene::e_DynamicScene(e_Sensor* C, e_SceneInitData a_Data, const std::s
 
 void e_DynamicScene::Free()
 { 
-#define DEALLOC(x) { delete x; }
+#define DEALLOC(x) { delete x; x = 0;}
 	DEALLOC(m_pTriDataStream)
 	DEALLOC(m_pTriIntStream)
 	DEALLOC(m_pBVHStream)
@@ -147,6 +147,7 @@ void e_DynamicScene::Free()
 	CUDA_FREE(m_pDeviceTmpFloats);
 #undef DEALLOC
 	delete m_pBVH;
+	m_pBVH = 0;
 }
 
 e_DynamicScene::~e_DynamicScene()
@@ -402,7 +403,7 @@ void e_DynamicScene::AnimateMesh(e_StreamReference(e_Node) n, float t, unsigned 
 	m_pBVH->invalidateNode(n);
 }
 
-e_KernelDynamicScene e_DynamicScene::getKernelSceneData(bool devicePointer) const
+e_KernelDynamicScene e_DynamicScene::getKernelSceneData(bool devicePointer)
 {
 	e_KernelDynamicScene r;
 	r.m_sAnimData = m_pAnimStream->getKernelData(devicePointer);
@@ -418,7 +419,7 @@ e_KernelDynamicScene e_DynamicScene::getKernelSceneData(bool devicePointer) cons
 	r.m_sVolume = e_KernelAggregateVolume(m_pVolumes, devicePointer);
 	r.m_sSceneBVH = m_pBVH->getData(devicePointer);
 	r.m_uEnvMapIndex = m_uEnvMapIndex;
-	r.m_sBox = m_pBVH->m_sBox;
+	r.m_sBox = getBox(m_pNodeStream->UsedElements());
 	r.m_Camera = *m_pCamera;
 
 	if (m_pLightStream->NumUsedElements() < 20)
@@ -479,7 +480,7 @@ unsigned int e_DynamicScene::getCudaBufferSize()
 AABB e_DynamicScene::getBox(e_StreamReference(e_Node) n)
 {
 	if (n.getIndex() == 0 && n.getLength() == m_pNodeStream->NumUsedElements() && !m_pBVH->needsBuild())
-		return m_pBVH->m_sBox;
+		return m_pBVH->getSceneBox();
 	AABB r = AABB::Identity();
 	for(unsigned int i = 0; i < n.getLength(); i++)
 		r.Enlarge(n(i)->getWorldBox(getMesh(n(i)), GetNodeTransform(n(i))));

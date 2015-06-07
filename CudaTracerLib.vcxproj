@@ -120,7 +120,6 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClCompile Include="Engine\e_MeshCompiler.cpp" />
     <ClCompile Include="Engine\e_Node.cpp" />
     <ClCompile Include="Engine\e_SceneBVH.cpp" />
-    <ClCompile Include="Engine\e_SceneBVHVisualize.cpp" />
     <ClCompile Include="Engine\e_ShapeSet.cpp" />
     <ClCompile Include="Engine\SceneBuilder\Importer.cpp" />
     <ClCompile Include="Engine\SceneBuilder\MD5Parser.cpp" />

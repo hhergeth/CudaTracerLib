@@ -62,7 +62,7 @@ public:
 	void SetNodeTransform(const float4x4& mat, e_StreamReference(e_Node) n);
 	void AnimateMesh(e_StreamReference(e_Node) n, float t, unsigned int anim);
 	bool UpdateScene();
-	e_KernelDynamicScene getKernelSceneData(bool devicePointer = true)  const;
+	e_KernelDynamicScene getKernelSceneData(bool devicePointer = true);
 	//void UpdateMaterial(e_StreamReference(e_KernelMaterial) m);
 	e_StreamReference(e_Node) getNodes();
 	unsigned int getNodeCount();

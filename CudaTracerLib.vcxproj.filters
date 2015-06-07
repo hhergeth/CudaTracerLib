@@ -355,9 +355,6 @@
     <ClCompile Include="Engine\SceneBuilder\TangentSpaceHelper.cpp">
       <Filter>Engine\SceneBuilder</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\e_SceneBVHVisualize.cpp">
-      <Filter>Engine</Filter>
-    </ClCompile>
     <ClCompile Include="Engine\e_BVHRebuilder.cpp">
       <Filter>Engine</Filter>
     </ClCompile>

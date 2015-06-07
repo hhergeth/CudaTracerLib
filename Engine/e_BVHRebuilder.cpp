@@ -2,6 +2,7 @@
 #include "e_BVHRebuilder.h"
 #include "SceneBuilder/SplitBVHBuilder.hpp"
 #include <algorithm>
+#include <fstream>
 
 #define NO_NODE 0x76543210
 
@@ -54,12 +55,6 @@ public:
 		if (!isLeaf())
 			throw std::runtime_error("not a leaf!");
 		return ~native;
-	}
-	int idx() const
-	{
-		if (isLeaf())
-			return leafIdx();
-		else return innerIdx();
 	}
 	bool isValid() const
 	{
@@ -118,11 +113,11 @@ struct e_BVHRebuilder::BVHNodeInfo
 
 	}
 
-	static void changeCount(std::vector<BVHNodeInfo>& nodeInfos, const e_BVHNodeData* nodeData, int idx, int off)
+	static void changeCount(std::vector<BVHNodeInfo>& nodeInfos, const e_BVHNodeData* nodeData, BVHIndex idx, int off)
 	{
-		nodeInfos[idx].numLeafs += off;
-		int parent = nodeData[idx].getParent();
-		if (parent != -1)
+		nodeInfos[idx.innerIdx()].numLeafs += off;
+		BVHIndex parent = BVHIndex::FromNative(nodeData[idx.innerIdx()].getParent());
+		if (parent.isValid())
 			changeCount(nodeInfos, nodeData, parent, off);
 	}
 };
@@ -134,8 +129,6 @@ public:
 	BuilderCLB(e_BVHRebuilder* c)
 		: t(c)
 	{
-		t->bvhNodeData.clear();
-		t->nodeToBVHNode.clear();
 	}
 	virtual unsigned int Count() const
 	{
@@ -196,7 +189,7 @@ void e_BVHRebuilder::removeNodeAndCollapse(BVHIndex nodeIdx, BVHIndex childIdx)
 	BVHIndexTuple children = this->children(nodeIdx);
 	node->setChild(childIdxLocal, NO_NODE, AABB::Identity());
 	propagateBBChange(nodeIdx, AABB::Identity(), childIdxLocal);
-	BVHNodeInfo::changeCount(bvhNodeData, m_pBVHData, nodeIdx.innerIdx(), -1);
+	BVHNodeInfo::changeCount(bvhNodeData, m_pBVHData, nodeIdx, -1);
 	BVHIndex grandpaIdx = BVHIndex::FromNative(m_pBVHData[nodeIdx.innerIdx()].getParent());
 	if (children[1 - childIdxLocal].NoNode() && grandpaIdx.isValid())
 	{
@@ -236,7 +229,7 @@ void e_BVHRebuilder::insertNode(BVHIndex bvhNodeIdx, unsigned int nodeIdx, const
 		setChild(idx, bvhNodeIdx, 1);
 		bvhNodeData[idx.innerIdx()] = BVHNodeInfo(1);//only set one so we can increment
 		setChild(parentIdx, idx, localIdx);
-		BVHNodeInfo::changeCount(bvhNodeData, m_pBVHData, idx.innerIdx(), +1);
+		BVHNodeInfo::changeCount(bvhNodeData, m_pBVHData, idx, +1);
 		nodeToBVHNode[nodeIdx] = idx;
 		nodeToBVHNode[bvhNodeIdx.leafIdx()] = idx;
 		propagateBBChange(parentIdx, node->getBox(), localIdx);
@@ -248,7 +241,7 @@ void e_BVHRebuilder::insertNode(BVHIndex bvhNodeIdx, unsigned int nodeIdx, const
 		if (c[0].NoNode() || c[1].NoNode())//insert into one child
 		{
 			node->setChild(c[1].NoNode(), ~nodeIdx, m_pData->getBox(nodeIdx));
-			BVHNodeInfo::changeCount(bvhNodeData, m_pBVHData, bvhNodeIdx.innerIdx(), +1);
+			BVHNodeInfo::changeCount(bvhNodeData, m_pBVHData, bvhNodeIdx, +1);
 			nodeToBVHNode[nodeIdx] = bvhNodeIdx;
 			propagateBBChange(bvhNodeIdx, nodeWorldBox, c[1].NoNode());
 		}
@@ -315,6 +308,53 @@ void e_BVHRebuilder::recomputeNode(BVHIndex bvhNodeIdx, AABB& newBox)
 
 		newBox = getBox(bvhNodeIdx);
 	}
+}
+
+bool e_BVHRebuilder::Build(ISpatialInfoProvider* data)
+{
+	this->m_pData = data;
+	bool modified = false;
+	if (data->getCount() != 0 && needsBuild())
+	{
+		modified = true;
+		size_t m = max(nodesToInsert.size(), nodesToRecompute.size(), nodesToRemove.size());
+		if (m > data->getCount() / 2 || startNode == -1)
+		{
+			BuilderCLB b(this);
+			SplitBVHBuilder::Platform Pq;
+			Pq.m_maxLeafSize = 1;
+			SplitBVHBuilder bu(&b, Pq, SplitBVHBuilder::BuildParams());
+			bu.run();
+			b.buildInfoTree(BVHIndex::FromNative(startNode), BVHIndex::INVALID());
+			validateTree(BVHIndex::FromNative(startNode), BVHIndex::INVALID());
+		}
+		else
+		{
+			typedef std::set<unsigned int>::iterator n_it;
+			for (n_it it = nodesToRemove.begin(); it != nodesToRemove.end(); ++it)
+				removeNodeAndCollapse(nodeToBVHNode[*it], BVHIndex::FromSceneNode(*it));
+			for (n_it it = nodesToInsert.begin(); it != nodesToInsert.end(); ++it)
+				insertNode(BVHIndex::FromNative(startNode), *it, data->getBox(*it));
+			for (n_it it = nodesToRecompute.begin(); it != nodesToRecompute.end(); ++it)
+				propagateFlag(BVHIndex::FromSceneNode(*it));
+			AABB box;
+			if (flaggedBVHNodes[startNode / 4])
+				recomputeNode(BVHIndex::FromNative(startNode), box);
+			flaggedBVHNodes.assign(flaggedBVHNodes.size(), 0);
+			flaggedSceneNodes.assign(flaggedSceneNodes.size(), 0);
+			validateTree(BVHIndex::FromNative(startNode), BVHIndex::INVALID());
+		}
+		//printGraph("1.txt", a_Nodes);
+	}
+	if (!data->getCount())
+	{
+		startNode = -1;
+		m_uBvhNodeCount = 0;
+	}
+	nodesToRecompute.clear();
+	nodesToInsert.clear();
+	nodesToRemove.clear();
+	return modified;
 }
 
 e_BVHRebuilder::e_BVHRebuilder(e_BVHNodeData* data, unsigned int a_BVHNodeLength, unsigned int a_SceneNodeLength)
@@ -510,6 +550,32 @@ void e_BVHRebuilder::swapChildren(BVHIndex idx, int localChildIdx, int localGran
 	setChild(idx, grandChildIdx, localChildIdx);
 
 	int grandChildLeafNum = numLeafs(grandChildIdx), childLeafNum = numLeafs(childIdx);
-	BVHNodeInfo::changeCount(bvhNodeData, m_pBVHData, otherChildIdx.innerIdx(), -grandChildLeafNum + childLeafNum);
-	BVHNodeInfo::changeCount(bvhNodeData, m_pBVHData, idx.innerIdx(), -childLeafNum + grandChildLeafNum);
+	BVHNodeInfo::changeCount(bvhNodeData, m_pBVHData, otherChildIdx, -grandChildLeafNum + childLeafNum);
+	BVHNodeInfo::changeCount(bvhNodeData, m_pBVHData, idx, -childLeafNum + grandChildLeafNum);
+}
+
+void write(int idx, e_BVHNodeData* nodes, int parent, std::ofstream& f, int& leafC)
+{
+	if (parent != -1)
+	f << parent << " -> " << idx << ";\n";
+	Vec2i c = nodes[idx].getChildren();
+	if (c.x > 0 && c.x != NO_NODE)
+	write(c.x / 4, nodes, idx, f, leafC);
+	else if (c.x < 0)
+	f << idx << " -> " << c.x << "[style=dotted];\n";
+	if (c.y > 0 && c.y != NO_NODE)
+	write(c.y / 4, nodes, idx, f, leafC);
+	else if (c.y < 0)
+	f << idx << " -> " << c.y << "[style=dotted];\n";
+}
+
+void e_BVHRebuilder::printGraph(const std::string& path)
+{
+	std::ofstream file;
+	file.open(path);
+	file << "digraph SceneBVH {\nnode [fontname=\"Arial\"];\n";
+	int leafC = 0;
+	write(startNode / 4, m_pBVHData, -1, file, leafC);
+	file << "}";
+	file.close();
 }

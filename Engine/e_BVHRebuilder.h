@@ -6,8 +6,8 @@
 class ISpatialInfoProvider
 {
 public:
-	AABB getBox(unsigned int idx);
-	unsigned int getCount();
+	virtual AABB getBox(unsigned int idx) = 0;
+	virtual unsigned int getCount() = 0;
 };
 
 struct e_BVHNodeData;
@@ -42,8 +42,10 @@ public:
 
 	bool Build(ISpatialInfoProvider* data);
 	int getStartNode(){ return startNode; }
+	unsigned int getNumBVHNodesUsed(){ return m_uBvhNodeCount; }
 	AABB getBox();
 	bool needsBuild();
+	void printGraph(const std::string& path);
 
 	void addNode(unsigned int n);
 	void removeNode(unsigned int n);
