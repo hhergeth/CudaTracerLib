@@ -69,6 +69,14 @@ namespace bvh_helper
 		{
 			if (idx >= 0)
 				nodes[idx / 4].setSibling(sibling);
+			else
+			{
+				int o = ~idx;
+				while (!indices[o].getFlag())
+					o++;
+				o += 2;
+				//*(int*)(indices + o) = sibling;
+			}
 		}
 		virtual unsigned int handleLeafObjects(unsigned int pNode)
 		{
@@ -89,7 +97,8 @@ namespace bvh_helper
 			//if(triIndex > L1)
 			//	throw 1;
 			indices[triIndex - 1].setFlag(true);
-			*(int*)(indices + triIndex++) = parent;
+			//*(int*)(indices + triIndex) = parent;
+			//triIndex += 2;
 		}
 		virtual void HandleStartNode(int startNode)
 		{

@@ -465,6 +465,7 @@ e_SceneBVH::~e_SceneBVH()
 e_KernelSceneBVH e_SceneBVH::getData(bool devicePointer)
 {
 	e_KernelSceneBVH q;
+	q.m_uNumNodes = m_pNodes->getLength();
 	q.m_pNodes = m_pNodes->getKernelData(devicePointer).Data;
 	q.m_sStartNode = startNode;
 	q.m_pNodeTransforms = m_pTransforms->getKernelData(devicePointer).Data;

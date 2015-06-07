@@ -88,12 +88,20 @@ void e_Image::copyToHost()
 	cudaMemcpy(hostPixels, cudaPixels, sizeof(Pixel) * xResolution * yResolution, cudaMemcpyDeviceToHost);
 }
 
-void e_Image::WriteDisplayImage(const std::string& fileName)
+FIBITMAP* e_Image::toFreeImage()
 {
-	FREE_IMAGE_FORMAT ff = FreeImage_GetFIFFromFilename(fileName.c_str());
-
-	RGBCOL* colData = new RGBCOL[xResolution * yResolution];
-	if(outState == 1)
+	static RGBCOL* colData = 0;
+	static int xDim = 0;
+	static int yDim = 0;
+	if (colData == 0 || xDim != xResolution || yDim != yResolution)
+	{
+		if (colData)
+			delete[] colData;
+		xDim = xResolution;
+		yDim = yResolution;
+		colData = new RGBCOL[xResolution * yResolution];
+	}
+	if (outState == 1)
 	{
 		cudaGraphicsMapResources(1, &viewCudaResource);
 		cudaGraphicsSubResourceGetMappedArray(&viewCudaArray, viewCudaResource, 0, 0);
@@ -108,9 +116,9 @@ void e_Image::WriteDisplayImage(const std::string& fileName)
 	BYTE* A = FreeImage_GetBits(bitmap);
 	unsigned int pitch = FreeImage_GetPitch(bitmap);
 	int off = 0;
-	for(int y = 0; y < yResolution; y++)
+	for (int y = 0; y < yResolution; y++)
 	{
-		for(int x = 0; x < xResolution; x++)
+		for (int x = 0; x < xResolution; x++)
 		{
 			int i = (yResolution - 1 - y) * xResolution + x;
 			Spectrum rgb = Spectrum(colData[i].z, colData[i].y, colData[i].x) / 255;
@@ -125,10 +133,40 @@ void e_Image::WriteDisplayImage(const std::string& fileName)
 		}
 		off += pitch;
 	}
-	delete [] colData;
+	return bitmap;
+}
+
+void e_Image::WriteDisplayImage(const std::string& fileName)
+{
+	FIBITMAP* bitmap = toFreeImage();
+
+	FREE_IMAGE_FORMAT ff = FreeImage_GetFIFFromFilename(fileName.c_str());
 	bool b = FreeImage_Save(ff, bitmap, fileName.c_str());
 	if (!b)
 		throw std::runtime_error("Failed saving Screenshot!");
+	FreeImage_Unload(bitmap);
+}
+
+void e_Image::SaveToMemory(void** mem, size_t& size, const std::string& type)
+{
+	FIBITMAP* bitmap = toFreeImage();
+	FREE_IMAGE_FORMAT ff = FreeImage_GetFIFFromFilename(type.c_str());
+	FIMEMORY* str = FreeImage_OpenMemory();
+	int flags = ff == FREE_IMAGE_FORMAT::FIF_JPEG ? JPEG_QUALITYBAD : 0;
+	if (!FreeImage_SaveToMemory(ff, bitmap, str, 0))
+		throw std::runtime_error("SaveToMemory::FreeImage_SaveToMemory");
+	long file_size = FreeImage_TellMemory(str);	if (*mem == 0 || file_size > size)
+	{
+		if (*mem)
+			free(*mem);
+		size = file_size;
+		*mem = malloc(file_size);
+	}
+	FreeImage_SeekMemory(str, 0L, SEEK_SET);
+	unsigned n = FreeImage_ReadMemory(*mem, 1, file_size, str);
+	if (n != file_size)
+		throw std::runtime_error("SaveToMemory::FreeImage_ReadMemory");
+	FreeImage_CloseMemory(str);
 	FreeImage_Unload(bitmap);
 }
 

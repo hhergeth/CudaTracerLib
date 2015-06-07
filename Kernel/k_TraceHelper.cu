@@ -69,7 +69,7 @@ CUDA_FUNC_IN void loadInvModl(int i, float4x4* o)
 #endif
 }
 
-CUDA_FUNC_IN bool k_TraceRayNode3(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result, const e_Node* N)
+CUDA_FUNC_IN bool k_TraceRayNode2(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result, const e_Node* N)
 {
 	unsigned int mIndex = N->m_uMeshIndex;
 	e_KernelMesh mesh = g_SceneData.m_sMeshData[mIndex];
@@ -89,7 +89,9 @@ CUDA_FUNC_IN bool k_TraceRayNode3(const Vec3f& dir, const Vec3f& ori, TraceResul
 	int nodeIdx = 0, parentId, siblingId;
 	unsigned long long bitstack = 0;
 	bool found = false;
+#ifndef ISCUDA
 	const Vec4f* dat = (Vec4f*)g_SceneData.m_sBVHNodeData.Data;
+#endif
 
 	for (;;)
 	{
@@ -187,13 +189,11 @@ CUDA_FUNC_IN bool k_TraceRayNode3(const Vec3f& dir, const Vec3f& ori, TraceResul
 				{
 #ifdef ISCUDA
 					parentId = tex1Dfetch(t_triIndices, mesh.m_uBVHIndicesOffset + triAddr + 1);
-					float4 tmp = tex1Dfetch(t_nodesA, mesh.m_uBVHNodeOffset + parentId + 3);
+					siblingId = tex1Dfetch(t_triIndices, mesh.m_uBVHIndicesOffset + triAddr + 2);
 #else
 					parentId = *(int*)(g_SceneData.m_sBVHIndexData.Data + mesh.m_uBVHIndicesOffset + triAddr + 1);
-					Vec4f tmp = dat[mesh.m_uBVHNodeOffset + parentId + 3];
+					siblingId = *(int*)(g_SceneData.m_sBVHIndexData.Data + mesh.m_uBVHIndicesOffset + triAddr + 2);
 #endif
-					int4 childrenParentSibling = *(int4*)&tmp;
-					siblingId = childrenParentSibling.x == nodeIdx ? childrenParentSibling.y : childrenParentSibling.x;
 					break;
 				}
 			}
@@ -217,7 +217,6 @@ CUDA_FUNC_IN bool k_TraceRayNode3(const Vec3f& dir, const Vec3f& ori, TraceResul
 		nodeIdx = siblingId;
 		bitstack ^= 1;
 	}
-	return found;
 }
 
 CUDA_FUNC_IN bool k_TraceRayNode(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result, const e_Node* N)
@@ -406,8 +405,8 @@ bool k_TraceRay(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result)
 	//transform a_Result->m_fDist to local system
 	float4x4 modl;
 	loadInvModl(node, &modl);
-	Vec3f d = modl.TransformNormal(dir), o = modl.TransformNormal(ori) + modl.Translation();
-	k_TraceRayNode(d, o, a_Result, N, lastNode == N ? lastIndex : -1);
+	Vec3f d = modl.TransformDirection(dir), o = modl.TransformPoint(ori);
+	k_TraceRayNode(d, o, a_Result, N);
 #else
 	int traversalStackOuter[64];
 	int at = 1;
@@ -504,7 +503,7 @@ void k_INITIALIZE(const e_DynamicScene* a_Scene, const CudaRNGBuffer& a_RngBuf)
 	r = cudaBindTexture(&offset, &t_nodesA, a_Data.m_sBVHNodeData.Data, &cdf4, a_Data.m_sBVHNodeData.UsedCount * sizeof(e_BVHNodeData));
 	r = cudaBindTexture(&offset, &t_tris, a_Data.m_sBVHIntData.Data, &cdf4, a_Data.m_sBVHIntData.UsedCount * sizeof(e_TriIntersectorData));
 	r = cudaBindTexture(&offset, &t_triIndices, a_Data.m_sBVHIndexData.Data, &cdu1, a_Data.m_sBVHIndexData.UsedCount * sizeof(e_TriIntersectorData2));
-	r = cudaBindTexture(&offset, &t_SceneNodes, a_Data.m_sSceneBVH.m_pNodes, &cdf4, a_Data.m_sBVHNodeData.UsedCount * sizeof(e_BVHNodeData));
+	r = cudaBindTexture(&offset, &t_SceneNodes, a_Data.m_sSceneBVH.m_pNodes, &cdf4, a_Data.m_sSceneBVH.m_uNumNodes * sizeof(e_BVHNodeData));
 	r = cudaBindTexture(&offset, &t_NodeTransforms, a_Data.m_sSceneBVH.m_pNodeTransforms, &cdf4, a_Data.m_sNodeData.UsedCount * sizeof(float4x4));
 	r = cudaBindTexture(&offset, &t_NodeInvTransforms, a_Data.m_sSceneBVH.m_pInvNodeTransforms, &cdf4, a_Data.m_sNodeData.UsedCount * sizeof(float4x4));
 

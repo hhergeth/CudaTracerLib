@@ -12,6 +12,8 @@ enum ImageDrawType
 struct ID3D11Resource;
 #endif
 
+struct FIBITMAP;
+
 class e_Image
 {
 public:
@@ -100,8 +102,10 @@ public:
 		m_bDoUpdate = false;
 	}
 	void copyToHost();
+	void SaveToMemory(void** mem, size_t& size, const std::string& type);
 	static void ComputeDiff(const e_Image& A, const e_Image& B, e_Image& dest, float scale);
 private:
+	FIBITMAP* toFreeImage();
 	void InternalUpdateDisplay();
 	bool m_bDoUpdate;
 	e_Filter filter;

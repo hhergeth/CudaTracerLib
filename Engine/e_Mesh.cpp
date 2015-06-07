@@ -78,7 +78,7 @@ e_Mesh::e_Mesh(const std::string& path, IInStream& a_In, e_Stream<e_TriIntersect
 	a_In.Read(m_sIndicesInfo(0), m_uIndicesSize * sizeof(e_TriIntersectorData2));
 	m_sIndicesInfo.Invalidate();
 
-	printBVHData(m_sNodeInfo(0), "mesh.txt");
+	//printBVHData(m_sNodeInfo(0), "mesh.txt");
 }
 
 void e_Mesh::Free(e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4)

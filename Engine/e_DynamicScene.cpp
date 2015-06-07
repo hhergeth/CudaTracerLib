@@ -271,8 +271,6 @@ e_BufferReference<e_MIPMap, e_KernelMIPMap> e_DynamicScene::LoadTexture(const st
 	if (!exists(rawFilePath))
 		return LoadTexture((std::string(m_pTexturePath) + "404.jpg").c_str(), a_MipMap);
 	bool load;
-	if (file.find("../MOW Data/texture/") != -1)
-		std::cout << "A\n";
 	e_BufferReference<e_MIPMap, e_KernelMIPMap> T = m_pTextureBuffer->LoadCached(file, load);
 	if(load)
 	{

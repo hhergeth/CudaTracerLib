@@ -92,13 +92,21 @@ struct e_BVHNodeData
 	{
 		*(Vec2i*)&d = c;
 	}
-	CUDA_FUNC_IN void setParent(unsigned int parent)
+	CUDA_FUNC_IN void setParent(int parent)
 	{
-		*(unsigned int*)&d.z = parent;
+		*(int*)&d.z = parent;
 	}
-	CUDA_FUNC_IN void setSibling(unsigned int sibling)
+	CUDA_FUNC_IN void setSibling(int sibling)
 	{
-		*(unsigned int*)&d.w = sibling;
+		*(int*)&d.w = sibling;
+	}
+	CUDA_FUNC_IN int getParent() const
+	{
+		return *(int*)&d.z;
+	}
+	CUDA_FUNC_IN int getSibling() const
+	{
+		return *(int*)&d.w;
 	}
 	CUDA_FUNC_IN void setDummy()
 	{
