@@ -49,11 +49,11 @@ struct Frame
 		return s * v.x + t * v.y + n * v.z;
 	}
 
-	CUDA_FUNC_IN float4x4 ToMatrix()
+	CUDA_FUNC_IN float4x4 ToWorldMatrix()
 	{
 		float4x4 r;
-		r.col(0, Vec4f(t, 0));
-		r.col(1, Vec4f(s, 0));
+		r.col(0, Vec4f(s, 0));
+		r.col(1, Vec4f(t, 0));
 		r.col(2, Vec4f(n, 0));
 		r.col(3, Vec4f(0, 0, 0, 1));
 		return r;

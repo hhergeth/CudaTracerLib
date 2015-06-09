@@ -105,4 +105,6 @@ public:
 	e_Stream<e_KernelMaterial>* getMatBuffer();
 	void InvalidateNodesInBVH(e_StreamReference(e_Node) n);
 	void InvalidateMeshesInBVH(e_BufferReference<e_Mesh, e_KernelMesh> m);
+	void BuildFlatMeshBVH(e_BufferReference<e_Mesh, e_KernelMesh> m, const e_BVHNodeData* bvh, unsigned int bvhLength,
+		const e_TriIntersectorData* int1, unsigned int int1Legth, const e_TriIntersectorData2* int2, unsigned int int2Legth);
 };

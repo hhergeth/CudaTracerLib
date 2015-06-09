@@ -52,7 +52,7 @@ e_SceneBVH::e_SceneBVH(unsigned int a_NodeCount)
 	m_pTransforms->malloc(m_pTransforms->getLength());
 	m_pInvTransforms->malloc(m_pInvTransforms->getLength());
 	m_pNodes->malloc(m_pNodes->getLength());
-	m_pBuilder = new e_BVHRebuilder(m_pNodes->UsedElements(), m_pNodes->getLength(), a_NodeCount);
+	m_pBuilder = new e_BVHRebuilder(m_pNodes->UsedElements(), m_pNodes->getLength(), a_NodeCount, 0, 0);
 }
 
 e_SceneBVH::~e_SceneBVH()

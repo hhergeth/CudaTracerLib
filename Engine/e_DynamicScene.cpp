@@ -245,10 +245,10 @@ e_StreamReference(e_Node) e_DynamicScene::CreateNode(unsigned int a_TriangleCoun
 		m2(i)->bsdf.SetData(diffuse(CreateTexture(Spectrum(0.5f))));
 	}
 	e_BufferReference<e_Mesh, e_KernelMesh> M = m_pMeshBuffer->malloc(1);
-	M->m_sIndicesInfo = m_pBVHIndicesStream->malloc(1);
-	M->m_sIntInfo = m_pTriIntStream->malloc(1);
+	M->m_sIndicesInfo = m_pBVHIndicesStream->malloc(3 * a_TriangleCount);
+	M->m_sIntInfo = m_pTriIntStream->malloc(3 * a_TriangleCount);
 	M->m_sMatInfo = m2;
-	M->m_sNodeInfo = m_pBVHStream->malloc(1);
+	M->m_sNodeInfo = m_pBVHStream->malloc(3 * a_TriangleCount);
 	M->m_sTriInfo = m_pTriDataStream->malloc(a_TriangleCount);
 	M->m_uType = MESH_STATIC_TOKEN;
 	M->m_uUsedLights = 0;
@@ -746,4 +746,30 @@ e_StreamReference(e_KernelMaterial) e_DynamicScene::getMaterials()
 e_Stream<e_KernelMaterial>* e_DynamicScene::getMatBuffer()
 {
 	return m_pMaterialBuffer;
+}
+
+void e_DynamicScene::BuildFlatMeshBVH(e_BufferReference<e_Mesh, e_KernelMesh> m, const e_BVHNodeData* bvh, unsigned int bvhLength,
+	const e_TriIntersectorData* int1, unsigned int int1Legth, const e_TriIntersectorData2* int2, unsigned int int2Legth)
+{
+	int scl = 4;
+	if (bvhLength > m->m_sNodeInfo.getLength())
+	{
+		m_pBVHStream->dealloc(m->m_sNodeInfo);
+		m->m_sNodeInfo = m_pBVHStream->malloc(bvhLength * scl);
+	}
+	memcpy(m->m_sNodeInfo(0), bvh, sizeof(e_BVHNodeData) * bvhLength);
+	if (int1Legth > m->m_sIntInfo.getLength())
+	{
+		m_pTriIntStream->dealloc(m->m_sIntInfo);
+		m->m_sIntInfo = m_pTriIntStream->malloc(int1Legth * scl);
+	}
+	memcpy(m->m_sIntInfo(0), int1, sizeof(e_TriIntersectorData) * int1Legth);
+	if (int2Legth > m->m_sIndicesInfo.getLength())
+	{
+		m_pBVHIndicesStream->dealloc(m->m_sIndicesInfo);
+		m->m_sIndicesInfo = m_pBVHIndicesStream->malloc(int2Legth * scl);
+	}
+	memcpy(m->m_sIndicesInfo(0), int2, sizeof(e_TriIntersectorData2) * int2Legth);
+
+	m.Invalidate();
 }

@@ -51,6 +51,14 @@ void e_TriangleData::setData(const Vec3f& v0, const Vec3f& v1, const Vec3f& v2,
 	m_sDeviceData.DpduDpdv.z = b.y.bits() | (b.z.bits() << 16);
 }
 
+void e_TriangleData::getNormals(Vec3f& n0, Vec3f& n1, Vec3f& n2)
+{
+	uint2 nme = m_sDeviceData.NorMatExtra;
+	n0 = Uchar2ToNormalizedFloat3(nme.x);
+	n1 = Uchar2ToNormalizedFloat3(nme.x >> 16);
+	n2 = Uchar2ToNormalizedFloat3(nme.y);
+}
+
 void e_TriangleData::fillDG(const float4x4& localToWorld, const float4x4& worldToLocal, DifferentialGeometry& dg) const
 {
 	uint2 nme = m_sDeviceData.NorMatExtra;
