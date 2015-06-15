@@ -24,10 +24,11 @@ Spectrum e_KernelMIPMap::Texel(unsigned int level, const Vec2f& a_UV) const
 	{
 		unsigned int x = (unsigned int)l.x, y = (unsigned int)l.y;
 		void* data;
+		int i = max(0, ((int)m_uWidth >> (int)level));
 #ifdef ISCUDA
-		data = m_pDeviceData + (m_sOffsets[level] + y * (m_uWidth >> level) + x);
+		data = m_pDeviceData + (m_sOffsets[level] + y * i + x);
 #else
-		data = m_pHostData + (m_sOffsets[level] + y * (m_uWidth >> level) + x);
+		data = m_pHostData + (m_sOffsets[level] + y * i + x);
 #endif
 		Spectrum s;
 		if(m_uType == vtRGBE)
@@ -350,7 +351,8 @@ void e_MIPMap::CreateSphericalSkydomeTexture(const std::string& front, const std
 				B[y * w + xp] = c;
 			}
 	}
-	bool b = FreeImage_Save(FIF_EXR, bitmap, outFile.c_str());
+	if (!FreeImage_Save(FIF_EXR, bitmap, outFile.c_str()))
+		throw std::runtime_error(std::string(__FUNCTION__) + " :: FreeImage_Save");
 	FreeImage_Unload(bitmap);
 	for(int i = 0; i < 6; i++)
 		free(maps[i].data);
@@ -480,7 +482,8 @@ void e_MIPMap::CreateRelaxedConeMap(const std::string& a_InputFile, OutputStream
 		}
 		off += pitch;
 	}
-	bool b = FreeImage_Save(ff, bitmap, "../Data/conemap.png");
+	if (!FreeImage_Save(ff, bitmap, "../Data/conemap.png"))
+		throw std::runtime_error(__FUNCTION__);
 	FreeImage_Unload(bitmap);
 
 	a_Out << data.w;

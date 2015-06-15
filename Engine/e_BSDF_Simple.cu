@@ -96,8 +96,8 @@ Spectrum roughdiffuse::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 
 Spectrum dielectric::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const
 {
-	bool sampleReflection = (bRec.typeMask & EDeltaReflection);
-	bool sampleTransmission = (bRec.typeMask & EDeltaTransmission);
+	bool sampleReflection = (bRec.typeMask & EDeltaReflection) != 0;
+	bool sampleTransmission = (bRec.typeMask & EDeltaTransmission) != 0;
 
 	float cosThetaT;
 	float F = MonteCarlo::fresnelDielectricExt(Frame::cosTheta(bRec.wi), cosThetaT, m_eta);
@@ -244,8 +244,8 @@ Spectrum thindielectric::f(const BSDFSamplingRecord &bRec, EMeasure measure) con
 
 Spectrum thindielectric::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const
 {
-	bool sampleReflection   = (bRec.typeMask & EDeltaReflection);
-	bool sampleTransmission = (bRec.typeMask & ENull);
+	bool sampleReflection = (bRec.typeMask & EDeltaReflection) != 0;
+	bool sampleTransmission = (bRec.typeMask & ENull) != 0;
 
 	float R = MonteCarlo::fresnelDielectricExt(Frame::cosTheta(bRec.wi), m_eta), T = 1-R;
 
@@ -294,8 +294,8 @@ float roughdielectric::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) con
 		return 0.0f;
 
 	/* Determine the type of interaction */
-	bool hasReflection   = (bRec.typeMask & EGlossyReflection),
-		 hasTransmission = (bRec.typeMask & EGlossyTransmission),
+	bool hasReflection = (bRec.typeMask & EGlossyReflection) != 0,
+		hasTransmission = (bRec.typeMask & EGlossyTransmission) != 0,
 		 reflect         = Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) > 0;
 
 	Vec3f H;
@@ -443,8 +443,8 @@ Spectrum roughdielectric::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec
 {
 	Vec2f sample = (_sample);
 
-	bool hasReflection = (bRec.typeMask & EGlossyReflection),
-		hasTransmission = (bRec.typeMask & EGlossyTransmission),
+	bool hasReflection = (bRec.typeMask & EGlossyReflection) != 0,
+		hasTransmission = (bRec.typeMask & EGlossyTransmission) != 0,
 		sampleReflection = hasReflection;
 
 	if (!hasReflection && !hasTransmission)
@@ -550,7 +550,7 @@ Spectrum roughdielectric::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec
 
 Spectrum conductor::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const
 {
-	bool sampleReflection   = (bRec.typeMask & EDeltaReflection);
+	bool sampleReflection = (bRec.typeMask & EDeltaReflection) != 0;
 
 	if (!sampleReflection || Frame::cosTheta(bRec.wi) <= 0)
 		return Spectrum(0.0f);
@@ -565,7 +565,7 @@ Spectrum conductor::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sa
 
 Spectrum conductor::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 {
-	bool sampleReflection   = (bRec.typeMask & EDeltaReflection);
+	bool sampleReflection = (bRec.typeMask & EDeltaReflection) != 0;
 
 	/* Verify that the provided direction pair matches an ideal
 		specular reflection; tolerate some roundoff errors */
@@ -580,7 +580,7 @@ Spectrum conductor::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 
 float conductor::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 {
-	bool sampleReflection   = (bRec.typeMask & EDeltaReflection);
+	bool sampleReflection = (bRec.typeMask & EDeltaReflection) != 0;
 
 	/* Verify that the provided direction pair matches an ideal
 		specular reflection; tolerate some roundoff errors */
@@ -692,8 +692,8 @@ float roughconductor::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) cons
 
 Spectrum plastic::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const
 {
-	bool hasSpecular   = (bRec.typeMask & EDeltaReflection);
-	bool hasDiffuse = (bRec.typeMask & EDiffuseReflection);
+	bool hasSpecular = (bRec.typeMask & EDeltaReflection) != 0;
+	bool hasDiffuse = (bRec.typeMask & EDiffuseReflection) != 0;
 
 	if ((!hasDiffuse && !hasSpecular) || Frame::cosTheta(bRec.wi) <= 0)
 		return 0.0f;
@@ -790,8 +790,8 @@ Spectrum plastic::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 
 float plastic::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 {
-	bool hasSpecular   = (bRec.typeMask & EDeltaReflection);
-	bool hasDiffuse = (bRec.typeMask & EDiffuseReflection);
+	bool hasSpecular = (bRec.typeMask & EDeltaReflection) != 0;
+	bool hasDiffuse = (bRec.typeMask & EDiffuseReflection) != 0;
 
 	if (Frame::cosTheta(bRec.wo) <= 0 || Frame::cosTheta(bRec.wi) <= 0)
 		return 0.0f;
@@ -818,8 +818,8 @@ float plastic::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 
 Spectrum roughplastic::sample(BSDFSamplingRecord &bRec, float &_pdf, const Vec2f &_sample) const
 {
-	bool hasSpecular = (bRec.typeMask & EGlossyReflection);
-	bool hasDiffuse = (bRec.typeMask & EDiffuseReflection);
+	bool hasSpecular = (bRec.typeMask & EGlossyReflection) != 0;
+	bool hasDiffuse = (bRec.typeMask & EDiffuseReflection) != 0;
 
 	if (Frame::cosTheta(bRec.wi) <= 0 || (!hasSpecular && !hasDiffuse))
 		return Spectrum(0.0f);
@@ -874,8 +874,8 @@ Spectrum roughplastic::sample(BSDFSamplingRecord &bRec, float &_pdf, const Vec2f
 
 Spectrum roughplastic::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 {
-	bool hasSpecular = (bRec.typeMask & EGlossyReflection);
-	bool hasDiffuse = (bRec.typeMask & EDiffuseReflection);
+	bool hasSpecular = (bRec.typeMask & EGlossyReflection) != 0;
+	bool hasDiffuse = (bRec.typeMask & EDiffuseReflection) != 0;
 
 	if (measure != ESolidAngle ||
 			Frame::cosTheta(bRec.wi) <= 0 ||
@@ -931,8 +931,8 @@ Spectrum roughplastic::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 
 float roughplastic::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 {
-	bool hasSpecular = (bRec.typeMask & EGlossyReflection);
-	bool hasDiffuse = (bRec.typeMask & EDiffuseReflection);
+	bool hasSpecular = (bRec.typeMask & EGlossyReflection) != 0;
+	bool hasDiffuse = (bRec.typeMask & EDiffuseReflection) != 0;
 
 	if (measure != ESolidAngle ||
 		Frame::cosTheta(bRec.wi) <= 0 ||
@@ -982,8 +982,8 @@ float roughplastic::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 Spectrum phong::sample(BSDFSamplingRecord &bRec, float &_pdf, const Vec2f& _sample) const
 {
 	Vec2f sample = _sample;
-	bool hasSpecular = (bRec.typeMask & EGlossyReflection);
-	bool hasDiffuse  = (bRec.typeMask & EDiffuseReflection);
+	bool hasSpecular = (bRec.typeMask & EGlossyReflection) != 0;
+	bool hasDiffuse = (bRec.typeMask & EDiffuseReflection) != 0;
 
 	if (!hasSpecular && !hasDiffuse)
 		return Spectrum(0.0f);
@@ -1040,8 +1040,8 @@ Spectrum phong::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 		Frame::cosTheta(bRec.wo) <= 0 || measure != ESolidAngle)
 		return 0.0f;
 
-	bool hasSpecular = (bRec.typeMask & EGlossyReflection);
-	bool hasDiffuse  = (bRec.typeMask & EDiffuseReflection);
+	bool hasSpecular = (bRec.typeMask & EGlossyReflection) != 0;
+	bool hasDiffuse = (bRec.typeMask & EDiffuseReflection) != 0;
 
 	Spectrum result = 0.0f;
 	if (hasSpecular) {
@@ -1066,8 +1066,8 @@ float phong::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 		Frame::cosTheta(bRec.wo) <= 0 || measure != ESolidAngle)
 		return 0.0f;
 
-	bool hasSpecular = (bRec.typeMask & EGlossyReflection);
-	bool hasDiffuse  = (bRec.typeMask & EDiffuseReflection);
+	bool hasSpecular = (bRec.typeMask & EGlossyReflection) != 0;
+	bool hasDiffuse = (bRec.typeMask & EDiffuseReflection) != 0;
 
 	float diffuseProb = 0.0f, specProb = 0.0f;
 
@@ -1097,8 +1097,8 @@ Spectrum ward::sample(BSDFSamplingRecord &bRec, float &_pdf, const Vec2f &_sampl
 {
 	Vec2f sample = _sample;
 
-	bool hasSpecular = (bRec.typeMask & EGlossyReflection);
-	bool hasDiffuse  = (bRec.typeMask & EDiffuseReflection);
+	bool hasSpecular = (bRec.typeMask & EGlossyReflection) != 0;
+	bool hasDiffuse = (bRec.typeMask & EDiffuseReflection) != 0;
 
 	if (!hasSpecular && !hasDiffuse)
 		return Spectrum(0.0f);
@@ -1158,8 +1158,8 @@ Spectrum ward::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 		Frame::cosTheta(bRec.wo) <= 0 || measure != ESolidAngle)
 		return Spectrum(0.0f);
 
-	bool hasSpecular = (bRec.typeMask & EGlossyReflection);
-	bool hasDiffuse  = (bRec.typeMask & EDiffuseReflection);
+	bool hasSpecular = (bRec.typeMask & EGlossyReflection) != 0;
+	bool hasDiffuse = (bRec.typeMask & EDiffuseReflection) != 0;
 
 	Spectrum result = Spectrum(0.0f);
 	if (hasSpecular) {
@@ -1204,8 +1204,8 @@ float ward::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 		Frame::cosTheta(bRec.wo) <= 0 || measure != ESolidAngle)
 		return 0.0f;
 
-	bool hasSpecular = (bRec.typeMask & EGlossyReflection);
-	bool hasDiffuse  = (bRec.typeMask & EDiffuseReflection);
+	bool hasSpecular = (bRec.typeMask & EGlossyReflection) != 0;
+	bool hasDiffuse = (bRec.typeMask & EDiffuseReflection) != 0;
 
 	float diffuseProb = 0.0f, specProb = 0.0f;
 
@@ -1237,8 +1237,8 @@ float ward::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 
 Spectrum hk::sample(BSDFSamplingRecord &bRec, float &_pdf, const Vec2f &_sample) const
 {
-	bool hasSpecularTransmission = (bRec.typeMask & EDeltaTransmission);
-	bool hasSingleScattering = (bRec.typeMask & EGlossy);
+	bool hasSpecularTransmission = (bRec.typeMask & EDeltaTransmission) != 0;
+	bool hasSingleScattering = (bRec.typeMask & EGlossy) != 0;
 
 	const Spectrum sigmaA = m_sigmaA.Evaluate(bRec.dg),
 				sigmaS = m_sigmaS.Evaluate(bRec.dg),
@@ -1270,8 +1270,8 @@ Spectrum hk::sample(BSDFSamplingRecord &bRec, float &_pdf, const Vec2f &_sample)
 		return f(bRec, EDiscrete) / _pdf;
 	} else {
 		/* The glossy transmission/scattering component should be sampled */
-		bool hasGlossyReflection = (bRec.typeMask & EGlossyReflection);
-		bool hasGlossyTransmission = (bRec.typeMask & EGlossyTransmission);
+		bool hasGlossyReflection = (bRec.typeMask & EGlossyReflection) != 0;
+		bool hasGlossyTransmission = (bRec.typeMask & EGlossyTransmission) != 0;
 
 		/* Sample According to the phase function lobes */
 		PhaseFunctionSamplingRecord pRec(bRec.wi, bRec.wo);
@@ -1309,7 +1309,7 @@ Spectrum hk::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 
 	if (measure == EDiscrete) {
 		/* Figure out if the specular transmission is specifically requested */
-		bool hasSpecularTransmission = (bRec.typeMask & EDeltaTransmission);
+		bool hasSpecularTransmission = (bRec.typeMask & EDeltaTransmission) != 0;
 
 		/* Return the attenuated light if requested */
 		if (hasSpecularTransmission &&
@@ -1317,8 +1317,8 @@ Spectrum hk::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 			result = (-tauD/math::abs(Frame::cosTheta(bRec.wi))).exp();
 	} else if (measure == ESolidAngle) {
 		/* Sample single scattering events */
-		bool hasGlossyReflection = (bRec.typeMask & EGlossyReflection);
-		bool hasGlossyTransmission = (bRec.typeMask & EGlossyTransmission);
+		bool hasGlossyReflection = (bRec.typeMask & EGlossyReflection) != 0;
+		bool hasGlossyTransmission = (bRec.typeMask & EGlossyTransmission) != 0;
 
 		Spectrum albedo;
 			for (int i = 0; i < SPECTRUM_SAMPLES; i++)
@@ -1369,8 +1369,8 @@ Spectrum hk::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 
 float hk::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 {
-	bool hasSingleScattering = (bRec.typeMask & EGlossy);
-	bool hasSpecularTransmission = (bRec.typeMask & EDeltaTransmission);
+	bool hasSingleScattering = (bRec.typeMask & EGlossy) != 0;
+	bool hasSpecularTransmission = (bRec.typeMask & EDeltaTransmission) != 0;
 
 	const Spectrum sigmaA = m_sigmaA.Evaluate(bRec.dg),
 				sigmaS = m_sigmaS.Evaluate(bRec.dg),
@@ -1380,14 +1380,14 @@ float hk::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 	float probSpecularTransmission = ((-1.0f * tauD/math::abs(Frame::cosTheta(bRec.wi))).exp()).average();
 
 	if (measure == EDiscrete) {
-		bool hasSpecularTransmission = (bRec.typeMask & EDeltaTransmission);
+		bool hasSpecularTransmission = (bRec.typeMask & EDeltaTransmission) != 0;
 		/* Return the attenuated light if requested */
 		if (hasSpecularTransmission &&
 			math::abs(1+dot(bRec.wi, bRec.wo)) < DeltaEpsilon)
 			return hasSingleScattering ? probSpecularTransmission : 1.0f;
 	} else if (hasSingleScattering && measure == ESolidAngle) {
-		bool hasGlossyReflection = (bRec.typeMask & EGlossyReflection);
-		bool hasGlossyTransmission = (bRec.typeMask & EGlossyTransmission);
+		bool hasGlossyReflection = (bRec.typeMask & EGlossyReflection) != 0;
+		bool hasGlossyTransmission = (bRec.typeMask & EGlossyTransmission) != 0;
 		bool reflection = Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) >= 0;
 
 		if ((!hasGlossyReflection && reflection) ||

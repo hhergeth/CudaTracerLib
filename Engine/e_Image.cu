@@ -218,7 +218,7 @@ void e_Image::InternalUpdateDisplay()
 		float maxLum = UIntToFloat(mLum);
 		float L_w = exp(Lum_avg / float(xResolution * yResolution));
 		//float middleGrey = 1.03f - 2.0f / (2.0f + log10(L_w + 1.0f));
-		float alpha = 0.18, lumWhite2 = max(maxLum * maxLum, 0.1f);
+		float alpha = 0.18f, lumWhite2 = max(maxLum * maxLum, 0.1f);
 		if(outState == 1)
 			rtm_Scale << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(cudaPixels, T2, xResolution, yResolution, lastSplatVal, L_w, alpha, lumWhite2, filter);
 		else rtm_Scale << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(cudaPixels, T1, xResolution, yResolution, lastSplatVal, L_w, alpha, lumWhite2, filter);

@@ -13,7 +13,7 @@ template<int N> struct Distribution1D
 	Distribution1D(const float *f, unsigned int n)
 	{
 		if (n > N)
-			throw 1;
+			throw std::runtime_error(__FUNCTION__);
 		m_cdf[0] = 0.0f;
 		count = 1;
 #define append(pdfValue) {m_cdf[count] = m_cdf[count - 1] + pdfValue; count++;}

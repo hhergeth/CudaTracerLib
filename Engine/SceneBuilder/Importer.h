@@ -4,20 +4,12 @@
 
 struct BVH_Construction_Result
 {
-	e_BVHNodeData* nodes;
-	e_TriIntersectorData* tris;
-	e_TriIntersectorData2* tris2;
-	unsigned int nodeCount;
-	unsigned int triCount;
+	std::vector<e_BVHNodeData> nodes;
+	std::vector<e_TriIntersectorData> tris;
+	std::vector<e_TriIntersectorData2> tris2;
 	AABB box;
-	void Free()
-	{
-		delete [] nodes;
-		delete [] tris;
-		delete [] tris2;
-	}
 };
 
-BVH_Construction_Result ConstructBVH(const Vec3f* vertices, const unsigned int* indices, unsigned int vCount, unsigned int cCount);
+void ConstructBVH(const Vec3f* vertices, const unsigned int* indices, unsigned int vCount, unsigned int cCount, BVH_Construction_Result& res);
 
 void ConstructBVH(const Vec3f* vertices, const unsigned int* indices, int vCount, int cCount, OutputStream& O, BVH_Construction_Result* out = 0);

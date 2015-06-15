@@ -153,17 +153,20 @@ struct e_KernelAnimatedMesh
 };
 
 struct e_KernelDynamicScene;
+class e_BVHRebuilder;
 class e_AnimatedMesh : public e_Mesh
 {
+public:
 	e_KernelAnimatedMesh k_Data;
 	std::vector<e_Animation> m_pAnimations;
 	e_StreamReference(char) m_sVertices;
 	e_StreamReference(char) m_sTriangles;
 	e_BVHHierarchy m_sHierchary;
+	e_BVHRebuilder* m_pBuilder;
 public:
 	e_AnimatedMesh(const std::string& path, IInStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4, e_Stream<char>* a_Stream5);
 	static void CompileToBinary(const std::string& a_InputFile, std::vector<std::string>& a_Anims, OutputStream& a_Out);
-	void k_ComputeState(unsigned int a_Anim, unsigned int a_Frame, float a_lerp, e_KernelDynamicScene a_Data, e_Stream<e_BVHNodeData>* a_BVHNodeStream, e_TmpVertex* a_DeviceTmp);
+	void k_ComputeState(unsigned int a_Anim, unsigned int a_Frame, float a_lerp, e_KernelDynamicScene a_Data, e_Stream<e_BVHNodeData>* a_BVHNodeStream, e_TmpVertex* a_DeviceTmp, e_TmpVertex* a_HostTmp);
 	void CreateNewMesh(e_AnimatedMesh* A, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4, e_Stream<char>* a_Stream5);
 	void ComputeFrameIndex(float t, unsigned int a_Anim, unsigned int* a_FrameIndex, float* a_lerp)
 	{

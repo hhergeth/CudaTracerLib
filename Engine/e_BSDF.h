@@ -8,6 +8,7 @@
 #include "Engine/e_PhaseFunction.h"
 #include "e_MicrofacetDistribution.h"
 #include "../Math/Sampling.h"
+#include "../VirtualFuncType.h"
 
 #define NUM_TEX_PER_BSDF 10
 
@@ -81,28 +82,28 @@ public:
 
 #include "e_BSDF_Simple.h"
 
-struct BSDFFirst : public CudaVirtualAggregate<BSDF, diffuse, roughdiffuse, dielectric, thindielectric, roughdielectric, conductor, roughconductor, plastic, phong, ward, hk>
+struct BSDFFirst : public CudaVirtualAggregate<BSDF, diffuse, roughdiffuse, dielectric, thindielectric, roughdielectric, conductor, roughconductor, plastic, roughplastic, phong, ward, hk>
 {
 public:
+	CALLER(sample)
 	CUDA_FUNC_IN Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &_sample) const
 	{
-		CALL_FUNC12(diffuse,roughdiffuse,dielectric,thindielectric,roughdielectric,conductor,roughconductor,plastic,roughplastic,phong,ward,hk, sample(bRec, pdf, _sample));
-		return Spectrum(0.0f);
+		return sample_Caller<Spectrum>(*this, bRec, pdf, _sample);
 	}
 	CUDA_FUNC_IN Spectrum sample(BSDFSamplingRecord &bRec, const Vec2f &_sample) const
 	{
 		float p;
 		return sample(bRec, p, _sample);
 	}
+	CALLER(f)
 	CUDA_FUNC_IN Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
 	{
-		CALL_FUNC12(diffuse,roughdiffuse,dielectric,thindielectric,roughdielectric,conductor,roughconductor,plastic,roughplastic,phong,ward,hk, f(bRec, measure));
-		return Spectrum(0.0f);
+		return f_Caller<Spectrum>(*this, bRec, measure);
 	}
+	CALLER(pdf)
 	CUDA_FUNC_IN float pdf(const BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
 	{
-		CALL_FUNC12(diffuse,roughdiffuse,dielectric,thindielectric,roughdielectric,conductor,roughconductor,plastic,roughplastic,phong,ward,hk, pdf(bRec, measure));
-		return 0.0f;
+		return pdf_Caller<float>(*this, bRec, measure);
 	}
 	CUDA_FUNC_IN unsigned int getType() const
 	{
@@ -114,32 +115,32 @@ public:
 };
 
 #include "e_BSDF_Complex.h"
-struct BSDFALL : public CudaVirtualAggregate<BSDF, diffuse, roughdiffuse, dielectric, thindielectric, roughdielectric, conductor, roughconductor, plastic, phong, ward, hk, coating, roughcoating, blend>
+struct BSDFALL : public CudaVirtualAggregate<BSDF, diffuse, roughdiffuse, dielectric, thindielectric, roughdielectric, conductor, roughconductor, plastic, roughplastic, phong, ward, hk, coating, roughcoating, blend>
 {
 public:
 	BSDFALL()
 	{
 
 	}
+	CALLER(sample)
 	CUDA_FUNC_IN Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &_sample) const
 	{
-		CALL_FUNC15(diffuse, roughdiffuse, dielectric, thindielectric, roughdielectric, conductor, roughconductor, plastic, roughplastic, phong, ward, hk, coating, roughcoating, blend, sample(bRec, pdf, _sample));
-		return Spectrum(0.0f);
+		return sample_Caller<Spectrum>(*this, bRec, pdf, _sample);
 	}
 	CUDA_FUNC_IN Spectrum sample(BSDFSamplingRecord &bRec, const Vec2f &_sample) const
 	{
 		float pdf;
 		return sample(bRec, pdf, _sample);
 	}
+	CALLER(f)
 	CUDA_FUNC_IN Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
 	{
-		CALL_FUNC15(diffuse, roughdiffuse, dielectric, thindielectric, roughdielectric, conductor, roughconductor, plastic, roughplastic, phong, ward, hk, coating, roughcoating, blend, f(bRec, measure));
-		return Spectrum(0.0f);
+		return f_Caller<Spectrum>(*this, bRec, measure);
 	}
+	CALLER(pdf)
 	CUDA_FUNC_IN float pdf(const BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
 	{
-		CALL_FUNC15(diffuse, roughdiffuse, dielectric, thindielectric, roughdielectric, conductor, roughconductor, plastic, roughplastic, phong, ward, hk, coating, roughcoating, blend, pdf(bRec, measure));
-		return 0.0f;
+		return pdf_Caller<float>(*this, bRec, measure);
 	}
 	CUDA_FUNC_IN unsigned int getType() const
 	{

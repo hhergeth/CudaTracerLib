@@ -1,6 +1,5 @@
 #include "StdAfx.h"
 #include "e_DynamicScene.h"
-#include "..\Base\StringUtils.h"
 #include <iostream>
 #include <string>
 #include "e_AnimatedMesh.h"
@@ -112,7 +111,7 @@ template<typename T> e_StreamReference(e_KernelLight) createLight(T& val, e_Stre
 }
 
 e_DynamicScene::e_DynamicScene(e_Sensor* C, e_SceneInitData a_Data, const std::string& texPath, const std::string& cmpPath, const std::string& dataPath)
-	: m_uEnvMapIndex(0xffffffff), m_pCamera(C), m_pCompilePath(cmpPath), m_pTexturePath(texPath)
+	: m_uEnvMapIndex(0xffffffff), m_pCamera(C), m_pCompilePath(cmpPath), m_pTexturePath(texPath), m_pHostTmpFloats(0)
 {
 	int nodeC = 1 << 16, tCount = 1 << 16;
 	m_pAnimStream = new e_Stream<char>(a_Data.m_uSizeAnimStream + (a_Data.m_bSupportEnvironmentMap ? sizeof(Distribution2D<4096, 4096>) : 0));
@@ -127,7 +126,9 @@ e_DynamicScene::e_DynamicScene(e_Sensor* C, e_SceneInitData a_Data, const std::s
 	m_pLightStream = new e_Stream<e_KernelLight>(a_Data.m_uNumLights);
 	m_pVolumes = new e_Stream<e_VolumeRegion>(128);
 	m_pBVH = new e_SceneBVH(a_Data.m_uNumNodes);
-	CUDA_MALLOC(&m_pDeviceTmpFloats, sizeof(e_TmpVertex) * (1 << 16));
+	const int L = 1024 * 16;
+	CUDA_MALLOC(&m_pDeviceTmpFloats, sizeof(e_TmpVertex) * L);
+	m_pHostTmpFloats = (e_TmpVertex*)malloc(sizeof(e_TmpVertex) * L);
 }
 
 void e_DynamicScene::Free()
@@ -145,6 +146,7 @@ void e_DynamicScene::Free()
 	DEALLOC(m_pLightStream)
 	DEALLOC(m_pVolumes)
 	CUDA_FREE(m_pDeviceTmpFloats);
+	free(m_pHostTmpFloats);
 #undef DEALLOC
 	delete m_pBVH;
 	m_pBVH = 0;
@@ -292,7 +294,7 @@ e_BufferReference<e_MIPMap, e_KernelMIPMap> e_DynamicScene::LoadTexture(const st
 		T.Invalidate();
 	}
 	if(!T->getKernelData().m_pDeviceData)
-		throw 1;
+		throw std::runtime_error(__FUNCTION__);
 	m_pTextureBuffer->UpdateInvalidated();
 	return T;
 }
@@ -360,6 +362,8 @@ bool e_DynamicScene::UpdateScene()
 		}
 		void operator()(const std::string& path, e_Variable<e_KernelMIPMap> var)
 		{
+			std::cout << "path = " << path << "\n";
+			std::cout << "host = " << var.host << "\n";
 			m_pTextureBuffer->Release(path);
 		}
 	};
@@ -398,7 +402,7 @@ void e_DynamicScene::AnimateMesh(e_StreamReference(e_Node) n, float t, unsigned 
 	unsigned int k;
 	float l;
 	m2->ComputeFrameIndex(t, anim, &k, &l);
-	m2->k_ComputeState(anim, k, l, getKernelSceneData(), m_pBVHStream, m_pDeviceTmpFloats);
+	m2->k_ComputeState(anim, k, l, getKernelSceneData(), m_pBVHStream, m_pDeviceTmpFloats, m_pHostTmpFloats);
 	getMesh(n).Invalidate();
 	m_pBVH->invalidateNode(n);
 }

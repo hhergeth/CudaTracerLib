@@ -3,6 +3,7 @@
 #include "e_FileTexture_device.h"
 #include "e_DifferentialGeometry.h"
 #include "../Base/FixedString.h"
+#include "../VirtualFuncType.h"
 
 struct e_TextureMapping2D
 {
@@ -105,9 +106,9 @@ struct e_CheckerboardTexture : public e_TextureBase//, public e_DerivedTypeHelpe
 struct e_ImageTexture : public e_TextureBase//, public e_DerivedTypeHelper<4>
 {
 	TYPE_FUNC(4)
-	e_ImageTexture(){}
+	e_ImageTexture():tex(0,0){}
 	e_ImageTexture(const e_TextureMapping2D& m, const std::string& _file)
-		: mapping(m), file(_file)
+		: mapping(m), file(_file), tex(0, 0)
 	{
 	}
 	CUDA_FUNC_IN Spectrum Evaluate(const DifferentialGeometry& its) const
@@ -194,18 +195,16 @@ struct e_ExtraDataTexture : public e_TextureBase//, public e_DerivedTypeHelper<7
 struct e_Texture : public CudaVirtualAggregate<e_TextureBase, e_BilerpTexture, e_ConstantTexture, e_ImageTexture, e_UVTexture, e_CheckerboardTexture, e_WireframeTexture, e_ExtraDataTexture>
 {
 public:
-	CUDA_FUNC_IN e_Texture()
-	{
-	}
+	CALLER(Evaluate)
 	CUDA_FUNC_IN Spectrum Evaluate(const DifferentialGeometry & dg) const
 	{
-		CALL_FUNC7(e_BilerpTexture, e_ConstantTexture, e_ImageTexture, e_UVTexture, e_CheckerboardTexture, e_WireframeTexture, e_ExtraDataTexture, Evaluate(dg))
-		return Spectrum(0.0f);
+		return Evaluate_Caller<Spectrum>(*this, dg);
 	}
+
+	CALLER(Average)
 	CUDA_FUNC_IN Spectrum Average()
 	{
-		CALL_FUNC7(e_BilerpTexture, e_ConstantTexture, e_ImageTexture, e_UVTexture, e_CheckerboardTexture, e_WireframeTexture, e_ExtraDataTexture, Average())
-		return Spectrum(0.0f);
+		return Average_Caller<Spectrum>(*this);
 	}
 };
 

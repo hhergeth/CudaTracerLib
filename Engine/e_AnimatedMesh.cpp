@@ -4,6 +4,9 @@
 #include "SceneBuilder/MD5Parser.h"
 #include "SceneBuilder/Importer.h"
 #include "SceneBuilder\TangentSpaceHelper.h"
+#include "e_BVHRebuilder.h"
+#include "../Base/Platform.h"
+#include "e_AnimatedMeshHelper.h"
 
 void build_e_Animation(Anim* A, MD5Model* M, e_Animation& res, const std::string& name, const std::vector<float4x4>& inverseJoints)
 {
@@ -58,6 +61,7 @@ e_AnimatedMesh::e_AnimatedMesh(const std::string& path, IInStream& a_In, e_Strea
 	uint3* idx = ((uint3*)m_sTriangles().operator char *()) + (m_sTriInfo.getLength() - 2);
 	m_sHierchary.deSerialize(a_In, a_Stream5);
 	a_Stream5->UpdateInvalidated();
+	m_pBuilder = 0;
 }
 
 void e_AnimatedMesh::CompileToBinary(const std::string& a_InputFile, std::vector<std::string>& a_Anims, OutputStream& a_Out)
@@ -139,9 +143,8 @@ void e_AnimatedMesh::CompileToBinary(const std::string& a_InputFile, std::vector
 	}
 	a_Out.Write(&v_Data[0], vCount * sizeof(e_AnimatedVertex));
 	a_Out.Write(&triData2[0], (unsigned int)triData2.size() * sizeof(uint3));
-	e_BVHHierarchy hier(bvh.nodes);
+	e_BVHHierarchy hier(&bvh.nodes[0]);
 	hier.serialize(a_Out);
-	bvh.Free();
 }
 
 void e_AnimatedMesh::CreateNewMesh(e_AnimatedMesh* A, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4, e_Stream<char>* a_Stream5)
@@ -150,10 +153,11 @@ void e_AnimatedMesh::CreateNewMesh(e_AnimatedMesh* A, e_Stream<e_TriIntersectorD
 	A->m_uUsedLights = 0;
 	A->m_sLocalBox = m_sLocalBox;
 	A->m_sMatInfo = m_sMatInfo;
-	A->m_sIndicesInfo = (m_sIndicesInfo);
+	A->m_sIndicesInfo = a_Stream3->malloc(m_sIndicesInfo, true);
 	A->m_sTriInfo = a_Stream1->malloc(m_sTriInfo, true);
 	A->m_sNodeInfo = a_Stream2->malloc(m_sNodeInfo, true);
 	A->m_sIntInfo = a_Stream0->malloc(m_sIntInfo, true);
+	A->m_pBuilder = 0;
 	
 	A->k_Data = k_Data;
 	A->m_pAnimations = m_pAnimations;

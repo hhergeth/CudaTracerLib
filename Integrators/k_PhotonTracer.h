@@ -1,7 +1,6 @@
 #pragma once
 
 #include "..\Kernel\k_Tracer.h"
-#include "..\Base\StringUtils.h"
 
 class k_PhotonTracer : public k_Tracer<false, true>
 {

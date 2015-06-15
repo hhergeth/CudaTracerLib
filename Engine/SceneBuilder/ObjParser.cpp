@@ -479,8 +479,7 @@ static e_Texture CreateTexture(const char* p, const Spectrum& col)
 void compileobj(IInStream& in, OutputStream& a_Out)
 {
 	std::string dirName = boost::filesystem::path(in.getFilePath()).parent_path().string();
-	ImportState* state = new ImportState();
-	ImportState& s = *state;//do not put it on the stack it is kinda big
+	ImportState s;//do not put it on the stack it is kinda big
 	int submesh = -1;
 	int defaultSubmesh = -1;
 

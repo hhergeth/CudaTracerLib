@@ -23,6 +23,7 @@ public:
 
 struct e_BVHNodeData;
 struct e_TriIntersectorData2;
+class e_Mesh;
 
 class e_BVHRebuilder
 {
@@ -45,7 +46,7 @@ class e_BVHRebuilder
 	struct SceneInfo;
 
 	std::vector<BVHNodeInfo> bvhNodeData;
-	std::vector<BVHIndex> nodeToBVHNode;
+	std::vector<std::vector<BVHIndex>> objectToBVHNodes;
 
 	enum{MAX_NODES = 1024 * 1024 * 32};
 
@@ -59,9 +60,10 @@ class e_BVHRebuilder
 
 public:
 	e_BVHRebuilder(e_BVHNodeData* data, unsigned int a_BVHNodeLength, unsigned int a_SceneNodeLength, e_TriIntersectorData2* indices, unsigned int a_IndicesLength);
+	e_BVHRebuilder(e_Mesh* mesh, ISpatialInfoProvider* data);
 	~e_BVHRebuilder();
 
-	bool Build(ISpatialInfoProvider* data);
+	bool Build(ISpatialInfoProvider* data, bool invalidateAll = false);
 	int getStartNode(){ return startNode; }
 	unsigned int getNumBVHNodesUsed(){ return m_uBvhNodeCount; }
 	AABB getBox();
@@ -74,11 +76,12 @@ public:
 
 	const std::bitset<MAX_NODES>& getInvalidatedNodes(){ return nodesToRecompute; }
 private:
+	int BuildInfoTree(BVHIndex idx, BVHIndex parent);
 	void removeNodeAndCollapse(BVHIndex nodeIdx, BVHIndex childIdx);
 	void insertNode(BVHIndex bvhNodeIdx, BVHIndex parent, unsigned int nodeIdx, const AABB& nodeWorldBox);
 	void recomputeNode(BVHIndex bvhNodeIdx, AABB& newBox);
 	int getChildIdxInLocal(BVHIndex nodeIdx, BVHIndex childIdx);
-	void setChild(BVHIndex nodeIdx, BVHIndex childIdx, int localIdxToSetTo);
+	void setChild(BVHIndex nodeIdx, BVHIndex childIdx, int localIdxToSetTo, BVHIndex oldParent);
 	void sahModified(BVHIndex nodeIdx, const AABB& box, float& leftSAH, float& rightSAH);
 	int validateTree(BVHIndex idx, BVHIndex parent);
 	void propagateBBChange(BVHIndex idx, const AABB& box, int localChildIdx);
@@ -91,7 +94,6 @@ private:
 	int numLeafs(BVHIndex idx);
 	void enumerateLeaf(BVHIndex idx, const std::function<void(int)>& f);
 	BVHIndex createLeaf(unsigned int nodeIdx, BVHIndex oldLeaf);
-	BVHIndex getLeafIdx(unsigned int objIdx);
 	bool removeObjectFromLeaf(BVHIndex leafIdx, unsigned int objIdx);
 	void writeGraphPart(BVHIndex idx, BVHIndex parent, std::ofstream& f);
 };

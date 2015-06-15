@@ -3,8 +3,8 @@
 
 Spectrum coating::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &_sample) const
 {
-	bool sampleSpecular = (bRec.typeMask & EDeltaReflection);
-	bool sampleNested = (bRec.typeMask & m_nested.getType() & EAll);
+	bool sampleSpecular = (bRec.typeMask & EDeltaReflection) != 0;
+	bool sampleNested = (bRec.typeMask & m_nested.getType() & EAll) != 0;
 
 	if ((!sampleSpecular && !sampleNested))
 		return Spectrum(0.0f);
@@ -76,8 +76,8 @@ Spectrum coating::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &_sam
 
 Spectrum coating::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 {
-	bool sampleSpecular = (bRec.typeMask & EDeltaReflection);
-	bool sampleNested = (bRec.typeMask & m_nested.getType() & EAll);
+	bool sampleSpecular = (bRec.typeMask & EDeltaReflection) != 0;
+	bool sampleNested = (bRec.typeMask & m_nested.getType() & EAll) != 0;
 
 	if (measure == EDiscrete && sampleSpecular &&
 			math::abs(dot(reflect(bRec.wi), bRec.wo)-1) < DeltaEpsilon) {
@@ -115,8 +115,8 @@ Spectrum coating::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 
 float coating::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 {
-	bool sampleSpecular = (bRec.typeMask & EDeltaReflection);
-	bool sampleNested = (bRec.typeMask & m_nested.getType() & EAll);
+	bool sampleSpecular = (bRec.typeMask & EDeltaReflection) != 0;
+	bool sampleNested = (bRec.typeMask & m_nested.getType() & EAll) != 0;
 
 	float R12;
 	Vec3f wiPrime = refractIn(bRec.wi, R12);
@@ -151,8 +151,8 @@ float coating::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 
 Spectrum roughcoating::sample(BSDFSamplingRecord &bRec, float &_pdf, const Vec2f &_sample) const
 {
-	bool hasNested = (bRec.typeMask & m_nested.getType() & EAll);
-	bool hasSpecular = (bRec.typeMask & EGlossyReflection);
+	bool hasNested = (bRec.typeMask & m_nested.getType() & EAll) != 0;
+	bool hasSpecular = (bRec.typeMask & EGlossyReflection) != 0;
 
 	bool choseSpecular = hasSpecular;
 	Vec2f sample = _sample;
@@ -213,8 +213,8 @@ Spectrum roughcoating::sample(BSDFSamplingRecord &bRec, float &_pdf, const Vec2f
 
 Spectrum roughcoating::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 {
-	bool hasNested = (bRec.typeMask & m_nested.getType() & EAll);
-	bool hasSpecular = (bRec.typeMask & EGlossyReflection) && measure == ESolidAngle;
+	bool hasNested = (bRec.typeMask & m_nested.getType() & EAll) != 0;
+	bool hasSpecular = (bRec.typeMask & EGlossyReflection) != 0 && measure == ESolidAngle;
 
 	/* Evaluate the roughness texture */
 	float alpha = m_alpha.Evaluate(bRec.dg).average();
@@ -272,8 +272,8 @@ Spectrum roughcoating::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 
 float roughcoating::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 {
-	bool hasNested = (bRec.typeMask & m_nested.getType() & EAll);
-	bool hasSpecular = (bRec.typeMask & EGlossyReflection) && measure == ESolidAngle;
+	bool hasNested = (bRec.typeMask & m_nested.getType() & EAll) != 0;
+	bool hasSpecular = (bRec.typeMask & EGlossyReflection) != 0 && measure == ESolidAngle;
 
 	/* Calculate the reflection half-vector */
 	const Vec3f H = normalize(bRec.wo+bRec.wi)

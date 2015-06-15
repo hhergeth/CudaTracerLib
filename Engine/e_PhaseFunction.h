@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../MathTypes.h"
+#include "../VirtualFuncType.h"
 
 struct PhaseFunctionSamplingRecord;
 struct CudaRNG;
@@ -110,24 +111,24 @@ public:
 		return ((e_BasePhaseFunction*)Data)->type;
 	}
 
+	CALLER(Evaluate)
 	CUDA_FUNC_IN float Evaluate(const PhaseFunctionSamplingRecord &pRec) const
 	{
-		CALL_FUNC4(e_HGPhaseFunction,e_IsotropicPhaseFunction,e_KajiyaKayPhaseFunction,e_RayleighPhaseFunction, Evaluate(pRec))
-		return 0.0f;
+		return Evaluate_Caller<float>(*this, pRec);
 	}
 
+	CALLER(Sample)
 	CUDA_FUNC_IN float Sample(PhaseFunctionSamplingRecord &pRec, CudaRNG& sampler) const
 	{
-		CALL_FUNC4(e_HGPhaseFunction,e_IsotropicPhaseFunction,e_KajiyaKayPhaseFunction,e_RayleighPhaseFunction, Sample(pRec, sampler))
-		return 0.0f;
+		return Sample_Caller<float>(*this, pRec, sampler);
 	}
 
 	CUDA_FUNC_IN float Sample(PhaseFunctionSamplingRecord &pRec, float &pdf, CudaRNG& sampler) const
 	{
-		CALL_FUNC4(e_HGPhaseFunction,e_IsotropicPhaseFunction,e_KajiyaKayPhaseFunction,e_RayleighPhaseFunction, Sample(pRec, pdf, sampler))
-		return 0.0f;
+		return Sample_Caller<float>(*this, pRec, pdf, sampler);
 	}
 
+	CALLER(pdf)
 	CUDA_FUNC_IN float pdf(const PhaseFunctionSamplingRecord &pRec) const
 	{
 		return Evaluate(pRec);

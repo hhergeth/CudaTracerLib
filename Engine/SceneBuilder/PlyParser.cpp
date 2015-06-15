@@ -229,9 +229,9 @@ void compileply(IInStream& istream, OutputStream& a_Out)
 						uvStart = name[0] == 'u' ? elementIndex : uvStart;
 					}
 					else if(name.find("material") != -1)
-						throw 1;
+						throw std::runtime_error(__FUNCTION__);
 				}
-				else throw 1;
+				else throw std::runtime_error(__FUNCTION__);
 				elementIndex++;
 			}
 			else
@@ -245,14 +245,14 @@ void compileply(IInStream& istream, OutputStream& a_Out)
 					listCount = varReader(size_type_string);
 					listElements = varReader(scalar_type_string);
 				}
-				//else throw 1;
+				//else throw std::runtime_error(__FUNCTION__);
 			}
 		}
 		else if(keyword == "end_header")
 			break;
 	}
 	if(hasPos != 7)
-		throw 1;
+		throw std::runtime_error(__FUNCTION__);
 
 	Vec3f* Vertices = (Vec3f*)malloc(vertexCount * sizeof(Vec3f));
 	Vec2f* TexCoords = (Vec2f*)malloc(vertexCount * sizeof(Vec2f));
@@ -297,7 +297,7 @@ void compileply(IInStream& istream, OutputStream& a_Out)
 				for(unsigned int i = 0; i < 3; i++)
 					Indices[indexCount++] = (stack[i]);
 			}
-			else throw 1;
+			else throw std::runtime_error(__FUNCTION__);
 		}
 	}
 	else
@@ -328,14 +328,14 @@ void compileply(IInStream& istream, OutputStream& a_Out)
 				for(unsigned int i = 0; i < 3; i++)
 					Indices[indexCount++] = format == binary_little_endian_format ? dat[i] : LongSwap(dat[i]);
 			}
-			else throw 1;
+			else throw std::runtime_error(__FUNCTION__);
 			file_pos += 4 * FILE_BUF[file_pos] + 1;
 		}
 		free(FILE_BUF);
 	}
 	unsigned int pos = istream.getPos(), size = istream.getFileSize();
 	//if(pos != size)
-	//	throw 1;
+	//	throw std::runtime_error(__FUNCTION__);
 
 	Vec3f* Normals = new Vec3f[vertexCount], *Tangents = new Vec3f[vertexCount];
 	ComputeTangentSpace(Vertices, TexCoords, Indices, vertexCount, faceCount, Normals, Tangents);

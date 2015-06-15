@@ -101,7 +101,7 @@ void gaussLegendre(int n, float *nodes, float *weights) {
 		nodes[0] = 0;
 		weights[0] = 2;
 	} else if (n == 1) {
-		nodes[0] = (float) -math::sqrt(1.0/3.0);
+		nodes[0] = (float) -math::sqrt(1.0f/3.0f);
 		nodes[1] = -nodes[0];
 		weights[0] = weights[1] = 1;
 	}

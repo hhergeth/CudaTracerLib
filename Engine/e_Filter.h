@@ -1,6 +1,7 @@
 #pragma once
 
 #include <MathTypes.h>
+#include "../VirtualFuncType.h"
 
 struct e_FilterBase : public e_BaseType//, public e_BaseTypeHelper<5524550>
 {
@@ -151,9 +152,9 @@ public:
 		//type = 0;	
 	}
 
+	CALLER(Evaluate)
 	CUDA_FUNC_IN float Evaluate(float x, float y) const
 	{
-		CALL_FUNC5(e_BoxFilter,e_GaussianFilter,e_MitchellFilter,e_LanczosSincFilter,e_TriangleFilter, Evaluate(x, y))
-		return 0.0f;
+		return Evaluate_Caller<float>(*this, x, y);
 	}
 };

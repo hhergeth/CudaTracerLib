@@ -609,7 +609,7 @@ void SpectrumHelper::StaticInitialize()
 {
 	host.init();
 	cudaError r= cudaMemcpyToSymbol(device, &host, sizeof(staticData));
-	if(r)throw 1;
+	if(r)throw std::runtime_error(__FUNCTION__);
 }
 
 void SpectrumHelper::StaticDeinitialize()

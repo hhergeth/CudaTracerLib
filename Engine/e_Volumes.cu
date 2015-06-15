@@ -344,7 +344,7 @@ float e_KernelAggregateVolume::Sample(const Vec3f& p, const Vec3f& wo, CudaRNG& 
 		if (m_pVolumes[i].As()->isInVolume(a_NodeIndex) && m_pVolumes[i].WorldBound().Contains(p))
 		{
 			float pdf;
-			float pf = m_pVolumes[i].BaseRegion()->Func.Sample(r2, pdf, rng);
+			float pf = m_pVolumes[i].As()->Func.Sample(r2, pdf, rng);
 			*wi = r2.wo;
 			return pf;
 		}
@@ -359,7 +359,7 @@ float e_KernelAggregateVolume::p(const Vec3f& p, const Vec3f& wo, const Vec3f& w
 	r2.wo = wi;
 	for(unsigned int i = 0; i < m_uVolumeCount; i++)
 		if (m_pVolumes[i].As()->isInVolume(a_NodeIndex) && m_pVolumes[i].WorldBound().Contains(p))
-			return m_pVolumes[i].BaseRegion()->Func.Evaluate(r2);
+			return m_pVolumes[i].As()->Func.Evaluate(r2);
 	return 0.0f;
 }
 

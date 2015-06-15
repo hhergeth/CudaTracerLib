@@ -38,7 +38,7 @@ e_RoughTransmittance::e_RoughTransmittance(const std::string& name)
 	cudaMemcpy(m_transDevice, m_transHost, sizeof(float) * m_transSize, cudaMemcpyHostToDevice);
 	cudaMemcpy(m_diffTransDevice, m_diffTransHost, sizeof(float) * m_diffTransSize, cudaMemcpyHostToDevice);
 	if(I.getPos() != I.getFileSize())
-		throw 1;
+		throw std::runtime_error(__FUNCTION__);
 }
 
 float e_RoughTransmittance::Evaluate(float cosTheta, float alpha, float eta) const

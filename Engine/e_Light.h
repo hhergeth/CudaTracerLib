@@ -5,6 +5,7 @@
 #include "e_FileTexture_device.h"
 #include "e_AbstractEmitter.h"
 #include "e_Samples.h"
+#include "../VirtualFuncType.h"
 
 template<typename H, typename D> class e_BufferReference;
 template<typename T> class e_Stream;
@@ -80,7 +81,7 @@ struct e_PointLight : public e_LightBase//, public e_DerivedTypeHelper<1>
 		return Spectrum((dRec.measure == ESolidAngle) ? INV_FOURPI : 0.0f);
 	}
 
-	AABB getBox(float eps) const
+	CUDA_FUNC_IN AABB getBox(float eps) const
 	{
 		return AABB(lightPos - Vec3f(eps), lightPos + Vec3f(eps));
 	}
@@ -148,7 +149,7 @@ struct e_DiffuseLight : public e_LightBase//, public e_DerivedTypeHelper<2>
 
 	CUDA_DEVICE CUDA_HOST Spectrum evalDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const;
 
-	AABB getBox(float eps) const
+	CUDA_FUNC_IN AABB getBox(float eps) const
 	{
 		return shapeSet.getBox();
 	}
@@ -226,7 +227,7 @@ struct e_DistantLight : public e_LightBase//, public e_DerivedTypeHelper<3>
 		return Spectrum((dRec.measure == EDiscrete) ? 1.0f : 0.0f);
 	}
 	
-	AABB getBox(float eps) const
+	CUDA_FUNC_IN AABB getBox(float eps) const
 	{
 		return AABB(Vec3f(-radius), Vec3f(+radius));
 	}
@@ -292,7 +293,7 @@ struct e_SpotLight : public e_LightBase//, public e_DerivedTypeHelper<4>
 		return (dRec.measure == ESolidAngle) ? falloffCurve(ToWorld.toLocal(dRec.d)) * INV_FOURPI : Spectrum(0.0f);
 	}
 	
-	AABB getBox(float eps) const
+	CUDA_FUNC_IN AABB getBox(float eps) const
 	{
 		return AABB(Position - Vec3f(eps), Position + Vec3f(eps));
 	}
@@ -354,7 +355,7 @@ struct e_InfiniteLight : public e_LightBase//, public e_DerivedTypeHelper<5>
 
 	CUDA_DEVICE CUDA_HOST Spectrum evalEnvironment(const Ray &ray, const Ray& rX, const Ray& rY) const;
 	
-	AABB getBox(float eps) const
+	CUDA_FUNC_IN AABB getBox(float eps) const
 	{
 		return AABB(-Vec3f(1.0f / eps), Vec3f(1.0f / eps));
 	}
@@ -366,70 +367,70 @@ private:
 CUDA_ALIGN(16) struct e_KernelLight : public CudaVirtualAggregate<e_LightBase, e_PointLight, e_DiffuseLight, e_DistantLight, e_SpotLight, e_InfiniteLight>
 {
 public:
+	CALLER(sampleRay)
 	CUDA_FUNC_IN Spectrum sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const
 	{
-		CALL_FUNC5(e_PointLight,e_DiffuseLight,e_DistantLight,e_SpotLight,e_InfiniteLight, sampleRay(ray, spatialSample, directionalSample))
-		return 0.0f;
+		return sampleRay_Caller<Spectrum>(*this, ray, spatialSample, directionalSample);
 	}
 
+	CALLER(eval)
 	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const Vec3f &d) const
 	{
-		CALL_FUNC5(e_PointLight,e_DiffuseLight,e_DistantLight,e_SpotLight,e_InfiniteLight, eval(p, sys, d))
-		return 0.0f;
+		return eval_Caller<Spectrum>(*this, p, sys, d);
 	}
 
+	CALLER(sampleDirect)
 	CUDA_FUNC_IN Spectrum sampleDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const
 	{
-		CALL_FUNC5(e_PointLight,e_DiffuseLight,e_DistantLight,e_SpotLight,e_InfiniteLight, sampleDirect(dRec, sample))
-		return 0.0f;
+		return sampleDirect_Caller<Spectrum>(*this, dRec, sample);
 	}
 
+	CALLER(pdfDirect)
 	CUDA_FUNC_IN float pdfDirect(const DirectSamplingRecord &dRec) const
 	{
-		CALL_FUNC5(e_PointLight,e_DiffuseLight,e_DistantLight,e_SpotLight,e_InfiniteLight, pdfDirect(dRec))
-		return 0.0f;
+		return pdfDirect_Caller<float>(*this, dRec);
 	}
 
+	CALLER(samplePosition)
 	CUDA_FUNC_IN Spectrum samplePosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra = 0) const
 	{
-		CALL_FUNC5(e_PointLight,e_DiffuseLight,e_DistantLight,e_SpotLight,e_InfiniteLight, samplePosition(pRec, sample, extra))
-		return 0.0f;
+		return samplePosition_Caller<Spectrum>(*this, pRec, sample, extra);
 	}
 
+	CALLER(evalPosition)
 	CUDA_FUNC_IN Spectrum evalPosition(const PositionSamplingRecord &pRec) const
 	{
-		CALL_FUNC5(e_PointLight,e_DiffuseLight,e_DistantLight,e_SpotLight,e_InfiniteLight, evalPosition(pRec))
-		return 0.0f;
+		return evalPosition_Caller<Spectrum>(*this, pRec);
 	}
 
+	CALLER(pdfPosition)
 	CUDA_FUNC_IN float pdfPosition(const PositionSamplingRecord &pRec) const
 	{
-		CALL_FUNC5(e_PointLight,e_DiffuseLight,e_DistantLight,e_SpotLight,e_InfiniteLight, pdfPosition(pRec))
-		return 0.0f;
+		return pdfPosition_Caller<float>(*this, pRec);
 	}
 
+	CALLER(sampleDirection)
 	CUDA_FUNC_IN Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra = 0) const
 	{
-		CALL_FUNC5(e_PointLight,e_DiffuseLight,e_DistantLight,e_SpotLight,e_InfiniteLight, sampleDirection(dRec, pRec, sample, extra))
-		return 0.0f;
+		return sampleDirection_Caller<Spectrum>(*this, dRec, pRec, sample, extra);
 	}
 
+	CALLER(pdfDirection)
 	CUDA_FUNC_IN float pdfDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
 	{
-		CALL_FUNC5(e_PointLight,e_DiffuseLight,e_DistantLight,e_SpotLight,e_InfiniteLight, pdfDirection(dRec, pRec))
-		return 0.0f;
+		return pdfDirection_Caller<float>(*this, dRec, pRec);
 	}
 
+	CALLER(evalDirection)
 	CUDA_FUNC_IN Spectrum evalDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
 	{
-		CALL_FUNC5(e_PointLight,e_DiffuseLight,e_DistantLight,e_SpotLight,e_InfiniteLight, evalDirection(dRec, pRec))
-		return 0.0f;
+		return evalDirection_Caller<Spectrum>(*this, dRec, pRec);
 	}
 
-	AABB getBox(float eps) const
+	CALLER(getBox)
+	CUDA_FUNC_IN AABB getBox(float eps) const
 	{
-		CALL_FUNC5(e_PointLight,e_DiffuseLight,e_DistantLight,e_SpotLight,e_InfiniteLight, getBox(eps))
-		return AABB::Identity();
+		return getBox_Caller<AABB>(*this, eps);
 	}
 };
 

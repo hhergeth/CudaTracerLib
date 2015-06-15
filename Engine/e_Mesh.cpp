@@ -96,7 +96,7 @@ e_SceneInitData e_Mesh::ParseBinary(const std::string& a_InputFile)
 	AABB m_sLocalBox;
 	a_In >> m_sLocalBox;
 	a_In.Move(sizeof(e_MeshPartLight) * MAX_AREALIGHT_NUM + 8);
-#define PRINT(n, t) { a_In.Move(n * sizeof(t)); char msg[255]; msg[0] = 0; sprintf(msg, "Buf : %s, length : %llu, size : %llu[MB]\n", #t, size_t(n), size_t((n) * sizeof(t) / (1024 * 1024))); Platform::OutputDebug(msg);}
+#define PRINT(n, t) { a_In.Move(n * sizeof(t)); Platform::OutputDebug(format("Buf : %s, length : %llu, size : %llu[MB]\n", #t, size_t(n), size_t((n) * sizeof(t) / (1024 * 1024))));}
 	unsigned int m_uTriangleCount;
 	a_In >> m_uTriangleCount;
 	PRINT(m_uTriangleCount, e_TriangleData)
@@ -115,9 +115,7 @@ e_SceneInitData e_Mesh::ParseBinary(const std::string& a_InputFile)
 #undef PRINT
 #undef PRINT2
 	a_In.Close();
-	char msg[2048];
-	sprintf(msg, "return CreateForSpecificMesh(%d, %d, %d, %d, 255, a_Lights);\n", m_uTriangleCount, m_uIntSize, m_uNodeSize, m_uIndicesSize);
-	Platform::OutputDebug(msg);
+	Platform::OutputDebug(format("return CreateForSpecificMesh(%d, %d, %d, %d, 255, a_Lights);\n", m_uTriangleCount, m_uIntSize, m_uNodeSize, m_uIndicesSize));
 	return e_SceneInitData::CreateForSpecificMesh(m_uTriangleCount, m_uIntSize, m_uNodeSize, m_uIndicesSize, 255, 16, 16, 8);
 }
 

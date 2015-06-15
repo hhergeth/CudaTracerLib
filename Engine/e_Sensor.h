@@ -3,6 +3,7 @@
 #include "..\MathTypes.h"
 #include "e_Samples.h"
 #include "e_AbstractEmitter.h"
+#include "../VirtualFuncType.h"
 
 enum ESensorFlags
 {
@@ -541,75 +542,75 @@ public:
 		return r;
 	}
 
+	CALLER(sampleRay)
 	CUDA_FUNC_IN Spectrum sampleRay(Ray &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const
 	{
-		CALL_FUNC5(e_SphericalCamera,e_PerspectiveCamera,e_ThinLensCamera,e_OrthographicCamera,e_TelecentricCamera, sampleRay(ray, pixelSample, apertureSample))
-		return Spectrum(1.0f);
+		return sampleRay_Caller<Spectrum>(*this, ray, pixelSample, apertureSample);
 	}
 
+	CALLER(sampleRayDifferential)
 	CUDA_FUNC_IN Spectrum sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const
 	{
-		CALL_FUNC5(e_SphericalCamera, e_PerspectiveCamera, e_ThinLensCamera, e_OrthographicCamera, e_TelecentricCamera, sampleRayDifferential(ray, rayX, rayY, pixelSample, apertureSample))
-			return Spectrum(1.0f);
+		return sampleRayDifferential_Caller<Spectrum>(*this, ray, rayX, rayY, pixelSample, apertureSample);
 	}
 
+	CALLER(eval)
 	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const Vec3f &d) const
 	{
-		CALL_FUNC5(e_SphericalCamera,e_PerspectiveCamera,e_ThinLensCamera,e_OrthographicCamera,e_TelecentricCamera, eval(p, sys, d))
-		return Spectrum(1.0f);
+		return eval_Caller<Spectrum>(*this, p, sys, d);
 	}
 
+	CALLER(sampleDirect)
 	CUDA_FUNC_IN Spectrum sampleDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const
 	{
-		CALL_FUNC5(e_SphericalCamera,e_PerspectiveCamera,e_ThinLensCamera,e_OrthographicCamera,e_TelecentricCamera, sampleDirect(dRec, sample))
-		return Spectrum(1.0f);
+		return sampleDirect_Caller<Spectrum>(*this, dRec, sample);
 	}
 
+	CALLER(pdfDirect)
 	CUDA_FUNC_IN float pdfDirect(const DirectSamplingRecord &dRec) const
 	{
-		CALL_FUNC5(e_SphericalCamera,e_PerspectiveCamera,e_ThinLensCamera,e_OrthographicCamera,e_TelecentricCamera, pdfDirect(dRec))
-		return 0.0f;
+		return pdfDirect_Caller<float>(*this, dRec);
 	}
 
+	CALLER(samplePosition)
 	CUDA_FUNC_IN Spectrum samplePosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const
 	{
-		CALL_FUNC5(e_SphericalCamera,e_PerspectiveCamera,e_ThinLensCamera,e_OrthographicCamera,e_TelecentricCamera, samplePosition(pRec, sample, extra))
-		return Spectrum(1.0f);
+		return samplePosition_Caller<Spectrum>(*this, pRec, sample, extra);
 	}
 
+	CALLER(evalPosition)
 	CUDA_FUNC_IN Spectrum evalPosition(const PositionSamplingRecord &pRec) const
 	{
-		CALL_FUNC5(e_SphericalCamera,e_PerspectiveCamera,e_ThinLensCamera,e_OrthographicCamera,e_TelecentricCamera, evalPosition(pRec))
-		return Spectrum(1.0f);
+		return evalPosition_Caller<Spectrum>(*this, pRec);
 	}
 
+	CALLER(pdfPosition)
 	CUDA_FUNC_IN float pdfPosition(const PositionSamplingRecord &pRec) const
 	{
-		CALL_FUNC5(e_SphericalCamera,e_PerspectiveCamera,e_ThinLensCamera,e_OrthographicCamera,e_TelecentricCamera, pdfPosition(pRec))
-		return 1.0f;
+		return pdfPosition_Caller<float>(*this, pRec);
 	}
 
+	CALLER(sampleDirection)
 	CUDA_FUNC_IN Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const
 	{
-		CALL_FUNC5(e_SphericalCamera,e_PerspectiveCamera,e_ThinLensCamera,e_OrthographicCamera,e_TelecentricCamera, sampleDirection(dRec, pRec, sample, extra))
-		return Spectrum(1.0f);
+		return sampleDirection_Caller<Spectrum>(*this, dRec, pRec, sample, extra);
 	}
 
+	CALLER(pdfDirection)
 	CUDA_FUNC_IN float pdfDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
 	{
-		CALL_FUNC5(e_SphericalCamera,e_PerspectiveCamera,e_ThinLensCamera,e_OrthographicCamera,e_TelecentricCamera, pdfDirection(dRec, pRec))
-		return 1.0f;
+		return pdfDirection_Caller<float>(*this, dRec, pRec);
 	}
 
+	CALLER(evalDirection)
 	CUDA_FUNC_IN Spectrum evalDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
 	{
-		CALL_FUNC5(e_SphericalCamera,e_PerspectiveCamera,e_ThinLensCamera,e_OrthographicCamera,e_TelecentricCamera, evalDirection(dRec, pRec))
-		return Spectrum(1.0f);
+		return evalDirection_Caller<Spectrum>(*this, dRec, pRec);
 	}
 
+	CALLER(getSamplePosition)
 	CUDA_FUNC_IN bool getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, Vec2f &samplePosition) const
 	{
-		CALL_FUNC5(e_SphericalCamera,e_PerspectiveCamera,e_ThinLensCamera,e_OrthographicCamera,e_TelecentricCamera, getSamplePosition(pRec, dRec, samplePosition))
-		return false;
+		return getSamplePosition_Caller<bool>(*this, pRec, dRec, samplePosition);
 	}
 };

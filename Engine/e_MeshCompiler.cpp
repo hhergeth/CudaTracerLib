@@ -3,7 +3,6 @@
 #include "e_AnimatedMesh.h"
 #include <algorithm>
 #include <string>
-#include "..\Base\StringUtils.h"
 #define BOOST_FILESYSTEM_DEPRECATED
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>

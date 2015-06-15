@@ -538,9 +538,9 @@ public:
 	static CUDA_FUNC_IN Vec3f XYZToRGB(const Vec3f& c)
 	{
 		Vec3f r;
-		r.x = dot(Vec3f(2.0413690, -0.5649464, -0.3446944), c);
-		r.y = dot(Vec3f(-0.9692660,  1.8760108,  0.0415560), c);
-		r.z = dot(Vec3f(0.0134474, -0.1183897,  1.0154096), c);
+		r.x = dot(Vec3f(2.0413690f, -0.5649464f, -0.3446944f), c);
+		r.y = dot(Vec3f(-0.9692660f,  1.8760108f,  0.0415560f), c);
+		r.z = dot(Vec3f(0.0134474f, -0.1183897f,  1.0154096f), c);
 		return r;
 	}
 

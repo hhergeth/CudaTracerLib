@@ -1,6 +1,7 @@
 #pragma once
 
 #include <MathTypes.h>
+#include "../VirtualFuncType.h"
 
 enum EEmitterType {
 	/// Emission profile contains a Dirac delta term with respect to direction
@@ -28,11 +29,11 @@ struct e_AbstractEmitter : public e_BaseType
 
 	CUDA_FUNC_IN bool IsDegenerate() const
 	{
-		return m_Type & (EDeltaPosition | EDeltaDirection);
+		return (m_Type & (EDeltaPosition | EDeltaDirection)) != 0;
 	}
 
 	CUDA_FUNC_IN bool IsOnSurface() const
 	{
-		return m_Type & EOnSurface;
+		return (m_Type & EOnSurface) != 0;
 	}
 };

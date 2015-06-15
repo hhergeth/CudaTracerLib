@@ -3,11 +3,11 @@
 #include "MathFunc.h"
 #include "Vector.h"
 
-#define m_alpha ((float)math::sqrt(2.0/3.0))
-#define m_beta ((float)(1.0/math::sqrt(5.0)))
-#define m_x1 ((float)0.94288241569547971906)
-#define m_x2 ((float)0.64185334234578130578)
-#define m_x3 ((float)0.23638319966214988028)
+#define m_alpha (math::sqrt(2.0f/3.0f))
+#define m_beta ((1.0f/math::sqrt(5.0f)))
+#define m_x1 (0.94288241569547971906f)
+#define m_x2 (0.64185334234578130578f)
+#define m_x3 (0.23638319966214988028f)
 
 CUDA_DEVICE CUDA_HOST float legendreP(int l, float x);
 
@@ -110,13 +110,13 @@ private:
 		const float y11= f(m+m_alpha*h);
 		const float y13= f(b);
 
-		float acc = h*((float) 0.0158271919734801831*(y1+y13)
-					 + (float) 0.0942738402188500455*(f(m-m_x1*h)+f(m+m_x1*h))
-					 + (float) 0.1550719873365853963*(y3+y11)
-					 + (float) 0.1888215739601824544*(f(m-m_x2*h)+ f(m+m_x2*h))
-					 + (float) 0.1997734052268585268*(y5+y9)
-					 + (float) 0.2249264653333395270*(f(m-m_x3*h)+f(m+m_x3*h))
-					 + (float) 0.2426110719014077338*y7);
+		float acc = h*( 0.0158271919734801831f*(y1+y13)
+					 +  0.0942738402188500455f*(f(m-m_x1*h)+f(m+m_x1*h))
+					 +  0.1550719873365853963f*(y3+y11)
+					 +  0.1888215739601824544f*(f(m-m_x2*h)+ f(m+m_x2*h))
+					 +  0.1997734052268585268f*(y5+y9)
+					 +  0.2249264653333395270f*(f(m-m_x3*h)+f(m+m_x3*h))
+					 +  0.2426110719014077338f*y7);
 		evals += 13;
 
 		float r = 1.0;

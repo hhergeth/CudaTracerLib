@@ -1,7 +1,6 @@
 #include <StdAfx.h>
 #include "k_sPpmTracer.h"
 #include "..\Base\Timer.h"
-#include "..\Base\StringUtils.h"
 #include "../Engine/e_DynamicScene.h"
 #include "../Engine/e_Node.h"
 #include "../Engine/e_Mesh.h"

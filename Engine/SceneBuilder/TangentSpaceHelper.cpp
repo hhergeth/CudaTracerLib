@@ -30,7 +30,7 @@ void ComputeTangentSpace(const Vec3f* V, const Vec2f* T, const unsigned int* I, 
 		const Vec2f w1 = T ? T[i1] : Vec2f(0), w2 = T ? T[i2] : Vec2f(0), w3 = T ? T[i3] : Vec2f(0);
 		const Vec3f n2 = normalize(cross(e1, e0));
 		//if(fsumf(n2 - n) > 1e-3)
-		//	throw 1;
+		//	throw std::runtime_error(__FUNCTION__);
 		a_Normals[i1] += n2;
 		a_Normals[i2] += n2;
 		a_Normals[i3] += n2;

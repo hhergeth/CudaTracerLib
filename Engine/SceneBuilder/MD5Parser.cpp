@@ -202,7 +202,6 @@ void MD5Model::readElements(std::ifstream &fin) {
   } // while ( not EOF )
 }
 
-#include "..\..\Base\StringUtils.h"
 
 void MD5Model::readAnimElements(std::ifstream &fin, Anim &anim) {
   while ( !fin.eof() ) {

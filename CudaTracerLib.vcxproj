@@ -126,6 +126,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClCompile Include="Engine\SceneBuilder\ObjParser.cpp" />
     <ClCompile Include="Engine\SceneBuilder\PlyParser.cpp" />
     <ClCompile Include="Engine\SceneBuilder\SplitBVHBuilder.cpp" />
+    <ClInclude Include="Engine\e_AnimatedMeshHelper.h" />
     <ClInclude Include="Engine\e_Buffer_device.h" />
     <ClInclude Include="Engine\e_BVHRebuilder.h" />
     <ClInclude Include="Engine\e_FileTexture_device.h" />
@@ -150,7 +151,6 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="Base\FixedString.h" />
     <ClInclude Include="Base\Platform.h" />
     <ClInclude Include="Base\STL.h" />
-    <ClInclude Include="Base\StringUtils.h" />
     <ClInclude Include="Base\Timer.h" />
     <ClInclude Include="Defines.h" />
     <ClInclude Include="Engine\e_AbstractEmitter.h" />

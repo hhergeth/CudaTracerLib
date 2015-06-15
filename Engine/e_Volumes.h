@@ -2,6 +2,7 @@
 #include "../Defines.h"
 #include "..\Math\AABB.h"
 #include "e_PhaseFunction.h"
+#include "../VirtualFuncType.h"
 
 template<typename T> class e_Stream;
 
@@ -345,56 +346,51 @@ public:
 		type = 0;
 	}
 
-	CUDA_FUNC_IN e_BaseVolumeRegion* BaseRegion()
-	{
-		return (e_BaseVolumeRegion*)Data;
-	}
-
 	CUDA_FUNC_IN AABB WorldBound()
 	{
 		return ((e_BaseVolumeRegion*)Data)->Box;
 	}
 
+	CALLER(IntersectP)
 	CUDA_FUNC_IN bool IntersectP(const Ray &ray, const float minT, const float maxT, float *t0, float *t1) const
 	{
-		CALL_FUNC2(e_HomogeneousVolumeDensity, e_VolumeGrid, IntersectP(ray, minT, maxT, t0, t1))
-		return false;
+		return IntersectP_Caller<bool>(*this, ray, minT, maxT, t0, t1);
 	}
 
+	CALLER(sigma_a)
 	CUDA_FUNC_IN Spectrum sigma_a(const Vec3f& p, const Vec3f& w) const
 	{
-		CALL_FUNC2(e_HomogeneousVolumeDensity, e_VolumeGrid, sigma_a(p, w))
-		return 0.0f;
+		return sigma_a_Caller<Spectrum>(*this, p, w);
 	}
 
+	CALLER(sigma_s)
 	CUDA_FUNC_IN Spectrum sigma_s(const Vec3f& p, const Vec3f& w) const
 	{
-		CALL_FUNC2(e_HomogeneousVolumeDensity, e_VolumeGrid, sigma_s(p, w))
-		return 0.0f;
+		return sigma_s_Caller<Spectrum>(*this, p, w);
 	}
 
+	CALLER(Lve)
 	CUDA_FUNC_IN Spectrum Lve(const Vec3f& p, const Vec3f& w) const
 	{
-		CALL_FUNC2(e_HomogeneousVolumeDensity, e_VolumeGrid, Lve(p, w))
-		return 0.0f;
+		return Lve_Caller<Spectrum>(*this, p, w);
 	}
 
+	CALLER(sigma_t)
 	CUDA_FUNC_IN Spectrum sigma_t(const Vec3f &p, const Vec3f &wo) const
 	{
-		CALL_FUNC2(e_HomogeneousVolumeDensity, e_VolumeGrid, sigma_t(p, wo))
-		return 0.0f;
+		return sigma_t_Caller<Spectrum>(*this, p, wo);
 	}
 
+	CALLER(tau)
     CUDA_FUNC_IN Spectrum tau(const Ray &ray, float minT, float maxT) const
 	{
-		CALL_FUNC2(e_HomogeneousVolumeDensity, e_VolumeGrid, tau(ray, minT, maxT))
-		return 0.0f;
+		return tau_Caller<Spectrum>(*this, ray, minT, maxT);
 	}
 
+	CALLER(sampleDistance)
 	CUDA_FUNC_IN bool sampleDistance(const Ray& ray, float minT, float maxT, float sample, MediumSamplingRecord& mRec) const
 	{
-		CALL_FUNC2(e_HomogeneousVolumeDensity, e_VolumeGrid, sampleDistance(ray, minT, maxT, sample, mRec))
-		return false;
+		return sampleDistance_Caller<bool>(*this, ray, minT, maxT, sample, mRec);
 	}
 };
 
@@ -442,7 +438,7 @@ public:
 	CUDA_FUNC_IN bool IsInVolume(const Vec3f& p, unsigned int a_NodeIndex = 0xffffffff) const
 	{
 		for (unsigned int i = 0; i < m_uVolumeCount; i++)
-			if (m_pVolumes[i].BaseRegion()->Box.Contains(p))
+			if (m_pVolumes[i].As()->Box.Contains(p))
 				return true;
 		return false;
 	}

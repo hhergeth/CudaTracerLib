@@ -157,7 +157,7 @@ bool e_KernelMaterial::GetBSSRDF(const DifferentialGeometry& uv, const e_KernelB
 {
 	if (usedBssrdf)
 		*res = &bssrdf;
-	return usedBssrdf;
+	return !!usedBssrdf;
 }
 
 void e_KernelMaterial::setBssrdf(const Spectrum& sig_a, const Spectrum& sigp_s, float e)

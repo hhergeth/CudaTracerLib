@@ -1,6 +1,7 @@
 #include <StdAfx.h>
 #include "e_BVHRebuilder.h"
 #include "SceneBuilder/SplitBVHBuilder.hpp"
+#include "e_Mesh.h"
 #include <algorithm>
 
 #define NO_NODE 0x76543210
@@ -66,6 +67,10 @@ public:
 	bool operator!=(const BVHIndex& rhs) const
 	{
 		return native != rhs.native;
+	}
+	bool operator<(const BVHIndex& rhs) const
+	{
+		return native < rhs.native;
 	}
 	static BVHIndex INVALID()
 	{
@@ -182,22 +187,6 @@ public:
 	{
 		return t->m_pData->SplitNode(a_ObjIdx, dim, pos, lBox, rBox, refBox);
 	}
-	int buildInfoTree(BVHIndex idx, BVHIndex parent, e_BVHRebuilder* t)
-	{
-		BVHIndexTuple c = BVHIndexTuple::FromChildren(t->m_pBVHData + idx.innerIdx());
-		int s = 0;
-		for (int i = 0; i < 2; i++)
-		{
-			if (c[i].isLeaf())
-			{
-				t->enumerateLeaf(c[i], [&](int i){t->nodeToBVHNode[i] = idx; s++; });		
-			}
-			else if (!c[i].NoNode())
-				s += buildInfoTree(c[i], idx, t);
-		}
-		t->bvhNodeData[idx.innerIdx()].numLeafs = s;
-		return s;
-	}
 };
 
 void e_BVHRebuilder::removeNodeAndCollapse(BVHIndex nodeIdx, BVHIndex childIdx)
@@ -206,7 +195,8 @@ void e_BVHRebuilder::removeNodeAndCollapse(BVHIndex nodeIdx, BVHIndex childIdx)
 	e_BVHNodeData* node = m_pBVHData + nodeIdx.innerIdx();
 	BVHIndexTuple children = this->children(nodeIdx);
 	node->setChild(childIdxLocal, NO_NODE, AABB::Identity());
-	propagateBBChange(nodeIdx, AABB::Identity(), childIdxLocal);
+	if (!children[1 - childIdxLocal].NoNode())
+		propagateBBChange(nodeIdx, AABB::Identity(), childIdxLocal);
 	BVHNodeInfo::changeCount(bvhNodeData, m_pBVHData, nodeIdx, -1);
 	BVHIndex grandpaIdx = BVHIndex::FromNative(m_pBVHData[nodeIdx.innerIdx()].getParent());
 	if (children[1 - childIdxLocal].NoNode() && grandpaIdx.isValid())
@@ -226,10 +216,10 @@ void e_BVHRebuilder::removeNodeAndCollapse(BVHIndex nodeIdx, BVHIndex childIdx)
 				m_pBVHData[otherChild.innerIdx()].setSibling(-1);
 			}
 		}
-		else if (grandpaIdx.isValid())
+		else
 		{
 			int parentLocal = getChildIdxInLocal(grandpaIdx, nodeIdx);
-			setChild(grandpaIdx, otherChild, parentLocal);
+			setChild(grandpaIdx, otherChild, parentLocal, nodeIdx);
 			propagateBBChange(grandpaIdx, getBox(nodeIdx), parentLocal);
 		}
 	}
@@ -244,22 +234,21 @@ void e_BVHRebuilder::insertNode(BVHIndex bvhNodeIdx, BVHIndex parent, unsigned i
 			//TODO sah for split?
 			BVHNodeInfo::changeCount(bvhNodeData, m_pBVHData, parent, +1);
 			BVHIndex newLeafIdx = createLeaf(nodeIdx, bvhNodeIdx);
-			setChild(parent, newLeafIdx, getChildIdxInLocal(parent, bvhNodeIdx));
+			setChild(parent, newLeafIdx, getChildIdxInLocal(parent, bvhNodeIdx), bvhNodeIdx);
 		}
 		else//split leaf
 		{
 			e_BVHNodeData* node = m_pBVHData + m_uBvhNodeCount++;
-			BVHIndex parentIdx = nodeToBVHNode[bvhNodeIdx.leafIdx()];
-			int localIdx = getChildIdxInLocal(parentIdx, bvhNodeIdx);
+			int localIdx = getChildIdxInLocal(parent, bvhNodeIdx);
 			BVHIndex idx = BVHIndex::FromBVHNode(node - m_pBVHData);
-			setChild(idx, BVHIndex::FromSceneNode(nodeIdx), 0);
-			setChild(idx, bvhNodeIdx, 1);
+			setChild(idx, BVHIndex::FromSceneNode(nodeIdx), 0, BVHIndex::INVALID());
+			setChild(idx, bvhNodeIdx, 1, parent);
 			bvhNodeData[idx.innerIdx()] = BVHNodeInfo(1);//only set one so we can increment
-			setChild(parentIdx, idx, localIdx);
+			setChild(parent, idx, localIdx, BVHIndex::INVALID());
 			BVHNodeInfo::changeCount(bvhNodeData, m_pBVHData, idx, +1);
-			nodeToBVHNode[nodeIdx] = idx;
-			nodeToBVHNode[bvhNodeIdx.leafIdx()] = idx;
-			propagateBBChange(parentIdx, node->getBox(), localIdx);
+			objectToBVHNodes[nodeIdx].clear();
+			objectToBVHNodes[nodeIdx].push_back(idx);
+			propagateBBChange(parent, node->getBox(), localIdx);
 		}
 	}
 	else
@@ -270,7 +259,8 @@ void e_BVHRebuilder::insertNode(BVHIndex bvhNodeIdx, BVHIndex parent, unsigned i
 		{
 			node->setChild(c[1].NoNode(), createLeaf(nodeIdx, BVHIndex::INVALID()).ToNative(), m_pData->getBox(nodeIdx));
 			BVHNodeInfo::changeCount(bvhNodeData, m_pBVHData, bvhNodeIdx, +1);
-			nodeToBVHNode[nodeIdx] = bvhNodeIdx;
+			objectToBVHNodes[nodeIdx].clear();
+			objectToBVHNodes[nodeIdx].push_back(bvhNodeIdx);
 			propagateBBChange(bvhNodeIdx, nodeWorldBox, c[1].NoNode());
 		}
 		else
@@ -308,7 +298,7 @@ void e_BVHRebuilder::recomputeNode(BVHIndex bvhNodeIdx, AABB& newBox)
 			}
 		}
 
-		if (modified)
+		if (modified&&0)
 		{
 			bool canRotateAB = numberGrandchildren(bvhNodeIdx, 0) == 2;
 			bool canRotateCD = numberGrandchildren(bvhNodeIdx, 1) == 2;
@@ -338,7 +328,7 @@ void e_BVHRebuilder::recomputeNode(BVHIndex bvhNodeIdx, AABB& newBox)
 					swapChildren(bvhNodeIdx, 0, 0);
 			}
 		}
-		else throw std::runtime_error("Invalid flaggednodes!");
+		//else throw std::runtime_error("Invalid flaggednodes!");
 
 		newBox = getBox(bvhNodeIdx);
 	}
@@ -349,7 +339,9 @@ void e_BVHRebuilder::propagateFlag(BVHIndex idx)
 	if (idx.isLeaf())
 	{
 		int objIdx = m_pBVHIndices ? m_pBVHIndices[idx.leafIdx()].getIndex() : idx.leafIdx();
-		propagateFlag(nodeToBVHNode[objIdx]);
+		auto& nodes = objectToBVHNodes[objIdx];
+		for (size_t i = 0; i < nodes.size(); i++)
+			propagateFlag(nodes[i]);
 	}
 	else
 	{
@@ -362,23 +354,24 @@ void e_BVHRebuilder::propagateFlag(BVHIndex idx)
 	}
 }
 
-bool e_BVHRebuilder::Build(ISpatialInfoProvider* data)
+bool e_BVHRebuilder::Build(ISpatialInfoProvider* data, bool invalidateAll)
 {
 	this->m_pData = data;
 	bool modified = false;
-	if (data->getCount() != 0 && needsBuild())
+	if (data->getCount() != 0 && (needsBuild() || invalidateAll))
 	{
 		modified = true;
-		size_t m = max(nodesToInsert.size(), nodesToRecompute.size(), nodesToRemove.size());
 		if (startNode == -1)
 		{
+			Platform::SetMemory(m_pBVHData, sizeof(e_BVHNodeData) * m_uBVHDataLength);
+			Platform::SetMemory(m_pBVHIndices, sizeof(e_TriIntersectorData2) * m_uBVHIndicesLength);
 			BuilderCLB b(this);
 			SplitBVHBuilder::Platform Pq;
 			if (!m_pBVHIndices)
 				Pq.m_maxLeafSize = 1;
 			SplitBVHBuilder bu(&b, Pq, SplitBVHBuilder::BuildParams());
 			bu.run();
-			b.buildInfoTree(BVHIndex::FromNative(startNode), BVHIndex::INVALID(), this);
+			BuildInfoTree(BVHIndex::FromNative(startNode), BVHIndex::INVALID());
 			validateTree(BVHIndex::FromNative(startNode), BVHIndex::INVALID());
 		}
 		else
@@ -386,13 +379,40 @@ bool e_BVHRebuilder::Build(ISpatialInfoProvider* data)
 			typedef std::set<unsigned int>::iterator n_it;
 			for (n_it it = nodesToRemove.begin(); it != nodesToRemove.end(); ++it)
 			{
-				BVHIndex leafIdx = getLeafIdx(*it);
-				if (!m_pBVHIndices || removeObjectFromLeaf(leafIdx, *it))
-					removeNodeAndCollapse(nodeToBVHNode[*it], leafIdx);
+				std::vector<BVHIndex> leafIndices;
+				const auto& nodes = objectToBVHNodes[*it];
+
+				if (!m_pBVHIndices)
+					leafIndices.push_back(BVHIndex::FromSceneNode(*it));
+				else
+				{
+					for (size_t i = 0; i < nodes.size(); i++)
+					{
+						bool found = false;
+						BVHIndexTuple c = children(nodes[i]);
+						enumerateLeaf(c[0], [&](int i){if (i == *it) found = true; });
+						if (found)
+							leafIndices.push_back(c[0]);
+						else
+						{
+							enumerateLeaf(c[1], [&](int i){if (i == *it) found = true; });
+							if (found)
+								leafIndices.push_back(c[0]);
+							else std::runtime_error(__FUNCTION__);
+						}
+					}
+				}
+
+				for (size_t i = 0; i < leafIndices.size(); i++)
+					if (!m_pBVHIndices || removeObjectFromLeaf(leafIndices[i], *it))
+						removeNodeAndCollapse(nodes[i], leafIndices[i]);
 			}
 			for (n_it it = nodesToInsert.begin(); it != nodesToInsert.end(); ++it)
-				insertNode(BVHIndex::FromNative(startNode), BVHIndex::INVALID(), *it, data->getBox(*it));	
-			recomputeAll = m_uModifiedCount > m_pData->getCount() / 2;
+			{
+				objectToBVHNodes[*it].clear();
+				insertNode(BVHIndex::FromNative(startNode), BVHIndex::INVALID(), *it, data->getBox(*it));
+			}
+			recomputeAll = m_uModifiedCount > m_pData->getCount() / 2 || invalidateAll;
 			if (!recomputeAll)
 				for (size_t i = 0; i < m_pData->getCount(); i++)
 					if (nodesToRecompute.at(i))
@@ -401,11 +421,11 @@ bool e_BVHRebuilder::Build(ISpatialInfoProvider* data)
 			if (recomputeAll || flaggedBVHNodes[startNode / 4])
 				recomputeNode(BVHIndex::FromNative(startNode), box);
 			flaggedBVHNodes.reset();
-#if DEBUG
-			validateTree(BVHIndex::FromNative(startNode), BVHIndex::INVALID());
-#endif
 		}
-		//printGraph("1.txt", a_Nodes);
+		printGraph("1.txt");
+#ifndef NDEBUG
+		validateTree(BVHIndex::FromNative(startNode), BVHIndex::INVALID());
+#endif
 	}
 	if (!data->getCount())
 	{
@@ -421,17 +441,62 @@ bool e_BVHRebuilder::Build(ISpatialInfoProvider* data)
 
 e_BVHRebuilder::e_BVHRebuilder(e_BVHNodeData* data, unsigned int a_BVHNodeLength, unsigned int a_SceneNodeLength, e_TriIntersectorData2* indices, unsigned int a_IndicesLength)
 	: m_pBVHData(data), m_uBVHDataLength(a_BVHNodeLength), m_uBvhNodeCount(0), startNode(-1), m_pBVHIndices(indices), m_uBVHIndicesLength(a_IndicesLength), m_UBVHIndicesCount(0),
-	  m_uModifiedCount(0)
+	m_uModifiedCount(0), m_pData(0)
 {
 	if (a_SceneNodeLength > MAX_NODES)
 		throw std::runtime_error("e_BVHRebuilder too many objects!");
-	nodeToBVHNode.resize(a_SceneNodeLength);
-	bvhNodeData.resize(a_BVHNodeLength);
+	objectToBVHNodes.resize(a_SceneNodeLength);
+	bvhNodeData.resize(m_uBVHDataLength);
+}
+
+e_BVHRebuilder::e_BVHRebuilder(e_Mesh* mesh, ISpatialInfoProvider* data)
+	: m_pBVHData(mesh->m_sNodeInfo(0)), m_uBVHDataLength(mesh->m_sNodeInfo.getLength()), m_uBvhNodeCount(0), startNode(-1), 
+	m_pBVHIndices(mesh->m_sIndicesInfo(0)), m_uBVHIndicesLength(mesh->m_sIndicesInfo.getLength()), m_UBVHIndicesCount(0),
+	m_uModifiedCount(0), m_pData(data)
+{
+	unsigned int a_SceneNodeLength = mesh->m_sTriInfo.getLength();
+	if (a_SceneNodeLength > MAX_NODES)
+		throw std::runtime_error("e_BVHRebuilder too many objects!");
+	objectToBVHNodes.resize(a_SceneNodeLength);
+	bvhNodeData.resize(m_uBVHDataLength);
+
+	m_uBvhNodeCount = m_uBVHDataLength;
+	m_UBVHIndicesCount = m_uBVHIndicesLength;
+	startNode = 0;
+	BuilderCLB b(this);
+	BuildInfoTree(BVHIndex::FromNative(startNode), BVHIndex::INVALID());
+	AABB box;
+	recomputeAll = true;
+	recomputeNode(BVHIndex::FromNative(startNode), box);
+	validateTree(BVHIndex::FromNative(startNode), BVHIndex::INVALID());
+	m_pData = 0;
+	recomputeAll = false;
 }
 
 e_BVHRebuilder::~e_BVHRebuilder()
 {
 
+}
+
+int e_BVHRebuilder::BuildInfoTree(BVHIndex idx, BVHIndex parent)
+{
+	BVHIndexTuple c = BVHIndexTuple::FromChildren(m_pBVHData + idx.innerIdx());
+	int s = 0;
+	for (int i = 0; i < 2; i++)
+	{
+		if (c[i].isLeaf())
+		{
+			enumerateLeaf(c[i], [&](int j)
+			{
+				objectToBVHNodes[j].push_back(idx);
+				s++;
+			});
+		}
+		else if (!c[i].NoNode())
+			s += BuildInfoTree(c[i], idx);
+	}
+	bvhNodeData[idx.innerIdx()].numLeafs = s;
+	return s;
 }
 
 void e_BVHRebuilder::invalidateNode(unsigned int n)
@@ -492,7 +557,12 @@ int e_BVHRebuilder::validateTree(BVHIndex idx, BVHIndex parent)
 {
 	if (idx.isLeaf())
 	{
-		enumerateLeaf(idx, [&](int i){if (nodeToBVHNode[i] != parent) throw std::runtime_error(__FUNCTION__); });
+		enumerateLeaf(idx, [&](int i)
+		{
+			const auto& nodes = objectToBVHNodes[i];//local copy, sort shouldn't matter but still
+			if (std::find(nodes.begin(), nodes.end(), parent) == nodes.end())
+				throw std::runtime_error(__FUNCTION__);
+		});
 		return numLeafs(idx);
 	}
 	else if (idx.NoNode())
@@ -573,11 +643,24 @@ int e_BVHRebuilder::numLeafs(BVHIndex idx)
 	else return bvhNodeData[idx.innerIdx()].numLeafs;
 }
 
-void e_BVHRebuilder::setChild(BVHIndex nodeIdx, BVHIndex childIdx, int localIdxToSetTo)
+void e_BVHRebuilder::setChild(BVHIndex nodeIdx, BVHIndex childIdx, int localIdxToSetTo, BVHIndex oldParent)
 {
 	m_pBVHData[nodeIdx.innerIdx()].setChild(localIdxToSetTo, childIdx.ToNative(), getBox(childIdx));
 	if (childIdx.isLeaf())
-		enumerateLeaf(childIdx, [&](int i){nodeToBVHNode[i] = nodeIdx; });
+		enumerateLeaf(childIdx, [&](int i)
+		{
+			auto& nodes = objectToBVHNodes[i];
+			auto it = std::find(nodes.begin(), nodes.end(), oldParent);
+			if (oldParent != BVHIndex::INVALID() && it == nodes.end())
+				throw std::runtime_error(__FUNCTION__);
+			if (it == nodes.end())
+				objectToBVHNodes[i].push_back(nodeIdx);
+			else *it = nodeIdx;
+
+			sort(nodes.begin(), nodes.end());
+			if (adjacent_find(nodes.begin(), nodes.end()) != nodes.end())
+				throw std::runtime_error(__FUNCTION__);
+		});
 	else
 	{
 		m_pBVHData[childIdx.innerIdx()].setParent(nodeIdx.ToNative());
@@ -601,8 +684,8 @@ void e_BVHRebuilder::swapChildren(BVHIndex idx, int localChildIdx, int localGran
 	BVHIndex childIdx = children(idx)[localChildIdx], otherChildIdx = children(idx)[1 - localChildIdx],
 		grandChildIdx = children(otherChildIdx)[localGrandChildIdx], otherGrandChildIdx = children(otherChildIdx)[1 - localGrandChildIdx];
 
-	setChild(otherChildIdx, childIdx, localGrandChildIdx);
-	setChild(idx, grandChildIdx, localChildIdx);
+	setChild(otherChildIdx, childIdx, localGrandChildIdx, idx);
+	setChild(idx, grandChildIdx, localChildIdx, otherChildIdx);
 
 	int grandChildLeafNum = numLeafs(grandChildIdx), childLeafNum = numLeafs(childIdx);
 	BVHNodeInfo::changeCount(bvhNodeData, m_pBVHData, otherChildIdx, -grandChildLeafNum + childLeafNum);
@@ -643,21 +726,6 @@ e_BVHRebuilder::BVHIndex e_BVHRebuilder::createLeaf(unsigned int nodeIdx, BVHInd
 	else return BVHIndex::FromSceneNode(nodeIdx);
 }
 
-e_BVHRebuilder::BVHIndex e_BVHRebuilder::getLeafIdx(unsigned int objIdx)
-{
-	if (!m_pBVHIndices)
-		return BVHIndex::FromSceneNode(objIdx);
-	bool found = false;
-	BVHIndexTuple c = children(nodeToBVHNode[objIdx]);
-	enumerateLeaf(c[0], [&](int i){if (i == objIdx) found = true; });
-	if (found)
-		return c[0];
-	enumerateLeaf(c[1], [&](int i){if (i == objIdx) found = true; });
-	if (found)
-		return c[0];
-	throw std::runtime_error(__FUNCTION__);
-}
-
 bool e_BVHRebuilder::removeObjectFromLeaf(BVHIndex leafIdx, unsigned int objIdx)
 {
 	if (!m_pBVHIndices)
@@ -679,12 +747,12 @@ void e_BVHRebuilder::writeGraphPart(BVHIndex idx, BVHIndex parent, std::ofstream
 {
 	if (idx.isLeaf())
 	{
-		enumerateLeaf(idx, [&](int i){f << parent.innerIdx() << " -> " << i << "[style=dotted];\n"; });
+		enumerateLeaf(idx, [&](int i){f << parent.ToNative() << " -> " << ~i << "[style=dotted];\n"; });
 	}
 	else
 	{
 		if (parent.isValid())
-			f << parent.innerIdx() << " -> " << idx.innerIdx() << ";\n";
+			f << parent.ToNative() << " -> " << idx.ToNative() << ";\n";
 		BVHIndexTuple c = children(idx);
 		for (int i = 0; i < 2; i++)
 			if (!c[i].NoNode())

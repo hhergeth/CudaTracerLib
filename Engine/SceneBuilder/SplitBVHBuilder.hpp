@@ -25,6 +25,10 @@ public:
 		return false;
 	}
 	virtual void setSibling(int idx, int sibling) = 0;
+	virtual void setNumInner_Leaf(unsigned int nInnerNodes, unsigned int nLeafNodes)
+	{
+
+	}
 };
 
 	enum BVH_STAT
@@ -38,68 +42,12 @@ public:
 
 	class BVHNode
 	{
+		unsigned int left, right;
 	public:
-		BVHNode() : m_probability(1.f), m_parentProbability(1.f), m_treelet(-1), m_index(-1) {}
-		virtual bool        isLeaf() const = 0;
-		virtual int         getNumChildNodes() const = 0;
-		virtual BVHNode*    getChildNode(int i) const = 0;
-		virtual int         getNumTriangles() const { return 0; }
-
-		float       getArea() const     { return m_bounds.Area(); }
-
-		AABB        m_bounds;
-
-		// These are somewhat experimental, for some specific test and may be invalid...
-		float       m_probability;          // probability of coming here (widebvh uses this)
-		float       m_parentProbability;    // probability of coming to parent (widebvh uses this)
-
-		int         m_treelet;              // for queuing tests (qmachine uses this)
-		int         m_index;                // in linearized tree (qmachine uses this)
-
-		// Subtree functions
-		int     getSubtreeSize(BVH_STAT stat = BVH_STAT_NODE_COUNT) const;
-		void    computeSubtreeProbabilities(const Platform& p, float parentProbability, float& sah);
-		float   computeSubtreeSAHCost(const Platform& p) const;     // NOTE: assumes valid probabilities
-		void    deleteSubtree();
-
-		void    assignIndicesDepthFirst(int index = 0, bool includeLeafNodes = true);
-		void    assignIndicesBreadthFirst(int index = 0, bool includeLeafNodes = true);
-	};
-
-
-	class InnerNode : public BVHNode
-	{
-	public:
-		InnerNode(const AABB& bounds, BVHNode* child0, BVHNode* child1)   { m_bounds = bounds; m_children[0] = child0; m_children[1] = child1; }
-		~InnerNode()
-		{
-			if (m_children[0])
-				delete m_children[0];
-			if (m_children[1])
-				delete m_children[1];
-		}
-
-		bool        isLeaf() const                  { return false; }
-		int         getNumChildNodes() const        { return 2; }
-		BVHNode*    getChildNode(int i) const       { CT_ASSERT(i >= 0 && i<2); return m_children[i]; }
-
-		BVHNode*    m_children[2];
-	};
-
-
-	class LeafNode : public BVHNode
-	{
-	public:
-		LeafNode(const AABB& bounds, int lo, int hi)  { m_bounds = bounds; m_lo = lo; m_hi = hi; }
-		LeafNode(const LeafNode& s)                 { *this = s; }
-
-		bool        isLeaf() const                  { return true; }
-		int         getNumChildNodes() const        { return 0; }
-		BVHNode*    getChildNode(int) const         { return NULL; }
-
-		int         getNumTriangles() const         { return m_hi - m_lo; }
-		int         m_lo;
-		int         m_hi;
+		BVHNode(unsigned int l, unsigned int r, bool leaf) : left((l << 1) | unsigned int(leaf)), right(r) {}
+		bool isLeaf() { return left & 1; }
+		unsigned int getLeft(){ return left >> 1; }
+		unsigned int getRight(){ return right; }
 	};
 
 class SplitBVHBuilder
@@ -230,8 +178,8 @@ private:
     static bool             sortCompare         (void* data, int idxA, int idxB);
     static void             sortSwap            (void* data, int idxA, int idxB);
 
-	BVHNode*                buildNode(NodeSpec spec, int level, float progressStart, float progressEnd);
-    BVHNode*                createLeaf          (const NodeSpec& spec);
+	unsigned int                buildNode(NodeSpec spec, int level, float progressStart, float progressEnd);
+	unsigned int                createLeaf(const NodeSpec& spec);
 
 	ObjectSplit             findObjectSplit(const NodeSpec& spec, float nodeSAH);
     void                    performObjectSplit  (NodeSpec& left, NodeSpec& right, const NodeSpec& spec, const ObjectSplit& split);
@@ -259,5 +207,7 @@ private:
 
 	std::vector<int> m_Indices;
 
-	cTimer m_Timer;
+	std::vector<BVHNode> m_Nodes;
+
+	InstructionTimer m_Timer;
 };

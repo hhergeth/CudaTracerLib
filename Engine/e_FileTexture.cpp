@@ -66,7 +66,7 @@ void e_MIPMap::CompileToBinary(const std::string& a_InputFile, OutputStream& a_O
 	if(popc(data.w) != 1 || popc(data.h) != 1)
 		resize(&data);
 
-	unsigned int nLevels = 1 + math::Log2Int(max(float(data.w), float(data.h)));
+	unsigned int nLevels = 1 + math::Log2Int(min(float(data.w), float(data.h)));
 	//if(!a_MipMap)
 	//	nLevels = 1;
 	unsigned int size = 0;

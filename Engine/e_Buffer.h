@@ -128,7 +128,7 @@ public:
 	void memcpy(e_BufferReference<H, D> source, e_BufferReference<H, D> dest)
 	{
 		if(source.getLength() < dest.getLength() || source.m_pStream != this || dest.m_pStream != this)
-			throw 1;
+			throw std::runtime_error(__FUNCTION__);
 		::memcpy(dest.atH(dest->getIndex()), source.atH(source.getIndex()), m_uHostBlockSize * dest.getLength());
 		Invalidate(dest);
 	}
@@ -331,6 +331,10 @@ public:
 	void Invalidate()
 	{
 		m_pStream->Invalidate(*this);
+	}
+	void CopyFromDevice()
+	{
+		m_pStream->CopyFromDevice(*this);
 	}
 	e_BufferReference<H, D> operator()(unsigned int i = 0) const
 	{
@@ -568,7 +572,7 @@ public:
 	void memcpy(e_BufferReference<T, T> source, e_BufferReference<T, T> dest)
 	{
 		if(source.getLength() < dest.getLength() || source.m_pStream != this || dest.m_pStream != this)
-			throw 1;
+			throw std::runtime_error(__FUNCTION__);
 		::memcpy(dest.atH(dest.getIndex()), source.atH(source.getIndex()), m_uHostBlockSize * dest.getLength());
 		Invalidate(dest);
 	}
@@ -644,6 +648,10 @@ public:
 	void Invalidate(unsigned int i, unsigned int j = 1)
 	{
 		Invalidate(operator()(i, j));
+	}
+	void CopyFromDevice(e_BufferReference<T, T> ref)
+	{
+		cudamemcpy(host + ref.getIndex(), device + ref.getIndex(), sizeof(T) * ref.getLength(), cudaMemcpyDeviceToHost);
 	}
 	void UpdateInvalidated()
 	{

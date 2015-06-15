@@ -1,7 +1,7 @@
 #pragma once
 
 #include <chrono>
-class cTimer
+class InstructionTimer
 {
 	std::chrono::high_resolution_clock::time_point start;
 	std::chrono::high_resolution_clock::time_point stop;

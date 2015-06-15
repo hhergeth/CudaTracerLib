@@ -28,6 +28,7 @@ class e_DynamicScene
 private:
 	std::vector<e_StreamReference(e_Node)> m_sRemovedNodes;
 	e_TmpVertex* m_pDeviceTmpFloats;
+	e_TmpVertex* m_pHostTmpFloats;
 	unsigned int m_uEnvMapIndex;
 public:
 	e_SceneBVH* m_pBVH;

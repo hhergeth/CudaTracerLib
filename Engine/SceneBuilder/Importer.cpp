@@ -15,32 +15,23 @@ namespace bvh_helper
 			return Iab ? Iab[i * 3 + o] : (i * 3 + o);
 		}
 	public:
-		e_BVHNodeData* nodes;
-		unsigned int nodeIndex;
-		e_TriIntersectorData* tris;
-		unsigned int triIndex;
-		e_TriIntersectorData2* indices;
+		std::vector<e_BVHNodeData>& nodes;
+		std::vector<e_TriIntersectorData>& tris;
+		std::vector<e_TriIntersectorData2>& indices;
 		AABB box;
 		int startNode;
-		unsigned int L0, L1;
+		//unsigned int L0, L1;
+		unsigned int l0, l1;
 	public:
-		clb(unsigned int _v, unsigned int _i, const Vec3f* _V, const unsigned int* _I)
-			: V(_V), Iab(_I), v(_v), i(_i)
+		clb(unsigned int _v, unsigned int _i, const Vec3f* _V, const unsigned int* _I, std::vector<e_BVHNodeData>& A, std::vector<e_TriIntersectorData>& B, std::vector<e_TriIntersectorData2>& C)
+			: V(_V), Iab(_I), v(_v), i(_i), nodes(A), tris(B), indices(C), l0(0), l1(0)
 		{
-			nodeIndex = triIndex = 0;
-			const float duplicates = 0.5f, f = 1.0f + duplicates;
-			L0 = (int)(float(_i / 3) * f);
-			L1 = (int)(float(_i / 3) * f * 4);
-			nodes = new e_BVHNodeData[L0];
-			tris = new e_TriIntersectorData[L1];
-			indices = new e_TriIntersectorData2[L1];
-			Platform::SetMemory(indices, L1 * sizeof(e_TriIntersectorData2));
 		}
-		void Free()
+		virtual void setNumInner_Leaf(unsigned int nInnerNodes, unsigned int nLeafNodes)
 		{
-			delete[] nodes;
-			delete[] tris;
-			delete[] indices;
+			nodes.resize(nInnerNodes + 2);
+			tris.resize(nLeafNodes + 2);
+			indices.resize(nLeafNodes + 2);
 		}
 		virtual unsigned int Count() const
 		{
@@ -60,10 +51,11 @@ namespace bvh_helper
 		}
 		virtual e_BVHNodeData* HandleNodeAllocation(int* index)
 		{
-			*index = nodeIndex++ * 4;
-			if (nodeIndex > L0)
-				throw std::runtime_error("Not enough space for nodes!");
-			return nodes + *index / 4;
+			size_t n = l0++;
+			if (n >= nodes.size())
+				throw std::runtime_error(__FUNCTION__);
+			*index = (int)n * 4;
+			return &nodes[n];
 		}
 		void setSibling(int idx, int sibling)
 		{
@@ -80,25 +72,17 @@ namespace bvh_helper
 		}
 		virtual unsigned int handleLeafObjects(unsigned int pNode)
 		{
-			unsigned int c = triIndex++;
-			if (triIndex > L1)
-				throw std::runtime_error("Not enough space for leafes!");
-			indices[c].setIndex(pNode);
+			size_t c = l1++;
+			if (c >= indices.size())
+				throw std::runtime_error(__FUNCTION__);
 			tris[c].setData(V[_index(pNode, 0)], V[_index(pNode, 1)], V[_index(pNode, 2)]);
 			indices[c].setFlag(false);
 			indices[c].setIndex(pNode);
-			return c;
+			return (unsigned int)c;
 		}
 		virtual void handleLastLeafObject(int parent)
 		{
-			//*(int*)&tris[triIndex].x = 0x80000000;
-			//indices[triIndex] = -1;
-			//triIndex += 1;
-			//if(triIndex > L1)
-			//	throw 1;
-			indices[triIndex - 1].setFlag(true);
-			//*(int*)(indices + triIndex) = parent;
-			//triIndex += 2;
+			indices[l1 - 1].setFlag(true);
 		}
 		virtual void HandleStartNode(int startNode)
 		{
@@ -142,43 +126,34 @@ namespace bvh_helper
 	};
 }
 
-BVH_Construction_Result ConstructBVH(const Vec3f* vertices, const unsigned int* indices, unsigned int vCount, unsigned int cCount)
+void ConstructBVH(const Vec3f* vertices, const unsigned int* indices, unsigned int vCount, unsigned int cCount, BVH_Construction_Result& out)
 {
-	bvh_helper::clb c(vCount, cCount, vertices, indices);
-	//BVHBuilder::BuildBVH(&c, BVHBuilder::Platform());
-	SplitBVHBuilder bu(&c, SplitBVHBuilder::Platform(), SplitBVHBuilder::BuildParams()); bu.run();
+	bvh_helper::clb c(vCount, cCount, vertices, indices, out.nodes, out.tris, out.tris2);
+	SplitBVHBuilder bu(&c, SplitBVHBuilder::Platform(), SplitBVHBuilder::BuildParams());
+	bu.run();
 	BVH_Construction_Result r;
 	r.box = c.box;
 	r.tris2 = c.indices;
-	r.nodeCount = c.nodeIndex;
 	r.nodes = c.nodes;
-	r.triCount = c.triIndex;
 	r.tris = c.tris;
-	return r;
 }
 
 void ConstructBVH(const Vec3f* vertices, const unsigned int* indices, int vCount, int cCount, OutputStream& O, BVH_Construction_Result* out)
-{	
-	bvh_helper::clb c(vCount, cCount, vertices, indices);
+{
+	BVH_Construction_Result localRes;
+	if (!out)
+		out = &localRes;
+
+	bvh_helper::clb c(vCount, cCount, vertices, indices, out->nodes, out->tris, out->tris2);
 	//BVHBuilder::BuildBVH(&c, BVHBuilder::Platform());
 	SplitBVHBuilder bu(&c, SplitBVHBuilder::Platform(), SplitBVHBuilder::BuildParams()); bu.run();
-	O << (unsigned long long)c.nodeIndex;
-	if(c.nodeIndex)
-		O.Write(c.nodes, (unsigned int)c.nodeIndex * sizeof(e_BVHNodeData));
-	O << (unsigned long long)c.triIndex;
-	if(c.triIndex )
-		O.Write(c.tris, (unsigned int)c.triIndex * sizeof(e_TriIntersectorData));
-	O << (unsigned long long)c.triIndex;
-	if(c.triIndex )
-		O.Write(c.indices, (unsigned int)c.triIndex * sizeof(e_TriIntersectorData2));
-	if(out)
-	{
-		out->box = c.box;
-		out->tris2 = c.indices;
-		out->nodeCount = c.nodeIndex;
-		out->nodes = c.nodes;
-		out->triCount = c.triIndex;
-		out->tris = c.tris;
-	}
-	else c.Free();
+	O << (unsigned long long)c.l0;
+	if (c.l0)
+		O.Write(&c.nodes[0], (unsigned int)c.l0 * sizeof(e_BVHNodeData));
+	O << (unsigned long long)c.l1;
+	if (c.l1)
+		O.Write(&c.tris[0], (unsigned int)c.l1 * sizeof(e_TriIntersectorData));
+	O << (unsigned long long)c.l1;
+	if (c.l1)
+		O.Write(&c.indices[0], (unsigned int)c.l1 * sizeof(e_TriIntersectorData2));
 }
