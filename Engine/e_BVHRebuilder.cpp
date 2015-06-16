@@ -298,7 +298,7 @@ void e_BVHRebuilder::recomputeNode(BVHIndex bvhNodeIdx, AABB& newBox)
 			}
 		}
 
-		if (modified&&0)
+		if (modified)
 		{
 			bool canRotateAB = numberGrandchildren(bvhNodeIdx, 0) == 2;
 			bool canRotateCD = numberGrandchildren(bvhNodeIdx, 1) == 2;
@@ -662,6 +662,7 @@ void e_BVHRebuilder::setChild(BVHIndex nodeIdx, BVHIndex childIdx, int localIdxT
 		m_pBVHData[childIdx.innerIdx()].setParent(nodeIdx.ToNative());
 		m_pBVHData[childIdx.innerIdx()].setSibling(children(nodeIdx)[1 - localIdxToSetTo].ToNative());
 	}
+	propagateBBChange(nodeIdx, getBox(childIdx), localIdxToSetTo);
 }
 
 void e_BVHRebuilder::propagateBBChange(BVHIndex idx, const AABB& box, int localChildIdx)
