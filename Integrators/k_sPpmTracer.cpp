@@ -125,8 +125,8 @@ void k_sPpmTracer::StartNewTrace(e_Image* I)
 	AABB volBox = m_pScene->getKernelSceneData().m_sVolume.box;
 	for (unsigned int i = 0; i < m_pScene->getNodeCount(); i++)
 	{
-		e_StreamReference(e_Node) n = m_pScene->getNodes()(i);
-		e_StreamReference(e_KernelMaterial) mats = m_pScene->getMats(n);
+		e_StreamReference<e_Node> n = m_pScene->getNodes()(i);
+		e_StreamReference<e_KernelMaterial> mats = m_pScene->getMats(n);
 		for (unsigned int j = 0; j < mats.getLength(); j++)
 		{
 			const e_KernelBSSRDF* bssrdf;

@@ -452,7 +452,8 @@ public:
 	}
 };
 
-#define e_StreamReference(T) e_BufferReference<T, T>
+template<class T> using e_StreamReference = e_BufferReference<T, T>;
+
 template<typename T> class e_Buffer<T, T>
 {
 	friend e_BufferReference<T, T>;
@@ -738,23 +739,3 @@ public:
 
 	}
 };
-/*
-template<typename T> class e_CachedStream : public e_CachedBuffer<T, T>
-{
-public:
-	e_CachedStream(unsigned int N)
-		: e_CachedBuffer<T, T>(N)
-	{
-
-	}
-	virtual void UpdateInvalidated()
-	{
-		for(unsigned int i = 0; i < m_sInvalidated.size(); i++)
-		{
-			int q = sizeof(T), f = m_sInvalidated[i].first, n = q * m_sInvalidated[i].second;
-			cudaMemcpy(device + f, host + f, n, cudaMemcpyHostToDevice);
-		}
-		m_sInvalidated.clear();
-	} 
-};*/
-

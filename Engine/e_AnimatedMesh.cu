@@ -69,7 +69,7 @@ class AnimProvider : public ISpatialInfoProvider
 	uint3* triData;
 	unsigned int m_uNumTriangles;
 public:
-	AnimProvider(e_AnimatedMesh* M, e_TmpVertex* V, e_StreamReference(char) S)
+	AnimProvider(e_AnimatedMesh* M, e_TmpVertex* V, e_StreamReference<char> S)
 		: intData(M->m_sIntInfo(0)), vertexData(V), m_uNumTriangles(M->m_sTriInfo.getLength() / 3)
 	{
 		triData = (uint3*)S.operator char *();

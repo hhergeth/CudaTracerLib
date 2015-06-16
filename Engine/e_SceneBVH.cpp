@@ -5,15 +5,15 @@
 #include "SceneBuilder/SplitBVHBuilder.hpp"
 #include "e_BVHRebuilder.h"
 
-bool e_SceneBVH::Build(e_StreamReference(e_Node) a_Nodes, e_BufferReference<e_Mesh, e_KernelMesh> a_Meshes)
+bool e_SceneBVH::Build(e_StreamReference<e_Node> a_Nodes, e_BufferReference<e_Mesh, e_KernelMesh> a_Meshes)
 {
 	class provider : public ISpatialInfoProvider
 	{
-		e_StreamReference(e_Node) a_Nodes;
+		e_StreamReference<e_Node> a_Nodes;
 		e_BufferReference<e_Mesh, e_KernelMesh> a_Meshes;
-		e_StreamReference(float4x4) a_Transforms;
+		e_StreamReference<float4x4> a_Transforms;
 	public:
-		provider(e_StreamReference(e_Node) A, e_BufferReference<e_Mesh, e_KernelMesh> B, e_StreamReference(float4x4) C)
+		provider(e_StreamReference<e_Node> A, e_BufferReference<e_Mesh, e_KernelMesh> B, e_StreamReference<float4x4> C)
 			: a_Nodes(A), a_Meshes(B), a_Transforms(C)
 		{
 
@@ -97,7 +97,7 @@ e_BVHNodeData* e_SceneBVH::getBVHNode(unsigned int i)
 {
 	if (i >= m_pBuilder->getNumBVHNodesUsed())
 		throw std::runtime_error(__FUNCTION__);
-	e_StreamReference(e_BVHNodeData) n = m_pNodes->operator()(i);
+	e_StreamReference<e_BVHNodeData> n = m_pNodes->operator()(i);
 	e_BVHNodeData* n2 = n.operator e_BVHNodeData *();
 	return n2;
 }

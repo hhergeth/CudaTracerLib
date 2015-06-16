@@ -32,11 +32,11 @@ public:
 	AABB m_sLocalBox;
 	int m_uType;
 public:
-	e_StreamReference(e_TriangleData) m_sTriInfo;
-	e_StreamReference(e_KernelMaterial) m_sMatInfo;
-	e_StreamReference(e_BVHNodeData) m_sNodeInfo;
-	e_StreamReference(e_TriIntersectorData) m_sIntInfo;
-	e_StreamReference(e_TriIntersectorData2) m_sIndicesInfo;
+	e_StreamReference<e_TriangleData> m_sTriInfo;
+	e_StreamReference<e_KernelMaterial> m_sMatInfo;
+	e_StreamReference<e_BVHNodeData> m_sNodeInfo;
+	e_StreamReference<e_TriIntersectorData> m_sIntInfo;
+	e_StreamReference<e_TriIntersectorData2> m_sIndicesInfo;
 	e_MeshPartLight m_sLights[MAX_AREALIGHT_NUM];
 	unsigned int m_uUsedLights;
 	FixedString<64> m_uPath;

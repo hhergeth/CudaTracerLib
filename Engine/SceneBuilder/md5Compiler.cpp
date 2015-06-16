@@ -144,7 +144,7 @@ void compilemd5(IInStream& in, std::vector<IInStream*>& animFiles, OutputStream&
 		build_e_Animation(M.anims[a], &M, anim, animFiles[a]->getFilePath(), inverseJoints);
 		anim.serialize(a_Out);
 	}
-	a_Out.Write(&v_Data[0], v_Pos.size() * sizeof(e_AnimatedVertex));
+	a_Out.Write(&v_Data[0], (unsigned int)v_Pos.size() * sizeof(e_AnimatedVertex));
 	a_Out.Write(&triData2[0], (unsigned int)triData2.size() * sizeof(uint3));
 	///delete[] v_Data;
 	//delete[] v_Pos;

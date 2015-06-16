@@ -20,11 +20,11 @@ void ShapeSet::triData::Recalculate(const float4x4& mat)
 	area = 0.5f * length(n);
 }
 
-ShapeSet::ShapeSet(e_StreamReference(e_TriIntersectorData)* indices, unsigned int indexCount, float4x4& mat, e_Stream<char>* buffer)
+ShapeSet::ShapeSet(e_StreamReference<e_TriIntersectorData>* indices, unsigned int indexCount, float4x4& mat, e_Stream<char>* buffer)
 {
 	count = indexCount;
-	e_StreamReference(char) buffer1 = buffer->malloc((count + 1) * sizeof(float));
-	e_StreamReference(char) buffer2 = buffer->malloc(count * sizeof(triData));
+	e_StreamReference<char> buffer1 = buffer->malloc((count + 1) * sizeof(float));
+	e_StreamReference<char> buffer2 = buffer->malloc(count * sizeof(triData));
 	areaDistribution = buffer1.AsVar<float>();
 	triangles = buffer2.AsVar<triData>();
 	for (unsigned int i = 0; i < count; i++)

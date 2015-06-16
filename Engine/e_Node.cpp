@@ -3,7 +3,7 @@
 #include "e_Mesh.h"
 #include "e_Buffer.h"
 
-e_Node::e_Node(unsigned int MeshIndex, e_Mesh* mesh, e_StreamReference(e_KernelMaterial) mat)
+e_Node::e_Node(unsigned int MeshIndex, e_Mesh* mesh, e_StreamReference<e_KernelMaterial> mat)
 	: m_uInstanciatedMaterial(false)
 {
 	m_uMeshIndex = MeshIndex;

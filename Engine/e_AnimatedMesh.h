@@ -31,7 +31,7 @@ struct e_TmpVertex
 
 struct e_Frame
 {
-	e_StreamReference(char) m_sMatrices;
+	e_StreamReference<char> m_sMatrices;
 	std::vector<float4x4> m_sHostConstructionData;
 
 	e_Frame(){}
@@ -101,8 +101,8 @@ class e_AnimatedMesh : public e_Mesh
 public:
 	e_KernelAnimatedMesh k_Data;
 	std::vector<e_Animation> m_pAnimations;
-	e_StreamReference(char) m_sVertices;
-	e_StreamReference(char) m_sTriangles;
+	e_StreamReference<char> m_sVertices;
+	e_StreamReference<char> m_sTriangles;
 	e_BVHRebuilder* m_pBuilder;
 public:
 	e_AnimatedMesh(const std::string& path, IInStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4, e_Stream<char>* a_Stream5);

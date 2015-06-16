@@ -324,7 +324,7 @@ e_InfiniteLight::e_InfiniteLight(e_Stream<char>* a_Buffer, e_BufferReference<e_M
 
 	m_size = Vec2f(radianceMap.m_uWidth, radianceMap.m_uHeight);
 	unsigned int nEntries = (unsigned int) (m_size.x + 1) * (unsigned int) m_size.y;
-	e_StreamReference(char) m1 = a_Buffer->malloc(nEntries * sizeof(float)), m2 = a_Buffer->malloc((m_size.y + 1) * sizeof(float)), m3 = a_Buffer->malloc(m_size.y * sizeof(float));
+	e_StreamReference<char> m1 = a_Buffer->malloc(nEntries * sizeof(float)), m2 = a_Buffer->malloc((m_size.y + 1) * sizeof(float)), m3 = a_Buffer->malloc(m_size.y * sizeof(float));
 	m_cdfCols = m1.AsVar<float>();
 	m_cdfRows = m2.AsVar<float>();
 	m_rowWeights = m3.AsVar<float>();
