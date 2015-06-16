@@ -42,7 +42,7 @@ bool e_Md5Compiler::IsApplicable(const std::string& a_InputFile, IInStream& in, 
 
 void e_Md5Compiler::Compile(IInStream& in, OutputStream& a_Out)
 {
-	std::vector<std::string> animFiles;
+	std::vector<IInStream*> animFiles;
 	boost::filesystem::path p_file(in.getFilePath());
 	for (directory_iterator it(p_file.parent_path()); it != directory_iterator(); ++it)
 	{
@@ -51,10 +51,14 @@ void e_Md5Compiler::Compile(IInStream& in, OutputStream& a_Out)
 			std::string ext = it->path().extension().string();
 			boost::algorithm::to_lower(ext);
 			if (ext == ".md5anim")
-				animFiles.push_back(it->path().string());
+			{
+				animFiles.push_back(new InputStream(it->path().string()));
+			}
 		}
 	}
-	e_AnimatedMesh::CompileToBinary(in.getFilePath(), animFiles, a_Out);
+	compilemd5(in, animFiles, a_Out);
+	for (size_t i = 0; i < animFiles.size(); i++)
+		delete animFiles[i];
 }
 
 bool e_PlyCompiler::IsApplicable(const std::string& a_InputFile, IInStream& in, e_MeshCompileType* out)

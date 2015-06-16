@@ -6,6 +6,7 @@
 //ugly
 void compileply(IInStream& in, OutputStream& a_Out);
 void compileobj(IInStream& in, OutputStream& a_Out);
+void compilemd5(IInStream& in, std::vector<IInStream*>& animFiles, OutputStream& a_Out);
 
 enum e_MeshCompileType
 {

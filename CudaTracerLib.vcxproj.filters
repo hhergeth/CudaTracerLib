@@ -282,9 +282,6 @@
     <ClInclude Include="Engine\e_BVHRebuilder.h">
       <Filter>Engine</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\e_AnimatedMeshHelper.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Base\FileStream.cpp">
@@ -357,6 +354,9 @@
     </ClCompile>
     <ClCompile Include="Engine\e_BVHRebuilder.cpp">
       <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\SceneBuilder\md5Compiler.cpp">
+      <Filter>Engine\SceneBuilder</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
