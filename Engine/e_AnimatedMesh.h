@@ -4,64 +4,6 @@
 #include <vector>
 #include <queue>
 
-struct e_BVHLevelEntry
-{
-	signed int m_sParent;
-	signed int m_sNode;
-	signed int m_sSide;
-	signed int m_sLevel;
-	e_BVHLevelEntry(int p, int n, int s, int l)
-	{
-		m_sParent = p;
-		m_sNode = n;
-		m_sSide = s;
-		m_sLevel = l;
-	}
-};
-
-struct e_BVHHierarchy
-{
-	//builder data
-	std::vector<e_BVHLevelEntry> m_pEntries;
-
-	e_StreamReference(char) m_sEntries;
-	unsigned int levels[32];//highest...lowest
-	unsigned int m_uNumLevels;
-
-	e_BVHHierarchy(){}
-
-	e_BVHHierarchy(e_BVHNodeData* ref);
-
-	unsigned int numInLevel(int level)
-	{
-		return levels[level + 1] - levels[level];
-	}
-
-	e_BVHLevelEntry* getLevelStartOnDevice(int level)
-	{
-		e_BVHLevelEntry* A = (e_BVHLevelEntry*)m_sEntries.getDevice();
-		return A + levels[level];
-	}
-
-	void serialize(OutputStream& a_Out)
-	{
-		a_Out << (size_t)m_pEntries.size() * sizeof(e_BVHLevelEntry);
-		a_Out.Write(&m_pEntries[0], (unsigned int)m_pEntries.size() * sizeof(e_BVHLevelEntry));
-		a_Out.Write(levels);
-		a_Out << m_uNumLevels;
-	}
-
-	void deSerialize(IInStream& a_In, e_Stream<char>* Buf)
-	{
-		size_t l;
-		a_In >> l;
-		m_sEntries = Buf->malloc((unsigned int)l);
-		m_sEntries.ReadFrom(a_In);
-		a_In.Read(levels, sizeof(levels));
-		a_In >> m_uNumLevels;
-	}
-};
-
 const int g_uMaxWeights = 8;
 struct e_AnimatedVertex
 {
@@ -161,7 +103,6 @@ public:
 	std::vector<e_Animation> m_pAnimations;
 	e_StreamReference(char) m_sVertices;
 	e_StreamReference(char) m_sTriangles;
-	e_BVHHierarchy m_sHierchary;
 	e_BVHRebuilder* m_pBuilder;
 public:
 	e_AnimatedMesh(const std::string& path, IInStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4, e_Stream<char>* a_Stream5);

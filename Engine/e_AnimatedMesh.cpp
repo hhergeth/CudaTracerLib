@@ -59,7 +59,6 @@ e_AnimatedMesh::e_AnimatedMesh(const std::string& path, IInStream& a_In, e_Strea
 	m_sTriangles = a_Stream5->malloc(sizeof(uint3) * m_sTriInfo.getLength());//malloc_aligned(a_Stream5, sizeof(uint3) * m_sTriInfo.getLength(), 16);//
 	m_sTriangles.ReadFrom(a_In);
 	uint3* idx = ((uint3*)m_sTriangles().operator char *()) + (m_sTriInfo.getLength() - 2);
-	m_sHierchary.deSerialize(a_In, a_Stream5);
 	a_Stream5->UpdateInvalidated();
 	m_pBuilder = 0;
 }
@@ -73,19 +72,65 @@ void e_AnimatedMesh::CompileToBinary(const std::string& a_InputFile, std::vector
 	AABB box;
 	box = box.Identity();
 	std::vector<uint3> triData2;
-	e_AnimatedVertex* v_Data;
-	Vec3f* v_Pos;
+	//e_AnimatedVertex* v_Data;
+	//Vec3f* v_Pos;
+	//unsigned int vCount;
+	//ComputeTangentSpace(&M, v_Data, v_Pos, vCount);
+
+	std::vector<Vec3f> v_Pos;
+	std::vector<Vec2f> tCoord;
+	std::vector<e_AnimatedVertex> v_Data;
+	std::vector<unsigned int> tData;
+	unsigned int off = 0;
+	for (int i = 0; i < M.meshes.size(); i++)
+	{
+		for (int v = 0; v < M.meshes[i]->verts.size(); v++)
+		{
+			e_AnimatedVertex av;
+			Vec3f pos = Vec3f(0);
+			Vertex& V = M.meshes[i]->verts[v];
+			int a = min(g_uMaxWeights, V.weightCount);
+			for (int k = 0; k < a; k++)
+			{
+				const Weight &w = M.meshes[i]->weights[V.weightIndex + k];
+				const Joint &joint = M.joints[w.joint];
+				const Vec3f r = joint.quat.toMatrix().TransformPoint(w.pos);
+				pos += (joint.pos + r) * w.w;
+				av.m_cBoneIndices[k] = (unsigned char)w.joint;
+				av.m_fBoneWeights[k] = (unsigned char)(w.w * 255.0f);
+			}
+			av.m_fVertexPos = pos;
+			v_Pos.push_back(pos);
+			tCoord.push_back(V.tc);
+			v_Data.push_back(av);
+		}
+
+		for (size_t t = 0; t < M.meshes[i]->tris.size(); t++)
+			for (int j = 0; j < 3; j++)
+				tData.push_back(M.meshes[i]->tris[t].v[j] + off);
+		off += (unsigned int)M.meshes[i]->verts.size();
+	}
+	unsigned int m_numVertices = (unsigned int)v_Data.size();
+	Vec3f* v_Normals = new Vec3f[m_numVertices], *v_Tangents = new Vec3f[m_numVertices], *v_BiTangents = new Vec3f[m_numVertices];
+	Platform::SetMemory(v_Normals, sizeof(Vec3f) * m_numVertices);
+	Platform::SetMemory(v_Tangents, sizeof(Vec3f) * m_numVertices);
+	Platform::SetMemory(v_BiTangents, sizeof(Vec3f) * m_numVertices);
+	ComputeTangentSpace(&v_Pos[0], &tCoord[0], &tData[0], v_Pos.size(), tData.size() / 3, v_Normals, v_Tangents, v_BiTangents);
+	for (unsigned int v = 0; v < m_numVertices; v++)
+	{
+		v_Data[v].m_fNormal = v_Normals[v];
+		v_Data[v].m_fTangent = v_Tangents[v];
+		v_Data[v].m_fBitangent = v_BiTangents[v];
+	}
+
 	std::vector<e_TriangleData> triData;
 	std::vector<e_KernelMaterial> matData;
-	unsigned int off = 0;
-	unsigned int vCount;
-	ComputeTangentSpace(&M, &v_Data, &v_Pos, &vCount);
 	e_MeshPartLight m_sLights[MAX_AREALIGHT_NUM];
 	unsigned int lc = 0;
-
 	diffuse stdMaterial;
 	stdMaterial.m_reflectance = CreateTexture(Spectrum(1, 0, 0));
 
+	off = 0;
 	for(int s = 0; s < M.meshes.size(); s++)
 	{
 		Mesh* sm = M.meshes[s];
@@ -125,12 +170,12 @@ void e_AnimatedMesh::CompileToBinary(const std::string& a_InputFile, std::vector
 	a_Out << (unsigned int)matData.size();
 	a_Out.Write(&matData[0], sizeof(e_KernelMaterial) * (unsigned int)matData.size());
 	BVH_Construction_Result bvh;
-	ConstructBVH(v_Pos, (unsigned int*)&triData2[0], (int)vCount, (int)triData2.size() * 3, a_Out, &bvh);
+	ConstructBVH(&v_Pos[0], (unsigned int*)&triData2[0], (int)v_Pos.size(), (int)triData2.size() * 3, a_Out, &bvh);
 
 	e_KernelAnimatedMesh mesh;
 	mesh.m_uAnimCount = (unsigned int)M.anims.size();
 	mesh.m_uJointCount = (unsigned int)M.joints.size();
-	mesh.m_uVertexCount = vCount;
+	mesh.m_uVertexCount = (unsigned int)v_Pos.size();
 	a_Out.Write(mesh);
 	std::vector<float4x4> inverseJoints;
 	for (unsigned int i = 0; i < M.joints.size(); i++)
@@ -141,10 +186,10 @@ void e_AnimatedMesh::CompileToBinary(const std::string& a_InputFile, std::vector
 		build_e_Animation(M.anims[a], &M, anim, a_Anims[a], inverseJoints);
 		anim.serialize(a_Out);
 	}
-	a_Out.Write(&v_Data[0], vCount * sizeof(e_AnimatedVertex));
+	a_Out.Write(&v_Data[0], v_Pos.size() * sizeof(e_AnimatedVertex));
 	a_Out.Write(&triData2[0], (unsigned int)triData2.size() * sizeof(uint3));
-	e_BVHHierarchy hier(&bvh.nodes[0]);
-	hier.serialize(a_Out);
+	///delete[] v_Data;
+	//delete[] v_Pos;
 }
 
 void e_AnimatedMesh::CreateNewMesh(e_AnimatedMesh* A, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4, e_Stream<char>* a_Stream5)
@@ -163,27 +208,4 @@ void e_AnimatedMesh::CreateNewMesh(e_AnimatedMesh* A, e_Stream<e_TriIntersectorD
 	A->m_pAnimations = m_pAnimations;
 	A->m_sVertices = m_sVertices;
 	A->m_sTriangles = m_sTriangles;
-	A->m_sHierchary = m_sHierchary;
-}
-
-e_BVHHierarchy::e_BVHHierarchy(e_BVHNodeData* ref)
-{
-	std::queue<e_BVHLevelEntry> bfs;
-	bfs.push(e_BVHLevelEntry(-1,0,0, 0));
-	while(!bfs.empty())
-	{
-		e_BVHLevelEntry n = bfs.front(); bfs.pop();
-		m_pEntries.push_back(n);
-		if(n.m_sNode < 0)
-			continue;
-		Vec2i d0 = ref[n.m_sNode].getChildren(), d = Vec2i(d0.x < 0 ? d0.x : d0.x / 4, d0.y < 0 ? d0.y : d0.y / 4);
-		bfs.push(e_BVHLevelEntry(n.m_sNode, d.x, +1, n.m_sLevel + 1));
-		bfs.push(e_BVHLevelEntry(n.m_sNode, d.y, -1, n.m_sLevel + 1));
-	}
-	for(int i = 0; i < 32; i++)
-		levels[i] = 0xffffffff;
-	for(unsigned int i = 0; i < m_pEntries.size(); i++)
-		levels[m_pEntries[i].m_sLevel] = std::min(levels[m_pEntries[i].m_sLevel], i);
-	m_uNumLevels = m_pEntries[m_pEntries.size() - 1].m_sLevel;
-	levels[m_uNumLevels] = (unsigned int)m_pEntries.size();
 }

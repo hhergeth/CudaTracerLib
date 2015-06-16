@@ -422,7 +422,7 @@ bool e_BVHRebuilder::Build(ISpatialInfoProvider* data, bool invalidateAll)
 				recomputeNode(BVHIndex::FromNative(startNode), box);
 			flaggedBVHNodes.reset();
 		}
-		printGraph("1.txt");
+		//printGraph("1.txt");
 #ifndef NDEBUG
 		validateTree(BVHIndex::FromNative(startNode), BVHIndex::INVALID());
 #endif
@@ -656,10 +656,6 @@ void e_BVHRebuilder::setChild(BVHIndex nodeIdx, BVHIndex childIdx, int localIdxT
 			if (it == nodes.end())
 				objectToBVHNodes[i].push_back(nodeIdx);
 			else *it = nodeIdx;
-
-			sort(nodes.begin(), nodes.end());
-			if (adjacent_find(nodes.begin(), nodes.end()) != nodes.end())
-				throw std::runtime_error(__FUNCTION__);
 		});
 	else
 	{

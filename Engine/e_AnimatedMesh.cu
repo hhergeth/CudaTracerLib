@@ -32,15 +32,15 @@ __global__ void g_ComputeVertices(e_TmpVertex* a_Dest, e_AnimatedVertex* a_Sourc
 		float4x4 mat1 = d_Compute(a_Matrices2, v);
 		Vec3f v0 = mat0.TransformPoint(v.m_fVertexPos), v1 = mat1.TransformPoint(v.m_fVertexPos);
 		a_Dest[N].m_fPos = math::lerp(v0, v1, a_lerp);
-		Frame f(mat0.TransformDirection(v.m_fNormal));
+
 		Vec3f n0 = mat0.TransformDirection(v.m_fNormal), n1 = mat1.TransformDirection(v.m_fNormal);
-		a_Dest[N].m_fNormal = f.n;//-normalize(math::lerp(n0, n1, a_lerp));
+		a_Dest[N].m_fNormal = normalize(math::lerp(n0, n1, a_lerp));
 
 		Vec3f t0 = mat0.TransformDirection(v.m_fTangent), t1 = mat1.TransformDirection(v.m_fTangent);
-		a_Dest[N].m_fTangent = f.t;// -normalize(math::lerp(t0, t1, a_lerp));
+		a_Dest[N].m_fTangent = normalize(math::lerp(t0, t1, a_lerp));
 
 		Vec3f b0 = mat0.TransformDirection(v.m_fBitangent), b1 = mat1.TransformDirection(v.m_fBitangent);
-		a_Dest[N].m_fBiTangent = f.s;// -normalize(math::lerp(b0, b1, a_lerp));
+		a_Dest[N].m_fBiTangent = normalize(math::lerp(b0, b1, a_lerp));
 	}
 }
 
@@ -53,7 +53,7 @@ __global__ void g_ComputeTriangles(e_TmpVertex* a_Tmp, uint3* a_TriData, e_Trian
 #ifdef EXT_TRI
 		Vec3f n = normalize(cross(a_Tmp[t.z].m_fPos - a_Tmp[t.x].m_fPos, a_Tmp[t.y].m_fPos - a_Tmp[t.x].m_fPos));
 		a_TriData2[N].setData(a_Tmp[t.x].m_fPos, a_Tmp[t.y].m_fPos, a_Tmp[t.z].m_fPos,
-			n,n,n);
+			a_Tmp[t.x].m_fNormal, a_Tmp[t.y].m_fNormal, a_Tmp[t.z].m_fNormal);
 #else
 		//a_TriData2[N].m_sDeviceData.Row0.
 #endif
@@ -61,45 +61,6 @@ __global__ void g_ComputeTriangles(e_TmpVertex* a_Tmp, uint3* a_TriData, e_Trian
 }
 
 CUDA_DEVICE AABB g_BOX;
-
-__global__ void g_ComputeBVHState(e_TriIntersectorData* a_BVHIntersectionData, e_BVHNodeData* a_BVHNodeData, e_TriIntersectorData2* a_BVHIntersectionData2, e_TmpVertex* a_Tmp, uint3* a_TriData, e_BVHLevelEntry* a_Level, unsigned int a_NCount)
-{
-	unsigned int N = blockIdx.x * blockDim.x + threadIdx.x;
-	if(N < a_NCount)
-	{
-		e_BVHLevelEntry e = a_Level[N];
-		AABB box;
-		box = box.Identity();
-		if(e.m_sNode >= 0)
-		{
-			AABB l, r;
-			a_BVHNodeData[e.m_sNode].getBox(l, r);
-			box.minV = min(l.minV, r.minV);
-			box.maxV = max(l.maxV, r.maxV);
-		}
-		else if(e.m_sNode < 0)
-		{
-			for (int triAddr = ~e.m_sNode; ; triAddr++)
-			{
-				e_TriIntersectorData2 i = a_BVHIntersectionData2[triAddr];
-				uint3 t = a_TriData[i.getIndex()];
-				Vec3f v0 = a_Tmp[t.x].m_fPos, v1 = a_Tmp[t.y].m_fPos, v2 = a_Tmp[t.z].m_fPos;
-				box.Enlarge(v0);
-				box.Enlarge(v1);
-				box.Enlarge(v2);
-				a_BVHIntersectionData[triAddr].setData(v0, v1, v2);//no change in indices
-				if(i.getFlag())
-					break;
-			}
-		}
-		if(e.m_sSide == 1)
-			a_BVHNodeData[e.m_sParent].setLeft(box);
-		else if(e.m_sSide == -1)
-			a_BVHNodeData[e.m_sParent].setRight(box);
-		if(N == 0 && a_NCount == 1)
-			g_BOX = box;
-	}
-}
 
 class AnimProvider : public ISpatialInfoProvider
 {
@@ -179,19 +140,6 @@ void e_AnimatedMesh::k_ComputeState(unsigned int a_Anim, unsigned int a_Frame, f
 	g_ComputeTriangles<<<m_sTriInfo.getLength() / 256 + 1, 256>>>(a_DeviceTmp, (uint3*)m_sTriangles.getDevice(), m_sTriInfo.getDevice(), m_sTriInfo.getLength());
 	cudaThreadSynchronize();
 	ThrowCudaErrors();
-	/*for(int l = m_sHierchary.m_uNumLevels - 1; l >= 0; l--)
-	{
-		int l2 = m_sHierchary.numInLevel(l);
-		g_ComputeBVHState<<<l2 / 256 + 1, 256>>>(m_sIntInfo.getDevice(), m_sNodeInfo.getDevice(), m_sIndicesInfo.getDevice(), a_DeviceTmp, 
-												 (uint3*)m_sTriangles.getDevice(), m_sHierchary.getLevelStartOnDevice(l), l2);
-		cudaThreadSynchronize();
-		ThrowCudaErrors();
-	}
-	cudaMemcpyFromSymbol(&m_sLocalBox, g_BOX, sizeof(AABB));
-
-	m_sTriInfo.CopyFromDevice();
-	m_sNodeInfo.CopyFromDevice();
-	m_sIntInfo.CopyFromDevice();*/
 	cudamemcpy(a_HostTmp, a_DeviceTmp, sizeof(e_TmpVertex) * k_Data.m_uVertexCount, cudaMemcpyDeviceToHost);
 	AnimProvider p(this, a_HostTmp, this->m_sTriangles);
 	cudaThreadSynchronize();
