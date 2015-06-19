@@ -16,13 +16,7 @@ class e_RoughTransmittance
 public:
 	e_RoughTransmittance(){}
 	e_RoughTransmittance(const std::string& name);
-	void Free()
-	{
-		delete [] m_transHost;
-		delete [] m_diffTransHost;
-		CUDA_FREE(m_transDevice);
-		CUDA_FREE(m_diffTransDevice);
-	}
+	void Free();
 	CUDA_DEVICE CUDA_HOST float Evaluate(float cosTheta, float alpha = 0.0f, float eta = 0.0f) const;
 	CUDA_DEVICE CUDA_HOST float EvaluateDiffuse(float alpha = 0, float eta = 0) const;
 };

@@ -71,10 +71,10 @@ void ComputeTangentSpace(const Vec3f* V, const Vec2f* T, const unsigned int* I, 
 		const Vec3f t = tan1[a];
 		Vec3f tangent = normalize(t - n * dot(n, t));
 		a_Tangents[a] = tangent;
-		a_BiTangents[a] = normalize(cross(n, t));
 
-		if (dot(cross(n, t), tan2[a]) < 0.0f)
-			a_BiTangents[a] *= -1.0f;
+		float h = (dot(cross(n, t), tan2[a]) < 0.0F) ? -1.0F : 1.0F;
+		if (a_BiTangents)
+			a_BiTangents[a] = normalize(cross(a_Tangents[a], n) * h);
 	}
 
 	delete[] tan1;

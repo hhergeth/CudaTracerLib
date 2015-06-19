@@ -1,6 +1,7 @@
 #pragma once
 
 #include "..\Kernel\k_Tracer.h"
+#include "../CudaMemoryManager.h"
 
 template<typename T, int N> struct k_RayBuffer
 {

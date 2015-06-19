@@ -1,404 +1,397 @@
 #pragma once
-
-#include <MathTypes.h>
+#include <stdio.h>
+#include <map>
 #include <vector>
-#include "e_ErrorHandler.h"
-#include "e_Buffer_device.h"
-#include "../Base/FileStream.h"
 #include <algorithm>
+#include <iostream>
+#include <limits>
+#include <type_traits>
+#include <boost/icl/interval_set.hpp>
 
-template<typename H, typename D> class e_BufferReference;
-template<typename H, typename D> class e_Buffer
+#include "e_Buffer_device.h"
+#include "../Base/Platform.h"
+#include "../CudaMemoryManager.h"
+
+template<typename H, typename D> class e_BufferIterator;
+template<typename H, typename D> class e_BufferRange
 {
-	friend e_BufferReference<H, D>;
+public:
+	virtual e_BufferIterator<H, D> begin() = 0;
+
+	virtual e_BufferIterator<H, D> end() = 0;
+
+	bool hasElements()
+	{
+		return hasMoreThanElements(0);
+	}
+
+	bool hasMoreThanElements(size_t i)
+	{
+		return num_in_iterator(*this, i) > i;
+	}
+
+	size_t numElements()
+	{
+		return num_in_iterator(*this, MINUS_ONE);
+	}
+};
+template<typename T> using e_StreamRange = e_BufferRange<T, T>;
+
+template<typename H, typename D> class e_BufferBase : public e_BufferRange<H, D>
+{
 protected:
+	typedef boost::icl::interval_set<size_t, ICL_COMPARE_INSTANCE(std::less, size_t), boost::icl::right_open_interval<size_t>> range_set_t;
+	typedef typename range_set_t::interval_type ival;
+
 	H* host;
 	D* device;
-	D* deviceMapped;
-	unsigned int m_uPos;
-	unsigned int m_uLength;
-	unsigned int m_uHostBlockSize;
-	typedef std::pair<unsigned int, unsigned int> part;
-	std::vector<part> m_sInvalidated;
-	std::vector<part> m_sDeallocated;
+	size_t m_uPos;
+	size_t m_uLength;
+	size_t m_uBlockSize;
+	bool m_bUpdateElement;
+	range_set_t* m_uInvalidated;
+	range_set_t* m_uDeallocated;
+
+	virtual void updateElement(size_t i) = 0;
+	virtual void copyRange(size_t i, size_t l) = 0;
+	virtual void realloc(){}
+	virtual D* getDeviceMappedData() = 0;
+
+	template<typename H2, typename D2> friend class e_BufferIterator;
+	template<typename H2, typename D2> friend class e_BufferReference;
+
 public:
-	e_Buffer(unsigned int a_NumElements, unsigned int a_ElementSize = 0xffffffff)
+
+	typedef e_BufferIterator<H, D> iterator;
+
+	e_BufferBase(size_t a_NumElements, size_t a_ElementSize, bool callUpdateElement)
+		: m_uPos(0), m_uLength(a_NumElements), m_uBlockSize(a_ElementSize != MINUS_ONE ? a_ElementSize : sizeof(H)), m_bUpdateElement(callUpdateElement)
 	{
-		if(a_ElementSize == 0xffffffff)
-			a_ElementSize = sizeof(H);
-		m_uHostBlockSize = a_ElementSize;
-		m_uPos = 0;
-		m_uLength = a_NumElements;
-		host = (H*)::malloc(m_uHostBlockSize * a_NumElements);
-		Platform::SetMemory(host, m_uHostBlockSize * a_NumElements);
+		host = (H*)::malloc(m_uBlockSize * m_uLength);
+		Platform::SetMemory(host, m_uBlockSize * a_NumElements);
 		CUDA_MALLOC(&device, sizeof(D) * a_NumElements);
 		cudaMemset(device, 0, sizeof(D) * a_NumElements);
-		deviceMapped = (D*)::malloc(a_NumElements * sizeof(D));
-		memset(deviceMapped, 0, sizeof(D) * a_NumElements);
+		m_uInvalidated = new range_set_t();
+		m_uDeallocated = new range_set_t();
 	}
-	~e_Buffer()
+
+	virtual ~e_BufferBase()
 	{
 		Free();
 	}
-	void Free()
+
+	virtual void Free()
 	{
+		for (auto it : *this)
+			(*it).~H();
 		free(host);
-		if(deviceMapped)
-			free(deviceMapped);
 		CUDA_FREE(device);
+		delete m_uInvalidated;
+		delete m_uDeallocated;
 	}
-	e_Buffer(InputStream& a_In)
+
+	size_t numElements()
 	{
-		a_In >> m_uLength;
-		a_In >> m_uPos;
-		a_In >> m_uHostBlockSize;
-		unsigned int deN;
-		a_In >> deN;
-		if(CUDA_MALLOC(&device, sizeof(D) * m_uLength))
-			BAD_CUDA_ALLOC(sizeof(D) * m_uLength)
-		host = (H*)::malloc(m_uHostBlockSize * m_uLength);
-		a_In.Read(host, m_uPos * m_uHostBlockSize);
-		m_sDeallocated.resize(deN);
-		if(deN)
-			a_In.Read(&m_sDeallocated[0], deN * sizeof(part));
-		Invalidate();
+		return m_uLength;
 	}
-	void Serialize(OutputStream& a_Out)
+
+	e_BufferReference<H, D> malloc(size_t a_Length)
 	{
-		a_Out << m_uLength;
-		a_Out << m_uPos;
-		a_Out << m_uHostBlockSize;
-		a_Out << (unsigned int)m_sDeallocated.size();
-		a_Out.Write(host, m_uPos * m_uHostBlockSize);
-		if(m_sDeallocated.size())
-			a_Out.Write(&m_sDeallocated[0], m_sDeallocated.size() * sizeof(part));
-	}
-	e_BufferReference<H, D> malloc(unsigned int a_Count)
-	{
-		for(unsigned int i = 0; i < m_sDeallocated.size(); i++)
-			if(m_sDeallocated[i].second >= a_Count)
+		e_BufferReference<H, D> res;
+		for (range_set_t::iterator it = m_uDeallocated->begin(); it != m_uDeallocated->end(); it++)
+			if (it->upper() - it->lower() >= a_Length)
 			{
-				part& p = m_sDeallocated[i];
-				if(p.second == a_Count)
-				{
-					m_sDeallocated.erase(m_sDeallocated.begin() + i);
-					return e_BufferReference<H, D>(this, p.first, a_Count);
-				}
-				else
-				{
-					p.second = p.second - a_Count;
-					unsigned int s = p.first;
-					p.first += a_Count;
-					return e_BufferReference<H, D>(this, s, a_Count);
-				}
+				ival i(it->lower(), it->lower() + a_Length);
+				res = e_BufferReference<H, D>(this, it->lower(), a_Length);
+				m_uDeallocated->erase(i);
+				break;
 			}
-		if(a_Count <= m_uLength - m_uPos)
+		if (a_Length <= m_uLength - m_uPos)
 		{
-			m_uPos += a_Count;//RoundUp(a_Count, 16)
-			return e_BufferReference<H, D>(this, m_uPos - a_Count, a_Count);
+			m_uPos += a_Length;
+			res = e_BufferReference<H, D>(this, m_uPos - a_Length, a_Length);
 		}
 		else
 		{
 			//BAD_EXCEPTION("Cuda data stream malloc failure, %d elements requested, %d available.", a_Count, m_uLength - m_uPos)
-			//return e_BufferReference<H, D>();
-			unsigned int newLength = m_uPos + a_Count;
+			size_t newLength = m_uPos + a_Length;
 			cudaFree(device);
-			free(deviceMapped);
-			H* newHost = (H*)::malloc(m_uHostBlockSize * newLength);
-			::memcpy(newHost, host, m_uPos * m_uHostBlockSize);
+			H* newHost = (H*)::malloc(m_uBlockSize * newLength);
+			::memcpy(newHost, host, m_uPos * m_uBlockSize);
 			free(host);
 			host = newHost;
 			m_uLength = newLength;
 			CUDA_MALLOC(&device, sizeof(D) * newLength);
 			cudaMemset(device, 0, sizeof(D) * newLength);
-			deviceMapped = (D*)::malloc(newLength * sizeof(D));
-			memset(deviceMapped, 0, sizeof(D) * newLength);
+			realloc();
 			Invalidate(0, m_uPos);
-			return malloc(a_Count);
+			return malloc(a_Length);
+
 		}
+		Invalidate(res);
+		return res;
 	}
+
 	e_BufferReference<H, D> malloc(e_BufferReference<H, D> r, bool copyToNew = true)
 	{
-		e_BufferReference<H, D> r2 = malloc(r.getLength());
-		if(copyToNew)
-			memcpy(r, r2);
+		e_BufferReference<H, D> r2 = malloc(r.l);
+		if (copyToNew)
+			memcpy(r2, r);
 		return r2;
 	}
-	///Copies dest->length bytes from source to dest, on the host aswell as the device
-	void memcpy(e_BufferReference<H, D> source, e_BufferReference<H, D> dest)
+
+	void memcpy(e_BufferReference<H, D> dest, e_BufferReference<H, D> source)
 	{
-		if(source.getLength() < dest.getLength() || source.m_pStream != this || dest.m_pStream != this)
+		if (source.l > dest.l || source.buf != this || dest.buf != this)
 			throw std::runtime_error(__FUNCTION__);
-		::memcpy(dest.atH(dest->getIndex()), source.atH(source.getIndex()), m_uHostBlockSize * dest.getLength());
-		Invalidate(dest);
+		::memcpy(dest(), source(), m_uBlockSize * dest.l);
 	}
-	void dealloc(e_BufferReference<H, D> a_Ref)
+
+	void dealloc(e_BufferReference<H, D> ref)
 	{
-		if(a_Ref.getIndex() + a_Ref.getLength() == m_uPos)
-			m_uPos -= a_Ref.getLength();
+		dealloc(ref.p, ref.l);
+	}
+
+	void dealloc(size_t p, size_t l)
+	{
+		for (size_t i = p; i < p + l; ++i)
+			host[i].~H();
+		if (p + l == m_uPos)
+		{
+			m_uPos -= l;
+		}
 		else
 		{
-			for(unsigned int i = 0; i < m_sDeallocated.size(); i++)
-				if(m_sDeallocated[i].first == a_Ref.getIndex() + a_Ref.getLength())
-				{
-					m_sDeallocated[i].first = a_Ref.getIndex();
-					m_sDeallocated[i].second += a_Ref.getLength();
-					return;
-				}
-			m_sDeallocated.push_back(std::make_pair(a_Ref.getIndex(), a_Ref.getLength()));
+			m_uDeallocated->insert(ival(p, p + l));
 		}
 
-		if (m_sDeallocated.size())
+		if (m_uPos > 0)
 		{
-			std::vector<part > result;
-			std::sort(m_sDeallocated.begin(), m_sDeallocated.end());
-			std::vector<part >::iterator it = m_sDeallocated.begin();
-			part current = *(it)++;
-			while (it != m_sDeallocated.end()){
-				if (current.first + current.second >= it->first){ // you might want to change it to >=
-					current.second = max(current.first + current.second, it->first + it->second) - current.first;
-				}
-				else {
-					result.push_back(current);
-					current = *(it);
-				}
-				it++;
-			}
-			result.push_back(current);
-			m_sDeallocated = result;
-		}
-
-		if (m_sDeallocated.size())
-		{
-			part last = m_sDeallocated.back();
-			if (last.first + last.second == m_uPos)
+			range_set_t::const_iterator it = m_uDeallocated->find(m_uPos - 1);
+			if (it != m_uDeallocated->end())
 			{
-				m_sDeallocated.erase(m_sDeallocated.end() - 1);
-				m_uPos -= last.second;
+				m_uPos -= it->upper() - it->lower();
+				m_uDeallocated->erase(it);
 			}
 		}
 	}
-	void dealloc(unsigned int i, unsigned int j = 1)
-	{
-		dealloc(operator()(i, j));
-	}
+
 	void Invalidate()
 	{
-		m_sInvalidated.clear();
-		m_sInvalidated.push_back(std::make_pair(0U, numElements));
+		m_uInvalidated->insert(ival(0U, m_uPos));
 	}
-	void Invalidate(e_BufferReference<H, D> a_Ref)
-	{	
-		for(unsigned int i = 0; i < m_sInvalidated.size(); i++)
-		{
-			if(m_sInvalidated[i].first <= a_Ref.getIndex() && m_sInvalidated[i].second + m_sInvalidated[i].first >= a_Ref.getIndex() + a_Ref.getLength())
-				return;
-			else if(m_sInvalidated[i].first <= a_Ref.getIndex() && m_sInvalidated[i].first + m_sInvalidated[i].second >= a_Ref.getIndex())
-			{
-				m_sInvalidated[i].second = a_Ref.getIndex() + a_Ref.getLength() - m_sInvalidated[i].first;
-				return;
-			}
-		}
-		m_sInvalidated.push_back(std::make_pair(a_Ref.getIndex(), a_Ref.getLength()));
-	}
-	void Invalidate(unsigned int i, unsigned int j = 1)
+
+	void Invalidate(e_BufferReference<H, D> ref)
 	{
-		Invalidate(operator()(i, j));
+		Invalidate(ref.p, ref.l);
 	}
+
+	void Invalidate(size_t idx, size_t l)
+	{
+		m_uInvalidated->insert(ival(idx, idx + l));
+	}
+
 	void UpdateInvalidated()
 	{
-		for(unsigned int i = 0; i < m_sInvalidated.size(); i++)
+		struct f{ void operator()(e_BufferReference<H, D>){} };
+		f _f;
+		UpdateInvalidated(_f);
+	}
+
+	template<typename CLB> void UpdateInvalidated(CLB& f)
+	{
+		for (range_set_t::iterator it = m_uInvalidated->begin(); it != m_uInvalidated->end(); it++)
 		{
-			for(unsigned int j = 0; j < m_sInvalidated[i].second; j++)
+			for (size_t i = it->lower(); i < it->upper(); i++)
 			{
-				unsigned int k = j + m_sInvalidated[i].first;
-				deviceMapped[k] = operator()(k)->getKernelData();
+				f(operator()(i, 1));
+				if (m_bUpdateElement)
+					updateElement(i);
 			}
+			copyRange(it->lower(), it->upper() - it->lower());
 		}
-		for(unsigned int i = 0; i < m_sInvalidated.size(); i++)
-		{
-			int q = sizeof(D), f = m_sInvalidated[i].first, n = q * m_sInvalidated[i].second;
-			cudaMemcpy(device + f, deviceMapped + f, n, cudaMemcpyHostToDevice);
-		}
-		m_sInvalidated.clear();
+		m_uInvalidated->clear();
 	}
-	template<typename CBT> void UpdateInvalidatedCB(CBT& f)
+
+	void CopyFromDevice(e_BufferReference<H, D> ref)
 	{
-		for(unsigned int i = 0; i < m_sInvalidated.size(); i++)
-		{
-			for(unsigned int j = 0; j < m_sInvalidated[i].second; j++)
-			{
-				unsigned int k = j + m_sInvalidated[i].first;
-				f(operator()(k));//do that BEFORE, so the user has a chance to modify the data which will be copied...
-				deviceMapped[k] = operator()(k)->getKernelData();
-			}
-		}
-		for(unsigned int i = 0; i < m_sInvalidated.size(); i++)
-		{
-			int q = sizeof(D), f = m_sInvalidated[i].first, n = q * m_sInvalidated[i].second;
-			cudaMemcpy(device + f, deviceMapped + f, n, cudaMemcpyHostToDevice);
-		}
-		m_sInvalidated.clear();
+		static_assert(std::is_same<H, D>::value, "H != T");
+		cudaMemcpy(this->host + ref.p, device + ref.p, sizeof(H) * ref.l, cudaMemcpyDeviceToHost);
 	}
-	unsigned int getLength() const
+
+	e_BufferReference<H, D> operator()(size_t i, size_t l = 1)
 	{
-		return m_uLength;
-	}
-	e_BufferReference<H, D> operator()(unsigned int i = 0, unsigned int l = 1)
-	{
-		if (i >= m_uLength)
-			BAD_EXCEPTION("Invalid index of %d, length is %d", i, m_uLength)
+		if (i >= m_uPos)
+			throw std::runtime_error("Invalid idx!");
 		return e_BufferReference<H, D>(this, i, l);
 	}
-	unsigned int NumUsedElements() const
+
+	virtual e_BufferIterator<H, D> begin()
 	{
-		return UsedElements().getLength();
+		return e_BufferIterator<H, D>(*this, 0);
 	}
-	e_BufferReference<H, D> UsedElements() const
+
+	virtual e_BufferIterator<H, D> end()
 	{
-		return e_BufferReference<H, D>((e_Buffer<H, D>*)this, 0, m_uPos);
+		return e_BufferIterator<H, D>(*this, m_uPos);
 	}
-	unsigned int getSizeInBytes() const
+
+	size_t getDeviceSizeInBytes() const
 	{
 		return m_uLength * sizeof(D);
 	}
-	e_KernelBuffer<D> getKernelData(bool devicePointer = true) const
+
+	virtual e_KernelBuffer<D> getKernelData(bool devicePointer = true) const = 0;
+
+	e_BufferReference<H, D> translate(e_Variable<D> var)
 	{
-		e_KernelBuffer<D> r;
-		r.Data = devicePointer ? device : deviceMapped;
-		r.Length = m_uLength;
-		r.UsedCount = m_uPos;
-		return r;
-	}
-	e_BufferReference<H, D> translate(const H* val) const
-	{
-		unsigned long long t0 = ((unsigned long long)val - (unsigned long long)host) / sizeof(H), t1 = ((unsigned long long)val - (unsigned long long)device) / sizeof(D);
-		unsigned int i = t0 < m_uLength ? t0 : t1;
-		return e_BufferReference<H, D>(this, i, 1);
-	}
-	e_BufferReference<H, D> translate(const D* val) const
-	{
-		unsigned long long t0 = ((unsigned long long)val - (unsigned long long)host) / sizeof(H), t1 = ((unsigned long long)val - (unsigned long long)device) / sizeof(D);
-		unsigned int i = t0 < m_uLength ? t0 : t1;
-		return e_BufferReference<H, D>(this, i, 1);
-	}
-	D* getDeviceMapped(int i) const
-	{
-		return deviceMapped + i;
-	}
-	e_BufferReference<H, D> translate(const e_Variable<D>& var)
-	{
-		unsigned int idx = var.device - device;
+		size_t idx = var.device - device;
 		return e_BufferReference<H, D>(this, idx, 1);
 	}
-	template<typename T> e_BufferReference<H, D> translate(const e_Variable<T>& var)
+
+	template<typename T> e_BufferReference<H, D> translate(e_Variable<T> var)
 	{
-		unsigned int idx = var.device - device;
+		size_t idx = (D*)var.device - device;
 		return e_BufferReference<H, D>(this, idx, unsigned int(sizeof(T) / sizeof(D)));
 	}
 };
 
-template<typename H, typename D> class e_BufferReference
+template<typename H, typename D> class e_BufferIterator
 {
+	e_BufferBase<H, D>& buf;
+	size_t idx;
+	typename e_BufferBase<H, D>::range_set_t::iterator next_interval;
 public:
-	unsigned int m_uIndex;
-	unsigned int m_uLength;
-	e_Buffer<H, D>* m_pStream;
-public:
-	e_BufferReference()
+	e_BufferIterator(e_BufferBase<H, D>& b, size_t i)
+		: buf(b), idx(i)
 	{
-		m_uIndex = m_uLength = 0;
-		m_pStream = 0;
+		next_interval = buf.m_uDeallocated->lower_bound(typename e_BufferBase<H, D>::ival(idx, idx + 1));
 	}
-	e_BufferReference(e_Buffer<H, D>* s, unsigned int i, unsigned int c)
+
+	e_BufferReference<H, D> operator*() const
 	{
-		m_uIndex = i;
-		m_uLength = c;
-		m_pStream = s;
+		return buf(idx, 1);
 	}
-	unsigned int getIndex() const
-	{
-		return m_uIndex;
-	}
-	unsigned int getLength() const
-	{
-		return m_uLength;
-	}
-	unsigned int getSizeInBytes() const
-	{
-		return m_uLength * sizeof(H);
-	}
-	void Invalidate()
-	{
-		m_pStream->Invalidate(*this);
-	}
-	void CopyFromDevice()
-	{
-		m_pStream->CopyFromDevice(*this);
-	}
-	e_BufferReference<H, D> operator()(unsigned int i = 0) const
-	{
-		return e_BufferReference<H, D>(m_pStream, m_uIndex + i, 1);
-	}
-	bool operator<(const e_BufferReference<H, D>& rhs)
-	{
-		return m_uIndex < rhs.m_uIndex;
-	}
-	e_BufferReference<H, D>& operator= (const H &r)
-	{
-		*atH(m_uIndex) = r;
-		return *this;
-	}
+
 	H* operator->() const
 	{
-		return atH(m_uIndex);
+		return buf.host + idx;
 	}
-	D* getDeviceMapped() const
+
+	e_BufferIterator<H, D>& operator++()
 	{
-		return m_pStream->getDeviceMapped(m_uIndex);
+		/*idx++;
+		auto it = buf.m_uDeallocated->find(idx);
+		if(it != buf.m_uDeallocated->end())
+		{
+		idx = it->upper();
+		}*/
+		if (next_interval != buf.m_uDeallocated->end() && idx + 1 == next_interval->lower())
+		{
+			idx = next_interval->upper();
+			next_interval = buf.m_uDeallocated->lower_bound(typename e_BufferBase<H, D>::ival(idx, idx + 1));
+		}
+		else idx++;
+		if (idx > buf.m_uLength)
+			throw std::runtime_error("Out of bounds!");
+		return *this;
 	}
-	const H& operator*() const
+
+	bool operator==(const e_BufferIterator<H, D>& rhs) const
 	{
-		return *atH(m_uIndex);
+		return &buf == &rhs.buf && idx == rhs.idx;
 	}
-	operator H*() const
+
+	bool operator!=(const e_BufferIterator<H, D>& rhs) const
 	{
-		return atH(m_uIndex);
+		return !(*this == rhs);
 	}
-	D* getDevice() const
+};
+
+template<typename H, typename D> size_t num_in_iterator(e_BufferRange<H, D>& range, size_t i)
+{
+	size_t n = 0;
+	for (auto it : range)
 	{
-		return atD(m_uIndex);
+		n++;
+		if (n > i)
+			return n;
 	}
-	template<typename U> U* operator()(unsigned int i = 0) const
+	return n;
+}
+
+template<typename H, typename D> class e_Buffer : public e_BufferBase<H, D>
+{
+	D* deviceMapped;
+protected:
+	virtual void updateElement(size_t i)
 	{
-		U* base = (U*)atH(m_uIndex);
-		return base + i;
+		deviceMapped[i] = operator()(i)->getKernelData();
 	}
-	void ReadFrom(IInStream& a_In)
+	virtual void copyRange(size_t i, size_t l)
 	{
-		a_In.Read(operator H *(), getSizeInBytes());
-		Invalidate();
+		cudaMemcpy(this->device + i, deviceMapped + i, l * sizeof(D), cudaMemcpyHostToDevice);
 	}
-	void WriteTo(OutputStream& a_Out)
+	virtual void realloc()
 	{
-		a_Out.Write(operator H *(), getSizeInBytes());
+		free(deviceMapped);
+		deviceMapped = (D*)::malloc(m_uLength * sizeof(D));
+		memset(deviceMapped, 0, sizeof(D) * m_uLength);
 	}
-	e_Variable<D> AsVar()
+	virtual D* getDeviceMappedData()
 	{
-		return AsVar<D>();
+		return deviceMapped;
 	}
-	template<typename T> e_Variable<T> AsVar()
+public:
+	e_Buffer(size_t a_NumElements, size_t a_ElementSize = MINUS_ONE)
+		: e_BufferBase<H, D>(a_NumElements, a_ElementSize, true)
 	{
-		return e_Variable<T>((T*)getDeviceMapped(), (T*)getDevice());
+		deviceMapped = (D*)::malloc(a_NumElements * sizeof(D));
+		memset(deviceMapped, 0, sizeof(D) * a_NumElements);
 	}
-//private:
-	H* atH(unsigned int i) const 
+	virtual void Free()
 	{
-		return (H*)((char*)m_pStream->host + m_pStream->m_uHostBlockSize * i);
+		free(deviceMapped);
+		e_BufferBase<H, D>::Free();
 	}
-	D* atD(unsigned int i) const
+	virtual e_KernelBuffer<D> getKernelData(bool devicePointer = true) const
 	{
-		return m_pStream->device + i;
+		e_KernelBuffer<D> r;
+		r.Data = devicePointer ? device : deviceMapped;
+		r.Length = (unsigned int)m_uLength;
+		r.UsedCount = (unsigned int)m_uPos;
+		return r;
+	}
+};
+
+template<typename T> class e_Stream : public e_BufferBase<T, T>
+{
+protected:
+	virtual void updateElement(size_t)
+	{
+
+	}
+	virtual void copyRange(size_t i, size_t l)
+	{
+		cudaMemcpy(this->device + i, this->host + i, l * sizeof(T), cudaMemcpyHostToDevice);
+	}
+	virtual T* getDeviceMappedData()
+	{
+		return this->host;
+	}
+public:
+	e_Stream(size_t a_NumElements)
+		: e_BufferBase<T, T>(a_NumElements, sizeof(T), false)
+	{
+
+	}
+	virtual e_KernelBuffer<T> getKernelData(bool devicePointer = true) const
+	{
+		e_KernelBuffer<T> r;
+		r.Data = devicePointer ? device : host;
+		r.Length = (unsigned int)m_uLength;
+		r.UsedCount = (unsigned int)m_uPos;
+		return r;
 	}
 };
 
@@ -407,7 +400,7 @@ template<typename H, typename D> class e_CachedBuffer : public e_Buffer<H, D>
 private:
 	struct entry
 	{
-		unsigned int count;
+		size_t count;
 		e_BufferReference<H, D> ref;
 		entry()
 		{
@@ -417,10 +410,10 @@ private:
 	std::map<std::string, entry> m_sEntries;
 public:
 	std::vector<e_BufferReference<H, D>> m_UnusedEntries;
-	e_CachedBuffer(unsigned int a_Count, unsigned int a_ElementSize = 0xffffffff)
+	e_CachedBuffer(size_t a_Count, size_t a_ElementSize = MINUS_ONE)
 		: e_Buffer<H, D>(a_Count, a_ElementSize)
 	{
-		
+
 	}
 	e_BufferReference<H, D> LoadCached(const std::string& file, bool& load)
 	{
@@ -452,290 +445,3 @@ public:
 	}
 };
 
-template<class T> using e_StreamReference = e_BufferReference<T, T>;
-
-template<typename T> class e_Buffer<T, T>
-{
-	friend e_BufferReference<T, T>;
-protected:
-	T* host;
-	T* device;
-	T* deviceMapped;
-	unsigned int m_uPos;
-	unsigned int m_uLength;
-	unsigned int m_uHostBlockSize;
-	typedef std::pair<unsigned int, unsigned int> part;
-	std::vector<part> m_sInvalidated;
-	std::vector<part> m_sDeallocated;
-public:
-	e_Buffer(unsigned int N, unsigned int a_ElementSize = 0xffffffff)
-	{
-		a_ElementSize = sizeof(T);
-		m_uHostBlockSize = a_ElementSize;
-		m_uPos = 0;
-		m_uLength = N;
-		host = (T*)::malloc(m_uHostBlockSize * N);
-		Platform::SetMemory(host, m_uHostBlockSize * N);
-		CUDA_MALLOC(&device, sizeof(T) * N);
-		cudaMemset(device, 0, sizeof(T) * N);
-		deviceMapped = 0;
-	}
-	~e_Buffer()
-	{
-		Free();
-	}
-	void Free()
-	{
-		free(host);
-		if(deviceMapped)
-			free(deviceMapped);
-		CUDA_FREE(device);
-	}
-	e_Buffer(InputStream& a_In)
-	{
-		a_In >> m_uLength;
-		a_In >> m_uPos;
-		a_In >> m_uHostBlockSize;
-		unsigned int deN;
-		a_In >> deN;
-		if(CUDA_MALLOC(&device, sizeof(T) * m_uLength))
-			BAD_CUDA_ALLOC(sizeof(T) * m_uLength)
-		host = (T*)::malloc(m_uHostBlockSize * m_uLength);
-		a_In.Read(host, m_uPos * m_uHostBlockSize);
-		m_sDeallocated.resize(deN);
-		if(deN)
-			a_In.Read(&m_sDeallocated[0], deN * sizeof(part));
-		Invalidate();
-	}
-	void Serialize(OutputStream& a_Out)
-	{
-		a_Out << m_uLength;
-		a_Out << m_uPos;
-		a_Out << m_uHostBlockSize;
-		a_Out << (unsigned int)m_sDeallocated.size();
-		a_Out.Write(host, m_uPos * m_uHostBlockSize);
-		if(m_sDeallocated.size())
-			a_Out.Write(&m_sDeallocated[0], (int)m_sDeallocated.size() * sizeof(part));
-	}
-	e_BufferReference<T, T> malloc(unsigned int a_Count)
-	{
-		e_BufferReference<T, T> r;
-		for(unsigned int i = 0; i < m_sDeallocated.size(); i++)
-			if(m_sDeallocated[i].second >= a_Count)
-			{
-				part& p = m_sDeallocated[i];
-				if(p.second == a_Count)
-				{
-					m_sDeallocated.erase(m_sDeallocated.begin() + i);
-					r = e_BufferReference<T, T>(this, p.first, a_Count);
-				}
-				else
-				{
-					p.second = p.second - a_Count;
-					unsigned int s = p.first;
-					p.first += a_Count;
-					r = e_BufferReference<T, T>(this, s, a_Count);
-				}
-				break;
-			}
-		if(a_Count <= m_uLength - m_uPos)
-		{
-			m_uPos += a_Count;//RoundUp(a_Count, 16)
-			r = e_BufferReference<T, T>(this, m_uPos - a_Count, a_Count);
-		}
-		else
-		{
-			//BAD_EXCEPTION("Cuda data stream malloc failure, %d elements requested, %d available.", a_Count, m_uLength - m_uPos)
-			//return e_BufferReference<T, T>();
-			unsigned int newLength = m_uPos + a_Count;
-			cudaFree(device);
-			T* newHost = (T*)::malloc(m_uHostBlockSize * newLength);
-			::memcpy(newHost, host, m_uPos * m_uHostBlockSize);
-			free(host);
-			host = newHost;
-			m_uLength = newLength;
-			CUDA_MALLOC(&device, sizeof(T) * newLength);
-			cudaMemset(device, 0, sizeof(T) * newLength);
-			Invalidate(0, m_uPos);
-			return malloc(a_Count);
-		}
-		Invalidate(r);
-		return r;
-	}
-	e_BufferReference<T, T> malloc(e_BufferReference<T, T> r, bool copyToNew = true)
-	{
-		e_BufferReference<T, T> r2 = malloc(r.getLength());
-		if(copyToNew)
-			memcpy(r, r2);
-		return r2;
-	}
-	///Copies dest->length bytes from source to dest, on the host aswell as the device
-	void memcpy(e_BufferReference<T, T> source, e_BufferReference<T, T> dest)
-	{
-		if(source.getLength() < dest.getLength() || source.m_pStream != this || dest.m_pStream != this)
-			throw std::runtime_error(__FUNCTION__);
-		::memcpy(dest.atH(dest.getIndex()), source.atH(source.getIndex()), m_uHostBlockSize * dest.getLength());
-		Invalidate(dest);
-	}
-	void dealloc(e_BufferReference<T, T> a_Ref)
-	{
-		if(a_Ref.getIndex() + a_Ref.getLength() == m_uPos)
-			m_uPos -= a_Ref.getLength();
-		else
-		{
-			for(unsigned int i = 0; i < m_sDeallocated.size(); i++)
-				if(m_sDeallocated[i].first == a_Ref.getIndex() + a_Ref.getLength())
-				{
-					m_sDeallocated[i].first = a_Ref.getIndex();
-					m_sDeallocated[i].second += a_Ref.getLength();
-					return;
-				}
-			m_sDeallocated.push_back(std::make_pair(a_Ref.getIndex(), a_Ref.getLength()));
-		}
-
-		if (m_sDeallocated.size())
-		{
-			std::vector<part > result;
-			std::sort(m_sDeallocated.begin(), m_sDeallocated.end());
-			std::vector<part >::iterator it = m_sDeallocated.begin();
-			part current = *(it)++;
-			while (it != m_sDeallocated.end()){
-				if (current.first + current.second >= it->first){ // you might want to change it to >=
-					current.second = max(current.first + current.second, it->first + it->second) - current.first;
-				}
-				else {
-					result.push_back(current);
-					current = *(it);
-				}
-				it++;
-			}
-			result.push_back(current);
-			m_sDeallocated = result;
-		}
-
-		if (m_sDeallocated.size())
-		{
-			part last = m_sDeallocated.back();
-			if (last.first + last.second == m_uPos)
-			{
-				m_sDeallocated.erase(m_sDeallocated.end() - 1);
-				m_uPos -= last.second;
-			}
-		}
-	}
-	void dealloc(unsigned int i, unsigned int j = 1)
-	{
-		dealloc(operator()(i, j));
-	}
-	void Invalidate()
-	{
-		m_sInvalidated.clear();
-		m_sInvalidated.push_back(std::make_pair(0U, m_uPos));
-	}
-	void Invalidate(e_BufferReference<T, T> a_Ref)
-	{	
-		for(unsigned int i = 0; i < m_sInvalidated.size(); i++)
-		{
-			if(m_sInvalidated[i].first <= a_Ref.getIndex() && m_sInvalidated[i].second + m_sInvalidated[i].first >= a_Ref.getIndex() + a_Ref.getLength())
-				return;
-			else if(m_sInvalidated[i].first <= a_Ref.getIndex() && m_sInvalidated[i].first + m_sInvalidated[i].second >= a_Ref.getIndex())
-			{
-				m_sInvalidated[i].second = a_Ref.getIndex() + a_Ref.getLength() - m_sInvalidated[i].first;
-				return;
-			}
-		}
-		m_sInvalidated.push_back(std::make_pair(a_Ref.getIndex(), a_Ref.getLength()));
-	}
-	void Invalidate(unsigned int i, unsigned int j = 1)
-	{
-		Invalidate(operator()(i, j));
-	}
-	void CopyFromDevice(e_BufferReference<T, T> ref)
-	{
-		cudamemcpy(host + ref.getIndex(), device + ref.getIndex(), sizeof(T) * ref.getLength(), cudaMemcpyDeviceToHost);
-	}
-	void UpdateInvalidated()
-	{
-		for(unsigned int i = 0; i < m_sInvalidated.size(); i++)
-		{
-			int q = sizeof(T), f = m_sInvalidated[i].first, n = q * m_sInvalidated[i].second;
-			cudaMemcpy(device + f, host + f, n, cudaMemcpyHostToDevice);
-		}
-		m_sInvalidated.clear();
-	}
-	template<typename CBT> void UpdateInvalidatedCB(CBT& cbf)
-	{
-		for(unsigned int i = 0; i < m_sInvalidated.size(); i++)
-		{
-			int q = sizeof(T), f = m_sInvalidated[i].first, n = q * m_sInvalidated[i].second;
-			for(unsigned int j = 0; j < m_sInvalidated[i].second; j++)
-				cbf(operator()(f + j));
-			cudaMemcpy(device + f, host + f, n, cudaMemcpyHostToDevice);
-		}
-		m_sInvalidated.clear();
-	}
-	unsigned int getLength()
-	{
-		return m_uLength;
-	}
-	e_BufferReference<T, T> operator()(unsigned int i = 0, unsigned int l = 1)
-	{
-		if (i >= m_uLength)
-			BAD_EXCEPTION("Invalid index of %d, length is %d", i, m_uLength)
-		return e_BufferReference<T, T>(this, i, l);
-	}
-	unsigned int NumUsedElements()
-	{
-		return m_uPos;
-	}
-	e_BufferReference<T, T> UsedElements()
-	{
-		return e_BufferReference<T, T>(this, 0, m_uPos);
-	}
-	unsigned int getSizeInBytes()
-	{
-		return m_uLength * sizeof(T);
-	}
-	e_KernelBuffer<T> getKernelData(bool devicePointer = true)
-	{
-		e_KernelBuffer<T> r;
-		r.Data = devicePointer ? device : host;
-		r.Length = m_uLength;
-		r.UsedCount = m_uPos;
-		return r;
-	}
-	e_BufferReference<T, T> translate(const T* val)
-	{
-		unsigned long long t0 = ((unsigned long long)val - (unsigned long long)host) / sizeof(T), t1 = ((unsigned long long)val - (unsigned long long)device) / sizeof(T);
-		unsigned int i = t0 < m_uLength ? t0 : t1;
-		return e_BufferReference<T, T>(this, i, 1);
-	}
-	T* getDeviceMapped(int i) const
-	{
-		return host + i;
-	}
-	e_BufferReference<T, T> translate(const e_Variable<T>& var)
-	{
-		unsigned int idx = var.device - device;
-		return e_BufferReference<T, T>(this, idx, 1);
-	}
-	template<typename T2> e_BufferReference<T, T> translate(const e_Variable<T2>& var)
-	{
-		unsigned int idx = (T*)var.device - device;
-		return e_BufferReference<T, T>(this, idx, unsigned int(sizeof(T2) / sizeof(T)));
-	}
-};
-
-template<typename T> class e_Stream : public e_Buffer<T, T>
-{
-public:
-	e_Stream(unsigned int N)
-		: e_Buffer<T, T>(N)
-	{
-	}
-	e_Stream(InputStream& a_In)
-		: e_Buffer<T, T>(a_In)
-	{
-
-	}
-};

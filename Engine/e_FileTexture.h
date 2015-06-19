@@ -23,11 +23,7 @@ public:
 	std::string m_pPath;
 	e_MIPMap() {m_pDeviceData = 0; m_uWidth = m_uHeight = m_uBpp = 0xffffffff;}
 	e_MIPMap(const std::string& a_InputFile, IInStream& a_In);
-	void Free()
-	{
-		CUDA_FREE(m_pDeviceData);
-		free(m_pHostData);
-	}
+	void Free();
 	static void CompileToBinary(const std::string& a_InputFile, OutputStream& a_Out, bool a_MipMap);
 	static void CompileToBinary(const std::string& in, const std::string& out, bool a_MipMap);
 	static void CreateSphericalSkydomeTexture(const std::string& front, const std::string& back, const std::string& left, const std::string& right, const std::string& top, const std::string& bottom, const std::string& outFile);

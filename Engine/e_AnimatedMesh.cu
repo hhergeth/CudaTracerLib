@@ -1,6 +1,9 @@
+#include "e_Buffer.h"
 #include "e_AnimatedMesh.h"
-#include "e_KernelDynamicScene.h"
 #include "e_BVHRebuilder.h"
+#include "e_TriangleData.h"
+#include "e_Material.h"
+#include "e_IntersectorData.h"
 
 //low...high
 //x=(0,1,2,3), y=(4,5,6,7)
@@ -83,9 +86,10 @@ public:
 		b.Enlarge(vertexData[t.z].m_fPos);
 		return b;
 	}
-	virtual unsigned int getCount()
+	virtual void iterateObjects(std::function<void(unsigned int)> f)
 	{
-		return m_uNumTriangles;
+		for (unsigned int i = 0; i < m_uNumTriangles; i++)
+			f(i);
 	}
 	virtual void setObject(unsigned int a_IntersectorIdx, unsigned int a_ObjIdx)
 	{
@@ -129,18 +133,18 @@ public:
 		return true;
 	}
 };
-void e_AnimatedMesh::k_ComputeState(unsigned int a_Anim, unsigned int a_Frame, float a_lerp, e_KernelDynamicScene a_Data, e_Stream<e_BVHNodeData>* a_BVHNodeStream, e_TmpVertex* a_DeviceTmp, e_TmpVertex* a_HostTmp)
+void e_AnimatedMesh::k_ComputeState(unsigned int a_Anim, unsigned int a_Frame, float a_lerp, e_Stream<e_BVHNodeData>* a_BVHNodeStream, e_TmpVertex* a_DeviceTmp, e_TmpVertex* a_HostTmp)
 {
 	unsigned int n = (a_Frame + 1) % m_pAnimations[a_Anim].m_pFrames.size();
 	float4x4* m0 = (float4x4*)m_pAnimations[a_Anim].m_pFrames[a_Frame].m_sMatrices.getDevice();
 	float4x4* m1 = (float4x4*)m_pAnimations[a_Anim].m_pFrames[n].m_sMatrices.getDevice();
-	g_ComputeVertices<<<k_Data.m_uVertexCount / 256 + 1, 256>>>(a_DeviceTmp, (e_AnimatedVertex*)m_sVertices.getDevice(), m0, m1, a_lerp, k_Data.m_uVertexCount);
+	g_ComputeVertices << <k_Data.m_uVertexCount / 256 + 1, 256 >> >(a_DeviceTmp, (e_AnimatedVertex*)m_sVertices.getDevice(), m0, m1, a_lerp, k_Data.m_uVertexCount);
 	cudaThreadSynchronize();
 	ThrowCudaErrors();
-	g_ComputeTriangles<<<m_sTriInfo.getLength() / 256 + 1, 256>>>(a_DeviceTmp, (uint3*)m_sTriangles.getDevice(), m_sTriInfo.getDevice(), m_sTriInfo.getLength());
+	g_ComputeTriangles << <m_sTriInfo.getLength() / 256 + 1, 256 >> >(a_DeviceTmp, (uint3*)m_sTriangles.getDevice(), m_sTriInfo.getDevice(), m_sTriInfo.getLength());
 	cudaThreadSynchronize();
 	ThrowCudaErrors();
-	cudamemcpy(a_HostTmp, a_DeviceTmp, sizeof(e_TmpVertex) * k_Data.m_uVertexCount, cudaMemcpyDeviceToHost);
+	cudaMemcpy(a_HostTmp, a_DeviceTmp, sizeof(e_TmpVertex) * k_Data.m_uVertexCount, cudaMemcpyDeviceToHost);
 	AnimProvider p(this, a_HostTmp, this->m_sTriangles);
 	cudaThreadSynchronize();
 	ThrowCudaErrors();

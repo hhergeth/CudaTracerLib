@@ -1,6 +1,7 @@
 #pragma once
 
 #include "e_Grid.h"
+#include "../CudaMemoryManager.h"
 
 template<typename T> struct e_SpatialLinkedMap_volume_iterator;
 

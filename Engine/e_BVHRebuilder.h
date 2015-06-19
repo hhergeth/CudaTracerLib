@@ -10,7 +10,7 @@ class ISpatialInfoProvider
 {
 public:
 	virtual AABB getBox(unsigned int idx) = 0;
-	virtual unsigned int getCount() = 0;
+	virtual void iterateObjects(std::function<void(unsigned int)> f) = 0;
 	virtual void setObject(unsigned int a_IntersectorIdx, unsigned int a_ObjIdx)
 	{
 
@@ -64,9 +64,7 @@ public:
 	~e_BVHRebuilder();
 
 	bool Build(ISpatialInfoProvider* data, bool invalidateAll = false);
-	int getStartNode(){ return startNode; }
-	unsigned int getNumBVHNodesUsed(){ return m_uBvhNodeCount; }
-	AABB getBox();
+	void SetEmpty();
 	bool needsBuild();
 	void printGraph(const std::string& path);
 
@@ -75,13 +73,17 @@ public:
 	void invalidateNode(unsigned int n);
 
 	const std::bitset<MAX_NODES>& getInvalidatedNodes(){ return nodesToRecompute; }
+	unsigned int getNumBVHIndicesUsed(){ return m_UBVHIndicesCount; }
+	int getStartNode(){ return startNode; }
+	unsigned int getNumBVHNodesUsed(){ return m_uBvhNodeCount; }
+	AABB getBox();
 private:
 	int BuildInfoTree(BVHIndex idx, BVHIndex parent);
 	void removeNodeAndCollapse(BVHIndex nodeIdx, BVHIndex childIdx);
 	void insertNode(BVHIndex bvhNodeIdx, BVHIndex parent, unsigned int nodeIdx, const AABB& nodeWorldBox);
 	void recomputeNode(BVHIndex bvhNodeIdx, AABB& newBox);
 	int getChildIdxInLocal(BVHIndex nodeIdx, BVHIndex childIdx);
-	void setChild(BVHIndex nodeIdx, BVHIndex childIdx, int localIdxToSetTo, BVHIndex oldParent);
+	void setChild(BVHIndex nodeIdx, BVHIndex childIdx, int localIdxToSetTo, BVHIndex oldParent, bool prop = true);
 	void sahModified(BVHIndex nodeIdx, const AABB& box, float& leftSAH, float& rightSAH);
 	int validateTree(BVHIndex idx, BVHIndex parent);
 	void propagateBBChange(BVHIndex idx, const AABB& box, int localChildIdx);

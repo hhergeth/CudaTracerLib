@@ -341,12 +341,7 @@ private:
 struct CUDA_ALIGN(16) e_VolumeRegion : public CudaVirtualAggregate<e_BaseVolumeRegion, e_HomogeneousVolumeDensity, e_VolumeGrid>
 {
 public:
-	CUDA_FUNC_IN e_VolumeRegion()
-	{
-		type = 0;
-	}
-
-	CUDA_FUNC_IN AABB WorldBound()
+	CUDA_FUNC_IN AABB WorldBound() const
 	{
 		return ((e_BaseVolumeRegion*)Data)->Box;
 	}
@@ -396,15 +391,13 @@ public:
 
 struct e_KernelAggregateVolume
 {
+	enum{MAX_VOL_COUNT = 16};
 public:
 	unsigned int m_uVolumeCount;
-	e_VolumeRegion* m_pVolumes;
+	e_VolumeRegion m_pVolumes[MAX_VOL_COUNT];
 	AABB box;
 public:
-	CUDA_FUNC_IN e_KernelAggregateVolume()
-	{
-
-	}
+	CUDA_FUNC_IN e_KernelAggregateVolume(){}
 	e_KernelAggregateVolume(e_Stream<e_VolumeRegion>* D, bool devicePointer = true);
 
 	///Calculates the intersection of the ray with the bound of the volume

@@ -1,5 +1,6 @@
 #include "k_BlockSampler.h"
 #include <numeric>
+#include "../CudaMemoryManager.h"
 /*#include <thrust/device_ptr.h>
 #include <thrust/sort.h>
 #include <thrust/device_vector.h>
@@ -155,6 +156,41 @@ struct order
 		return data[a] / float(contribPixels[a]) > data[b] / float(contribPixels[b]);
 	}
 };
+
+k_BlockSampler::k_BlockSampler(e_Image* img)
+	: img(img)
+{
+	unsigned int nBlocks = totalNumBlocks();
+	CUDA_MALLOC(&m_pLumData, img->getWidth() * img->getHeight() * sizeof(k_SamplerpixelData));
+	CUDA_MALLOC(&m_pDeviceBlockData, nBlocks * sizeof(float));
+	CUDA_MALLOC(&m_pDeviceIndexData, nBlocks * sizeof(unsigned int));
+	CUDA_MALLOC(&m_pDeviceSamplesData, nBlocks * sizeof(unsigned int));
+	CUDA_MALLOC(&m_pDeviceContribPixels, nBlocks * sizeof(unsigned int));
+	CUDA_MALLOC(&m_pDeviceWeight, nBlocks * sizeof(float));
+	m_pHostIndexData = new unsigned int[nBlocks];
+	m_pHostBlockData = new float[nBlocks];
+	m_pHostSamplesData = new unsigned int[nBlocks];
+	m_pHostContribPixels = new unsigned int[nBlocks];
+	m_pHostWeight = new float[nBlocks];
+	Clear();
+	for (unsigned int i = 0; i < nBlocks; i++)
+		m_pHostWeight[i] = 1;
+}
+
+void k_BlockSampler::Free()
+{
+	CUDA_FREE(m_pLumData);
+	CUDA_FREE(m_pDeviceIndexData);
+	CUDA_FREE(m_pDeviceBlockData);
+	CUDA_FREE(m_pDeviceSamplesData);
+	CUDA_FREE(m_pDeviceContribPixels);
+	CUDA_FREE(m_pDeviceWeight);
+	delete[] m_pHostIndexData;
+	delete[] m_pHostBlockData;
+	delete[] m_pHostSamplesData;
+	delete[] m_pHostContribPixels;
+	delete[] m_pHostWeight;
+}
 
 void k_BlockSampler::AddPass()
 {

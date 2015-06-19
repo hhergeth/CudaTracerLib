@@ -3,6 +3,7 @@
 #include "e_ErrorHandler.h"
 #include "e_FileTextureHelper.h"
 #include "../Base/FileStream.h"
+#include "../CudaMemoryManager.h"
 
 /// Integer floor function (single precision)
 template <typename Scalar> CUDA_FUNC_IN int floorToInt(Scalar value) { return (int)floor(value); }

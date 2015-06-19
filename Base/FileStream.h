@@ -4,6 +4,7 @@
 #include <fstream>
 #include <MathTypes.h>
 #include "FixedString.h"
+#include "../Engine/e_Buffer_device.h"
 
 #define DCL_IN(TYPE) \
 	IInStream& operator>>(TYPE& rhs) \
@@ -28,9 +29,9 @@ public:
 	{
 
 	}
-	virtual void Read(void* a_Out, unsigned int a_Size) = 0;
-	virtual unsigned long long getPos() = 0;
-	unsigned long long getFileSize()
+	virtual void Read(void* a_Out, size_t a_Size) = 0;
+	virtual size_t getPos() = 0;
+	size_t getFileSize()
 	{
 		return m_uFileSize;
 	}
@@ -70,7 +71,7 @@ public:
 	{
 		return (T*)ReadToEnd();
 	}
-	template<typename T> void Read(T* a_Data, unsigned int a_Size)
+	template<typename T> void Read(T* a_Data, size_t a_Size)
 	{
 		Read((void*)a_Data, a_Size);
 	}
@@ -104,12 +105,19 @@ public:
 	DCL_IN(AABB)
 	DCL_IN(Ray)
 	DCL_IN(float4x4)
+
+	template<typename H, typename D> IInStream& operator>>(e_BufferReference<H, D> rhs)
+	{
+		Read(rhs(0), rhs.getHostSize());
+		rhs.Invalidate();
+		return *this;
+	}
 };
 
 class InputStream : public IInStream
 {
 private:
-	unsigned int numBytesRead;
+	size_t numBytesRead;
 	void* H;
 	std::string path;
 public:
@@ -119,11 +127,11 @@ public:
 		Close();
 	}
 	virtual void Close();
-	virtual unsigned long long getPos()
+	virtual size_t getPos()
 	{
 		return numBytesRead;
 	}
-	virtual void Read(void* a_Data, unsigned int a_Size);
+	virtual void Read(void* a_Data, size_t a_Size);
 	void Move(int off);
 	virtual const std::string& getFilePath() const
 	{
@@ -134,11 +142,11 @@ public:
 class MemInputStream : public IInStream
 {
 private:
-	unsigned int numBytesRead;
+	size_t numBytesRead;
 	const unsigned char* buf;
 	std::string path;
 public:
-	MemInputStream(const unsigned char* buf, unsigned int length, bool canKeep = false);
+	MemInputStream(const unsigned char* buf, size_t length, bool canKeep = false);
 	MemInputStream(InputStream& in);
 	MemInputStream(const std::string& a_Name);
 	~MemInputStream()
@@ -154,11 +162,11 @@ public:
 		}
 		buf = 0;
 	}
-	virtual unsigned long long getPos()
+	virtual size_t getPos()
 	{
 		return numBytesRead;
 	}
-	virtual void Read(void* a_Data, unsigned int a_Size);
+	virtual void Read(void* a_Data, size_t a_Size);
 	void Move(int off)
 	{
 		numBytesRead += off;
@@ -174,9 +182,9 @@ IInStream* OpenFile(const std::string& filename);
 class OutputStream
 {
 private:
-	unsigned int numBytesWrote;
+	size_t numBytesWrote;
 	void* H;
-	void _Write(const void* data, unsigned int size);
+	void _Write(const void* data, size_t size);
 public:
 	OutputStream(const std::string& a_Name);
 	virtual ~OutputStream()
@@ -184,11 +192,11 @@ public:
 		Close();
 	}
 	void Close();
-	unsigned int GetNumBytesWritten()
+	size_t GetNumBytesWritten()
 	{
 		return numBytesWrote;
 	}
-	template<typename T> void Write(T* a_Data, unsigned int a_Size)
+	template<typename T> void Write(T* a_Data, size_t a_Size)
 	{
 		_Write(a_Data, a_Size);
 	}
@@ -220,4 +228,10 @@ public:
 	DCL_OUT(AABB)
 	DCL_OUT(Ray)
 	DCL_OUT(float4x4)
+
+	template<typename H, typename D> OutputStream& operator<<(e_BufferReference<H, D> rhs)
+	{
+		_Write(rhs(0), rhs.getHostSize());
+		return *this;
+	}
 };

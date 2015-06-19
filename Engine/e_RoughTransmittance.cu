@@ -1,6 +1,7 @@
 #include "e_RoughTransmittance.h"
 #include "..\Math\Spline.h"
 #include "..\Base\FileStream.h"
+#include "../CudaMemoryManager.h"
 
 e_RoughTransmittance::e_RoughTransmittance(const std::string& name)
 {
@@ -39,6 +40,14 @@ e_RoughTransmittance::e_RoughTransmittance(const std::string& name)
 	cudaMemcpy(m_diffTransDevice, m_diffTransHost, sizeof(float) * m_diffTransSize, cudaMemcpyHostToDevice);
 	if(I.getPos() != I.getFileSize())
 		throw std::runtime_error(__FUNCTION__);
+}
+
+void e_RoughTransmittance::Free()
+{
+	delete[] m_transHost;
+	delete[] m_diffTransHost;
+	CUDA_FREE(m_transDevice);
+	CUDA_FREE(m_diffTransDevice);
 }
 
 float e_RoughTransmittance::Evaluate(float cosTheta, float alpha, float eta) const

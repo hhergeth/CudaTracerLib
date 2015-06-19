@@ -1,58 +1,67 @@
 #include "StdAfx.h"
+#include "e_Buffer.h"
 #include "e_SceneBVH.h"
 #include "e_Mesh.h"
 #include "e_Node.h"
 #include "SceneBuilder/SplitBVHBuilder.hpp"
 #include "e_BVHRebuilder.h"
 
-bool e_SceneBVH::Build(e_StreamReference<e_Node> a_Nodes, e_BufferReference<e_Mesh, e_KernelMesh> a_Meshes)
+bool e_SceneBVH::Build(e_Stream<e_Node>* node_stream, e_Buffer<e_Mesh, e_KernelMesh>* mesh_buf)
 {
 	class provider : public ISpatialInfoProvider
 	{
-		e_StreamReference<e_Node> a_Nodes;
-		e_BufferReference<e_Mesh, e_KernelMesh> a_Meshes;
+		e_Stream<e_Node>* a_Nodes;
+		e_Buffer<e_Mesh, e_KernelMesh>* mesh_buf;
 		e_StreamReference<float4x4> a_Transforms;
 	public:
-		provider(e_StreamReference<e_Node> A, e_BufferReference<e_Mesh, e_KernelMesh> B, e_StreamReference<float4x4> C)
-			: a_Nodes(A), a_Meshes(B), a_Transforms(C)
+		provider(e_Stream<e_Node>* A, e_Buffer<e_Mesh, e_KernelMesh>* B, e_StreamReference<float4x4> C)
+			: a_Nodes(A), mesh_buf(B), a_Transforms(C)
 		{
 
 		}
 		virtual AABB getBox(unsigned int idx)
 		{
-			unsigned int mi = a_Nodes(idx)->m_uMeshIndex;
-			AABB box = a_Meshes(mi)->m_sLocalBox;
+			unsigned int mi = a_Nodes->operator()(idx)->m_uMeshIndex;
+			AABB box = mesh_buf->operator()(mi)->m_sLocalBox;
 			float4x4 mat = *a_Transforms(idx);
 			return box.Transform(mat);
 		}
-		virtual unsigned int getCount()
+		virtual void iterateObjects(std::function<void(unsigned int)> f)
 		{
-			return a_Nodes.getLength();
+			for (auto it : *a_Nodes)
+				f(it.getIndex());
 		}
 	};
-	provider p(a_Nodes, a_Meshes, m_pTransforms->UsedElements());
+	if (!node_stream->hasElements())
+	{
+		m_pBuilder->SetEmpty();
+		return false;
+	}
+	provider p(node_stream, mesh_buf, tr_ref);
 	bool modified = m_pBuilder->Build(&p);
-	m_pNodes->Invalidate();
-	m_pNodes->UpdateInvalidated();
-	m_pTransforms->Invalidate();
-	m_pTransforms->UpdateInvalidated();
-	m_pInvTransforms->Invalidate();
-	m_pInvTransforms->UpdateInvalidated();
+	if (modified)
+	{
+		m_pNodes->Invalidate();
+		m_pNodes->UpdateInvalidated();
+		m_pTransforms->Invalidate();
+		m_pTransforms->UpdateInvalidated();
+		m_pInvTransforms->Invalidate();
+		m_pInvTransforms->UpdateInvalidated();
+	}
 	return modified;
 }
 
-e_SceneBVH::e_SceneBVH(unsigned int a_NodeCount)
+e_SceneBVH::e_SceneBVH(size_t a_NodeCount)
 {
 	m_pNodes = new e_Stream<e_BVHNodeData>(a_NodeCount * 2);//largest binary tree has the same amount of inner nodes
 	m_pTransforms = new e_Stream<float4x4>(a_NodeCount);
 	m_pInvTransforms = new e_Stream<float4x4>(a_NodeCount);
-	for(unsigned int i = 0; i < a_NodeCount; i++)
-		*m_pTransforms[0](i).operator->() = *m_pInvTransforms[0](i).operator->() = float4x4::Identity();
-	//INVALIDATE
-	m_pTransforms->malloc(m_pTransforms->getLength());
-	m_pInvTransforms->malloc(m_pInvTransforms->getLength());
-	m_pNodes->malloc(m_pNodes->getLength());
-	m_pBuilder = new e_BVHRebuilder(m_pNodes->UsedElements(), m_pNodes->getLength(), a_NodeCount, 0, 0);
+	tr_ref = m_pTransforms->malloc(m_pTransforms->numElements());
+	iv_tr_ref = m_pInvTransforms->malloc(m_pInvTransforms->numElements());
+	node_ref = m_pNodes->malloc(m_pNodes->numElements());
+	for (unsigned int i = 0; i < a_NodeCount; i++)
+		*tr_ref(i) = *iv_tr_ref(i) = float4x4::Identity();
+	m_pBuilder = new e_BVHRebuilder(node_ref(), node_ref.getLength(), (unsigned int)a_NodeCount, 0, 0);
 }
 
 e_SceneBVH::~e_SceneBVH()
@@ -75,7 +84,7 @@ void e_SceneBVH::setTransform(e_BufferReference<e_Node, e_Node> n, const float4x
 e_KernelSceneBVH e_SceneBVH::getData(bool devicePointer)
 {
 	e_KernelSceneBVH q;
-	q.m_uNumNodes = m_pNodes->getLength();
+	q.m_uNumNodes = (unsigned int)m_pBuilder->getNumBVHNodesUsed();
 	q.m_pNodes = m_pNodes->getKernelData(devicePointer).Data;
 	q.m_sStartNode = m_pBuilder->getStartNode();
 	q.m_pNodeTransforms = m_pTransforms->getKernelData(devicePointer).Data;
@@ -83,9 +92,9 @@ e_KernelSceneBVH e_SceneBVH::getData(bool devicePointer)
 	return q;
 }
 
-unsigned int e_SceneBVH::getSizeInBytes()
+size_t e_SceneBVH::getDeviceSizeInBytes()
 {
-	return m_pNodes->getSizeInBytes() + m_pTransforms->getSizeInBytes() + m_pInvTransforms->getSizeInBytes();
+	return m_pNodes->getDeviceSizeInBytes() + m_pTransforms->getDeviceSizeInBytes() + m_pInvTransforms->getDeviceSizeInBytes();
 }
 
 const float4x4& e_SceneBVH::getNodeTransform(e_BufferReference<e_Node, e_Node> n)

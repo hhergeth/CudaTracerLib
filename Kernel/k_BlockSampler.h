@@ -11,6 +11,7 @@ struct k_SamplerpixelData
 	unsigned int flag;
 };
 
+class e_Image;
 class k_BlockSampler : public IBlockSampler
 {
 	k_SamplerpixelData* m_pLumData;
@@ -30,43 +31,12 @@ class k_BlockSampler : public IBlockSampler
 	float* m_pHostWeight;
 	float* m_pDeviceWeight;
 public:
-	k_BlockSampler(e_Image* img)
-		: img(img)
-	{
-		unsigned int nBlocks = totalNumBlocks();
-		CUDA_MALLOC(&m_pLumData, img->getWidth() * img->getHeight() * sizeof(k_SamplerpixelData));
-		CUDA_MALLOC(&m_pDeviceBlockData, nBlocks * sizeof(float));
-		CUDA_MALLOC(&m_pDeviceIndexData, nBlocks * sizeof(unsigned int));
-		CUDA_MALLOC(&m_pDeviceSamplesData, nBlocks * sizeof(unsigned int));
-		CUDA_MALLOC(&m_pDeviceContribPixels, nBlocks * sizeof(unsigned int));
-		CUDA_MALLOC(&m_pDeviceWeight, nBlocks * sizeof(float));
-		m_pHostIndexData = new unsigned int[nBlocks];
-		m_pHostBlockData = new float[nBlocks];
-		m_pHostSamplesData = new unsigned int[nBlocks];
-		m_pHostContribPixels = new unsigned int[nBlocks];
-		m_pHostWeight = new float[nBlocks];
-		Clear();
-		for (unsigned int i = 0; i < nBlocks; i++)
-			m_pHostWeight[i] = 1;
-	}
+	k_BlockSampler(e_Image* img);
 	virtual ~k_BlockSampler()
 	{
 		Free();
 	}
-	virtual void Free()
-	{
-		CUDA_FREE(m_pLumData);
-		CUDA_FREE(m_pDeviceIndexData);
-		CUDA_FREE(m_pDeviceBlockData);
-		CUDA_FREE(m_pDeviceSamplesData);
-		CUDA_FREE(m_pDeviceContribPixels);
-		CUDA_FREE(m_pDeviceWeight);
-		delete[] m_pHostIndexData;
-		delete[] m_pHostBlockData;
-		delete[] m_pHostSamplesData;
-		delete[] m_pHostContribPixels;
-		delete[] m_pHostWeight;
-	}
+	virtual void Free();
 	float getBlockVariance(int idx) const
 	{
 		return m_pHostBlockData[idx];

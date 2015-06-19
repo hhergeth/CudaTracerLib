@@ -4,6 +4,12 @@
 #include "e_Volumes.h"
 #include "e_Light.h"
 #include "SceneBuilder\Importer.h"
+#include "e_Buffer.h"
+#include "../Base/FileStream.h"
+#include "e_SceneInitData.h"
+#include "e_TriangleData.h"
+#include "e_Material.h"
+#include "e_IntersectorData.h"
 
 #define NO_NODE 0x76543210
 void write(int idx, const e_BVHNodeData* nodes, int parent, std::ofstream& f, int& leafC)
@@ -49,13 +55,13 @@ e_Mesh::e_Mesh(const std::string& path, IInStream& a_In, e_Stream<e_TriIntersect
 	unsigned int m_uTriangleCount;
 	a_In >> m_uTriangleCount;
 	m_sTriInfo = a_Stream1->malloc(m_uTriangleCount);
-	a_In.Read(m_sTriInfo(0), m_sTriInfo.getSizeInBytes());
+	a_In >> m_sTriInfo;
 	m_sTriInfo.Invalidate();
 
 	unsigned int m_uMaterialCount;
 	a_In >> m_uMaterialCount;
 	m_sMatInfo = a_Stream4->malloc(m_uMaterialCount);
-	a_In.Read(m_sMatInfo(0), m_sMatInfo.getSizeInBytes());
+	a_In >> m_sMatInfo;
 	for (unsigned int i = 0; i < m_uMaterialCount; i++)
 		m_sMatInfo(i)->bsdf.SetVtable();
 	m_sMatInfo.Invalidate();
@@ -63,22 +69,33 @@ e_Mesh::e_Mesh(const std::string& path, IInStream& a_In, e_Stream<e_TriIntersect
 	unsigned long long m_uNodeSize;
 	a_In >> m_uNodeSize;
 	m_sNodeInfo = a_Stream2->malloc(m_uNodeSize);
-	a_In.Read(m_sNodeInfo(0), m_uNodeSize * sizeof(e_BVHNodeData));
+	a_In >> m_sNodeInfo;
 	m_sNodeInfo.Invalidate();
 
 	unsigned long long m_uIntSize;
 	a_In >> m_uIntSize;
 	m_sIntInfo = a_Stream0->malloc(m_uIntSize);
-	a_In.Read(m_sIntInfo(0), m_uIntSize * sizeof(e_TriIntersectorData));
+	a_In >> m_sIntInfo;
 	m_sIntInfo.Invalidate();
 
 	unsigned long long m_uIndicesSize;
 	a_In >> m_uIndicesSize;
 	m_sIndicesInfo = a_Stream3->malloc(m_uIndicesSize);
-	a_In.Read(m_sIndicesInfo(0), m_uIndicesSize * sizeof(e_TriIntersectorData2));
+	a_In >> m_sIndicesInfo;
 	m_sIndicesInfo.Invalidate();
 
 	//printBVHData(m_sNodeInfo(0), "mesh.txt");
+}
+
+e_KernelMesh e_Mesh::getKernelData()
+{
+	e_KernelMesh m_sData;
+	m_sData.m_uBVHIndicesOffset = m_sIndicesInfo.getIndex();
+	m_sData.m_uBVHNodeOffset = m_sNodeInfo.getIndex() * sizeof(e_BVHNodeData) / sizeof(float4);
+	m_sData.m_uBVHTriangleOffset = m_sIntInfo.getIndex() * 3;
+	m_sData.m_uTriangleOffset = m_sTriInfo.getIndex();
+	m_sData.m_uStdMaterialOffset = m_sMatInfo.getIndex();
+	return m_sData;
 }
 
 void e_Mesh::Free(e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4)

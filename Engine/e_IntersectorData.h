@@ -5,8 +5,6 @@
 
 struct Ray;
 
-#define MAX_AREALIGHT_NUM 2
-
 struct e_TriIntersectorData2
 {
 	unsigned int index;

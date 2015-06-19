@@ -16,6 +16,7 @@ struct e_Sensor;
 struct e_KernelMIPMap;
 class e_MIPMap;
 class e_Mesh;
+template<typename H, typename D> class e_BufferRange;
 
 struct textureLoader;
 
@@ -60,18 +61,14 @@ public:
 	void SetNodeTransform(const float4x4& mat, e_BufferReference<e_Node, e_Node> n);
 	void AnimateMesh(e_BufferReference<e_Node, e_Node> n, float t, unsigned int anim);
 	bool UpdateScene();
+	e_BufferRange<e_Node, e_Node>& getNodes();
+	e_BufferRange<e_VolumeRegion, e_VolumeRegion>& getVolumes();
+	e_BufferRange<e_KernelLight, e_KernelLight>& getLights();
 	e_KernelDynamicScene getKernelSceneData(bool devicePointer = true);
 	//void UpdateMaterial(e_BufferReference<e_KernelMaterial, e_KernelMaterial> m);
-	e_BufferReference<e_Node, e_Node> getNodes();
-	unsigned int getNodeCount();
-	unsigned int getLightCount();
-	e_BufferReference<e_KernelLight, e_KernelLight> getLights();
-	unsigned int getMaterialCount();
-	e_BufferReference<e_KernelMaterial, e_KernelMaterial> getMaterials();
 	e_AnimatedMesh* AccessAnimatedMesh(e_BufferReference<e_Node, e_Node> n);
-	unsigned int getCudaBufferSize();
+	size_t getCudaBufferSize();
 	unsigned int getTriangleCount();
-	std::string printStatus();
 	void setCamera(e_Sensor* C)
 	{
 		m_pCamera = C;
@@ -85,19 +82,18 @@ public:
 	e_BufferReference<e_VolumeRegion, e_VolumeRegion> AddVolume(int wA, int hA, int dA,
 												int wS, int hS, int dS,
 												int wL, int hL, int dL, const float4x4& worldToVol, const e_PhaseFunction& p);
-	e_BufferReference<e_VolumeRegion, e_VolumeRegion> getVolumes();
 	AABB getAABB(e_BufferReference<e_Node, e_Node> Node, const std::string& name, unsigned int* a_Mi = 0);
 	e_BufferReference<e_Mesh, e_KernelMesh> getMesh(e_BufferReference<e_Node, e_Node> n);
 	e_BufferReference<e_KernelMaterial, e_KernelMaterial> getMats(e_BufferReference<e_Node, e_Node> n);
 	e_BufferReference<e_KernelMaterial, e_KernelMaterial> getMat(e_BufferReference<e_Node, e_Node> n, const std::string& name);
 	ShapeSet CreateShape(e_BufferReference<e_Node, e_Node> Node, const std::string& name, unsigned int* a_Mi = 0);
-	AABB getBox(e_BufferReference<e_Node, e_Node> n);
+	AABB getNodeBox(e_BufferReference<e_Node, e_Node> n);
+	AABB getSceneBox();
 	e_BufferReference<e_KernelLight, e_KernelLight> createLight(e_BufferReference<e_Node, e_Node> Node, const std::string& materialName, Spectrum& L);
 	void removeLight(e_BufferReference<e_Node, e_Node> Node, unsigned int mi);
 	void removeAllLights(e_BufferReference<e_Node, e_Node> Node);
 	void recalculateAreaLights(e_BufferReference<e_Node, e_Node> Node);
 	e_BufferReference<e_KernelLight, e_KernelLight> setEnvironementMap(const Spectrum& power, const std::string& file);
-	unsigned int getLightCount(e_BufferReference<e_Node, e_Node> n);
 	e_BufferReference<e_KernelLight, e_KernelLight> getLight(e_BufferReference<e_Node, e_Node> n, unsigned int i);
 	void instanciateNodeMaterials(e_BufferReference<e_Node, e_Node> n);
 	e_Stream<e_KernelMaterial>* getMatBuffer();
@@ -105,4 +101,5 @@ public:
 	void InvalidateMeshesInBVH(e_BufferReference<e_Mesh, e_KernelMesh> m);
 	void BuildFlatMeshBVH(e_BufferReference<e_Mesh, e_KernelMesh> m, const e_BVHNodeData* bvh, unsigned int bvhLength,
 		const e_TriIntersectorData* int1, unsigned int int1Legth, const e_TriIntersectorData2* int2, unsigned int int2Legth);
+	unsigned int getLightCount(e_BufferReference<e_Node, e_Node> n);
 };

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <MathTypes.h>
-#include "e_IntersectorData.h"
 
 class e_Mesh;
 struct e_KernelMaterial;

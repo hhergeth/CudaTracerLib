@@ -3,6 +3,7 @@
 #include "e_ErrorHandler.h"
 #include "e_FileTextureHelper.h"
 #include "..\Base\FileStream.h"
+#include "../CudaMemoryManager.h"
 
 e_MIPMap::e_MIPMap(const std::string& a_InputFile, IInStream& a_In)
 	: m_pPath(a_InputFile)
@@ -27,6 +28,12 @@ e_MIPMap::e_MIPMap(const std::string& a_InputFile, IInStream& a_In)
 		BAD_HOST_DEVICE_COPY(m_pDeviceData, m_uSize)
 	a_In.Read(m_sOffsets, sizeof(m_sOffsets));
 	a_In.Read(m_weightLut, sizeof(m_weightLut));
+}
+
+void e_MIPMap::Free()
+{
+	CUDA_FREE(m_pDeviceData);
+	free(m_pHostData);
 }
 
 void e_MIPMap::CompileToBinary(const std::string& in, const std::string& out, bool a_MipMap)

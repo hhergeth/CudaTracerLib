@@ -119,8 +119,6 @@ Spectrum UniformSampleAllLights(const BSDFSamplingRecord& bRec, const e_KernelMa
 	{
 		unsigned int l = g_SceneData.m_uEmitterIndices[i];
 		e_KernelLight* light = g_SceneData.m_sLightData.Data + l;
-		if(light->As()->IsRemoved)
-			continue;
 		Spectrum Ld = Spectrum(0.0f);
 		for(int j = 0; j < nSamples; j++)
 		{

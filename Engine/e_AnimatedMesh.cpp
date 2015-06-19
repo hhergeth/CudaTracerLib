@@ -1,7 +1,48 @@
 #include "StdAfx.h"
 #include "e_AnimatedMesh.h"
+#include "e_Buffer.h"
 #include <MathTypes.h>
 #include "../Base/Platform.h"
+#include "../Base/FileStream.h"
+#include "e_TriangleData.h"
+#include "e_Material.h"
+#include "e_IntersectorData.h"
+
+void e_Frame::serialize(OutputStream& a_Out)
+{
+	a_Out << (size_t)m_sHostConstructionData.size();
+	a_Out.Write(&m_sHostConstructionData[0], sizeof(float4x4) * (unsigned int)m_sHostConstructionData.size());
+}
+
+void e_Frame::deSerialize(IInStream& a_In, e_Stream<char>* Buf)
+{
+	size_t A;
+	a_In >> A;
+	m_sMatrices = Buf->malloc(sizeof(float4x4) * (unsigned int)A);
+	a_In >> m_sMatrices;
+}
+
+void e_Animation::serialize(OutputStream& a_Out)
+{
+	a_Out << (size_t)m_pFrames.size();
+	a_Out << m_uFrameRate;
+	a_Out.Write(m_sName);
+	for (unsigned int i = 0; i < m_pFrames.size(); i++)
+		m_pFrames[i].serialize(a_Out);
+}
+
+void e_Animation::deSerialize(IInStream& a_In, e_Stream<char>* Buf)
+{
+	size_t m_uNumFrames;
+	a_In >> m_uNumFrames;
+	a_In >> m_uFrameRate;
+	a_In.Read(m_sName);
+	for (unsigned int i = 0; i < m_uNumFrames; i++)
+	{
+		m_pFrames.push_back(e_Frame());
+		m_pFrames[i].deSerialize(a_In, Buf);
+	}
+}
 
 e_BufferReference<char, char> malloc_aligned(e_Stream<char>* stream, unsigned int a_Count, unsigned int a_Alignment)
 {
@@ -29,10 +70,10 @@ e_AnimatedMesh::e_AnimatedMesh(const std::string& path, IInStream& a_In, e_Strea
 		m_pAnimations.push_back(A);
 	}
 	m_sVertices = a_Stream5->malloc(sizeof(e_AnimatedVertex) * k_Data.m_uVertexCount);//malloc_aligned(a_Stream5, sizeof(e_AnimatedVertex) * k_Data.m_uVertexCount, 16);//
-	m_sVertices.ReadFrom(a_In);
+	a_In >> m_sVertices;
 	m_sTriangles = a_Stream5->malloc(sizeof(uint3) * m_sTriInfo.getLength());//malloc_aligned(a_Stream5, sizeof(uint3) * m_sTriInfo.getLength(), 16);//
-	m_sTriangles.ReadFrom(a_In);
-	uint3* idx = ((uint3*)m_sTriangles().operator char *()) + (m_sTriInfo.getLength() - 2);
+	a_In >> m_sTriangles;
+	uint3* idx = (uint3*)m_sTriangles.operator char *() + (m_sTriInfo.getLength() - 2);
 	a_Stream5->UpdateInvalidated();
 	m_pBuilder = 0;
 }

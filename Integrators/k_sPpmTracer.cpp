@@ -1,4 +1,5 @@
 #include <StdAfx.h>
+#include "../Engine/e_Buffer.h"
 #include "k_sPpmTracer.h"
 #include "..\Base\Timer.h"
 #include "../Engine/e_DynamicScene.h"
@@ -107,7 +108,7 @@ void k_sPpmTracer::DoRender(e_Image* I)
 
 void k_sPpmTracer::StartNewTrace(e_Image* I)
 {
-	m_bDirect = !m_pScene->getVolumes().getLength();
+	m_bDirect = !m_pScene->getVolumes().hasElements();
 #ifndef _DEBUG
 	m_fLightVisibility = k_Tracer::GetLightVisibility(m_pScene, 1);
 #endif
@@ -116,17 +117,17 @@ void k_sPpmTracer::StartNewTrace(e_Image* I)
 	//m_bDirect = 0;
 	k_Tracer<true, true>::StartNewTrace(I);
 	m_uPhotonsEmitted = 0;
-	AABB m_sEyeBox = GetEyeHitPointBox(m_pScene, true);
+	//AABB m_sEyeBox = GetEyeHitPointBox(m_pScene, true);
+	AABB m_sEyeBox = m_pScene->getSceneBox();
 	m_sEyeBox.Enlarge(0.1f);
 	float r = (m_sEyeBox.maxV - m_sEyeBox.minV).sum() / float(w);
 	m_sEyeBox.minV -= Vec3f(r);
 	m_sEyeBox.maxV += Vec3f(r);
 	m_fInitialRadius = r;
 	AABB volBox = m_pScene->getKernelSceneData().m_sVolume.box;
-	for (unsigned int i = 0; i < m_pScene->getNodeCount(); i++)
+	for (auto it : m_pScene->getNodes())
 	{
-		e_StreamReference<e_Node> n = m_pScene->getNodes()(i);
-		e_StreamReference<e_KernelMaterial> mats = m_pScene->getMats(n);
+		e_StreamReference<e_KernelMaterial> mats = m_pScene->getMats(it);
 		for (unsigned int j = 0; j < mats.getLength(); j++)
 		{
 			const e_KernelBSSRDF* bssrdf;
@@ -134,7 +135,7 @@ void k_sPpmTracer::StartNewTrace(e_Image* I)
 			ZERO_MEM(dg);
 			if (mats(j)->GetBSSRDF(dg, &bssrdf))
 			{
-				volBox.Enlarge(m_pScene->getBox(n));
+				volBox.Enlarge(m_pScene->getNodeBox(it));
 				m_bLongRunning |= 1;
 			}
 		}

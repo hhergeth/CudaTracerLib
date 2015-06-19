@@ -119,12 +119,12 @@ protected:
 		SetVtable<CLASS2, REST...>();
 	}
 public:
+#ifndef __CUDACC__
 	CUDA_FUNC_IN CudaVirtualAggregate()
 	{
-#ifndef ISCUDA
 		memset(this, 0, sizeof(*this));
-#endif
 	}
+#endif
 
 	template<typename SpecializedType> CUDA_FUNC_IN SpecializedType* As() const
 	{

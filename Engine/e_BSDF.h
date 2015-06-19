@@ -1,7 +1,7 @@
 #pragma once
 
 //this architecture and the implementations are completly copied from mitsuba!
-
+#include <vector>
 #include <MathTypes.h>
 #include "Engine/e_KernelTexture.h"
 #include "Engine/e_Samples.h"

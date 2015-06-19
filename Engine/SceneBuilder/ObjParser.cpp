@@ -1,9 +1,14 @@
 #include <StdAfx.h>
 #include "..\e_Mesh.h"
+#include "../e_TriangleData.h"
+#include "../e_Material.h"
+#include "../e_IntersectorData.h"
 #include "TangentSpaceHelper.h"
 #include <Engine\SceneBuilder\Importer.h>
 #include <boost\algorithm\string.hpp>
 #include <boost\filesystem.hpp>
+#include "../../Base/FileStream.h"
+#include <map>
 
 bool parseSpace(const char*& ptr)
 {

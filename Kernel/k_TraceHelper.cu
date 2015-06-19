@@ -4,6 +4,9 @@
 #include "cuda_runtime.h"
 #include "../Engine/e_Sensor.h"
 #include "../Engine/e_Mesh.h"
+#include "../Engine/e_TriangleData.h"
+#include "../Engine/e_Material.h"
+#include "../Engine/e_IntersectorData.h"
 #include "../Engine/e_Node.h"
 #include "../Engine/e_DynamicScene.h"
 

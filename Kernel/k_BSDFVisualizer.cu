@@ -1,3 +1,4 @@
+#include "../Engine/e_Buffer.h"
 #include "k_BSDFVisualizer.h"
 #include "../Kernel/k_TraceHelper.h"
 #include <time.h>
@@ -5,7 +6,7 @@
 #include "../Engine/e_BSDF.h"
 #include "../Engine/e_Light.h"
 #include "../Engine/e_FileTexture.h"
-#include "../Engine/e_Buffer.h"
+#include "../Base/FileStream.h"
 
 CUDA_FUNC_IN Vec3f hemishphere(const Vec2f& q)
 {

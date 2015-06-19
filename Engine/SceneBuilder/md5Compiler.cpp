@@ -4,6 +4,10 @@
 #include <Engine\SceneBuilder\Importer.h>
 #include "MD5Parser.h"
 #include "Importer.h"
+#include "../../Base/FileStream.h"
+#include "../e_TriangleData.h"
+#include "../e_Material.h"
+#include "../e_IntersectorData.h"
 
 void build_e_Animation(Anim* A, MD5Model* M, e_Animation& res, const std::string& name, const std::vector<float4x4>& inverseJoints)
 {

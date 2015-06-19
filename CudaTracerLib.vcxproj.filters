@@ -282,6 +282,8 @@
     <ClInclude Include="Engine\e_BVHRebuilder.h">
       <Filter>Engine</Filter>
     </ClInclude>
+    <ClInclude Include="VirtualFuncType.h" />
+    <ClInclude Include="CudaMemoryManager.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Base\FileStream.cpp">
@@ -409,9 +411,6 @@
       <Filter>Engine</Filter>
     </CudaCompile>
     <CudaCompile Include="Engine\e_Material.cu">
-      <Filter>Engine</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Engine\e_Mesh.cu">
       <Filter>Engine</Filter>
     </CudaCompile>
     <CudaCompile Include="Engine\e_MicrofacetDistribution.cu">

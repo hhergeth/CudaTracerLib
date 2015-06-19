@@ -2,6 +2,7 @@
 
 #include "..\Kernel\k_Tracer.h"
 #include "k_PhotonMapHelper.h"
+#include "../CudaMemoryManager.h"
 
 struct k_AdaptiveEntry
 {

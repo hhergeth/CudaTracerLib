@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdexcept>
 #include <cuda_runtime.h>
+#include <iostream>
 
 #ifdef ISWINDOWS
 #include <Windows.h>
@@ -24,6 +25,27 @@ void fail(const char* format, ...)
 	// Kill the app.
 
 	throw std::runtime_error("");
+}
+
+void ThrowCudaErrors()
+{
+	cudaError r = cudaGetLastError();
+	if (r)
+	{
+		const char* msg = cudaGetErrorString(r);
+		std::cout << msg;
+		throw std::runtime_error(msg);
+	}
+}
+
+void ThrowCudaErrors(cudaError r)
+{
+	if (r)
+	{
+		const char* msg = cudaGetErrorString(r);
+		std::cout << msg;
+		throw std::runtime_error(msg);
+	}
 }
 
 void CudaSetToZero(void* dest, size_t length)

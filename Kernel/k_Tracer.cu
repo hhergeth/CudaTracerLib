@@ -1,6 +1,5 @@
 #include "k_Tracer.h"
 #include "k_TraceHelper.h"
-#include "..\Engine\e_Core.h"
 #include "k_TraceAlgorithms.h"
 #include "../Engine/e_DynamicScene.h"
 #include "../Engine/e_Light.h"

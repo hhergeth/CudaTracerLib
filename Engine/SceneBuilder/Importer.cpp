@@ -33,9 +33,10 @@ namespace bvh_helper
 			tris.resize(nLeafNodes + 2);
 			indices.resize(nLeafNodes + 2);
 		}
-		virtual unsigned int Count() const
+		virtual void iterateObjects(std::function<void(unsigned int)> f)
 		{
-			return i / 3;
+			for (unsigned int j = 0; j < i / 3; j++)
+				f(j);
 		}
 		virtual void getBox(unsigned int index, AABB* out) const
 		{

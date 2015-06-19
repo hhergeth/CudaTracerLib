@@ -14,16 +14,14 @@ class e_MIPMap;
 
 struct e_LightBase : public e_AbstractEmitter//, public e_BaseTypeHelper<5523276>
 {
-	bool IsRemoved;
-
 	e_LightBase()
-		: e_AbstractEmitter(0), IsRemoved(false)
+		: e_AbstractEmitter(0)
 	{
 
 	}
 
 	e_LightBase(unsigned int type)
-		: e_AbstractEmitter(type), IsRemoved(false)
+		: e_AbstractEmitter(type)
 	{
 	}
 };

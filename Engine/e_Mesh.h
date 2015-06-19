@@ -1,12 +1,9 @@
 #pragma once
 
 #include <MathTypes.h>
-#include "e_TriangleData.h"
-#include "e_Material.h"
-#include "e_Buffer.h"
-#include "e_IntersectorData.h"
-#include "e_SceneInitData.h"
+#include "e_Buffer_device.h"
 #include "../Base/FixedString.h"
+#include <vector>
 
 struct e_KernelMesh
 {
@@ -26,6 +23,16 @@ struct e_MeshPartLight
 #define MESH_STATIC_TOKEN 1
 #define MESH_ANIMAT_TOKEN 2
 
+class IInStream;
+class OutputStream;
+template<typename T> class e_Stream;
+struct e_TriangleData;
+struct e_KernelMaterial;
+struct e_BVHNodeData;
+struct e_TriIntersectorData;
+struct e_TriIntersectorData2;
+struct e_SceneInitData;
+
 class e_Mesh
 {
 public:
@@ -43,16 +50,7 @@ public:
 public:
 	e_Mesh(const std::string& path, IInStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4);
 	void Free(e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4);
-	e_KernelMesh getKernelData()
-	{
-		e_KernelMesh m_sData;
-		m_sData.m_uBVHIndicesOffset = m_sIndicesInfo.getIndex();
-		m_sData.m_uBVHNodeOffset = m_sNodeInfo.getIndex() * sizeof(e_BVHNodeData) / sizeof(float4);
-		m_sData.m_uBVHTriangleOffset = m_sIntInfo.getIndex() * 3;
-		m_sData.m_uTriangleOffset = m_sTriInfo.getIndex();
-		m_sData.m_uStdMaterialOffset = m_sMatInfo.getIndex();
-		return m_sData;
-	}
+	e_KernelMesh getKernelData();
 	unsigned int getTriangleCount()
 	{
 		return m_sTriInfo.getLength();

@@ -1,5 +1,8 @@
 #include <StdAfx.h>
 #include "..\e_Mesh.h"
+#include "../e_TriangleData.h"
+#include "../e_Material.h"
+#include "../e_IntersectorData.h"
 #include <fstream>
 #include <iostream>
 #include <istream>
@@ -10,6 +13,7 @@
 #include <intrin.h>
 #include "TangentSpaceHelper.h"
 #include <Engine\SceneBuilder\Importer.h>
+#include "../../Base/FileStream.h"
 
 typedef int format_type;
 enum format {
@@ -315,6 +319,8 @@ void compileply(IInStream& istream, OutputStream& a_Out)
 		file_pos += sizeof(Vec3f) * vertexCount;
 		for(int f = 0; f < faceCount; f++)
 		{
+			if (f == faceCount - 3)
+				std::cout << "";
 			unsigned int* dat = (unsigned int*)(FILE_BUF + file_pos + 1);
 			if(FILE_BUF[file_pos] == 3)
 			{
@@ -329,11 +335,13 @@ void compileply(IInStream& istream, OutputStream& a_Out)
 					Indices[indexCount++] = format == binary_little_endian_format ? dat[i] : LongSwap(dat[i]);
 			}
 			else throw std::runtime_error(__FUNCTION__);
+			for (unsigned int i = indexCount - FILE_BUF[file_pos]; i < indexCount; i++)
+				Indices[i] = Indices[i] > vertexCount ? 0 : Indices[i];
 			file_pos += 4 * FILE_BUF[file_pos] + 1;
 		}
 		free(FILE_BUF);
 	}
-	unsigned int pos = istream.getPos(), size = istream.getFileSize();
+	size_t pos = istream.getPos(), size = istream.getFileSize();
 	//if(pos != size)
 	//	throw std::runtime_error(__FUNCTION__);
 

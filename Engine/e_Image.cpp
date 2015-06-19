@@ -2,7 +2,7 @@
 #include "e_Image.h"
 #include <stdexcept>
 #include <iostream>
-#include "cuda_runtime.h"
+#include "../CudaMemoryManager.h"
 
 #ifdef ISWINDOWS
 #include <windows.h>

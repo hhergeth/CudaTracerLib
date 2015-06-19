@@ -1,5 +1,5 @@
-#include "e_Volumes.h"
 #include "e_Buffer.h"
+#include "e_Volumes.h"
 #include "../Base/CudaRandom.h"
 #include "e_Samples.h"
 
@@ -395,8 +395,12 @@ bool e_KernelAggregateVolume::sampleDistance(const Ray& ray, float minT, float m
 
 e_KernelAggregateVolume::e_KernelAggregateVolume(e_Stream<e_VolumeRegion>* D, bool devicePointer)
 {
-	m_uVolumeCount = D->UsedElements().getLength();
-	m_pVolumes = D->getKernelData(devicePointer).Data;
+	m_uVolumeCount = 0;
+	for (e_Stream<e_VolumeRegion>::iterator it = D->begin(); it != D->end(); ++it)
+	{
+		m_pVolumes[m_uVolumeCount] = *(*it);
+		m_uVolumeCount++;
+	}
 	box = AABB::Identity();
 	for (unsigned int i = 0; i < m_uVolumeCount; i++)
 		box.Enlarge(D->operator()(i)->WorldBound());

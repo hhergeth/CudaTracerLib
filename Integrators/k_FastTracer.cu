@@ -218,7 +218,7 @@ void k_FastTracer::doDirect(e_Image* I)
 	pathCreateKernel << < dim3(180, 1, 1), dim3(32, 6, 1) >> >(w, h, *buf);
 	buf->setNumRays(w * h, 0);
 	
-	buf->IntersectBuffers<false>(m_pScene->getNodeCount() == 1);
+	buf->IntersectBuffers<false>(false);
 
 	I->Clear();
 	cudaMemcpyToSymbol(g_NextRayCounterFT, &zero, sizeof(zero));
@@ -236,7 +236,7 @@ void k_FastTracer::doPath(e_Image* I)
 	do
 	{
 		destBuf->Clear();
-		srcBuf->IntersectBuffers<false>(m_pScene->getNodeCount() == 1);
+		srcBuf->IntersectBuffers<false>(false);
 		cudaMemcpyToSymbol(g_Intersector, srcBuf, sizeof(*srcBuf));
 		cudaMemcpyToSymbol(g_Intersector2, destBuf, sizeof(*destBuf));
 		cudaMemcpyToSymbol(g_NextRayCounterFT, &zero, sizeof(zero));

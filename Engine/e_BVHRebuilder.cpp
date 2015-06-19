@@ -1,4 +1,5 @@
 #include <StdAfx.h>
+#include "e_Buffer.h"
 #include "e_BVHRebuilder.h"
 #include "SceneBuilder/SplitBVHBuilder.hpp"
 #include "e_Mesh.h"
@@ -136,9 +137,9 @@ public:
 		t->m_uBvhNodeCount = 0;
 		t->m_UBVHIndicesCount = 0;
 	}
-	virtual unsigned int Count() const
+	virtual void iterateObjects(std::function<void(unsigned int)> f)
 	{
-		return t->m_pData->getCount();
+		t->m_pData->iterateObjects(f);
 	}
 	virtual void getBox(unsigned int index, AABB* out) const
 	{
@@ -241,10 +242,10 @@ void e_BVHRebuilder::insertNode(BVHIndex bvhNodeIdx, BVHIndex parent, unsigned i
 			e_BVHNodeData* node = m_pBVHData + m_uBvhNodeCount++;
 			int localIdx = getChildIdxInLocal(parent, bvhNodeIdx);
 			BVHIndex idx = BVHIndex::FromBVHNode(node - m_pBVHData);
-			setChild(idx, BVHIndex::FromSceneNode(nodeIdx), 0, BVHIndex::INVALID());
-			setChild(idx, bvhNodeIdx, 1, parent);
+			setChild(parent, idx, localIdx, BVHIndex::INVALID(), false);
+			setChild(idx, BVHIndex::FromSceneNode(nodeIdx), 0, BVHIndex::INVALID(), false);
+			setChild(idx, bvhNodeIdx, 1, parent, true);
 			bvhNodeData[idx.innerIdx()] = BVHNodeInfo(1);//only set one so we can increment
-			setChild(parent, idx, localIdx, BVHIndex::INVALID());
 			BVHNodeInfo::changeCount(bvhNodeData, m_pBVHData, idx, +1);
 			objectToBVHNodes[nodeIdx].clear();
 			objectToBVHNodes[nodeIdx].push_back(idx);
@@ -354,11 +355,17 @@ void e_BVHRebuilder::propagateFlag(BVHIndex idx)
 	}
 }
 
+void e_BVHRebuilder::SetEmpty()
+{
+	startNode = -1;
+	m_uBvhNodeCount = 0;
+}
+
 bool e_BVHRebuilder::Build(ISpatialInfoProvider* data, bool invalidateAll)
 {
 	this->m_pData = data;
 	bool modified = false;
-	if (data->getCount() != 0 && (needsBuild() || invalidateAll))
+	if (needsBuild() || invalidateAll)
 	{
 		modified = true;
 		if (startNode == -1)
@@ -412,11 +419,13 @@ bool e_BVHRebuilder::Build(ISpatialInfoProvider* data, bool invalidateAll)
 				objectToBVHNodes[*it].clear();
 				insertNode(BVHIndex::FromNative(startNode), BVHIndex::INVALID(), *it, data->getBox(*it));
 			}
-			recomputeAll = m_uModifiedCount > m_pData->getCount() / 2 || invalidateAll;
+			recomputeAll = invalidateAll;
 			if (!recomputeAll)
-				for (size_t i = 0; i < m_pData->getCount(); i++)
-					if (nodesToRecompute.at(i))
-						propagateFlag(BVHIndex::FromSceneNode((unsigned int)i));
+				m_pData->iterateObjects([&](unsigned int i)
+			{
+				if (nodesToRecompute.at(i))
+					propagateFlag(BVHIndex::FromSceneNode((unsigned int)i));
+			});
 			AABB box;
 			if (recomputeAll || flaggedBVHNodes[startNode / 4])
 				recomputeNode(BVHIndex::FromNative(startNode), box);
@@ -426,11 +435,6 @@ bool e_BVHRebuilder::Build(ISpatialInfoProvider* data, bool invalidateAll)
 #ifndef NDEBUG
 		validateTree(BVHIndex::FromNative(startNode), BVHIndex::INVALID());
 #endif
-	}
-	if (!data->getCount())
-	{
-		startNode = -1;
-		m_uBvhNodeCount = 0;
 	}
 	nodesToRecompute.reset();
 	nodesToInsert.clear();
@@ -643,7 +647,7 @@ int e_BVHRebuilder::numLeafs(BVHIndex idx)
 	else return bvhNodeData[idx.innerIdx()].numLeafs;
 }
 
-void e_BVHRebuilder::setChild(BVHIndex nodeIdx, BVHIndex childIdx, int localIdxToSetTo, BVHIndex oldParent)
+void e_BVHRebuilder::setChild(BVHIndex nodeIdx, BVHIndex childIdx, int localIdxToSetTo, BVHIndex oldParent, bool prop)
 {
 	m_pBVHData[nodeIdx.innerIdx()].setChild(localIdxToSetTo, childIdx.ToNative(), getBox(childIdx));
 	if (childIdx.isLeaf())

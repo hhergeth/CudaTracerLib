@@ -4,6 +4,7 @@
 #include "../Engine/e_Grid.h"
 #include "../Math//Compression.h"
 #include "../Base/FileStream.h"
+#include "../CudaMemoryManager.h"
 
 #define ALPHA (2.0f / 3.0f)
 

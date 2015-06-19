@@ -5,6 +5,7 @@
 
 #define EXT_TRI
 #define NUM_UV_SETS 1
+#define MAX_AREALIGHT_NUM 2
 
 #ifdef _MSC_VER
 #define ISWINDOWS
@@ -60,6 +61,11 @@
 #endif
 
 void fail(const char* format, ...);
+
+void ThrowCudaErrors();
+
+enum cudaError;
+void ThrowCudaErrors(cudaError r);
 
 template<typename T> CUDA_FUNC_IN void swapk(T* a, T* b)
 {

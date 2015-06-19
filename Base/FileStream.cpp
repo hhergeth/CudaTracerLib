@@ -41,7 +41,7 @@ void InputStream::Close()
 	}
 }
 
-void InputStream::Read(void* a_Data, unsigned int a_Size)
+void InputStream::Read(void* a_Data, size_t a_Size)
 {
 	boost::iostreams::mapped_file& mmap = *(boost::iostreams::mapped_file*)H;
 	if (numBytesRead + a_Size <= m_uFileSize)
@@ -59,7 +59,7 @@ void InputStream::Move(int off)
 	numBytesRead += off;
 }
 
-MemInputStream::MemInputStream(const unsigned char* _buf, unsigned int length, bool canKeep)
+MemInputStream::MemInputStream(const unsigned char* _buf, size_t length, bool canKeep)
 {
 	path = "";
 	if(canKeep)
@@ -90,7 +90,7 @@ MemInputStream::MemInputStream(const std::string& a_Name)
 	path = a_Name;
 }
 
-void MemInputStream::Read(void* a_Data, unsigned int a_Size)
+void MemInputStream::Read(void* a_Data, size_t a_Size)
 {
 	if(a_Size + numBytesRead > m_uFileSize)
 		throw std::runtime_error("Stream not long enough!");
@@ -114,7 +114,7 @@ OutputStream::OutputStream(const std::string& a_Name)
 		throw std::runtime_error("Could not open file!");
 }
 
-void OutputStream::_Write(const void* data, unsigned int size)
+void OutputStream::_Write(const void* data, size_t size)
 {
 	size_t i = fwrite(data, 1, size, (FILE*)H);
 	if (i != size)

@@ -5,7 +5,7 @@
 CUDA_DEVICE k_PhotonMapCollection<true, k_pPpmPhoton> g_Map;
 
 template<bool DIRECT> __global__ void k_PhotonPass()
-{ 
+{
 	CudaRNG rng = g_RNGData();
 	CUDA_SHARED unsigned int local_Counter;
 	local_Counter = 0;
@@ -21,7 +21,7 @@ template<bool DIRECT> __global__ void k_PhotonPass()
 		const e_KernelLight* light;
 		Vec2f sps = rng.randomFloat2(), sds = rng.randomFloat2();
 		Spectrum Le = g_SceneData.sampleEmitterRay(r, light, sps, sds),
-				 throughput(1.0f);
+			throughput(1.0f);
 		int depth = -1;
 		atomicInc(&local_Counter, (unsigned int)-1);
 		bool wasStored = false;

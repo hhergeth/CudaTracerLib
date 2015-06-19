@@ -1,6 +1,6 @@
 #include <StdAfx.h>
 #include "e_Core.h"
-#include "cuda_runtime.h"
+#include "../CudaMemoryManager.h"
 #include "..\MathTypes.h"
 #include "e_RoughTransmittance.h"
 #define FREEIMAGE_LIB
@@ -16,7 +16,7 @@ void InitializeCuda4Tracer(const std::string& dataPath)
 	//_CrtSetDbgFlag(_CrtSetDbgFlag(0) | _CRTDBG_CHECK_ALWAYS_DF);
 	//_CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_DEBUG);
 #endif
-	cudaError er = CUDA_FREE(0);
+	cudaError er = cudaFree(0);
 	SpectrumHelper::StaticInitialize();
 	FreeImage_Initialise();
 	e_RoughTransmittanceManager::StaticInitialize(dataPath);
@@ -33,26 +33,7 @@ void DeInitializeCuda4Tracer()
 #endif
 }
 
-void ThrowCudaErrors()
-{
-	cudaError r = cudaGetLastError();
-	if(r)
-	{
-		const char* msg = cudaGetErrorString(r);
-		std::cout << msg;
-		throw std::runtime_error(msg);
-	}
-}
 
-void ThrowCudaErrors(cudaError r)
-{
-	if(r)
-	{
-		const char* msg = cudaGetErrorString(r);
-		std::cout << msg;
-		throw std::runtime_error(msg);
-	}
-}
 
 std::map<void*, CudaMemoryEntry> CudaMemoryManager::alloced_entries;
 std::vector<CudaMemoryEntry> CudaMemoryManager::freed_entries;
@@ -85,9 +66,4 @@ cudaError_t CudaMemoryManager::Cuda_free_managed(void* v, const std::string& cal
 	cudaError_t r = cudaFree(v);
 	ThrowCudaErrors(r);
 	return r;
-}
-
-cudaError_t cudamemcpy(void* dest, void* src, size_t len, cudaMemcpyKind k)
-{
-	return cudaMemcpy(dest, src, len, k);
 }

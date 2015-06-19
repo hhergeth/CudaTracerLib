@@ -2,11 +2,14 @@
 #include "..\..\MathTypes.h"
 #include "..\e_IntersectorData.h"
 #include "../../Base/Timer.h"
+#include <vector>
+#include <functional>
 
 class IBVHBuilderCallback
 {
 public:
 	virtual void getBox(unsigned int index, AABB* out) const = 0;
+	virtual void iterateObjects(std::function<void(unsigned int)> f) = 0;
 	virtual unsigned int handleLeafObjects(unsigned int pNode)
 	{
 		return pNode;
@@ -14,7 +17,6 @@ public:
 	virtual void handleLastLeafObject(int parent)
 	{
 	}
-	virtual unsigned int Count() const = 0;
 	virtual void HandleBoundingBox(const AABB& box)
 	{
 	}

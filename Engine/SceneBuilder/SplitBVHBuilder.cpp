@@ -239,17 +239,17 @@ void SplitBVHBuilder::run(void)
     // Initialize reference stack and determine root bounds.
 
     NodeSpec rootSpec;
-    rootSpec.numRef = m_pClb->Count();
+    rootSpec.numRef = 0;
 	rootSpec.bounds = AABB::Identity();
-    m_refStack.resize(rootSpec.numRef);
-
-    for (int i = 0; i < rootSpec.numRef; i++)
-    {
-        m_refStack[i].triIdx = i;
-		m_pClb->getBox(i, &m_refStack[i].bounds);
-		m_refStack[i].bounds = m_refStack[i].bounds.Inflate();
-        rootSpec.bounds.Enlarge(m_refStack[i].bounds);
-    }
+	m_pClb->iterateObjects([&](unsigned int i)
+	{
+		rootSpec.numRef++;
+		Reference r;
+		m_pClb->getBox(i, &r.bounds);
+		r.triIdx = i;
+		rootSpec.bounds.Enlarge(r.bounds);
+		m_refStack.push_back(r);
+	});
 
     // Initialize rest of the members.
 
@@ -264,8 +264,8 @@ void SplitBVHBuilder::run(void)
 
     // Done.
 	*(bool*)&m_params.enablePrints = false;
-        printf("SplitBVHBuilder: progress %.0f%%, duplicates %.0f%%\n",
-		100.0f, (float)m_numDuplicates / (float)m_pClb->Count() * 100.0f);
+        printf("SplitBVHBuilder: progress %.0f%%\n",
+		100.0f);
 
 	m_pClb->HandleBoundingBox(rootSpec.bounds);
 	unsigned int innerC = 0, leafC = 0;
@@ -306,8 +306,8 @@ unsigned int SplitBVHBuilder::buildNode(NodeSpec spec, int level, float progress
 
     if ( m_Timer.EndTimer() >= 1.0f)
     {
-        printf("SplitBVHBuilder: progress %.0f%%, duplicates %.0f%%\r",
-			progressStart * 100.0f, (float)m_numDuplicates / (float)m_pClb->Count() * 100.0f);
+        printf("SplitBVHBuilder: progress %.0f%%\r",
+			progressStart * 100.0f);
 		m_Timer.StartTimer();
     }
 
