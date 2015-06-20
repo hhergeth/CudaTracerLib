@@ -46,7 +46,8 @@ public:
 	{
 		unsigned int left, right;
 	public:
-		BVHNode(unsigned int l, unsigned int r, bool leaf) : left((l << 1) | unsigned int(leaf)), right(r) {}
+		AABB box;
+		BVHNode(const AABB& bounds, unsigned int l, unsigned int r, bool leaf) : box(bounds), left((l << 1) | unsigned int(leaf)), right(r) {}
 		bool isLeaf() { return left & 1; }
 		unsigned int getLeft(){ return left >> 1; }
 		unsigned int getRight(){ return right; }

@@ -45,19 +45,17 @@ struct AABB
 	CUDA_FUNC_IN float d() const { return maxV[2]-minV[2]; }
 	CUDA_FUNC_IN AABB Transform(const float4x4& mat) const
 	{
-		Vec3f d = maxV - minV;
-#define A(x,y,z) Vec3f(x,y,z) * d + minV
-		Vec3f v[8] = { A(0, 0, 0), A(1, 0, 0), A(1, 0, 1), A(0, 0, 1),
-					   A(0,1,0), A(1,1,0), A(1,1,1), A(0,1,1)};
-		Vec3f mi = Vec3f(FLT_MAX), ma = Vec3f(-FLT_MAX);
-		for(int i = 0; i < 8; i++)
-		{
-			Vec3f q = mat.TransformPoint(v[i]);
-			mi = min(q, mi);
-			ma = max(q, ma);
-		}
-		return AABB(mi, ma);
-#undef A
+		//http://dev.theomader.com/transform-bounding-boxes/
+		Vec3f xa = mat.Right() * minV.x,
+			  xb = mat.Right() * maxV.x;
+		Vec3f ya = mat.Up() * minV.y,
+			  yb = mat.Up() * maxV.y;
+		Vec3f za = mat.Forward() * minV.z,
+			  zb = mat.Forward() * maxV.z;
+		return AABB(
+			min(xa, xb) + min(ya, yb) + min(za, zb) + mat.Translation(),
+			max(xa, xb) + max(ya, yb) + max(za, zb) + mat.Translation()
+			);
 	}
 	//Ensures that every dim != zero
 	CUDA_FUNC_IN AABB Inflate() const

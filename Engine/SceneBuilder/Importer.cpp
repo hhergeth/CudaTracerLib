@@ -130,7 +130,8 @@ namespace bvh_helper
 void ConstructBVH(const Vec3f* vertices, const unsigned int* indices, unsigned int vCount, unsigned int cCount, BVH_Construction_Result& out)
 {
 	bvh_helper::clb c(vCount, cCount, vertices, indices, out.nodes, out.tris, out.tris2);
-	SplitBVHBuilder bu(&c, SplitBVHBuilder::Platform(), SplitBVHBuilder::BuildParams());
+	SplitBVHBuilder::Platform P; P.m_maxLeafSize = 8;
+	SplitBVHBuilder bu(&c, P, SplitBVHBuilder::BuildParams());
 	bu.run();
 	BVH_Construction_Result r;
 	r.box = c.box;
@@ -146,8 +147,8 @@ void ConstructBVH(const Vec3f* vertices, const unsigned int* indices, int vCount
 		out = &localRes;
 
 	bvh_helper::clb c(vCount, cCount, vertices, indices, out->nodes, out->tris, out->tris2);
-	//BVHBuilder::BuildBVH(&c, BVHBuilder::Platform());
-	SplitBVHBuilder bu(&c, SplitBVHBuilder::Platform(), SplitBVHBuilder::BuildParams()); bu.run();
+	SplitBVHBuilder::Platform P; P.m_maxLeafSize = 8;
+	SplitBVHBuilder bu(&c, P, SplitBVHBuilder::BuildParams()); bu.run();
 	O << (unsigned long long)c.l0;
 	if (c.l0)
 		O.Write(&c.nodes[0], (unsigned int)c.l0 * sizeof(e_BVHNodeData));

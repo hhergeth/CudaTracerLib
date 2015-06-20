@@ -117,8 +117,11 @@ void k_sPpmTracer::StartNewTrace(e_Image* I)
 	//m_bDirect = 0;
 	k_Tracer<true, true>::StartNewTrace(I);
 	m_uPhotonsEmitted = 0;
-	//AABB m_sEyeBox = GetEyeHitPointBox(m_pScene, true);
+#ifndef _DEBUG
+	AABB m_sEyeBox = GetEyeHitPointBox(m_pScene, true);
+#else
 	AABB m_sEyeBox = m_pScene->getSceneBox();
+#endif
 	m_sEyeBox.Enlarge(0.1f);
 	float r = (m_sEyeBox.maxV - m_sEyeBox.minV).sum() / float(w);
 	m_sEyeBox.minV -= Vec3f(r);

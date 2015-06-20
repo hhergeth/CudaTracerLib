@@ -157,7 +157,7 @@ SplitBVHBuilder::~SplitBVHBuilder(void)
 
 //------------------------------------------------------------------------
 
-int handleNode(std::vector<BVHNode>& nodes, BVHNode* n, IBVHBuilderCallback* clb, std::vector<int>& m_Indices, AABB& resBox, int level = 0, unsigned int parent = -1)
+int handleNode(std::vector<BVHNode>& nodes, BVHNode* n, IBVHBuilderCallback* clb, std::vector<int>& m_Indices, int level = 0, unsigned int parent = -1)
 {
 	if (n->isLeaf())
 	{
@@ -166,13 +166,11 @@ int handleNode(std::vector<BVHNode>& nodes, BVHNode* n, IBVHBuilderCallback* clb
 		if (level)
 		{
 			int idx = -1;
-			resBox = AABB::Identity();
 			AABB box;
 			for (unsigned int j = n->getLeft(); j < n->getRight(); j++)
 			{
 				int qp = clb->handleLeafObjects(m_Indices[j]); if (idx == -1) idx = qp;
 				clb->getBox(m_Indices[j], &box);
-				resBox.Enlarge(box);
 			}
 			clb->handleLastLeafObject(parent);
 			return ~idx;
@@ -182,20 +180,18 @@ int handleNode(std::vector<BVHNode>& nodes, BVHNode* n, IBVHBuilderCallback* clb
 			int idx;
 			e_BVHNodeData* node = clb->HandleNodeAllocation(&idx);
 			int idx2 = -1;
-			resBox = AABB::Identity();
 			AABB box;
 			for (unsigned int j = n->getLeft(); j < n->getRight(); j++)
 			{
 				int qp = clb->handleLeafObjects(m_Indices[j]); if (idx2 == -1) idx2 = qp;
 				clb->getBox(m_Indices[j], &box);
-				resBox.Enlarge(box);
 			}
 			clb->handleLastLeafObject(parent);
 
 			node->setChildren(Vec2i(~idx2, 0x76543210));
 			node->setParent(-1);
 			node->setSibling(-1);
-			node->setLeft(resBox);
+			node->setLeft(n->box);
 			node->setRight(AABB(Vec3f(0.0f), Vec3f(0.0f)));
 			return idx;
 		}
@@ -205,17 +201,14 @@ int handleNode(std::vector<BVHNode>& nodes, BVHNode* n, IBVHBuilderCallback* clb
 	{
 		int idx;
 		e_BVHNodeData* node = clb->HandleNodeAllocation(&idx);
-		AABB lBox, rBox;
-		int a = handleNode(nodes, &nodes[n->getLeft()], clb, m_Indices, lBox, level + 1, idx);
-		int b = handleNode(nodes, &nodes[n->getRight()], clb, m_Indices, rBox, level + 1, idx);
+		int a = handleNode(nodes, &nodes[n->getLeft()], clb, m_Indices, level + 1, idx);
+		int b = handleNode(nodes, &nodes[n->getRight()], clb, m_Indices, level + 1, idx);
 		clb->setSibling(a, b);
 		clb->setSibling(b, a);
 		node->setChildren(Vec2i(a, b));
 		node->setParent(parent);
-		node->setLeft(lBox);
-		node->setRight(rBox);
-		resBox = lBox;
-		resBox.Enlarge(rBox);
+		node->setLeft(nodes[n->getLeft()].box);
+		node->setRight(nodes[n->getRight()].box);
 		return idx;
 	}
 }
@@ -271,8 +264,7 @@ void SplitBVHBuilder::run(void)
 	unsigned int innerC = 0, leafC = 0;
 	countNodes(m_Nodes, &m_Nodes[root], innerC, leafC);
 	m_pClb->setNumInner_Leaf(innerC, leafC);
-	AABB resBox;
-	int rootIdx = handleNode(m_Nodes, &m_Nodes[root], m_pClb, m_Indices, resBox);
+	int rootIdx = handleNode(m_Nodes, &m_Nodes[root], m_pClb, m_Indices);
 	m_pClb->setSibling(rootIdx, 0x76543210);
 	m_pClb->HandleStartNode(rootIdx);
 }
@@ -336,6 +328,7 @@ unsigned int SplitBVHBuilder::buildNode(NodeSpec spec, int level, float progress
     ObjectSplit object = findObjectSplit(spec, nodeSAH);
 
     SpatialSplit spatial;
+	spatial.dim = 0; spatial.pos = 0; spatial.sah = FLT_MAX;
     if (level < MaxSpatialDepth)
     {
         AABB overlap = object.leftBounds;
@@ -344,19 +337,31 @@ unsigned int SplitBVHBuilder::buildNode(NodeSpec spec, int level, float progress
             spatial = findSpatialSplit(spec, nodeSAH);
     }
 
+	//printf("%f, %d, %d, %f, %f, %f\n", object.sah, object.sortDim, object.numLeft, object.leftBounds.minV.x, object.leftBounds.minV.x, object.leftBounds.minV.z);
+	//printf("%f, %d, %f\n", spatial.sah, spatial.dim, spatial.pos);
+
     // Leaf SAH is the lowest => create leaf.
 
     float minSAH = min(leafSAH, object.sah, spatial.sah);
-    if (minSAH == leafSAH && spec.numRef <= m_platform.getMaxLeafSize())
-        return createLeaf(spec);
+	if (minSAH == leafSAH && spec.numRef <= m_platform.getMaxLeafSize())
+	{
+		//printf("leaf = %d\n", spec.numRef);
+		return createLeaf(spec);
+	}
 
     // Perform split.
 
     NodeSpec left, right;
-    if (minSAH == spatial.sah)
-        performSpatialSplit(left, right, spec, spatial);
-    if (!left.numRef || !right.numRef)
-        performObjectSplit(left, right, spec, object);
+	if (minSAH == spatial.sah)
+	{
+		//printf("spatial = %f, %d, %f\n", spatial.sah, spatial.dim, spatial.pos);
+		performSpatialSplit(left, right, spec, spatial);
+	}
+	if (!left.numRef || !right.numRef)
+	{
+		//printf("object = %f, %d, %d\n", object.sah, object.sortDim, object.numLeft);
+		performObjectSplit(left, right, spec, object);
+	}
 
     // Create inner node.
 
@@ -364,7 +369,7 @@ unsigned int SplitBVHBuilder::buildNode(NodeSpec spec, int level, float progress
     float progressMid = math::lerp(progressStart, progressEnd, (float)right.numRef / (float)(left.numRef + right.numRef));
     unsigned int rightNode = buildNode(right, level + 1, progressStart, progressMid);
     unsigned int leftNode = buildNode(left, level + 1, progressMid, progressEnd);
-	m_Nodes.push_back(BVHNode(leftNode, rightNode, false));
+	m_Nodes.push_back(BVHNode(spec.bounds, leftNode, rightNode, false));
 	return (unsigned int)m_Nodes.size() - 1;
 }
 
@@ -374,7 +379,7 @@ unsigned int SplitBVHBuilder::createLeaf(const NodeSpec& spec)
 {
     for (int i = 0; i < spec.numRef; i++)
 		m_Indices.push_back(removeLast(m_refStack).triIdx);
-	m_Nodes.push_back(BVHNode((unsigned int)m_Indices.size() - spec.numRef, (unsigned int)m_Indices.size(), true));
+	m_Nodes.push_back(BVHNode(spec.bounds, (unsigned int)m_Indices.size() - spec.numRef, (unsigned int)m_Indices.size(), true));
 	return (unsigned int)m_Nodes.size() - 1;
 }
 

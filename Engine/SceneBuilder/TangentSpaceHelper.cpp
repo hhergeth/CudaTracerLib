@@ -2,7 +2,7 @@
 #include "TangentSpaceHelper.h"
 #include "../../Base/Platform.h"
 
-void ComputeTangentSpace(const Vec3f* V, const Vec2f* T, const unsigned int* I, unsigned int vertexCount, unsigned int triCount, Vec3f* a_Normals, Vec3f* a_Tangents, Vec3f* a_BiTangents)
+void ComputeTangentSpace(const Vec3f* V, const Vec2f* T, const unsigned int* I, unsigned int vertexCount, unsigned int triCount, Vec3f* a_Normals, Vec3f* a_Tangents, Vec3f* a_BiTangents, bool flipOrder)
 {
 	bool hasUV = false;
 	if (T)
@@ -17,11 +17,12 @@ void ComputeTangentSpace(const Vec3f* V, const Vec2f* T, const unsigned int* I, 
 	Vec3f *tan2 = tan1 + vertexCount;
 	Platform::SetMemory(tan1, vertexCount * sizeof(float3) * 2);
 	Platform::SetMemory(a_Normals, vertexCount * sizeof(float3));
+	unsigned int o1 = 2 * !!flipOrder, o3 = 2 - o1;
 	for (unsigned int f = 0; f < triCount; f++)
 	{
-		unsigned int i1 = I ? I[f * 3 + 0] : f * 3 + 0;
+		unsigned int i1 = I ? I[f * 3 + o1] : f * 3 + 0;
 		unsigned int i2 = I ? I[f * 3 + 1] : f * 3 + 1;
-		unsigned int i3 = I ? I[f * 3 + 2] : f * 3 + 2;
+		unsigned int i3 = I ? I[f * 3 + o3] : f * 3 + 2;
 		const Vec3f v1 = V[i1], v2 = V[i2], v3 = V[i3];
 
 		const Vec3f n1 = v1 - v2, n2 = v3 - v2;//, n = normalize(v1q.n + v2q.n + v3q.n);
