@@ -194,7 +194,7 @@ e_StreamReference<e_Node> e_DynamicScene::CreateNode(const std::string& a_Token,
 		unsigned int t;
 		*xmshStream >> t;
 		if(t == (unsigned int)e_MeshCompileType::Static)
-			new(M(0)) e_Mesh(token, *xmshStream, m_pTriIntStream, m_pTriDataStream, m_pBVHStream, m_pBVHIndicesStream, m_pMaterialBuffer);
+			new(M(0)) e_Mesh(token, *xmshStream, m_pTriIntStream, m_pTriDataStream, m_pBVHStream, m_pBVHIndicesStream, m_pMaterialBuffer, m_pAnimStream);
 		else if(t == (unsigned int)e_MeshCompileType::Animated) 
 			new(M(0)) e_AnimatedMesh(token, *xmshStream, m_pTriIntStream, m_pTriDataStream, m_pBVHStream, m_pBVHIndicesStream, m_pMaterialBuffer, m_pAnimStream);
 		else throw std::runtime_error("Mesh file parser error.");
@@ -447,25 +447,26 @@ e_KernelDynamicScene e_DynamicScene::getKernelSceneData(bool devicePointer)
 
 void e_DynamicScene::instanciateNodeMaterials(e_StreamReference<e_Node> n)
 {
-	e_BufferReference<e_Mesh, e_KernelMesh> M = getMesh(n);
-	e_StreamReference<e_KernelMaterial> m2 = m_pMaterialBuffer->malloc(M->m_sMatInfo);
-	m2.Invalidate();
+	e_StreamReference<e_KernelMaterial> newMaterials = m_pMaterialBuffer->malloc(getMesh(n)->m_sMatInfo);
 	m_pMaterialBuffer->DecrementRef(getMats(n));
-	n->m_uMaterialOffset = m2.getIndex();
+	n->m_uMaterialOffset = newMaterials.getIndex();
 	n->m_uInstanciatedMaterial = true;
 	n.Invalidate();
 	bool b;
-	if (m2->AlphaMap.used && m2->AlphaMap.tex.Is<e_ImageTexture>())
-		m_pTextureBuffer->LoadCached(m2->AlphaMap.tex.As<e_ImageTexture>()->file, b);
-	if (m2->HeightMap.used && m2->HeightMap.tex.Is<e_ImageTexture>())
-		m_pTextureBuffer->LoadCached(m2->HeightMap.tex.As<e_ImageTexture>()->file, b);
-	if (m2->NormalMap.used && m2->NormalMap.tex.Is<e_ImageTexture>())
-		m_pTextureBuffer->LoadCached(m2->NormalMap.tex.As<e_ImageTexture>()->file, b);
-	auto T = m2->bsdf.As()->getTextureList();
-	for (auto t : T)
-		if (t->Is<e_ImageTexture>())
-			m_pTextureBuffer->LoadCached(t->As<e_ImageTexture>()->file, b);
-	std::cout << "A\n";
+	for (size_t i = 0; i < newMaterials.getLength(); i++)
+	{
+		e_KernelMaterial* m2 = newMaterials(i);
+		if (m2->AlphaMap.used && m2->AlphaMap.tex.Is<e_ImageTexture>())
+			m_pTextureBuffer->LoadCached(m2->AlphaMap.tex.As<e_ImageTexture>()->file, b);
+		if (m2->HeightMap.used && m2->HeightMap.tex.Is<e_ImageTexture>())
+			m_pTextureBuffer->LoadCached(m2->HeightMap.tex.As<e_ImageTexture>()->file, b);
+		if (m2->NormalMap.used && m2->NormalMap.tex.Is<e_ImageTexture>())
+			m_pTextureBuffer->LoadCached(m2->NormalMap.tex.As<e_ImageTexture>()->file, b);
+		auto T = m2->bsdf.As()->getTextureList();
+		for (auto t : T)
+			if (t->Is<e_ImageTexture>())
+				m_pTextureBuffer->LoadCached(t->As<e_ImageTexture>()->file, b);
+	}
 	ReloadTextures();
 }
 

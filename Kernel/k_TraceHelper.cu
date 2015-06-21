@@ -34,6 +34,7 @@ texture<unsigned int,  1>		t_triIndices;
 texture<float4, 1>		t_SceneNodes;
 texture<float4, 1>		t_NodeTransforms;
 texture<float4, 1>		t_NodeInvTransforms;
+texture<int2, 1> t_LeafInfo;
 
 texture<int2, 1> t_TriDataA;
 texture<float4, 1> t_TriDataB;
@@ -72,7 +73,7 @@ CUDA_FUNC_IN void loadInvModl(int i, float4x4* o)
 #endif
 }
 
-CUDA_FUNC_IN bool k_TraceRayNode2(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result, const e_Node* N)
+CUDA_FUNC_IN bool k_TraceRayNode(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result, const e_Node* N)
 {
 	unsigned int mIndex = N->m_uMeshIndex;
 	e_KernelMesh mesh = g_SceneData.m_sMeshData[mIndex];
@@ -146,8 +147,14 @@ CUDA_FUNC_IN bool k_TraceRayNode2(const Vec3f& dir, const Vec3f& ori, TraceResul
 			else nodeIdx = traverseChild0 ? childrenParentSibling.x : childrenParentSibling.y; 
 		}
 
-		if (nodeIdx < 0 && nodeIdx != -214783648)
+		if (nodeIdx < 0)
 		{
+#ifdef ISCUDA
+			int2 abc = tex1Dfetch(t_LeafInfo, mesh.m_uLeafInfoOffset / sizeof(Vec2i) + ~nodeIdx);
+#else
+			Vec2i abc = ((Vec2i*)(g_SceneData.m_sAnimData.Data + mesh.m_uLeafInfoOffset))[~nodeIdx];
+#endif
+			parentId = abc.x; siblingId = abc.y;
 			for (int triAddr = ~nodeIdx;; triAddr++)
 			{
 #ifdef ISCUDA
@@ -191,11 +198,11 @@ CUDA_FUNC_IN bool k_TraceRayNode2(const Vec3f& dir, const Vec3f& ori, TraceResul
 				if (index & 1)
 				{
 #ifdef ISCUDA
-					parentId = tex1Dfetch(t_triIndices, mesh.m_uBVHIndicesOffset + triAddr + 1);
-					siblingId = tex1Dfetch(t_triIndices, mesh.m_uBVHIndicesOffset + triAddr + 2);
+					//parentId = tex1Dfetch(t_triIndices, mesh.m_uBVHIndicesOffset + triAddr + 1);
+					//siblingId = tex1Dfetch(t_triIndices, mesh.m_uBVHIndicesOffset + triAddr + 2);
 #else
-					parentId = *(int*)(g_SceneData.m_sBVHIndexData.Data + mesh.m_uBVHIndicesOffset + triAddr + 1);
-					siblingId = *(int*)(g_SceneData.m_sBVHIndexData.Data + mesh.m_uBVHIndicesOffset + triAddr + 2);
+					//parentId = *(int*)(g_SceneData.m_sBVHIndexData.Data + mesh.m_uBVHIndicesOffset + triAddr + 1);
+					//siblingId = *(int*)(g_SceneData.m_sBVHIndexData.Data + mesh.m_uBVHIndicesOffset + triAddr + 2);
 #endif
 					break;
 				}
@@ -222,7 +229,7 @@ CUDA_FUNC_IN bool k_TraceRayNode2(const Vec3f& dir, const Vec3f& ori, TraceResul
 	}
 }
 
-CUDA_FUNC_IN bool k_TraceRayNode(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result, const e_Node* N)
+CUDA_FUNC_IN bool k_TraceRayNode2(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result, const e_Node* N)
 {
 	unsigned int mIndex = N->m_uMeshIndex;
 	e_KernelMesh mesh = g_SceneData.m_sMeshData[mIndex];
@@ -512,6 +519,8 @@ void k_INITIALIZE(e_DynamicScene* a_Scene, const CudaRNGBuffer& a_RngBuf)
 
 	r = cudaBindTexture(&offset, &t_TriDataA, a_Data.m_sTriData.Data, &cdi2, a_Data.m_sTriData.UsedCount * sizeof(e_TriangleData));
 	r = cudaBindTexture(&offset, &t_TriDataB, a_Data.m_sTriData.Data, &cdh4, a_Data.m_sTriData.UsedCount * sizeof(e_TriangleData));
+
+	r = cudaBindTexture(&offset, &t_LeafInfo, a_Data.m_sAnimData.Data, &cdi2, a_Data.m_sAnimData.UsedCount);
 
 	unsigned int b = 0;
 	cudaMemcpyToSymbol(g_RayTracedCounterDevice, &b, sizeof(unsigned int));

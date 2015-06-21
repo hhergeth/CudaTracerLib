@@ -12,6 +12,7 @@ struct e_KernelMesh
 	unsigned int m_uBVHTriangleOffset;
 	unsigned int m_uBVHIndicesOffset;
 	unsigned int m_uStdMaterialOffset;
+	unsigned int m_uLeafInfoOffset;
 };
 
 struct e_MeshPartLight
@@ -44,11 +45,12 @@ public:
 	e_StreamReference<e_BVHNodeData> m_sNodeInfo;
 	e_StreamReference<e_TriIntersectorData> m_sIntInfo;
 	e_StreamReference<e_TriIntersectorData2> m_sIndicesInfo;
+	e_StreamReference<char> m_sLeafInfo;
 	e_MeshPartLight m_sLights[MAX_AREALIGHT_NUM];
 	unsigned int m_uUsedLights;
 	FixedString<64> m_uPath;
 public:
-	e_Mesh(const std::string& path, IInStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4);
+	e_Mesh(const std::string& path, IInStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4, e_Stream<char>* a_Stream5);
 	void Free(e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4);
 	e_KernelMesh getKernelData();
 	unsigned int getTriangleCount()

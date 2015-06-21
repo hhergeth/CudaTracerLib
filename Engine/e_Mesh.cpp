@@ -42,7 +42,24 @@ void printBVHData(const e_BVHNodeData* bvh, const std::string& path)
 	file.close();
 }
 
-e_Mesh::e_Mesh(const std::string& path, IInStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4)
+void createLeafInfo(Vec2i* data, int idx, int parent, int sibling, e_BVHNodeData* data2)
+{
+	if (idx < 0)
+	{
+		data[~idx] = Vec2i(parent, sibling);
+	}
+	else
+	{
+		e_BVHNodeData& n = data2[idx / 4];
+		Vec2i c = n.getChildren();
+		if (c.x != 0x76543210)
+			createLeafInfo(data, c.x, idx, c.y, data2);
+		if (c.y != 0x76543210)
+			createLeafInfo(data, c.y, idx, c.x, data2);
+	}
+}
+
+e_Mesh::e_Mesh(const std::string& path, IInStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4, e_Stream<char>* a_Stream5)
 	: m_uPath(path)
 {
 	m_uType = MESH_STATIC_TOKEN;
@@ -84,6 +101,9 @@ e_Mesh::e_Mesh(const std::string& path, IInStream& a_In, e_Stream<e_TriIntersect
 	a_In >> m_sIndicesInfo;
 	m_sIndicesInfo.Invalidate();
 
+	m_sLeafInfo = a_Stream5->malloc(RND_16(m_uIndicesSize * sizeof(Vec2i)));
+	createLeafInfo((Vec2i*)m_sLeafInfo.operator char *(), 0, -1, -1, m_sNodeInfo());
+	m_sLeafInfo.Invalidate();
 	//printBVHData(m_sNodeInfo(0), "mesh.txt");
 }
 
@@ -95,6 +115,7 @@ e_KernelMesh e_Mesh::getKernelData()
 	m_sData.m_uBVHTriangleOffset = m_sIntInfo.getIndex() * 3;
 	m_sData.m_uTriangleOffset = m_sTriInfo.getIndex();
 	m_sData.m_uStdMaterialOffset = m_sMatInfo.getIndex();
+	m_sData.m_uLeafInfoOffset = m_sLeafInfo.getIndex();
 	return m_sData;
 }
 
