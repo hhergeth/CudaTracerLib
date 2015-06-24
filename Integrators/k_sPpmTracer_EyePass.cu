@@ -4,36 +4,37 @@
 
 #define MAX_PHOTONS_PER_CELL 30
 texture<uint4, 1> t_Photons;
+texture<int2, 1> t_Beams;
 
-template<bool VOL> CUDA_FUNC_IN Spectrum L_Volume(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const Spectrum& sigt, const Spectrum& sigs, Spectrum& Tr, const k_PhotonMapCollection<true, k_pPpmPhoton>& photonMap, unsigned int a_NodeIndex = 0xffffffff)
+template<bool VOL> CUDA_FUNC_IN Spectrum L_Volume2(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const Spectrum& sigt, const Spectrum& sigs, Spectrum& Tr, const k_PhotonMapCollection<true, k_pPpmPhoton>& photonMap, unsigned int a_NodeIndex = 0xffffffff)
 {
 	const k_PhotonMapReg& map = photonMap.m_sVolumeMap;
 	Spectrum Tau = Spectrum(0.0f);
 	float Vs = 1.0f / ((4.0f / 3.0f) * PI * a_r * a_r * a_r * photonMap.m_uPhotonNumEmitted), r2 = a_r * a_r;
 	Spectrum L_n = Spectrum(0.0f);
-	float a,b;
+	float a, b;
 	if (!map.m_sHash.getAABB().Intersect(r, &a, &b))
 		return L_n;//that would be dumb
 	a = math::clamp(a, tmin, tmax);
 	b = math::clamp(b, tmin, tmax);
 	float d = 2.0f * a_r;
 	b -= d / 2.0f;
-	while(b > a)
+	while (b > a)
 	{
 		Spectrum L = Spectrum(0.0f);
 		Vec3f x = r(b);
 		uint3 lo = map.m_sHash.Transform(x - Vec3f(a_r)), hi = map.m_sHash.Transform(x + Vec3f(a_r));
-		for(unsigned int ac = lo.x; ac <= hi.x; ac++)
-			for(unsigned int bc = lo.y; bc <= hi.y; bc++)
-				for(unsigned int cc = lo.z; cc <= hi.z; cc++)
+		for (unsigned int ac = lo.x; ac <= hi.x; ac++)
+			for (unsigned int bc = lo.y; bc <= hi.y; bc++)
+				for (unsigned int cc = lo.z; cc <= hi.z; cc++)
 				{
-					unsigned int i0 = map.m_sHash.Hash(make_uint3(ac, bc, cc)), i = map.m_pDeviceHashGrid[i0], NUM = 0;
+					unsigned int i0 = map.m_sHash.Hash(Vec3u(ac, bc, cc)), i = map.m_pDeviceHashGrid[i0], NUM = 0;
 					while (i != 0xffffffff && i != 0xffffff && NUM++ < MAX_PHOTONS_PER_CELL)
 					{
 						k_pPpmPhoton e = photonMap.m_pPhotons[i];
-						Vec3f wi = e.getWi(), P = e.getPos(map.m_sHash, Vec3u(ac,bc,cc));
+						Vec3f wi = e.getWi(), P = e.getPos(map.m_sHash, Vec3u(ac, bc, cc));
 						Spectrum l = e.getL();
-						if(distanceSquared(P, x) < r2)
+						if (distanceSquared(P, x) < r2)
 						{
 							float p = VOL ? g_SceneData.m_sVolume.p(x, r.direction, wi, rng, a_NodeIndex) : Warp::squareToUniformSpherePdf();
 							L += p * l * Vs;
@@ -46,6 +47,63 @@ template<bool VOL> CUDA_FUNC_IN Spectrum L_Volume(float a_r, CudaRNG& rng, const
 		Spectrum o_s = VOL ? g_SceneData.m_sVolume.sigma_s(x, -r.direction, a_NodeIndex) : sigs;
 		L_n = L * d + L_n * (-tauDelta).exp() + (VOL ? g_SceneData.m_sVolume.Lve(x, -1.0f * r.direction, a_NodeIndex) * d : Spectrum(0.0f));
 		b -= d;
+	}
+	Tr = (-Tau).exp();
+	return L_n;
+}
+
+template<bool VOL> CUDA_FUNC_IN Spectrum L_Volume(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const Spectrum& sigt, const Spectrum& sigs, Spectrum& Tr, const k_PhotonMapCollection<true, k_pPpmPhoton>& photonMap, unsigned int a_NodeIndex = 0xffffffff)
+{
+	const k_PhotonMapReg& map = photonMap.m_sVolumeMap;
+	Spectrum Tau = Spectrum(0.0f);
+	float Vs = 1.0f / ((4.0f / 3.0f) * PI * a_r * a_r * a_r * photonMap.m_uPhotonNumEmitted), r2 = a_r * a_r;
+	Spectrum L_n = Spectrum(0.0f);
+	float a, b;
+	AABB box = map.m_sHash.getAABB();
+	if (!box.Intersect(r, &a, &b))
+		return 0.0f;
+	a = math::clamp(a, tmin, tmax);
+	b = math::clamp(b, tmin, tmax);
+	Ray rDisc((r.origin - box.minV) / box.Size() * map.m_sHash.m_fGridSize, r.direction / box.Size() * map.m_sHash.m_fGridSize);
+	//there is a homomorphismus between rDisc and r for a<=t<=b
+	while (a < b)
+	{
+		Vec3f pd = rDisc(a), lambdaMinus = -Vec3f(math::frac(pd.x), math::frac(pd.y), math::frac(pd.z)) / rDisc.direction;
+		Vec3f minV(lambdaMinus.x > 0 ? lambdaMinus.x : (lambdaMinus.x < 0 ? (lambdaMinus.x + 1.0f / rDisc.direction.x) : FLT_MAX),
+				   lambdaMinus.y > 0 ? lambdaMinus.y : (lambdaMinus.y < 0 ? (lambdaMinus.y + 1.0f / rDisc.direction.y) : FLT_MAX),
+				   lambdaMinus.z > 0 ? lambdaMinus.z : (lambdaMinus.z < 0 ? (lambdaMinus.z + 1.0f / rDisc.direction.z) : FLT_MAX));
+		float minLambda = min(minV);
+
+		Spectrum L = Spectrum(0.0f);
+		Vec3u cell_idx(math::Float2Int(pd.x), math::Float2Int(pd.y), math::Float2Int(pd.z));
+		int beam_idx = map.m_sHash.Hash(cell_idx);
+#ifdef ISCUDA
+		if (beam_idx != -1)
+			do
+			{
+				int2 beam = tex1Dfetch(t_Beams, beam_idx);
+				beam_idx = beam.y;
+				if (beam.x != -1)
+				{
+					uint4 dat = tex1Dfetch(t_Photons, beam.x);
+					k_pPpmPhoton& e = *(k_pPpmPhoton*)&dat;
+					Vec3f wi = e.getWi(), P = e.getPos(map.m_sHash, cell_idx);
+					Spectrum l = e.getL();
+					float d2 = cross(r.direction, r.origin - P).lenSqr() / dot(r.direction, r.direction);
+					if (d2 < r2)
+					{
+						float p = VOL ? g_SceneData.m_sVolume.p(P, r.direction, wi, rng, a_NodeIndex) : Warp::squareToUniformSpherePdf();
+						L += p * l * Vs;
+					}
+				}
+			} while (beam_idx != -1);
+#endif
+		Spectrum tauDelta = VOL ? g_SceneData.m_sVolume.tau(r, a, a + minLambda, a_NodeIndex) : sigt * minLambda;
+		Tau += tauDelta;
+		Spectrum o_s = VOL ? g_SceneData.m_sVolume.sigma_s(r(a), -r.direction, a_NodeIndex) : sigs;
+		L_n = L * minLambda + L_n * (-tauDelta).exp() + (VOL ? g_SceneData.m_sVolume.Lve(r(a), -1.0f * r.direction, a_NodeIndex) * minLambda : Spectrum(0.0f));
+
+		a += minLambda;
 	}
 	Tr = (-Tau).exp();
 	return L_n;
@@ -65,7 +123,7 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED
 		for(unsigned int b = lo.y; b <= hi.y; b++)
 			for(unsigned int c = lo.z; c <= hi.z; c++)
 			{
-				unsigned int i0 = map.m_sHash.Hash(make_uint3(a, b, c)), i = map.m_pDeviceHashGrid[i0], NUM = 0;
+				unsigned int i0 = map.m_sHash.Hash(Vec3u(a, b, c)), i = map.m_pDeviceHashGrid[i0], NUM = 0;
 				while (i != 0xffffffff && i != 0xffffff && NUM++ < MAX_PHOTONS_PER_CELL)
 				{
 #ifdef ISCUDA
@@ -128,7 +186,7 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED
 	for (unsigned int b = lo.y; b <= hi.y; b++)
 	for (unsigned int c = lo.z; c <= hi.z; c++)
 	{
-		unsigned int i0 = map.m_sHash.Hash(make_uint3(a, b, c)), i = map.m_pDeviceHashGrid[i0];
+		unsigned int i0 = map.m_sHash.Hash(Vec3u(a, b, c)), i = map.m_pDeviceHashGrid[i0];
 		while (i != 0xffffffff && i != 0xffffff)
 		{
 			k_pPpmPhoton e = photonMap.m_pPhotons[i];
@@ -327,15 +385,22 @@ template<bool DIRECT, bool FINAL_GATHER> __global__ void k_EyePass(Vec2i off, in
 	}
 }
 
+void test(Ray r2, float r, k_PhotonMapCollection<true, k_pPpmPhoton> photonMap)
+{
+	L_Volume<true>(r, g_RNGData(), r2, 0, FLT_MAX, Spectrum(0.0f), Spectrum(0.0f), Spectrum(0.0f), photonMap);
+}
+
 #define TN(r) (r * math::pow(float(m_uPassesDone), -1.0f/6.0f))
 void k_sPpmTracer::RenderBlock(e_Image* I, int x, int y, int blockW, int blockH)
 {
-	cudaChannelFormatDesc cdu4 = cudaCreateChannelDesc<uint4>();
+	cudaChannelFormatDesc cdu4 = cudaCreateChannelDesc<uint4>(), cdi2 = cudaCreateChannelDesc<int2>();
 	size_t offset = 0;
 	cudaError_t r = cudaBindTexture(&offset, &t_Photons, m_sMaps.m_pPhotons, &cdu4, m_sMaps.m_uPhotonNumStored * sizeof(uint4));
+	r = cudaBindTexture(&offset, &t_Beams, m_sBeams.m_pDeviceData, &cdi2, m_sBeams.m_uNumEntries * sizeof(int2));
 
 	float radius2 = getCurrentRadius2(2);
 	float radius3 = getCurrentRadius2(3);
+
 	//radius2 = radius3 = m_fInitialRadius * 10;
 	k_AdaptiveStruct A(TN(r_min), TN(r_max), m_pEntries);
 	Vec2i off = Vec2i(x, y);
@@ -354,8 +419,14 @@ void k_sPpmTracer::RenderBlock(e_Image* I, int x, int y, int blockW, int blockH)
 	}
 }
 
+#include <Engine/e_DynamicScene.h>
 void k_sPpmTracer::Debug(e_Image* I, const Vec2i& pixel)
 {
+	StartNewTrace(I);
+	L_Volume<true>(getCurrentRadius2(3), g_RNGData(), Ray(Vec3f(39.592178f,41.220329f,3.317543f), Vec3f(-0.147530f,-0.893036f,0.425113f)), 0, 32.386997f, Spectrum(0.0f), Spectrum(0.0f), Spectrum(0.0f), m_sMaps);
+	//for (int i = 0; i < w; i++)
+	//	for (int j = 0; j < h; j++)
+	//		L_Volume<true>(r, g_RNGData(), m_pScene->getCamera()->GenRay(i, j), 0, FLT_MAX, Spectrum(0.0f), Spectrum(0.0f), Spectrum(0.0f), m_sMaps);
 	/*if(m_uPhotonsEmitted == (unsigned long long)-1)
 		return;
 	static k_AdaptiveEntry* hostEntries = 0;

@@ -18,7 +18,7 @@ CUDA_DEVICE Spectrum L_Surface(BPTSubPathState& aCameraState, BSDFSamplingRecord
 	for (unsigned int b = lo.y; b <= hi.y; b++)
 	for (unsigned int c = lo.z; c <= hi.z; c++)
 	{
-		unsigned int i0 = g_CurrentMap.m_sSurfaceMap.m_sHash.Hash(make_uint3(a, b, c)), i = g_CurrentMap.m_sSurfaceMap.m_pDeviceHashGrid[i0];
+		unsigned int i0 = g_CurrentMap.m_sSurfaceMap.m_sHash.Hash(Vec3u(a, b, c)), i = g_CurrentMap.m_sSurfaceMap.m_pDeviceHashGrid[i0];
 		while (i != 0xffffffff && i != 0xffffff)
 		{
 			k_MISPhoton e = g_CurrentMap.m_pPhotons[i];

@@ -12,7 +12,6 @@ struct e_KernelMesh
 	unsigned int m_uBVHTriangleOffset;
 	unsigned int m_uBVHIndicesOffset;
 	unsigned int m_uStdMaterialOffset;
-	unsigned int m_uLeafInfoOffset;
 };
 
 struct e_MeshPartLight
@@ -45,7 +44,6 @@ public:
 	e_StreamReference<e_BVHNodeData> m_sNodeInfo;
 	e_StreamReference<e_TriIntersectorData> m_sIntInfo;
 	e_StreamReference<e_TriIntersectorData2> m_sIndicesInfo;
-	e_StreamReference<char> m_sLeafInfo;
 	e_MeshPartLight m_sLights[MAX_AREALIGHT_NUM];
 	unsigned int m_uUsedLights;
 	FixedString<64> m_uPath;

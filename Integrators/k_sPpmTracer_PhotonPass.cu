@@ -3,19 +3,21 @@
 #include "..\Kernel\k_TraceAlgorithms.h"
 
 CUDA_DEVICE k_PhotonMapCollection<true, k_pPpmPhoton> g_Map;
+CUDA_DEVICE bool g_HasVolumePhotons;
 
-template<bool DIRECT> __global__ void k_PhotonPass()
+template<bool DIRECT> __global__ void k_PhotonPass(int photons_per_thread)
 {
 	CudaRNG rng = g_RNGData();
 	CUDA_SHARED unsigned int local_Counter;
 	local_Counter = 0;
-	unsigned int local_Todo = PPM_Photons_Per_Thread * blockDim.x * blockDim.y;
+	unsigned int local_Todo = photons_per_thread * blockDim.x * blockDim.y;
 
 	DifferentialGeometry dg;
 	BSDFSamplingRecord bRec(dg);
 	e_KernelAggregateVolume& V = g_SceneData.m_sVolume;
+	bool hasVolPhotons;
 
-	while (local_Counter < local_Todo && g_Map.m_uPhotonNumStored < g_Map.m_uPhotonBufferLength)
+	while (atomicInc(&local_Counter, (unsigned int)-1) < local_Todo && g_Map.m_uPhotonNumStored < g_Map.m_uPhotonBufferLength)
 	{
 		Ray r;
 		const e_KernelLight* light;
@@ -23,7 +25,6 @@ template<bool DIRECT> __global__ void k_PhotonPass()
 		Spectrum Le = g_SceneData.sampleEmitterRay(r, light, sps, sds),
 			throughput(1.0f);
 		int depth = -1;
-		atomicInc(&local_Counter, (unsigned int)-1);
 		bool wasStored = false;
 		bool delta = false;
 		MediumSamplingRecord mRec;
@@ -39,6 +40,7 @@ template<bool DIRECT> __global__ void k_PhotonPass()
 			{
 				throughput *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
 				wasStored |= storePhoton(mRec.p, throughput * Le, -r.direction, Vec3f(0, 0, 0), PhotonType::pt_Volume, g_Map);
+				hasVolPhotons = true;
 				if (bssrdf)
 					r.direction = Warp::squareToUniformSphere(rng.randomFloat2());
 				else throughput *= V.Sample(mRec.p, -r.direction, rng, &r.direction);
@@ -75,6 +77,8 @@ template<bool DIRECT> __global__ void k_PhotonPass()
 		if (wasStored)
 			atomicInc(&g_Map.m_uPhotonNumEmitted, 0xffffffff);
 	}
+	if (threadIdx.x == 0)
+		g_HasVolumePhotons = __any(hasVolPhotons);
 
 	g_RNGData(rng);
 }
@@ -156,14 +160,51 @@ __global__ void reorderPhotonBuffer()
 	}
 }*/
 
+CUDA_DEVICE k_BeamMap g_Beams;
+__global__ void buildBeams(float r)
+{
+	int idx = blockDim.x * blockDim.y * blockIdx.x + threadIdx.y * blockDim.x + threadIdx.x;
+	if (idx < g_Map.m_sVolumeMap.m_uGridLength)
+	{
+		unsigned int p_idx = g_Map.m_sVolumeMap.m_pDeviceHashGrid[idx];
+		Vec3u ci = g_Map.m_sVolumeMap.m_sHash.InvHash(idx);
+		while (p_idx != 0xffffffff && p_idx != 0xffffff)
+		{
+			Vec3f pPos = g_Map.m_pPhotons[p_idx].getPos(g_Map.m_sVolumeMap.m_sHash, ci);
+			Vec3u mi = g_Map.m_sVolumeMap.m_sHash.Transform(pPos - Vec3f(r));
+			Vec3u ma = g_Map.m_sVolumeMap.m_sHash.Transform(pPos + Vec3f(r));
+			for (; mi.x <= ma.x; mi.x++)
+				for (; mi.y <= ma.y; mi.y++)
+					for (; mi.z <= ma.z; mi.z++)
+					{
+						unsigned int d_idx = atomicInc(&g_Beams.m_uIndex, -1);
+						if (d_idx >= g_Beams.m_uNumEntries)
+							return;
+						unsigned int n_idx = atomicExch(&g_Beams.m_pDeviceData[g_Map.m_sVolumeMap.m_sHash.Hash(mi)].y, d_idx);
+						g_Beams.m_pDeviceData[d_idx] = Vec2i(p_idx, n_idx);
+					}
+			p_idx = g_Map.m_pPhotons[p_idx].getNext();
+		}
+	}
+}
+
 void k_sPpmTracer::doPhotonPass()
 {
+	bool hasVol = false;
 	cudaMemcpyToSymbol(g_Map, &m_sMaps, sizeof(m_sMaps));
+	cudaMemcpyToSymbol(g_HasVolumePhotons, &hasVol, sizeof(bool));
 	while (!m_sMaps.PassFinished())
 	{
+#ifdef NDEBUG
+		int per_thread = PPM_Photons_Per_Thread;
+		dim3 block = dim3(PPM_BlockX, PPM_BlockY, 1);
+#else
+		int per_thread = 1;
+		dim3 block = dim3(32, 1, 1);
+#endif
 		if (m_bDirect)
-			k_PhotonPass<true> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >();
-		else k_PhotonPass<false> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >();
+			k_PhotonPass<true> << < m_uBlocksPerLaunch, block >> >(per_thread);
+		else k_PhotonPass<false> << < m_uBlocksPerLaunch, block >> >(per_thread);
 		cudaMemcpyFromSymbol(&m_sMaps, g_Map, sizeof(m_sMaps));
 	}
 	buildHashGrid<< <m_sMaps.m_uPhotonBufferLength / (32 * 6) + 1, dim3(32, 6, 1) >> >();
@@ -171,6 +212,19 @@ void k_sPpmTracer::doPhotonPass()
 	//reorderPhotonBuffer << < m_sMaps.m_sSurfaceMap.m_uGridLength / (32 * 6) + 1, dim3(32, 6, 1) >> >();
 	cudaMemcpyFromSymbol(&m_sMaps, g_Map, sizeof(m_sMaps));
 	//swapk(&m_sMaps.m_pPhotons, &m_sMaps.m_pPhotons2);
+	cudaMemcpyFromSymbol(&hasVol, g_HasVolumePhotons, sizeof(bool));
+	if (hasVol)
+	{
+		m_sBeams.m_uIndex = m_sBeams.m_uGridEntries;
+		cudaMemcpyToSymbol(g_Beams, &m_sBeams, sizeof(m_sBeams));
+		cudaMemset(m_sBeams.m_pDeviceData, -1, sizeof(Vec2i) * m_sBeams.m_uNumEntries);
+		buildBeams << <m_sMaps.m_sVolumeMap.m_uGridLength / (32 * 6) + 1, dim3(32, 6) >> >(getCurrentRadius2(3));
+		cudaMemcpyFromSymbol(&m_sBeams, g_Beams, sizeof(m_sBeams));
+		cudaDeviceSynchronize();
+		if (m_sBeams.m_uIndex == m_sBeams.m_uNumEntries)
+			std::cout << "Beam indices full!\n";
+		//std::cout << "Beam indices index = " << m_sBeams.m_uIndex << ", length = " << m_sBeams.m_uNumEntries << "\n";
+	}
 }
 
 CUDA_GLOBAL void estimateRadius(unsigned int w, unsigned int h, k_AdaptiveEntry* E, k_PhotonMapCollection<true, k_pPpmPhoton> photonMap, float maxR, float targetNumPhotons)
@@ -205,7 +259,7 @@ CUDA_GLOBAL void estimateRadius(unsigned int w, unsigned int h, k_AdaptiveEntry*
 					for (unsigned int b = lo.y; b <= hi.y; b++)
 						for (unsigned int c = lo.z; c <= hi.z; c++)
 						{
-							unsigned int i0 = map.m_sHash.Hash(make_uint3(a, b, c)), i = map.m_pDeviceHashGrid[i0];
+							unsigned int i0 = map.m_sHash.Hash(Vec3u(a, b, c)), i = map.m_pDeviceHashGrid[i0];
 							while (i != 0xffffffff && i != 0xffffff)
 							{
 								k_pPpmPhoton e = photonMap.m_pPhotons[i];

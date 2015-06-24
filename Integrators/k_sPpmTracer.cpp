@@ -22,6 +22,9 @@ k_sPpmTracer::k_sPpmTracer()
 	unsigned int numPhotons = (m_uBlocksPerLaunch + 2) * PPM_slots_per_block;
 	unsigned int linkedListLength = numPhotons * 10;
 	m_sMaps = k_PhotonMapCollection<true, k_pPpmPhoton>(numPhotons, LNG*LNG*LNG, linkedListLength);
+	m_sBeams.m_uGridEntries = LNG*LNG*LNG;
+	m_sBeams.m_uNumEntries = m_sBeams.m_uGridEntries * (1 + 3);
+	CUDA_MALLOC(&m_sBeams.m_pDeviceData, sizeof(Vec2i) * m_sBeams.m_uNumEntries);
 }
 
 void k_sPpmTracer::PrintStatus(std::vector<std::string>& a_Buf) const

@@ -266,7 +266,9 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <CudaCompile Include="Integrators\k_PhotonTracer.cu" />
     <CudaCompile Include="Integrators\k_PmmTracer.cu" />
     <CudaCompile Include="Integrators\k_PrimTracer.cu" />
-    <CudaCompile Include="Integrators\k_sPpmTracer_EyePass.cu" />
+    <CudaCompile Include="Integrators\k_sPpmTracer_EyePass.cu">
+      <GPUDebugInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</GPUDebugInfo>
+    </CudaCompile>
     <CudaCompile Include="Integrators\k_sPpmTracer_PhotonPass.cu" />
     <CudaCompile Include="Integrators\k_VCM.cu" />
     <CudaCompile Include="Kernel\k_BlockSampler.cu" />

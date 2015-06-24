@@ -26,7 +26,12 @@ struct k_AdaptiveStruct
 	}
 };
 
-
+struct k_BeamMap
+{
+	unsigned int m_uIndex;
+	unsigned int m_uNumEntries, m_uGridEntries;
+	Vec2i* m_pDeviceData;
+};
 
 enum
 {
@@ -44,6 +49,7 @@ class k_sPpmTracer : public k_Tracer<true, true>
 {
 private:
 	k_PhotonMapCollection<true, k_pPpmPhoton> m_sMaps;
+	k_BeamMap m_sBeams;
 	bool m_bDirect;
 	float m_fLightVisibility;
 

@@ -36,7 +36,7 @@ template<bool REGULAR> struct k_HashGrid
 		return unsigned int(key) ^ unsigned int(key >> 2);
 	}
 
-	CUDA_FUNC_IN unsigned int Hash(const uint3& p) const
+	CUDA_FUNC_IN unsigned int Hash(const Vec3u& p) const
 	{
 		if(REGULAR)
 		{
@@ -58,6 +58,20 @@ template<bool REGULAR> struct k_HashGrid
 			n = (p + beta);
 
 			return (unsigned int)math::floor( math::frac(dot(n / m, Vec4f(1.0, -1.0, 1.0, -1.0))) * N );
+		}
+	}
+
+	CUDA_FUNC_IN Vec3u InvHash(unsigned int idx) const
+	{
+		if (REGULAR)
+		{
+			unsigned int k = idx / (m_fGridSize * m_fGridSize);
+			unsigned int j = (idx - k * m_fGridSize * m_fGridSize) / m_fGridSize;
+			return Vec3u(idx - k * m_fGridSize * m_fGridSize - j * m_fGridSize, j, k);
+		}
+		else
+		{
+			return Vec3u(-1);
 		}
 	}
 

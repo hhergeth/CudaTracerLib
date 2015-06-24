@@ -69,7 +69,7 @@ public:
 
 	//internal
 
-	CUDA_FUNC_IN unsigned int idx(const uint3& i) const
+	CUDA_FUNC_IN unsigned int idx(const Vec3u& i) const
 	{
 		return deviceMap[hashMap.Hash(i)];
 	}

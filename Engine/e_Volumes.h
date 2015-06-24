@@ -86,7 +86,8 @@ public:
 
 	CUDA_FUNC_IN bool isInVolume(unsigned int a_NodeIndex)
 	{
-		return m_uNodeIndex == 0xffffffff || m_uNodeIndex == a_NodeIndex;
+		return true;
+		//return m_uNodeIndex == 0xffffffff || m_uNodeIndex == a_NodeIndex;
 	}
 
 	CUDA_FUNC_IN bool inside(const Vec3f& p) const
