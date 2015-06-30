@@ -1,55 +1,18 @@
 #include "k_sPpmTracer.h"
 #include "..\Kernel\k_TraceHelper.h"
 #include "..\Kernel\k_TraceAlgorithms.h"
+#include <Math/half.h>
 
 #define MAX_PHOTONS_PER_CELL 30
 texture<uint4, 1> t_Photons;
 texture<int2, 1> t_Beams;
 
-template<bool VOL> CUDA_FUNC_IN Spectrum L_Volume2(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const Spectrum& sigt, const Spectrum& sigs, Spectrum& Tr, const k_PhotonMapCollection<true, k_pPpmPhoton>& photonMap, unsigned int a_NodeIndex = 0xffffffff)
+template<bool HAS_MULTIPLE_MAPS, typename PHOTON> CUDA_FUNC_IN PHOTON loadPhoton(unsigned int idx, const k_PhotonMapCollection<HAS_MULTIPLE_MAPS, PHOTON>& map)
 {
-	const k_PhotonMapReg& map = photonMap.m_sVolumeMap;
-	Spectrum Tau = Spectrum(0.0f);
-	float Vs = 1.0f / ((4.0f / 3.0f) * PI * a_r * a_r * a_r * photonMap.m_uPhotonNumEmitted), r2 = a_r * a_r;
-	Spectrum L_n = Spectrum(0.0f);
-	float a, b;
-	if (!map.m_sHash.getAABB().Intersect(r, &a, &b))
-		return L_n;//that would be dumb
-	a = math::clamp(a, tmin, tmax);
-	b = math::clamp(b, tmin, tmax);
-	float d = 2.0f * a_r;
-	b -= d / 2.0f;
-	while (b > a)
-	{
-		Spectrum L = Spectrum(0.0f);
-		Vec3f x = r(b);
-		uint3 lo = map.m_sHash.Transform(x - Vec3f(a_r)), hi = map.m_sHash.Transform(x + Vec3f(a_r));
-		for (unsigned int ac = lo.x; ac <= hi.x; ac++)
-			for (unsigned int bc = lo.y; bc <= hi.y; bc++)
-				for (unsigned int cc = lo.z; cc <= hi.z; cc++)
-				{
-					unsigned int i0 = map.m_sHash.Hash(Vec3u(ac, bc, cc)), i = map.m_pDeviceHashGrid[i0], NUM = 0;
-					while (i != 0xffffffff && i != 0xffffff && NUM++ < MAX_PHOTONS_PER_CELL)
-					{
-						k_pPpmPhoton e = photonMap.m_pPhotons[i];
-						Vec3f wi = e.getWi(), P = e.getPos(map.m_sHash, Vec3u(ac, bc, cc));
-						Spectrum l = e.getL();
-						if (distanceSquared(P, x) < r2)
-						{
-							float p = VOL ? g_SceneData.m_sVolume.p(x, r.direction, wi, rng, a_NodeIndex) : Warp::squareToUniformSpherePdf();
-							L += p * l * Vs;
-						}
-						i = e.getNext();
-					}
-				}
-		Spectrum tauDelta = VOL ? g_SceneData.m_sVolume.tau(r, b - d, b, a_NodeIndex) : sigt * d;
-		Tau += tauDelta;
-		Spectrum o_s = VOL ? g_SceneData.m_sVolume.sigma_s(x, -r.direction, a_NodeIndex) : sigs;
-		L_n = L * d + L_n * (-tauDelta).exp() + (VOL ? g_SceneData.m_sVolume.Lve(x, -1.0f * r.direction, a_NodeIndex) * d : Spectrum(0.0f));
-		b -= d;
-	}
-	Tr = (-Tau).exp();
-	return L_n;
+	PHOTON e = map.m_pPhotons[idx];
+	//uint4 dat = tex1Dfetch(t_Photons, idx);
+	//PHOTON e = *(k_pPpmPhoton*)&dat;
+	return e;
 }
 
 template<bool VOL> CUDA_FUNC_IN Spectrum L_Volume(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const Spectrum& sigt, const Spectrum& sigs, Spectrum& Tr, const k_PhotonMapCollection<true, k_pPpmPhoton>& photonMap, unsigned int a_NodeIndex = 0xffffffff)
@@ -59,25 +22,81 @@ template<bool VOL> CUDA_FUNC_IN Spectrum L_Volume(float a_r, CudaRNG& rng, const
 	float Vs = 1.0f / ((4.0f / 3.0f) * PI * a_r * a_r * a_r * photonMap.m_uPhotonNumEmitted), r2 = a_r * a_r;
 	Spectrum L_n = Spectrum(0.0f);
 	float a, b;
-	AABB box = map.m_sHash.getAABB();
-	if (!box.Intersect(r, &a, &b))
-		return 0.0f;
-	a = math::clamp(a, tmin, tmax);
+	if (!map.m_sHash.getAABB().Intersect(r, &a, &b))
+		return L_n;//that would be dumb
+	float minT = a = math::clamp(a, tmin, tmax);
 	b = math::clamp(b, tmin, tmax);
-	Ray rDisc((r.origin - box.minV) / box.Size() * map.m_sHash.m_fGridSize, r.direction / box.Size() * map.m_sHash.m_fGridSize);
-	//there is a homomorphismus between rDisc and r for a<=t<=b
+	float d = 2.0f * a_r;
 	while (a < b)
 	{
-		Vec3f pd = rDisc(a), lambdaMinus = -Vec3f(math::frac(pd.x), math::frac(pd.y), math::frac(pd.z)) / rDisc.direction;
-		Vec3f minV(lambdaMinus.x > 0 ? lambdaMinus.x : (lambdaMinus.x < 0 ? (lambdaMinus.x + 1.0f / rDisc.direction.x) : FLT_MAX),
-				   lambdaMinus.y > 0 ? lambdaMinus.y : (lambdaMinus.y < 0 ? (lambdaMinus.y + 1.0f / rDisc.direction.y) : FLT_MAX),
-				   lambdaMinus.z > 0 ? lambdaMinus.z : (lambdaMinus.z < 0 ? (lambdaMinus.z + 1.0f / rDisc.direction.z) : FLT_MAX));
-		float minLambda = min(minV);
+		float t = a + d / 2.0f;
+		Vec3f x = r(t);
+		uint3 lo = map.m_sHash.Transform(x - Vec3f(a_r)), hi = map.m_sHash.Transform(x + Vec3f(a_r));
+		for (unsigned int ac = lo.x; ac <= hi.x; ac++)
+			for (unsigned int bc = lo.y; bc <= hi.y; bc++)
+				for (unsigned int cc = lo.z; cc <= hi.z; cc++)
+				{
+					unsigned int i0 = map.m_sHash.Hash(Vec3u(ac, bc, cc)), i = map.m_pDeviceHashGrid[i0];
+					while (i != 0xffffffff && i != 0xffffff)
+					{
+						k_pPpmPhoton e = loadPhoton(i, photonMap);
+						Vec3f wi = e.getWi(), P = e.getPos(map.m_sHash, Vec3u(ac, bc, cc));
+						Spectrum l = e.getL();
+						if (distanceSquared(P, x) < r2)
+						{
+							float p = VOL ? g_SceneData.m_sVolume.p(x, r.direction, wi, rng, a_NodeIndex) : Warp::squareToUniformSpherePdf();
+							float l1 = dot(P - r.origin, r.direction) / dot(r.direction, r.direction);
+							Spectrum tauToPhoton = VOL ? (-Tau - g_SceneData.m_sVolume.tau(r, a, l1)).exp() : (-sigt * (l1 - minT)).exp();
+							L_n += p * l * Vs * tauToPhoton*d;
+						}
+						i = e.getNext();
+					}
+				}
+		Spectrum tauDelta = VOL ? g_SceneData.m_sVolume.tau(r, a, a + d, a_NodeIndex) : sigt * d;
+		Tau += tauDelta;
+		if (VOL)
+			L_n += g_SceneData.m_sVolume.Lve(x, -1.0f * r.direction, a_NodeIndex) * d;
+		a += d;
+	}
+	Tr = (-Tau).exp();
+	return L_n;
+}
 
-		Spectrum L = Spectrum(0.0f);
-		Vec3u cell_idx(math::Float2Int(pd.x), math::Float2Int(pd.y), math::Float2Int(pd.z));
-		int beam_idx = map.m_sHash.Hash(cell_idx);
+template<typename V, typename T> CUDA_FUNC_IN V sign(T f)
+{
+	return f > T(0) ? V(1) : (f < T(0) ? V(-1) : V(0));
+}
+template<bool VOL> CUDA_FUNC_IN Spectrum L_Volume2(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const Spectrum& sigt, const Spectrum& sigs, Spectrum& Tr, const k_PhotonMapCollection<true, k_pPpmPhoton>& photonMap, unsigned int a_NodeIndex = 0xffffffff)
+{
+	const k_PhotonMapReg& map = photonMap.m_sVolumeMap;
+	Spectrum Tau = Spectrum(0.0f);
+	float r2 = a_r * a_r;
+	Spectrum L_n = Spectrum(0.0f);
+	float rayT, maxT;
+	AABB box = map.m_sHash.getAABB();
+	if (!box.Intersect(r, &rayT, &maxT))
+		return 0.0f;
+	float minT = rayT = math::clamp(rayT, tmin, tmax);
+	maxT = math::clamp(maxT, tmin, tmax);
+	//pbrt grid accellerator copy! (slightly streamlined for SIMD)
+	Vec3u Pos = map.m_sHash.Transform(r(rayT));
+	Vec3i Step(sign<int>(r.direction.x), sign<int>(r.direction.y), sign<int>(r.direction.z));
+	Vec3f inv_d = r.direction;
+	const float ooeps = math::exp2(-80.0f);
+	inv_d.x = 1.0f / (math::abs(inv_d.x) > ooeps ? inv_d.x : copysignf(ooeps, inv_d.x));
+	inv_d.y = 1.0f / (math::abs(inv_d.y) > ooeps ? inv_d.y : copysignf(ooeps, inv_d.y));
+	inv_d.z = 1.0f / (math::abs(inv_d.z) > ooeps ? inv_d.z : copysignf(ooeps, inv_d.z));
+	Vec3f NextCrossingT = Vec3f(rayT) + (map.m_sHash.m_sBox.minV + (Vec3f(Pos.x, Pos.y, Pos.z) + max(Vec3f(0.0f), sign(r.direction))) * map.m_sHash.m_vCellSize - r(rayT)) * inv_d,
+		  DeltaT = abs(map.m_sHash.m_vCellSize * inv_d);
+
+	for (;;)
+	{
+		int bits = ((NextCrossingT[0] < NextCrossingT[1]) << 2) + ((NextCrossingT[0] < NextCrossingT[2]) << 1) + ((NextCrossingT[1] < NextCrossingT[2]));
+		const int cmpToAxis[8] = { 2, 1, 2, 1, 2, 2, 0, 0 };
+		int stepAxis = cmpToAxis[bits];
+		float localDist = NextCrossingT[stepAxis] - rayT;
 #ifdef ISCUDA
+		int beam_idx = map.m_sHash.Hash(Pos);
 		if (beam_idx != -1)
 			do
 			{
@@ -85,25 +104,28 @@ template<bool VOL> CUDA_FUNC_IN Spectrum L_Volume(float a_r, CudaRNG& rng, const
 				beam_idx = beam.y;
 				if (beam.x != -1)
 				{
-					uint4 dat = tex1Dfetch(t_Photons, beam.x);
-					k_pPpmPhoton& e = *(k_pPpmPhoton*)&dat;
-					Vec3f wi = e.getWi(), P = e.getPos(map.m_sHash, cell_idx);
-					Spectrum l = e.getL();
-					float d2 = cross(r.direction, r.origin - P).lenSqr() / dot(r.direction, r.direction);
-					if (d2 < r2)
+					k_pPpmPhoton e = loadPhoton(beam.x, photonMap);
+					Vec3f wi = e.getWi(), P = e.getPos(map.m_sHash, Pos);
+					//float r_p = half(e.accessNormalStorage()).ToFloat();
+					float l1 = dot(P - r.origin, r.direction) / dot(r.direction, r.direction);
+					if (distanceSquared(P, r(l1)) < r2 && rayT <= l1 && l1 <= NextCrossingT[stepAxis])
 					{
 						float p = VOL ? g_SceneData.m_sVolume.p(P, r.direction, wi, rng, a_NodeIndex) : Warp::squareToUniformSpherePdf();
-						L += p * l * Vs;
+						Spectrum tauToPhoton = VOL ? (-Tau - g_SceneData.m_sVolume.tau(r, rayT, l1)).exp() : (-sigt * (l1 - minT)).exp();
+						L_n += p * e.getL() / (PI * photonMap.m_uPhotonNumEmitted * r2) * tauToPhoton;
 					}
 				}
 			} while (beam_idx != -1);
+		Spectrum tauD = VOL ? g_SceneData.m_sVolume.tau(r, rayT, NextCrossingT[stepAxis]) : sigt * localDist;
+		Tau += tauD;
+		if (VOL)
+			L_n += g_SceneData.m_sVolume.Lve(r(rayT + localDist / 2), -1.0f * r.direction) * localDist;
 #endif
-		Spectrum tauDelta = VOL ? g_SceneData.m_sVolume.tau(r, a, a + minLambda, a_NodeIndex) : sigt * minLambda;
-		Tau += tauDelta;
-		Spectrum o_s = VOL ? g_SceneData.m_sVolume.sigma_s(r(a), -r.direction, a_NodeIndex) : sigs;
-		L_n = L * minLambda + L_n * (-tauDelta).exp() + (VOL ? g_SceneData.m_sVolume.Lve(r(a), -1.0f * r.direction, a_NodeIndex) * minLambda : Spectrum(0.0f));
-
-		a += minLambda;
+		Pos[stepAxis] += Step[stepAxis];
+		if (Pos[stepAxis] > map.m_sHash.m_fGridSize || maxT < NextCrossingT[stepAxis])
+			break;
+		rayT = NextCrossingT[stepAxis];
+		NextCrossingT[stepAxis] += DeltaT[stepAxis];
 	}
 	Tr = (-Tau).exp();
 	return L_n;
@@ -126,12 +148,7 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED
 				unsigned int i0 = map.m_sHash.Hash(Vec3u(a, b, c)), i = map.m_pDeviceHashGrid[i0], NUM = 0;
 				while (i != 0xffffffff && i != 0xffffff && NUM++ < MAX_PHOTONS_PER_CELL)
 				{
-#ifdef ISCUDA
-					uint4 dat = tex1Dfetch(t_Photons, i);
-					k_pPpmPhoton& e = *(k_pPpmPhoton*)&dat;
-#else
-					k_pPpmPhoton e = photonMap.m_pPhotons[i];
-#endif
+					k_pPpmPhoton e = loadPhoton(i, photonMap);
 					Vec3f n = e.getNormal(), wi = e.getWi(), P = e.getPos(map.m_sHash, Vec3u(a,b,c));
 					Spectrum l = e.getL();
 					float dist2 = distanceSquared(P, bRec.dg.P);
@@ -189,7 +206,7 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED
 		unsigned int i0 = map.m_sHash.Hash(Vec3u(a, b, c)), i = map.m_pDeviceHashGrid[i0];
 		while (i != 0xffffffff && i != 0xffffff)
 		{
-			k_pPpmPhoton e = photonMap.m_pPhotons[i];
+			k_pPpmPhoton e = loadPhoton(i, photonMap);
 			Vec3f nor = e.getNormal(), wi = e.getWi(), P = e.getPos(map.m_sHash, Vec3u(a,b,c));
 			Spectrum l = e.getL();
 			float dist2 = distanceSquared(P, bRec.dg.P);
@@ -385,11 +402,6 @@ template<bool DIRECT, bool FINAL_GATHER> __global__ void k_EyePass(Vec2i off, in
 	}
 }
 
-void test(Ray r2, float r, k_PhotonMapCollection<true, k_pPpmPhoton> photonMap)
-{
-	L_Volume<true>(r, g_RNGData(), r2, 0, FLT_MAX, Spectrum(0.0f), Spectrum(0.0f), Spectrum(0.0f), photonMap);
-}
-
 #define TN(r) (r * math::pow(float(m_uPassesDone), -1.0f/6.0f))
 void k_sPpmTracer::RenderBlock(e_Image* I, int x, int y, int blockW, int blockH)
 {
@@ -423,7 +435,8 @@ void k_sPpmTracer::RenderBlock(e_Image* I, int x, int y, int blockW, int blockH)
 void k_sPpmTracer::Debug(e_Image* I, const Vec2i& pixel)
 {
 	StartNewTrace(I);
-	L_Volume<true>(getCurrentRadius2(3), g_RNGData(), Ray(Vec3f(39.592178f,41.220329f,3.317543f), Vec3f(-0.147530f,-0.893036f,0.425113f)), 0, 32.386997f, Spectrum(0.0f), Spectrum(0.0f), Spectrum(0.0f), m_sMaps);
+	L_Volume<true>(getCurrentRadius2(3), g_RNGData(), m_pScene->getCamera()->GenRay(pixel.x, pixel.y), 0, FLT_MAX, Spectrum(0.0f), Spectrum(0.0f), Spectrum(0.0f), m_sMaps);
+	//L_Volume<true>(getCurrentRadius2(3), g_RNGData(), Ray(Vec3f(39.592178f,41.220329f,3.317543f), Vec3f(-0.147530f,-0.893036f,0.425113f)), 0, 32.386997f, Spectrum(0.0f), Spectrum(0.0f), Spectrum(0.0f), m_sMaps);
 	//for (int i = 0; i < w; i++)
 	//	for (int j = 0; j < h; j++)
 	//		L_Volume<true>(r, g_RNGData(), m_pScene->getCamera()->GenRay(i, j), 0, FLT_MAX, Spectrum(0.0f), Spectrum(0.0f), Spectrum(0.0f), m_sMaps);

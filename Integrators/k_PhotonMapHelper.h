@@ -38,8 +38,8 @@ enum PhotonType
 struct k_pPpmPhoton
 {
 private:
-	//Vec3f Pos;
-	unsigned int pos;
+	Vec3f Pos;
+	//unsigned int pos;
 	RGBE L;
 	unsigned short Wi;
 	unsigned short Nor;
@@ -85,14 +85,19 @@ public:
 	}
 	template<typename HASH> CUDA_FUNC_IN void setPos(const HASH& hash, const Vec3u& i, const Vec3f& p)
 	{
-		pos = hash.EncodePos(p, i);
-		//Pos = p;
+		//pos = hash.EncodePos(p, i);
+		Pos = p;
 	}
 	template<typename HASH> CUDA_FUNC_IN Vec3f getPos(const HASH& hash, const Vec3u& i) const
 	{
-		return hash.DecodePos(pos, i);
-		//return Pos;
-	}/*
+		//return hash.DecodePos(pos, i);
+		return Pos;
+	}
+	CUDA_FUNC_IN unsigned short& accessNormalStorage()
+	{
+		return Nor;
+	}
+	/*
 	 CUDA_FUNC_IN k_pPpmPhoton(const uint4& v)
 	 {
 	 Pos = v.x;

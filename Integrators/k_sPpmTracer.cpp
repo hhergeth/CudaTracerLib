@@ -6,7 +6,7 @@
 #include "../Engine/e_Node.h"
 #include "../Engine/e_Mesh.h"
 
-#define LNG 200
+#define LNG 100
 #define SER_NAME "photonMapBuf.dat"
 
 k_sPpmTracer::k_sPpmTracer()
@@ -23,7 +23,7 @@ k_sPpmTracer::k_sPpmTracer()
 	unsigned int linkedListLength = numPhotons * 10;
 	m_sMaps = k_PhotonMapCollection<true, k_pPpmPhoton>(numPhotons, LNG*LNG*LNG, linkedListLength);
 	m_sBeams.m_uGridEntries = LNG*LNG*LNG;
-	m_sBeams.m_uNumEntries = m_sBeams.m_uGridEntries * (1 + 3);
+	m_sBeams.m_uNumEntries = m_sBeams.m_uGridEntries * (1 + 20);
 	CUDA_MALLOC(&m_sBeams.m_pDeviceData, sizeof(Vec2i) * m_sBeams.m_uNumEntries);
 }
 
@@ -125,7 +125,6 @@ void k_sPpmTracer::StartNewTrace(e_Image* I)
 #else
 	AABB m_sEyeBox = m_pScene->getSceneBox();
 #endif
-	m_sEyeBox.Enlarge(0.1f);
 	float r = (m_sEyeBox.maxV - m_sEyeBox.minV).sum() / float(w);
 	m_sEyeBox.minV -= Vec3f(r);
 	m_sEyeBox.maxV += Vec3f(r);

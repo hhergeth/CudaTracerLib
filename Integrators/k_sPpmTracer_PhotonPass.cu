@@ -1,6 +1,7 @@
 #include "k_sPpmTracer.h"
 #include "..\Kernel\k_TraceHelper.h"
 #include "..\Kernel\k_TraceAlgorithms.h"
+#include <Math/half.h>
 
 CUDA_DEVICE k_PhotonMapCollection<true, k_pPpmPhoton> g_Map;
 CUDA_DEVICE bool g_HasVolumePhotons;
@@ -160,6 +161,27 @@ __global__ void reorderPhotonBuffer()
 	}
 }*/
 
+CUDA_FUNC_IN int nnSearch(float r, const Vec3f& p)
+{
+	Vec3u mi = g_Map.m_sVolumeMap.m_sHash.Transform(p - Vec3f(r));
+	Vec3u ma = g_Map.m_sVolumeMap.m_sHash.Transform(p + Vec3f(r));
+	int N = 0;
+	for (unsigned int x = mi.x; x <= ma.x; x++)
+		for (unsigned int y = mi.y; y <= ma.y; y++)
+			for (unsigned int z = mi.z; z <= ma.z; z++)
+			{
+				unsigned int p_idx = g_Map.m_sVolumeMap.m_pDeviceHashGrid[g_Map.m_sVolumeMap.m_sHash.Hash(Vec3u(x,y,z))];
+				while (p_idx != 0xffffffff && p_idx != 0xffffff)
+				{
+					Vec3f p2 = g_Map.m_pPhotons[p_idx].getPos(g_Map.m_sVolumeMap.m_sHash, Vec3u(x, y, z));
+					if (distanceSquared(p, p2) < r * r)
+						N++;
+					p_idx = g_Map.m_pPhotons[p_idx].getNext();
+				}
+			}
+	return N;
+}
+
 CUDA_DEVICE k_BeamMap g_Beams;
 __global__ void buildBeams(float r)
 {
@@ -171,16 +193,21 @@ __global__ void buildBeams(float r)
 		while (p_idx != 0xffffffff && p_idx != 0xffffff)
 		{
 			Vec3f pPos = g_Map.m_pPhotons[p_idx].getPos(g_Map.m_sVolumeMap.m_sHash, ci);
+			//float N = nnSearch(r, pPos);
+			//float r_new = math::clamp(math::sqrt(20 * r * r / N), 0.0f, r);
+			//g_Map.m_pPhotons[p_idx].accessNormalStorage() = half(r_new).bits();
+			//printf("r_new = %f, r = %f\n", r_new, r);
+
 			Vec3u mi = g_Map.m_sVolumeMap.m_sHash.Transform(pPos - Vec3f(r));
 			Vec3u ma = g_Map.m_sVolumeMap.m_sHash.Transform(pPos + Vec3f(r));
-			for (; mi.x <= ma.x; mi.x++)
-				for (; mi.y <= ma.y; mi.y++)
-					for (; mi.z <= ma.z; mi.z++)
+			for (unsigned int x = mi.x; x <= ma.x; x++)
+				for (unsigned int y = mi.y; y <= ma.y; y++)
+					for (unsigned int z = mi.z; z <= ma.z; z++)
 					{
 						unsigned int d_idx = atomicInc(&g_Beams.m_uIndex, -1);
 						if (d_idx >= g_Beams.m_uNumEntries)
 							return;
-						unsigned int n_idx = atomicExch(&g_Beams.m_pDeviceData[g_Map.m_sVolumeMap.m_sHash.Hash(mi)].y, d_idx);
+						unsigned int n_idx = atomicExch(&g_Beams.m_pDeviceData[g_Map.m_sVolumeMap.m_sHash.Hash(Vec3u(x, y, z))].y, d_idx);
 						g_Beams.m_pDeviceData[d_idx] = Vec2i(p_idx, n_idx);
 					}
 			p_idx = g_Map.m_pPhotons[p_idx].getNext();
@@ -221,7 +248,7 @@ void k_sPpmTracer::doPhotonPass()
 		buildBeams << <m_sMaps.m_sVolumeMap.m_uGridLength / (32 * 6) + 1, dim3(32, 6) >> >(getCurrentRadius2(3));
 		cudaMemcpyFromSymbol(&m_sBeams, g_Beams, sizeof(m_sBeams));
 		cudaDeviceSynchronize();
-		if (m_sBeams.m_uIndex == m_sBeams.m_uNumEntries)
+		if (m_sBeams.m_uIndex >= m_sBeams.m_uNumEntries)
 			std::cout << "Beam indices full!\n";
 		//std::cout << "Beam indices index = " << m_sBeams.m_uIndex << ", length = " << m_sBeams.m_uNumEntries << "\n";
 	}
