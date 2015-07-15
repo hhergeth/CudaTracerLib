@@ -160,7 +160,7 @@ __global__ void pathKernel(unsigned int w, unsigned int h, int xoff, int yoff, k
 	g_RNGData(rng);
 }
 
-__global__ void buildHashGrid2()
+/*__global__ void buildHashGrid2()
 {
 	unsigned int idx = threadIdx.y * blockDim.x + threadIdx.x + blockDim.x * blockDim.y * blockIdx.x;
 	if (idx < g_NextMap.m_uPhotonNumEmitted)
@@ -173,7 +173,7 @@ __global__ void buildHashGrid2()
 		unsigned int k = atomicExch(map.m_pDeviceHashGrid + i, idx);
 		e.setNext(k);
 	}
-}
+}*/
 
 void k_VCM::RenderBlock(e_Image* I, int x, int y, int blockW, int blockH)
 {
@@ -189,7 +189,7 @@ void k_VCM::DoRender(e_Image* I)
 
 	k_Tracer<true, true>::DoRender(I);
 	cudaMemcpyFromSymbol(&m_sPhotonMapsNext, g_NextMap, sizeof(m_sPhotonMapsNext));
-	buildHashGrid2 << <m_sPhotonMapsNext.m_uPhotonBufferLength / (32 * 6) + 1, dim3(32, 6, 1) >> >();
+	//buildHashGrid2 << <m_sPhotonMapsNext.m_uPhotonBufferLength / (32 * 6) + 1, dim3(32, 6, 1) >> >();
 	cudaMemcpyFromSymbol(&m_sPhotonMapsCurrent, g_CurrentMap, sizeof(m_sPhotonMapsCurrent));
 	cudaMemcpyFromSymbol(&m_sPhotonMapsNext, g_NextMap, sizeof(m_sPhotonMapsNext));
 

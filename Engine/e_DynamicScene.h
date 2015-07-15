@@ -5,6 +5,7 @@
 #include "e_MeshCompiler.h"
 #include "e_SceneInitData.h"
 #include "e_ShapeSet.h"
+#include <functional>
 
 struct e_TmpVertex;
 class e_AnimatedMesh;
@@ -28,6 +29,7 @@ private:
 	e_TmpVertex* m_pDeviceTmpFloats;
 	e_TmpVertex* m_pHostTmpFloats;
 	unsigned int m_uEnvMapIndex;
+	AABB m_psSceneBoxEnvLight;
 public:
 	e_SceneBVH* m_pBVH;
 	e_Stream<e_TriangleData>* m_pTriDataStream;
@@ -45,6 +47,7 @@ public:
 	std::string m_pCompilePath;
 	e_MeshCompilerManager m_sCmpManager;
 	e_Sensor* m_pCamera;
+	std::function<bool(e_StreamReference<e_TriangleData>, e_StreamReference<e_TriIntersectorData>)> m_sShapeCreationClb;
 protected:
 	friend struct textureLoader;
 	e_BufferReference<e_MIPMap, e_KernelMIPMap> LoadTexture(const std::string& file, bool a_MipMap);

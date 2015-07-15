@@ -59,6 +59,7 @@ ownsTarget = false;
 e_Image::e_Image(int xRes, int yRes, RGBCOL* target)
 	: xResolution(xRes), yResolution(yRes), lastSplatVal(0)
 {
+	ThrowCudaErrors();
 	drawStyle = ImageDrawType::Normal;
 	setStdFilter();
 	CUDA_MALLOC(&cudaPixels, sizeof(Pixel) * xResolution * yResolution);
@@ -75,12 +76,14 @@ e_Image::e_Image(int xRes, int yRes, RGBCOL* target)
 
 void e_Image::Free()
 {
+	ThrowCudaErrors();
 	delete hostPixels;
 	CUDA_FREE(cudaPixels);
 	if(ownsTarget)
 		CUDA_FREE(viewTarget);
 	if(outState == 1)
 		cudaGraphicsUnregisterResource(viewCudaResource);
+	ThrowCudaErrors();
 }
 
 void e_Image::copyToHost()

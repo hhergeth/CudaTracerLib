@@ -136,7 +136,7 @@ void k_BSDFVisualizer::setSkydome(const char* compiledPath)
 	e_BufferReference<e_MIPMap, e_KernelMIPMap> mip = m_pBuffer2->malloc(1); 
 	m_pMipMap = new (mip.operator->())e_MIPMap(in.getFilePath(), in);
 	in.Close();	
-	m_pLight = new e_InfiniteLight(m_pBuffer, mip, Spectrum(1.0f), AABB(Vec3f(0), Vec3f(1)));
+	m_pLight = new e_InfiniteLight(m_pBuffer, mip, Spectrum(1.0f), new AABB(Vec3f(0), Vec3f(1)));
 }
 
 k_BSDFVisualizer::~k_BSDFVisualizer()

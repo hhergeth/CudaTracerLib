@@ -43,19 +43,18 @@ AABB k_TracerBase::GetEyeHitPointBox(e_DynamicScene* m_pScene, bool recursive)
 {
 	ThrowCudaErrors();
 	Vec3u ma = Vec3u(0), mi = Vec3u(UINT_MAX);
-	cudaMemcpyToSymbol(g_EyeHitBoxMin, &mi, 12);
-	cudaMemcpyToSymbol(g_EyeHitBoxMax, &ma, 12);
+	ThrowCudaErrors(cudaMemcpyToSymbol(g_EyeHitBoxMin, &mi, 12));
+	ThrowCudaErrors(cudaMemcpyToSymbol(g_EyeHitBoxMax, &ma, 12));
 	k_INITIALIZE(m_pScene, g_sRngs);
 	int qw = 128, qh = 128, p0 = 16;
 	float a = (float)m_pScene->getCamera()->As()->m_resolution.x / qw, b = (float)m_pScene->getCamera()->As()->m_resolution.y / qh;
 	if(recursive)
 		k_GuessPass<true> <<<dim3( qw/p0, qh/p0, 1), dim3(p0, p0, 1)>>>(qw, qh, a, b);
 	else k_GuessPass<false> <<<dim3( qw/p0, qh/p0, 1), dim3(p0, p0, 1)>>>(qw, qh, a, b);
-	cudaThreadSynchronize();
-	ThrowCudaErrors();
+	ThrowCudaErrors(cudaThreadSynchronize());
 	uint3 minU, maxU;
-	cudaMemcpyFromSymbol(&minU, g_EyeHitBoxMin, 12);
-	cudaMemcpyFromSymbol(&maxU, g_EyeHitBoxMax, 12);
+	ThrowCudaErrors(cudaMemcpyFromSymbol(&minU, g_EyeHitBoxMin, 12));
+	ThrowCudaErrors(cudaMemcpyFromSymbol(&maxU, g_EyeHitBoxMax, 12));
 	AABB m_sEyeBox;
 	m_sEyeBox.minV = Vec3f(float(minU.x), float(minU.y), float(minU.z)) / float(UINT_MAX);
 	m_sEyeBox.maxV = Vec3f(float(maxU.x), float(maxU.y), float(maxU.z)) / float(UINT_MAX);
@@ -119,16 +118,16 @@ __global__ void estimateLightVisibility(int w, int h, float scx, float scy, int 
 float k_TracerBase::GetLightVisibility(e_DynamicScene* s, int recursion_depth)
 {
 	unsigned int zero = 0;
-	cudaMemcpyToSymbol(g_ShotRays, &zero, sizeof(unsigned int));
-	cudaMemcpyToSymbol(g_SuccRays, &zero, sizeof(unsigned int));
+	ThrowCudaErrors(cudaMemcpyToSymbol(g_ShotRays, &zero, sizeof(unsigned int)));
+	ThrowCudaErrors(cudaMemcpyToSymbol(g_SuccRays, &zero, sizeof(unsigned int)));
 	k_INITIALIZE(s, g_sRngs);
 	int qw = 128, qh = 128, p0 = 16;
 	float a = (float)s->getCamera()->As()->m_resolution.x / qw, b = (float)s->getCamera()->As()->m_resolution.y / qh;
 	estimateLightVisibility << <dim3(qw / p0, qh / p0, 1), dim3(p0, p0, 1) >> >(qw, qh, a, b, recursion_depth);
-	cudaThreadSynchronize();
+	ThrowCudaErrors(cudaThreadSynchronize());
 	unsigned int N, S;
-	cudaMemcpyFromSymbol(&N, g_ShotRays, sizeof(unsigned int));
-	cudaMemcpyFromSymbol(&S, g_SuccRays, sizeof(unsigned int));
+	ThrowCudaErrors(cudaMemcpyFromSymbol(&N, g_ShotRays, sizeof(unsigned int)));
+	ThrowCudaErrors(cudaMemcpyFromSymbol(&S, g_SuccRays, sizeof(unsigned int)));
 	return float(S) / float(N);
 }
 
@@ -150,4 +149,5 @@ void k_TracerBase::RenderDepth(e_Image* img, e_DynamicScene* s)
 {
 	k_INITIALIZE(s, g_sRngs);
 	depthKernel << <dim3(img->getWidth() / 16 + 1, img->getHeight() / 16 + 1), dim3(16, 16) >> >(*img);
+	ThrowCudaErrors(cudaThreadSynchronize());
 }

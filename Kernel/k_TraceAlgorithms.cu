@@ -30,7 +30,7 @@ Spectrum Transmittance(const Ray& r, float tmin, float tmax, unsigned int a_Node
 	return Spectrum(1.0f);
 }
 
-CUDA_FUNC_IN Spectrum EstimateDirect(BSDFSamplingRecord bRec, const e_KernelMaterial& mat, const e_KernelLight* light, unsigned int li, EBSDFType flags, CudaRNG& rng)
+CUDA_FUNC_IN Spectrum EstimateDirect(BSDFSamplingRecord bRec, const e_KernelMaterial& mat, const e_KernelLight* light, unsigned int li, EBSDFType flags, CudaRNG& rng, bool attenuated)
 {
 #ifndef EXT_EST
 	DirectSamplingRecord dRec(bRec.dg.P, bRec.dg.sys.n);
@@ -47,6 +47,8 @@ CUDA_FUNC_IN Spectrum EstimateDirect(BSDFSamplingRecord bRec, const e_KernelMate
 			const float bsdfPdf = mat.bsdf.pdf(bRec);
 			const float weight = MonteCarlo::PowerHeuristic(1, dRec.pdf, 1, bsdfPdf);
 			retVal = value * bsdfVal * weight;
+			if (attenuated)
+				retVal *= Transmittance(Ray(dRec.ref, dRec.d), 0, dRec.dist);
 		}
 		bRec.typeMask = EAll;
 		bRec.wo = oldWo;
@@ -111,7 +113,7 @@ CUDA_FUNC_IN Spectrum EstimateDirect(BSDFSamplingRecord bRec, const e_KernelMate
 #endif
 }
 
-Spectrum UniformSampleAllLights(const BSDFSamplingRecord& bRec, const e_KernelMaterial& mat, int nSamples, CudaRNG& rng)
+Spectrum UniformSampleAllLights(const BSDFSamplingRecord& bRec, const e_KernelMaterial& mat, int nSamples, CudaRNG& rng, bool attenuated)
 {
 	//only sample the relevant lights and assume the others emit the same
 	Spectrum L = Spectrum(0.0f);
@@ -122,18 +124,18 @@ Spectrum UniformSampleAllLights(const BSDFSamplingRecord& bRec, const e_KernelMa
 		Spectrum Ld = Spectrum(0.0f);
 		for(int j = 0; j < nSamples; j++)
 		{
-			Ld += EstimateDirect((BSDFSamplingRecord&)bRec, mat, light, l, EBSDFType(EAll & ~EDelta), rng);
+			Ld += EstimateDirect((BSDFSamplingRecord&)bRec, mat, light, l, EBSDFType(EAll & ~EDelta), rng, attenuated);
 		}
 		L += Ld / float(nSamples);
 	}
 	return L;
 }
 
-Spectrum UniformSampleOneLight(const BSDFSamplingRecord& bRec, const e_KernelMaterial& mat, CudaRNG& rng)
+Spectrum UniformSampleOneLight(const BSDFSamplingRecord& bRec, const e_KernelMaterial& mat, CudaRNG& rng, bool attenuated)
 {
 	if(!g_SceneData.m_uEmitterCount)
 		return Spectrum(0.0f);
 	float emitpdf;
 	unsigned int index = g_SceneData.m_uEmitterIndices[g_SceneData.m_emitterPDF.SampleDiscrete(rng.randomFloat(), &emitpdf)];
-	return float(g_SceneData.m_uEmitterCount) * EstimateDirect((BSDFSamplingRecord&)bRec, mat, g_SceneData.m_sLightData.Data + index, index, EBSDFType(EAll & ~EDelta), rng);
+	return float(g_SceneData.m_uEmitterCount) * EstimateDirect((BSDFSamplingRecord&)bRec, mat, g_SceneData.m_sLightData.Data + index, index, EBSDFType(EAll & ~EDelta), rng, attenuated);
 }

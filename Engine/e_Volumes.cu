@@ -2,11 +2,12 @@
 #include "e_Volumes.h"
 #include "../Base/CudaRandom.h"
 #include "e_Samples.h"
+#include "e_Grid.h"
 
-bool e_HomogeneousVolumeDensity::IntersectP(const Ray &ray, const float minT, const float maxT, float *t0, float *t1) const
+bool e_BaseVolumeRegion::IntersectP(const Ray &ray, const float minT, const float maxT, float *t0, float *t1) const
 {
 	Ray r = ray * WorldToVolume;
-	bool b = e_BaseVolumeRegion::Box.Intersect(r, t0, t1);
+	bool b = AABB(Vec3f(0), Vec3f(1)).Intersect(r, t0, t1);
 	if(b)
 	{
 		*t0 = math::clamp(*t0, minT, maxT);
@@ -39,22 +40,20 @@ void e_DenseVolGridBaseType::InvalidateDeviceData(e_Stream<char>* a_Buffer)
 	a_Buffer->translate(data).Invalidate();
 }
 
-e_VolumeGrid::e_VolumeGrid(const e_PhaseFunction& func, const float4x4 volToWorld, e_Stream<char>* a_Buffer, Vec3u dim)
+e_VolumeGrid::e_VolumeGrid(const e_PhaseFunction& func, const float4x4& ToWorld, e_Stream<char>* a_Buffer, Vec3u dim)
 	: grid(a_Buffer, dim), singleGrid(true)
 {
-	VolumeToWorld = volToWorld;
-	WorldToVolume = volToWorld.inverse();
+	VolumeToWorld = ToWorld;
 	e_BaseVolumeRegion::Func = func;
 	sigAMin = sigSMin = leMin = Spectrum(0.0f);
 	sigAMax = sigSMax = leMax = Spectrum(1.0f);
 	Update();
 }
 
-e_VolumeGrid::e_VolumeGrid(const e_PhaseFunction& func, const float4x4 volToWorld, e_Stream<char>* a_Buffer, Vec3u dimA, Vec3u dimS, Vec3u dimL)
+e_VolumeGrid::e_VolumeGrid(const e_PhaseFunction& func, const float4x4& ToWorld, e_Stream<char>* a_Buffer, Vec3u dimA, Vec3u dimS, Vec3u dimL)
 	: gridA(a_Buffer, dimA), gridS(a_Buffer, dimS), gridL(a_Buffer, dimL), singleGrid(false)
 {
-	VolumeToWorld = volToWorld;
-	WorldToVolume = volToWorld.inverse();
+	VolumeToWorld = ToWorld;
 	e_BaseVolumeRegion::Func = func;
 	sigAMin = sigSMin = leMin = Spectrum(0.0f);
 	sigAMax = sigSMax = leMax = Spectrum(1.0f);
@@ -63,7 +62,7 @@ e_VolumeGrid::e_VolumeGrid(const e_PhaseFunction& func, const float4x4 volToWorl
 
 void e_VolumeGrid::Update()
 {
-	e_BaseVolumeRegion::Box = AABB(Vec3f(0), Vec3f(1)).Transform(VolumeToWorld);
+	e_BaseVolumeRegion::Update();
 	float dimf[] = { (float)grid.dim.x - 1, (float)grid.dim.y - 1, (float)grid.dim.z - 1 };
 	if (!singleGrid)
 	{
@@ -77,20 +76,10 @@ void e_VolumeGrid::Update()
 		}
 	}
 	m_stepSize = FLT_MAX;
+	Vec3f size = VolumeToWorld.Scale();
 	for (int i = 0; i < 3; i++)
-		m_stepSize = min(m_stepSize, (Box.maxV[i] - Box.minV[i]) / dimf[i]);
+		m_stepSize = min(m_stepSize, size[i] / dimf[i]);
 	m_stepSize /= 2.0f;
-}
-
-bool e_VolumeGrid::IntersectP(const Ray &ray, const float minT, const float maxT, float *t0, float *t1) const
-{
-	bool b = e_BaseVolumeRegion::Box.Intersect(ray, t0, t1);
-	if (b)
-	{
-		*t0 = math::clamp(*t0, minT, maxT);
-		*t1 = math::clamp(*t1, minT, maxT);
-	}
-	return b && *t1 > *t0 && *t1 > 0;
 }
 
 Spectrum e_VolumeGrid::tau(const Ray &ray, const float minT, const float maxT) const
@@ -126,10 +115,11 @@ Spectrum e_VolumeGrid::tau(const Ray &ray, const float minT, const float maxT) c
 	return tau * step;*/
 }
 
-float e_VolumeGrid::integrateDensity(const Ray& ray, float minT, float maxT) const
+float e_VolumeGrid::integrateDensity(const Ray& ray, float t0, float t1) const
 {
-	float length = maxT - minT, maxComp = 0;
-	Vec3f p = ray(minT), pLast = ray(maxT);
+#if 0
+	float length = t1 - t0, maxComp = 0;
+	Vec3f p = ray(t0), pLast = ray(t1);
 	float pf[] = { p.x, p.y, p.z };
 	float pLastf[] = { pLast.x, pLast.y, pLast.z };
 	for (int i = 0; i<3; ++i)
@@ -157,31 +147,86 @@ float e_VolumeGrid::integrateDensity(const Ray& ray, float minT, float maxT) con
 		p = next;
 	}
 	return integratedDensity * m_scale * stepSize * (1.0f / 3.0f);
+#endif
+
+	Ray rayL = ray * WorldToVolume;
+	float Td = rayL.direction.length();
+	float minTL = t0 * Td, maxTL = t1 * Td;
+	rayL.direction.normalize();
+	float integratedDensity = 0;
+	TraverseGrid(rayL, minTL, maxTL, [&](float minT, float rayT, float maxT, float cellEndT, Vec3u& cell_pos, bool& cancelTraversal)
+	{
+		float d0 = 2 * grid.sampleTrilinear(grid.dimF * rayL(rayT)), d1 = 2 * grid.sampleTrilinear(grid.dimF * rayL(cellEndT)), d = (d0 + d1) / 2.0f;
+		integratedDensity += d * (cellEndT - rayT);
+		/*
+		//Performs analytic integration over the cell, somewhat buggy
+		unsigned char xFlag = 0x66, zFlag = 0xcc;
+		float V[8];
+		for (int i = 0; i < 8; i++)
+			V[i] = grid.value(cell_pos.x + ((xFlag >> i) & 1), cell_pos.y + i / 4, cell_pos.z + ((zFlag >> i) & 1));
+		Vec3f r = rayL(rayT) * grid.dimF - Vec3f(cell_pos.x, cell_pos.y, cell_pos.z);
+		float t1 = cellEndT - rayT, t2 = t1 * t1, t3 = t1 * t1 * t1;
+		Vec3f R = r * t1 + 0.5f * rayL.direction * t2;
+		float Rxy = r.x * r.y * t1 + 0.5f * r.x * rayL.direction.y * t2 + 0.5f * r.y * rayL.direction.x * t2 + 1.0f / 3.0f * rayL.direction.x * rayL.direction.y * t3;
+		float Ryz = r.y * r.z * t1 + 0.5f * r.y * rayL.direction.z * t2 + 0.5f * r.z * rayL.direction.y * t2 + 1.0f / 3.0f * rayL.direction.y * rayL.direction.z * t3;
+		float Rxz = r.x * r.z * t1 + 0.5f * r.x * rayL.direction.z * t2 + 0.5f * r.z * rayL.direction.x * t2 + 1.0f / 3.0f * rayL.direction.x * rayL.direction.z * t3;
+		integratedDensity += t1 * V[0] + (V[1] - V[0]) * R.x + (V[3] - V[0]) * R.z + (V[2] + V[0] - V[3] - V[1]) * Rxz;
+		integratedDensity += (V[0] - V[4]) * R.y + (V[1] - V[0] - V[5] + V[4]) * Rxy + (V[3] - V[0] - V[7] + V[4]) * Ryz;*/
+	}, AABB(Vec3f(0), Vec3f(1)), grid.dimF);
+	return integratedDensity * (t1 - t0) / (maxTL - minTL);
+
 }
 
-bool e_VolumeGrid::invertDensityIntegral(const Ray& ray, float minT, float maxT, float desiredDensity,
+bool e_VolumeGrid::invertDensityIntegral(const Ray& ray, float t0, float t1, float desiredDensity,
 										 float &integratedDensity, float &t, float &densityAtMinT, float &densityAtT) const
 {
+
 	integratedDensity = densityAtMinT = densityAtT = 0.0f;
-	float length = maxT - minT, maxComp = 0;
-	Vec3f p = ray(minT), pLast = ray(maxT);
-	float pf[] = {p.x, p.y, p.z};
-	float pLastf[] = { pLast.x, pLast.y, pLast.z };
+	Ray rayL = ray * WorldToVolume;
+	float Td = rayL.direction.length();
+	float minTL = t0 * Td, maxTL = t1 * Td;
+	rayL.direction.normalize();
+	bool found = false;
+	densityAtMinT = sigma_t(ray(t0), Vec3f(0)).average();
+	TraverseGrid(rayL, minTL, maxTL, [&](float minT, float rayT, float maxT, float cellEndT, Vec3u& cell_pos, bool& cancelTraversal)
+	{
+		float d0 = grid.sampleTrilinear(grid.dimF * rayL(rayT)) * (sigAMax + sigSMax).average(),
+			  d1 = grid.sampleTrilinear(grid.dimF * rayL(cellEndT)) * (sigAMax + sigSMax).average(),
+			  d = (d0 + d1) / 2.0f;
+		float D = d * (cellEndT - rayT) * (t1 - t0) / (maxTL - minTL);
+		if (found)
+			printf("Already found!\n");
+		if(integratedDensity + D > desiredDensity)
+		{
+			densityAtT = d;
+			t = (desiredDensity - integratedDensity) / d + rayT * (t1 - t0) / (maxTL - minTL);
+			integratedDensity = desiredDensity;
+			found = true;
+			cancelTraversal = true;
+		}
+		else integratedDensity += D;
+	}, AABB(Vec3f(0), Vec3f(1)), grid.dimF);
+	return found;
+
+#if 0
+	integratedDensity = densityAtMinT = densityAtT = 0.0f;
+	float length = t1 - t0, maxComp = 0;
+	Vec3f p = ray(t0), pLast = ray(t1);
 	for (int i = 0; i<3; ++i)
-		maxComp = max(max(maxComp, math::abs(pf[i])), math::abs(pLastf[i]));
+		maxComp = max(max(maxComp, math::abs(p[i])), math::abs(pLast[i]));
 	if (length < 1e-6f * maxComp)
 		return 0.0f;
 	float m_scale = 1;
 	unsigned int nSteps = (unsigned int)ceilf(length / (2 * m_stepSize));
 	float stepSize = length / nSteps, multiplier = (1.0f / 6.0f) * stepSize * m_scale;
 	Vec3f fullStep = ray.direction * stepSize, halfStep = fullStep * .5f;
-	float node1 = densityT(p);
+	float node1 = sigma_t(p, Vec3f(0)).average();
 	densityAtMinT = node1 * m_scale;
 	for (unsigned int i = 0; i < nSteps; ++i)
 	{
-		float node2 = densityT(p + halfStep),
-			  node3 = densityT(p + fullStep),
-			  newDensity = integratedDensity + multiplier * (node1 + node2 * 4 + node3);
+		float node2 = sigma_t(p + halfStep, Vec3f(0.0f)).average(),
+			  node3 = sigma_t(p + fullStep, Vec3f(0.0f)).average();
+		float newDensity = integratedDensity + multiplier * (node1 + node2 * 4 + node3);
 		if (newDensity >= desiredDensity)
 		{
 			/*float a = 0, b = stepSize, x = a,
@@ -222,16 +267,12 @@ bool e_VolumeGrid::invertDensityIntegral(const Ray& ray, float minT, float maxT,
 				else
 					a = x;
 			}*/
-			//float c = 0, a = (node3 - node1 - 2 * (node2 - node1)) / (stepSize * stepSize * 0.5f), b = (node3 - node1 - a * stepSize * stepSize) / stepSize, d = desiredDensity - integratedDensity - node1;
-			//float q0 = (1.73205080757f*math::sqrt(d*(6 * a * a * d - b * b * b)) / (2.82842712475f * a * a) + (12 * a * a * d - b * b * b) / (8 * a * a * a)), q1 = math::pow(q0, 1.0f / 3.0f);
-			//t = minT + stepSize * i + q1 + b * b / (4 * a * a * q1) - b / (2 * a);
-			//return true;
 			float V = desiredDensity - integratedDensity, s = (node3 - node1) / (2 * stepSize);
 			float r = (node1 * node1) / (4 * stepSize * stepSize) + V / stepSize;
 			if (r < 0)
 				printf("r = %f\n", r);
 			float tl = -node1 / (2 * stepSize) + math::sqrt(r);
-			t = minT + stepSize * i + tl;
+			t = t0 + stepSize * i + tl;
 			integratedDensity = desiredDensity;
 			densityAtT = s * tl + node1;
 			return true;
@@ -247,6 +288,7 @@ bool e_VolumeGrid::invertDensityIntegral(const Ray& ray, float minT, float maxT,
 		p = next;
 	}
 	return false;
+#endif
 }
 
 bool e_VolumeGrid::sampleDistance(const Ray& ray, float minT, float maxT, float sample, MediumSamplingRecord& mRec) const
@@ -258,7 +300,6 @@ bool e_VolumeGrid::sampleDistance(const Ray& ray, float minT, float maxT, float 
 	if (!IntersectP(rn, minT * length, maxT * length, &t0, &t1)) return 0.;
 	float integratedDensity, densityAtMinT, densityAtT;
 	float desiredDensity = -logf(1 - sample);
-	float sigta = sigma_t(rn(t0), rn.direction).average();
 	bool success = false;
 	if (invertDensityIntegral(rn, t0, t1, desiredDensity, integratedDensity, mRec.t, densityAtMinT, densityAtT))
 	{

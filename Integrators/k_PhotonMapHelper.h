@@ -195,7 +195,6 @@ template<bool HAS_MULTIPLE_MAPS, typename PHOTON> struct k_PhotonMapCollection
 	k_PhotonMap<k_HashGrid_Reg> m_sVolumeMap;
 	k_PhotonMap<k_HashGrid_Reg> m_sCausticMap;
 	PHOTON* m_pPhotons;// , *m_pPhotons2;
-	Vec3f* m_pPhotonPositions;
 	unsigned int m_uPhotonBufferLength;
 	unsigned int m_uPhotonNumStored;
 	unsigned int m_uPhotonNumEmitted;
@@ -206,7 +205,7 @@ template<bool HAS_MULTIPLE_MAPS, typename PHOTON> struct k_PhotonMapCollection
 	}
 
 	k_PhotonMapCollection(unsigned int a_BufferLength, unsigned int a_HashNum, unsigned int linkedListLength)
-		: m_pPhotons(0), m_pPhotonPositions(0)//, m_pPhotons2(0)
+		: m_pPhotons(0)
 	{
 		m_sSurfaceMap = k_PhotonMap<k_HashGrid_Reg>(a_HashNum);
 		if (HAS_MULTIPLE_MAPS)
@@ -256,8 +255,6 @@ template<bool HAS_MULTIPLE_MAPS, typename PHOTON> struct k_PhotonMapCollection
 			m_sCausticMap.Free();
 		}
 		CUDA_FREE(m_pPhotons);
-		//CUDA_FREE(m_pPhotons2);
-		CUDA_FREE(m_pPhotonPositions);
 	}
 
 	void Resize(unsigned int a_BufferLength, unsigned int linkedListLength)
@@ -270,9 +267,6 @@ template<bool HAS_MULTIPLE_MAPS, typename PHOTON> struct k_PhotonMapCollection
 		//	CUDA_FREE(m_pPhotons2);
 		//CUDA_MALLOC(&m_pPhotons2, sizeof(PHOTON)* a_BufferLength);
 		//cudaMemset(m_pPhotons2, 0, sizeof(PHOTON)* a_BufferLength);
-		if (m_pPhotonPositions)
-			CUDA_FREE(m_pPhotonPositions);
-		CUDA_MALLOC(&m_pPhotonPositions, sizeof(Vec3f) * a_BufferLength);
 		m_uPhotonBufferLength = a_BufferLength;
 		m_sSurfaceMap.Resize(linkedListLength);
 		if (HAS_MULTIPLE_MAPS)
@@ -313,21 +307,33 @@ template<bool HAS_MULTIPLE_MAPS, typename PHOTON> struct k_PhotonMapCollection
 typedef k_PhotonMap<k_HashGrid_Reg> k_PhotonMapReg;
 
 #ifdef __CUDACC__
-template<typename PHOTON> CUDA_ONLY_FUNC bool storePhoton(const Vec3f& p, const Spectrum& phi, const Vec3f& wi, const Vec3f& n, PhotonType type, k_PhotonMapCollection<true, PHOTON>& g_Map)
+template<typename PHOTON> CUDA_ONLY_FUNC bool storePhoton(const Vec3f& pos, const Spectrum& phi, const Vec3f& wi, const Vec3f& n, PhotonType type, k_PhotonMapCollection<true, PHOTON>& g_Map, bool final_gather)
 {
 	unsigned int p_idx = atomicInc(&g_Map.m_uPhotonNumStored, 0xffffffff);
 	if (p_idx < g_Map.m_uPhotonBufferLength)
 	{
-		g_Map.m_pPhotons[p_idx] = PHOTON(phi, wi, n, type);
-		g_Map.m_pPhotonPositions[p_idx] = p;
+		{
+			PHOTON p = PHOTON(phi, wi, n, type);
+			const k_PhotonMap<k_HashGrid_Reg>& map = type == pt_Volume ? g_Map.m_sVolumeMap :  g_Map.m_sSurfaceMap;
+			p.setPos(map.m_sHash, map.m_sHash.Transform(pos), pos);
+			unsigned int grid_idx = map.m_sHash.Hash(pos);
+			unsigned int k = atomicExch(map.m_pDeviceHashGrid + grid_idx, p_idx);
+			p.setNext(k);
+			g_Map.m_pPhotons[p_idx] = p;
+		}
 		//if this photon is caustic we will also have to store it in the diffuse map
-		if (type == PhotonType::pt_Caustic)
+		if (type == PhotonType::pt_Caustic && final_gather)
 		{
 			p_idx = atomicInc(&g_Map.m_uPhotonNumStored, 0xffffffff);
 			if (p_idx < g_Map.m_uPhotonBufferLength)
 			{
-				g_Map.m_pPhotons[p_idx] = PHOTON(phi, wi, n, PhotonType::pt_Diffuse);
-				g_Map.m_pPhotonPositions[p_idx] = p;
+				PHOTON p = PHOTON(phi, wi, n, PhotonType::pt_Diffuse);
+				const k_PhotonMap<k_HashGrid_Reg>& map = g_Map.m_sCausticMap;
+				p.setPos(map.m_sHash, map.m_sHash.Transform(pos), pos);
+				unsigned int grid_idx = map.m_sHash.Hash(pos);
+				unsigned int k = atomicExch(map.m_pDeviceHashGrid + grid_idx, p_idx);
+				p.setNext(k);
+				g_Map.m_pPhotons[p_idx] = p;
 			}
 		}
 		return true;
@@ -335,13 +341,18 @@ template<typename PHOTON> CUDA_ONLY_FUNC bool storePhoton(const Vec3f& p, const 
 	else return false;
 }
 
-template<typename PHOTON> CUDA_ONLY_FUNC bool storePhoton(const Vec3f& p, const Spectrum& phi, const Vec3f& wi, const Vec3f& n, PhotonType type, k_PhotonMapCollection<false, PHOTON>& g_Map, PHOTON** resPhoton = 0)
+template<typename PHOTON> CUDA_ONLY_FUNC bool storePhoton(const Vec3f& pos, const Spectrum& phi, const Vec3f& wi, const Vec3f& n, PhotonType type, k_PhotonMapCollection<false, PHOTON>& g_Map, PHOTON** resPhoton = 0)
 {
 	unsigned int p_idx = atomicInc(&g_Map.m_uPhotonNumStored, 0xffffffff);
 	if (p_idx < g_Map.m_uPhotonBufferLength)
 	{
-		g_Map.m_pPhotons[p_idx] = PHOTON(phi, wi, n, type);
-		g_Map.m_pPhotonPositions[p_idx] = p;
+		PHOTON p = PHOTON(phi, wi, n, type);
+		const k_PhotonMap<k_HashGrid_Reg>& map = type == pt_Volume ? g_Map.m_sVolumeMap :  g_Map.m_sSurfaceMap;
+		p.setPos(map.m_sHash, map.m_sHash.Transform(pos), pos);
+		unsigned int grid_idx = map.m_sHash.Hash(pos);
+		unsigned int k = atomicExch(map.m_pDeviceHashGrid + grid_idx, p_idx);
+		p.setNext(k);
+		g_Map.m_pPhotons[p_idx] = p;
 		if (resPhoton)
 			*resPhoton = g_Map.m_pPhotons + p_idx;
 		return true;

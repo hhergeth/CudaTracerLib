@@ -317,12 +317,9 @@ Spectrum e_SpotLight::falloffCurve(const Vec3f &d) const
 	return ((m_cutoffAngle - acosf(cosTheta)) * m_invTransitionWidth);
 }
 
-e_InfiniteLight::e_InfiniteLight(e_Stream<char>* a_Buffer, e_BufferReference<e_MIPMap, e_KernelMIPMap>& mip, const Spectrum& scale, const AABB& scenBox)
-	: e_LightBase(false), radianceMap(mip->getKernelData()), m_SceneCenter(scenBox.Center()), m_SceneRadius(length(scenBox.Size()) / 1.5f), m_scale(scale)
+e_InfiniteLight::e_InfiniteLight(e_Stream<char>* a_Buffer, e_BufferReference<e_MIPMap, e_KernelMIPMap>& mip, const Spectrum& scale, const AABB* scenBox)
+	: e_LightBase(false), radianceMap(mip->getKernelData()), m_scale(scale), m_pSceneBox(scenBox)
 {
-	float surfaceArea = 4 * PI * m_SceneRadius * m_SceneRadius;
-	m_invSurfaceArea = 1 / surfaceArea;
-
 	m_size = Vec2f(radianceMap.m_uWidth, radianceMap.m_uHeight);
 	unsigned int nEntries = (unsigned int) (m_size.x + 1) * (unsigned int) m_size.y;
 	e_StreamReference<char> m1 = a_Buffer->malloc(nEntries * sizeof(float)), m2 = a_Buffer->malloc((m_size.y + 1) * sizeof(float)), m3 = a_Buffer->malloc(m_size.y * sizeof(float));
@@ -365,8 +362,6 @@ e_InfiniteLight::e_InfiniteLight(e_Stream<char>* a_Buffer, e_BufferReference<e_M
 
 	float lvl = 0.65f, qpdf;
 	unsigned int INDEX = sampleReuse(m_cdfRows.operator->(), m_size.y, lvl, qpdf);
-
-	m_power = (surfaceArea * m_scale / m_normalization).average();
 
 	m_worldTransform = m_worldTransformInverse = float4x4::Identity();
 }

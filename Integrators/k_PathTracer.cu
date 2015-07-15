@@ -8,38 +8,68 @@ CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_NextRayCounter;
 
 template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(Ray& r, const Ray& rX, const Ray& rY, CudaRNG& rnd)
 {
-	TraceResult r2;
-	r2.Init();
 	Spectrum cl = Spectrum(0.0f);   // accumulated color
 	Spectrum cf = Spectrum(1.0f);  // accumulated reflectance
 	int depth = 0;
 	bool specularBounce = false;
 	DifferentialGeometry dg;
 	BSDFSamplingRecord bRec(dg);
-	while (k_TraceRay(r.direction, r.origin, &r2) && depth++ < 7)
+	e_KernelAggregateVolume& V = g_SceneData.m_sVolume;
+	MediumSamplingRecord mRec;
+	TraceResult r2;
+	while (depth++ < 10)
 	{
-		r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rnd);// return (Spectrum(bRec.map.sys.n) + Spectrum(1)) / 2.0f; //return bRec.map.sys.n;
-		if (depth == 1)
-			dg.computePartials(r, rX, rY);
-		if (!DIRECT || (depth == 1 || specularBounce))
-			cl += cf * r2.Le(bRec.dg.P, bRec.dg.sys, -r.direction);
-		Spectrum f = r2.getMat().bsdf.sample(bRec, rnd.randomFloat2());
-		if (DIRECT)
-			cl += cf * UniformSampleOneLight(bRec, r2.getMat(), rnd);
-		specularBounce = (bRec.sampledType & EDelta) != 0;
+		r2 = k_TraceRay(r);
+		float minT, maxT;
+		bool isInMedium = V.IntersectP(r, 0, r2.m_fDist, &minT, &maxT);
+		if (V.HasVolumes() && isInMedium && V.sampleDistance(r, 0, r2.m_fDist, rnd, mRec))
+		{
+			cf *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
+			
+			if (DIRECT)//direct sampling
+			{
+				DirectSamplingRecord dRec(mRec.p, Vec3f(0));
+				Spectrum value = g_SceneData.sampleEmitterDirect(dRec, rnd.randomFloat2());
+				if (!value.isZero())
+				{
+					float p = V.p(mRec.p, -r.direction, dRec.d, rnd);
+					if (p != 0 && !g_SceneData.Occluded(Ray(dRec.ref, dRec.d), 0, dRec.dist))
+					{
+						const float bsdfPdf = p;//phase functions are normalized
+						const float weight = MonteCarlo::PowerHeuristic(1, dRec.pdf, 1, bsdfPdf);
+						cl += cf * value * p * weight * Transmittance(Ray(dRec.ref, dRec.d), 0, dRec.dist);
+					}
+				}
+			}
+
+			cf *= V.Sample(mRec.p, -r.direction, rnd, &r.direction);
+			r.origin = mRec.p;
+		}
+		else if (r2.hasHit())
+		{
+			if (isInMedium)
+				cf *= Transmittance(r, 0, r2.m_fDist);
+			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rnd);
+			if (depth == 1)
+				dg.computePartials(r, rX, rY);
+			if (!DIRECT || (depth == 1 || specularBounce))
+				cl += cf * r2.Le(bRec.dg.P, bRec.dg.sys, -r.direction);
+			Spectrum f = r2.getMat().bsdf.sample(bRec, rnd.randomFloat2());
+			if (DIRECT)
+				cl += cf * UniformSampleOneLight(bRec, r2.getMat(), rnd, true);
+			specularBounce = (bRec.sampledType & EDelta) != 0;
+			cf = cf * f;
+			r = Ray(dg.P, bRec.getOutgoing());
+		}
 		if (depth > 5)
 		{
-			if (rnd.randomFloat() < f.max())
-				f = f / f.max();
-			else break;
+			if (rnd.randomFloat() >= cf.max())
+				break;
+			cf /= cf.max();
 		}
-		cf = cf * f;
-		r = Ray(dg.P, bRec.getOutgoing());
-		r2.Init();
 	}
-	if (!r2.hasHit() && depth == 0)
-		cl = cf * g_SceneData.EvalEnvironment(r, rX, rY);
-	else cl += cf * g_SceneData.EvalEnvironment(r);
+	if (!r2.hasHit())
+		cl += cf * g_SceneData.EvalEnvironment(r);
 	return cl;
 }
 

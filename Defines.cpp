@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <cuda_runtime.h>
 #include <iostream>
+#include <Base/Platform.h>
 
 #ifdef ISWINDOWS
 #include <Windows.h>
@@ -11,7 +12,6 @@
 
 void fail(const char* format, ...)
 {
-
 	va_list arglist;
 	va_start(arglist, format);
 	vprintf(format, arglist);
@@ -27,24 +27,19 @@ void fail(const char* format, ...)
 	throw std::runtime_error("");
 }
 
-void ThrowCudaErrors()
+void __ThrowCudaErrors__(const char* file, int line, ...)
 {
-	cudaError r = cudaGetLastError();
+	va_list ap;
+	va_start(ap, line);
+	int arg = va_arg(ap, int);
+	va_end(ap);
+	cudaError_t r = arg == -1 ? cudaGetLastError() : (cudaError_t)arg;
 	if (r)
 	{
 		const char* msg = cudaGetErrorString(r);
-		std::cout << msg;
-		throw std::runtime_error(msg);
-	}
-}
-
-void ThrowCudaErrors(cudaError r)
-{
-	if (r)
-	{
-		const char* msg = cudaGetErrorString(r);
-		std::cout << msg;
-		throw std::runtime_error(msg);
+		auto er = format("In file '%s' at line %d : %s\n", file, line, msg);
+		std::cout << er;
+		throw std::runtime_error(er);
 	}
 }
 

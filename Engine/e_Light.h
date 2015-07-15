@@ -312,10 +312,21 @@ struct e_InfiniteLight : public e_LightBase//, public e_DerivedTypeHelper<5>
 	Vec2f m_size, m_pixelSize;
 	Spectrum m_scale;
 	float4x4 m_worldTransform, m_worldTransformInverse;
+
+	const AABB* m_pSceneBox;
 	
 	CUDA_FUNC_IN e_InfiniteLight() {}
 
-	CUDA_HOST e_InfiniteLight(e_Stream<char>* a_Buffer, e_BufferReference<e_MIPMap, e_KernelMIPMap>& mip, const Spectrum& scale, const AABB& scenBox);
+	CUDA_HOST e_InfiniteLight(e_Stream<char>* a_Buffer, e_BufferReference<e_MIPMap, e_KernelMIPMap>& mip, const Spectrum& scale, const AABB* scenBox);
+
+	virtual void Update()
+	{
+		m_SceneCenter = m_pSceneBox->Center();
+		m_SceneRadius = m_pSceneBox->Size().length() / 1.5f;
+		float surfaceArea = 4 * PI * m_SceneRadius * m_SceneRadius;
+		m_invSurfaceArea = 1 / surfaceArea;
+		m_power = (surfaceArea * m_scale / m_normalization).average();
+	}
 
 	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
 

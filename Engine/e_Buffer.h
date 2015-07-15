@@ -5,12 +5,14 @@
 #include <algorithm>
 #include <iostream>
 #include <limits>
+#include <utility>
 #include <type_traits>
 #include <boost/icl/interval_set.hpp>
 
 #include "e_Buffer_device.h"
 #include "../Base/Platform.h"
 #include "../CudaMemoryManager.h"
+#include "../VirtualFuncType.h"
 
 template<typename H, typename D> class e_BufferIterator;
 template<typename H, typename D> class e_BufferRange
@@ -193,7 +195,9 @@ public:
 
 	void UpdateInvalidated()
 	{
-		struct f{ void operator()(e_BufferReference<H, D>){} };
+		struct f{ void operator()(e_BufferReference<H, D> r)
+		{ 
+		} };
 		f _f;
 		UpdateInvalidated(_f);
 	}

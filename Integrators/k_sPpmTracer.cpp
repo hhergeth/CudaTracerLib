@@ -6,7 +6,7 @@
 #include "../Engine/e_Node.h"
 #include "../Engine/e_Mesh.h"
 
-#define LNG 100
+#define LNG 50
 #define SER_NAME "photonMapBuf.dat"
 
 k_sPpmTracer::k_sPpmTracer()
@@ -22,9 +22,21 @@ k_sPpmTracer::k_sPpmTracer()
 	unsigned int numPhotons = (m_uBlocksPerLaunch + 2) * PPM_slots_per_block;
 	unsigned int linkedListLength = numPhotons * 10;
 	m_sMaps = k_PhotonMapCollection<true, k_pPpmPhoton>(numPhotons, LNG*LNG*LNG, linkedListLength);
+	m_sBeams.m_pDeviceData = 0;
+	m_sPhotonBeams.m_pGrid = 0;
+	m_sPhotonBeams.m_pDeviceBeams = 0;
+	
 	m_sBeams.m_uGridEntries = LNG*LNG*LNG;
-	m_sBeams.m_uNumEntries = m_sBeams.m_uGridEntries * (1 + 20);
-	CUDA_MALLOC(&m_sBeams.m_pDeviceData, sizeof(Vec2i) * m_sBeams.m_uNumEntries);
+	m_sBeams.m_uNumEntries = m_sBeams.m_uGridEntries * (1 + 250);
+	//CUDA_MALLOC(&m_sBeams.m_pDeviceData, sizeof(Vec2i) * m_sBeams.m_uNumEntries);
+
+	m_sPhotonBeams.m_uBeamIdx = 0;
+	m_sPhotonBeams.m_uBeamLength = 100000;
+	//CUDA_MALLOC(&m_sPhotonBeams.m_pDeviceBeams, sizeof(k_Beam) * m_sPhotonBeams.m_uBeamLength);
+	m_sPhotonBeams.m_uGridIdx = 0;
+	m_sPhotonBeams.m_uGridOffset = LNG*LNG*LNG;
+	m_sPhotonBeams.m_uGridLength = m_sPhotonBeams.m_uGridOffset * (1 + 1000);
+	//CUDA_MALLOC(&m_sPhotonBeams.m_pGrid, sizeof(Vec2i) * m_sPhotonBeams.m_uGridLength);
 }
 
 void k_sPpmTracer::PrintStatus(std::vector<std::string>& a_Buf) const
@@ -37,6 +49,7 @@ void k_sPpmTracer::PrintStatus(std::vector<std::string>& a_Buf) const
 	a_Buf.push_back(format("Photons per pass : %d*100,000", m_sMaps.m_uPhotonBufferLength / 100000));
 	if (m_bVisualizeGrid)
 		a_Buf.push_back(format("Max #Photons per cell : %d", m_uVisLastMax));
+	a_Buf.push_back(format("Final gather %d", m_bFinalGather));
 }
 
 void k_sPpmTracer::CreateSliders(SliderCreateCallback a_Callback) const
@@ -50,7 +63,7 @@ void k_sPpmTracer::Resize(unsigned int _w, unsigned int _h)
 	k_Tracer<true, true>::Resize(_w, _h);
 	if(m_pEntries)
 		CUDA_FREE(m_pEntries);
-	CUDA_MALLOC(&m_pEntries, sizeof(k_AdaptiveEntry) * _w * _h);
+	//CUDA_MALLOC(&m_pEntries, sizeof(k_AdaptiveEntry) * _w * _h);
 }
 /*
 void print(k_PhotonMapCollection& m_sMaps, k_PhotonMap<k_HashGrid_Reg>& m_Map, std::string name)
@@ -94,9 +107,10 @@ void print(k_PhotonMapCollection& m_sMaps, k_PhotonMap<k_HashGrid_Reg>& m_Map, s
 	std::cout << s;
 	OutputDebugString(s.c_str());
 }*/
-
+static Vec2i lastPix = Vec2i(0,0);
 void k_sPpmTracer::DoRender(e_Image* I)
 {
+	//I->Clear();
 	doPhotonPass();
 	if (m_uPhotonsEmitted == 0)
 	{
@@ -106,7 +120,18 @@ void k_sPpmTracer::DoRender(e_Image* I)
 	if (m_bVisualizeGrid)
 		visualizeGrid(I);
 	else k_Tracer<true, true>::DoRender(I);
+
+	//k_AdaptiveStruct str(r_min, r_max, m_pEntries, w, m_uPassesDone);
+	//k_AdaptiveEntry ent;
+	//ThrowCudaErrors(cudaMemcpy(&ent, &str(lastPix.x, lastPix.y), sizeof(ent), cudaMemcpyDeviceToHost));
+	//printf("{r = %f, rd = %f}, r = %f, {min = %f, max = %f}\n", ent.r, ent.rd, getCurrentRadius2(2), str.r_min, str.r_max);
+
 	m_sMaps.StartNewPass();
+}
+
+void k_sPpmTracer::Debug(e_Image* I, const Vec2i& pixel)
+{
+	lastPix = pixel;
 }
 
 void k_sPpmTracer::StartNewTrace(e_Image* I)
@@ -149,9 +174,9 @@ void k_sPpmTracer::StartNewTrace(e_Image* I)
 	m_sMaps.StartNewRendering(m_sEyeBox, volBox, r);
 	m_sMaps.StartNewPass();
 
-	float r_scene = length(m_pScene->getKernelSceneData().m_sBox.Size()) / 2;
+	float r_scene = m_sEyeBox.Size().length() / 2;
 	r_min = 10e-7f * r_scene;
 	r_max = 10e-3f * r_scene;
-	float r1 = r_max / 10.0f;
+	float r1 = r_max;
 	doStartPass(r1, r1);
 }

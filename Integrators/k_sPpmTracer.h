@@ -14,16 +14,23 @@ struct k_AdaptiveEntry
 
 struct k_AdaptiveStruct
 {
-	k_AdaptiveEntry* E;
 	float r_min;
 	float r_max;
+	int w;
 	CUDA_FUNC_IN k_AdaptiveStruct(){}
-	k_AdaptiveStruct(float rmin, float rmax, k_AdaptiveEntry* e)
+	k_AdaptiveStruct(float rmin, float rmax, k_AdaptiveEntry* e, int w, int m_uPassesDone)
+		: w(w)
 	{
 		E = e;
-		r_min = rmin;
-		r_max = rmax;
+		r_min = rmin * math::pow(float(m_uPassesDone), -1.0f / 6.0f);
+		r_max = rmax * math::pow(float(m_uPassesDone), -1.0f / 6.0f);
 	}
+	CUDA_FUNC_IN k_AdaptiveEntry& operator()(int x, int y)
+	{
+		return E[w * y + x];
+	}
+private:
+	k_AdaptiveEntry* E;
 };
 
 struct k_BeamMap
@@ -31,6 +38,31 @@ struct k_BeamMap
 	unsigned int m_uIndex;
 	unsigned int m_uNumEntries, m_uGridEntries;
 	Vec2i* m_pDeviceData;
+};
+
+struct k_Beam
+{
+	Vec3f pos;
+	Vec3f dir;
+	float t;
+	Spectrum Phi;
+	CUDA_FUNC_IN k_Beam(const Vec3f& p, const Vec3f& d, float t, const Spectrum& ph)
+		: pos(p), dir(d), t(t), Phi(ph)
+	{
+
+	}
+};
+
+struct k_BeamGrid
+{
+	k_Beam* m_pDeviceBeams;
+	unsigned int m_uBeamIdx;
+	unsigned int m_uBeamLength;
+
+	Vec2i* m_pGrid;
+	unsigned int m_uGridIdx;
+	unsigned int m_uGridLength;
+	unsigned int m_uGridOffset;
 };
 
 enum
@@ -50,6 +82,8 @@ class k_sPpmTracer : public k_Tracer<true, true>
 private:
 	k_PhotonMapCollection<true, k_pPpmPhoton> m_sMaps;
 	k_BeamMap m_sBeams;
+	k_BeamGrid m_sPhotonBeams;
+
 	bool m_bDirect;
 	float m_fLightVisibility;
 

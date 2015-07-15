@@ -76,12 +76,17 @@ struct e_BaseVolumeRegion : public e_BaseType//, public e_BaseTypeHelper<5001046
 {
 public:
 	unsigned int m_uNodeIndex;
-	AABB Box;
 	e_PhaseFunction Func;
+	float4x4 WorldToVolume, VolumeToWorld;
 
 	e_BaseVolumeRegion()
 	{
 		m_uNodeIndex = 0xffffffff;
+	}
+
+	virtual void Update()
+	{
+		WorldToVolume = VolumeToWorld.inverse();
 	}
 
 	CUDA_FUNC_IN bool isInVolume(unsigned int a_NodeIndex)
@@ -90,10 +95,14 @@ public:
 		//return m_uNodeIndex == 0xffffffff || m_uNodeIndex == a_NodeIndex;
 	}
 
-	CUDA_FUNC_IN bool inside(const Vec3f& p) const
+	CUDA_FUNC_IN bool insideWorld(const Vec3f& p) const
 	{
-		return Box.Contains(p);
+		Vec3f pl = WorldToVolume.TransformPoint(p);
+		return pl.x >= 0 && pl.y >= 0 && pl.z >= 0 &&
+			   pl.x <= 1 && pl.y <= 1 && pl.z <= 1;
 	}
+	
+	CUDA_DEVICE CUDA_HOST bool IntersectP(const Ray &ray, const float minT, const float maxT, float *t0, float *t1) const;
 };
 
 struct e_HomogeneousVolumeDensity : public e_BaseVolumeRegion//, public e_DerivedTypeHelper<1>
@@ -101,46 +110,42 @@ struct e_HomogeneousVolumeDensity : public e_BaseVolumeRegion//, public e_Derive
 	TYPE_FUNC(1)
 public:
 	e_HomogeneousVolumeDensity(){}
-	e_HomogeneousVolumeDensity(const float sa, const float ss, const e_PhaseFunction& func, float emit, const AABB& box)
+	e_HomogeneousVolumeDensity(const e_PhaseFunction& func, const float4x4& ToWorld, const float sa, const float ss, float emit)
 	{
-		e_BaseVolumeRegion::Box = box;
 		e_BaseVolumeRegion::Func = func;
-        WorldToVolume = float4x4::Identity();
+		VolumeToWorld = ToWorld;
         sig_a = Spectrum(sa);
         sig_s = Spectrum(ss);
         le = Spectrum(emit);
 	}
 
-	e_HomogeneousVolumeDensity(const Spectrum& sa, const Spectrum& ss, const e_PhaseFunction& func, const Spectrum& emit, const AABB& box, const float4x4& v2w)
+	e_HomogeneousVolumeDensity(const e_PhaseFunction& func, const float4x4& ToWorld, const Spectrum& sa, const Spectrum& ss, const Spectrum& emit)
 	{
-		e_BaseVolumeRegion::Box = box;
 		e_BaseVolumeRegion::Func = func;
-        WorldToVolume = v2w.inverse();
+		VolumeToWorld = ToWorld;
         sig_a = sa;
         sig_s = ss;
         le = emit;
 	}
 
-    CUDA_DEVICE CUDA_HOST bool IntersectP(const Ray &ray, const float minT, const float maxT, float *t0, float *t1) const;
-
 	CUDA_FUNC_IN Spectrum sigma_a(const Vec3f& p, const Vec3f& w) const
 	{
-		return inside(p) ? sig_a : Spectrum(0.0f);
+		return insideWorld(p) ? sig_a : Spectrum(0.0f);
 	}
 
 	CUDA_FUNC_IN Spectrum sigma_s(const Vec3f& p, const Vec3f& w) const
 	{
-		return inside(p) ? sig_s : Spectrum(0.0f);
+		return insideWorld(p) ? sig_s : Spectrum(0.0f);
 	}
 
 	CUDA_FUNC_IN Spectrum Lve(const Vec3f& p, const Vec3f& w) const
 	{
-		return inside(p) ? le : Spectrum(0.0f);
+		return insideWorld(p) ? le : Spectrum(0.0f);
 	}
 
 	CUDA_FUNC_IN Spectrum sigma_t(const Vec3f &p, const Vec3f &wo) const
 	{
-		return inside(p) ? (sig_s + sig_a) : Spectrum(0.0f);
+		return insideWorld(p) ? (sig_s + sig_a) : Spectrum(0.0f);
 	}
 
     CUDA_DEVICE CUDA_HOST Spectrum tau(const Ray &ray, const float minT, const float maxT) const;
@@ -148,7 +153,6 @@ public:
 	CUDA_DEVICE CUDA_HOST bool sampleDistance(const Ray& ray, float minT, float maxT, float sample, MediumSamplingRecord& mRec) const;
 public:
 	Spectrum sig_a, sig_s, le;
-	float4x4 WorldToVolume;
 };
 
 struct e_DenseVolGridBaseType
@@ -190,7 +194,7 @@ public:
 	}
 	CUDA_FUNC_IN unsigned int idx(unsigned int i, unsigned int j, unsigned int k) const
 	{
-		return k + j * dim.x + i * dim.x * dim.y;
+		return min(k, dim.x - 1) + min(j, dim.y - 1) * dim.x + min(i, dim.z - 1) * dim.x * dim.y;
 	}
 	CUDA_FUNC_IN bool isInBounds(const Vec3u& idx) const
 	{
@@ -236,10 +240,8 @@ struct e_VolumeGrid : public e_BaseVolumeRegion//, public e_DerivedTypeHelper<2>
 	TYPE_FUNC(2)
 public:
 	e_VolumeGrid(){}
-	e_VolumeGrid(const e_PhaseFunction& func, const float4x4 worldToVol, e_Stream<char>* a_Buffer, Vec3u dim);
-	e_VolumeGrid(const e_PhaseFunction& func, const float4x4 worldToVol, e_Stream<char>* a_Buffer, Vec3u dimA, Vec3u dimS, Vec3u dimL);
-
-	CUDA_DEVICE CUDA_HOST bool IntersectP(const Ray &ray, const float minT, const float maxT, float *t0, float *t1) const;
+	e_VolumeGrid(const e_PhaseFunction& func, const float4x4& ToWorld, e_Stream<char>* a_Buffer, Vec3u dim);
+	e_VolumeGrid(const e_PhaseFunction& func, const float4x4& ToWorld, e_Stream<char>* a_Buffer, Vec3u dimA, Vec3u dimS, Vec3u dimL);
 
 	CUDA_FUNC_IN Spectrum sigma_a(const Vec3f& p, const Vec3f& w) const
 	{
@@ -291,7 +293,6 @@ public:
 
 	virtual void Update();
 public:
-	float4x4 WorldToVolume, VolumeToWorld;
 	Spectrum sigAMin, sigAMax, sigSMin, sigSMax, leMin, leMax;
 	e_DenseVolGrid<float> gridA, gridS, gridL, grid;
 	bool singleGrid;
@@ -344,13 +345,12 @@ struct CUDA_ALIGN(16) e_VolumeRegion : public CudaVirtualAggregate<e_BaseVolumeR
 public:
 	CUDA_FUNC_IN AABB WorldBound() const
 	{
-		return ((e_BaseVolumeRegion*)Data)->Box;
+		return AABB(Vec3f(0), Vec3f(1)).Transform(((e_BaseVolumeRegion*)Data)->VolumeToWorld);
 	}
 
-	CALLER(IntersectP)
 	CUDA_FUNC_IN bool IntersectP(const Ray &ray, const float minT, const float maxT, float *t0, float *t1) const
 	{
-		return IntersectP_Caller<bool>(*this, ray, minT, maxT, t0, t1);
+		return As()->IntersectP(ray, minT, maxT, t0, t1);
 	}
 
 	CALLER(sigma_a)
@@ -432,7 +432,7 @@ public:
 	CUDA_FUNC_IN bool IsInVolume(const Vec3f& p, unsigned int a_NodeIndex = 0xffffffff) const
 	{
 		for (unsigned int i = 0; i < m_uVolumeCount; i++)
-			if (m_pVolumes[i].As()->Box.Contains(p))
+			if (m_pVolumes[i].As()->insideWorld(p))
 				return true;
 		return false;
 	}

@@ -263,11 +263,11 @@ void e_Image::Clear()
 {
 	usedHostPixels = false;
 	Platform::SetMemory(hostPixels, sizeof(Pixel) * xResolution * yResolution);
-	cudaMemset(cudaPixels, 0, sizeof(Pixel) * xResolution * yResolution);
+	ThrowCudaErrors(cudaMemset(cudaPixels, 0, sizeof(Pixel) * xResolution * yResolution));
 	if(outState == 2)
-		cudaMemset(viewTarget, 0, sizeof(RGBCOL) * xResolution * yResolution);
+		ThrowCudaErrors(cudaMemset(viewTarget, 0, sizeof(RGBCOL) * xResolution * yResolution));
 	else if(outState == 1)
-		cudaMemcpyToArray(viewCudaArray, 0, 0, viewTarget, sizeof(RGBCOL) * xResolution * yResolution, cudaMemcpyDeviceToDevice);
+		ThrowCudaErrors(cudaMemcpyToArray(viewCudaArray, 0, 0, viewTarget, sizeof(RGBCOL) * xResolution * yResolution, cudaMemcpyDeviceToDevice));
 }
 
 template<typename TARGET> CUDA_GLOBAL void rtm_NumSamples(e_Image::Pixel* P, TARGET T, unsigned int w, unsigned int h, float numPasses)

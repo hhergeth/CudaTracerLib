@@ -37,14 +37,16 @@ CUDA_FUNC_IN Spectrum trace(Ray& r, const Ray& rX, const Ray& rY, CudaRNG& rng, 
 			depth++;
 			r = Ray(r(r2.m_fDist), bRec.getOutgoing());
 			r2 = k_TraceRay(r);
+			through *= Transmittance(r, 0, r2.m_fDist);
 			if(r2.hasHit())
 			{
 				r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
-				f *= r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
+				//f *= r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
+				through *= r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
 			}
 			else break;
 		}
-		return f;
+		return through * (r2.hasHit() ? UniformSampleOneLight(bRec, r2.getMat(), rng) : Spectrum(1.0f));
 	}
 	else return g_SceneData.EvalEnvironment(r);
 }

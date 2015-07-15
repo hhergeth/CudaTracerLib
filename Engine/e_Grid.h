@@ -22,8 +22,8 @@ template<bool REGULAR> struct k_HashGrid
 		m_sBox.minV = m - q * e2;
 		m_fGridSize = (int)floor(math::pow(a_NumEntries, 1.0f/3.0f));
 		m_vMin = m_sBox.minV;
-		m_vInvSize = Vec3f(1.0f) / m_sBox.Size() * m_fGridSize;
-		m_vCellSize = m_sBox.Size() / m_fGridSize;
+		m_vInvSize = Vec3f(1.0f) / m_sBox.Size() * (m_fGridSize - 1);
+		m_vCellSize = m_sBox.Size() / (m_fGridSize - 1);
 	}
 
 	CUDA_FUNC_IN unsigned int hash6432shift(unsigned long long key) const
@@ -40,7 +40,10 @@ template<bool REGULAR> struct k_HashGrid
 	{
 		if(REGULAR)
 		{
-			return math::clamp((unsigned int)(p.z * m_fGridSize * m_fGridSize + p.y * m_fGridSize + p.x), 0u, N);
+			unsigned int h = p.z * m_fGridSize * m_fGridSize + p.y * m_fGridSize + p.x;
+			if (h > N)
+				printf("h = %d, p = {%d, %d, %d}\n", h, p.x, p.y, p.z);
+			return h;
 		}
 		else
 		{
@@ -84,7 +87,7 @@ template<bool REGULAR> struct k_HashGrid
 	CUDA_FUNC_IN  Vec3u Transform(const Vec3f& p) const
 	{
 		Vec3f q = (p - m_vMin) * m_vInvSize;
-		return clamp(Vec3u(unsigned int(q.x), unsigned int(q.y), unsigned int(q.z)), Vec3u(0), Vec3u(m_fGridSize));
+		return clamp(Vec3u(unsigned int(q.x), unsigned int(q.y), unsigned int(q.z)), Vec3u(0), Vec3u(m_fGridSize - 1));
 	}
 
 	CUDA_FUNC_IN Vec3f InverseTransform(const Vec3u& i) const
@@ -120,3 +123,50 @@ template<bool REGULAR> struct k_HashGrid
 
 typedef k_HashGrid<true> k_HashGrid_Reg;
 typedef k_HashGrid<false> k_HashGrid_Irreg;
+
+template<typename V, typename T> CUDA_FUNC_IN V sign(T f)
+{
+	return f > T(0) ? V(1) : (f < T(0) ? V(-1) : V(0));
+}
+template<typename F> CUDA_FUNC_IN void TraverseGrid(const Ray& r, float tmin, float tmax, F& clb,
+	const AABB& box, const Vec3f& gridSize)
+{
+	/*
+	pbrt grid accellerator copy! (slightly streamlined for SIMD)
+
+	*/
+	Vec3f m_vCellSize = box.Size() / (gridSize - 1);
+	float rayT, maxT;
+	if (!box.Intersect(r, &rayT, &maxT))
+		return;
+	float minT = rayT = math::clamp(rayT, tmin, tmax);
+	maxT = math::clamp(maxT, tmin, tmax);
+	Vec3f q = (r(rayT) - box.minV) / box.Size() * (gridSize - Vec3f(1));
+	Vec3u Pos = clamp(Vec3u(unsigned int(q.x), unsigned int(q.y), unsigned int(q.z)), Vec3u(0), Vec3u(gridSize.x - 1, gridSize.y - 1, gridSize.z - 1));
+	Vec3i Step(sign<int>(r.direction.x), sign<int>(r.direction.y), sign<int>(r.direction.z));
+	Vec3f inv_d = r.direction;
+	const float ooeps = math::exp2(-80.0f);
+	inv_d.x = 1.0f / (math::abs(inv_d.x) > ooeps ? inv_d.x : copysignf(ooeps, inv_d.x));
+	inv_d.y = 1.0f / (math::abs(inv_d.y) > ooeps ? inv_d.y : copysignf(ooeps, inv_d.y));
+	inv_d.z = 1.0f / (math::abs(inv_d.z) > ooeps ? inv_d.z : copysignf(ooeps, inv_d.z));
+	Vec3f NextCrossingT = Vec3f(rayT) + (box.minV + (Vec3f(Pos.x, Pos.y, Pos.z) + max(Vec3f(0.0f), sign(r.direction))) * m_vCellSize - r(rayT)) * inv_d,
+		DeltaT = abs(m_vCellSize * inv_d);
+	bool cancelTraversal = false;
+	for (; !cancelTraversal;)
+	{
+		int bits = ((NextCrossingT[0] < NextCrossingT[1]) << 2) + ((NextCrossingT[0] < NextCrossingT[2]) << 1) + ((NextCrossingT[1] < NextCrossingT[2]));
+		const int cmpToAxis[8] = { 2, 1, 2, 1, 2, 2, 0, 0 };
+		int stepAxis = cmpToAxis[bits];
+		clb(minT, rayT, maxT, min(NextCrossingT[stepAxis], maxT), Pos, cancelTraversal);
+		Pos[stepAxis] += Step[stepAxis];
+		if (Pos[stepAxis] > gridSize[stepAxis] || maxT < NextCrossingT[stepAxis])
+			break;
+		rayT = NextCrossingT[stepAxis];
+		NextCrossingT[stepAxis] += DeltaT[stepAxis];
+	}
+}
+
+template<typename F> CUDA_FUNC_IN void TraverseGrid(const Ray& r, const k_HashGrid_Reg& grid, float tmin, float tmax, F& clb)
+{
+	return TraverseGrid(r, tmin, tmax, clb, grid.m_sBox, Vec3f(grid.m_fGridSize));
+}

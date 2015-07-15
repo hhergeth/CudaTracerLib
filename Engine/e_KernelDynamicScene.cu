@@ -22,7 +22,10 @@ bool e_KernelDynamicScene::Occluded(const Ray& r, float tmin, float tmax, TraceR
 	TraceResult r2 = k_TraceRay(r);
 	if (r2.hasHit() && res)
 		*res = r2;
-	return r2.m_fDist > tmin * (1.0f + eps) && r2.m_fDist < tmax * (1.0f - eps);
+	bool end = r2.m_fDist < tmax * (1.0f - eps);
+	if (isinf(tmax) && !r2.hasHit())
+		end = false;
+	return r2.m_fDist > tmin * (1.0f + eps) && end;
 	//return tmin < r2.m_fDist && r2.m_fDist < tmax;
 }
 

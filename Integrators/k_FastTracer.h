@@ -128,6 +128,7 @@ public:
 	}
 	virtual void Resize(unsigned int w, unsigned int h)
 	{
+		ThrowCudaErrors();
 		k_Tracer<false, true>::Resize(w, h);
 		ThrowCudaErrors();
 		if (bufA)

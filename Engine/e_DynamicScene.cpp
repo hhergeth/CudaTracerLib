@@ -387,6 +387,10 @@ bool e_DynamicScene::UpdateScene()
 	}
 	m_pTextureBuffer->m_UnusedEntries.clear();
 
+	m_psSceneBoxEnvLight = getSceneBox();
+	if (m_uEnvMapIndex != 0xffffffff)
+		m_pLightStream->operator()(m_uEnvMapIndex).Invalidate();
+
 	m_pNodeStream->UpdateInvalidated();
 	m_pTriIntStream->UpdateInvalidated();
 	m_pTriDataStream->UpdateInvalidated();
@@ -394,8 +398,8 @@ bool e_DynamicScene::UpdateScene()
 	m_pBVHIndicesStream->UpdateInvalidated();
 	m_pMeshBuffer->UpdateInvalidated();
 	m_pAnimStream->UpdateInvalidated();
-	m_pLightStream->UpdateInvalidated();
-	m_pVolumes->UpdateInvalidated();
+	m_pLightStream->UpdateInvalidated([](e_StreamReference<e_KernelLight> l){l->As()->Update(); });
+	m_pVolumes->UpdateInvalidated([](e_StreamReference<e_VolumeRegion> l){l->As()->Update(); });
 	ReloadTextures();
 	return m_pBVH->Build(m_pNodeStream, m_pMeshBuffer);
 }
@@ -560,7 +564,8 @@ ShapeSet e_DynamicScene::CreateShape(e_StreamReference<e_Node> Node, const std::
 		e_StreamReference<e_TriIntersectorData2> sec2 = m->m_sIndicesInfo.operator()(i);
 		unsigned int i2 = sec2->getIndex();
 		e_TriangleData* d = m->m_sTriInfo(i2);
-		if(d->getMatIndex(0) == matIdx)//do not use Node->m_uMaterialOffset, cause mi is local...
+		bool clb = m_sShapeCreationClb ? m_sShapeCreationClb(m->m_sTriInfo(i2), sec) : true;
+		if(d->getMatIndex(0) == matIdx && clb)//do not use Node->m_uMaterialOffset, cause mi is local...
 		{
 			unsigned int k = 0;
 			for (; k < n.size(); k++)
@@ -676,7 +681,8 @@ e_StreamReference<e_KernelLight> e_DynamicScene::setEnvironementMap(const Spectr
 		//TODO
 	}
 	e_BufferReference<e_MIPMap, e_KernelMIPMap> m = LoadTexture(file, true);
-	e_InfiniteLight l = e_InfiniteLight( m_pAnimStream, m, power, getSceneBox());
+	m_psSceneBoxEnvLight = getSceneBox();
+	e_InfiniteLight l = e_InfiniteLight(m_pAnimStream, m, power, &m_psSceneBoxEnvLight);
 	e_StreamReference<e_KernelLight> r = ::createLight(l, m_pLightStream);
 	m_uEnvMapIndex = r.getIndex();
 	return r;
@@ -760,7 +766,5 @@ unsigned int e_DynamicScene::getLightCount(e_StreamReference<e_Node> n)
 	int i = 0;
 	while (i < MAX_AREALIGHT_NUM && n->m_uLightIndices[i] != 0xffffffff)
 		i++;
-	if (i == MAX_AREALIGHT_NUM)
-		throw std::runtime_error("Could not allocate light slot!");
 	return i;
 }
