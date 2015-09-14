@@ -30,7 +30,7 @@ void build_e_Animation(Anim* A, MD5Model* M, e_Animation& res, const std::string
 	}
 }
 
-void compilemd5(IInStream& in, std::vector<IInStream*>& animFiles, OutputStream& a_Out)
+void compilemd5(IInStream& in, std::vector<IInStream*>& animFiles, FileOutputStream& a_Out)
 {
 	MD5Model M;
 	M.loadMesh(in.getFilePath().c_str());

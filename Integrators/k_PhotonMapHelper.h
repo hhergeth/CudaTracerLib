@@ -151,7 +151,7 @@ template<typename HASH> struct k_PhotonMap
 		//ThrowCudaErrors(cudaMemset(m_pDeviceLinkedList, -1, sizeof(uint2) * linkedListLength));
 	}
 
-	void Serialize(OutputStream& O, void* hostbuf)
+	void Serialize(FileOutputStream& O, void* hostbuf)
 	{
 		O << m_uGridLength;
 		cudaMemcpy(hostbuf, m_pDeviceHashGrid, sizeof(unsigned int)* m_uGridLength, cudaMemcpyDeviceToHost);
@@ -218,7 +218,7 @@ template<bool HAS_MULTIPLE_MAPS, typename PHOTON> struct k_PhotonMapCollection
 		Resize(a_BufferLength, linkedListLength);
 	}
 
-	void Serialize(OutputStream& O)
+	void Serialize(FileOutputStream& O)
 	{
 		void* hostbuf = malloc(m_uPhotonBufferLength * sizeof(PHOTON));
 		O << m_uPhotonBufferLength;
@@ -232,7 +232,7 @@ template<bool HAS_MULTIPLE_MAPS, typename PHOTON> struct k_PhotonMapCollection
 		free(hostbuf);
 	}
 
-	void DeSerialize(InputStream& I)
+	void DeSerialize(FileInputStream& I)
 	{
 		void* hostbuf = malloc(m_uPhotonBufferLength * sizeof(PHOTON));
 		I >> m_uPhotonBufferLength;

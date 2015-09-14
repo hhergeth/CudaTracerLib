@@ -24,7 +24,7 @@ struct e_MeshPartLight
 #define MESH_ANIMAT_TOKEN 2
 
 class IInStream;
-class OutputStream;
+class FileOutputStream;
 template<typename T> class e_Stream;
 struct e_TriangleData;
 struct e_KernelMaterial;
@@ -55,7 +55,7 @@ public:
 	{
 		return m_sTriInfo.getLength();
 	}
-	static void CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2f* uvs, const unsigned int* indices, unsigned int nIndices, const e_KernelMaterial& mat, const Spectrum& Le, OutputStream& out);
-	static void CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2f** uvs, unsigned int nUV_Sets, const unsigned int* indices, unsigned int nIndices, const std::vector<e_KernelMaterial>& mats, const std::vector<Spectrum>& Le, const std::vector<unsigned int>& subMeshes, const unsigned char* extraData, OutputStream& out);
+	static void CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2f* uvs, const unsigned int* indices, unsigned int nIndices, const e_KernelMaterial& mat, const Spectrum& Le, FileOutputStream& out);
+	static void CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2f** uvs, unsigned int nUV_Sets, const unsigned int* indices, unsigned int nIndices, const std::vector<e_KernelMaterial>& mats, const std::vector<Spectrum>& Le, const std::vector<unsigned int>& subMeshes, const unsigned char* extraData, FileOutputStream& out);
 	static e_SceneInitData ParseBinary(const std::string& a_InputFile);
 };

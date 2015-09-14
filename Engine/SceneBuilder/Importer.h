@@ -12,4 +12,4 @@ struct BVH_Construction_Result
 
 void ConstructBVH(const Vec3f* vertices, const unsigned int* indices, unsigned int vCount, unsigned int cCount, BVH_Construction_Result& res);
 
-void ConstructBVH(const Vec3f* vertices, const unsigned int* indices, int vCount, int cCount, OutputStream& O, BVH_Construction_Result* out = 0);
+void ConstructBVH(const Vec3f* vertices, const unsigned int* indices, int vCount, int cCount, FileOutputStream& O, BVH_Construction_Result* out = 0);

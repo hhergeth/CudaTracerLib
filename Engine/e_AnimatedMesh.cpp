@@ -8,7 +8,7 @@
 #include "e_Material.h"
 #include "e_IntersectorData.h"
 
-void e_Frame::serialize(OutputStream& a_Out)
+void e_Frame::serialize(FileOutputStream& a_Out)
 {
 	a_Out << (size_t)m_sHostConstructionData.size();
 	a_Out.Write(&m_sHostConstructionData[0], sizeof(float4x4) * (unsigned int)m_sHostConstructionData.size());
@@ -22,7 +22,7 @@ void e_Frame::deSerialize(IInStream& a_In, e_Stream<char>* Buf)
 	a_In >> m_sMatrices;
 }
 
-void e_Animation::serialize(OutputStream& a_Out)
+void e_Animation::serialize(FileOutputStream& a_Out)
 {
 	a_Out << (size_t)m_pFrames.size();
 	a_Out << m_uFrameRate;

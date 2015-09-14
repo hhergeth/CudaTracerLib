@@ -3,7 +3,7 @@
 #include "../Base/FixedString.h"
 
 class IInStream;
-class OutputStream;
+class FileOutputStream;
 
 class e_MIPMap
 {
@@ -24,10 +24,10 @@ public:
 	e_MIPMap() {m_pDeviceData = 0; m_uWidth = m_uHeight = m_uBpp = 0xffffffff;}
 	e_MIPMap(const std::string& a_InputFile, IInStream& a_In);
 	void Free();
-	static void CompileToBinary(const std::string& a_InputFile, OutputStream& a_Out, bool a_MipMap);
+	static void CompileToBinary(const std::string& a_InputFile, FileOutputStream& a_Out, bool a_MipMap);
 	static void CompileToBinary(const std::string& in, const std::string& out, bool a_MipMap);
 	static void CreateSphericalSkydomeTexture(const std::string& front, const std::string& back, const std::string& left, const std::string& right, const std::string& top, const std::string& bottom, const std::string& outFile);
-	static void CreateRelaxedConeMap(const std::string& a_InputFile, OutputStream& Out);
+	static void CreateRelaxedConeMap(const std::string& a_InputFile, FileOutputStream& Out);
 	e_KernelMIPMap getKernelData();
 	unsigned int getNumMips()
 	{

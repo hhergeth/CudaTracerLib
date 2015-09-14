@@ -36,7 +36,7 @@ struct e_Frame
 
 	e_Frame(){}
 
-	void serialize(OutputStream& a_Out);
+	void serialize(FileOutputStream& a_Out);
 
 	void deSerialize(IInStream& a_In, e_Stream<char>* Buf);
 };
@@ -54,7 +54,7 @@ struct e_Animation
 	{
 	}
 
-	void serialize(OutputStream& a_Out);
+	void serialize(FileOutputStream& a_Out);
 
 	void deSerialize(IInStream& a_In, e_Stream<char>* Buf);
 };

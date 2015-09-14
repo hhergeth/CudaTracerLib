@@ -440,7 +440,7 @@ template<int SEARCH_STEPS> __global__ void generateRelaxedConeMap(imgData img, f
 	}
 }
 
-void e_MIPMap::CreateRelaxedConeMap(const std::string& a_InputFile, OutputStream& a_Out)
+void e_MIPMap::CreateRelaxedConeMap(const std::string& a_InputFile, FileOutputStream& a_Out)
 {
 	imgData data;
 	if (!parseImage(a_InputFile, &data))

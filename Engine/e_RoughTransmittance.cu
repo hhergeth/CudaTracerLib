@@ -5,7 +5,7 @@
 
 e_RoughTransmittance::e_RoughTransmittance(const std::string& name)
 {
-	InputStream I(name.c_str());
+	FileInputStream I(name.c_str());
 	const char header[] = "MTS_TRANSMITTANCE";
 	char *fileHeader = (char *) alloca(strlen(header));
 	I.Read(fileHeader, (unsigned int)strlen(header));

@@ -786,7 +786,7 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
         }
 
         // Traversal loop.
-		/*TraceResult r2 = k_TraceRay(Ray(a_RayBuffer[rayidx].a.getXYZ(), a_RayBuffer[rayidx].b.getXYZ()));
+		TraceResult r2 = k_TraceRay(Ray(a_RayBuffer[rayidx].a.getXYZ(), a_RayBuffer[rayidx].b.getXYZ()));
 		int4 res = make_int4(0, 0, 0, 0);
 		if (r2.hasHit())
 		{
@@ -797,9 +797,9 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 			res.w = *(int*)&h;
 		}
 		((int4*)a_ResBuffer)[rayidx] = res;
-		nodeAddr = EntrypointSentinel;*/
+		nodeAddr = EntrypointSentinel;
 
-		if (g_SceneData.m_sNodeData.UsedCount == 0)
+		/*if (g_SceneData.m_sNodeData.UsedCount == 0)
 			nodeAddr = EntrypointSentinel;
 
 		while (nodeAddr != EntrypointSentinel)
@@ -1087,7 +1087,7 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 			half2 h(bCorrds);
 			res.w = *(int*)&h;
 		}
-		((int4*)a_ResBuffer)[rayidx] = res;
+		((int4*)a_ResBuffer)[rayidx] = res;*/
 //outerlabel: ;
     } while(true);
 }

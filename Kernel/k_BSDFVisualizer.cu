@@ -132,7 +132,7 @@ void k_BSDFVisualizer::setSkydome(const char* compiledPath)
 		m_pBuffer2->Free();
 	m_pBuffer = new e_Stream<char>(1024 * 1024 * 32);
 	m_pBuffer2 = new e_Buffer<e_MIPMap, e_KernelMIPMap>(3);
-	InputStream in = InputStream(compiledPath);
+	FileInputStream in(compiledPath);
 	e_BufferReference<e_MIPMap, e_KernelMIPMap> mip = m_pBuffer2->malloc(1); 
 	m_pMipMap = new (mip.operator->())e_MIPMap(in.getFilePath(), in);
 	in.Close();	

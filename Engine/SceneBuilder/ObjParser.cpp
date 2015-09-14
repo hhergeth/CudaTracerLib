@@ -1157,7 +1157,7 @@ void parse(ImportState& s, IInStream& in)
 		push(s.subMeshes[submesh].indices, s.indexTmp);
 }
 
-void compileobj(IInStream& in, OutputStream& a_Out)
+void compileobj(IInStream& in, FileOutputStream& a_Out)
 {
 	ImportState state;
 	parse(state, in);

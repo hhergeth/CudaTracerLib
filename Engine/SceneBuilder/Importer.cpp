@@ -140,7 +140,7 @@ void ConstructBVH(const Vec3f* vertices, const unsigned int* indices, unsigned i
 	r.tris = c.tris;
 }
 
-void ConstructBVH(const Vec3f* vertices, const unsigned int* indices, int vCount, int cCount, OutputStream& O, BVH_Construction_Result* out)
+void ConstructBVH(const Vec3f* vertices, const unsigned int* indices, int vCount, int cCount, FileOutputStream& O, BVH_Construction_Result* out)
 {
 	BVH_Construction_Result localRes;
 	if (!out)

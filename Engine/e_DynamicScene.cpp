@@ -181,7 +181,7 @@ e_StreamReference<e_Node> e_DynamicScene::CreateNode(const std::string& a_Token,
 			if (si <= 4 || rawStamp != cmpStamp)
 			{
 				std::cout << "Started compiling mesh : " << a_Token << "\n";
-				OutputStream a_Out(cmpFilePath.string());
+				FileOutputStream a_Out(cmpFilePath.string());
 				e_MeshCompileType t;
 				m_sCmpManager.Compile(in, token, a_Out, &t);
 				a_Out.Close();
@@ -287,12 +287,12 @@ e_BufferReference<e_MIPMap, e_KernelMIPMap> e_DynamicScene::LoadTexture(const st
 		time_t cmpStamp = exists(cmpFilePath) ? last_write_time(cmpFilePath) : 0;
 		if (cmpStamp == 0 || rawStamp != cmpStamp)
 		{
-			OutputStream a_Out(cmpFilePath.string().c_str());
+			FileOutputStream a_Out(cmpFilePath.string().c_str());
 			e_MIPMap::CompileToBinary(rawFilePath.string().c_str(), a_Out, a_MipMap);
 			a_Out.Close();
 			boost::filesystem::last_write_time(cmpFilePath, rawStamp);
 		}
-		InputStream I(cmpFilePath.string().c_str());
+		FileInputStream I(cmpFilePath.string().c_str());
 		new(T)e_MIPMap(file, I);
 		I.Close();
 		T.Invalidate();

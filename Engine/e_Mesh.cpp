@@ -109,7 +109,7 @@ void e_Mesh::Free(e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_Triangle
 
 e_SceneInitData e_Mesh::ParseBinary(const std::string& a_InputFile)
 {
-	InputStream a_In(a_InputFile);
+	FileInputStream a_In(a_InputFile);
 	AABB m_sLocalBox;
 	a_In >> m_sLocalBox;
 	a_In.Move(sizeof(e_MeshPartLight) * MAX_AREALIGHT_NUM + 8);
@@ -136,7 +136,7 @@ e_SceneInitData e_Mesh::ParseBinary(const std::string& a_InputFile)
 	return e_SceneInitData::CreateForSpecificMesh(m_uTriangleCount, m_uIntSize, m_uNodeSize, m_uIndicesSize, 255, 16, 16, 8);
 }
 
-void e_Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2f* uvs, const unsigned int* indices, unsigned int nIndices, const e_KernelMaterial& mat, const Spectrum& Le, OutputStream& a_Out)
+void e_Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2f* uvs, const unsigned int* indices, unsigned int nIndices, const e_KernelMaterial& mat, const Spectrum& Le, FileOutputStream& a_Out)
 {
 	e_MeshPartLight m_sLights[MAX_AREALIGHT_NUM];
 	Platform::SetMemory(m_sLights, sizeof(m_sLights));
@@ -196,7 +196,7 @@ void e_Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Ve
 	delete [] triData;
 }
 
-void e_Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2f** uvs, unsigned int nUV_Sets, const unsigned int* indices, unsigned int nIndices, const std::vector<e_KernelMaterial>& mats, const std::vector<Spectrum>& Les, const std::vector<unsigned int>& subMeshes, const unsigned char* extraData, OutputStream& a_Out)
+void e_Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2f** uvs, unsigned int nUV_Sets, const unsigned int* indices, unsigned int nIndices, const std::vector<e_KernelMaterial>& mats, const std::vector<Spectrum>& Les, const std::vector<unsigned int>& subMeshes, const unsigned char* extraData, FileOutputStream& a_Out)
 {
 	e_MeshPartLight m_sLights[MAX_AREALIGHT_NUM];
 	Platform::SetMemory(m_sLights, sizeof(m_sLights));

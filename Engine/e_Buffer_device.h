@@ -17,7 +17,7 @@ template<typename T> struct e_KernelBuffer
 
 template<typename H, typename D> class e_BufferBase;
 class IInStream;
-class OutputStream;
+class FileOutputStream;
 template<typename H, typename D> class e_BufferReference
 {
 	template<typename H2, typename D2> friend class e_BufferBase;

@@ -158,7 +158,7 @@ float LongSwap(const float inFloat)
 	return retVal;
 }
 
-void compileply(IInStream& istream, OutputStream& a_Out)
+void compileply(IInStream& istream, FileOutputStream& a_Out)
 {
 	format_type format;
 	std::string line;

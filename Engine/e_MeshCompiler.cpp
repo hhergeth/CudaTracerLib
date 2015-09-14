@@ -27,7 +27,7 @@ bool e_ObjCompiler::IsApplicable(const std::string& a_InputFile, IInStream& in, 
 	return b;
 }
 
-void e_ObjCompiler::Compile(IInStream& in, OutputStream& a_Out)
+void e_ObjCompiler::Compile(IInStream& in, FileOutputStream& a_Out)
 {
 	compileobj(in, a_Out);
 }
@@ -40,7 +40,7 @@ bool e_Md5Compiler::IsApplicable(const std::string& a_InputFile, IInStream& in, 
 	return b;
 }
 
-void e_Md5Compiler::Compile(IInStream& in, OutputStream& a_Out)
+void e_Md5Compiler::Compile(IInStream& in, FileOutputStream& a_Out)
 {
 	std::vector<IInStream*> animFiles;
 	boost::filesystem::path p_file(in.getFilePath());
@@ -52,7 +52,7 @@ void e_Md5Compiler::Compile(IInStream& in, OutputStream& a_Out)
 			boost::algorithm::to_lower(ext);
 			if (ext == ".md5anim")
 			{
-				animFiles.push_back(new InputStream(it->path().string()));
+				animFiles.push_back(new FileInputStream(it->path().string()));
 			}
 		}
 	}
@@ -77,12 +77,12 @@ bool e_PlyCompiler::IsApplicable(const std::string& a_InputFile, IInStream& in, 
 	return b;
 }
 
-void e_PlyCompiler::Compile(IInStream& in, OutputStream& a_Out)
+void e_PlyCompiler::Compile(IInStream& in, FileOutputStream& a_Out)
 {
 	compileply(in, a_Out);
 }
 
-void e_MeshCompilerManager::Compile(IInStream& in, const std::string& a_InputFile, OutputStream& a_Out, e_MeshCompileType* out)
+void e_MeshCompilerManager::Compile(IInStream& in, const std::string& a_InputFile, FileOutputStream& a_Out, e_MeshCompileType* out)
 {
 	e_MeshCompileType t;
 	for(unsigned int i = 0; i < m_sCompilers.size(); i++)

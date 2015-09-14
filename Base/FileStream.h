@@ -14,7 +14,7 @@
 	}
 
 #define DCL_OUT(TYPE) \
-	OutputStream& operator<<(TYPE rhs) \
+	FileOutputStream& operator<<(TYPE rhs) \
 	{ \
 		Write(rhs); \
 		return *this; \
@@ -38,14 +38,6 @@ public:
 	bool eof(){return getPos() == getFileSize();}
 	virtual void Move(int off) = 0;
 	virtual void Close() = 0;
-	void ToBegin()
-	{
-		Move((int)getPos());
-	}
-	template<typename T> void Move(int num)
-	{
-		Move(num * sizeof(T));
-	}
 	template<typename T> bool get(T& c)
 	{
 		if(getPos() + sizeof(T) <= getFileSize())
@@ -114,15 +106,15 @@ public:
 	}
 };
 
-class InputStream : public IInStream
+class FileInputStream : public IInStream
 {
 private:
 	size_t numBytesRead;
 	void* H;
 	std::string path;
 public:
-	InputStream(const std::string& a_Name);
-	~InputStream()
+	FileInputStream(const std::string& a_Name);
+	~FileInputStream()
 	{
 		Close();
 	}
@@ -147,7 +139,7 @@ private:
 	std::string path;
 public:
 	MemInputStream(const unsigned char* buf, size_t length, bool canKeep = false);
-	MemInputStream(InputStream& in);
+	MemInputStream(FileInputStream& in);
 	MemInputStream(const std::string& a_Name);
 	~MemInputStream()
 	{
@@ -179,15 +171,15 @@ public:
 
 IInStream* OpenFile(const std::string& filename);
 
-class OutputStream
+class FileOutputStream
 {
 private:
 	size_t numBytesWrote;
 	void* H;
 	void _Write(const void* data, size_t size);
 public:
-	OutputStream(const std::string& a_Name);
-	virtual ~OutputStream()
+	FileOutputStream(const std::string& a_Name);
+	virtual ~FileOutputStream()
 	{
 		Close();
 	}
@@ -229,7 +221,7 @@ public:
 	DCL_OUT(Ray)
 	DCL_OUT(float4x4)
 
-	template<typename H, typename D> OutputStream& operator<<(e_BufferReference<H, D> rhs)
+	template<typename H, typename D> FileOutputStream& operator<<(e_BufferReference<H, D> rhs)
 	{
 		_Write(rhs(0), rhs.getHostSize());
 		return *this;

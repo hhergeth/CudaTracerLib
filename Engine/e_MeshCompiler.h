@@ -4,9 +4,9 @@
 #include <vector>
 
 //ugly
-void compileply(IInStream& in, OutputStream& a_Out);
-void compileobj(IInStream& in, OutputStream& a_Out);
-void compilemd5(IInStream& in, std::vector<IInStream*>& animFiles, OutputStream& a_Out);
+void compileply(IInStream& in, FileOutputStream& a_Out);
+void compileobj(IInStream& in, FileOutputStream& a_Out);
+void compilemd5(IInStream& in, std::vector<IInStream*>& animFiles, FileOutputStream& a_Out);
 
 enum e_MeshCompileType
 {
@@ -17,28 +17,28 @@ enum e_MeshCompileType
 class e_MeshCompiler
 {
 public:
-	virtual void Compile(IInStream& in, OutputStream& a_Out) = 0;
+	virtual void Compile(IInStream& in, FileOutputStream& a_Out) = 0;
 	virtual bool IsApplicable(const std::string& a_InputFile, IInStream& in, e_MeshCompileType* out = 0) = 0;
 };
 
 class e_ObjCompiler : public e_MeshCompiler
 {
 public:
-	virtual void Compile(IInStream& in, OutputStream& a_Out);
+	virtual void Compile(IInStream& in, FileOutputStream& a_Out);
 	virtual bool IsApplicable(const std::string& a_InputFile, IInStream& in, e_MeshCompileType* out);
 };
 
 class e_Md5Compiler : public e_MeshCompiler
 {
 public:
-	virtual void Compile(IInStream& in, OutputStream& a_Out);
+	virtual void Compile(IInStream& in, FileOutputStream& a_Out);
 	virtual bool IsApplicable(const std::string& a_InputFile, IInStream& in, e_MeshCompileType* out);
 };
 
 class e_PlyCompiler : public e_MeshCompiler
 {
 public:
-	virtual void Compile(IInStream& in, OutputStream& a_Out);
+	virtual void Compile(IInStream& in, FileOutputStream& a_Out);
 	virtual bool IsApplicable(const std::string& a_InputFile, IInStream& in, e_MeshCompileType* out);
 };
 
@@ -58,7 +58,7 @@ public:
 		for(unsigned int i = 0; i < m_sCompilers.size(); i++)
 			delete m_sCompilers[i];
 	}
-	void Compile(IInStream& in, const std::string& a_Token, OutputStream& a_Out, e_MeshCompileType* out = 0);
+	void Compile(IInStream& in, const std::string& a_Token, FileOutputStream& a_Out, e_MeshCompileType* out = 0);
 	void Register(e_MeshCompiler* C)
 	{
 		m_sCompilers.push_back(C);

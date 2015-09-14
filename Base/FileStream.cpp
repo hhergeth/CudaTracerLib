@@ -21,7 +21,7 @@ unsigned char* IInStream::ReadToEnd()
 	return (unsigned char*)v;
 }
 
-InputStream::InputStream(const std::string& a_Name)
+FileInputStream::FileInputStream(const std::string& a_Name)
 	: path(a_Name)
 {
 	numBytesRead = 0;
@@ -30,7 +30,7 @@ InputStream::InputStream(const std::string& a_Name)
 	m_uFileSize = mmap.size();
 }
 
-void InputStream::Close()
+void FileInputStream::Close()
 {
 	if (H)
 	{
@@ -41,7 +41,7 @@ void InputStream::Close()
 	}
 }
 
-void InputStream::Read(void* a_Data, size_t a_Size)
+void FileInputStream::Read(void* a_Data, size_t a_Size)
 {
 	boost::iostreams::mapped_file& mmap = *(boost::iostreams::mapped_file*)H;
 	if (numBytesRead + a_Size <= m_uFileSize)
@@ -52,10 +52,10 @@ void InputStream::Read(void* a_Data, size_t a_Size)
 	else throw std::runtime_error("Passed end of file!");
 }
 
-void InputStream::Move(int off)
+void FileInputStream::Move(int off)
 {
-	if (numBytesRead + off > m_uFileSize)
-		throw std::runtime_error("Passed end of file!");
+	if (size_t(numBytesRead + off) > m_uFileSize)
+		throw std::runtime_error("Passed end of file or tried moving before beginning!");
 	numBytesRead += off;
 }
 
@@ -74,7 +74,7 @@ MemInputStream::MemInputStream(const unsigned char* _buf, size_t length, bool ca
 	this->numBytesRead = 0;
 }
 
-MemInputStream::MemInputStream(InputStream& in)
+MemInputStream::MemInputStream(FileInputStream& in)
 {
 	m_uFileSize = in.getFileSize() - in.getPos();
 	buf = in.ReadToEnd();
@@ -83,7 +83,7 @@ MemInputStream::MemInputStream(InputStream& in)
 
 MemInputStream::MemInputStream(const std::string& a_Name)
 {
-	InputStream in(a_Name);
+	FileInputStream in(a_Name);
 	numBytesRead = 0;
 	m_uFileSize = in.getFileSize();
 	buf = in.ReadToEnd();
@@ -102,11 +102,11 @@ IInStream* OpenFile(const std::string& filename)
 {
 	if(boost::filesystem::file_size(filename) < 1024 * 1024 * 512)
 		return new MemInputStream(filename);
-	else return new InputStream(filename);
+	else return new FileInputStream(filename);
 	return 0;
 }
 
-OutputStream::OutputStream(const std::string& a_Name)
+FileOutputStream::FileOutputStream(const std::string& a_Name)
 {
 	numBytesWrote = 0;
 	H = fopen(a_Name.c_str(), "wb");
@@ -114,7 +114,7 @@ OutputStream::OutputStream(const std::string& a_Name)
 		throw std::runtime_error("Could not open file!");
 }
 
-void OutputStream::_Write(const void* data, size_t size)
+void FileOutputStream::_Write(const void* data, size_t size)
 {
 	size_t i = fwrite(data, 1, size, (FILE*)H);
 	if (i != size)
@@ -122,7 +122,7 @@ void OutputStream::_Write(const void* data, size_t size)
 	numBytesWrote += size;
 }
 
-void OutputStream::Close()
+void FileOutputStream::Close()
 {
 	if (H)
 		if (fclose((FILE*)H))

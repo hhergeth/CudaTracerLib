@@ -38,7 +38,7 @@ void e_MIPMap::Free()
 
 void e_MIPMap::CompileToBinary(const std::string& in, const std::string& out, bool a_MipMap)
 {
-	OutputStream o(out);
+	FileOutputStream o(out);
 	CompileToBinary(in, o, a_MipMap);
 	o.Close();
 }
@@ -65,7 +65,7 @@ struct sampleHelper
 	}
 };
 
-void e_MIPMap::CompileToBinary(const std::string& a_InputFile, OutputStream& a_Out, bool a_MipMap)
+void e_MIPMap::CompileToBinary(const std::string& a_InputFile, FileOutputStream& a_Out, bool a_MipMap)
 {
 	imgData data;
 	if(!parseImage(a_InputFile, &data))
