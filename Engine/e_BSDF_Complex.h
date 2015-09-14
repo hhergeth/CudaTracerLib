@@ -18,14 +18,14 @@ struct coating : public BSDF//, public e_DerivedTypeHelper<13>
 	{
 		BSDF::initTextureOffsets(m_sigmaA, m_specularReflectance);
 	}
-	coating(BSDFFirst& nested, float eta, float thickness, const e_Texture& sig)
+	coating(const BSDFFirst& nested, float eta, float thickness, const e_Texture& sig)
 		: BSDF(EBSDFType(EDeltaReflection | nested.getType())), m_nested(nested), m_eta(eta), m_invEta(1.0f / eta), m_thickness(thickness), m_sigmaA(sig), m_specularReflectance(CreateTexture(Spectrum(1.0f)))
 	{
 		BSDF::initTextureOffsets2(nested.As()->getTextureList(), m_sigmaA, m_specularReflectance);
 		float avgAbsorption = (m_sigmaA.Average()*(-2*m_thickness)).exp().average();
 		m_specularSamplingWeight = 1.0f / (avgAbsorption + 1.0f);
 	}
-	coating(BSDFFirst& nested, float eta, float thickness, const e_Texture& sig, const e_Texture& specular)
+	coating(const BSDFFirst& nested, float eta, float thickness, const e_Texture& sig, const e_Texture& specular)
 		: BSDF(EBSDFType(EDeltaReflection | nested.getType())), m_nested(nested), m_eta(eta), m_invEta(1.0f / eta), m_thickness(thickness), m_sigmaA(sig), m_specularReflectance(specular)
 	{
 		BSDF::initTextureOffsets2(nested.As()->getTextureList(), m_sigmaA, m_specularReflectance);
@@ -88,7 +88,7 @@ struct roughcoating : public BSDF//, public e_DerivedTypeHelper<14>
 	{
 		initTextureOffsets(m_sigmaA, m_specularReflectance, m_alpha);
 	}
-	roughcoating(BSDFFirst& nested, MicrofacetDistribution::EType type, float eta, float thickness, e_Texture& sig, e_Texture& alpha, e_Texture& specular)
+	roughcoating(MicrofacetDistribution::EType type, const BSDFFirst& nested, float eta, float thickness, e_Texture& sig, e_Texture& alpha, e_Texture& specular)
 		: BSDF(EBSDFType(EGlossyReflection | nested.getType())), m_nested(nested), m_eta(eta), m_invEta(1.0f / eta), m_thickness(thickness), m_sigmaA(sig), m_alpha(alpha), m_specularReflectance(specular)
 	{
 		initTextureOffsets2(nested.As()->getTextureList(), m_sigmaA, m_specularReflectance, m_alpha);
@@ -111,7 +111,7 @@ struct roughcoating : public BSDF//, public e_DerivedTypeHelper<14>
 	{
 		BSDFFirst nested;
 		nested.SetData(val);
-		return roughcoating(nested, type, eta, thickness, sig, alpha, CreateTexture(Spectrum(1.0f)));
+		return roughcoating(type, nested, eta, thickness, sig, alpha, CreateTexture(Spectrum(1.0f)));
 	}
 private:
 	/// Helper function: reflect \c wi with respect to a given surface normal

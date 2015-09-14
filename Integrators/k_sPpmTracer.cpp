@@ -10,7 +10,7 @@
 #define SER_NAME "photonMapBuf.dat"
 
 k_sPpmTracer::k_sPpmTracer()
-	: m_pEntries(0), m_bFinalGather(false), m_bVisualizeGrid(false)
+	: m_pEntries(0), m_bFinalGather(false), m_bVisualizeGrid(false), m_pSurfaceValues(0)
 {
 #ifdef NDEBUG
 	m_uBlocksPerLaunch = 180;
@@ -28,7 +28,7 @@ k_sPpmTracer::k_sPpmTracer()
 	
 	m_sBeams.m_uGridEntries = LNG*LNG*LNG;
 	m_sBeams.m_uNumEntries = m_sBeams.m_uGridEntries * (1 + 250);
-	//CUDA_MALLOC(&m_sBeams.m_pDeviceData, sizeof(Vec2i) * m_sBeams.m_uNumEntries);
+	CUDA_MALLOC(&m_sBeams.m_pDeviceData, sizeof(Vec2i) * m_sBeams.m_uNumEntries);
 
 	m_sPhotonBeams.m_uBeamIdx = 0;
 	m_sPhotonBeams.m_uBeamLength = 100000;
@@ -37,6 +37,8 @@ k_sPpmTracer::k_sPpmTracer()
 	m_sPhotonBeams.m_uGridOffset = LNG*LNG*LNG;
 	m_sPhotonBeams.m_uGridLength = m_sPhotonBeams.m_uGridOffset * (1 + 1000);
 	//CUDA_MALLOC(&m_sPhotonBeams.m_pGrid, sizeof(Vec2i) * m_sPhotonBeams.m_uGridLength);
+
+	//CUDA_MALLOC(&m_pSurfaceValues, LNG*LNG*LNG*sizeof(k_pGridEntry));
 }
 
 void k_sPpmTracer::PrintStatus(std::vector<std::string>& a_Buf) const

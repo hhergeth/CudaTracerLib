@@ -786,20 +786,20 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
         }
 
         // Traversal loop.
-		/*TraceResult r2 = k_TraceRay(Ray(a_RayBuffer[rayidx].a.getXYZ(), a_RayBuffer[rayidx].b.getXYZ()));
+		TraceResult r2 = k_TraceRay(Ray(a_RayBuffer[rayidx].a.getXYZ(), a_RayBuffer[rayidx].b.getXYZ()));
 		int4 res = make_int4(0, 0, 0, 0);
 		if (r2.hasHit())
 		{
 			res.x = __float_as_int(r2.m_fDist);
 			res.y = r2.getNodeIndex();
 			res.z = r2.m_pTri - g_SceneData.m_sTriData.Data;
-			half2 h(r2.m_fUV);
+			half2 h(r2.m_fBaryCoords);
 			res.w = *(int*)&h;
 		}
 		((int4*)a_ResBuffer)[rayidx] = res;
-		nodeAddr = EntrypointSentinel;*/
+		nodeAddr = EntrypointSentinel;
 
-		if (g_SceneData.m_sNodeData.UsedCount == 0)
+		/*if (g_SceneData.m_sNodeData.UsedCount == 0)
 			nodeAddr = EntrypointSentinel;
 
 		while (nodeAddr != EntrypointSentinel)
@@ -1002,7 +1002,7 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 							const float4 v00 = tex1Dfetch(t_tris, triAddr * 3 + 0 + m_uBVHTriangleOffset);
 							const float4 v11 = tex1Dfetch(t_tris, triAddr * 3 + 1 + m_uBVHTriangleOffset);
 							const float4 v22 = tex1Dfetch(t_tris, triAddr * 3 + 2 + m_uBVHTriangleOffset);
-							unsigned int index = tex1Dfetch(t_triIndices, triAddr + m_uBVHIndicesOffset);
+							unsigned int index = tex1Dfetch(t_triIndices, min(triAddr + m_uBVHIndicesOffset, 8135));
 
 							float Oz = v00.w - lorigx*v00.x - lorigy*v00.y - lorigz*v00.z;
 							float invDz = 1.0f / (ldirx*v00.x + ldiry*v00.y + ldirz*v00.z);
@@ -1088,16 +1088,16 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 			half2 h(bCorrds);
 			res.w = *(int*)&h;
 		}
-		((int4*)a_ResBuffer)[rayidx] = res;
+		((int4*)a_ResBuffer)[rayidx] = res;*/
 //outerlabel: ;
     } while(true);
 }
 
 void __internal__IntersectBuffers(int N, traversalRay* a_RayBuffer, traversalResult* a_ResBuffer, bool SKIP_OUTER, bool ANY_HIT)
 {
-	cudaDeviceSetCacheConfig (cudaFuncCachePreferL1);
+	ThrowCudaErrors(cudaDeviceSetCacheConfig (cudaFuncCachePreferL1));
 	unsigned int zero = 0;
-	cudaMemcpyToSymbol(g_warpCounter, &zero, sizeof(unsigned int));
+	ThrowCudaErrors(cudaMemcpyToSymbol(g_warpCounter, &zero, sizeof(unsigned int)));
 	/*if(SKIP_OUTER)
 		if(ANY_HIT)
 			intersectKernel_SKIPOUTER<true><<< 180, dim3(32, 4, 1)>>>(N, a_RayBuffer, a_ResBuffer);
@@ -1106,7 +1106,8 @@ void __internal__IntersectBuffers(int N, traversalRay* a_RayBuffer, traversalRes
 	{
 		if(ANY_HIT)
 			intersectKernel<true><<< 180, dim3(32, 4, 1)>>>(N, a_RayBuffer, a_ResBuffer);
-		else intersectKernel<false><<< 180, dim3(32, 4, 1)>>>(N, a_RayBuffer, a_ResBuffer);;
+		else intersectKernel<false><<< 180, dim3(32, 4, 1)>>>(N, a_RayBuffer, a_ResBuffer);
 	}
+	ThrowCudaErrors(cudaDeviceSynchronize());
 	g_RayTracedCounterHost += N;
 }

@@ -1,48 +1,6 @@
 #include "k_VCM.h"
-#include "k_VCMHelper.h"
 
 CUDA_DEVICE k_PhotonMapCollection<false, k_MISPhoton> g_CurrentMap, g_NextMap;
-
-CUDA_DEVICE Spectrum L_Surface(BPTSubPathState& aCameraState, BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED, const e_KernelMaterial* mat, float mMisVcWeightFactor)
-{
-	Spectrum Lp = Spectrum(0.0f);
-	const float r2 = a_rSurfaceUNUSED * a_rSurfaceUNUSED;
-	Frame sys = bRec.dg.sys;
-	sys.t *= a_rSurfaceUNUSED;
-	sys.s *= a_rSurfaceUNUSED;
-	sys.n *= a_rSurfaceUNUSED;
-	Vec3f a = -1.0f * sys.t - sys.s, b = sys.t - sys.s, c = -1.0f * sys.t + sys.s, d = sys.t + sys.s;
-	Vec3f low = min(min(a, b), min(c, d)) + bRec.dg.P, high = max(max(a, b), max(c, d)) + bRec.dg.P;
-	uint3 lo = g_CurrentMap.m_sSurfaceMap.m_sHash.Transform(low), hi = g_CurrentMap.m_sSurfaceMap.m_sHash.Transform(high);
-	for (unsigned int a = lo.x; a <= hi.x; a++)
-	for (unsigned int b = lo.y; b <= hi.y; b++)
-	for (unsigned int c = lo.z; c <= hi.z; c++)
-	{
-		unsigned int i0 = g_CurrentMap.m_sSurfaceMap.m_sHash.Hash(Vec3u(a, b, c)), i = g_CurrentMap.m_sSurfaceMap.m_pDeviceHashGrid[i0];
-		while (i != 0xffffffff && i != 0xffffff)
-		{
-			k_MISPhoton e = g_CurrentMap.m_pPhotons[i];
-			Vec3f n = e.getNormal(), wi = e.getWi(), P = e.getPos(g_CurrentMap.m_sSurfaceMap.m_sHash, Vec3u(a,b,c));
-			Spectrum l = e.getL();
-			float dist2 = distanceSquared(P, bRec.dg.P);
-			if (dist2 < r2 && dot(n, bRec.dg.sys.n) > 0.8f)
-			{
-				bRec.wo = bRec.dg.toLocal(wi);
-				const float cameraBsdfDirPdfW = pdf(*mat, bRec);
-				Spectrum bsdfFactor = mat->bsdf.f(bRec);
-				const float cameraBsdfRevPdfW = revPdf(*mat, bRec);
-				const float wLight = e.dVCM * mMisVcWeightFactor + e.dVM * cameraBsdfDirPdfW;
-				const float wCamera = aCameraState.dVCM * mMisVcWeightFactor + aCameraState.dVM * cameraBsdfRevPdfW;
-				const float misWeight = 1.f / (wLight + 1.f + wCamera);
-
-				float ke = k_tr(a_rSurfaceUNUSED, math::sqrt(dist2));
-				Lp += misWeight * PI * ke * l * bsdfFactor / Frame::cosTheta(bRec.wo);
-			}
-			i = e.getNext();
-		}
-	}
-	return Lp / float(g_CurrentMap.m_uPhotonNumEmitted);
-}
 
 CUDA_FUNC_IN void VCM(const Vec2f& pixelPosition, k_BlockSampleImage& img, CudaRNG& rng, int w, int h, float a_Radius, int a_NumIteration)
 {
@@ -140,7 +98,7 @@ CUDA_FUNC_IN void VCM(const Vec2f& pixelPosition, k_BlockSampleImage& img, CudaR
 
 			//scale by 2 to account for no merging in the first iteration
 #ifdef ISCUDA
-			acc += cameraState.throughput * (a_NumIteration == 2 ? 2 : 1) * L_Surface(cameraState, bRec, a_Radius, &r2.getMat(), mMisVcWeightFactor);
+			acc += cameraState.throughput * (a_NumIteration == 2 ? 2 : 1) * L_Surface2(g_CurrentMap, cameraState, bRec, a_Radius, &r2.getMat(), mMisVcWeightFactor, true);
 #endif
 		}
 

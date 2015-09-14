@@ -768,3 +768,8 @@ unsigned int e_DynamicScene::getLightCount(e_StreamReference<e_Node> n)
 		i++;
 	return i;
 }
+
+unsigned int e_DynamicScene::getLightCount()
+{
+	return m_pLightStream->numElements();
+}

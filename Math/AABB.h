@@ -81,6 +81,10 @@ struct AABB
 		box.minV = m - q * e2;
 		return box;
 	}
+	CUDA_FUNC_IN Vec3f Clamp(const Vec3f& p) const
+	{
+		return clamp(p, minV, maxV);
+	}
 	CUDA_FUNC_IN bool Contains(const Vec3f& p) const
 	{
 		return minV.x <= p.x && p.x <= maxV.x && minV.y <= p.y && p.y <= maxV.y && minV.z <= p.z && p.z <= maxV.z;

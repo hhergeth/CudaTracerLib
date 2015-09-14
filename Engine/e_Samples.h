@@ -178,4 +178,5 @@ struct BSDFSamplingRecord
 	unsigned int sampledType;
 	CUDA_FUNC_IN BSDFSamplingRecord(DifferentialGeometry& dg) : dg(dg) {}
 	CUDA_DEVICE CUDA_HOST Vec3f getOutgoing();
+	CUDA_DEVICE CUDA_HOST BSDFSamplingRecord& operator=(const BSDFSamplingRecord& other);
 };

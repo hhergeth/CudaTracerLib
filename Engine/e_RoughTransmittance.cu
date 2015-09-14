@@ -124,8 +124,8 @@ CUDA_CONST e_RoughTransmittance m_sObjectsDevice[3];
 void e_RoughTransmittanceManager::StaticInitialize(const std::string& a_Path)
 {
 	m_sObjectsHost[0] = e_RoughTransmittance(a_Path + "/microfacet/beckmann.dat");
-	m_sObjectsHost[1] = e_RoughTransmittance(a_Path + "microfacet/phong.dat");
-	m_sObjectsHost[2] = e_RoughTransmittance(a_Path + "microfacet/ggx.dat");
+	m_sObjectsHost[1] = e_RoughTransmittance(a_Path + "/microfacet/phong.dat");
+	m_sObjectsHost[2] = e_RoughTransmittance(a_Path + "/microfacet/ggx.dat");
 	cudaMemcpyToSymbol(m_sObjectsDevice, m_sObjectsHost, sizeof(e_RoughTransmittance) * 3);
 }
 

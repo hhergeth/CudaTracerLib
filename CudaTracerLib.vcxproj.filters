@@ -284,6 +284,12 @@
     </ClInclude>
     <ClInclude Include="VirtualFuncType.h" />
     <ClInclude Include="CudaMemoryManager.h" />
+    <ClInclude Include="Integrators\k_WavefrontVCM.h">
+      <Filter>Integrators</Filter>
+    </ClInclude>
+    <ClInclude Include="Kernel\k_RayBuffer.h">
+      <Filter>Kernel</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Base\FileStream.cpp">
@@ -359,6 +365,9 @@
     </ClCompile>
     <ClCompile Include="Engine\SceneBuilder\md5Compiler.cpp">
       <Filter>Engine\SceneBuilder</Filter>
+    </ClCompile>
+    <ClCompile Include="Integrators\k_WavefrontVCM.cpp">
+      <Filter>Integrators</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -481,6 +490,9 @@
     </CudaCompile>
     <CudaCompile Include="Engine\e_TriIntersectorData.cu">
       <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Integrators\k_WavefrontVCM.cu">
+      <Filter>Integrators</Filter>
     </CudaCompile>
   </ItemGroup>
 </Project>

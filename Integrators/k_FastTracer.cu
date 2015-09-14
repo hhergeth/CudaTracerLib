@@ -107,7 +107,7 @@ __device__ CUDA_INLINE Vec2f stratifiedSample(const Vec2f& f, int pass)
 #define max_PASS 7
 CUDA_DEVICE k_PTDBuffer g_Intersector;
 CUDA_DEVICE k_PTDBuffer g_Intersector2;
-__global__ void pathIterateKernel(unsigned int N, e_Image I, int pass, int iterationIdx, bool depthImage)//template
+template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(unsigned int N, e_Image I, int pass, int iterationIdx, bool depthImage)//template
 {
 	CudaRNG rng = g_RNGData();
 	int rayidx;
@@ -133,7 +133,7 @@ __global__ void pathIterateKernel(unsigned int N, e_Image I, int pass, int itera
 		}
 
 		rayData dat = g_Intersector(rayidx);
-		if (pass > 0 && dat.dIdx != 0xffffffff)
+		if (NEXT_EVENT_EST && pass > 0 && dat.dIdx != 0xffffffff)
 		{
 			traversalResult& res = g_Intersector.res(dat.dIdx, 1);
 			traversalRay& ray = g_Intersector(dat.dIdx, 1);
@@ -172,14 +172,14 @@ __global__ void pathIterateKernel(unsigned int N, e_Image I, int pass, int itera
 						f = f / f.max();
 					else goto labelAdd;
 				}
-				unsigned int idx2 = g_Intersector2.insertRay(0);
+				unsigned int idx2 =  g_Intersector2.insertRay(0);
 				traversalRay& ray2 = g_Intersector2(idx2, 0);
 				ray2.a = Vec4f(bRec.dg.P, 1e-2f);
 				ray2.b = Vec4f(bRec.getOutgoing(), FLT_MAX);
 
 				DirectSamplingRecord dRec(bRec.dg.P, bRec.dg.sys.n);
 				Spectrum value = g_SceneData.sampleEmitterDirect(dRec, rng.randomFloat2());
-				if (r2.getMat().bsdf.hasComponent(ESmooth) && !value.isZero())
+				if (NEXT_EVENT_EST && r2.getMat().bsdf.hasComponent(ESmooth) && !value.isZero())
 				{
 					bRec.wo = normalize(bRec.dg.toLocal(dRec.d));
 					Spectrum bsdfVal = r2.getMat().bsdf.f(bRec);
@@ -240,7 +240,9 @@ void k_FastTracer::doPath(e_Image* I)
 		cudaMemcpyToSymbol(g_Intersector, srcBuf, sizeof(*srcBuf));
 		cudaMemcpyToSymbol(g_Intersector2, destBuf, sizeof(*destBuf));
 		cudaMemcpyToSymbol(g_NextRayCounterFT, &zero, sizeof(zero));
-		pathIterateKernel << < dim3(180, 1, 1), dim3(32, 6, 1) >> >(srcBuf->getNumRays(0), *I, pass, m_uPassesDone, depthImage ? 1 : 0);
+		if (m_pScene->getLightCount() > 2)
+			pathIterateKernel<true> << < dim3(180, 1, 1), dim3(32, 6, 1) >> >(srcBuf->getNumRays(0), *I, pass, m_uPassesDone, depthImage ? 1 : 0);
+		else pathIterateKernel<false> << < dim3(180, 1, 1), dim3(32, 6, 1) >> >(srcBuf->getNumRays(0), *I, pass, m_uPassesDone, depthImage ? 1 : 0);
 		cudaMemcpyFromSymbol(srcBuf, g_Intersector, sizeof(*srcBuf));
 		cudaMemcpyFromSymbol(destBuf, g_Intersector2, sizeof(*destBuf));
 		swapk(srcBuf, destBuf);

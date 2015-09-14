@@ -190,6 +190,76 @@ template<typename TARGET> CUDA_GLOBAL void rtm_Copy(e_Image::Pixel* P, TARGET T,
 	}
 }
 
+#define BLOCK_HGT 8
+template<typename TARGET> CUDA_GLOBAL void rtm_CopyShared(e_Image::Pixel* P, TARGET T, int w, int h, float splatScale, e_Filter filter)
+{
+	const int elePerWarp = 20*12;
+	CUDA_SHARED RGBCOL sharedStorage[elePerWarp * BLOCK_HGT];
+	RGBCOL* localStorage = sharedStorage + threadIdx.y * elePerWarp;
+	Vec2i local_base(16 * int(blockIdx.x) - 2, 8 * int(threadIdx.y + BLOCK_HGT * blockIdx.y) - 2);
+	if (local_base.x < -2 || local_base.x >= w || local_base.y < -2 || local_base.y >= h)
+		return;
+	Vec2i px = local_base + Vec2i(2 + (threadIdx.x % 8) * 2, 2 + (threadIdx.x / 8) * 2);
+#define LOCAL_IDX(img_x, img_y) ((img_y - local_base.y) * 20 + (img_x - local_base.x))
+#define LOAD_BLOCK(local_x, local_y) { \
+		for(int i = 0; i < 2; i++) \
+			for(int j = 0; j < 3; j++) \
+			{ \
+				Vec2i pix = local_base + Vec2i(local_x * 2 + i, local_y * 3 + j); \
+				localStorage[LOCAL_IDX(pix.x, pix.y)] = Spectrum(P[math::clamp(pix.y, 0, h-1) * w + math::clamp(pix.x, 0, w-1)].toSpectrum(splatScale).saturate()).toRGBCOL(); \
+			} \
+		}
+	
+	Vec2i local_idx((threadIdx.x % 8) + 1, threadIdx.x / 8);
+	int side = (threadIdx.x % 8 == 0) * -1 + (threadIdx.x % 8 == 7);
+	if (side)
+		LOAD_BLOCK((local_idx.x + side), local_idx.y)
+	LOAD_BLOCK(local_idx.x, local_idx.y);
+	
+	//operating on warp level => synchronized
+
+	//container for all 4 pixels
+	int x0 = math::Ceil2Int(px.x - 0.5f - filter.As<e_FilterBase>()->xWidth);
+	int x1 = math::Floor2Int(px.x + 1 - 0.5f + filter.As<e_FilterBase>()->xWidth);
+	int y0 = math::Ceil2Int(px.y - 0.5f - filter.As<e_FilterBase>()->yWidth);
+	int y1 = math::Floor2Int(px.y + 1 - 0.5f + filter.As<e_FilterBase>()->yWidth);
+	x0 = max(x0, 0);
+	x1 = min(x1, 0 + int(w) - 1);
+	y0 = max(y0, 0);
+	y1 = min(y1, 0 + int(h) - 1);
+	/*  0 1
+	    2 3
+	*/
+	Spectrum acc[4] = { Spectrum(0.0f), Spectrum(0.0f), Spectrum(0.0f), Spectrum(0.0f) };
+	float accWeight[4] = {0, 0, 0, 0};
+	if ((x1 - x0) >= 0 || (y1 - y0) >= 0)
+	{
+		for (int y = y0; y <= y1; ++y)
+			for (int x = x0; x <= x1; ++x)
+			{
+				float fWt0 = filter.Evaluate(x - (px.x - 0.5f), y - (px.y - 0.5f)),
+					  fWt1 = filter.Evaluate(x - (px.x + 1 - 0.5f), y - (px.y - 0.5f)),
+					  fWt2 = filter.Evaluate(x - (px.x - 0.5f), y - (px.y + 1 - 0.5f)),
+					  fWt3 = filter.Evaluate(x - (px.x + 1 - 0.5f), y - (px.y + 1 - 0.5f));
+				Spectrum s;
+				s.fromRGBCOL(localStorage[LOCAL_IDX(x, y)]);
+				acc[0] += s * fWt0; acc[1] += s * fWt1; acc[2] += s * fWt2; acc[3] += s * fWt3;
+				accWeight[0] += fWt0; accWeight[1] += fWt1; accWeight[2] += fWt2; accWeight[3] += fWt3;
+			}
+		if (px.x < w && px.y < h)
+			T(px.x, px.y, gammaCorrecture(acc[0] / accWeight[0]));
+		if (px.x + 1 < w && px.y < h)
+			T(px.x + 1, px.y, gammaCorrecture(acc[1] / accWeight[1]));
+		if (px.x < w && px.y + 1 < h)
+			T(px.x, px.y + 1, gammaCorrecture(acc[2] / accWeight[2]));
+		if (px.x + 1 < w && px.y + 1 < h)
+			T(px.x + 1, px.y + 1, gammaCorrecture(acc[3] / accWeight[3]));
+	}
+
+#undef LOCAL_IDX
+#undef LOAD_BLOCK
+}
+
 void e_Image::InternalUpdateDisplay()
 {
 	if(outState > 2)
@@ -226,10 +296,20 @@ void e_Image::InternalUpdateDisplay()
 	}
 	else
 	{
-		if(outState == 1)
-			rtm_Copy << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(cudaPixels, T2, xResolution, yResolution, lastSplatVal, filter);
-		else rtm_Copy << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(cudaPixels, T1, xResolution, yResolution, lastSplatVal, filter);
+		if (filter.As()->xWidth <= 2 && filter.As()->yWidth <= 2)
+		{
+			if (outState == 1)
+				rtm_CopyShared << <dim3(xResolution / 16 + 1, yResolution / (8 * BLOCK_HGT) + 1), dim3(32, BLOCK_HGT) >> >(cudaPixels, T2, xResolution, yResolution, lastSplatVal, filter);
+			else rtm_CopyShared << <dim3(xResolution / 16 + 1, yResolution / (8 * BLOCK_HGT) + 1), dim3(32, BLOCK_HGT) >> >(cudaPixels, T1, xResolution, yResolution, lastSplatVal, filter);
+		}
+		else
+		{
+			if (outState == 1)
+				rtm_Copy << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(cudaPixels, T2, xResolution, yResolution, lastSplatVal, filter);
+			else rtm_Copy << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(cudaPixels, T1, xResolution, yResolution, lastSplatVal, filter);
+		}
 	}
+	ThrowCudaErrors();
 }
 
 template<typename TARGET> CUDA_GLOBAL void rtm_Copy(e_Image::Pixel* A, e_Image::Pixel* B, TARGET T, unsigned int w, unsigned int h, float splatScaleA, float splatScaleB, e_Filter filterA, e_Filter filterB, float scale)

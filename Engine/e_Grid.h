@@ -119,6 +119,12 @@ template<bool REGULAR> struct k_HashGrid
 	{
 		return m_sBox;
 	}
+
+	CUDA_FUNC_IN AABB getCell(const Vec3u& cell_idx) const
+	{
+		Vec3f f = m_sBox.minV + m_vCellSize * Vec3f(cell_idx.x, cell_idx.y, cell_idx.z);
+		return AABB(f, f + m_vCellSize);
+	}
 };
 
 typedef k_HashGrid<true> k_HashGrid_Reg;

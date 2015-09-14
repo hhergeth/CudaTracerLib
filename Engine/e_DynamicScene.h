@@ -105,4 +105,5 @@ public:
 	void BuildFlatMeshBVH(e_BufferReference<e_Mesh, e_KernelMesh> m, const e_BVHNodeData* bvh, unsigned int bvhLength,
 		const e_TriIntersectorData* int1, unsigned int int1Legth, const e_TriIntersectorData2* int2, unsigned int int2Legth);
 	unsigned int getLightCount(e_BufferReference<e_Node, e_Node> n);
+	unsigned int getLightCount();
 };

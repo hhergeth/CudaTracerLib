@@ -109,13 +109,13 @@ void k_BlockSampleImage::Add(int x, int y, const Spectrum& c)
 {
 	img.AddSample(x, y, c);
 #ifdef ISCUDA
-	float l = math::clamp(c.average(), 0.0f, 1000.0f);
+	/*float l = math::clamp(c.average(), 0.0f, 1000.0f);
 	unsigned int i = y * w + x;
 	k_SamplerpixelData& pix = m_pLumData[i];
 	pix.E += l;
 	pix.E2 += l * l;
 	pix.flag = 1;
-	pix.n++;
+	pix.n++;*/
 #endif
 }
 

@@ -8,6 +8,7 @@ texture<uint4, 1> t_Photons;
 texture<int2, 1> t_Beams;
 texture<int2, 1> t_PhotonBeams;
 CUDA_DEVICE k_BeamGrid g_PhotonBeamGrid;
+CUDA_CONST k_pGridEntry* g_SurfaceEntries2;
 
 template<bool HAS_MULTIPLE_MAPS, typename PHOTON> CUDA_FUNC_IN PHOTON loadPhoton(unsigned int idx, const k_PhotonMapCollection<HAS_MULTIPLE_MAPS, PHOTON>& map)
 {
@@ -148,6 +149,21 @@ template<bool VOL> CUDA_DEVICE Spectrum L_Volume3(float a_r, CudaRNG& rng, const
 	return L_n;
 }
 
+CUDA_FUNC_IN float calculatePlaneAreaInCell(const AABB& planeBox)
+{
+	return length(Vec3f(planeBox.minV.x, planeBox.maxV.y, planeBox.maxV.z) - planeBox.minV) * length(Vec3f(planeBox.maxV.x, planeBox.minV.y, planeBox.minV.z) - planeBox.minV);
+}
+CUDA_FUNC_IN AABB calculatePlaneAABBInCell(const AABB& cell, const Vec3f& p, const Vec3f& n, float r)
+{
+	Vec3f down_plane = normalize(cross(Vec3f(1,0,0), n));
+	Vec3f left_plane = normalize(cross(down_plane, n));
+	AABB res = AABB::Identity();
+	res.Enlarge(cell.Clamp(p + r * down_plane));
+	res.Enlarge(cell.Clamp(p + r * left_plane));
+	res.Enlarge(cell.Clamp(p - r * down_plane));
+	res.Enlarge(cell.Clamp(p - r * left_plane));
+	return res;
+}
 CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED, const e_KernelMaterial* mat, const k_PhotonMapCollection<true, k_pPpmPhoton>& photonMap, const k_PhotonMapReg& map)
 {
 	Spectrum Lp = Spectrum(0.0f);
@@ -178,6 +194,18 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED
 					}
 					i = e.getNext();
 				}
+				/*unsigned int cell_idx = map.m_sHash.Hash(Vec3u(a, b, c));
+				if (cell_idx < map.m_uGridLength)
+				{
+					AABB cell_world = map.m_sHash.getCell(Vec3u(a, b, c));
+					AABB disk_aabb_in_box = calculatePlaneAABBInCell(cell_world, bRec.dg.P, bRec.dg.sys.n, a_rSurfaceUNUSED);
+					AABB plane_aabb_in_box = calculatePlaneAABBInCell(cell_world, bRec.dg.P, bRec.dg.sys.n, map.m_sHash.m_vCellSize.length() * 5);
+					float scale = (calculatePlaneAreaInCell(disk_aabb_in_box)) / calculatePlaneAreaInCell(plane_aabb_in_box);
+					auto& e = g_SurfaceEntries2[cell_idx];
+					//float X = disk_aabb_in_box.maxV.x - disk_aabb_in_box.minV.x, X2 = disk_aabb_in_box.maxV.x * disk_aabb_in_box.maxV.
+					Spectrum m_sValue = e.m_sValues[0];
+					Lp += mat->bsdf.As<diffuse>()->m_reflectance.Evaluate(bRec.dg) * m_sValue / (PI * r2);
+				}*/
 			}
 	return Lp / float(photonMap.m_uPhotonNumEmitted);
 }
@@ -326,9 +354,7 @@ template<bool DIRECT, bool FINAL_GATHER> CUDA_FUNC_IN void k_EyePassF(int x, int
 			TraceResult r3 = k_TraceRay(rTrans);
 			Spectrum Tr;
 #ifdef ISCUDA
-			/*if (r2.getMat().bsdf.m_bReflectDirAtSurface)
-				L += throughput * L_Volume<true>(a_rVolume, rng, rTrans, 0, r3.m_fDist, r2.getNodeIndex(), Spectrum(0.0f), Spectrum(0.0f), Tr, photonMap);
-				else */L += throughput * L_Volume<false>(a_rVolume, rng, rTrans, 0, r3.m_fDist, bssrdf->sigp_s + bssrdf->sig_a, bssrdf->sigp_s, Tr, photonMap, r2.getNodeIndex());
+			L += throughput * L_Volume<false>(a_rVolume, rng, rTrans, 0, r3.m_fDist, bssrdf->sigp_s + bssrdf->sig_a, bssrdf->sigp_s, Tr, photonMap, r2.getNodeIndex());
 #endif
 			//break;
 		}
@@ -410,6 +436,7 @@ void k_sPpmTracer::RenderBlock(e_Image* I, int x, int y, int blockW, int blockH)
 	if (m_sPhotonBeams.m_pGrid)
 		ThrowCudaErrors(cudaBindTexture(&offset, &t_PhotonBeams, m_sPhotonBeams.m_pGrid, &cdi2, m_sPhotonBeams.m_uGridLength * sizeof(int2)));
 	//ThrowCudaErrors(cudaMemcpyToSymbol(g_PhotonBeamGrid, &m_sPhotonBeams, sizeof(m_sPhotonBeams)));
+	ThrowCudaErrors(cudaMemcpyToSymbol(g_SurfaceEntries2, &m_pSurfaceValues, sizeof(m_pSurfaceValues)));
 
 	float radius2 = getCurrentRadius2(2);
 	float radius3 = getCurrentRadius2(3);
