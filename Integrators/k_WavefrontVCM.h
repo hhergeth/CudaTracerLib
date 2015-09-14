@@ -20,6 +20,9 @@ struct k_BPTCamSubPathState
 	BPTSubPathState state;
 };
 
+typedef k_RayBuffer<k_BPTPathState, 1> k_WVCM_LightBuffer;
+typedef k_RayBuffer<k_BPTCamSubPathState, 1> k_WVCM_CamBuffer;
+
 class k_WavefrontVCM : public k_Tracer<true, true>
 {
 public:
@@ -44,9 +47,9 @@ private:
 	}
 private:
 	unsigned int m_uNumLightRays;
-	k_RayBuffer<k_BPTPathState, 1> m_sLightBufA, m_sLightBufB;
+	k_WVCM_LightBuffer m_sLightBufA, m_sLightBufB;
 	BPTVertex* m_pDeviceLightVertices;
-	k_RayBuffer<k_BPTCamSubPathState, 1> m_sCamBufA, m_sCamBufB;
+	k_WVCM_CamBuffer m_sCamBufA, m_sCamBufB;
 	unsigned int m_uLightOff;
 	void cppTest();
 protected:

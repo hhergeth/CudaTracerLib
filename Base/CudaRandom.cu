@@ -39,7 +39,6 @@ CudaRNGBuffer::CudaRNGBuffer(unsigned int a_Length, unsigned int a_Spacing, unsi
 
 void CudaRNGBuffer::Free()
 {
-	std::cout << "~CudaRNGBuffer_cuRAND called!\n";
 	CUDA_FREE(m_pDeviceGenerators);
 	delete[] m_pHostGenerators;
 }

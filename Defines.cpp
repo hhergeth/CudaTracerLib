@@ -14,7 +14,8 @@ void fail(const char* format, ...)
 {
 	va_list arglist;
 	va_start(arglist, format);
-	vprintf(format, arglist);
+	std::string err_str = vformat(format, arglist);
+	std::cout << err_str;
 	va_end(arglist);
 
 #ifdef ISWINDOWS
@@ -22,9 +23,7 @@ void fail(const char* format, ...)
 		__debugbreak();
 #endif
 
-	// Kill the app.
-
-	throw std::runtime_error("");
+	throw std::runtime_error(err_str);
 }
 
 void __ThrowCudaErrors__(const char* file, int line, ...)

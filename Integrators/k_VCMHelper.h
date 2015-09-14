@@ -208,7 +208,14 @@ CUDA_FUNC_IN bool sampleScattering(BPTSubPathState& v, BSDFSamplingRecord& bRec,
 	return misWeight * L;
 }
 
- CUDA_FUNC_IN void connectToCamera(const BPTSubPathState& lightState, BSDFSamplingRecord& bRec, const e_KernelMaterial& mat, e_Image& g_Image, CudaRNG& rng, float mLightSubPathCount, float mMisVmWeightFactor, float scaleLight, bool use_mis)
+ template<bool TEST_VISIBILITY> CUDA_FUNC_IN bool V(const Vec3f& a, const Vec3f& b, TraceResult* res = 0)
+ {
+	 if (!TEST_VISIBILITY)
+		 return true;
+	 else return ::V(a, b, res);
+ }
+
+template<bool TEST_VISIBILITY = true> CUDA_FUNC_IN void connectToCamera(const BPTSubPathState& lightState, BSDFSamplingRecord& bRec, const e_KernelMaterial& mat, e_Image& g_Image, CudaRNG& rng, float mLightSubPathCount, float mMisVmWeightFactor, float scaleLight, bool use_mis)
 {
 	DirectSamplingRecord dRec(bRec.dg.P, bRec.dg.sys.n);
 	Spectrum directFactor = g_SceneData.m_Camera.sampleDirect(dRec, rng.randomFloat2());
@@ -223,11 +230,11 @@ CUDA_FUNC_IN bool sampleScattering(BPTSubPathState& v, BSDFSamplingRecord& bRec,
 						 mMisVmWeightFactor + lightState.dVCM + lightState.dVC * Mis(bsdfRevPdfW));
 	float miWeight = use_mis ? 1.f / (wLight + 1.f) : 1;
 	Spectrum contrib = miWeight * lightState.throughput * bsdfFactor * directFactor / mLightSubPathCount;
-	if (!contrib.isZero() && ::V(dRec.p, dRec.ref))
+	if (!contrib.isZero() && V<TEST_VISIBILITY>(dRec.p, dRec.ref))
 		g_Image.Splat(dRec.uv.x, dRec.uv.y, contrib * scaleLight);
 }
 
- CUDA_FUNC_IN Spectrum connectToLight(const BPTSubPathState& cameraState, BSDFSamplingRecord& bRec, const e_KernelMaterial& mat, CudaRNG& rng, float mMisVmWeightFactor, bool use_mis)
+template<bool TEST_VISIBILITY = true> CUDA_FUNC_IN Spectrum connectToLight(const BPTSubPathState& cameraState, BSDFSamplingRecord& bRec, const e_KernelMaterial& mat, CudaRNG& rng, float mMisVmWeightFactor, bool use_mis)
 {
 	DirectSamplingRecord dRec(bRec.dg.P, bRec.dg.sys.n);
 	const Spectrum directFactor = g_SceneData.sampleEmitterDirect(dRec, rng.randomFloat2());
@@ -260,12 +267,12 @@ CUDA_FUNC_IN bool sampleScattering(BPTSubPathState& v, BSDFSamplingRecord& bRec,
 
 	Spectrum contrib = misWeight * directFactor * bsdfFactor;
 
-	if (contrib.isZero() || !::V(bRec.dg.P, dRec.p))
-		return Spectrum(0.0f);
-	return contrib;
+	if (!contrib.isZero() && V<TEST_VISIBILITY>(bRec.dg.P, dRec.p))
+		return contrib;
+	return Spectrum(0.0f);
 }
 
- CUDA_FUNC_IN Spectrum connectVertices(BPTVertex& emitterVertex, const BPTSubPathState& cameraState, BSDFSamplingRecord& bRec, const e_KernelMaterial& mat, float mMisVcWeightFactor, float mMisVmWeightFactor, bool use_mis)
+template<bool TEST_VISIBILITY = true> CUDA_FUNC_IN Spectrum connectVertices(BPTVertex& emitterVertex, const BPTSubPathState& cameraState, BSDFSamplingRecord& bRec, const e_KernelMaterial& mat, float mMisVcWeightFactor, float mMisVmWeightFactor, bool use_mis)
 {
 	const float dist2 = distanceSquared(emitterVertex.dg.P, bRec.dg.P);
 	Vec3f direction = normalize(emitterVertex.dg.P - bRec.dg.P);
@@ -300,9 +307,9 @@ CUDA_FUNC_IN bool sampleScattering(BPTSubPathState& v, BSDFSamplingRecord& bRec,
 
 	const float geometryTerm = 1.0f / dist2;
 	const Spectrum contrib = (misWeight * geometryTerm) * cameraBsdf * emitterBsdf;
-	if (contrib.isZero() || !::V(bRec.dg.P, emitterVertex.dg.P))
-		return Spectrum(0.0f);
-	return contrib;
+	if (!contrib.isZero() && V<TEST_VISIBILITY>(bRec.dg.P, emitterVertex.dg.P))
+		return contrib;
+	return Spectrum(0.0f);
 }
 
  template<bool MULTIPLE> inline CUDA_DEVICE Spectrum L_Surface2(k_PhotonMapCollection<MULTIPLE, k_MISPhoton>& map, BPTSubPathState& aCameraState, BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED, const e_KernelMaterial* mat, float mMisVcWeightFactor, bool use_mis)

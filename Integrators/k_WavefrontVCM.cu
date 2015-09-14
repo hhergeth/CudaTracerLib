@@ -14,11 +14,11 @@ CUDA_CONST float mMisVcWeightFactor;
 CUDA_CONST float mMisVmWeightFactor;
 CUDA_CONST float mLightSubPathCount;
 
-CUDA_DEVICE k_RayBuffer<k_BPTPathState, 1> g_sLightBufA, g_sLightBufB;
+CUDA_DEVICE k_WVCM_LightBuffer g_sLightBufA, g_sLightBufB;
 
 CUDA_DEVICE k_PhotonMapCollection<false, k_MISPhoton> g_NextMap2;
 
-CUDA_DEVICE k_RayBuffer<k_BPTCamSubPathState, 1> g_sCamBufA, g_sCamBufB;
+CUDA_DEVICE k_WVCM_CamBuffer g_sCamBufA, g_sCamBufB;
 
 CUDA_GLOBAL void createLightRays(unsigned int g_DeviceNumLightPaths)
 {
@@ -118,7 +118,7 @@ void k_WavefrontVCM::DoRender(e_Image* I)
 	m_sPhotonMapsNext.m_uPhotonNumEmitted = m_uNumLightRays;
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_NextMap2, &m_sPhotonMapsNext, sizeof(m_sPhotonMapsNext)));
 
-	k_RayBuffer<k_BPTPathState, 1>* srcBuf = &m_sLightBufA, *destBuf = &m_sLightBufB;
+	k_WVCM_LightBuffer* srcBuf = &m_sLightBufA, *destBuf = &m_sLightBufB;
 	int i = 0;
 	do
 	{
@@ -173,6 +173,34 @@ CUDA_GLOBAL void createCameraRays(int xoff, int yoff, int blockW, int blockH, in
 	g_RNGData(rng);
 }
 
+CUDA_GLOBAL void performPPMEstimate(unsigned int N, float a_Radius)
+{
+	DifferentialGeometry dg;
+	BSDFSamplingRecord bRec(dg);
+	CudaRNG rng = g_RNGData();
+	unsigned int idx = blockIdx.x * blockDim.x * blockDim.y + threadIdx.y * blockDim.x + threadIdx.x;
+	if (idx < N)
+	{
+		auto ent = g_sCamBufA(idx);
+		auto res = g_sCamBufA.res(idx, 0);
+		if (res.dist)
+		{
+			TraceResult r2;
+			res.toResult(&r2, g_SceneData);
+
+			r2.getBsdfSample(ent.state.r, bRec, ETransportMode::ERadiance, &rng);
+
+			ent.state.dVCM *= r2.m_fDist * r2.m_fDist;
+			ent.state.dVCM /= math::abs(Frame::cosTheta(bRec.wi));
+			ent.state.dVC /= math::abs(Frame::cosTheta(bRec.wi));
+			ent.state.dVM /= math::abs(Frame::cosTheta(bRec.wi));
+
+			g_sCamBufA(idx).acc = ent.acc + ent.state.throughput * L_Surface2(g_NextMap2, ent.state, bRec, a_Radius, &r2.getMat(), mMisVcWeightFactor, true);
+		}
+	}
+	g_RNGData(rng);
+}
+
 CUDA_GLOBAL void extendCameraRays(unsigned int N, e_Image I, int iteration, bool lastIteration, float a_Radius, unsigned int lightOff, unsigned int numLightPaths, BPTVertex* g_pLightVertices)
 {
 	DifferentialGeometry dg;
@@ -201,8 +229,6 @@ CUDA_GLOBAL void extendCameraRays(unsigned int N, e_Image I, int iteration, bool
 
 			if (r2.getMat().bsdf.hasComponent(ESmooth))
 			{
-				ent.acc += ent.state.throughput * L_Surface2(g_NextMap2, ent.state, bRec, a_Radius, &r2.getMat(), mMisVcWeightFactor, true);
-
 				ent.acc += ent.state.throughput * connectToLight(ent.state, bRec, r2.getMat(), rng, mMisVmWeightFactor, true);
 
 				unsigned int vOff = ((lightOff + idx) % numLightPaths) * MAX_LIGHT_SUB_PATH_LENGTH, i = 0;
@@ -254,7 +280,7 @@ void k_WavefrontVCM::RenderBlock(e_Image* I, int x, int y, int blockW, int block
 	ThrowCudaErrors(cudaThreadSynchronize());
 	m_sCamBufA.setNumRays(blockSize * blockSize, 0);
 
-	k_RayBuffer<k_BPTCamSubPathState, 1>* srcBuf = &m_sCamBufA, *destBuf = &m_sCamBufB;
+	k_WVCM_CamBuffer* srcBuf = &m_sCamBufA, *destBuf = &m_sCamBufB;
 	int i = 0;
 	do
 	{
@@ -262,6 +288,7 @@ void k_WavefrontVCM::RenderBlock(e_Image* I, int x, int y, int blockW, int block
 		srcBuf->IntersectBuffers<false>(false);
 		ThrowCudaErrors(cudaMemcpyToSymbol(g_sCamBufA, srcBuf, sizeof(*srcBuf)));
 		ThrowCudaErrors(cudaMemcpyToSymbol(g_sCamBufB, destBuf, sizeof(*destBuf)));
+		performPPMEstimate << <srcBuf->getNumRays(0) / (32 * 6) + 1, dim3(32, 6) >> >(srcBuf->getNumRays(0), getCurrentRadius(2));
 		extendCameraRays << <srcBuf->getNumRays(0) / (32 * 6) + 1, dim3(32, 6) >> >(srcBuf->getNumRays(0), *I, i++, i == 4, getCurrentRadius(2), m_uLightOff, m_uNumLightRays, m_pDeviceLightVertices);
 		ThrowCudaErrors(cudaThreadSynchronize());
 		ThrowCudaErrors(cudaMemcpyFromSymbol(srcBuf, g_sCamBufA, sizeof(*srcBuf)));

@@ -786,7 +786,7 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
         }
 
         // Traversal loop.
-		TraceResult r2 = k_TraceRay(Ray(a_RayBuffer[rayidx].a.getXYZ(), a_RayBuffer[rayidx].b.getXYZ()));
+		/*TraceResult r2 = k_TraceRay(Ray(a_RayBuffer[rayidx].a.getXYZ(), a_RayBuffer[rayidx].b.getXYZ()));
 		int4 res = make_int4(0, 0, 0, 0);
 		if (r2.hasHit())
 		{
@@ -797,16 +797,14 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 			res.w = *(int*)&h;
 		}
 		((int4*)a_ResBuffer)[rayidx] = res;
-		nodeAddr = EntrypointSentinel;
+		nodeAddr = EntrypointSentinel;*/
 
-		/*if (g_SceneData.m_sNodeData.UsedCount == 0)
+		if (g_SceneData.m_sNodeData.UsedCount == 0)
 			nodeAddr = EntrypointSentinel;
 
 		while (nodeAddr != EntrypointSentinel)
         {
-			//nodeAddr = nodeAddr == EntrypointSentinel - 1 ? EntrypointSentinel : nodeAddr;
             // Traverse internal nodes until all SIMD lanes have found a leaf.
-
             while (unsigned int(nodeAddr) < unsigned int(EntrypointSentinel))   // functionally equivalent, but faster
             {
                 // Fetch AABBs of the two child nodes.
@@ -1002,7 +1000,7 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 							const float4 v00 = tex1Dfetch(t_tris, triAddr * 3 + 0 + m_uBVHTriangleOffset);
 							const float4 v11 = tex1Dfetch(t_tris, triAddr * 3 + 1 + m_uBVHTriangleOffset);
 							const float4 v22 = tex1Dfetch(t_tris, triAddr * 3 + 2 + m_uBVHTriangleOffset);
-							unsigned int index = tex1Dfetch(t_triIndices, min(triAddr + m_uBVHIndicesOffset, 8135));
+							unsigned int index = tex1Dfetch(t_triIndices, triAddr + m_uBVHIndicesOffset);
 
 							float Oz = v00.w - lorigx*v00.x - lorigy*v00.y - lorigz*v00.z;
 							float invDz = 1.0f / (ldirx*v00.x + ldiry*v00.y + ldirz*v00.z);
@@ -1062,6 +1060,7 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 					//	goto outerlabel;//jump AFTER store cause we will do that later
 					//}
 				}
+				
 				// Another leaf was postponed => process it as well.		
 				leafAddr = nodeAddr;
 				if (nodeAddr < 0)
@@ -1088,7 +1087,7 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 			half2 h(bCorrds);
 			res.w = *(int*)&h;
 		}
-		((int4*)a_ResBuffer)[rayidx] = res;*/
+		((int4*)a_ResBuffer)[rayidx] = res;
 //outerlabel: ;
     } while(true);
 }
