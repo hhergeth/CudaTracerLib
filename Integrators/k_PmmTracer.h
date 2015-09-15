@@ -9,6 +9,8 @@ void plotPoints(Vec3f* dirs, unsigned int N);
 struct SpatialEntry;
 struct DirectionModel;
 
+//Incomplete implementation of "On-line Learning of Parametric Mixture Models for Light Transport Simulation"
+
 class k_PmmTracer : public k_Tracer<false, true>
 {
 public:

@@ -10,16 +10,18 @@
 #define SELECT(x,y,o) o < 4 ? (x >> (o * 8)) : (x >> (o * 8 - 32))
 #define SCRAMBLE(x,y,a,b,c,d) unsigned int(((SELECT(x, y, d)) << 24) | ((SELECT(x, y, c) << 16)) | ((SELECT(x, y, b) << 8)) | ((SELECT(x, y, a))))
 
-CUDA_ONLY_FUNC float4x4 d_Compute(float4x4* a_Matrices, e_AnimatedVertex& v)
+CUDA_ONLY_FUNC float4x4 d_Compute(float4x4* a_Matrices, const e_AnimatedVertex& v)
 {
 	float4x4 mat;
 	mat.zeros();
-	for(int i = 0; i < g_uMaxWeights; i++)
+	unsigned long long idx = v.m_cBoneIndices, wgt = v.m_fBoneWeights;
+	for(int i = 0; i < 8; i++)
 	{
-		if(v.m_fBoneWeights[i] == 0)
-			break;
-		float4x4 m = a_Matrices[v.m_cBoneIndices[i]];
-		m = m * (float(v.m_fBoneWeights[i]) / 255.0f);
+		int j = idx & 0xff;
+		float w = (wgt & 0xff) / 255.0f;
+		idx >>= 8; wgt >>= 8;
+		float4x4 m = a_Matrices[j];
+		m = m * w;
 		mat = mat + m;
 	}
 	return mat;
@@ -139,25 +141,20 @@ void e_AnimatedMesh::k_ComputeState(unsigned int a_Anim, unsigned int a_Frame, f
 	float4x4* m0 = (float4x4*)m_pAnimations[a_Anim].m_pFrames[a_Frame].m_sMatrices.getDevice();
 	float4x4* m1 = (float4x4*)m_pAnimations[a_Anim].m_pFrames[n].m_sMatrices.getDevice();
 	g_ComputeVertices << <k_Data.m_uVertexCount / 256 + 1, 256 >> >(a_DeviceTmp, (e_AnimatedVertex*)m_sVertices.getDevice(), m0, m1, a_lerp, k_Data.m_uVertexCount);
-	cudaThreadSynchronize();
-	ThrowCudaErrors();
+	ThrowCudaErrors(cudaDeviceSynchronize());
 	g_ComputeTriangles << <m_sTriInfo.getLength() / 256 + 1, 256 >> >(a_DeviceTmp, (uint3*)m_sTriangles.getDevice(), m_sTriInfo.getDevice(), m_sTriInfo.getLength());
-	cudaThreadSynchronize();
-	ThrowCudaErrors();
+	ThrowCudaErrors(cudaDeviceSynchronize());
 	cudaMemcpy(a_HostTmp, a_DeviceTmp, sizeof(e_TmpVertex) * k_Data.m_uVertexCount, cudaMemcpyDeviceToHost);
 	AnimProvider p(this, a_HostTmp, this->m_sTriangles);
-	cudaThreadSynchronize();
-	ThrowCudaErrors();
+	ThrowCudaErrors(cudaDeviceSynchronize());
 	if (m_pBuilder)
 		m_pBuilder->Build(&p, true);
 	else m_pBuilder = new e_BVHRebuilder(this, &p);
-	cudaThreadSynchronize();
-	ThrowCudaErrors();
+	ThrowCudaErrors(cudaDeviceSynchronize());
 	m_sTriInfo.CopyFromDevice();
 	m_sNodeInfo.Invalidate();
 	m_sIntInfo.Invalidate();
 	m_sIndicesInfo.Invalidate();
 	m_sLocalBox = m_pBuilder->getBox();
-	cudaThreadSynchronize();
-	ThrowCudaErrors();
+	ThrowCudaErrors(cudaDeviceSynchronize());
 }

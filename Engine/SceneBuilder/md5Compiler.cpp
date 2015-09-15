@@ -51,15 +51,15 @@ void compilemd5(IInStream& in, std::vector<IInStream*>& animFiles, FileOutputStr
 			e_AnimatedVertex av;
 			Vec3f pos = Vec3f(0);
 			Vertex& V = M.meshes[i]->verts[v];
-			int a = min(g_uMaxWeights, V.weightCount);
+			int a = min(8, V.weightCount);
 			for (int k = 0; k < a; k++)
 			{
 				const Weight &w = M.meshes[i]->weights[V.weightIndex + k];
 				const Joint &joint = M.joints[w.joint];
 				const Vec3f r = joint.quat.toMatrix().TransformPoint(w.pos);
 				pos += (joint.pos + r) * w.w;
-				av.m_cBoneIndices[k] = (unsigned char)w.joint;
-				av.m_fBoneWeights[k] = (unsigned char)(w.w * 255.0f);
+				((unsigned char*)&av.m_cBoneIndices)[k] = (unsigned char)w.joint;
+				((unsigned char*)&av.m_fBoneWeights)[k] = (unsigned char)(w.w * 255.0f);
 			}
 			av.m_fVertexPos = pos;
 			v_Pos.push_back(pos);

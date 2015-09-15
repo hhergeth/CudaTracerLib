@@ -1179,12 +1179,7 @@ void compileobj(IInStream& in, FileOutputStream& a_Out)
 			mat.bsdf.SetData(d);
 		}
 		else if (M.IlluminationModel == 5)
-		{/*
-		 dielectric d;
-		 d.m_invEta = d.m_eta = 1;
-		 d.m_specularReflectance = CreateTexture(0, Spectrum(M.specular));
-		 d.m_specularTransmittance = CreateTexture(0, Spectrum(0.0f));
-		 mat.bsdf.SetData(d);*/
+		{
 			mat.bsdf.SetData(conductor(Spectrum(0.0f), Spectrum(1.0f)));
 		}
 		else if (M.IlluminationModel == 7)
@@ -1209,39 +1204,7 @@ void compileobj(IInStream& in, FileOutputStream& a_Out)
 		{
 			mat.SetHeightMap(M.textures[TextureType_Displacement].c_str());
 		}
-		/*
-		if(0&&M.textures[3].c_str().size())
-		{
-		char* c = new char[M.textures[3].getID().getLength()+1];
-		ZeroMemory(c, M.textures[3].getID().getLength()+1);
-		memcpy(c, M.textures[3].getID().getPtr(), M.textures[3].getID().getLength());
-		OutputDebugString(c);
-		OutputDebugString(M.textures[3].getID().getPtr());
-		mat.SetHeightMap(CreateTexture(c, make_float3(0)));
-		mat.HeightScale = 0.5f;
-		}
 
-		#ifdef EXT_TRI
-		if(M.textures[0].hasData())
-		memcpy(m.m_cDiffusePath, M.textures[0].getID().getPtr(), M.textures[0].getID().getLength());
-		if(M.textures[3].hasData())
-		memcpy(m.m_cNormalPath, M.textures[3].getID().getPtr(), M.textures[3].getID().getLength());
-		#endif
-		*/
-		/*		Material M = s.materialHash.data[matIndex].value;
-		if(length(M.emission) != 0)
-		{
-		//duplicate material
-		matData.push_back(matData[matIndex]);
-		matIndex = matData.size() - 1;
-		std::cout << "duplicating material : " << matData[matIndex].Name << "\n";
-
-		Platform::SetMemory(m_sLights + lc, sizeof(e_MeshPartLight));
-		m_sLights[lc].L = M.emission;
-		strcpy(m_sLights[lc].MatName, M.Name.c_str());
-		matData[matIndex].NodeLightIndex = lc++;
-		}
-		*/
 		if (length(M.emission))
 		{
 			m_sLights[lc].L = Spectrum(M.emission.x, M.emission.y, M.emission.z);
@@ -1301,7 +1264,6 @@ void compileobj(IInStream& in, FileOutputStream& a_Out)
 				ta[j] = normalize(tangents[l]);
 				bi[j] = normalize(bitangents[l]);
 				n[j] = normalize(normals[l]);
-				//n[j] = v.n;
 #endif
 			}
 			triData[c++] = e_TriangleData(p, (unsigned char)matIndex, t, n, ta, bi);

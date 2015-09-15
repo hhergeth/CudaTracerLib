@@ -6,6 +6,8 @@
 #include <fstream>
 #include <MathTypes.h>
 
+// MD5 Loader, by A.J. Tavakoli
+
 enum TOKEN { TOKEN_KEYWORD,
                TOKEN_INT,
                TOKEN_FLOAT,

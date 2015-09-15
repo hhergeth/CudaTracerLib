@@ -8,6 +8,29 @@
 #include "e_Material.h"
 #include "e_IntersectorData.h"
 
+e_BufferReference<char, char> malloc_aligned(e_Stream<char>* stream, unsigned int a_Count, unsigned int a_Alignment)
+{
+	e_BufferReference<char, char> ref = stream->malloc(a_Count + a_Alignment * 2);
+	uintptr_t ptr = (uintptr_t)ref.getDevice();
+	unsigned int diff = ptr % a_Alignment, off = a_Alignment - diff;
+	if (diff)
+	{
+		unsigned int end = ref.getIndex() + off + a_Count;
+		e_BufferReference<char, char> refFreeFront = e_BufferReference<char, char>(stream, ref.getIndex(), off),
+									  refFreeTail = e_BufferReference<char, char>(stream, end, ref.getLength() - off - a_Count);
+		stream->dealloc(refFreeFront);
+		if (refFreeTail.getLength() != 0)
+			stream->dealloc(refFreeTail);
+		return e_BufferReference<char, char>(stream, ref.getIndex() + off, a_Count);
+	}
+	else
+	{
+		e_BufferReference<char, char> refFreeTail = e_BufferReference<char, char>(stream, ref.getIndex() + a_Count, a_Alignment * 2);
+		stream->dealloc(refFreeTail);
+		return e_BufferReference<char, char>(stream, ref.getIndex() + off, a_Count);
+	}
+}
+
 void e_Frame::serialize(FileOutputStream& a_Out)
 {
 	a_Out << (size_t)m_sHostConstructionData.size();
@@ -18,7 +41,8 @@ void e_Frame::deSerialize(IInStream& a_In, e_Stream<char>* Buf)
 {
 	size_t A;
 	a_In >> A;
-	m_sMatrices = Buf->malloc(sizeof(float4x4) * (unsigned int)A);
+	//m_sMatrices = Buf->malloc(sizeof(float4x4) * (unsigned int)A);
+	m_sMatrices = malloc_aligned(Buf, sizeof(float4x4) * (unsigned int)A, 16);
 	a_In >> m_sMatrices;
 }
 
@@ -42,20 +66,6 @@ void e_Animation::deSerialize(IInStream& a_In, e_Stream<char>* Buf)
 		m_pFrames.push_back(e_Frame());
 		m_pFrames[i].deSerialize(a_In, Buf);
 	}
-}
-
-e_BufferReference<char, char> malloc_aligned(e_Stream<char>* stream, unsigned int a_Count, unsigned int a_Alignment)
-{
-	e_BufferReference<char, char> ref = stream->malloc(a_Count + a_Alignment * 2);
-	uintptr_t ptr = (uintptr_t)ref.getDevice();
-	unsigned int diff = ptr % a_Alignment, off = a_Alignment - diff;
-	if (diff)
-	{
-		e_BufferReference<char, char> refFree = e_BufferReference<char, char>(stream, ref.getIndex(), off);
-		//stream->dealloc(refFree);
-		return e_BufferReference<char, char>(stream, ref.getIndex() + off, ref.getLength() - off);
-	}
-	else return ref;
 }
 
 e_AnimatedMesh::e_AnimatedMesh(const std::string& path, IInStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4, e_Stream<char>* a_Stream5)

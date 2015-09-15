@@ -4,20 +4,18 @@
 #include <vector>
 #include <queue>
 
-const int g_uMaxWeights = 8;
-struct e_AnimatedVertex
+struct CUDA_ALIGN(16) e_AnimatedVertex
 {
 	Vec3f m_fVertexPos;
 	Vec3f m_fNormal;
 	Vec3f m_fTangent;
 	Vec3f m_fBitangent;
-	unsigned char m_cBoneIndices[g_uMaxWeights];
-	unsigned char m_fBoneWeights[g_uMaxWeights];
+	unsigned long long m_cBoneIndices;
+	unsigned long long m_fBoneWeights;
 	e_AnimatedVertex()
 	{
 		m_fVertexPos = Vec3f(0);
-		for(int i = 0; i < g_uMaxWeights; i++)
-			m_cBoneIndices[i] = m_fBoneWeights[i] = 0;
+		m_cBoneIndices = m_fBoneWeights = 0;
 	}
 };
 
