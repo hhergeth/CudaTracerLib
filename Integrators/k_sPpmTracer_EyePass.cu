@@ -158,10 +158,10 @@ CUDA_FUNC_IN AABB calculatePlaneAABBInCell(const AABB& cell, const Vec3f& p, con
 	Vec3f down_plane = normalize(cross(Vec3f(1,0,0), n));
 	Vec3f left_plane = normalize(cross(down_plane, n));
 	AABB res = AABB::Identity();
-	res.Enlarge(cell.Clamp(p + r * down_plane));
-	res.Enlarge(cell.Clamp(p + r * left_plane));
-	res.Enlarge(cell.Clamp(p - r * down_plane));
-	res.Enlarge(cell.Clamp(p - r * left_plane));
+	res = res.Extend(cell.Clamp(p + r * down_plane));
+	res = res.Extend(cell.Clamp(p + r * left_plane));
+	res = res.Extend(cell.Clamp(p - r * down_plane));
+	res = res.Extend(cell.Clamp(p - r * left_plane));
 	return res;
 }
 CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED, const e_KernelMaterial* mat, const k_PhotonMapCollection<true, k_pPpmPhoton>& photonMap, const k_PhotonMapReg& map)

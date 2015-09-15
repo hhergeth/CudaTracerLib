@@ -363,7 +363,7 @@ void compileply(IInStream& istream, FileOutputStream& a_Out)
 			te[j] = TexCoords[l];
 			ta[j] = normalize(Tangents[l]);
 			n[j] = normalize(Normals[l]);
-			box.Enlarge(p[j]);
+			box = box.Extend(p[j]);
 		}
 		triData[t / 3] = e_TriangleData(p, (unsigned char)0, te, n, ta, bi);
 	}

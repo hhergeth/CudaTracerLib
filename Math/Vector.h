@@ -7,6 +7,8 @@
 #pragma warning(pop)
 #include "MathFunc.h"
 
+//This class is based on "understanding-the-efficiency-of-ray-traversal-on-gpus" with slight modifications.
+
 template <class T, int L> class Vector;
 
 template <class T, int L, class S> class VectorBase

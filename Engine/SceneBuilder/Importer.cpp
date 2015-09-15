@@ -42,7 +42,7 @@ namespace bvh_helper
 		{
 			*out = AABB::Identity();
 			for (int i = 0; i < 3; i++)
-				out->Enlarge(V[_index(index, i)]);
+				*out = out->Extend(V[_index(index, i)]);
 			//if(min(out->Size()) < 0.01f)
 			//	out->maxV += make_float3(0.01f);
 		}
@@ -105,23 +105,23 @@ namespace bvh_helper
 				// Insert vertex to the boxes it belongs to.
 
 				if (v0p <= pos)
-					lBox.Enlarge(v0);
+					lBox = lBox.Extend(v0);
 				if (v0p >= pos)
-					rBox.Enlarge(v0);
+					rBox = rBox.Extend(v0);
 
 				// Edge intersects the plane => insert intersection to both boxes.
 
 				if ((v0p < pos && v1p > pos) || (v0p > pos && v1p < pos))
 				{
 					Vec3f t = math::lerp(v0, v1, math::clamp01((pos - v0p) / (v1p - v0p)));
-					lBox.Enlarge(t);
-					rBox.Enlarge(t);
+					lBox = lBox.Extend(t);
+					rBox = rBox.Extend(t);
 				}
 			}
 			lBox.maxV[dim] = pos;
 			rBox.minV[dim] = pos;
-			lBox.intersect(refBox);
-			rBox.intersect(refBox);
+			lBox = lBox.Intersect(refBox);
+			rBox = rBox.Intersect(refBox);
 			return true;
 		}
 	};

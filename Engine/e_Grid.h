@@ -74,7 +74,7 @@ template<bool REGULAR> struct k_HashGrid
 		}
 		else
 		{
-			return Vec3u(-1);
+			return Vec3u(0xffffffff);
 		}
 	}
 

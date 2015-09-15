@@ -3,6 +3,9 @@
 #include "MathFunc.h"
 #include "Vector.h"
 
+//Compresses normalized float3s to ushorts. Either by using spherical coordinates, which are heavy on ALUs.
+//The alternative is scaling the x and y components to [0,255] and storing the z in one bit of the others data.
+
 #define SPHERICAL_COMPRESSION
 
 #ifdef SPHERICAL_COMPRESSION

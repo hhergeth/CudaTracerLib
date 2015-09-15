@@ -1,7 +1,9 @@
 #pragma once
 
-const int INT24_max = 8388607;
+const int INT24_MAX = 8388607;
 
+//3 byte signed integer datatype
+//http://stackoverflow.com/questions/2682725/int24-24-bit-integral-datatype
 class Int24
 {
 protected:

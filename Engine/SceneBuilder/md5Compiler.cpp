@@ -113,7 +113,7 @@ void compilemd5(IInStream& in, std::vector<IInStream*>& animFiles, FileOutputStr
 				unsigned int v = sm->tris[t].v[j] + off;
 				P[j] = v_Pos[v];
 				T[j] = sm->verts[v - off].tc;
-				box.Enlarge(P[j]);
+				box = box.Extend(P[j]);
 			}
 			e_TriangleData d(P, s, T, N, Tan, BiTan);
 			triData.push_back(d);

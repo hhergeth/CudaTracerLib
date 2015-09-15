@@ -5,9 +5,9 @@
 class k_PathTracer : public k_Tracer<true, true>
 {
 public:
-	bool m_Direct;
-	k_PathTracer(bool direct = false)
-		: m_Direct(direct)
+	bool m_Direct, m_Regularization;
+	k_PathTracer(bool direct = false, bool regularization = false)
+		: m_Direct(direct), m_Regularization(regularization)
 	{
 	}
 	virtual void Debug(e_Image* I, const Vec2i& pixel);

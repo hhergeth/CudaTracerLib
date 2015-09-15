@@ -2,6 +2,8 @@
 
 #include "float4x4.h"
 
+//Implementation copied from Mitsuba. Slight additions with respect to matrices.
+
 CUDA_FUNC_IN void coordinateSystem(const Vec3f& a, Vec3f& s, Vec3f& t)
 {
 	if (math::abs(a.x) > math::abs(a.y))
@@ -21,21 +23,14 @@ struct Frame
 {
 	Vec3f s, t;
 	Vec3f n;
-
-	/// Default constructor -- performs no initialization!
 	CUDA_FUNC_IN Frame() { }
-
-	/// Given a float3 and tangent float3s, construct a new coordinate frame
 	CUDA_FUNC_IN Frame(const Vec3f &s, const Vec3f &t, const Vec3f &n)
 	 : s(s), t(t), n(n) {
 	}
-
-	/// Construct a new coordinate frame from a single float3
 	CUDA_FUNC_IN Frame(const Vec3f &n) : n(normalize(n)) {
 		coordinateSystem(n, s, t);
 	}
 
-	/// Convert from world coordinates to local coordinates
 	CUDA_FUNC_IN Vec3f toLocal(const Vec3f &v) const {
 		return Vec3f(
 			dot(v, s),
@@ -43,8 +38,6 @@ struct Frame
 			dot(v, n)
 		);
 	}
-
-	/// Convert from local coordinates to world coordinates
 	CUDA_FUNC_IN Vec3f toWorld(const Vec3f &v) const {
 		return s * v.x + t * v.y + n * v.z;
 	}
@@ -145,13 +138,11 @@ struct Frame
 		return r;
 	}
 
-	/// Equality test
 	CUDA_FUNC_IN bool operator==(const Frame &frame) const {
 		Vec3f diff = frame.s - s + frame.t - t + frame.n - n;
 		return !dot(diff, diff);
 	}
 
-	/// Inequality test
 	CUDA_FUNC_IN bool operator!=(const Frame &frame) const {
 		return !operator==(frame);
 	}

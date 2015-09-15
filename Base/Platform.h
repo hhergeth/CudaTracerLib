@@ -23,7 +23,7 @@ inline std::string vformat(const char *fmt, va_list ap)
 	int l = _vscprintf(fmt, ap) + 1;
 	std::string str;
 	str.resize(l);
-	vsprintf_s((char*)str.c_str(), l, fmt, ap);
+	vsprintf((char*)str.c_str(), fmt, ap);
 	return str;
 }
 

@@ -444,5 +444,5 @@ e_KernelAggregateVolume::e_KernelAggregateVolume(e_Stream<e_VolumeRegion>* D, bo
 	}
 	box = AABB::Identity();
 	for (unsigned int i = 0; i < m_uVolumeCount; i++)
-		box.Enlarge(D->operator()(i)->WorldBound());
+		box = box.Extend(D->operator()(i)->WorldBound());
 }

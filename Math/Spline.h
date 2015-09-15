@@ -3,6 +3,8 @@
 #include "MathFunc.h"
 #include "Vector.h"
 
+//Implementation copied from Mitsuba.
+
 class Spline
 {
 public:

@@ -118,8 +118,7 @@ struct e_BVHNodeData
 	{
 		AABB left, right;
 		getBox(left, right);
-		left.Enlarge(right);
-		return left;
+		return left.Extend(right);
 	}
 
 	CUDA_FUNC_IN void setChild(int localChildIdx, int childIdx, const AABB& box)

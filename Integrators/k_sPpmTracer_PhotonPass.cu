@@ -107,7 +107,7 @@ CUDA_FUNC_IN AABB calculatePlaneAABBInCell(const AABB& cell, const Vec3f& p, con
 				{
 					Vec3f x = o + lambda * d;
 					x = p + (p - x) * min(distance(p, x), r);
-					res.Enlarge(x);
+					res = res.Extend(x);
 				}
 			}
 		}

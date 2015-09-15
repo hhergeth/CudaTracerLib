@@ -3,9 +3,6 @@
 #include "../Base/STL.h"
 #include "Distribution.h"
 
-//unsigned int index = min(unsigned int(size - 2U), max(0U, unsigned int(entry - cdf - 1)));
-//const float *ptr = STL_lower_bound(cdf, cdf + size, sample);
-//unsigned int index = (unsigned int)min(int(size - 2U), max(0, int(ptr - cdf) - 1));
 unsigned int sampleReuse(float *cdf, unsigned int size, float &sample, float& pdf)
 {
 	const float *entry = STL_lower_bound(cdf, cdf + size + 1, sample);

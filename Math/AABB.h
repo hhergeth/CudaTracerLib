@@ -15,27 +15,12 @@ struct AABB
 		minV = min(vMin, vMax);
 		maxV = max(vMin, vMax);
 	}
-	CUDA_FUNC_IN void Enlarge(const AABB& a)
-	{
-		minV = min(minV, a.minV);
-		maxV = max(maxV, a.maxV);
-	}
-	CUDA_FUNC_IN void Enlarge(const Vec3f& v)
-	{
-		minV = min(minV, v);
-		maxV = max(maxV, v);
-	}
-	CUDA_FUNC_IN void intersect(const AABB& box)
-	{
-		minV = max(box.minV, minV);
-		maxV = min(box.maxV, maxV);
-	}
 	CUDA_FUNC_IN float Area() const
 	{
 		Vec3f a = (maxV - minV);
 		return 2.0f * (a.x * a.y + a.x * a.z + a.y * a.z);
 	}
-	CUDA_FUNC_IN float volume() const
+	CUDA_FUNC_IN float Volume() const
 	{
 		Vec3f a = (maxV - minV);
 		return a.x * a.y * a.z;
@@ -57,6 +42,7 @@ struct AABB
 			max(xa, xb) + max(ya, yb) + max(za, zb) + mat.Translation()
 			);
 	}
+
 	//Ensures that every dim != zero
 	CUDA_FUNC_IN AABB Inflate() const
 	{
@@ -71,8 +57,8 @@ struct AABB
 			}
 		return b;
 	}
-	//Enlarges the box by the factor
-	CUDA_FUNC_IN AABB Enlarge(float f = 0.015f) const
+	//Extends the box by the factor
+	CUDA_FUNC_IN AABB Extend(float f = 0.015f) const
 	{
 		Vec3f q = (maxV - minV) / 2.0f, m = (maxV + minV) / 2.0f;
 		float e2 = 1.0f + f;
@@ -81,6 +67,31 @@ struct AABB
 		box.minV = m - q * e2;
 		return box;
 	}
+	//Computes the union of both boxes
+	CUDA_FUNC_IN AABB Extend(const AABB& a)
+	{
+		AABB res;
+		res.minV = min(minV, a.minV);
+		res.maxV = max(maxV, a.maxV);
+		return res;
+	}
+	//Computes the union of the box and the point
+	CUDA_FUNC_IN AABB Extend(const Vec3f& v)
+	{
+		AABB res;
+		res.minV = min(minV, v);
+		res.maxV = max(maxV, v);
+		return res;
+	}
+	//Computes the intersection of both boxes
+	CUDA_FUNC_IN AABB Intersect(const AABB& box)
+	{
+		AABB res;
+		res.minV = max(box.minV, minV);
+		res.maxV = min(box.maxV, maxV);
+		return res;
+	}
+
 	CUDA_FUNC_IN Vec3f Clamp(const Vec3f& p) const
 	{
 		return clamp(p, minV, maxV);

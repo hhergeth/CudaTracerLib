@@ -2,6 +2,8 @@
 
 #include "Vector.h"
 
+//Matrix class for vectors in R^3x1 i.e. column vectors.
+
 struct CUDA_ALIGN(16) float4x4
 {
 	float data[16];
@@ -176,13 +178,12 @@ public:
 		return r;
 	}
 
-	CUDA_FUNC_IN static float4x4 OuterProduct(const Vec4f& v)
+	CUDA_FUNC_IN static float4x4 OuterProduct(const Vec4f& a, const Vec4f& b)
 	{
-		float d[] = {v.x, v.y, v.z, v.w};
 		float4x4 r;
 		for (int i = 0; i < 4; i++)
 			for (int j = 0; j < 4; j++)
-				r(i, j) = d[i] * d[j];
+				r(i, j) = a[i] * b[j];
 		return r;
 	}
 

@@ -7,7 +7,7 @@ AABB ShapeSet::triData::box() const
 {
 	AABB b = AABB::Identity();
 	for (unsigned int i = 0; i < 3; i++)
-		b.Enlarge(p[i]);
+		b = b.Extend(p[i]);
 	return b;
 }
 

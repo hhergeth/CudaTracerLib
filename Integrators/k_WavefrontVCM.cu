@@ -144,7 +144,7 @@ void k_WavefrontVCM::StartNewTrace(e_Image* I)
 	k_Tracer<true, true>::StartNewTrace(I);
 	m_uPhotonsEmitted = 0;
 	AABB m_sEyeBox = GetEyeHitPointBox(m_pScene, true);
-	m_sEyeBox.Enlarge(0.1f);
+	m_sEyeBox = m_sEyeBox.Extend(0.1f);
 	float r = (m_sEyeBox.maxV - m_sEyeBox.minV).sum() / float(w);
 	m_sEyeBox.minV -= Vec3f(r);
 	m_sEyeBox.maxV += Vec3f(r);

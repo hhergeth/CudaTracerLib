@@ -497,7 +497,7 @@ AABB e_DynamicScene::getNodeBox(e_StreamReference<e_Node> n)
 {
 	AABB r = AABB::Identity();
 	for(unsigned int i = 0; i < n.getLength(); i++)
-		r.Enlarge(n(i)->getWorldBox(getMesh(n(i)), GetNodeTransform(n(i))));
+		r = r.Extend(n(i)->getWorldBox(getMesh(n(i)), GetNodeTransform(n(i))));
 	return r;
 }
 
@@ -507,7 +507,7 @@ AABB e_DynamicScene::getSceneBox()
 		return m_pBVH->getSceneBox();
 	AABB res = AABB::Identity();
 	for (e_Stream<e_Node>::iterator it = m_pNodeStream->begin(); it != m_pNodeStream->end(); ++it)
-		res.Enlarge(it->getWorldBox(getMesh(*it), GetNodeTransform(*it)));
+		res = res.Extend(it->getWorldBox(getMesh(*it), GetNodeTransform(*it)));
 	return res;
 }
 

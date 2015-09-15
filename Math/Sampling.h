@@ -5,6 +5,8 @@
 
 struct CudaRNG;
 
+//Implementation of most methods copied from Mitsuba, some are PBRT material too.
+
 class MonteCarlo
 {
 public:

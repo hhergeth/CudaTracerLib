@@ -4,6 +4,8 @@
 #include "Vector.h"
 #include "Frame.h"
 
+//Implementation of most methods copied from Mitsuba.
+
 CUDA_FUNC_IN float intervalToTent(float sample)
 {
 	float sign;

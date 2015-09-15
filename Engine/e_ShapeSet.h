@@ -31,7 +31,7 @@ public:
 	{
 		AABB b = AABB::Identity();
 		for (unsigned int i = 0; i < count; i++)
-			b.Enlarge(triangles[i].box());
+			b = b.Extend(triangles[i].box());
 		return b;
 	}
 	void Recalculate(const float4x4& mat, e_Stream<char>* buffer);

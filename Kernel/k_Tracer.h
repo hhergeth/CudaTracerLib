@@ -157,7 +157,6 @@ public:
 	}
 
 protected:
-	//w,h <= 64
 	virtual void RenderBlock(e_Image* I, int x, int y, int blockW, int blockH)
 	{
 

@@ -167,7 +167,7 @@ void k_sPpmTracer::StartNewTrace(e_Image* I)
 			ZERO_MEM(dg);
 			if (mats(j)->GetBSSRDF(dg, &bssrdf))
 			{
-				volBox.Enlarge(m_pScene->getNodeBox(it));
+				volBox = volBox.Extend(m_pScene->getNodeBox(it));
 				m_bLongRunning |= 1;
 			}
 		}

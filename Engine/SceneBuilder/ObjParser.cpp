@@ -1295,7 +1295,7 @@ void compileobj(IInStream& in, FileOutputStream& a_Out)
 			{
 				int l = idx[j];
 				p[j] = positions[l];
-				box.Enlarge(p[j]);
+				box = box.Extend(p[j]);
 #ifdef EXT_TRI
 				t[j] = texCoords[l];
 				ta[j] = normalize(tangents[l]);

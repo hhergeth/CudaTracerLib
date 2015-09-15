@@ -73,7 +73,7 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(Ray& r, const Ray& rX, con
 	return cl;
 }
 
-template<bool DIRECT, typename DEBUGGER> CUDA_FUNC_IN Spectrum PathTraceRegularization(Ray& r, const Ray& rX, const Ray& rY, CudaRNG& rnd, float g_fRMollifier)
+template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTraceRegularization(Ray& r, const Ray& rX, const Ray& rY, CudaRNG& rnd, float g_fRMollifier)
 {
 	TraceResult r2;
 	r2.Init();
@@ -140,7 +140,7 @@ void k_PathTracer::Debug(e_Image* I, const Vec2i& p)
 	PathTrace<true>(r, r, r, rng);
 }
 
-template<bool DIRECT> __global__ void pathKernel2(unsigned int w, unsigned int h, unsigned int xoff, unsigned int yoff, k_BlockSampleImage img, float m)
+template<bool DIRECT, bool REGU> __global__ void pathKernel2(unsigned int w, unsigned int h, unsigned int xoff, unsigned int yoff, k_BlockSampleImage img, float m)
 {
 	Vec2i pixel = k_TracerBase::getPixelPos(xoff, yoff);
 	CudaRNG rng = g_RNGData();
@@ -148,7 +148,7 @@ template<bool DIRECT> __global__ void pathKernel2(unsigned int w, unsigned int h
 	{
 		Ray r;
 		Spectrum imp = g_SceneData.sampleSensorRay(r, Vec2f(pixel.x, pixel.y), rng.randomFloat2());
-		Spectrum col = imp * PathTrace<DIRECT>(r, r, r, rng);
+		Spectrum col = imp * (REGU ? PathTraceRegularization<DIRECT>(r, r, r, rng, m) : PathTrace<DIRECT>(r, r, r, rng));
 		img.Add(pixel.x, pixel.y, col);
 	}
 	g_RNGData(rng);
@@ -160,7 +160,17 @@ void k_PathTracer::RenderBlock(e_Image* I, int x, int y, int blockW, int blockH)
 	float m_fInitialRadius = (m_sEyeBox.maxV - m_sEyeBox.minV).sum() / 100;
 	float ALPHA = 0.75f;
 	float radius2 = math::pow(math::pow(m_fInitialRadius, float(2)) / math::pow(float(m_uPassesDone), 0.5f * (1 - ALPHA)), 1.0f / 2.0f);
-	if (m_Direct)
-		pathKernel2<true> << <numBlocks, threadsPerBlock >> > (w, h, x, y, m_pBlockSampler->getBlockImage(), radius2);
-	else pathKernel2<false> << <numBlocks, threadsPerBlock >> > (w, h, x, y, m_pBlockSampler->getBlockImage(), radius2);
+
+	if (m_Regularization)
+	{
+		if (m_Direct)
+			pathKernel2<true, true> << <numBlocks, threadsPerBlock >> > (w, h, x, y, m_pBlockSampler->getBlockImage(), radius2);
+		else pathKernel2<false, true> << <numBlocks, threadsPerBlock >> > (w, h, x, y, m_pBlockSampler->getBlockImage(), radius2);
+	}
+	else
+	{
+		if (m_Direct)
+			pathKernel2<true, false> << <numBlocks, threadsPerBlock >> > (w, h, x, y, m_pBlockSampler->getBlockImage(), radius2);
+		else pathKernel2<false, false> << <numBlocks, threadsPerBlock >> > (w, h, x, y, m_pBlockSampler->getBlockImage(), radius2);
+	}
 }

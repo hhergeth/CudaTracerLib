@@ -169,7 +169,7 @@ void e_Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Ve
 		{
 			size_t l = indices ? indices[ti * 3 + j] : ti * 3 + j;
 			p[j] = vertices[l];
-			box.Enlarge(p[j]);
+			box = box.Extend(p[j]);
 #ifdef EXT_TRI
 			if(uvs)
 				t[j] = uvs[l];
@@ -231,7 +231,7 @@ void e_Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Ve
 		{
 			size_t l = indices ? indices[ti * 3 + j] : ti * 3 + j;
 			p[j] = vertices[l];
-			box.Enlarge(p[j]);
+			box = box.Extend(p[j]);
 #ifdef EXT_TRI
 			ta[j] = normalize(v_Tangents[l]);
 			bi[j] = normalize(v_BiTangents[l]);

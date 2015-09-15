@@ -240,7 +240,7 @@ void SplitBVHBuilder::run(void)
 		Reference r;
 		m_pClb->getBox(i, &r.bounds);
 		r.triIdx = i;
-		rootSpec.bounds.Enlarge(r.bounds);
+		rootSpec.bounds = rootSpec.bounds.Extend(r.bounds);
 		m_refStack.push_back(r);
 	});
 
@@ -332,7 +332,7 @@ unsigned int SplitBVHBuilder::buildNode(NodeSpec spec, int level, float progress
     if (level < MaxSpatialDepth)
     {
         AABB overlap = object.leftBounds;
-        overlap.intersect(object.rightBounds);
+        overlap = overlap.Intersect(object.rightBounds);
         if (overlap.Area() >= m_minOverlap)
             spatial = findSpatialSplit(spec, nodeSAH);
     }
@@ -402,7 +402,7 @@ SplitBVHBuilder::ObjectSplit SplitBVHBuilder::findObjectSplit(const NodeSpec& sp
         AABB rightBounds = AABB::Identity();
         for (int i = spec.numRef - 1; i > 0; i--)
         {
-            rightBounds.Enlarge(refPtr[i].bounds);
+			rightBounds = rightBounds.Extend(refPtr[i].bounds);
             m_rightBounds[i - 1] = rightBounds;
         }
 
@@ -411,7 +411,7 @@ SplitBVHBuilder::ObjectSplit SplitBVHBuilder::findObjectSplit(const NodeSpec& sp
 		AABB leftBounds = AABB::Identity();
         for (int i = 1; i < spec.numRef; i++)
         {
-            leftBounds.Enlarge(refPtr[i - 1].bounds);
+			leftBounds = leftBounds.Extend(refPtr[i - 1].bounds);
 			float lA = leftBounds.Area(), rA = m_rightBounds[i - 1].Area();
             float sah = nodeSAH + lA * m_platform.getTriangleCost(i) + rA * m_platform.getTriangleCost(spec.numRef - i);
 			float tieBreak = math::sqr((float)i) + math::sqr((float)(spec.numRef - i));
@@ -478,10 +478,10 @@ SplitBVHBuilder::SpatialSplit SplitBVHBuilder::findSpatialSplit(const NodeSpec& 
             {
                 Reference leftRef, rightRef;
 				splitReference(leftRef, rightRef, currRef, dim, origin[dim] + binSize[dim] * (float)(i + 1));
-                m_bins[dim][i].bounds.Enlarge(leftRef.bounds);
+				m_bins[dim][i].bounds = m_bins[dim][i].bounds.Extend(leftRef.bounds);
                 currRef = rightRef;
             }
-            m_bins[dim][lastBin[dim]].bounds.Enlarge(currRef.bounds);
+			m_bins[dim][lastBin[dim]].bounds = m_bins[dim][lastBin[dim]].bounds.Extend(currRef.bounds);
             m_bins[dim][firstBin[dim]].enter++;
             m_bins[dim][lastBin[dim]].exit++;
         }
@@ -497,7 +497,7 @@ SplitBVHBuilder::SpatialSplit SplitBVHBuilder::findSpatialSplit(const NodeSpec& 
 		AABB rightBounds = AABB::Identity();
         for (int i = NumSpatialBins - 1; i > 0; i--)
         {
-            rightBounds.Enlarge(m_bins[dim][i].bounds);
+			rightBounds = rightBounds.Extend(m_bins[dim][i].bounds);
             m_rightBounds[i - 1] = rightBounds;
         }
 
@@ -509,7 +509,7 @@ SplitBVHBuilder::SpatialSplit SplitBVHBuilder::findSpatialSplit(const NodeSpec& 
 
         for (int i = 1; i < NumSpatialBins; i++)
         {
-            leftBounds.Enlarge(m_bins[dim][i - 1].bounds);
+			leftBounds = leftBounds.Extend(m_bins[dim][i - 1].bounds);
             leftNum += m_bins[dim][i - 1].enter;
             rightNum -= m_bins[dim][i - 1].exit;
 
@@ -547,7 +547,7 @@ void SplitBVHBuilder::performSpatialSplit(NodeSpec& left, NodeSpec& right, const
 
         if (refs[i].bounds.maxV[split.dim] <= split.pos)
         {
-            left.bounds.Enlarge(refs[i].bounds);
+			left.bounds = left.bounds.Extend(refs[i].bounds);
             swapk(refs[i], refs[leftEnd++]);
         }
 
@@ -555,7 +555,7 @@ void SplitBVHBuilder::performSpatialSplit(NodeSpec& left, NodeSpec& right, const
 
         else if (refs[i].bounds.minV[split.dim] >= split.pos)
         {
-            right.bounds.Enlarge(refs[i].bounds);
+			right.bounds = right.bounds.Extend(refs[i].bounds);
             swapk(refs[i--], refs[--rightStart]);
         }
     }
@@ -575,10 +575,10 @@ void SplitBVHBuilder::performSpatialSplit(NodeSpec& left, NodeSpec& right, const
         AABB rub = right.bounds; // Unsplit to right:    new right-hand bounds.
         AABB ldb = left.bounds;  // Duplicate:           new left-hand bounds.
         AABB rdb = right.bounds; // Duplicate:           new right-hand bounds.
-        lub.Enlarge(refs[leftEnd].bounds);
-        rub.Enlarge(refs[leftEnd].bounds);
-        ldb.Enlarge(lref.bounds);
-        rdb.Enlarge(rref.bounds);
+        lub = lub.Extend(refs[leftEnd].bounds);
+        rub = rub.Extend(refs[leftEnd].bounds);
+        ldb = ldb.Extend(lref.bounds);
+        rdb = rdb.Extend(rref.bounds);
 
         float lac = m_platform.getTriangleCost(leftEnd - leftStart);
 		float rac = m_platform.getTriangleCost((int)refs.size() - rightStart);

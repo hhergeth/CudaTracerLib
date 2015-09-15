@@ -3,6 +3,8 @@
 #include "MathFunc.h"
 #include "Vector.h"
 
+//Implementation copied from Mitsuba.
+
 #define m_alpha (math::sqrt(2.0f/3.0f))
 #define m_beta ((1.0f/math::sqrt(5.0f)))
 #define m_x1 (0.94288241569547971906f)
@@ -130,7 +132,7 @@ private:
 			if (r == 0.0 || r > 1.0)
 				r = 1.0;
 		}
-		//float result = std::numeric_limits<float>::infinity();
+
 		float result = FLT_MAX;
 
 		if (m_relError != 0 && acc != 0)
@@ -144,10 +146,4 @@ private:
 
 		return result;
 	}
-};
-
-///TODO
-class NDIntegrator
-{
-
 };

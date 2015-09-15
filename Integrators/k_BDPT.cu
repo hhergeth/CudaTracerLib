@@ -4,8 +4,6 @@
 #include "..\Kernel\k_TraceAlgorithms.h"
 #include "k_VCMHelper.h"
 
-
-
 CUDA_FUNC_IN float pathWeight(int force_s, int force_t, int s, int t)
 {
 	if (force_s != -1 && force_t != -1 && (s != force_s || t != force_t))

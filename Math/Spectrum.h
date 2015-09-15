@@ -2,6 +2,8 @@
 
 #include "Vector.h"
 
+//The general design of the class is copied from PBRT, the conversion/integration routines from Mitsuba.
+
 #define SPECTRUM_SAMPLES 3
 
 #define SPECTRUM_min_WAVELENGTH   360
@@ -293,25 +295,6 @@ template <class T2, int L2> inline std::ostream& operator << (std::ostream & str
 	stream << ")";
 	return stream;
 }
-
-struct Color3 : public TSpectrum<float, 3> {
-public:
-	typedef TSpectrum<float, 3> Parent;
-
-	/// Create a new color value, but don't initialize the contents
-	CUDA_FUNC_IN Color3() { }
-
-	/// Copy constructor
-	CUDA_FUNC_IN Color3(const Parent &s) : Parent(s) { }
-
-	/// Initialize to a constant value
-	CUDA_FUNC_IN Color3(float value) : Parent(value) { }
-
-	/// Initialize to the given RGB value
-	CUDA_FUNC_IN Color3(float r, float g, float b) {
-		s[0] = r; s[1] = g; s[2] = b;
-	}
-};
 
 template<typename T, int N> CUDA_FUNC_IN TSpectrum<T, N> max(const TSpectrum<T, N>& a, const TSpectrum<T, N>& b)
 {

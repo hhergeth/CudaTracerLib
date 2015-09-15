@@ -1,6 +1,8 @@
 #pragma once
 
 #include <chrono>
+
+//High resolution timer, measuring in seconds(with fractions)
 class InstructionTimer
 {
 	std::chrono::high_resolution_clock::time_point start;

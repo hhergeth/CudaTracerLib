@@ -43,6 +43,8 @@ CUDA_FUNC_IN int popc(unsigned int u)
 #ifdef ISCUDA
 	return __popc(u);
 #else
+	//credits to HAKMEM
+
 	unsigned int uCount;
 
 	uCount = u
@@ -88,17 +90,14 @@ FW_SPECIALIZE_MINMAX(template <class T>, T, const, (a < b) ? a : b, (a > b) ? a 
 class math
 {
 public:
-	/// Arcsine variant that gracefully handles arguments > 1 that are due to roundoff errors
 	CUDA_FUNC_IN static float safe_asin(float value) {
 		return asinf(min(1.0f, max(-1.0f, value)));
 	}
 
-	/// Arccosine variant that gracefully handles arguments > 1 that are due to roundoff errors
 	CUDA_FUNC_IN static float safe_acos(float value) {
 		return acosf(min(1.0f, max(-1.0f, value)));
 	}
 
-	/// Square root variant that gracefully handles arguments < 0 that are due to roundoff errors
 	CUDA_FUNC_IN static float safe_sqrt(float value) {
 		return sqrt(max(0.0f, value));
 	}
@@ -108,14 +107,12 @@ public:
 		return copysign(1.0f, value);
 	}
 
-	/// Always-positive modulo function (assumes b > 0)
 	CUDA_FUNC_IN static int modulo(int a, int b)
 	{
 		int r = a % b;
 		return (r < 0) ? r + b : r;
 	}
 
-	/// Always-positive modulo function, float version (assumes b > 0)
 	CUDA_FUNC_IN static float modulo(float a, float b)
 	{
 		float r = fmod(a, b);
@@ -202,22 +199,26 @@ public:
 	template <class T> CUDA_FUNC_IN static T clamp01(T& a) { return clamp(a, T(0.0f), T(1.0f)); }
 	template <class T> CUDA_FUNC_IN static T clamp01(const T& a) { return clamp(a, T(0.0f), T(1.0f)); }
 
-	CUDA_FUNC_IN static int Mod(int a, int b) {
+	CUDA_FUNC_IN static int Mod(int a, int b)
+	{
 		int n = int(a / b);
 		a -= n*b;
 		if (a < 0) a += b;
 		return a;
 	}
 
-	CUDA_FUNC_IN static float Radians(float deg) {
+	CUDA_FUNC_IN static float Radians(float deg)
+	{
 		return ((float)PI / 180.f) * deg;
 	}
 
-	CUDA_FUNC_IN static float Degrees(float rad) {
+	CUDA_FUNC_IN static float Degrees(float rad)
+	{
 		return (180.f / (float)PI) * rad;
 	}
 
-	CUDA_FUNC_IN static float Log2(float x) {
+	CUDA_FUNC_IN static float Log2(float x)
+	{
 		float invLog2 = 1.f / logf(2.f);
 		return logf(x) * invLog2;
 	}
@@ -227,11 +228,14 @@ public:
 		return Floor2Int(Log2(v));
 	}
 
-	CUDA_FUNC_IN static bool IsPowerOf2(int v) {
+	CUDA_FUNC_IN static bool IsPowerOf2(int v)
+	{
 		return (v & (v - 1)) == 0;
 	}
 
-	CUDA_FUNC_IN static unsigned int RoundUpPow2(unsigned int v) {
+	CUDA_FUNC_IN static unsigned int RoundUpPow2(unsigned int v)
+	{
+		//Credits to PBRT.
 		v--;
 		v |= v >> 1;    v |= v >> 2;
 		v |= v >> 4;    v |= v >> 8;

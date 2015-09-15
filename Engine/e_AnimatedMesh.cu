@@ -82,8 +82,8 @@ public:
 		uint3 t = triData[idx];
 		AABB b;
 		b.maxV = b.minV = vertexData[t.x].m_fPos;
-		b.Enlarge(vertexData[t.y].m_fPos);
-		b.Enlarge(vertexData[t.z].m_fPos);
+		b = b.Extend(vertexData[t.y].m_fPos);
+		b = b.Extend(vertexData[t.z].m_fPos);
 		return b;
 	}
 	virtual void iterateObjects(std::function<void(unsigned int)> f)
@@ -113,23 +113,23 @@ public:
 			// Insert vertex to the boxes it belongs to.
 
 			if (v0p <= pos)
-				lBox.Enlarge(v0);
+				lBox = lBox.Extend(v0);
 			if (v0p >= pos)
-				rBox.Enlarge(v0);
+				rBox = rBox.Extend(v0);
 
 			// Edge intersects the plane => insert intersection to both boxes.
 
 			if ((v0p < pos && v1p > pos) || (v0p > pos && v1p < pos))
 			{
 				Vec3f t = math::lerp(v0, v1, math::clamp01((pos - v0p) / (v1p - v0p)));
-				lBox.Enlarge(t);
-				rBox.Enlarge(t);
+				lBox = lBox.Extend(t);
+				rBox = rBox.Extend(t);
 			}
 		}
 		lBox.maxV[dim] = pos;
 		rBox.minV[dim] = pos;
-		lBox.intersect(refBox);
-		rBox.intersect(refBox);
+		lBox = lBox.Intersect(refBox);
+		rBox = rBox.Intersect(refBox);
 		return true;
 	}
 };

@@ -39,8 +39,7 @@ template<int LENGTH> struct FixedString
 	{
 		return buffer;
 	}
-	template <int N2>
-	FixedString<LENGTH>& operator=(const FixedString<N2>& other)
+	template <int N2> FixedString<LENGTH>& operator=(const FixedString<N2>& other)
 	{
 		if (c_str() != other.c_str())
 		{

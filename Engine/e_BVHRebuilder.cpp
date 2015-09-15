@@ -549,8 +549,8 @@ void e_BVHRebuilder::sahModified(BVHIndex nodeIdx, const AABB& box, float& leftS
 	node->getBox(left, right);
 	BVHIndexTuple c = children(nodeIdx);
 	float lA = left.Area(), rA = right.Area();
-	left.Enlarge(box);
-	right.Enlarge(box);
+	left = left.Extend(box);
+	right = right.Extend(box);
 	float lAd = left.Area(), rAd = right.Area();
 	int lN = numLeafs(c[0]), rN = numLeafs(c[1]);
 	leftSAH = lAd * (lN + 1) + rA * rN;
@@ -581,8 +581,7 @@ int e_BVHRebuilder::validateTree(BVHIndex idx, BVHIndex parent)
 		int s = validateTree(c[0], idx) + validateTree(c[1], idx);
 		if (s != info.numLeafs)
 			throw std::runtime_error(__FUNCTION__);
-		AABB leftBox = getBox(c[0]), rightBox = getBox(c[1]), box = getBox(idx), box2 = leftBox;
-		box2.Enlarge(rightBox);
+		AABB leftBox = getBox(c[0]), rightBox = getBox(c[1]), box = getBox(idx), box2 = leftBox.Extend(rightBox);
 		if (!box.Contains(box2.minV) || !box.Contains(box2.maxV))
 			throw std::runtime_error(__FUNCTION__);
 		return s;
@@ -596,7 +595,7 @@ AABB e_BVHRebuilder::getBox(BVHIndex idx)
 	if (idx.isLeaf())
 	{
 		AABB box = AABB::Identity();
-		enumerateLeaf(idx, [&](int i){box.Enlarge(m_pData->getBox(i)); });
+		enumerateLeaf(idx, [&](int i){box = box.Extend(m_pData->getBox(i)); });
 		return box;
 	}
 	else return m_pBVHData[idx.innerIdx()].getBox();
@@ -624,7 +623,7 @@ float e_BVHRebuilder::sah(BVHIndex idx, int localChildIdx, int localGrandChildId
 
 	AABB boxLhs1 = getBox(childIdx), boxLhs2 = getBox(otherGrandChildIdx);
 	int numLhs1 = numLeafs(childIdx), numLhs2 = numLeafs(otherGrandChildIdx);
-	boxLhs1.Enlarge(boxLhs2);
+	boxLhs1 = boxLhs1.Extend(boxLhs2);
 
 	return boxLhs1.Area() * (numLhs1 + numLhs2) + childRhsArea * childRhsNum;
 }
