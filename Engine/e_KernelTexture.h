@@ -5,6 +5,8 @@
 #include "../Base/FixedString.h"
 #include "../VirtualFuncType.h"
 
+//Implementation and interface designed after PBRT.
+
 struct e_TextureMapping2D
 {
 	e_TextureMapping2D(float su = 1, float sv = 1, float du = 0, float dv = 0, int setId = 0)

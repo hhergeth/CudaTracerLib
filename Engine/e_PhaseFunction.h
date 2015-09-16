@@ -3,6 +3,8 @@
 #include "../MathTypes.h"
 #include "../VirtualFuncType.h"
 
+//Implementation and interface copied from Mitsuba as well as PBRT.
+
 struct PhaseFunctionSamplingRecord;
 struct CudaRNG;
 

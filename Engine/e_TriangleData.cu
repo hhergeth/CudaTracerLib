@@ -71,6 +71,9 @@ void e_TriangleData::fillDG(const float4x4& localToWorld, const float4x4& worldT
 	dg.sys.s = dpdu - dg.sys.n * dot(dg.sys.n, dpdu);
 	dg.sys.t = cross(dg.sys.s, dg.sys.n);
 	dg.sys = dg.sys * localToWorld;
+	dg.sys.n.normalize();
+	dg.sys.s.normalize();
+	dg.sys.t.normalize();
 	dg.n = normalize(worldToLocal.TransformTranspose(Vec4f(na + nb + nc, 0.0f)).getXYZ());
 	dg.dpdu = (localToWorld.TransformDirection(dpdu));
 	dg.dpdv = (localToWorld.TransformDirection(dpdv));
@@ -87,4 +90,37 @@ void e_TriangleData::fillDG(const float4x4& localToWorld, const float4x4& worldT
 	if (dot(dg.n, dg.sys.n) < 0.0f)
 		dg.n = -dg.n;
 }
+#else
+e_TriangleData::e_TriangleData(const Vec3f* P, unsigned char matIndex, const Vec2f* T, const Vec3f* N, const Vec3f* Tan, const Vec3f* BiTan)
+{
+	Vec3f p = P[0] - P[2];
+	Vec3f q = P[1] - P[2];
+	Vec3f d = normalize(cross(q, p));
+	m_sHostData.Normal = NormalizedFloat3ToUchar3(d);
+	m_sHostData.MatIndex = matIndex;
+}
+
+void e_TriangleData::fillDG(const float4x4& localToWorld, const float4x4& worldToLocal, DifferentialGeometry& dg) const
+{
+	Vec3f n = normalize(Uchar3ToNormalizedFloat3(m_sHostData.Normal));
+	dg.sys = Frame(n) * localToWorld;
+	dg.n = normalize(worldToLocal.TransformTranspose(Vec4f(n, 0.0f)).getXYZ());
+	dg.dpdu = Vec3f(1,0,0);
+	dg.dpdv = Vec3f(0,0,1);
+	for (int i = 0; i < NUM_UV_SETS; i++)
+		dg.uv[i] = Vec2f(0.0f);
+	dg.extraData = 0;
+}
+
+void e_TriangleData::setData(const Vec3f& v0, const Vec3f& v1, const Vec3f& v2,
+	const Vec3f& n0, const Vec3f& n1, const Vec3f& n2)
+{
+	m_sHostData.Normal = NormalizedFloat3ToUchar3(n0 + n1 + n2);
+}
+
+void e_TriangleData::getNormals(Vec3f& n0, Vec3f& n1, Vec3f& n2)
+{
+	n0 = n1 = n2 = Uchar3ToNormalizedFloat3(m_sHostData.Normal);
+}
+
 #endif

@@ -113,6 +113,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Base\FileStream.cpp" />
+    <ClCompile Include="CudaMemoryManager.cpp" />
     <ClCompile Include="Defines.cpp" />
     <ClCompile Include="Engine\e_AnimatedMesh.cpp" />
     <ClCompile Include="Engine\e_BVHRebuilder.cpp" />
@@ -180,7 +181,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="Engine\e_Filter.h" />
     <ClInclude Include="Engine\e_Grid.h" />
     <ClInclude Include="Engine\e_Image.h" />
-    <ClInclude Include="Engine\e_IntersectorData.h" />
+    <ClInclude Include="Engine\e_TriIntersectorData.h" />
     <ClInclude Include="Engine\e_KernelDynamicScene.h" />
     <ClInclude Include="Engine\e_KernelTexture.h" />
     <ClInclude Include="Engine\e_Light.h" />

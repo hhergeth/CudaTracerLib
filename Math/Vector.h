@@ -7,6 +7,10 @@
 #pragma warning(pop)
 #include "MathFunc.h"
 
+/*
+Copyright (c) 2009-2011, NVIDIA Corporation
+All rights reserved.
+*/
 //This class is based on "understanding-the-efficiency-of-ray-traversal-on-gpus" with slight modifications.
 
 template <class T, int L> class Vector;

@@ -219,9 +219,6 @@
     <ClInclude Include="Engine\e_DifferentialGeometry.h">
       <Filter>Engine</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\e_IntersectorData.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
     <ClInclude Include="Engine\e_AbstractEmitter.h">
       <Filter>Engine</Filter>
     </ClInclude>
@@ -289,6 +286,9 @@
     </ClInclude>
     <ClInclude Include="Kernel\k_RayBuffer.h">
       <Filter>Kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\e_TriIntersectorData.h">
+      <Filter>Engine</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -369,6 +369,7 @@
     <ClCompile Include="Integrators\k_WavefrontVCM.cpp">
       <Filter>Integrators</Filter>
     </ClCompile>
+    <ClCompile Include="CudaMemoryManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="Base\CudaRandom.cu">

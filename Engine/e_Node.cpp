@@ -3,7 +3,7 @@
 #include "e_Mesh.h"
 #include "e_Buffer.h"
 #include "e_Material.h"
-#include "e_IntersectorData.h"
+#include "e_TriIntersectorData.h"
 
 e_Node::e_Node(unsigned int MeshIndex, e_Mesh* mesh, e_StreamReference<e_KernelMaterial> mat)
 	: m_uInstanciatedMaterial(false)

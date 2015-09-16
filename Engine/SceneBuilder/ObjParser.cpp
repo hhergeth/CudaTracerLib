@@ -2,7 +2,7 @@
 #include "..\e_Mesh.h"
 #include "../e_TriangleData.h"
 #include "../e_Material.h"
-#include "../e_IntersectorData.h"
+#include "../e_TriIntersectorData.h"
 #include "TangentSpaceHelper.h"
 #include <Engine\SceneBuilder\Importer.h>
 #include <boost\algorithm\string.hpp>
@@ -1222,7 +1222,6 @@ void compileobj(IInStream& in, FileOutputStream& a_Out)
 	Vec3f ta[3];
 	Vec3f bi[3];
 	Vec2f t[3];
-#ifdef EXT_TRI
 	std::vector<Vec3f> positions, normals, tangents, bitangents;
 	positions.resize(m_numVertices); normals.resize(m_numVertices); tangents.resize(m_numVertices); bitangents.resize(m_numVertices);
 	std::vector<Vec2f> texCoords;
@@ -1242,6 +1241,7 @@ void compileobj(IInStream& in, FileOutputStream& a_Out)
 	for (size_t i = 0; i < state.subMeshes.size(); i++)
 		for (size_t j = 0; j < state.subMeshes[i].indices.size(); j++)
 			indices[k++] = state.subMeshes[i].indices[j];
+#ifdef EXT_TRI
 	ComputeTangentSpace(&positions[0], &texCoords[0], (unsigned int*)&indices[0], m_numVertices, m_numTriangles, &normals[0], &tangents[0], &bitangents[0], true);
 #endif
 

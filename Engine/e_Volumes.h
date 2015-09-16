@@ -4,6 +4,8 @@
 #include "e_PhaseFunction.h"
 #include "../VirtualFuncType.h"
 
+//Implementation and interface copied from Mitsuba as well as PBRT.
+
 template<typename T> class e_Stream;
 
 struct MediumSamplingRecord

@@ -5,10 +5,9 @@
 #include "../Base/FileStream.h"
 #include "../CudaMemoryManager.h"
 
-/// Integer floor function (single precision)
-template <typename Scalar> CUDA_FUNC_IN int floorToInt(Scalar value) { return (int)floor(value); }
+//MipMap evaluation copied from Mitsuba.
 
-/// Integer ceil function (single precision)
+template <typename Scalar> CUDA_FUNC_IN int floorToInt(Scalar value) { return (int)floor(value); }
 template <typename Scalar> CUDA_FUNC_IN int ceilToInt(Scalar value) { return (int)ceil(value); }
 
 CUDA_FUNC_IN float hypot2(float a, float b)

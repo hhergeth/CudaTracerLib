@@ -17,7 +17,6 @@ struct FIBITMAP;
 class e_Image
 {
 public:
-    // ImageFilm Public Methods
 	CUDA_FUNC_IN e_Image(){}
 
 	e_Image(int xRes, int yRes, unsigned int viewGLTexture);

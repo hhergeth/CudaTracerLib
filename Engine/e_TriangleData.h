@@ -61,34 +61,19 @@ struct e_TriangleData
 		} m_sDeviceData;
 	};
 	e_TriangleData(){}
-	e_TriangleData(Vec3f* P, unsigned char matIndex, Vec2f* T, Vec3f* N, Vec3f* Tan, Vec3f* BiTan)
-	{
-		Vec3f p = P[0] - P[2];
-		Vec3f q = P[1] - P[2];
-		Vec3f d = normalize(cross(p, q));
-		m_sHostData.Normal = NormalizedFloat3ToUchar3(d);
-		m_sHostData.MatIndex = matIndex;
-	}
-
-	CUDA_FUNC_IN Frame math::lerpFrame(const Vec2f& bCoords, const float4x4& localToWorld, Vec3f* ng = 0) const
-	{
-		Vec3f n = Uchar3ToNormalizedFloat3(m_sHostData.Normal);
-		if(ng)
-			*ng = n;
-		return Frame(n);
-	}
+	e_TriangleData(const Vec3f* P, unsigned char matIndex, const Vec2f* T, const Vec3f* N, const Vec3f* Tan, const Vec3f* BiTan);
+	CUDA_DEVICE CUDA_HOST void fillDG(const float4x4& localToWorld, const float4x4& worldToLocal, DifferentialGeometry& dg) const;
 	CUDA_FUNC_IN unsigned int getMatIndex(const unsigned int off) const
 	{
 		unsigned int v = m_sDeviceData.Row0;
 		return unsigned int(v >> 24) + off;
 	}
-	CUDA_FUNC_IN Vec2f math::lerpUV(const Vec2f& bCoords) const
-	{
-		return make_float2(0);
-	}
-	CUDA_FUNC_IN void getNormalDerivative(const Vec2f& bCoords, Vec3f& dndu, Vec3f& dndv) const
+	CUDA_DEVICE CUDA_HOST void setData(const Vec3f& v0, const Vec3f& v1, const Vec3f& v2,
+		const Vec3f& n0, const Vec3f& n1, const Vec3f& n3);
+	void setUvSetData(int setId, const Vec2f& a, const Vec2f& b, const Vec2f& c)
 	{
 
 	}
+	CUDA_DEVICE CUDA_HOST void getNormals(Vec3f& n0, Vec3f& n1, Vec3f& n2);
 };
 #endif

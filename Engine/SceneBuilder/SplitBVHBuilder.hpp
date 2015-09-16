@@ -1,6 +1,6 @@
 #pragma once
 #include "..\..\MathTypes.h"
-#include "..\e_IntersectorData.h"
+#include "..\e_TriIntersectorData.h"
 #include "../../Base/Timer.h"
 #include <vector>
 #include <functional>
@@ -33,25 +33,32 @@ public:
 	}
 };
 
-	enum BVH_STAT
-	{
-		BVH_STAT_NODE_COUNT,
-		BVH_STAT_INNER_COUNT,
-		BVH_STAT_LEAF_COUNT,
-		BVH_STAT_TRIANGLE_COUNT,
-		BVH_STAT_CHILDNODE_COUNT,
-	};
+/*
+Copyright (c) 2009-2011, NVIDIA Corporation
+All rights reserved.
+*/
+//These classes are based on "understanding-the-efficiency-of-ray-traversal-on-gpus" with slight modifications.
+//The main algorithm is 100% their great work!
 
-	class BVHNode
-	{
-		unsigned int left, right;
-	public:
-		AABB box;
-		BVHNode(const AABB& bounds, unsigned int l, unsigned int r, bool leaf) : box(bounds), left((l << 1) | unsigned int(leaf)), right(r) {}
-		bool isLeaf() { return left & 1; }
-		unsigned int getLeft(){ return left >> 1; }
-		unsigned int getRight(){ return right; }
-	};
+enum BVH_STAT
+{
+	BVH_STAT_NODE_COUNT,
+	BVH_STAT_INNER_COUNT,
+	BVH_STAT_LEAF_COUNT,
+	BVH_STAT_TRIANGLE_COUNT,
+	BVH_STAT_CHILDNODE_COUNT,
+};
+
+class BVHNode
+{
+	unsigned int left, right;
+public:
+	AABB box;
+	BVHNode(const AABB& bounds, unsigned int l, unsigned int r, bool leaf) : box(bounds), left((l << 1) | unsigned int(leaf)), right(r) {}
+	bool isLeaf() { return left & 1; }
+	unsigned int getLeft(){ return left >> 1; }
+	unsigned int getRight(){ return right; }
+};
 
 class SplitBVHBuilder
 {

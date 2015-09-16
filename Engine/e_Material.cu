@@ -45,7 +45,6 @@ CUDA_FUNC_IN Vec2f parallaxOcclusion(const Vec2f& texCoord, e_KernelMIPMap* tex,
 	float  CurrentBound = 1.0;
 	float  ParallaxAmount = 0.0;
 
-	// Create the 2D vectors that will be used as the sampled points 
 	Vec2f pt1 = Vec2f(0);
 	Vec2f pt2 = Vec2f(0);
 
@@ -53,21 +52,9 @@ CUDA_FUNC_IN Vec2f parallaxOcclusion(const Vec2f& texCoord, e_KernelMIPMap* tex,
 
 	while (StepIndex < nNumSteps)
 	{
-		// Backtrace along the parallax offset vector by the StepSize value
 		TexCurrentOffset -= TexOffsetPerStep;
-
-		// Sample height map which in this case is stored in the alpha channel of the normal map:
 		CurrHeight = tex->Sample(TexCurrentOffset).average();
-
-		// Decrease the current height of the eye vector by the StepSize value
 		CurrentBound -= StepSize;
-
-		/*
-		Check if the eye vector has a larger height value than the CurrHeight sampled from the
-		height map which would mean there has been no intersection yet so increment the StepIndex.
-		If there has been an intersection (eye vector has a smaller value than CurrHeight) it will lie
-		between pt1 and pt2 which are the current sample point and the previous sampled point.
-		*/
 		if (CurrHeight > CurrentBound)
 		{
 			pt1 = Vec2f(CurrentBound, CurrHeight);

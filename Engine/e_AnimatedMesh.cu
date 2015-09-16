@@ -3,7 +3,7 @@
 #include "e_BVHRebuilder.h"
 #include "e_TriangleData.h"
 #include "e_Material.h"
-#include "e_IntersectorData.h"
+#include "e_TriIntersectorData.h"
 
 //low...high
 //x=(0,1,2,3), y=(4,5,6,7)

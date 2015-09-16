@@ -12,6 +12,8 @@ template<typename T> class e_Stream;
 struct e_KernelMIPMap;
 class e_MIPMap;
 
+//Implementation and interface copied from Mitsuba.
+
 struct e_LightBase : public e_AbstractEmitter//, public e_BaseTypeHelper<5523276>
 {
 	e_LightBase()

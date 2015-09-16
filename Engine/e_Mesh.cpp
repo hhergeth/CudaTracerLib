@@ -9,7 +9,7 @@
 #include "e_SceneInitData.h"
 #include "e_TriangleData.h"
 #include "e_Material.h"
-#include "e_IntersectorData.h"
+#include "e_TriIntersectorData.h"
 
 #define NO_NODE 0x76543210
 void write(int idx, const e_BVHNodeData* nodes, int parent, std::ofstream& f, int& leafC)
@@ -152,6 +152,7 @@ void e_Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Ve
 	Vec3f ta[3];
 	Vec3f bi[3];
 	Vec2f t[3];
+	t[0] = t[1] = t[2] = Vec2f(0.0f);
 	unsigned int numTriangles = indices ? nIndices / 3 : nVertices / 3;
 	e_TriangleData* triData = new e_TriangleData[numTriangles];
 	unsigned int triIndex = 0;
@@ -248,9 +249,11 @@ void e_Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Ve
 			}
 			tri.setUvSetData(uvIdx, t[0], t[1], t[2]);
 		}
+#ifdef EXT_TRI
 		if(extraData)
 			for(int j = 0; j < 3; j++)
 				tri.m_sHostData.ExtraData = extraData[indices ? indices[ti * 3 + j] : ti * 3 + j];
+#endif
 		triData[triIndex++] = tri;
 		if(subMeshes[si] + pc <= ti)
 		{

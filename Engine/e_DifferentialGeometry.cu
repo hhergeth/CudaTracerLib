@@ -1,20 +1,7 @@
 #include "e_DifferentialGeometry.h"
+#include "../Math/Sampling.h"
 
-CUDA_FUNC_IN bool solveLinearSystem2x2(const float a[2][2], const float b[2], float x[2])
-{
-	float det = a[0][0] * a[1][1] - a[0][1] * a[1][0];
-
-	if (math::abs(det) <= RCPOVERFLOW)
-		return false;
-
-	float inverse = (float) 1.0f / det;
-
-	x[0] = (a[1][1] * b[0] - a[0][1] * b[1]) * inverse;
-	x[1] = (a[0][0] * b[1] - a[1][0] * b[0]) * inverse;
-
-	return true;
-}
-
+//Implementation copied from Mitsuba.
 void DifferentialGeometry::computePartials(const Ray& r, const Ray& rx, const Ray& ry)
 {
 	float A[2][2], Bx[2], By[2], x[2];
@@ -75,7 +62,7 @@ void DifferentialGeometry::computePartials(const Ray& r, const Ray& rx, const Ra
 	By[0] = pyA[axes[0]] - pA[axes[0]];
 	By[1] = pyA[axes[1]] - pA[axes[1]];
 
-	if (solveLinearSystem2x2(A, Bx, x))
+	if (MonteCarlo::solveLinearSystem2x2(A, Bx, x))
 	{
 		dudx = x[0];
 		dvdx = x[1];
@@ -86,7 +73,7 @@ void DifferentialGeometry::computePartials(const Ray& r, const Ray& rx, const Ra
 		dvdx = 0;
 	}
 
-	if (solveLinearSystem2x2(A, By, x))
+	if (MonteCarlo::solveLinearSystem2x2(A, By, x))
 	{
 		dudy = x[0];
 		dvdy = x[1];

@@ -6,7 +6,7 @@
 #include "../Engine/e_Mesh.h"
 #include "../Engine/e_TriangleData.h"
 #include "../Engine/e_Material.h"
-#include "../Engine/e_IntersectorData.h"
+#include "../Engine/e_TriIntersectorData.h"
 #include "../Engine/e_Node.h"
 #include "../Engine/e_DynamicScene.h"
 
@@ -359,9 +359,10 @@ void k_INITIALIZE(e_DynamicScene* a_Scene, const CudaRNGBuffer& a_RngBuf)
 	r = cudaBindTexture(&offset, &t_SceneNodes, a_Data.m_sSceneBVH.m_pNodes, &cdf4, a_Data.m_sSceneBVH.m_uNumNodes * sizeof(e_BVHNodeData));
 	r = cudaBindTexture(&offset, &t_NodeTransforms, a_Data.m_sSceneBVH.m_pNodeTransforms, &cdf4, a_Data.m_sNodeData.UsedCount * sizeof(float4x4));
 	r = cudaBindTexture(&offset, &t_NodeInvTransforms, a_Data.m_sSceneBVH.m_pInvNodeTransforms, &cdf4, a_Data.m_sNodeData.UsedCount * sizeof(float4x4));
-
+#ifdef EXT_TRI
 	r = cudaBindTexture(&offset, &t_TriDataA, a_Data.m_sTriData.Data, &cdi2, a_Data.m_sTriData.UsedCount * sizeof(e_TriangleData));
 	r = cudaBindTexture(&offset, &t_TriDataB, a_Data.m_sTriData.Data, &cdh4, a_Data.m_sTriData.UsedCount * sizeof(e_TriangleData));
+#endif
 
 	unsigned int b = 0;
 	cudaMemcpyToSymbol(g_RayTracedCounterDevice, &b, sizeof(unsigned int));
@@ -380,7 +381,7 @@ void fillDG(const Vec2f& bary, const e_TriangleData* tri, const e_Node* node, Di
 	loadInvModl(node - g_SceneData.m_sNodeData.Data, &worldToLocal);
 	dg.bary = bary;
 	dg.hasUVPartials = false;
-#if defined(ISCUDA) && NUM_UV_SETS == 1
+#if defined(ISCUDA) && NUM_UV_SETS == 1 && defined(EXT_TRI)
 	unsigned int i = tri - g_SceneData.m_sTriData.Data;
 	int2 nme = tex1Dfetch(t_TriDataA, i * 4 + 0);
 	float4 rowB = tex1Dfetch(t_TriDataB, i * 4 + 1);
@@ -395,6 +396,9 @@ void fillDG(const Vec2f& bary, const e_TriangleData* tri, const e_Node* node, Di
 	dg.sys.s = dpdu - dg.sys.n * dot(dg.sys.n, dpdu);
 	dg.sys.t = cross(dg.sys.s, dg.sys.n);
 	dg.sys = dg.sys * localToWorld;
+	dg.sys.n.normalize();
+	dg.sys.s.normalize();
+	dg.sys.t.normalize();
 	dg.n = normalize(worldToLocal.TransformTranspose(Vec4f(na + nb + nc, 0.0f)).getXYZ());
 	dg.dpdu = localToWorld.TransformDirection(dpdu);
 	dg.dpdv = localToWorld.TransformDirection(dpdv);

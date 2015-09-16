@@ -1,7 +1,7 @@
 #include "e_ShapeSet.h"
 #include "..\Math\Sampling.h"
 #include "e_Samples.h"
-#include "e_IntersectorData.h"
+#include "e_TriIntersectorData.h"
 #include "../Math/Distribution.h"
 
 void ShapeSet::SamplePosition(PositionSamplingRecord& pRec, const Vec2f& spatialSample) const

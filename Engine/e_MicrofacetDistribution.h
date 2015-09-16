@@ -2,6 +2,8 @@
 
 #include "..\MathTypes.h"
 
+//Implementation and interface copied from Mitsuba.
+
 struct MicrofacetDistribution
 {
 	enum EType {

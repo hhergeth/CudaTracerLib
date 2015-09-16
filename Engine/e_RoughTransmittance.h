@@ -2,6 +2,8 @@
 
 #include "e_MicrofacetDistribution.h"
 
+//Implementation and interface copied from Mitsuba.
+
 class e_RoughTransmittance
 {
 	size_t m_etaSamples;

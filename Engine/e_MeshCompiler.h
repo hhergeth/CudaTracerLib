@@ -3,7 +3,6 @@
 #include "..\Base\FileStream.h"
 #include <vector>
 
-//ugly
 void compileply(IInStream& in, FileOutputStream& a_Out);
 void compileobj(IInStream& in, FileOutputStream& a_Out);
 void compilemd5(IInStream& in, std::vector<IInStream*>& animFiles, FileOutputStream& a_Out);

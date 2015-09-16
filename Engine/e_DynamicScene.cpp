@@ -5,7 +5,7 @@
 #include "e_AnimatedMesh.h"
 #include "e_TriangleData.h"
 #include "e_Material.h"
-#include "e_IntersectorData.h"
+#include "e_TriIntersectorData.h"
 #include "e_Node.h"
 #include "e_FileTexture.h"
 #include "e_SceneBVH.h"
@@ -366,8 +366,6 @@ bool e_DynamicScene::UpdateScene()
 		}
 		void operator()(const std::string& path, e_Variable<e_KernelMIPMap> var)
 		{
-			std::cout << "path = " << path << "\n";
-			std::cout << "host = " << var.host << "\n";
 			m_pTextureBuffer->Release(path);
 		}
 	};

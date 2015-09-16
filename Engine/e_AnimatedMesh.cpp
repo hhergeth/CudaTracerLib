@@ -6,7 +6,7 @@
 #include "../Base/FileStream.h"
 #include "e_TriangleData.h"
 #include "e_Material.h"
-#include "e_IntersectorData.h"
+#include "e_TriIntersectorData.h"
 
 e_BufferReference<char, char> malloc_aligned(e_Stream<char>* stream, unsigned int a_Count, unsigned int a_Alignment)
 {

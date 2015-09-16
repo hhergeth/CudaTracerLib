@@ -3,6 +3,8 @@
 #include <MathTypes.h>
 #include "../VirtualFuncType.h"
 
+//Implementation and interface designed after PBRT.
+
 struct e_FilterBase : public e_BaseType//, public e_BaseTypeHelper<5524550>
 {
 	float xWidth, yWidth;

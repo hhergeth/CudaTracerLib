@@ -1,7 +1,7 @@
 #include <StdAfx.h>
 #include "e_ShapeSet.h"
 #include "e_Buffer.h"
-#include "e_IntersectorData.h"
+#include "e_TriIntersectorData.h"
 
 AABB ShapeSet::triData::box() const
 {

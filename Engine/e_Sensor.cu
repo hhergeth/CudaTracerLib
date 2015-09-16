@@ -90,9 +90,6 @@ void e_PerspectiveCamera::Update()
 	m_imageRect = AABB(min / min.z, max / max.z);
 	m_imageRect.minV.z = -FLT_MAX; m_imageRect.maxV.z = FLT_MAX;
 	m_normalization = 1.0f / (m_imageRect.Size().x * m_imageRect.Size().y);
-
-//	DirectSamplingRecord dRec(Vec3f(301.48853f,398.27206f,559.20007f),Vec3f(0),Vec2f(0));
-	//sampleDirect(dRec, Vec2f(0));
 }
 
 float e_PerspectiveCamera::importance(const Vec3f &d) const

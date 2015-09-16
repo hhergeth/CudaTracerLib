@@ -7,7 +7,7 @@
 #include "../../Base/FileStream.h"
 #include "../e_TriangleData.h"
 #include "../e_Material.h"
-#include "../e_IntersectorData.h"
+#include "../e_TriIntersectorData.h"
 
 void build_e_Animation(Anim* A, MD5Model* M, e_Animation& res, const std::string& name, const std::vector<float4x4>& inverseJoints)
 {

@@ -1,4 +1,4 @@
-#include "e_IntersectorData.h"
+#include "e_TriIntersectorData.h"
 #include "../MathTypes.h"
 
 void e_TriIntersectorData::setData(const Vec3f& a, const Vec3f& b, const Vec3f& c)
