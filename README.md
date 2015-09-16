@@ -5,6 +5,7 @@ This library, for simplicity called CudaTracerLib, is a CUDA based ray tracer li
 - Photon/Light Tracing
 - Photon Mapping (Final Gathering)
 - Volumetric(Beam x Beam) Adaptive Progressive Photon Mapping
+- Path Space Regularization - Path Tracing
 - Bidirectional Path Tracing
 - Vertex Connection and Merging
 
