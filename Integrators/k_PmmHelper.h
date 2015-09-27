@@ -53,9 +53,10 @@ template<int D, int K> struct GaussianMixtureModel
 		{
 			invCovariance = inv(covariance);
 			a = 1.0f / (math::pow(2.0f * PI, float(D) / 2.0f) * math::sqrt(det(covariance)));
-			mat eigValues, eigVectors;
+			mat eigVectors;
+			vec eigValues;
 			qrAlgorithmSymmetric(covariance, eigValues, eigVectors);
-			Q = diagmat<vec>(diag<vec>(eigValues).sqrt()) * eigVectors;
+			Q = diagmat<vec>(eigValues.sqrt()) * eigVectors;
 		}
 
 		CUDA_FUNC_IN float p(const vec& x) const

@@ -194,8 +194,6 @@ bool e_VolumeGrid::invertDensityIntegral(const Ray& ray, float t0, float t1, flo
 			  d1 = grid.sampleTrilinear(grid.dimF * rayL(cellEndT)) * (sigAMax + sigSMax).average(),
 			  d = (d0 + d1) / 2.0f;
 		float D = d * (cellEndT - rayT) * (t1 - t0) / (maxTL - minTL);
-		if (found)
-			printf("Already found!\n");
 		if(integratedDensity + D > desiredDensity)
 		{
 			densityAtT = d;

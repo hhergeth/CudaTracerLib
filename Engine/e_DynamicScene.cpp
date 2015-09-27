@@ -31,9 +31,12 @@ struct textureLoader
 		if (lastVal.host)
 		{
 			e_BufferReference<e_MIPMap, e_KernelMIPMap> ref = S->m_pTextureBuffer->translate(lastVal);
-			if (ref->m_pPath == file)
-				return lastVal;
-			S->m_pTextureBuffer->Release(ref->m_pPath);
+			if (ref.getIndex() < S->m_pTextureBuffer->numElements())
+			{
+				if (ref->m_pPath == file)
+					return lastVal;
+				S->m_pTextureBuffer->Release(ref->m_pPath);
+			}
 		}
 		auto r = S->LoadTexture(file, true);
 		return r.AsVar();
@@ -276,7 +279,10 @@ e_BufferReference<e_MIPMap, e_KernelMIPMap> e_DynamicScene::LoadTexture(const st
 {
 	path rawFilePath = exists(file) ? path(file) : path(m_pTexturePath) / path(file);
 	if (!exists(rawFilePath))
+	{
+		std::cout << "Texture : " << file << " was not found in : \n" << m_pTexturePath << "\n";
 		return LoadTexture((std::string(m_pTexturePath) + "404.jpg").c_str(), a_MipMap);
+	}
 	bool load;
 	e_BufferReference<e_MIPMap, e_KernelMIPMap> T = m_pTextureBuffer->LoadCached(file, load);
 	if(load)

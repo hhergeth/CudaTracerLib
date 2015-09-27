@@ -10,7 +10,7 @@ struct e_FilterBase : public e_BaseType//, public e_BaseTypeHelper<5524550>
 	float xWidth, yWidth;
     float invXWidth, invYWidth;
 
-	e_FilterBase(float xw, float yw)
+	CUDA_FUNC_IN e_FilterBase(float xw, float yw)
 		: xWidth(xw), yWidth(yw), invXWidth(1.f/xw), invYWidth(1.f/yw)
 	{
 
@@ -51,7 +51,7 @@ struct e_GaussianFilter : public e_FilterBase//, public e_DerivedTypeHelper<2>
     float expX, expY;
 	
 	e_GaussianFilter(){}
-	e_GaussianFilter(float xw, float yw, float a)
+	CUDA_FUNC_IN e_GaussianFilter(float xw, float yw, float a)
 		: e_FilterBase(xw, yw), alpha(a), expX(expf(-alpha * xWidth * xWidth)),  expY(expf(-alpha * yWidth * yWidth))
 	{
 

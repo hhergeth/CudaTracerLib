@@ -9,8 +9,7 @@
 #include "../Engine/e_TriIntersectorData.h"
 #include "../Engine/e_Node.h"
 #include "../Engine/e_DynamicScene.h"
-
-//#define SKIP_OUTER_TREE
+#include "k_BVHTracer.h"
 
 enum
 {
@@ -159,14 +158,14 @@ CUDA_FUNC_IN bool k_TraceRayNode(const Vec3f& dir, const Vec3f& ori, TraceResult
 			}
 
 #ifdef ISCUDA
-            unsigned int mask;
-            asm("{\n"
-                "   .reg .pred p;               \n"
-                "setp.ge.s32        p, %1, 0;   \n"
-                "vote.ballot.b32    %0,p;       \n"
-                "}"
-                : "=r"(mask)
-                : "r"(leafAddr));
+			unsigned int mask;
+			asm("{\n"
+				"   .reg .pred p;               \n"
+				"setp.ge.s32        p, %1, 0;   \n"
+				"vote.ballot.b32    %0,p;       \n"
+				"}"
+				: "=r"(mask)
+				: "r"(leafAddr));
 #else
 			unsigned int mask = leafAddr >= 0;
 #endif
@@ -252,6 +251,67 @@ bool k_TraceRay(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result)
 	Platform::Increment(&g_RayTracedCounter);
 	if(!g_SceneData.m_sNodeData.UsedCount)
 		return false;
+	return k_TraceRayTemplate(Ray(ori, dir), a_Result->m_fDist, [&](int nodeIdx)
+	{
+		e_Node* N = g_SceneData.m_sNodeData.Data + nodeIdx;
+		e_KernelMesh mesh = g_SceneData.m_sMeshData[N->m_uMeshIndex];
+		//transform a_Result->m_fDist to local system
+		float4x4 modl, modl2;
+		loadInvModl(nodeIdx, &modl);
+		loadModl(nodeIdx, &modl2);
+		Vec3f d = modl.TransformDirection(dir), o = modl.TransformPoint(ori);
+		//return k_TraceRayNode(d, o, a_Result, N);
+		return k_TraceRayTemplate(Ray(o, d), a_Result->m_fDist, [&](int triIdx)
+		{
+			bool found = false;
+			for (int triAddr = triIdx;; triAddr++)
+			{
+#ifdef ISCUDA
+				const float4 v00 = tex1Dfetch(t_tris, mesh.m_uBVHTriangleOffset + triAddr * 3 + 0);
+				const float4 v11 = tex1Dfetch(t_tris, mesh.m_uBVHTriangleOffset + triAddr * 3 + 1);
+				const float4 v22 = tex1Dfetch(t_tris, mesh.m_uBVHTriangleOffset + triAddr * 3 + 2);
+				unsigned int index = tex1Dfetch(t_triIndices, mesh.m_uBVHIndicesOffset + triAddr);
+#else
+				Vec4f* dat = (Vec4f*)g_SceneData.m_sBVHIntData.Data;
+				const Vec4f v00 = dat[mesh.m_uBVHTriangleOffset + triAddr * 3 + 0];
+				const Vec4f v11 = dat[mesh.m_uBVHTriangleOffset + triAddr * 3 + 1];
+				const Vec4f v22 = dat[mesh.m_uBVHTriangleOffset + triAddr * 3 + 2];
+				unsigned int index = g_SceneData.m_sBVHIndexData.Data[mesh.m_uBVHIndicesOffset + triAddr].index;
+#endif
+
+				float Oz = v00.w - o.x*v00.x - o.y*v00.y - o.z*v00.z;
+				float invDz = 1.0f / (d.x*v00.x + d.y*v00.y + d.z*v00.z);
+				float t = Oz * invDz;
+				if (t > 1e-2f && t < a_Result->m_fDist)
+				{
+					float Ox = v11.w + o.x*v11.x + o.y*v11.y + o.z*v11.z;
+					float Dx = d.x*v11.x + d.y*v11.y + d.z*v11.z;
+					float u = Ox + t*Dx;
+					if (u >= 0.0f)
+					{
+						float Oy = v22.w + o.x*v22.x + o.y*v22.y + o.z*v22.z;
+						float Dy = d.x*v22.x + d.y*v22.y + d.z*v22.z;
+						float v = Oy + t*Dy;
+						if (v >= 0.0f && u + v <= 1.0f)
+						{
+							unsigned int ti = index >> 1;
+							e_TriangleData* tri = g_SceneData.m_sTriData.Data + ti + mesh.m_uTriangleOffset;
+
+							a_Result->m_pNode = N;
+							a_Result->m_pTri = tri;
+							a_Result->m_fBaryCoords = Vec2f(u, v);
+							a_Result->m_fDist = t;
+							found = true;
+						}
+					}
+				}
+				if (index & 1)
+					break;
+			}
+			return found;
+		}, t_nodesA, g_SceneData.m_sBVHNodeData.Data, mesh.m_uBVHNodeOffset, 0);
+	}, t_SceneNodes, g_SceneData.m_sSceneBVH.m_pNodes, 0, g_SceneData.m_sSceneBVH.m_sStartNode);
+
 #ifdef SKIP_OUTER_TREE
 	const int node = 0;
 	e_Node* N = g_SceneData.m_sNodeData.Data + node;
@@ -441,58 +501,58 @@ __device__ __inline__ float spanEndKepler2(float a0, float a1, float b0, float b
 
 template<bool ANY_HIT> __global__ void intersectKernel_SKIPOUTER(int numRays, traversalRay* a_RayBuffer, traversalResult* a_ResBuffer)
 {
-    int traversalStack[STACK_SIZE];
-    traversalStack[0] = EntrypointSentinel; // Bottom-most entry.
+	int traversalStack[STACK_SIZE];
+	traversalStack[0] = EntrypointSentinel; // Bottom-most entry.
 
-    // Live state during traversal, stored in registers.
+	// Live state during traversal, stored in registers.
 
-    float   origx, origy, origz;            // Ray origin.
-    char*   stackPtr;                       // Current position in traversal stack.
-    int     leafAddr;                       // First postponed leaf, non-negative if none.
-    int     nodeAddr = EntrypointSentinel;  // Non-negative: current internal node, negative: second postponed leaf.
-    int     hitIndex;                       // Triangle index of the closest intersection, -1 if none.
-    float   hitT;                           // t-value of the closest intersection.
-    float   tmin;
-    int     rayidx;
-    float   oodx;
-    float   oody;
-    float   oodz;
-    float   dirx;
-    float   diry;
-    float   dirz;
-    float   idirx;
-    float   idiry;
-    float   idirz;
+	float   origx, origy, origz;            // Ray origin.
+	char*   stackPtr;                       // Current position in traversal stack.
+	int     leafAddr;                       // First postponed leaf, non-negative if none.
+	int     nodeAddr = EntrypointSentinel;  // Non-negative: current internal node, negative: second postponed leaf.
+	int     hitIndex;                       // Triangle index of the closest intersection, -1 if none.
+	float   hitT;                           // t-value of the closest intersection.
+	float   tmin;
+	int     rayidx;
+	float   oodx;
+	float   oody;
+	float   oodz;
+	float   dirx;
+	float   diry;
+	float   dirz;
+	float   idirx;
+	float   idiry;
+	float   idirz;
 	Vec2f bCoords;
 
-    // Initialize persistent threads.
+	// Initialize persistent threads.
 
-    __shared__ volatile int nextRayArray[MaxBlockHeight]; // Current ray index in global buffer.
+	__shared__ volatile int nextRayArray[MaxBlockHeight]; // Current ray index in global buffer.
 
-    // Persistent threads: fetch and process rays in a loop.
+	// Persistent threads: fetch and process rays in a loop.
 
-    do
-    {
-        const int tidx = threadIdx.x;
-        volatile int& rayBase = nextRayArray[threadIdx.y];
+	do
+	{
+		const int tidx = threadIdx.x;
+		volatile int& rayBase = nextRayArray[threadIdx.y];
 
-        // Fetch new rays from the global pool using lane 0.
+		// Fetch new rays from the global pool using lane 0.
 
-        const bool          terminated     = nodeAddr==EntrypointSentinel;
-        const unsigned int  maskTerminated = __ballot(terminated);
-        const int           numTerminated  = __popc(maskTerminated);
-        const int           idxTerminated  = __popc(maskTerminated & ((1u<<tidx)-1));
+		const bool          terminated     = nodeAddr==EntrypointSentinel;
+		const unsigned int  maskTerminated = __ballot(terminated);
+		const int           numTerminated  = __popc(maskTerminated);
+		const int           idxTerminated  = __popc(maskTerminated & ((1u<<tidx)-1));
 
-        if(terminated)
-        {
-            if (idxTerminated == 0)
-                rayBase = atomicAdd(&g_warpCounter, numTerminated);
+		if(terminated)
+		{
+			if (idxTerminated == 0)
+				rayBase = atomicAdd(&g_warpCounter, numTerminated);
 
-            rayidx = rayBase + idxTerminated;
-            if (rayidx >= numRays)
-                break;
+			rayidx = rayBase + idxTerminated;
+			if (rayidx >= numRays)
+				break;
 
-            // Fetch ray.
+			// Fetch ray.
 
 			float4 o1 = ((float4*)a_RayBuffer)[rayidx * 2 + 0];
 			float4 d1 = ((float4*)a_RayBuffer)[rayidx * 2 + 1];
@@ -501,30 +561,30 @@ template<bool ANY_HIT> __global__ void intersectKernel_SKIPOUTER(int numRays, tr
 			loadInvModl(0, &modl);
 			float3 d = modl.TransformDirection(Vec3f(d1.x, d1.y, d1.z)), o = modl.TransformPoint(Vec3f(o1.x, o1.y, o1.z));
 
-            origx = o.x;
-            origy = o.y;
-            origz = o.z;
+			origx = o.x;
+			origy = o.y;
+			origz = o.z;
 			//tmin  = o1.w / length(d);
 			tmin = o1.w;
-            dirx  = d.x;
-            diry  = d.y;
-            dirz  = d.z;
-            //hitT  = d1.w / length(d);
+			dirx  = d.x;
+			diry  = d.y;
+			dirz  = d.z;
+			//hitT  = d1.w / length(d);
 			hitT = d1.w;
 			float ooeps = math::exp2(-80.0f); // Avoid div by zero.
-            idirx = 1.0f / (math::abs(d.x) > ooeps ? d.x : copysignf(ooeps, d.x));
-            idiry = 1.0f / (math::abs(d.y) > ooeps ? d.y : copysignf(ooeps, d.y));
-            idirz = 1.0f / (math::abs(d.z) > ooeps ? d.z : copysignf(ooeps, d.z));
-            oodx  = origx * idirx;
-            oody  = origy * idiry;
-            oodz  = origz * idirz;
+			idirx = 1.0f / (math::abs(d.x) > ooeps ? d.x : copysignf(ooeps, d.x));
+			idiry = 1.0f / (math::abs(d.y) > ooeps ? d.y : copysignf(ooeps, d.y));
+			idirz = 1.0f / (math::abs(d.z) > ooeps ? d.z : copysignf(ooeps, d.z));
+			oodx  = origx * idirx;
+			oody  = origy * idiry;
+			oodz  = origz * idirz;
 
-            // Setup traversal.
+			// Setup traversal.
 
-            stackPtr = (char*)&traversalStack[0];
-            leafAddr = 0;   // No postponed leaf.
-            nodeAddr = 0;   // Start from the root.
-            hitIndex = -1;  // No triangle intersected so far.
+			stackPtr = (char*)&traversalStack[0];
+			leafAddr = 0;   // No postponed leaf.
+			nodeAddr = 0;   // Start from the root.
+			hitIndex = -1;  // No triangle intersected so far.
 		}
 		
 		while(nodeAddr != EntrypointSentinel)
@@ -539,79 +599,79 @@ template<bool ANY_HIT> __global__ void intersectKernel_SKIPOUTER(int numRays, tr
 
 				// Intersect the ray against the child nodes.
 
-                const float c0lox = n0xy.x * idirx - oodx;
-                const float c0hix = n0xy.y * idirx - oodx;
-                const float c0loy = n0xy.z * idiry - oody;
-                const float c0hiy = n0xy.w * idiry - oody;
-                const float c0loz = nz.x   * idirz - oodz;
-                const float c0hiz = nz.y   * idirz - oodz;
-                const float c1loz = nz.z   * idirz - oodz;
-                const float c1hiz = nz.w   * idirz - oodz;
-                const float c0min = spanBeginKepler2(c0lox, c0hix, c0loy, c0hiy, c0loz, c0hiz, tmin);
-                const float c0max = spanEndKepler2  (c0lox, c0hix, c0loy, c0hiy, c0loz, c0hiz, hitT);
-                const float c1lox = n1xy.x * idirx - oodx;
-                const float c1hix = n1xy.y * idirx - oodx;
-                const float c1loy = n1xy.z * idiry - oody;
-                const float c1hiy = n1xy.w * idiry - oody;
-                const float c1min = spanBeginKepler2(c1lox, c1hix, c1loy, c1hiy, c1loz, c1hiz, tmin);
-                const float c1max = spanEndKepler2  (c1lox, c1hix, c1loy, c1hiy, c1loz, c1hiz, hitT);
+				const float c0lox = n0xy.x * idirx - oodx;
+				const float c0hix = n0xy.y * idirx - oodx;
+				const float c0loy = n0xy.z * idiry - oody;
+				const float c0hiy = n0xy.w * idiry - oody;
+				const float c0loz = nz.x   * idirz - oodz;
+				const float c0hiz = nz.y   * idirz - oodz;
+				const float c1loz = nz.z   * idirz - oodz;
+				const float c1hiz = nz.w   * idirz - oodz;
+				const float c0min = spanBeginKepler2(c0lox, c0hix, c0loy, c0hiy, c0loz, c0hiz, tmin);
+				const float c0max = spanEndKepler2  (c0lox, c0hix, c0loy, c0hiy, c0loz, c0hiz, hitT);
+				const float c1lox = n1xy.x * idirx - oodx;
+				const float c1hix = n1xy.y * idirx - oodx;
+				const float c1loy = n1xy.z * idiry - oody;
+				const float c1hiy = n1xy.w * idiry - oody;
+				const float c1min = spanBeginKepler2(c1lox, c1hix, c1loy, c1hiy, c1loz, c1hiz, tmin);
+				const float c1max = spanEndKepler2  (c1lox, c1hix, c1loy, c1hiy, c1loz, c1hiz, hitT);
 
-                bool swp = (c1min < c0min);
+				bool swp = (c1min < c0min);
 
-                bool traverseChild0 = (c0max >= c0min);
-                bool traverseChild1 = (c1max >= c1min);
+				bool traverseChild0 = (c0max >= c0min);
+				bool traverseChild1 = (c1max >= c1min);
 
-                // Neither child was intersected => pop stack.
+				// Neither child was intersected => pop stack.
 
-                if (!traverseChild0 && !traverseChild1)
-                {
-                    nodeAddr = *(int*)stackPtr;
-                    stackPtr -= 4;
-                }
+				if (!traverseChild0 && !traverseChild1)
+				{
+					nodeAddr = *(int*)stackPtr;
+					stackPtr -= 4;
+				}
 
-                // Otherwise => fetch child pointers.
+				// Otherwise => fetch child pointers.
 
-                else
-                {
-                    nodeAddr = (traverseChild0) ? cnodes.x : cnodes.y;
+				else
+				{
+					nodeAddr = (traverseChild0) ? cnodes.x : cnodes.y;
 
-                    // Both children were intersected => push the farther one.
+					// Both children were intersected => push the farther one.
 
-                    if (traverseChild0 && traverseChild1)
-                    {
-                        if (swp)
-                            swapk(nodeAddr, cnodes.y);
-                        stackPtr += 4;
-                        *(int*)stackPtr = cnodes.y;
-                    }
-                }
+					if (traverseChild0 && traverseChild1)
+					{
+						if (swp)
+							swapk(nodeAddr, cnodes.y);
+						stackPtr += 4;
+						*(int*)stackPtr = cnodes.y;
+					}
+				}
 
-                // First leaf => postpone and continue traversal.
+				// First leaf => postpone and continue traversal.
 
-                if (nodeAddr < 0 && leafAddr  >= 0)     // Postpone max 1
+				if (nodeAddr < 0 && leafAddr  >= 0)     // Postpone max 1
 //              if (nodeAddr < 0 && leafAddr2 >= 0)     // Postpone max 2
-                {
-                    //leafAddr2= leafAddr;          // postpone 2
-                    leafAddr = nodeAddr;
-                    nodeAddr = *(int*)stackPtr;
-                    stackPtr -= 4;
-                }
+				{
+					//leafAddr2= leafAddr;          // postpone 2
+					leafAddr = nodeAddr;
+					nodeAddr = *(int*)stackPtr;
+					stackPtr -= 4;
+				}
 
-                // All SIMD lanes have found a leaf? => process them.
+				// All SIMD lanes have found a leaf? => process them.
 
-                // NOTE: inline PTX implementation of "if(!__any(leafAddr >= 0)) break;".
-                // tried everything with CUDA 4.2 but always got several redundant instructions.
+				// NOTE: inline PTX implementation of "if(!__any(leafAddr >= 0)) break;".
+				// tried everything with CUDA 4.2 but always got several redundant instructions.
 
-                unsigned int mask;
-                asm("{\n"
-                    "   .reg .pred p;               \n"
-                    "setp.ge.s32        p, %1, 0;   \n"
-                    "vote.ballot.b32    %0,p;       \n"
-                    "}"
-                    : "=r"(mask)
-                    : "r"(leafAddr));
-                if(!mask)
-                    break;
+				unsigned int mask;
+				asm("{\n"
+					"   .reg .pred p;               \n"
+					"setp.ge.s32        p, %1, 0;   \n"
+					"vote.ballot.b32    %0,p;       \n"
+					"}"
+					: "=r"(mask)
+					: "r"(leafAddr));
+				if(!mask)
+					break;
 			}
 			while (leafAddr < 0)
 			{
@@ -691,105 +751,105 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 {
 	// Traversal stack in CUDA thread-local memory.
 
-    int traversalStack[STACK_SIZE];
-    traversalStack[0] = EntrypointSentinel; // Bottom-most entry.
+	int traversalStack[STACK_SIZE];
+	traversalStack[0] = EntrypointSentinel; // Bottom-most entry.
 
-    // Live state during traversal, stored in registers.
+	// Live state during traversal, stored in registers.
 
-    float   origx, origy, origz;            // Ray origin.
-    char*   stackPtr;                       // Current position in traversal stack.
-    int     leafAddr;                       // First postponed leaf, non-negative if none.
-    int     nodeAddr = EntrypointSentinel;  // Non-negative: current internal node, negative: second postponed leaf.
-    int     hitIndex;                       // Triangle index of the closest intersection, -1 if none.
-    float   hitT;                           // t-value of the closest intersection.
-    float   tmin;
-    int     rayidx;
-    float   oodx;
-    float   oody;
-    float   oodz;
-    float   dirx;
-    float   diry;
-    float   dirz;
-    float   idirx;
-    float   idiry;
-    float   idirz;
+	float   origx, origy, origz;            // Ray origin.
+	char*   stackPtr;                       // Current position in traversal stack.
+	int     leafAddr;                       // First postponed leaf, non-negative if none.
+	int     nodeAddr = EntrypointSentinel;  // Non-negative: current internal node, negative: second postponed leaf.
+	int     hitIndex;                       // Triangle index of the closest intersection, -1 if none.
+	float   hitT;                           // t-value of the closest intersection.
+	float   tmin;
+	int     rayidx;
+	float   oodx;
+	float   oody;
+	float   oodz;
+	float   dirx;
+	float   diry;
+	float   dirz;
+	float   idirx;
+	float   idiry;
+	float   idirz;
 	Vec2f bCorrds;
 	int nodeIdx = 0;
 
 	int ltraversalStack[STACK_SIZE];
 	ltraversalStack[0] = EntrypointSentinel;
-    float   lorigx, lorigy, lorigz;
-    char*   lstackPtr;
-    int     lleafAddr;
-    int     lnodeAddr = EntrypointSentinel;
-    float   lhitT;
-    float   ltmin;
-    float   loodx;
-    float   loody;
-    float   loodz;
-    float   ldirx;
-    float   ldiry;
-    float   ldirz;
-    float   lidirx;
-    float   lidiry;
-    float   lidirz;
+	float   lorigx, lorigy, lorigz;
+	char*   lstackPtr;
+	int     lleafAddr;
+	int     lnodeAddr = EntrypointSentinel;
+	float   lhitT;
+	float   ltmin;
+	float   loodx;
+	float   loody;
+	float   loodz;
+	float   ldirx;
+	float   ldiry;
+	float   ldirz;
+	float   lidirx;
+	float   lidiry;
+	float   lidirz;
 
-    // Initialize persistent threads.
+	// Initialize persistent threads.
 
-    __shared__ volatile int nextRayArray[MaxBlockHeight]; // Current ray index in global buffer.
+	__shared__ volatile int nextRayArray[MaxBlockHeight]; // Current ray index in global buffer.
 
-    // Persistent threads: fetch and process rays in a loop.
+	// Persistent threads: fetch and process rays in a loop.
 
-    do
-    {
-        const int tidx = threadIdx.x;
-        volatile int& rayBase = nextRayArray[threadIdx.y];
+	do
+	{
+		const int tidx = threadIdx.x;
+		volatile int& rayBase = nextRayArray[threadIdx.y];
 
-        // Fetch new rays from the global pool using lane 0.
+		// Fetch new rays from the global pool using lane 0.
 
-        const bool          terminated     = nodeAddr==EntrypointSentinel;
-        const unsigned int  maskTerminated = __ballot(terminated);
-        const int           numTerminated  = __popc(maskTerminated);
-        const int           idxTerminated  = __popc(maskTerminated & ((1u<<tidx)-1));
+		const bool          terminated     = nodeAddr==EntrypointSentinel;
+		const unsigned int  maskTerminated = __ballot(terminated);
+		const int           numTerminated  = __popc(maskTerminated);
+		const int           idxTerminated  = __popc(maskTerminated & ((1u<<tidx)-1));
 
-        if(terminated)
-        {
-            if (idxTerminated == 0)
-                rayBase = atomicAdd(&g_warpCounter, numTerminated);
+		if(terminated)
+		{
+			if (idxTerminated == 0)
+				rayBase = atomicAdd(&g_warpCounter, numTerminated);
 
-            rayidx = rayBase + idxTerminated;
-            if (rayidx >= numRays)
-                break;
+			rayidx = rayBase + idxTerminated;
+			if (rayidx >= numRays)
+				break;
 
-            // Fetch ray.
+			// Fetch ray.
 
 			float4 o = ((float4*)a_RayBuffer)[rayidx * 2 + 0];
 			float4 d = ((float4*)a_RayBuffer)[rayidx * 2 + 1];
-            origx = o.x;
-            origy = o.y;
-            origz = o.z;
-            tmin  = o.w;
-            dirx  = d.x;
-            diry  = d.y;
-            dirz  = d.z;
-            hitT  = d.w;
+			origx = o.x;
+			origy = o.y;
+			origz = o.z;
+			tmin  = o.w;
+			dirx  = d.x;
+			diry  = d.y;
+			dirz  = d.z;
+			hitT  = d.w;
 			float ooeps = math::exp2(-80.0f); // Avoid div by zero.
-            idirx = 1.0f / (math::abs(d.x) > ooeps ? d.x : copysignf(ooeps, d.x));
-            idiry = 1.0f / (math::abs(d.y) > ooeps ? d.y : copysignf(ooeps, d.y));
-            idirz = 1.0f / (math::abs(d.z) > ooeps ? d.z : copysignf(ooeps, d.z));
-            oodx  = origx * idirx;
-            oody  = origy * idiry;
-            oodz  = origz * idirz;
+			idirx = 1.0f / (math::abs(d.x) > ooeps ? d.x : copysignf(ooeps, d.x));
+			idiry = 1.0f / (math::abs(d.y) > ooeps ? d.y : copysignf(ooeps, d.y));
+			idirz = 1.0f / (math::abs(d.z) > ooeps ? d.z : copysignf(ooeps, d.z));
+			oodx  = origx * idirx;
+			oody  = origy * idiry;
+			oodz  = origz * idirz;
 
-            // Setup traversal.
+			// Setup traversal.
 
-            stackPtr = (char*)&traversalStack[0];
-            leafAddr = 0;   // No postponed leaf.
-            leafAddr = nodeAddr = g_SceneData.m_sSceneBVH.m_sStartNode;   // Start from the root. set the leafAddr to support scenes with one node
-            hitIndex = -1;  // No triangle intersected so far.
-        }
+			stackPtr = (char*)&traversalStack[0];
+			leafAddr = 0;   // No postponed leaf.
+			leafAddr = nodeAddr = g_SceneData.m_sSceneBVH.m_sStartNode;   // Start from the root. set the leafAddr to support scenes with one node
+			hitIndex = -1;  // No triangle intersected so far.
+		}
 
-        // Traversal loop.
+		// Traversal loop.
 		TraceResult r2 = k_TraceRay(Ray(a_RayBuffer[rayidx].a.getXYZ(), a_RayBuffer[rayidx].b.getXYZ()));
 		int4 res = make_int4(0, 0, 0, 0);
 		if (r2.hasHit())
@@ -807,89 +867,89 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 			nodeAddr = EntrypointSentinel;
 
 		while (nodeAddr != EntrypointSentinel)
-        {
-            // Traverse internal nodes until all SIMD lanes have found a leaf.
-            while (unsigned int(nodeAddr) < unsigned int(EntrypointSentinel))   // functionally equivalent, but faster
-            {
-                // Fetch AABBs of the two child nodes.
+		{
+			// Traverse internal nodes until all SIMD lanes have found a leaf.
+			while (unsigned int(nodeAddr) < unsigned int(EntrypointSentinel))   // functionally equivalent, but faster
+			{
+				// Fetch AABBs of the two child nodes.
 
-                const float4 n0xy = tex1Dfetch(t_SceneNodes, nodeAddr + 0); // (c0.lo.x, c0.hi.x, c0.lo.y, c0.hi.y)
-                const float4 n1xy = tex1Dfetch(t_SceneNodes, nodeAddr + 1); // (c1.lo.x, c1.hi.x, c1.lo.y, c1.hi.y)
-                const float4 nz   = tex1Dfetch(t_SceneNodes, nodeAddr + 2); // (c0.lo.z, c0.hi.z, c1.lo.z, c1.hi.z)
-                      float4 tmp  = tex1Dfetch(t_SceneNodes, nodeAddr + 3); // child_index0, child_index1
-                      int2  cnodes= *(int2*)&tmp;
+				const float4 n0xy = tex1Dfetch(t_SceneNodes, nodeAddr + 0); // (c0.lo.x, c0.hi.x, c0.lo.y, c0.hi.y)
+				const float4 n1xy = tex1Dfetch(t_SceneNodes, nodeAddr + 1); // (c1.lo.x, c1.hi.x, c1.lo.y, c1.hi.y)
+				const float4 nz   = tex1Dfetch(t_SceneNodes, nodeAddr + 2); // (c0.lo.z, c0.hi.z, c1.lo.z, c1.hi.z)
+					  float4 tmp  = tex1Dfetch(t_SceneNodes, nodeAddr + 3); // child_index0, child_index1
+					  int2  cnodes= *(int2*)&tmp;
 
-                // Intersect the ray against the child nodes.
+				// Intersect the ray against the child nodes.
 
-                const float c0lox = n0xy.x * idirx - oodx;
-                const float c0hix = n0xy.y * idirx - oodx;
-                const float c0loy = n0xy.z * idiry - oody;
-                const float c0hiy = n0xy.w * idiry - oody;
-                const float c0loz = nz.x   * idirz - oodz;
-                const float c0hiz = nz.y   * idirz - oodz;
-                const float c1loz = nz.z   * idirz - oodz;
-                const float c1hiz = nz.w   * idirz - oodz;
-                const float c0min = spanBeginKepler2(c0lox, c0hix, c0loy, c0hiy, c0loz, c0hiz, tmin);
-                const float c0max = spanEndKepler2  (c0lox, c0hix, c0loy, c0hiy, c0loz, c0hiz, hitT);
-                const float c1lox = n1xy.x * idirx - oodx;
-                const float c1hix = n1xy.y * idirx - oodx;
-                const float c1loy = n1xy.z * idiry - oody;
-                const float c1hiy = n1xy.w * idiry - oody;
-                const float c1min = spanBeginKepler2(c1lox, c1hix, c1loy, c1hiy, c1loz, c1hiz, tmin);
-                const float c1max = spanEndKepler2  (c1lox, c1hix, c1loy, c1hiy, c1loz, c1hiz, hitT);
+				const float c0lox = n0xy.x * idirx - oodx;
+				const float c0hix = n0xy.y * idirx - oodx;
+				const float c0loy = n0xy.z * idiry - oody;
+				const float c0hiy = n0xy.w * idiry - oody;
+				const float c0loz = nz.x   * idirz - oodz;
+				const float c0hiz = nz.y   * idirz - oodz;
+				const float c1loz = nz.z   * idirz - oodz;
+				const float c1hiz = nz.w   * idirz - oodz;
+				const float c0min = spanBeginKepler2(c0lox, c0hix, c0loy, c0hiy, c0loz, c0hiz, tmin);
+				const float c0max = spanEndKepler2  (c0lox, c0hix, c0loy, c0hiy, c0loz, c0hiz, hitT);
+				const float c1lox = n1xy.x * idirx - oodx;
+				const float c1hix = n1xy.y * idirx - oodx;
+				const float c1loy = n1xy.z * idiry - oody;
+				const float c1hiy = n1xy.w * idiry - oody;
+				const float c1min = spanBeginKepler2(c1lox, c1hix, c1loy, c1hiy, c1loz, c1hiz, tmin);
+				const float c1max = spanEndKepler2  (c1lox, c1hix, c1loy, c1hiy, c1loz, c1hiz, hitT);
 
-                bool swp = (c1min < c0min);
+				bool swp = (c1min < c0min);
 
-                bool traverseChild0 = (c0max >= c0min);
-                bool traverseChild1 = (c1max >= c1min);
+				bool traverseChild0 = (c0max >= c0min);
+				bool traverseChild1 = (c1max >= c1min);
 
-                // Neither child was intersected => pop stack.
+				// Neither child was intersected => pop stack.
 
-                if (!traverseChild0 && !traverseChild1)
-                {
-                    nodeAddr = *(int*)stackPtr;
-                    stackPtr -= 4;
-                }
-                else// Otherwise => fetch child pointers.
-                {
-                    nodeAddr = (traverseChild0) ? cnodes.x : cnodes.y;
+				if (!traverseChild0 && !traverseChild1)
+				{
+					nodeAddr = *(int*)stackPtr;
+					stackPtr -= 4;
+				}
+				else// Otherwise => fetch child pointers.
+				{
+					nodeAddr = (traverseChild0) ? cnodes.x : cnodes.y;
 
-                    // Both children were intersected => push the farther one.
+					// Both children were intersected => push the farther one.
 
-                    if (traverseChild0 && traverseChild1)
-                    {
-                        if (swp)
-                            swapk(nodeAddr, cnodes.y);
-                        stackPtr += 4;
-                        *(int*)stackPtr = cnodes.y;
-                    }
-                }
+					if (traverseChild0 && traverseChild1)
+					{
+						if (swp)
+							swapk(nodeAddr, cnodes.y);
+						stackPtr += 4;
+						*(int*)stackPtr = cnodes.y;
+					}
+				}
 
-                // First leaf => postpone and continue traversal.
+				// First leaf => postpone and continue traversal.
 
-                if (nodeAddr < 0 && leafAddr  >= 0)     // Postpone max 1
-                {
-                    leafAddr = nodeAddr;
-                    nodeAddr = *(int*)stackPtr;
-                    stackPtr -= 4;
-                }
+				if (nodeAddr < 0 && leafAddr  >= 0)     // Postpone max 1
+				{
+					leafAddr = nodeAddr;
+					nodeAddr = *(int*)stackPtr;
+					stackPtr -= 4;
+				}
 
-                unsigned int mask;
-                asm("{\n"
-                    "   .reg .pred p;               \n"
-                    "setp.ge.s32        p, %1, 0;   \n"
-                    "vote.ballot.b32    %0,p;       \n"
-                    "}"
-                    : "=r"(mask)
-                    : "r"(leafAddr));
-                if(!mask)
-                    break;
-            }
+				unsigned int mask;
+				asm("{\n"
+					"   .reg .pred p;               \n"
+					"setp.ge.s32        p, %1, 0;   \n"
+					"vote.ballot.b32    %0,p;       \n"
+					"}"
+					: "=r"(mask)
+					: "r"(leafAddr));
+				if(!mask)
+					break;
+			}
 
-            // Process postponed leaf nodes.
+			// Process postponed leaf nodes.
 
-            while (leafAddr < 0)
-            {
+			while (leafAddr < 0)
+			{
 				e_Node* N = g_SceneData.m_sNodeData.Data + (~leafAddr);
 				if (terminated)
 				{
@@ -1074,13 +1134,13 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 				}
 			} // leaf
 
-            // DYNAMIC FETCH
+			// DYNAMIC FETCH
 			//BUGGY
-            //if( __popc(__ballot(true)) < DYNAMIC_FETCH_THRESHOLD )
-            //    break;
-        } // traversal
+			//if( __popc(__ballot(true)) < DYNAMIC_FETCH_THRESHOLD )
+			//    break;
+		} // traversal
 
-        // Remap intersected triangle index, and store the result.
+		// Remap intersected triangle index, and store the result.
 
 		int4 res = make_int4(0,0,0,0);
 		if(hitIndex != -1)
@@ -1093,7 +1153,7 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 		}
 		((int4*)a_ResBuffer)[rayidx] = res;*/
 //outerlabel: ;
-    } while(true);
+	} while(true);
 }
 
 void __internal__IntersectBuffers(int N, traversalRay* a_RayBuffer, traversalResult* a_ResBuffer, bool SKIP_OUTER, bool ANY_HIT)

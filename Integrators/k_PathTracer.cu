@@ -136,7 +136,8 @@ void k_PathTracer::Debug(e_Image* I, const Vec2i& p)
 	float m = 1.0f*pow(this->m_uPassesDone, -1.0f / 6);
 	k_INITIALIZE(m_pScene, g_sRngs);
 	CudaRNG rng = g_RNGData();
-	Ray r = g_SceneData.GenerateSensorRay(p.x, p.y);	
+	Ray r = g_SceneData.GenerateSensorRay(p.x, p.y);
+	r.direction = Vec3f(0,0,1);
 	PathTrace<true>(r, r, r, rng);
 }
 

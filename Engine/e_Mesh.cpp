@@ -228,6 +228,16 @@ void e_Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Ve
 	unsigned int si = 0, pc = 0;
 	for(size_t ti = 0; ti < numTriangles; ti++)
 	{
+		e_TriangleData tri;
+		for (unsigned int uvIdx = 0; uvIdx < Dmin2(nUV_Sets, NUM_UV_SETS); uvIdx++)
+		{
+			for (int j = 0; j < 3; j++)
+			{
+				size_t l = indices ? indices[ti * 3 + j] : ti * 3 + j;
+				t[j] = uvs[uvIdx][l];
+			}
+			tri.setUvSetData(uvIdx, t[0], t[1], t[2]);
+		}
 		for(size_t j = 0; j < 3; j++)
 		{
 			size_t l = indices ? indices[ti * 3 + j] : ti * 3 + j;
@@ -239,16 +249,8 @@ void e_Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Ve
 			n[j] = normalize(v_Normals[l]);
 #endif
 		}
-		e_TriangleData tri(p, (unsigned char)si, t, n, ta, bi);
-		for(unsigned int uvIdx = 0; uvIdx < nUV_Sets; uvIdx++)
-		{
-			for(int j = 0; j < 3; j++)
-			{
-				size_t l = indices ? indices[ti * 3 + j] : ti * 3 + j;
-				t[j] = uvs[uvIdx][l];
-			}
-			tri.setUvSetData(uvIdx, t[0], t[1], t[2]);
-		}
+		tri.setData(p[0], p[1], p[2], n[0], n[1], n[2]);
+		
 #ifdef EXT_TRI
 		if(extraData)
 			for(int j = 0; j < 3; j++)

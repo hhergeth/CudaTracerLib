@@ -155,6 +155,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClInclude Include="Integrators\k_WavefrontVCM.h" />
+    <ClInclude Include="Kernel\k_BVHTracer.h" />
     <ClInclude Include="Kernel\k_RayBuffer.h" />
     <ClInclude Include="VirtualFuncType.h" />
   </ItemGroup>
