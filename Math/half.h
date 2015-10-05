@@ -157,8 +157,8 @@ class s10e5
   // This union gives us an easy way to examine and/or set the individual
   // bit-fields of an s23e8.
   union u_u32_s23e8 {
-    unsigned int i;
-    float	 f;
+	unsigned int i;
+	float	 f;
   };
 
  private:
@@ -334,37 +334,37 @@ inline s10e5::s10e5 (float f)
 
   e = e - 127;
   if (e == 128) {
-    // infinity or NAN; preserve the leading bits of mantissa
-    // because they tell whether it's a signaling of quiet NAN
-    _h = s | (31 << 10) | (m >> 13);
+	// infinity or NAN; preserve the leading bits of mantissa
+	// because they tell whether it's a signaling of quiet NAN
+	_h = s | (31 << 10) | (m >> 13);
   } else if (e > 15) {
-    // overflow to infinity
-    _h = s | (31 << 10);
+	// overflow to infinity
+	_h = s | (31 << 10);
   } else if (e > -15) {
-    // normalized case
-    if ((m & 0x00003fff) == 0x00001000) {
-      // tie, round down to even
-      _h = s | ((e+15) << 10) | (m >> 13);
-    } else {
-      // all non-ties, and tie round up to even
-      _h = s | ((e+15) << 10) | ((m + 0x00001000) >> 13);
-    }
+	// normalized case
+	if ((m & 0x00003fff) == 0x00001000) {
+	  // tie, round down to even
+	  _h = s | ((e+15) << 10) | (m >> 13);
+	} else {
+	  // all non-ties, and tie round up to even
+	  _h = s | ((e+15) << 10) | ((m + 0x00001000) >> 13);
+	}
   } else if (e > -25) {
-    // convert to subnormal
-    m |= 0x00800000; // restore the implied bit
-    e = -14 - e; // shift count
-    m >>= e; // M now in position but 2^13 too big
-    if ((m & 0x00003fff) == 0x00001000) {
-      // tie round down to even
-    } else {
-      // all non-ties, and tie round up to even
-      m += (1 << 12); // m += 0x00001000
-    }
-    m >>= 13;
-    _h = s | m;
+	// convert to subnormal
+	m |= 0x00800000; // restore the implied bit
+	e = -14 - e; // shift count
+	m >>= e; // M now in position but 2^13 too big
+	if ((m & 0x00003fff) == 0x00001000) {
+	  // tie round down to even
+	} else {
+	  // all non-ties, and tie round up to even
+	  m += (1 << 12); // m += 0x00001000
+	}
+	m >>= 13;
+	_h = s | m;
   } else {
-    // zero, or underflow
-    _h = s;
+	// zero, or underflow
+	_h = s;
   }
 }
 
@@ -388,23 +388,23 @@ inline s10e5::operator float () const
 
   s <<= 16;
   if (e == 31) {
-    // infinity or NAN
-    e = 255 << 23;
-    m <<= 13;
-    x.i = s | e | m;
+	// infinity or NAN
+	e = 255 << 23;
+	m <<= 13;
+	x.i = s | e | m;
   } else if (e > 0) {
-    // normalized
-    e = e + (127 - 15);
-    e <<= 23;
-    m <<= 13;
-    x.i = s | e | m;
+	// normalized
+	e = e + (127 - 15);
+	e <<= 23;
+	m <<= 13;
+	x.i = s | e | m;
   } else if (m == 0) {
-    // zero
-    x.i = s;
+	// zero
+	x.i = s;
   } else {
-    // subnormal, value is m times 2^-24
-    x.f = ((float) m);
-    x.i = s | (x.i - (24 << 23));
+	// subnormal, value is m times 2^-24
+	x.f = ((float) m);
+	x.i = s | (x.i - (24 << 23));
   }
   return(x.f);
 #endif
@@ -424,7 +424,7 @@ inline s10e5 s10e5::round (unsigned int n) const
   //
 
   if (n >= 10)
-    return *this;
+	return *this;
 
   //
   // Disassemble h into the sign, s,
@@ -450,15 +450,15 @@ inline s10e5 s10e5::round (unsigned int n) const
   //
 
   if (e >= 0x7c00)
-    {
-      //
-      // Overflow occurred -- truncate instead of rounding.
-      //
+	{
+	  //
+	  // Overflow occurred -- truncate instead of rounding.
+	  //
 
-      e = _h;
-      e >>= 10 - n;
-      e <<= 10 - n;
-    }
+	  e = _h;
+	  e >>= 10 - n;
+	  e <<= 10 - n;
+	}
 
   //
   // Put the original sign bit back.

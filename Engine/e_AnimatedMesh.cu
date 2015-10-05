@@ -144,7 +144,7 @@ void e_AnimatedMesh::k_ComputeState(unsigned int a_Anim, unsigned int a_Frame, f
 	ThrowCudaErrors(cudaDeviceSynchronize());
 	g_ComputeTriangles << <m_sTriInfo.getLength() / 256 + 1, 256 >> >(a_DeviceTmp, (uint3*)m_sTriangles.getDevice(), m_sTriInfo.getDevice(), m_sTriInfo.getLength());
 	ThrowCudaErrors(cudaDeviceSynchronize());
-	cudaMemcpy(a_HostTmp, a_DeviceTmp, sizeof(e_TmpVertex) * k_Data.m_uVertexCount, cudaMemcpyDeviceToHost);
+	ThrowCudaErrors(cudaMemcpy(a_HostTmp, a_DeviceTmp, sizeof(e_TmpVertex) * k_Data.m_uVertexCount, cudaMemcpyDeviceToHost));
 	AnimProvider p(this, a_HostTmp, this->m_sTriangles);
 	ThrowCudaErrors(cudaDeviceSynchronize());
 	if (m_pBuilder)

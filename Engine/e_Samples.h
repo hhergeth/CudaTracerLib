@@ -97,7 +97,7 @@ public:
 	EMeasure measure;
 	Vec2f uv;
 	///This is so unbelievably ugly it hurts my brain....
-	const void* object;
+	CUDA_ALIGN(16) const void* object;
 public:
 	CUDA_FUNC_IN PositionSamplingRecord() { }
 	CUDA_FUNC_IN PositionSamplingRecord(const Vec3f& _p, const Vec3f& _n, const void* _obj, EMeasure m = EArea)

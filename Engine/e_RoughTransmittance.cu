@@ -36,8 +36,8 @@ e_RoughTransmittance::e_RoughTransmittance(const std::string& name)
 	delete[] temp;
 	CUDA_MALLOC(&m_transDevice, sizeof(float) * m_transSize);
 	CUDA_MALLOC(&m_diffTransDevice, sizeof(float) * m_diffTransSize);
-	cudaMemcpy(m_transDevice, m_transHost, sizeof(float) * m_transSize, cudaMemcpyHostToDevice);
-	cudaMemcpy(m_diffTransDevice, m_diffTransHost, sizeof(float) * m_diffTransSize, cudaMemcpyHostToDevice);
+	ThrowCudaErrors(cudaMemcpy(m_transDevice, m_transHost, sizeof(float) * m_transSize, cudaMemcpyHostToDevice));
+	ThrowCudaErrors(cudaMemcpy(m_diffTransDevice, m_diffTransHost, sizeof(float) * m_diffTransSize, cudaMemcpyHostToDevice));
 	if(I.getPos() != I.getFileSize())
 		throw std::runtime_error(__FUNCTION__);
 }
@@ -126,7 +126,7 @@ void e_RoughTransmittanceManager::StaticInitialize(const std::string& a_Path)
 	m_sObjectsHost[0] = e_RoughTransmittance(a_Path + "/microfacet/beckmann.dat");
 	m_sObjectsHost[1] = e_RoughTransmittance(a_Path + "/microfacet/phong.dat");
 	m_sObjectsHost[2] = e_RoughTransmittance(a_Path + "/microfacet/ggx.dat");
-	cudaMemcpyToSymbol(m_sObjectsDevice, m_sObjectsHost, sizeof(e_RoughTransmittance) * 3);
+	ThrowCudaErrors(cudaMemcpyToSymbol(m_sObjectsDevice, m_sObjectsHost, sizeof(e_RoughTransmittance) * 3));
 }
 
 void e_RoughTransmittanceManager::StaticDeinitialize()

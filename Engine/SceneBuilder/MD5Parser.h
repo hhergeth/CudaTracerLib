@@ -9,77 +9,77 @@
 // MD5 Loader, by A.J. Tavakoli
 
 enum TOKEN { TOKEN_KEYWORD,
-               TOKEN_INT,
-               TOKEN_FLOAT,
-               TOKEN_STRING,
-               TOKEN_LBRACE,
-               TOKEN_RBRACE,
-               TOKEN_LPAREN,
-               TOKEN_RPAREN,
-               TOKEN_INVALID };
+			   TOKEN_INT,
+			   TOKEN_FLOAT,
+			   TOKEN_STRING,
+			   TOKEN_LBRACE,
+			   TOKEN_RBRACE,
+			   TOKEN_LPAREN,
+			   TOKEN_RPAREN,
+			   TOKEN_INVALID };
 
   class Vertex {
   public:
-    int weightIndex;
-    int weightCount;
-    Vec2f tc;
+	int weightIndex;
+	int weightCount;
+	Vec2f tc;
   };
   
   class Joint {
   public:
-    std::string name;
-    Vec3f pos;
-    Quaternion quat;
-    int parent;
-    std::vector<int> children;
+	std::string name;
+	Vec3f pos;
+	Quaternion quat;
+	int parent;
+	std::vector<int> children;
   };
   
   class Tri {
   public:
-    int v[3]; // vertex indices
+	int v[3]; // vertex indices
   };
   
   class Weight {
   public:
-    int joint;
-    float w;
+	int joint;
+	float w;
 	Vec3f pos;
   };
   
   class Mesh {
   public:
-    std::string texture;
-    std::vector<Vertex> verts;
-    std::vector<Tri> tris;
-    std::vector<Weight> weights;
+	std::string texture;
+	std::vector<Vertex> verts;
+	std::vector<Tri> tris;
+	std::vector<Weight> weights;
   };
   
   class bFrame {
   public:
-    std::vector<float> animatedComponents;
-    std::vector<Joint> joints;
-    Vec3f min; // min point of bounding box
-    Vec3f max; // max point of bounding box
+	std::vector<float> animatedComponents;
+	std::vector<Joint> joints;
+	Vec3f min; // min point of bounding box
+	Vec3f max; // max point of bounding box
   };
   
   class JointInfo {
   public:
-    std::string name;
-    int parentIndex;
-    int flags;
-    int startIndex;
+	std::string name;
+	int parentIndex;
+	int flags;
+	int startIndex;
   };
 
   // stores data from an anim file
   class Anim {
   public:
-    Anim(); 
-    int numbFrames;
-    int bFrameRate;
-    int numAnimatedComponents;
-    std::vector<bFrame> bFrames;
-    std::vector<Joint> baseJoints;
-    std::vector<JointInfo> jointInfo;
+	Anim(); 
+	int numbFrames;
+	int bFrameRate;
+	int numAnimatedComponents;
+	std::vector<bFrame> bFrames;
+	std::vector<Joint> baseJoints;
+	std::vector<JointInfo> jointInfo;
   };
 
 class MD5Model {
@@ -95,7 +95,7 @@ public:
 
   class Exception : public std::runtime_error {
   public:
-    Exception(const std::string &msg): std::runtime_error(msg) { }
+	Exception(const std::string &msg): std::runtime_error(msg) { }
   };
 
 //protected:

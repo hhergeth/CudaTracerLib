@@ -7,6 +7,7 @@ CUDA_DEVICE k_PhotonMapCollection<true, k_pPpmPhoton> g_Map;
 CUDA_DEVICE bool g_HasVolumePhotons;
 CUDA_DEVICE k_BeamGrid g_BeamGrid;
 CUDA_CONST k_pGridEntry* g_SurfaceEntries;
+CUDA_DEVICE k_BeamBVHStorage g_BVHBeams;
 
 CUDA_FUNC_IN bool storeBeam(const Ray& r, float t, const Spectrum& phi, float a_r)
 {
@@ -147,11 +148,12 @@ template<bool DIRECT> __global__ void k_PhotonPass(int photons_per_thread, bool 
 			if ((!bssrdf && V.HasVolumes() && V.IntersectP(r, 0, r2.m_fDist, &minT, &maxT) && V.sampleDistance(r, 0, r2.m_fDist, rng, mRec))
 				|| (bssrdf && sampleDistanceHomogenous(r, 0, r2.m_fDist, rng.randomFloat(), mRec, bssrdf->sig_a, bssrdf->sigp_s)))
 			{
-				if (g_BeamGrid.m_pDeviceBeams)
-					wasStored |= storeBeam(r, mRec.t, throughput * Le, a_r);
+				//if (g_BeamGrid.m_pDeviceBeams)
+				//	wasStored |= storeBeam(r, mRec.t, throughput * Le, a_r);
+				wasStored |= g_BVHBeams.insertBeam(k_Beam(r.origin, r.direction, mRec.t, throughput * Le));
 				throughput *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
-				if (!g_BeamGrid.m_pDeviceBeams)
-					wasStored |= storePhoton(mRec.p, throughput * Le, -r.direction, Vec3f(0, 0, 0), PhotonType::pt_Volume, g_Map, final_gather);
+				//if (!g_BeamGrid.m_pDeviceBeams)
+				//	wasStored |= storePhoton(mRec.p, throughput * Le, -r.direction, Vec3f(0, 0, 0), PhotonType::pt_Volume, g_Map, final_gather);
 				hasVolPhotons = true;
 				if (bssrdf)
 					r.direction = Warp::squareToUniformSphere(rng.randomFloat2());
@@ -296,6 +298,7 @@ void k_sPpmTracer::doPhotonPass()
 		ThrowCudaErrors(cudaMemcpyToSymbol(g_SurfaceEntries, &m_pSurfaceValues, sizeof(m_pSurfaceValues)));
 	}
 	bool hasVol = false;
+	ThrowCudaErrors(cudaMemcpyToSymbol(g_BVHBeams, &m_sBVHBeams, sizeof(m_sBVHBeams)));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_Map, &m_sMaps, sizeof(m_sMaps)));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_HasVolumePhotons, &hasVol, sizeof(bool)));
 	m_sPhotonBeams.m_uBeamIdx = 0;
@@ -304,7 +307,7 @@ void k_sPpmTracer::doPhotonPass()
 		ThrowCudaErrors(cudaMemset(m_sPhotonBeams.m_pGrid, -1, sizeof(Vec2i) * m_sPhotonBeams.m_uGridLength));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_BeamGrid, &m_sPhotonBeams, sizeof(m_sPhotonBeams)));
 
-	while (!m_sMaps.PassFinished() && m_sPhotonBeams.m_uBeamIdx < m_sPhotonBeams.m_uBeamLength)
+	while (!m_sMaps.PassFinished())// && m_sPhotonBeams.m_uBeamIdx < m_sPhotonBeams.m_uBeamLength
 	{
 		if (m_bDirect)
 			k_PhotonPass<true> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >(PPM_Photons_Per_Thread, m_bFinalGather, getCurrentRadius2(3));
@@ -317,6 +320,8 @@ void k_sPpmTracer::doPhotonPass()
 		std::cout << "Photn beam grid full!\n";
 
 	ThrowCudaErrors(cudaMemcpyFromSymbol(&hasVol, g_HasVolumePhotons, sizeof(bool)));
+	ThrowCudaErrors(cudaMemcpyFromSymbol(&m_sBVHBeams, g_BVHBeams, sizeof(m_sBVHBeams)));
+	m_sBVHBeams.BuildStorage(getCurrentRadius2(3), m_pScene);
 
 	if (hasVol && m_sBeams.m_pDeviceData)
 	{

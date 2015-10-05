@@ -43,7 +43,7 @@ public:
 	void ResetBuffer()
 	{
 		deviceDataIdx = 0;
-		cudaMemset(deviceMap, -1, sizeof(unsigned int) * gridSize * gridSize * gridSize);
+		ThrowCudaErrors(cudaMemset(deviceMap, -1, sizeof(unsigned int) * gridSize * gridSize * gridSize));
 	}
 
 	CUDA_FUNC_IN void store(const Vec3f& p, const T& v)
@@ -185,7 +185,7 @@ public:
 
 	void ResetBuffer()
 	{
-		cudaMemset(deviceData, 0, sizeof(T) * gridSize * gridSize * gridSize);
+		ThrowCudaErrors(cudaMemset(deviceData, 0, sizeof(T) * gridSize * gridSize * gridSize));
 	}
 
 	CUDA_FUNC_IN const T& operator()(const Vec3f& p) const

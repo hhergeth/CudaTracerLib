@@ -209,18 +209,18 @@ void k_BlockSampler::AddPass()
 	m_uPassesDone++;
 	if (0&&(m_uPassesDone % N) == 0)
 	{
-		cudaMemcpy(m_pDeviceWeight, m_pHostWeight, sizeof(float) * totalNumBlocks(), cudaMemcpyHostToDevice);
-		cudaMemset(m_pDeviceContribPixels, 0, sizeof(unsigned int) * totalNumBlocks());
-		cudaMemset(m_pDeviceBlockData, 0, totalNumBlocks() * sizeof(float));
+		ThrowCudaErrors(cudaMemcpy(m_pDeviceWeight, m_pHostWeight, sizeof(float) * totalNumBlocks(), cudaMemcpyHostToDevice));
+		ThrowCudaErrors(cudaMemset(m_pDeviceContribPixels, 0, sizeof(unsigned int) * totalNumBlocks()));
+		ThrowCudaErrors(cudaMemset(m_pDeviceBlockData, 0, totalNumBlocks() * sizeof(float)));
 		int nx = (img->getWidth() + 32 - 1) / 32, ny = (img->getHeight() + 32 - 1) / 32;
 		evalPass << <dim3(nx, ny), dim3(32, 32) >> >(*img, m_pLumData, m_pDeviceBlockData, numBlocksRow(), m_pDeviceSamplesData, m_pDeviceContribPixels, m_pDeviceWeight);
-		cudaMemcpy(m_pHostBlockData, m_pDeviceBlockData, sizeof(float) * totalNumBlocks(), cudaMemcpyDeviceToHost);
-		cudaMemcpy(m_pHostSamplesData, m_pDeviceSamplesData, sizeof(unsigned int) * totalNumBlocks(), cudaMemcpyDeviceToHost);
-		cudaMemcpy(m_pDeviceIndexData, &g_IndicesH[0], totalNumBlocks() * sizeof(unsigned int), cudaMemcpyHostToDevice);
-		cudaMemcpy(m_pHostContribPixels, m_pDeviceContribPixels, sizeof(unsigned int) * totalNumBlocks(), cudaMemcpyDeviceToHost);
+		ThrowCudaErrors(cudaMemcpy(m_pHostBlockData, m_pDeviceBlockData, sizeof(float) * totalNumBlocks(), cudaMemcpyDeviceToHost));
+		ThrowCudaErrors(cudaMemcpy(m_pHostSamplesData, m_pDeviceSamplesData, sizeof(unsigned int) * totalNumBlocks(), cudaMemcpyDeviceToHost));
+		ThrowCudaErrors(cudaMemcpy(m_pDeviceIndexData, &g_IndicesH[0], totalNumBlocks() * sizeof(unsigned int), cudaMemcpyHostToDevice));
+		ThrowCudaErrors(cudaMemcpy(m_pHostContribPixels, m_pDeviceContribPixels, sizeof(unsigned int) * totalNumBlocks(), cudaMemcpyDeviceToHost));
 		//thrust::sort(thrust::device_ptr<unsigned int>(m_pDeviceIndexData), thrust::device_ptr<unsigned int>(m_pDeviceIndexData + totalNumBlocks()), order(m_pDeviceBlockData, m_pDeviceContribPixels));
 		hasValidData = true;
-		cudaMemcpy(m_pHostIndexData, m_pDeviceIndexData, sizeof(unsigned int) * totalNumBlocks(), cudaMemcpyDeviceToHost);
+		ThrowCudaErrors(cudaMemcpy(m_pHostIndexData, m_pDeviceIndexData, sizeof(unsigned int) * totalNumBlocks(), cudaMemcpyDeviceToHost));
 		//m_uNumBlocksToLaunch = totalNumBlocks() / 2;
 		/*float w_max = 0;
 		for (unsigned int i = 0; i < totalNumBlocks(); i++)
@@ -253,9 +253,9 @@ void k_BlockSampler::Clear()
 {
 	m_uPassesDone = 0;
 	hasValidData = false;
-	cudaMemset(m_pDeviceBlockData, 0, sizeof(float) * totalNumBlocks());
-	cudaMemset(m_pLumData, 0, img->getWidth() * img->getHeight() * sizeof(k_SamplerpixelData));
-	cudaMemset(m_pDeviceContribPixels, 0, sizeof(unsigned int) * totalNumBlocks());
+	ThrowCudaErrors(cudaMemset(m_pDeviceBlockData, 0, sizeof(float) * totalNumBlocks()));
+	ThrowCudaErrors(cudaMemset(m_pLumData, 0, img->getWidth() * img->getHeight() * sizeof(k_SamplerpixelData)));
+	ThrowCudaErrors(cudaMemset(m_pDeviceContribPixels, 0, sizeof(unsigned int) * totalNumBlocks()));
 	Platform::SetMemory(m_pHostSamplesData, totalNumBlocks() * sizeof(unsigned int));
 	Platform::SetMemory(m_pHostBlockData, totalNumBlocks() * sizeof(float));
 }

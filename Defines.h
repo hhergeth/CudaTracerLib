@@ -44,8 +44,12 @@
 #define ISCUDA
 #endif
 
-#if _DEBUG && !__CUDACC__
-#   define CT_ASSERT(X) ((X) ? ((void)0) : fail("Assertion failed!\n%s:%d\n%s", __FILE__, __LINE__, #X))
+#if _DEBUG
+#if __CUDACC__
+	#define CT_ASSERT(X) ((X) ? ((void)0) : printf("Assertion failed!\n%s:%d\n%s", __FILE__, __LINE__, #X))
+#else
+	#define CT_ASSERT(X) ((X) ? ((void)0) : fail("Assertion failed!\n%s:%d\n%s", __FILE__, __LINE__, #X))
+#endif
 #else
 #   define CT_ASSERT(X) ((void)0)
 #endif

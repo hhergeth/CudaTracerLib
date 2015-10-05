@@ -63,55 +63,55 @@ public:
 class SplitBVHBuilder
 {
 private:
-    enum
-    {
-        MaxDepth        = 64,
-        MaxSpatialDepth = 48,
-        NumSpatialBins  = 128,
-    };
+	enum
+	{
+		MaxDepth        = 64,
+		MaxSpatialDepth = 48,
+		NumSpatialBins  = 128,
+	};
 
-    struct Reference
-    {
-        int                 triIdx;
-        AABB                bounds;
+	struct Reference
+	{
+		int                 triIdx;
+		AABB                bounds;
 
 		Reference(void) : triIdx(-1) { bounds = AABB::Identity(); }
-    };
+	};
 
-    struct NodeSpec
-    {
+	struct NodeSpec
+	{
 		int                 numRef;
-        AABB                bounds;
+		AABB                bounds;
 
 		NodeSpec(void) : numRef(0) { bounds = AABB::Identity(); }
-    };
+	};
 
-    struct ObjectSplit
-    {
-        float                 sah;
-        int                 sortDim;
-        int                 numLeft;
-        AABB                leftBounds;
-        AABB                rightBounds;
+	struct ObjectSplit
+	{
+		float                 sah;
+		int                 sortDim;
+		int                 numLeft;
+		AABB                leftBounds;
+		AABB                rightBounds;
 
 		ObjectSplit(void) : sah(FLT_MAX), sortDim(0), numLeft(0) { leftBounds = AABB::Identity(); rightBounds = AABB::Identity(); }
-    };
+	};
 
-    struct SpatialSplit
-    {
+	struct SpatialSplit
+	{
 		float                 sah;
 		int                 dim;
 		float                 pos;
 
 		SpatialSplit(void) : sah(FLT_MAX), dim(0), pos(0.0f) {}
-    };
+	};
 
-    struct SpatialBin
-    {
-        AABB                bounds;
+	struct SpatialBin
+	{
+		AABB                bounds;
 		int                 enter;
 		int                 exit;
-    };
+	};
 
 public:
 
@@ -180,40 +180,40 @@ public:
 	};
 
 	SplitBVHBuilder(IBVHBuilderCallback* clb, const Platform& P, const BuildParams& stats);
-                            ~SplitBVHBuilder    (void);
+							~SplitBVHBuilder    (void);
 
-    void                run                 (void);
+	void                run                 (void);
 
 private:
-    static bool             sortCompare         (void* data, int idxA, int idxB);
-    static void             sortSwap            (void* data, int idxA, int idxB);
+	static bool             sortCompare         (void* data, int idxA, int idxB);
+	static void             sortSwap            (void* data, int idxA, int idxB);
 
 	unsigned int                buildNode(NodeSpec spec, int level, float progressStart, float progressEnd);
 	unsigned int                createLeaf(const NodeSpec& spec);
 
 	ObjectSplit             findObjectSplit(const NodeSpec& spec, float nodeSAH);
-    void                    performObjectSplit  (NodeSpec& left, NodeSpec& right, const NodeSpec& spec, const ObjectSplit& split);
+	void                    performObjectSplit  (NodeSpec& left, NodeSpec& right, const NodeSpec& spec, const ObjectSplit& split);
 
 	SpatialSplit            findSpatialSplit(const NodeSpec& spec, float nodeSAH);
-    void                    performSpatialSplit (NodeSpec& left, NodeSpec& right, const NodeSpec& spec, const SpatialSplit& split);
+	void                    performSpatialSplit (NodeSpec& left, NodeSpec& right, const NodeSpec& spec, const SpatialSplit& split);
 	void                    splitReference(Reference& left, Reference& right, const Reference& ref, int dim, float pos);
 
 private:
-                            SplitBVHBuilder     (const SplitBVHBuilder&); // forbidden
-    SplitBVHBuilder&        operator=           (const SplitBVHBuilder&); // forbidden
+							SplitBVHBuilder     (const SplitBVHBuilder&); // forbidden
+	SplitBVHBuilder&        operator=           (const SplitBVHBuilder&); // forbidden
 
 private:
 	IBVHBuilderCallback*	m_pClb;
 	const Platform& m_platform;
 	BuildParams	m_params;
 
-    std::vector<Reference>  m_refStack;
+	std::vector<Reference>  m_refStack;
 	float                   m_minOverlap;
 	std::vector<AABB>       m_rightBounds;
 	int                     m_sortDim;
-    SpatialBin              m_bins[3][NumSpatialBins];
+	SpatialBin              m_bins[3][NumSpatialBins];
 
-    int                     m_numDuplicates;
+	int                     m_numDuplicates;
 
 	std::vector<int> m_Indices;
 

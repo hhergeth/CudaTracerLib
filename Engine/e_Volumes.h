@@ -116,18 +116,18 @@ public:
 	{
 		e_BaseVolumeRegion::Func = func;
 		VolumeToWorld = ToWorld;
-        sig_a = Spectrum(sa);
-        sig_s = Spectrum(ss);
-        le = Spectrum(emit);
+		sig_a = Spectrum(sa);
+		sig_s = Spectrum(ss);
+		le = Spectrum(emit);
 	}
 
 	e_HomogeneousVolumeDensity(const e_PhaseFunction& func, const float4x4& ToWorld, const Spectrum& sa, const Spectrum& ss, const Spectrum& emit)
 	{
 		e_BaseVolumeRegion::Func = func;
 		VolumeToWorld = ToWorld;
-        sig_a = sa;
-        sig_s = ss;
-        le = emit;
+		sig_a = sa;
+		sig_s = ss;
+		le = emit;
 	}
 
 	CUDA_FUNC_IN Spectrum sigma_a(const Vec3f& p, const Vec3f& w) const
@@ -150,7 +150,7 @@ public:
 		return insideWorld(p) ? (sig_s + sig_a) : Spectrum(0.0f);
 	}
 
-    CUDA_DEVICE CUDA_HOST Spectrum tau(const Ray &ray, const float minT, const float maxT) const;
+	CUDA_DEVICE CUDA_HOST Spectrum tau(const Ray &ray, const float minT, const float maxT) const;
 
 	CUDA_DEVICE CUDA_HOST bool sampleDistance(const Ray& ray, float minT, float maxT, float sample, MediumSamplingRecord& mRec) const;
 public:
@@ -380,7 +380,7 @@ public:
 	}
 
 	CALLER(tau)
-    CUDA_FUNC_IN Spectrum tau(const Ray &ray, float minT, float maxT) const
+	CUDA_FUNC_IN Spectrum tau(const Ray &ray, float minT, float maxT) const
 	{
 		return tau_Caller<Spectrum>(*this, ray, minT, maxT);
 	}

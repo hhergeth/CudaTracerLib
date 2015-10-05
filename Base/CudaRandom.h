@@ -283,9 +283,9 @@ private:
 		state->boxmuller_flag_double = 0;
 	}
 	void curand_init2(unsigned long long seed, 
-                            unsigned long long subsequence, 
-                            unsigned long long offset, 
-                            curandStateXORWOW_t *state)
+							unsigned long long subsequence, 
+							unsigned long long offset, 
+							curandStateXORWOW_t *state)
 	{
 		unsigned int scratch[5 * 5 * 32 * 2 + 5 * 2];
 		_curand_init_scratch(seed, subsequence, offset, state, (unsigned int*)scratch);

@@ -47,7 +47,7 @@ struct e_BilerpTexture : public e_TextureBase//, public e_DerivedTypeHelper<1>
 	{
 		Vec2f uv = mapping.Map(map);
 		return (1-uv.x)*(1-uv.y) * v00 + (1-uv.x)*(  uv.y) * v01 +
-               (  uv.x)*(1-uv.y) * v10 + (  uv.x)*(  uv.y) * v11;
+			   (  uv.x)*(1-uv.y) * v10 + (  uv.x)*(  uv.y) * v11;
 	}
 	CUDA_FUNC_IN Spectrum Average()
 	{

@@ -273,23 +273,23 @@ __global__ void primaryKernel(int width, int height, e_Image g_Image, bool depth
 	int N = width * height;
 	__shared__ volatile int nextRayArray[MaxBlockHeight];
 	do
-    {
-        const int tidx = threadIdx.x;
-        volatile int& rayBase = nextRayArray[threadIdx.y];
+	{
+		const int tidx = threadIdx.x;
+		volatile int& rayBase = nextRayArray[threadIdx.y];
 
-        const bool          terminated     = 1;//nodeAddr == EntrypointSentinel;
-        const unsigned int  maskTerminated = __ballot(terminated);
-        const int           numTerminated  = __popc(maskTerminated);
-        const int           idxTerminated  = __popc(maskTerminated & ((1u<<tidx)-1));	
+		const bool          terminated     = 1;//nodeAddr == EntrypointSentinel;
+		const unsigned int  maskTerminated = __ballot(terminated);
+		const int           numTerminated  = __popc(maskTerminated);
+		const int           idxTerminated  = __popc(maskTerminated & ((1u<<tidx)-1));	
 
-        if(terminated)
-        {			
-            if (idxTerminated == 0)
+		if(terminated)
+		{			
+			if (idxTerminated == 0)
 				rayBase = atomicAdd(&g_NextRayCounter2, numTerminated);
 
-            rayidx = rayBase + idxTerminated;
+			rayidx = rayBase + idxTerminated;
 			if (rayidx >= N)
-                break;
+				break;
 		}
 		int x = rayidx % width, y = rayidx / width;
 

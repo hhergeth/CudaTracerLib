@@ -15,8 +15,8 @@ struct e_KernelBSSRDF
 		sigp_s = sps;
 	}
 
-    float e;
-    Spectrum sig_a, sigp_s;
+	float e;
+	Spectrum sig_a, sigp_s;
 };
 
 struct e_KernelMaterial

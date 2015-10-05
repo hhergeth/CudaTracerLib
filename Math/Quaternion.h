@@ -72,23 +72,23 @@ public:
 	}
 	CUDA_FUNC_IN Vec3f operator *(const Vec3f &v) const
 	{
-        float x = val.x + val.x;
-        float y = val.y + val.y;
-        float z = val.z + val.z;
-        float wx = val.w * x;
-        float wy = val.w * y;
-        float wz = val.w * z;
-        float xx = val.x * x;
-        float xy = val.x * y;
-        float xz = val.x * z;
-        float yy = val.y * y;
-        float yz = val.y * z;
-        float zz = val.z * z;
+		float x = val.x + val.x;
+		float y = val.y + val.y;
+		float z = val.z + val.z;
+		float wx = val.w * x;
+		float wy = val.w * y;
+		float wz = val.w * z;
+		float xx = val.x * x;
+		float xy = val.x * y;
+		float xz = val.x * z;
+		float yy = val.y * y;
+		float yz = val.y * z;
+		float zz = val.z * z;
 		Vec3f vector;
-        vector.x = ((v.x * ((1.0f - yy) - zz)) + (v.y * (xy - wz))) + (v.z * (xz + wy));
+		vector.x = ((v.x * ((1.0f - yy) - zz)) + (v.y * (xy - wz))) + (v.z * (xz + wy));
 		vector.y = ((v.x * (xy + wz)) + (v.y * ((1.0f - xx) - zz))) + (v.z * (yz - wx));
-        vector.z = ((v.x * (xz - wy)) + (v.y * (yz + wx))) + (v.z * ((1.0f - xx) - yy));
-        return vector;
+		vector.z = ((v.x * (xz - wy)) + (v.y * (yz + wx))) + (v.z * ((1.0f - xx) - yy));
+		return vector;
 	}
 	CUDA_FUNC_IN const Quaternion & operator *= (const Quaternion &q)
 	{
@@ -143,14 +143,14 @@ public:
 	CUDA_FUNC_IN float4x4 toMatrix() const
 	{
 		float xx = val.x * val.x;
-        float yy = val.y * val.y;
-        float zz = val.z * val.z;
-        float xy = val.x * val.y;
-        float zw = val.z * val.w;
-        float zx = val.z * val.x;
-        float yw = val.y * val.w;
-        float yz = val.y * val.z;
-        float xw = val.x * val.w;
+		float yy = val.y * val.y;
+		float zz = val.z * val.z;
+		float xy = val.x * val.y;
+		float zw = val.z * val.w;
+		float zx = val.z * val.x;
+		float yw = val.y * val.w;
+		float yz = val.y * val.z;
+		float xw = val.x * val.w;
 		float4x4 r;
 		r.col(0, Vec4f(1.0f - (2.0f * (yy + zz)), 2.0f * (xy + zw), 2.0f * (zx - yw), 0));
 		r.col(1, Vec4f(2.0f * (xy - zw), 1.0f - (2.0f * (zz + xx)), 2.0f * (yz + xw), 0));

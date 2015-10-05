@@ -11,6 +11,7 @@ template<typename T> struct e_KernelBuffer
 	unsigned int Length;
 	CUDA_FUNC_IN T& operator[](unsigned int i) const
 	{
+		CT_ASSERT(i < UsedCount);
 		return Data[i];
 	}
 };

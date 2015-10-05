@@ -215,6 +215,8 @@ template<typename TARGET> CUDA_GLOBAL void rtm_CopyShared(e_Image::Pixel* P, TAR
 	if (side)
 		LOAD_BLOCK((local_idx.x + side), local_idx.y)
 	LOAD_BLOCK(local_idx.x, local_idx.y);
+
+	__syncthreads();
 	
 	//operating on warp level => synchronized
 
@@ -266,7 +268,7 @@ void e_Image::InternalUpdateDisplay()
 		return;
 	if(usedHostPixels)
 	{
-		cudaMemcpy(cudaPixels, hostPixels, sizeof(Pixel) * xResolution * yResolution, cudaMemcpyHostToDevice);
+		ThrowCudaErrors(cudaMemcpy(cudaPixels, hostPixels, sizeof(Pixel) * xResolution * yResolution, cudaMemcpyHostToDevice));
 	}
 	memTarget T1;
 	texTarget T2;
@@ -279,13 +281,13 @@ void e_Image::InternalUpdateDisplay()
 	{
 		CUDA_ALIGN(16) float Lum_avg = 0;
 		unsigned int val = FloatToUInt(0);
-		cudaError_t r = cudaMemcpyToSymbol(g_LogLum, &Lum_avg, sizeof(Lum_avg));
-		r = cudaMemcpyToSymbol(g_MaxLum, &val, sizeof(unsigned int));
+		ThrowCudaErrors(cudaMemcpyToSymbol(g_LogLum, &Lum_avg, sizeof(Lum_avg)));
+		ThrowCudaErrors(cudaMemcpyToSymbol(g_MaxLum, &val, sizeof(unsigned int)));
 		rtm_SumLogLum << <dim3(xResolution / 32 + 1, yResolution / 32 + 1), dim3(32, 32) >> >(cudaPixels, xResolution, yResolution, lastSplatVal);
-		r = cudaThreadSynchronize();
-		r = cudaMemcpyFromSymbol(&Lum_avg, g_LogLum, sizeof(Lum_avg));
+		ThrowCudaErrors(cudaThreadSynchronize());
+		ThrowCudaErrors(cudaMemcpyFromSymbol(&Lum_avg, g_LogLum, sizeof(Lum_avg)));
 		unsigned int mLum;
-		r = cudaMemcpyFromSymbol(&mLum, g_MaxLum, sizeof(unsigned int));
+		ThrowCudaErrors(cudaMemcpyFromSymbol(&mLum, g_MaxLum, sizeof(unsigned int)));
 		float maxLum = UIntToFloat(mLum);
 		float L_w = exp(Lum_avg / float(xResolution * yResolution));
 		//float middleGrey = 1.03f - 2.0f / (2.0f + log10(L_w + 1.0f));
@@ -308,8 +310,8 @@ void e_Image::InternalUpdateDisplay()
 				rtm_Copy << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(cudaPixels, T2, xResolution, yResolution, lastSplatVal, filter);
 			else rtm_Copy << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(cudaPixels, T1, xResolution, yResolution, lastSplatVal, filter);
 		}
+		ThrowCudaErrors(cudaThreadSynchronize());
 	}
-	ThrowCudaErrors();
 }
 
 template<typename TARGET> CUDA_GLOBAL void rtm_Copy(e_Image::Pixel* A, e_Image::Pixel* B, TARGET T, unsigned int w, unsigned int h, float splatScaleA, float splatScaleB, e_Filter filterA, e_Filter filterB, float scale)

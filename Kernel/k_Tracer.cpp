@@ -19,8 +19,20 @@ k_TracerBase::k_TracerBase()
 	: m_pScene(0), m_pBlockSampler(0)
 {
 	InitRngs(1024 * 768);
-	cudaEventCreate(&start);
-	cudaEventCreate(&stop);
+	ThrowCudaErrors(cudaEventCreate(&start));
+	ThrowCudaErrors(cudaEventCreate(&stop));
+}
+
+k_TracerBase::~k_TracerBase()
+{
+	if (start == 0)
+	{
+		std::cout << "Calling ~k_TracerBase() multiple times!\n";
+		return;
+	}
+	ThrowCudaErrors(cudaEventDestroy(start));
+	ThrowCudaErrors(cudaEventDestroy(stop));
+	start = stop = 0;
 }
 
 k_BlockSampleImage k_TracerBase::getDeviceBlockSampler() const

@@ -118,7 +118,7 @@ public:
 		a, b;
 
 		if (phi < -PI/4) {
-  			/* in range [-pi/4,7pi/4] */
+			/* in range [-pi/4,7pi/4] */
 			phi += 2*PI;
 		}
 

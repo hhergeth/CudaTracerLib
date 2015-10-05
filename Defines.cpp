@@ -55,5 +55,5 @@ void CudaSetToZero(void* dest, size_t length)
 		for (int i = 0; i < zeroBufLength / 8; i++)
 			*((unsigned long long*)zeroBuf + i) = 0;
 	}
-	cudaMemcpy(dest, zeroBuf, length, cudaMemcpyHostToDevice);
+	ThrowCudaErrors(cudaMemcpy(dest, zeroBuf, length, cudaMemcpyHostToDevice));
 }

@@ -32,7 +32,7 @@ struct e_PointLight : public e_LightBase//, public e_DerivedTypeHelper<1>
 {
 	TYPE_FUNC(1)
 	Vec3f lightPos;
-    Spectrum m_intensity;
+	Spectrum m_intensity;
 	
 	e_PointLight()
 		: e_LightBase(EDeltaPosition)
@@ -91,7 +91,7 @@ struct e_DiffuseLight : public e_LightBase//, public e_DerivedTypeHelper<2>
 {
 	TYPE_FUNC(2)
 	Spectrum m_radiance, m_power;
-    ShapeSet shapeSet;
+	ShapeSet shapeSet;
 	bool m_bOrthogonal;
 	unsigned int m_uNodeIdx;
 	
@@ -236,7 +236,7 @@ struct e_DistantLight : public e_LightBase//, public e_DerivedTypeHelper<3>
 struct e_SpotLight : public e_LightBase//, public e_DerivedTypeHelper<4>
 {
 	TYPE_FUNC(4)
-    Spectrum m_intensity;
+	Spectrum m_intensity;
 	float m_beamWidth, m_cutoffAngle;
 	float m_cosBeamWidth, m_cosCutoffAngle, m_invTransitionWidth;
 	Frame ToWorld;

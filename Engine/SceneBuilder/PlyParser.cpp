@@ -319,13 +319,11 @@ void compileply(IInStream& istream, FileOutputStream& a_Out)
 		file_pos += sizeof(Vec3f) * vertexCount;
 		for(int f = 0; f < faceCount; f++)
 		{
-			if (f == faceCount - 3)
-				std::cout << "";
 			unsigned int* dat = (unsigned int*)(FILE_BUF + file_pos + 1);
 			if(FILE_BUF[file_pos] == 3)
 			{
 				for (int idx = 0; idx < 3; idx++)
-					Indices[indexCount++] = format == binary_little_endian_format ? dat[idx] : LongSwap(dat[idx]);
+					Indices[indexCount++] = format == binary_little_endian_format ? dat[2 - idx] : LongSwap(dat[idx]);
 			}
 			else if(FILE_BUF[file_pos] == 4)
 			{

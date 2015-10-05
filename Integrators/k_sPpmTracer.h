@@ -40,18 +40,7 @@ struct k_BeamMap
 	Vec2i* m_pDeviceData;
 };
 
-struct k_Beam
-{
-	Vec3f pos;
-	Vec3f dir;
-	float t;
-	Spectrum Phi;
-	CUDA_FUNC_IN k_Beam(const Vec3f& p, const Vec3f& d, float t, const Spectrum& ph)
-		: pos(p), dir(d), t(t), Phi(ph)
-	{
-
-	}
-};
+#include "Beams\k_BeamBVHStorage.h"
 
 struct k_BeamGrid
 {
@@ -85,6 +74,7 @@ struct k_pGridEntry
 class k_sPpmTracer : public k_Tracer<true, true>
 {
 private:
+	k_BeamBVHStorage m_sBVHBeams;
 	k_PhotonMapCollection<true, k_pPpmPhoton> m_sMaps;
 	k_BeamMap m_sBeams;
 	k_BeamGrid m_sPhotonBeams;
@@ -102,6 +92,7 @@ private:
 
 	k_AdaptiveEntry* m_pEntries;
 	float r_min, r_max;
+
 public:
 	bool m_bVisualizeGrid;
 	unsigned int m_uVisLastMax;

@@ -21,9 +21,9 @@ struct CUDA_ALIGN(16) ShapeSet
 public:
 	ShapeSet(){}
 	ShapeSet(e_BufferReference<e_TriIntersectorData, e_TriIntersectorData>* indices, unsigned int indexCount, float4x4& mat, e_Stream<char>* buffer);
-    CUDA_FUNC_IN float Area() const { return sumArea; }
+	CUDA_FUNC_IN float Area() const { return sumArea; }
 	CUDA_DEVICE CUDA_HOST void SamplePosition(PositionSamplingRecord& pRec, const Vec2f& spatialSample) const;
-    CUDA_FUNC_IN float Pdf() const
+	CUDA_FUNC_IN float Pdf() const
 	{
 		return 1.0f / sumArea;
 	}

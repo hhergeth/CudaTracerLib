@@ -36,11 +36,7 @@ public:
 	}
 
 	k_TracerBase();
-	virtual ~k_TracerBase()
-	{
-		cudaEventDestroy(start);
-		cudaEventDestroy(stop);
-	}
+	virtual ~k_TracerBase();
 	virtual void InitializeScene(e_DynamicScene* a_Scene)
 	{
 		m_pScene = a_Scene;
@@ -121,7 +117,7 @@ public:
 		if (USE_BLOCKSAMPLER && !m_pBlockSampler)
 			allocateBlockSampler(I);
 		g_sRngs.NextPass();
-		cudaEventRecord(start, 0);
+		ThrowCudaErrors(cudaEventRecord(start, 0));
 		if (a_NewTrace || !PROGRESSIVE)
 		{
 			m_uPassesDone = 0;
@@ -139,9 +135,11 @@ public:
 		I->DoUpdateDisplay(getSplatScale());
 		if (USE_BLOCKSAMPLER)
 			m_pBlockSampler->AddPass();
-		cudaEventRecord(stop, 0);
-		cudaEventSynchronize(stop);
-		cudaEventElapsedTime(&m_fLastRuntime, start, stop);
+		ThrowCudaErrors(cudaEventRecord(stop, 0));
+		ThrowCudaErrors(cudaEventSynchronize(stop));
+		if (start != stop)
+			ThrowCudaErrors(cudaEventElapsedTime(&m_fLastRuntime, start, stop));
+		else m_fLastRuntime = 0;
 		m_fLastRuntime /= 1000.0f;
 		m_uLastNumRaysTraced = k_getNumRaysTraced();
 		m_fAccRuntime += m_fLastRuntime;

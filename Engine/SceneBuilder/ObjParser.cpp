@@ -90,15 +90,15 @@ private:
 
 // By Bob Jenkins, 1996. bob_jenkins@burtleburtle.net.
 #define FW_JENKINS_MIX(a, b, c)   \
-    a -= b; a -= c; a ^= (c>>13); \
-    b -= c; b -= a; b ^= (a<<8);  \
-    c -= a; c -= b; c ^= (b>>13); \
-    a -= b; a -= c; a ^= (c>>12); \
-    b -= c; b -= a; b ^= (a<<16); \
-    c -= a; c -= b; c ^= (b>>5);  \
-    a -= b; a -= c; a ^= (c>>3);  \
-    b -= c; b -= a; b ^= (a<<10); \
-    c -= a; c -= b; c ^= (b>>15);
+	a -= b; a -= c; a ^= (c>>13); \
+	b -= c; b -= a; b ^= (a<<8);  \
+	c -= a; c -= b; c ^= (b>>13); \
+	a -= b; a -= c; a ^= (c>>12); \
+	b -= c; b -= a; b ^= (a<<16); \
+	c -= a; c -= b; c ^= (b>>5);  \
+	a -= b; a -= c; a ^= (c>>3);  \
+	b -= c; b -= a; b ^= (a<<10); \
+	c -= a; c -= b; c ^= (b>>15);
 
 inline bool equalsBuffer(const void* ptrA, const void* ptrB, int size)              { return (memcmp(ptrA, ptrB, size) == 0); }
 U32 hashBufferAlign(const void* ptr, int size)

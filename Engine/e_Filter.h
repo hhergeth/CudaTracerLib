@@ -8,7 +8,7 @@
 struct e_FilterBase : public e_BaseType//, public e_BaseTypeHelper<5524550>
 {
 	float xWidth, yWidth;
-    float invXWidth, invYWidth;
+	float invXWidth, invYWidth;
 
 	CUDA_FUNC_IN e_FilterBase(float xw, float yw)
 		: xWidth(xw), yWidth(yw), invXWidth(1.f/xw), invYWidth(1.f/yw)
@@ -48,7 +48,7 @@ struct e_GaussianFilter : public e_FilterBase//, public e_DerivedTypeHelper<2>
 {
 	TYPE_FUNC(2)
 	float alpha;
-    float expX, expY;
+	float expX, expY;
 	
 	e_GaussianFilter(){}
 	CUDA_FUNC_IN e_GaussianFilter(float xw, float yw, float a)
@@ -65,7 +65,7 @@ struct e_GaussianFilter : public e_FilterBase//, public e_DerivedTypeHelper<2>
 
 	CUDA_FUNC_IN float Gaussian(float d, float expv) const {
 		return max(0.f, float(math::exp(-alpha * d * d) - expv));
-    }
+	}
 
 	CUDA_FUNC_IN float Evaluate(float x, float y) const
 	{
@@ -86,15 +86,15 @@ struct e_MitchellFilter : public e_FilterBase//, public e_DerivedTypeHelper<3>
 	}
 
 	CUDA_FUNC_IN float Mitchell1D(float x) const {
-        x = math::abs(2.f * x);
-        if (x > 1.f)
-            return ((-B - 6*C) * x*x*x + (6*B + 30*C) * x*x +
-                    (-12*B - 48*C) * x + (8*B + 24*C)) * (1.f/6.f);
-        else
-            return ((12 - 9*B - 6*C) * x*x*x +
-                    (-18 + 12*B + 6*C) * x*x +
-                    (6 - 2*B)) * (1.f/6.f);
-    }
+		x = math::abs(2.f * x);
+		if (x > 1.f)
+			return ((-B - 6*C) * x*x*x + (6*B + 30*C) * x*x +
+					(-12*B - 48*C) * x + (8*B + 24*C)) * (1.f/6.f);
+		else
+			return ((12 - 9*B - 6*C) * x*x*x +
+					(-18 + 12*B + 6*C) * x*x +
+					(6 - 2*B)) * (1.f/6.f);
+	}
 
 	CUDA_FUNC_IN float Evaluate(float x, float y) const
 	{
@@ -115,14 +115,14 @@ struct e_LanczosSincFilter : public e_FilterBase//, public e_DerivedTypeHelper<4
 	}
 
 	CUDA_FUNC_IN float Sinc1D(float x) const {
-        x = math::abs(x);
-        if (x < 1e-5) return 1.f;
-        if (x > 1.)   return 0.f;
-        x *= PI;
-        float sinc = sinf(x) / x;
-        float lanczos = sinf(x * tau) / (x * tau);
-        return sinc * lanczos;
-    }
+		x = math::abs(x);
+		if (x < 1e-5) return 1.f;
+		if (x > 1.)   return 0.f;
+		x *= PI;
+		float sinc = sinf(x) / x;
+		float lanczos = sinf(x * tau) / (x * tau);
+		return sinc * lanczos;
+	}
 
 	CUDA_FUNC_IN float Evaluate(float x, float y) const
 	{

@@ -6,14 +6,12 @@
 
 template<typename CLB> CUDA_FUNC_IN bool k_TraceRayTemplate(const Ray& r, float& rayT, const CLB& clb, texture<float4, 1> bvhNodes_texture, e_BVHNodeData* bvhNodes, int bvhNodesOffset = 0, int startNode = 0)
 {
+	const int EntrypointSentinel = 0x76543210;
 	if (startNode < 0)
 		return clb(~startNode);
 	bool found = false;
 	int traversalStack[64];
 	traversalStack[0] = EntrypointSentinel;
-	float   dirx = r.direction.x;
-	float   diry = r.direction.y;
-	float   dirz = r.direction.z;
 	const float ooeps = math::exp2(-80.0f);
 	float   idirx = 1.0f / (math::abs(r.direction.x) > ooeps ? r.direction.x : copysignf(ooeps, r.direction.x));
 	float   idiry = 1.0f / (math::abs(r.direction.y) > ooeps ? r.direction.y : copysignf(ooeps, r.direction.y));

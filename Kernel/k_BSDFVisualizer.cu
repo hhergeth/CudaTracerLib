@@ -94,12 +94,12 @@ void k_BSDFVisualizer::DrawRegion(e_Image* I, const Vec2i& off, const Vec2i& siz
 {
 	if (!m_Bsdf)
 		return;
-	cudaMemcpyToSymbol(g_RNGDataDevice, &k_Tracer::g_sRngs, sizeof(CudaRNGBuffer));
+	ThrowCudaErrors(cudaMemcpyToSymbol(g_RNGDataDevice, &k_Tracer::g_sRngs, sizeof(CudaRNGBuffer)));
 	int p = 16;
-	cudaMemcpyToSymbol(g_BSDF, m_Bsdf, sizeof(BSDFALL));
+	ThrowCudaErrors(cudaMemcpyToSymbol(g_BSDF, m_Bsdf, sizeof(BSDFALL)));
 	if (drawEnvMap)
 	{
-		cudaMemcpyToSymbol(g_Light, m_pLight, sizeof(e_InfiniteLight));
+		ThrowCudaErrors(cudaMemcpyToSymbol(g_Light, m_pLight, sizeof(e_InfiniteLight)));
 		BSDFCalc2 << <dim3(size.x / p + 1, size.y / p + 1, 1), dim3(p, p, 1) >> >(m_wo, *I, off, size, LScale, cosTheta);
 		I->DoUpdateDisplay(0);
 	}

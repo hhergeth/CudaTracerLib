@@ -6,11 +6,11 @@
 #include "../Engine/e_Node.h"
 #include "../Engine/e_Mesh.h"
 
-#define LNG 50
+#define LNG 100
 #define SER_NAME "photonMapBuf.dat"
 
 k_sPpmTracer::k_sPpmTracer()
-	: m_pEntries(0), m_bFinalGather(false), m_bVisualizeGrid(false), m_pSurfaceValues(0)
+	: m_pEntries(0), m_bFinalGather(false), m_bVisualizeGrid(false), m_pSurfaceValues(0), m_fLightVisibility(1), m_sBVHBeams(100 * 1024)
 {
 #ifdef NDEBUG
 	m_uBlocksPerLaunch = 180;
@@ -27,8 +27,8 @@ k_sPpmTracer::k_sPpmTracer()
 	m_sPhotonBeams.m_pDeviceBeams = 0;
 	
 	m_sBeams.m_uGridEntries = LNG*LNG*LNG;
-	m_sBeams.m_uNumEntries = m_sBeams.m_uGridEntries * (1 + 250);
-	CUDA_MALLOC(&m_sBeams.m_pDeviceData, sizeof(Vec2i) * m_sBeams.m_uNumEntries);
+	m_sBeams.m_uNumEntries = m_sBeams.m_uGridEntries * (1 + 20);
+	//CUDA_MALLOC(&m_sBeams.m_pDeviceData, sizeof(Vec2i) * m_sBeams.m_uNumEntries);
 
 	m_sPhotonBeams.m_uBeamIdx = 0;
 	m_sPhotonBeams.m_uBeamLength = 100000;
@@ -180,5 +180,6 @@ void k_sPpmTracer::StartNewTrace(e_Image* I)
 	r_min = 10e-7f * r_scene;
 	r_max = 10e-3f * r_scene;
 	float r1 = r_max;
+
 	doStartPass(r1, r1);
 }

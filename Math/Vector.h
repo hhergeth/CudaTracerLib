@@ -368,24 +368,24 @@ CUDA_FUNC_IN float    cross(const Vec2f& a, const Vec2f& b)    { return a.cross(
 CUDA_FUNC_IN Vec3f  cross(const Vec3f& a, const Vec3f& b)    { return a.cross(b); }
 
 #define minmax(T) \
-    CUDA_FUNC_IN T min(const T& a, const T& b)                          { return a.min(b); } \
-    CUDA_FUNC_IN T min(T& a, T& b)                                      { return a.min(b); } \
-    CUDA_FUNC_IN T max(const T& a, const T& b)                          { return a.max(b); } \
-    CUDA_FUNC_IN T max(T& a, T& b)                                      { return a.max(b); } \
-    CUDA_FUNC_IN T min(const T& a, const T& b, const T& c)              { return a.min(b).min(c); } \
-    CUDA_FUNC_IN T min(T& a, T& b, T& c)                                { return a.min(b).min(c); } \
-    CUDA_FUNC_IN T max(const T& a, const T& b, const T& c)              { return a.max(b).max(c); } \
-    CUDA_FUNC_IN T max(T& a, T& b, T& c)                                { return a.max(b).max(c); } \
-    CUDA_FUNC_IN T min(const T& a, const T& b, const T& c, const T& d)  { return a.min(b).min(c).min(d); } \
-    CUDA_FUNC_IN T min(T& a, T& b, T& c, T& d)                          { return a.min(b).min(c).min(d); } \
-    CUDA_FUNC_IN T max(const T& a, const T& b, const T& c, const T& d)  { return a.max(b).max(c).max(d); } \
-    CUDA_FUNC_IN T max(T& a, T& b, T& c, T& d)                          { return a.max(b).max(c).max(d); } \
-    CUDA_FUNC_IN T clamp(const T& v, const T& lo, const T& hi)          { return v.clamp(lo, hi); } \
-    CUDA_FUNC_IN T clamp(T& v, T& lo, T& hi)                            { return v.clamp(lo, hi); } \
-    CUDA_FUNC_IN T ceil(const T& v)										{ return v.ceil(); } \
-    CUDA_FUNC_IN T ceil(T& v)											{ return v.ceil(); } \
-    CUDA_FUNC_IN T floor(const T& v)									{ return v.floor(); } \
-    CUDA_FUNC_IN T floor(T& v)											{ return v.floor(); } \
+	CUDA_FUNC_IN T min(const T& a, const T& b)                          { return a.min(b); } \
+	CUDA_FUNC_IN T min(T& a, T& b)                                      { return a.min(b); } \
+	CUDA_FUNC_IN T max(const T& a, const T& b)                          { return a.max(b); } \
+	CUDA_FUNC_IN T max(T& a, T& b)                                      { return a.max(b); } \
+	CUDA_FUNC_IN T min(const T& a, const T& b, const T& c)              { return a.min(b).min(c); } \
+	CUDA_FUNC_IN T min(T& a, T& b, T& c)                                { return a.min(b).min(c); } \
+	CUDA_FUNC_IN T max(const T& a, const T& b, const T& c)              { return a.max(b).max(c); } \
+	CUDA_FUNC_IN T max(T& a, T& b, T& c)                                { return a.max(b).max(c); } \
+	CUDA_FUNC_IN T min(const T& a, const T& b, const T& c, const T& d)  { return a.min(b).min(c).min(d); } \
+	CUDA_FUNC_IN T min(T& a, T& b, T& c, T& d)                          { return a.min(b).min(c).min(d); } \
+	CUDA_FUNC_IN T max(const T& a, const T& b, const T& c, const T& d)  { return a.max(b).max(c).max(d); } \
+	CUDA_FUNC_IN T max(T& a, T& b, T& c, T& d)                          { return a.max(b).max(c).max(d); } \
+	CUDA_FUNC_IN T clamp(const T& v, const T& lo, const T& hi)          { return v.clamp(lo, hi); } \
+	CUDA_FUNC_IN T clamp(T& v, T& lo, T& hi)                            { return v.clamp(lo, hi); } \
+	CUDA_FUNC_IN T ceil(const T& v)										{ return v.ceil(); } \
+	CUDA_FUNC_IN T ceil(T& v)											{ return v.ceil(); } \
+	CUDA_FUNC_IN T floor(const T& v)									{ return v.floor(); } \
+	CUDA_FUNC_IN T floor(T& v)											{ return v.floor(); } \
 	CUDA_FUNC_IN T clamp01(const T& v)									{ return v.clamp(T(0), T(1)); } \
 	CUDA_FUNC_IN T clamp01(T& v)										{ return v.clamp(T(0), T(1)); } \
 

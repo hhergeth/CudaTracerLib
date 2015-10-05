@@ -331,12 +331,12 @@ void e_MIPMap::CreateSphericalSkydomeTexture(const std::string& front, const std
 			CUDA_MALLOC(&mapsC[i].data, 4 * maps[i].w * maps[i].h);
 			cudaMemcpy(mapsC[i].data, maps[i].data, 4 * maps[i].w * maps[i].h, cudaMemcpyHostToDevice); 
 		}
-		cudaMemcpyToSymbol(mapsCuda, &mapsC[0], sizeof(mapsCuda));
+		ThrowCudaErrors(cudaMemcpyToSymbol(mapsCuda, &mapsC[0], sizeof(mapsCuda)));
 		void* T;
 		CUDA_MALLOC(&T, sizeof(Vec3f) * w * h);
 		generateSkydome << <dim3((w + 31) / 32, (h + 31) / 32, 1), dim3(32, 32, 1) >> >(w, h, (Vec3f*)T);
-		cudaDeviceSynchronize();
-		cudaMemcpy(B, T, sizeof(Vec3f) * w * h, cudaMemcpyDeviceToHost);
+		ThrowCudaErrors(cudaDeviceSynchronize());
+		ThrowCudaErrors(cudaMemcpy(B, T, sizeof(Vec3f) * w * h, cudaMemcpyDeviceToHost));
 		CUDA_FREE(T);
 		for(int i = 0; i < 6; i++)
 			CUDA_FREE(mapsC[i].data);
@@ -446,7 +446,7 @@ void e_MIPMap::CreateRelaxedConeMap(const std::string& a_InputFile, FileOutputSt
 		throw std::runtime_error("Impossible to load texture file!");
 	RGBCOL* hostData = (RGBCOL*)data.data;
 	CUDA_MALLOC(&data.data, data.w * data.h * 4);
-	cudaMemcpy(data.data, hostData, data.w * data.h * 4, cudaMemcpyHostToDevice);
+	ThrowCudaErrors(cudaMemcpy(data.data, hostData, data.w * data.h * 4, cudaMemcpyHostToDevice));
 	float* deviceDepthData;
 	CUDA_MALLOC(&deviceDepthData, data.w * data.h * 4);
 	generateRelaxedConeMap<32, 64> << < dim3(data.w / 16, data.h / 16), dim3(16, 16) >> >(data, deviceDepthData);
@@ -458,7 +458,7 @@ void e_MIPMap::CreateRelaxedConeMap(const std::string& a_InputFile, FileOutputSt
 	//cudaMemcpy(hostData, data.data, data.w * data.h * 4, cudaMemcpyDeviceToHost);
 
 	float* hostConeData = new float[data.w * data.h];
-	cudaMemcpy(hostConeData, deviceDepthData, data.w * data.h * 4, cudaMemcpyDeviceToHost);
+	ThrowCudaErrors(cudaMemcpy(hostConeData, deviceDepthData, data.w * data.h * 4, cudaMemcpyDeviceToHost));
 
 	float oldw = data.w, oldh = data.h;
 	data.data = hostConeData;

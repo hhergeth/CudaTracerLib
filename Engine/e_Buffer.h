@@ -220,7 +220,7 @@ public:
 	void CopyFromDevice(e_BufferReference<H, D> ref)
 	{
 		static_assert(std::is_same<H, D>::value, "H != T");
-		cudaMemcpy(this->host + ref.p, device + ref.p, sizeof(H) * ref.l, cudaMemcpyDeviceToHost);
+		ThrowCudaErrors(cudaMemcpy(this->host + ref.p, device + ref.p, sizeof(H) * ref.l, cudaMemcpyDeviceToHost));
 	}
 
 	e_BufferReference<H, D> operator()(size_t i, size_t l = 1)
@@ -377,7 +377,7 @@ protected:
 	}
 	virtual void copyRange(size_t i, size_t l)
 	{
-		cudaMemcpy(this->device + i, this->host + i, l * sizeof(T), cudaMemcpyHostToDevice);
+		ThrowCudaErrors(cudaMemcpy(this->device + i, this->host + i, l * sizeof(T), cudaMemcpyHostToDevice));
 	}
 	virtual T* getDeviceMappedData()
 	{

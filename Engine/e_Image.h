@@ -24,7 +24,7 @@ public:
 	e_Image(int xRes, int yRes, ID3D11Resource *pD3DResource);
 #endif
 	e_Image(int xRes, int yRes, RGBCOL* target = 0);
-    void Free();
+	void Free();
 	CUDA_FUNC_IN void getExtent(unsigned int& xRes, unsigned int &yRes) const
 	{
 		xRes = xResolution;
@@ -60,13 +60,13 @@ public:
 	void EndRendering();
 	void Clear();
 	struct Pixel {
-        CUDA_FUNC_IN Pixel() {
+		CUDA_FUNC_IN Pixel() {
 			rgb[0] = rgb[1] = rgb[2] = 0;
 			rgbSplat[0] = rgbSplat[1] = rgbSplat[2] = 0;
-            weightSum = 0.0f;
-        }
-        float rgb[3];
-        float weightSum;
+			weightSum = 0.0f;
+		}
+		float rgb[3];
+		float weightSum;
 		float rgbSplat[3];
 		CUDA_FUNC_IN Spectrum toSpectrum(float splatScale)
 		{
@@ -76,7 +76,7 @@ public:
 			s2.fromLinearRGB(rgbSplat[0], rgbSplat[1], rgbSplat[2]);
 			return (s / weight + s2 * splatScale);
 		}
-    };
+	};
 	e_Filter& accessFilter()
 	{
 		return filter;
@@ -108,7 +108,7 @@ private:
 	void InternalUpdateDisplay();
 	bool m_bDoUpdate;
 	e_Filter filter;
-    Pixel *cudaPixels;
+	Pixel *cudaPixels;
 	Pixel *hostPixels;
 	bool usedHostPixels;
 	int xResolution, yResolution;

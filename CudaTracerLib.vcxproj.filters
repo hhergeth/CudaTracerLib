@@ -19,6 +19,9 @@
     <Filter Include="Engine\SceneBuilder">
       <UniqueIdentifier>{3bb70ff5-b556-42db-9042-9985093f213c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Integrators\Beams">
+      <UniqueIdentifier>{c37c6e80-ebc7-43f5-9f75-217778385c45}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Defines.h" />
@@ -293,6 +296,9 @@
     <ClInclude Include="Kernel\k_BVHTracer.h">
       <Filter>Kernel</Filter>
     </ClInclude>
+    <ClInclude Include="Integrators\Beams\k_BeamBVHStorage.h">
+      <Filter>Integrators\Beams</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Base\FileStream.cpp">
@@ -497,6 +503,9 @@
     </CudaCompile>
     <CudaCompile Include="Integrators\k_WavefrontVCM.cu">
       <Filter>Integrators</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Integrators\Beams\k_BeamBVHStorage.cu">
+      <Filter>Integrators\Beams</Filter>
     </CudaCompile>
   </ItemGroup>
 </Project>

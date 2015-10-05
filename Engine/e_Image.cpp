@@ -23,13 +23,11 @@ e_Image::e_Image(int xRes, int yRes, unsigned int viewGLTexture)
 	hostPixels = new Pixel[xResolution * yResolution];
 	outState = 1;
 	isMapped = 0;
-	cudaError er = cudaGraphicsGLRegisterImage(&viewCudaResource, viewGLTexture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsSurfaceLoadStore);
-	if(er)
-		throw std::runtime_error(cudaGetErrorString(er));
+	ThrowCudaErrors(cudaGraphicsGLRegisterImage(&viewCudaResource, viewGLTexture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsSurfaceLoadStore));
 	//use this to clear the array
 	CUDA_MALLOC(&viewTarget, sizeof(RGBCOL) * xRes * yRes);
 	ownsTarget = true;
-	cudaMemset(viewTarget, 0, sizeof(RGBCOL) * xRes * yRes);
+	ThrowCudaErrors(cudaMemset(viewTarget, 0, sizeof(RGBCOL) * xRes * yRes));
 }
 
 #ifdef ISWINDOWS
@@ -43,16 +41,11 @@ ownsTarget = false;
 	hostPixels = new Pixel[xResolution * yResolution];
 	outState = 1;
 	isMapped = 0;
-	cudaError er = cudaGraphicsD3D11RegisterResource(&viewCudaResource, pD3DResource, cudaGraphicsRegisterFlagsSurfaceLoadStore);
-	if (er)
-	{
-		std::cout << cudaGetErrorString(er) << "\n";
-		throw std::runtime_error(cudaGetErrorString(er));
-	}
+	ThrowCudaErrors(cudaGraphicsD3D11RegisterResource(&viewCudaResource, pD3DResource, cudaGraphicsRegisterFlagsSurfaceLoadStore));
 	//use this to clear the array
 	CUDA_MALLOC(&viewTarget, sizeof(RGBCOL) * xRes * yRes);
 	ownsTarget = true;
-	cudaMemset(viewTarget, 0, sizeof(RGBCOL) * xRes * yRes);
+	ThrowCudaErrors(cudaMemset(viewTarget, 0, sizeof(RGBCOL) * xRes * yRes));
 }
 #endif
 
@@ -82,13 +75,12 @@ void e_Image::Free()
 	if(ownsTarget)
 		CUDA_FREE(viewTarget);
 	if(outState == 1)
-		cudaGraphicsUnregisterResource(viewCudaResource);
-	ThrowCudaErrors();
+		ThrowCudaErrors(cudaGraphicsUnregisterResource(viewCudaResource));
 }
 
 void e_Image::copyToHost()
 {
-	cudaMemcpy(hostPixels, cudaPixels, sizeof(Pixel) * xResolution * yResolution, cudaMemcpyDeviceToHost);
+	ThrowCudaErrors(cudaMemcpy(hostPixels, cudaPixels, sizeof(Pixel) * xResolution * yResolution, cudaMemcpyDeviceToHost));
 }
 
 FIBITMAP* e_Image::toFreeImage()
@@ -106,14 +98,14 @@ FIBITMAP* e_Image::toFreeImage()
 	}
 	if (outState == 1)
 	{
-		cudaGraphicsMapResources(1, &viewCudaResource);
-		cudaGraphicsSubResourceGetMappedArray(&viewCudaArray, viewCudaResource, 0, 0);
-		cudaMemcpyFromArray(colData, viewCudaArray, 0, 0, xResolution * yResolution * sizeof(RGBCOL), cudaMemcpyDeviceToHost);
-		cudaGraphicsUnmapResources(1, &viewCudaResource);
+		ThrowCudaErrors(cudaGraphicsMapResources(1, &viewCudaResource));
+		ThrowCudaErrors(cudaGraphicsSubResourceGetMappedArray(&viewCudaArray, viewCudaResource, 0, 0));
+		ThrowCudaErrors(cudaMemcpyFromArray(colData, viewCudaArray, 0, 0, xResolution * yResolution * sizeof(RGBCOL), cudaMemcpyDeviceToHost));
+		ThrowCudaErrors(cudaGraphicsUnmapResources(1, &viewCudaResource));
 	}
 	else
 	{
-		cudaMemcpy(colData, viewTarget, sizeof(RGBCOL) * xResolution * yResolution, cudaMemcpyDeviceToHost);
+		ThrowCudaErrors(cudaMemcpy(colData, viewTarget, sizeof(RGBCOL) * xResolution * yResolution, cudaMemcpyDeviceToHost));
 	}
 	FIBITMAP* bitmap = FreeImage_Allocate(xResolution, yResolution, 24, 0x000000ff, 0x0000ff00, 0x00ff0000);
 	BYTE* A = FreeImage_GetBits(bitmap);
@@ -178,12 +170,12 @@ void e_Image::StartRendering()
 	m_bDoUpdate = false;
 	if(outState == 1)
 	{
-		cudaError r = cudaGraphicsMapResources(1, &viewCudaResource);
-		r = cudaGraphicsSubResourceGetMappedArray(&viewCudaArray, viewCudaResource, 0, 0);
+		ThrowCudaErrors(cudaGraphicsMapResources(1, &viewCudaResource));
+		ThrowCudaErrors(cudaGraphicsSubResourceGetMappedArray(&viewCudaArray, viewCudaResource, 0, 0));
 		cudaResourceDesc viewCudaArrayResourceDesc;
 		viewCudaArrayResourceDesc.resType = cudaResourceTypeArray;
 		viewCudaArrayResourceDesc.res.array.array = viewCudaArray;
-		r = cudaCreateSurfaceObject(&viewCudaSurfaceObject, &viewCudaArrayResourceDesc);
+		ThrowCudaErrors(cudaCreateSurfaceObject(&viewCudaSurfaceObject, &viewCudaArrayResourceDesc));
 		isMapped = 1;
 	}
 }
@@ -201,8 +193,8 @@ void e_Image::EndRendering()
 	m_bDoUpdate = false;
 	if(outState == 1)
 	{
-		cudaError r = cudaDestroySurfaceObject(viewCudaSurfaceObject);
-		r = cudaGraphicsUnmapResources(1, &viewCudaResource);
+		ThrowCudaErrors(cudaDestroySurfaceObject(viewCudaSurfaceObject));
+		ThrowCudaErrors(cudaGraphicsUnmapResources(1, &viewCudaResource));
 	}
 	isMapped = 0;
 }

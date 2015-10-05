@@ -12,11 +12,11 @@ bool hasEnding (std::string const &fullString, std::string const &_ending)
 {
 	std::string ending = _ending;
 	boost::algorithm::to_lower(ending);
-    if (fullString.length() >= ending.length()) {
-        return (0 == fullString.compare (fullString.length() - ending.length(), ending.length(), ending));
-    } else {
-        return false;
-    }
+	if (fullString.length() >= ending.length()) {
+		return (0 == fullString.compare (fullString.length() - ending.length(), ending.length(), ending));
+	} else {
+		return false;
+	}
 }
 
 bool e_ObjCompiler::IsApplicable(const std::string& a_InputFile, IInStream& in, e_MeshCompileType* out)

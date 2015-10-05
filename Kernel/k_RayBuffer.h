@@ -50,10 +50,10 @@ public:
 	{
 		for (int i = 0; i < N; i++)
 		{
-			cudaMemset(m_pRayBuffer[i], 0, sizeof(traversalRay) * Length);
-			cudaMemset(m_pResultBuffer[i], 0, sizeof(traversalResult) * Length);
+			ThrowCudaErrors(cudaMemset(m_pRayBuffer[i], 0, sizeof(traversalRay) * Length));
+			ThrowCudaErrors(cudaMemset(m_pResultBuffer[i], 0, sizeof(traversalResult) * Length));
 		}
-		cudaMemset(m_pPayloadBuffer, 0, sizeof(T) * Length);
+		ThrowCudaErrors(cudaMemset(m_pPayloadBuffer, 0, sizeof(T) * Length));
 		for (int i = 0; i < N; i++)
 			m_cInsertCounters[i] = 0;
 	}

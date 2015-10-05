@@ -24,8 +24,7 @@ e_MIPMap::e_MIPMap(const std::string& a_InputFile, IInStream& a_In)
 	}
 	m_pHostData = (unsigned int*)malloc(m_uSize);
 	a_In.Read(m_pHostData, m_uSize);
-	if(cudaMemcpy(m_pDeviceData, m_pHostData, m_uSize, cudaMemcpyHostToDevice))
-		BAD_HOST_DEVICE_COPY(m_pDeviceData, m_uSize)
+	ThrowCudaErrors(cudaMemcpy(m_pDeviceData, m_pHostData, m_uSize, cudaMemcpyHostToDevice));
 	a_In.Read(m_sOffsets, sizeof(m_sOffsets));
 	a_In.Read(m_weightLut, sizeof(m_weightLut));
 }

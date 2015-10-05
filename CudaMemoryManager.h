@@ -34,5 +34,5 @@ public:
 
 #define CUDA_MALLOC(v,i) CudaMemoryManager::Cuda_malloc_managed(v, i, std::string(__FUNCSIG__))
 #define CUDA_FREE(v) CudaMemoryManager::Cuda_free_managed(v, std::string(__FUNCSIG__))
-#define CUDA_MEMCPY_TO_HOST(dest,src,length) cudaMemcpy(dest, src, length, cudaMemcpyDeviceToHost)
-#define CUDA_MEMCPY_TO_DEVICE(dest,src,length) cudaMemcpy(dest, src, length, cudaMemcpyHostToDevice)
+#define CUDA_MEMCPY_TO_HOST(dest,src,length) ThrowCudaErrors(cudaMemcpy(dest, src, length, cudaMemcpyDeviceToHost))
+#define CUDA_MEMCPY_TO_DEVICE(dest,src,length) ThrowCudaErrors(cudaMemcpy(dest, src, length, cudaMemcpyHostToDevice))

@@ -71,181 +71,6 @@ CUDA_FUNC_IN void loadInvModl(int i, float4x4* o)
 #endif
 }
 
-CUDA_FUNC_IN bool k_TraceRayNode(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result, const e_Node* N)
-{
-	unsigned int mIndex = N->m_uMeshIndex;
-	e_KernelMesh mesh = g_SceneData.m_sMeshData[mIndex];
-	bool found = false;
-	int traversalStack[64];
-	traversalStack[0] = EntrypointSentinel;
-	float   dirx = dir.x;
-	float   diry = dir.y;
-	float   dirz = dir.z;
-	const float ooeps = math::exp2(-80.0f);
-	float   idirx = 1.0f / (math::abs(dir.x) > ooeps ? dir.x : copysignf(ooeps, dir.x));
-	float   idiry = 1.0f / (math::abs(dir.y) > ooeps ? dir.y : copysignf(ooeps, dir.y));
-	float   idirz = 1.0f / (math::abs(dir.z) > ooeps ? dir.z : copysignf(ooeps, dir.z));
-	float   origx = ori.x;
-	float	origy = ori.y;
-	float	origz = ori.z;						// Ray origin.
-	float   oodx = origx * idirx;
-	float   oody = origy * idiry;
-	float   oodz = origz * idirz;
-	char*   stackPtr;                       // Current position in traversal stack.
-	int     leafAddr;                       // First postponed leaf, non-negative if none.
-	int     nodeAddr = EntrypointSentinel;  // Non-negative: current internal node, negative: second postponed leaf.
-			stackPtr = (char*)&traversalStack[0];
-			leafAddr = 0;   // No postponed leaf.
-			nodeAddr = 0;   // Start from the root.
-	while(nodeAddr != EntrypointSentinel)
-	{
-		while (unsigned int(nodeAddr) < unsigned int(EntrypointSentinel))
-		{
-#ifdef ISCUDA
-			const float4 n0xy = tex1Dfetch(t_nodesA, mesh.m_uBVHNodeOffset + nodeAddr + 0); // (c0.lo.x, c0.hi.x, c0.lo.y, c0.hi.y)
-			const float4 n1xy = tex1Dfetch(t_nodesA, mesh.m_uBVHNodeOffset + nodeAddr + 1); // (c1.lo.x, c1.hi.x, c1.lo.y, c1.hi.y)
-			const float4 nz   = tex1Dfetch(t_nodesA, mesh.m_uBVHNodeOffset + nodeAddr + 2); // (c0.lo.z, c0.hi.z, c1.lo.z, c1.hi.z)
-				  float4 tmp  = tex1Dfetch(t_nodesA, mesh.m_uBVHNodeOffset + nodeAddr + 3); // child_index0, child_index1
-#else
-			Vec4f* dat = (Vec4f*)g_SceneData.m_sBVHNodeData.Data;
-			const Vec4f n0xy = dat[mesh.m_uBVHNodeOffset + nodeAddr + 0];
-			const Vec4f n1xy = dat[mesh.m_uBVHNodeOffset + nodeAddr + 1];
-			const Vec4f nz   = dat[mesh.m_uBVHNodeOffset + nodeAddr + 2];
-				  Vec4f tmp  = dat[mesh.m_uBVHNodeOffset + nodeAddr + 3];
-#endif
-				  Vec2i  cnodes = *(Vec2i*)&tmp;
-			const float c0lox = n0xy.x * idirx - oodx;
-			const float c0hix = n0xy.y * idirx - oodx;
-			const float c0loy = n0xy.z * idiry - oody;
-			const float c0hiy = n0xy.w * idiry - oody;
-			const float c0loz = nz.x   * idirz - oodz;
-			const float c0hiz = nz.y   * idirz - oodz;
-			const float c1loz = nz.z   * idirz - oodz;
-			const float c1hiz = nz.w   * idirz - oodz;
-			const float c0min = math::spanBeginKepler(c0lox, c0hix, c0loy, c0hiy, c0loz, c0hiz, 0);
-			const float c0max = math::spanEndKepler  (c0lox, c0hix, c0loy, c0hiy, c0loz, c0hiz, a_Result->m_fDist);
-			const float c1lox = n1xy.x * idirx - oodx;
-			const float c1hix = n1xy.y * idirx - oodx;
-			const float c1loy = n1xy.z * idiry - oody;
-			const float c1hiy = n1xy.w * idiry - oody;
-			const float c1min = math::spanBeginKepler(c1lox, c1hix, c1loy, c1hiy, c1loz, c1hiz, 0);
-			const float c1max = math::spanEndKepler  (c1lox, c1hix, c1loy, c1hiy, c1loz, c1hiz, a_Result->m_fDist);
-			bool swp = (c1min < c0min);
-			bool traverseChild0 = (c0max >= c0min);
-			bool traverseChild1 = (c1max >= c1min);
-			if (!traverseChild0 && !traverseChild1)
-			{
-				nodeAddr = *(int*)stackPtr;
-				stackPtr -= 4;
-			}
-			else
-			{
-				nodeAddr = (traverseChild0) ? cnodes.x : cnodes.y;
-				if (traverseChild0 && traverseChild1)
-				{
-					if (swp)
-						swapk(&nodeAddr, &cnodes.y);
-					stackPtr += 4;
-					*(int*)stackPtr = cnodes.y;
-				}
-			}
-
-			if (nodeAddr < 0 && leafAddr  >= 0)     // Postpone max 1
-			{
-				leafAddr = nodeAddr;
-				nodeAddr = *(int*)stackPtr;
-				stackPtr -= 4;
-			}
-
-#ifdef ISCUDA
-			unsigned int mask;
-			asm("{\n"
-				"   .reg .pred p;               \n"
-				"setp.ge.s32        p, %1, 0;   \n"
-				"vote.ballot.b32    %0,p;       \n"
-				"}"
-				: "=r"(mask)
-				: "r"(leafAddr));
-#else
-			unsigned int mask = leafAddr >= 0;
-#endif
-			if(!mask)
-				break;
-		}
-		while (leafAddr < 0)
-		{
-			if (leafAddr != -214783648)
-			{
-				for (int triAddr = ~leafAddr;; triAddr++)
-				{
-#ifdef ISCUDA
-					const float4 v00 = tex1Dfetch(t_tris, mesh.m_uBVHTriangleOffset + triAddr * 3 + 0);
-					const float4 v11 = tex1Dfetch(t_tris, mesh.m_uBVHTriangleOffset + triAddr * 3 + 1);
-					const float4 v22 = tex1Dfetch(t_tris, mesh.m_uBVHTriangleOffset + triAddr * 3 + 2);
-					unsigned int index = tex1Dfetch(t_triIndices, mesh.m_uBVHIndicesOffset + triAddr);
-#else
-					Vec4f* dat = (Vec4f*)g_SceneData.m_sBVHIntData.Data;
-					const Vec4f v00 = dat[mesh.m_uBVHTriangleOffset + triAddr * 3 + 0];
-					const Vec4f v11 = dat[mesh.m_uBVHTriangleOffset + triAddr * 3 + 1];
-					const Vec4f v22 = dat[mesh.m_uBVHTriangleOffset + triAddr * 3 + 2];
-					unsigned int index = g_SceneData.m_sBVHIndexData.Data[mesh.m_uBVHIndicesOffset + triAddr].index;
-#endif
-
-					float Oz = v00.w - origx*v00.x - origy*v00.y - origz*v00.z;
-					float invDz = 1.0f / (dirx*v00.x + diry*v00.y + dirz*v00.z);
-					float t = Oz * invDz;
-					if (t > 1e-2f && t < a_Result->m_fDist)
-					{
-						float Ox = v11.w + origx*v11.x + origy*v11.y + origz*v11.z;
-						float Dx = dirx*v11.x + diry*v11.y + dirz*v11.z;
-						float u = Ox + t*Dx;
-						if (u >= 0.0f)
-						{
-							float Oy = v22.w + origx*v22.x + origy*v22.y + origz*v22.z;
-							float Dy = dirx*v22.x + diry*v22.y + dirz*v22.z;
-							float v = Oy + t*Dy;
-							if (v >= 0.0f && u + v <= 1.0f)
-							{
-								unsigned int ti = index >> 1;
-								e_TriangleData* tri = g_SceneData.m_sTriData.Data + ti + mesh.m_uTriangleOffset;
-								int q = 1;
-								/*if (USE_ALPHA)
-								{
-									e_KernelMaterial* mat = g_SceneData.m_sMatData.Data + tri->getMatIndex(N->m_uMaterialOffset);
-									DifferentialGeometry dg;
-									dg.bary = make_float2(u, v);
-									for (int i = 0; i < NUM_UV_SETS; i++)
-										dg.uv[i] = tri->math::lerpUV(i, dg.bary);
-									float a = mat->SampleAlphaMap(dg);
-									q = a >= mat->m_fAlphaThreshold;
-
-								}*/
-								if (q)
-								{
-									a_Result->m_pNode = N;
-									a_Result->m_pTri = tri;
-									a_Result->m_fBaryCoords = Vec2f(u, v);
-									a_Result->m_fDist = t;
-									found = true;
-								}
-							}
-						}
-					}
-					if (index & 1)
-						break;
-				}
-			}
-			leafAddr = nodeAddr;
-			if (nodeAddr < 0)
-			{
-				nodeAddr = *(int*)stackPtr;
-				stackPtr -= 4;
-			}
-		}
-	}
-	return found;
-}
-
 bool k_TraceRay(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result)
 {
 	Platform::Increment(&g_RayTracedCounter);
@@ -260,7 +85,6 @@ bool k_TraceRay(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result)
 		loadInvModl(nodeIdx, &modl);
 		loadModl(nodeIdx, &modl2);
 		Vec3f d = modl.TransformDirection(dir), o = modl.TransformPoint(ori);
-		//return k_TraceRayNode(d, o, a_Result, N);
 		return k_TraceRayTemplate(Ray(o, d), a_Result->m_fDist, [&](int triIdx)
 		{
 			bool found = false;
@@ -311,93 +135,6 @@ bool k_TraceRay(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result)
 			return found;
 		}, t_nodesA, g_SceneData.m_sBVHNodeData.Data, mesh.m_uBVHNodeOffset, 0);
 	}, t_SceneNodes, g_SceneData.m_sSceneBVH.m_pNodes, 0, g_SceneData.m_sSceneBVH.m_sStartNode);
-
-#ifdef SKIP_OUTER_TREE
-	const int node = 0;
-	e_Node* N = g_SceneData.m_sNodeData.Data + node;
-	//transform a_Result->m_fDist to local system
-	float4x4 modl;
-	loadInvModl(node, &modl);
-	Vec3f d = modl.TransformDirection(dir), o = modl.TransformPoint(ori);
-	k_TraceRayNode(d, o, a_Result, N);
-#else
-	int traversalStackOuter[64];
-	int at = 1;
-	traversalStackOuter[0] = g_SceneData.m_sSceneBVH.m_sStartNode;
-	const float ooeps = math::exp2(-80.0f);
-	Vec3f O, I;
-	I.x = 1.0f / (math::abs(dir.x) > ooeps ? dir.x : copysignf(ooeps, dir.x));
-	I.y = 1.0f / (math::abs(dir.y) > ooeps ? dir.y : copysignf(ooeps, dir.y));
-	I.z = 1.0f / (math::abs(dir.z) > ooeps ? dir.z : copysignf(ooeps, dir.z));
-	O = I * ori;
-	while(at)
-	{
-		int nodeAddrOuter = traversalStackOuter[--at];
-		while (nodeAddrOuter >= 0 && nodeAddrOuter != EntrypointSentinel)
-		{
-#ifdef ISCUDA
-			const float4 n0xy = tex1Dfetch(t_SceneNodes, nodeAddrOuter + 0); // (c0.lo.x, c0.hi.x, c0.lo.y, c0.hi.y)
-			const float4 n1xy = tex1Dfetch(t_SceneNodes, nodeAddrOuter + 1); // (c1.lo.x, c1.hi.x, c1.lo.y, c1.hi.y)
-			const float4 nz   = tex1Dfetch(t_SceneNodes, nodeAddrOuter + 2); // (c0.lo.z, c0.hi.z, c1.lo.z, c1.hi.z)
-				  float4 tmp  = tex1Dfetch(t_SceneNodes, nodeAddrOuter + 3); // child_index0, child_index1
-#else
-			const Vec4f n0xy = g_SceneData.m_sSceneBVH.m_pNodes[nodeAddrOuter / 4].a;
-			const Vec4f n1xy = g_SceneData.m_sSceneBVH.m_pNodes[nodeAddrOuter / 4].b;
-			const Vec4f nz   = g_SceneData.m_sSceneBVH.m_pNodes[nodeAddrOuter / 4].c;
-				  Vec4f tmp  = g_SceneData.m_sSceneBVH.m_pNodes[nodeAddrOuter / 4].d;
-#endif
-			Vec2i  cnodesOuter = *(Vec2i*)&tmp;
-			const float c0lox = n0xy.x * I.x - O.x;
-			const float c0hix = n0xy.y * I.x - O.x;
-			const float c0loy = n0xy.z * I.y - O.y;
-			const float c0hiy = n0xy.w * I.y - O.y;
-			const float c0loz = nz.x   * I.z - O.z;
-			const float c0hiz = nz.y   * I.z - O.z;
-			const float c1loz = nz.z   * I.z - O.z;
-			const float c1hiz = nz.w   * I.z - O.z;
-			const float c0min = math::spanBeginKepler(c0lox, c0hix, c0loy, c0hiy, c0loz, c0hiz, 0);
-			const float c0max = math::spanEndKepler  (c0lox, c0hix, c0loy, c0hiy, c0loz, c0hiz, a_Result->m_fDist);
-			const float c1lox = n1xy.x * I.x - O.x;
-			const float c1hix = n1xy.y * I.x - O.x;
-			const float c1loy = n1xy.z * I.y - O.y;
-			const float c1hiy = n1xy.w * I.y - O.y;
-			const float c1min = math::spanBeginKepler(c1lox, c1hix, c1loy, c1hiy, c1loz, c1hiz, 0);
-			const float c1max = math::spanEndKepler  (c1lox, c1hix, c1loy, c1hiy, c1loz, c1hiz, a_Result->m_fDist);
-			bool swpOuter = (c1min < c0min);
-			bool traverseChild0Outer = (c0max >= c0min);
-			bool traverseChild1Outer = (c1max >= c1min);
-			if ((!traverseChild0Outer && !traverseChild1Outer) && at)
-				nodeAddrOuter = traversalStackOuter[--at];
-			else if(!traverseChild0Outer && !traverseChild1Outer)
-			{//empty stack and nowhere to go...
-				nodeAddrOuter = 0;
-				break;
-			}
-			else
-			{
-				nodeAddrOuter = (traverseChild0Outer) ? cnodesOuter.x : cnodesOuter.y;
-				if (traverseChild0Outer && traverseChild1Outer)
-				{
-					if (swpOuter)
-						swapk(&nodeAddrOuter, &cnodesOuter.y);
-					traversalStackOuter[at++] = cnodesOuter.y;
-				}
-			}
-		}
-		if(nodeAddrOuter < 0 && nodeAddrOuter != -214783648)
-		{
-			int node = ~nodeAddrOuter;
-			e_Node* N = g_SceneData.m_sNodeData.Data + node;
-			//transform a_Result->m_fDist to local system
-			float4x4 modl, modl2;
-			loadInvModl(node, &modl);
-			loadModl(node, &modl2);
-			Vec3f d = modl.TransformDirection(dir), o = modl.TransformPoint(ori);
-			k_TraceRayNode(d, o, a_Result, N);
-		}
-	}
-#endif
-	return a_Result->hasHit();
 }
 
 void k_INITIALIZE(e_DynamicScene* a_Scene, const CudaRNGBuffer& a_RngBuf)
@@ -412,22 +149,28 @@ void k_INITIALIZE(e_DynamicScene* a_Scene, const CudaRNGBuffer& a_RngBuf)
 							cdu1 = cudaCreateChannelDesc<unsigned int>(),
 							cdi2 = cudaCreateChannelDesc<int2>(),
 							cdh4 = cudaCreateChannelDescHalf4();
-	cudaError_t
-	r = cudaBindTexture(&offset, &t_nodesA, a_Data.m_sBVHNodeData.Data, &cdf4, a_Data.m_sBVHNodeData.UsedCount * sizeof(e_BVHNodeData));
-	r = cudaBindTexture(&offset, &t_tris, a_Data.m_sBVHIntData.Data, &cdf4, a_Data.m_sBVHIntData.UsedCount * sizeof(e_TriIntersectorData));
-	r = cudaBindTexture(&offset, &t_triIndices, a_Data.m_sBVHIndexData.Data, &cdu1, a_Data.m_sBVHIndexData.UsedCount * sizeof(e_TriIntersectorData2));
-	r = cudaBindTexture(&offset, &t_SceneNodes, a_Data.m_sSceneBVH.m_pNodes, &cdf4, a_Data.m_sSceneBVH.m_uNumNodes * sizeof(e_BVHNodeData));
-	r = cudaBindTexture(&offset, &t_NodeTransforms, a_Data.m_sSceneBVH.m_pNodeTransforms, &cdf4, a_Data.m_sNodeData.UsedCount * sizeof(float4x4));
-	r = cudaBindTexture(&offset, &t_NodeInvTransforms, a_Data.m_sSceneBVH.m_pInvNodeTransforms, &cdf4, a_Data.m_sNodeData.UsedCount * sizeof(float4x4));
+	ThrowCudaErrors(cudaBindTexture(&offset, &t_nodesA, a_Data.m_sBVHNodeData.Data, &cdf4, a_Data.m_sBVHNodeData.UsedCount * sizeof(e_BVHNodeData)));
+	ThrowCudaErrors(cudaBindTexture(&offset, &t_tris, a_Data.m_sBVHIntData.Data, &cdf4, a_Data.m_sBVHIntData.UsedCount * sizeof(e_TriIntersectorData)));
+	ThrowCudaErrors(cudaBindTexture(&offset, &t_triIndices, a_Data.m_sBVHIndexData.Data, &cdu1, a_Data.m_sBVHIndexData.UsedCount * sizeof(e_TriIntersectorData2)));
+	ThrowCudaErrors(cudaBindTexture(&offset, &t_SceneNodes, a_Data.m_sSceneBVH.m_pNodes, &cdf4, a_Data.m_sSceneBVH.m_uNumNodes * sizeof(e_BVHNodeData)));
+	ThrowCudaErrors(cudaBindTexture(&offset, &t_NodeTransforms, a_Data.m_sSceneBVH.m_pNodeTransforms, &cdf4, a_Data.m_sNodeData.UsedCount * sizeof(float4x4)));
+	ThrowCudaErrors(cudaBindTexture(&offset, &t_NodeInvTransforms, a_Data.m_sSceneBVH.m_pInvNodeTransforms, &cdf4, a_Data.m_sNodeData.UsedCount * sizeof(float4x4)));
 #ifdef EXT_TRI
-	r = cudaBindTexture(&offset, &t_TriDataA, a_Data.m_sTriData.Data, &cdi2, a_Data.m_sTriData.UsedCount * sizeof(e_TriangleData));
-	r = cudaBindTexture(&offset, &t_TriDataB, a_Data.m_sTriData.Data, &cdh4, a_Data.m_sTriData.UsedCount * sizeof(e_TriangleData));
+	ThrowCudaErrors(cudaBindTexture(&offset, &t_TriDataA, a_Data.m_sTriData.Data, &cdi2, a_Data.m_sTriData.UsedCount * sizeof(e_TriangleData)));
+	ThrowCudaErrors(cudaBindTexture(&offset, &t_TriDataB, a_Data.m_sTriData.Data, &cdh4, a_Data.m_sTriData.UsedCount * sizeof(e_TriangleData)));
 #endif
-
+	
 	unsigned int b = 0;
-	cudaMemcpyToSymbol(g_RayTracedCounterDevice, &b, sizeof(unsigned int));
-	cudaMemcpyToSymbol(g_SceneDataDevice, &a_Data, sizeof(e_KernelDynamicScene));
-	cudaMemcpyToSymbol(g_RNGDataDevice, &a_RngBuf, sizeof(CudaRNGBuffer));
+	void* symAdd = 0;
+	ThrowCudaErrors(cudaGetSymbolAddress(&symAdd, g_RayTracedCounterDevice));
+	if (symAdd)
+		ThrowCudaErrors(cudaMemcpy(symAdd, &b, sizeof(b), cudaMemcpyHostToDevice));
+	ThrowCudaErrors(cudaGetSymbolAddress(&symAdd, g_SceneDataDevice));
+	if (symAdd)
+		ThrowCudaErrors(cudaMemcpyToSymbol(g_SceneDataDevice, &a_Data, sizeof(a_Data)));
+	ThrowCudaErrors(cudaGetSymbolAddress(&symAdd, g_RNGDataDevice));
+	if (symAdd)
+	ThrowCudaErrors(cudaMemcpyToSymbol(g_RNGDataDevice, &a_RngBuf, sizeof(a_RngBuf)));
 
 	g_SceneDataHost = a_Scene->getKernelSceneData(false);
 	g_RNGDataHost = a_RngBuf;
@@ -475,14 +218,14 @@ void fillDG(const Vec2f& bary, const e_TriangleData* tri, const e_Node* node, Di
 unsigned int k_getNumRaysTraced()
 {
 	unsigned int i;
-	cudaMemcpyFromSymbol(&i, g_RayTracedCounterDevice, sizeof(unsigned int));
+	ThrowCudaErrors(cudaMemcpyFromSymbol(&i, g_RayTracedCounterDevice, sizeof(unsigned int)));
 	return i + g_RayTracedCounterHost;
 }
 
 void k_setNumRaysTraced(unsigned int i)
 {
 	g_RayTracedCounterHost = i;
-	cudaMemcpyToSymbol(g_RayTracedCounterDevice, &i, sizeof(unsigned int));
+	ThrowCudaErrors(cudaMemcpyToSymbol(g_RayTracedCounterDevice, &i, sizeof(unsigned int)));
 }
 
 #define DYNAMIC_FETCH_THRESHOLD 20

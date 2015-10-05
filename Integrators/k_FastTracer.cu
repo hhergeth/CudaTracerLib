@@ -107,7 +107,8 @@ __device__ CUDA_INLINE Vec2f stratifiedSample(const Vec2f& f, int pass)
 #define max_PASS 7
 CUDA_DEVICE k_PTDBuffer g_Intersector;
 CUDA_DEVICE k_PTDBuffer g_Intersector2;
-template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(unsigned int N, e_Image I, int pass, int iterationIdx, bool depthImage)//template
+//CUDA_CONST e_KernelMaterial* g_MAT;
+template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(unsigned int N, e_Image I, int pass, int iterationIdx, bool depthImage)
 {
 	CudaRNG rng = g_RNGData();
 	int rayidx;
@@ -233,6 +234,8 @@ void k_FastTracer::doPath(e_Image* I)
 	bufA->setNumRays(w * h, 0);
 	int pass = 0;
 	k_PTDBuffer* srcBuf = bufA, *destBuf = bufB;
+	size_t total, free;
+	cudaMemGetInfo(&free, &total);
 	do
 	{
 		destBuf->Clear();
@@ -248,10 +251,12 @@ void k_FastTracer::doPath(e_Image* I)
 		swapk(srcBuf, destBuf);
 	}
 	while (srcBuf->getNumRays(0) && ++pass < max_PASS);
+	cudaMemGetInfo(&free, &total);
 }
 
 void k_FastTracer::DoRender(e_Image* I)
 {
+	k_INITIALIZE(m_pScene, k_TracerBase::g_sRngs);
 	if (depthImage)
 	{
 		cudaMemcpyToSymbol(g_DepthImage, depthImage, sizeof(e_Image));
