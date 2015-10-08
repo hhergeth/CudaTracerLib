@@ -52,7 +52,7 @@ void k_BeamBVHStorage::BuildStorage(float max_query_radius, e_DynamicScene* a_Sc
 		virtual e_BVHNodeData* HandleNodeAllocation(int* index)
 		{
 			m_sBVHNodes.push_back(e_BVHNodeData());
-			*index = (unsigned int)(m_sBVHNodes.size() - 1);
+			*index = (unsigned int)(m_sBVHNodes.size() - 1) * 4;
 			return &m_sBVHNodes.back();
 		}
 		virtual void HandleStartNode(int startNode)
@@ -64,6 +64,8 @@ void k_BeamBVHStorage::BuildStorage(float max_query_radius, e_DynamicScene* a_Sc
 
 		}
 	};
+
+	m_uBeamIdx = min(m_uBeamIdx, m_uNumBeams);
 	CUDA_MEMCPY_TO_HOST(m_pHostBeams, m_pDeviceBeams, m_uBeamIdx * sizeof(k_Beam));
 
 	//shorten beams to create better bvh
@@ -84,7 +86,8 @@ void k_BeamBVHStorage::BuildStorage(float max_query_radius, e_DynamicScene* a_Sc
 	}
 
 	BuilderCLB clb(&m_sHostBVHBeams->operator[](0), (unsigned int)m_sHostBVHBeams->size(), max_query_radius);
-	SplitBVHBuilder builder(&clb, SplitBVHBuilder::Platform(), SplitBVHBuilder::BuildParams());
+	auto plat = SplitBVHBuilder::Platform();
+	SplitBVHBuilder builder(&clb, plat, SplitBVHBuilder::BuildParams());
 	builder.run();
 	if (clb.m_sReorderedBeams.size() > m_uNumDeviceBVHBeams)
 	{
@@ -106,9 +109,10 @@ void k_BeamBVHStorage::BuildStorage(float max_query_radius, e_DynamicScene* a_Sc
 		m_pHostNodes = new e_BVHNodeData[m_uNumNodes];
 	}
 	memcpy(m_pHostNodes, &clb.m_sBVHNodes[0], m_uNumNodes);
-	CUDA_MEMCPY_TO_DEVICE(m_pDeviceNodes, &clb.m_sBVHNodes[0], m_uNumNodes * sizeof(e_BVHNodeData));
+	CUDA_MEMCPY_TO_DEVICE(m_pDeviceNodes, &clb.m_sBVHNodes[0], (unsigned int)clb.m_sBVHNodes.size() * sizeof(e_BVHNodeData));
 
 	size_t offset;
 	cudaChannelFormatDesc cdf4 = cudaCreateChannelDesc<float4>();
-	ThrowCudaErrors(cudaBindTexture(&offset, (texture<float4, 1>*)t_BVHNodes, m_pDeviceNodes, &cdf4, m_uNumNodes * sizeof(e_BVHNodeData)));
+	//t_BVHNodes = new texture<float4, 1>();
+	//ThrowCudaErrors(cudaBindTexture(&offset, (texture<float4, 1>*)t_BVHNodes, m_pDeviceNodes, &cdf4, m_uNumNodes * sizeof(e_BVHNodeData)));
 }

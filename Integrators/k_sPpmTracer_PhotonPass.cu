@@ -6,7 +6,6 @@
 CUDA_DEVICE k_PhotonMapCollection<true, k_pPpmPhoton> g_Map;
 CUDA_DEVICE bool g_HasVolumePhotons;
 CUDA_DEVICE k_BeamGrid g_BeamGrid;
-CUDA_CONST k_pGridEntry* g_SurfaceEntries;
 CUDA_DEVICE k_BeamBVHStorage g_BVHBeams;
 
 CUDA_FUNC_IN bool storeBeam(const Ray& r, float t, const Spectrum& phi, float a_r)
@@ -127,7 +126,7 @@ template<bool DIRECT> __global__ void k_PhotonPass(int photons_per_thread, bool 
 	e_KernelAggregateVolume& V = g_SceneData.m_sVolume;
 	bool hasVolPhotons;
 
-	while (atomicInc(&local_Counter, (unsigned int)-1) < local_Todo && g_Map.m_uPhotonNumStored < g_Map.m_uPhotonBufferLength && g_BeamGrid.m_uBeamIdx < g_BeamGrid.m_uBeamLength)
+	while (atomicInc(&local_Counter, (unsigned int)-1) < local_Todo && g_Map.m_uPhotonNumStored < g_Map.m_uPhotonBufferLength)
 	{
 		Ray r;
 		const e_KernelLight* light;
@@ -135,25 +134,25 @@ template<bool DIRECT> __global__ void k_PhotonPass(int photons_per_thread, bool 
 		Spectrum Le = g_SceneData.sampleEmitterRay(r, light, sps, sds),
 			throughput(1.0f);
 		int depth = -1;
-		bool wasStored = false;
+		bool wasStored = false, wasStored2 = false;
 		bool delta = false;
 		MediumSamplingRecord mRec;
 		bool medium = false;
 		const e_KernelBSSRDF* bssrdf = 0;
 
-		while (++depth < PPM_MaxRecursion && g_Map.m_uPhotonNumStored < g_Map.m_uPhotonBufferLength && !Le.isZero() && g_BeamGrid.m_uBeamIdx < g_BeamGrid.m_uBeamLength)
+		while (++depth < PPM_MaxRecursion && g_Map.m_uPhotonNumStored < g_Map.m_uPhotonBufferLength && !Le.isZero())
 		{
 			TraceResult r2 = k_TraceRay(r);
 			float minT, maxT;
 			if ((!bssrdf && V.HasVolumes() && V.IntersectP(r, 0, r2.m_fDist, &minT, &maxT) && V.sampleDistance(r, 0, r2.m_fDist, rng, mRec))
 				|| (bssrdf && sampleDistanceHomogenous(r, 0, r2.m_fDist, rng.randomFloat(), mRec, bssrdf->sig_a, bssrdf->sigp_s)))
 			{
-				//if (g_BeamGrid.m_pDeviceBeams)
-				//	wasStored |= storeBeam(r, mRec.t, throughput * Le, a_r);
-				wasStored |= g_BVHBeams.insertBeam(k_Beam(r.origin, r.direction, mRec.t, throughput * Le));
+				if (g_BeamGrid.m_pDeviceBeams)
+					wasStored |= storeBeam(r, mRec.t, throughput * Le, a_r);
+				wasStored2 |= g_BVHBeams.insertBeam(k_Beam(r.origin, r.direction, mRec.t, throughput * Le));
 				throughput *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
-				//if (!g_BeamGrid.m_pDeviceBeams)
-				//	wasStored |= storePhoton(mRec.p, throughput * Le, -r.direction, Vec3f(0, 0, 0), PhotonType::pt_Volume, g_Map, final_gather);
+				if (!g_BeamGrid.m_pDeviceBeams)
+					wasStored |= storePhoton(mRec.p, throughput * Le, -r.direction, Vec3f(0, 0, 0), PhotonType::pt_Volume, g_Map, final_gather);
 				hasVolPhotons = true;
 				if (bssrdf)
 					r.direction = Warp::squareToUniformSphere(rng.randomFloat2());
@@ -208,6 +207,8 @@ template<bool DIRECT> __global__ void k_PhotonPass(int photons_per_thread, bool 
 		}
 		if (wasStored)
 			atomicInc(&g_Map.m_uPhotonNumEmitted, 0xffffffff);
+		if (wasStored2)
+			atomicInc(&g_BVHBeams.m_uNumEmitted, 0xffffffff);
 	}
 	if (threadIdx.x == 0)
 		atomicOr((int*)&g_HasVolumePhotons, __any(hasVolPhotons));
@@ -292,12 +293,8 @@ __global__ void checkGrid()
 
 void k_sPpmTracer::doPhotonPass()
 {
-	if (m_pSurfaceValues)
-	{
-		ThrowCudaErrors(cudaMemset(m_pSurfaceValues, 0, sizeof(k_pGridEntry)*m_sMaps.m_sSurfaceMap.m_uGridLength));
-		ThrowCudaErrors(cudaMemcpyToSymbol(g_SurfaceEntries, &m_pSurfaceValues, sizeof(m_pSurfaceValues)));
-	}
 	bool hasVol = false;
+	m_sBVHBeams.StartRendering();
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_BVHBeams, &m_sBVHBeams, sizeof(m_sBVHBeams)));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_Map, &m_sMaps, sizeof(m_sMaps)));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_HasVolumePhotons, &hasVol, sizeof(bool)));
@@ -321,7 +318,7 @@ void k_sPpmTracer::doPhotonPass()
 
 	ThrowCudaErrors(cudaMemcpyFromSymbol(&hasVol, g_HasVolumePhotons, sizeof(bool)));
 	ThrowCudaErrors(cudaMemcpyFromSymbol(&m_sBVHBeams, g_BVHBeams, sizeof(m_sBVHBeams)));
-	m_sBVHBeams.BuildStorage(getCurrentRadius2(3), m_pScene);
+	m_sBVHBeams.BuildStorage(getCurrentRadius2(3)*10, m_pScene);
 
 	if (hasVol && m_sBeams.m_pDeviceData)
 	{

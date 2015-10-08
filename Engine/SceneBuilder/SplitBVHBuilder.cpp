@@ -325,11 +325,13 @@ unsigned int SplitBVHBuilder::buildNode(NodeSpec spec, int level, float progress
 	float area = spec.bounds.Area();
 	float leafSAH = area * m_platform.getTriangleCost(spec.numRef);
 	float nodeSAH = area * m_platform.getNodeCost(2);
-	ObjectSplit object = findObjectSplit(spec, nodeSAH);
+	ObjectSplit object;
+	if (m_platform.m_objectSplits)
+		object = findObjectSplit(spec, nodeSAH);
 
 	SpatialSplit spatial;
 	spatial.dim = 0; spatial.pos = 0; spatial.sah = FLT_MAX;
-	if (level < MaxSpatialDepth)
+	if (m_platform.m_spatialSplits && level < MaxSpatialDepth)
 	{
 		AABB overlap = object.leftBounds;
 		overlap = overlap.Intersect(object.rightBounds);

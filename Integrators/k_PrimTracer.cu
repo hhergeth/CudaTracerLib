@@ -23,6 +23,7 @@ CUDA_FUNC_IN Spectrum trace(Ray& r, const Ray& rX, const Ray& rY, CudaRNG& rng, 
 		BSDFSamplingRecord bRec(dg);
 		r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
 		dg.computePartials(r, rX, rY);
+		return Spectrum(absdot(dg.n, -r.direction));
 		//return Spectrum(dg.dvdx, dg.dvdy, 0);
 		//Vec3f n = (bRec.dg.sys.n + Vec3f(1)) / 2;
 		//return Spectrum(n.x, n.y, n.z);
@@ -296,7 +297,7 @@ __global__ void primaryKernel(int width, int height, e_Image g_Image, bool depth
 		Ray r, rX, rY;
 		Spectrum imp = g_SceneData.m_Camera.sampleRayDifferential(r, rX, rY, Vec2f(x, y), rng.randomFloat2());
 		float d;
-		Spectrum L = imp * traceGame(r, rX, rY, rng, d);
+		Spectrum L = imp * trace(r, rX, rY, rng, d);
 			
 		g_Image.AddSample(x, y, L);
 		if (depthImage)
@@ -452,9 +453,9 @@ void k_PrimTracer::DoRender(e_Image* I)
 
 	unsigned int zero = 0;
 	cudaMemcpyToSymbol(g_NextRayCounter2, &zero, sizeof(unsigned int));
-	//primaryKernel << < 180, dim3(32, MaxBlockHeight, 1) >> >(w, h, *I, depthImage ? 1 : 0);
+	primaryKernel << < 180, dim3(32, MaxBlockHeight, 1) >> >(w, h, *I, depthImage ? 1 : 0);
 	swapk(&m_pDeviceLastImage1, &m_pDeviceLastImage2);
-	primaryKernelBlocked << <dim3(w / (2 * BLOCK_SIZE) + 1, h / (2 * BLOCK_SIZE) + 1, 1), dim3(BLOCK_SIZE, BLOCK_SIZE, 1) >> >(w, h, *I, depthImage ? 1 : 0, m_pDeviceLastImage1, m_pDeviceLastImage2, lastSensor, iterations++);
+	//primaryKernelBlocked << <dim3(w / (2 * BLOCK_SIZE) + 1, h / (2 * BLOCK_SIZE) + 1, 1), dim3(BLOCK_SIZE, BLOCK_SIZE, 1) >> >(w, h, *I, depthImage ? 1 : 0, m_pDeviceLastImage1, m_pDeviceLastImage2, lastSensor, iterations++);
 	if (depthImage)
 		depthImage->EndRendering();
 	lastSensor = g_SceneData.m_Camera;

@@ -32,3 +32,6 @@ void DeInitializeCuda4Tracer()
 	//_CrtDumpMemoryLeaks();
 #endif
 }
+
+
+

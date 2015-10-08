@@ -3,6 +3,7 @@
 #include "..\Kernel\k_Tracer.h"
 #include "k_PhotonMapHelper.h"
 #include "../CudaMemoryManager.h"
+#include "VolEstimators\k_Beam.h"
 
 struct k_AdaptiveEntry
 {
@@ -40,7 +41,7 @@ struct k_BeamMap
 	Vec2i* m_pDeviceData;
 };
 
-#include "Beams\k_BeamBVHStorage.h"
+#include "VolEstimators\k_BeamBVHStorage.h"
 
 struct k_BeamGrid
 {
@@ -66,11 +67,6 @@ enum
 	PPM_slots_per_block = PPM_photons_per_block * PPM_MaxRecursion,
 };
 
-struct k_pGridEntry
-{
-	Spectrum m_sValues[4];
-};
-
 class k_sPpmTracer : public k_Tracer<true, true>
 {
 private:
@@ -78,7 +74,6 @@ private:
 	k_PhotonMapCollection<true, k_pPpmPhoton> m_sMaps;
 	k_BeamMap m_sBeams;
 	k_BeamGrid m_sPhotonBeams;
-	k_pGridEntry* m_pSurfaceValues;
 
 	bool m_bDirect;
 	float m_fLightVisibility;

@@ -10,7 +10,7 @@
 #define SER_NAME "photonMapBuf.dat"
 
 k_sPpmTracer::k_sPpmTracer()
-	: m_pEntries(0), m_bFinalGather(false), m_bVisualizeGrid(false), m_pSurfaceValues(0), m_fLightVisibility(1), m_sBVHBeams(100 * 1024)
+	: m_pEntries(0), m_bFinalGather(false), m_bVisualizeGrid(false), m_fLightVisibility(1), m_sBVHBeams(10 * 1024)
 {
 #ifdef NDEBUG
 	m_uBlocksPerLaunch = 180;
@@ -37,8 +37,6 @@ k_sPpmTracer::k_sPpmTracer()
 	m_sPhotonBeams.m_uGridOffset = LNG*LNG*LNG;
 	m_sPhotonBeams.m_uGridLength = m_sPhotonBeams.m_uGridOffset * (1 + 1000);
 	//CUDA_MALLOC(&m_sPhotonBeams.m_pGrid, sizeof(Vec2i) * m_sPhotonBeams.m_uGridLength);
-
-	//CUDA_MALLOC(&m_pSurfaceValues, LNG*LNG*LNG*sizeof(k_pGridEntry));
 }
 
 void k_sPpmTracer::PrintStatus(std::vector<std::string>& a_Buf) const

@@ -8,7 +8,6 @@ texture<uint4, 1> t_Photons;
 texture<int2, 1> t_Beams;
 texture<int2, 1> t_PhotonBeams;
 CUDA_DEVICE k_BeamGrid g_PhotonBeamGrid;
-CUDA_CONST k_pGridEntry* g_SurfaceEntries2;
 CUDA_CONST k_BeamBVHStorage g_BVHBeamStorage;
 
 template<bool HAS_MULTIPLE_MAPS, typename PHOTON> CUDA_FUNC_IN PHOTON loadPhoton(unsigned int idx, const k_PhotonMapCollection<HAS_MULTIPLE_MAPS, PHOTON>& map)
@@ -66,7 +65,7 @@ template<bool VOL> CUDA_DEVICE Spectrum L_Volume1(float a_r, CudaRNG& rng, const
 	return L_n;
 }
 
-template<bool VOL> CUDA_DEVICE Spectrum L_Volume(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const Spectrum& sigt, const Spectrum& sigs, Spectrum& Tr, const k_PhotonMapCollection<true, k_pPpmPhoton>& photonMap, unsigned int a_NodeIndex = 0xffffffff)
+template<bool VOL> CUDA_DEVICE Spectrum L_Volume2(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const Spectrum& sigt, const Spectrum& sigs, Spectrum& Tr, const k_PhotonMapCollection<true, k_pPpmPhoton>& photonMap, unsigned int a_NodeIndex = 0xffffffff)
 {
 	Spectrum Tau = Spectrum(0.0f);
 	float r2 = a_r * a_r;
@@ -104,13 +103,24 @@ template<bool VOL> CUDA_DEVICE Spectrum L_Volume(float a_r, CudaRNG& rng, const 
 	return L_n;
 }
 
-CUDA_FUNC_IN void skew_lines(const Ray& r, const Ray& r2, float& t1, float& t2)
+CUDA_FUNC_IN float skew_lines(const Ray& r, const Ray& r2, float& t1, float& t2)
 {
+	if (absdot(r.direction.normalized(), r2.direction.normalized()) > 1 - 1e-2f)
+		return FLT_MAX;
+
 	float v1dotv2 = dot(r.direction, r2.direction), v1p2 = r.direction.lenSqr(), v2p2 = r2.direction.lenSqr();
 	float x = dot(r2.origin - r.origin, r.direction), y = dot(r2.origin - r.origin, r2.direction);
 	float dc = 1.0f / (v1dotv2 * v1dotv2 - v1p2 * v2p2);
 	t1 = dc * (-v2p2 * x + v1dotv2 * y);
-	t2 = dc * (-v1dotv2 * x + v1p2 * y);
+	t2 = dc * (-v1dotv2 * x + v1p2 * y);	
+	
+	float D = math::abs(dot(cross(r.direction, r2.direction).normalized(), r.origin - r2.origin));
+	float d = (r(t1) - r2(t2)).length();
+	float err = math::abs(D - d);
+	if (err > 0.1f)
+		printf("D = %f, d = %f, r1 = {(%f,%f,%f), (%f,%f,%f)}, r2 = {(%f,%f,%f), (%f,%f,%f)}\n", D, d, r.origin.x, r.origin.y, r.origin.z, r.direction.x, r.direction.y, r.direction.z, r2.origin.x, r2.origin.y, r2.origin.z, r2.direction.x, r2.direction.y, r2.direction.z);
+
+	return D;
 }
 template<bool VOL> CUDA_DEVICE Spectrum L_Volume3(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const Spectrum& sigt, const Spectrum& sigs, Spectrum& Tr, const k_PhotonMapCollection<true, k_pPpmPhoton>& photonMap, unsigned int a_NodeIndex = 0xffffffff)
 {
@@ -150,30 +160,28 @@ template<bool VOL> CUDA_DEVICE Spectrum L_Volume3(float a_r, CudaRNG& rng, const
 	return L_n;
 }
 
-template<bool VOL> CUDA_DEVICE Spectrum L_Volume4(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const Spectrum& sigt, const Spectrum& sigs, Spectrum& Tr, const k_PhotonMapCollection<true, k_pPpmPhoton>& photonMap, unsigned int a_NodeIndex = 0xffffffff)
+template<bool VOL> CUDA_DEVICE Spectrum L_Volume(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const Spectrum& sigt, const Spectrum& sigs, Spectrum& Tr, const k_PhotonMapCollection<true, k_pPpmPhoton>& photonMap, unsigned int a_NodeIndex = 0xffffffff)
 {
-	Spectrum Tau = Spectrum(0.0f);
-	float r2 = a_r * a_r;
 	Spectrum L_n = Spectrum(0.0f);
-
-	return L_n;
+	g_BVHBeamStorage.iterateBeams(Ray(r(tmin), r.direction), tmax - tmin, [&](const k_Beam& b)
+	{
+		float t1, t2;
+		if (skew_lines(r, Ray(b.pos, b.dir), t1, t2) < a_r)
+		{
+			float sin_theta = math::sin(math::safe_acos(dot(-b.dir.normalized(), r.direction.normalized())));
+			Spectrum photon_tau = g_SceneData.m_sVolume.tau(Ray(b.pos, b.dir), 0, t2);
+			Spectrum camera_tau = g_SceneData.m_sVolume.tau(r, 0, t1);
+			Spectrum camera_sc = g_SceneData.m_sVolume.sigma_s(r(t1), r.direction);
+			float p = g_SceneData.m_sVolume.p(r(t1), r.direction, b.dir, rng);
+			if (p < 0)
+				printf("p = %f\n", p);
+			L_n += camera_sc * p * b.Phi * (-photon_tau).exp() * (-camera_tau).exp() / sin_theta;
+		}
+	});
+	Tr = (-g_SceneData.m_sVolume.tau(r, tmin, tmax)).exp();
+	return L_n / (a_r * g_BVHBeamStorage.getNumEmitted());
 }
 
-CUDA_FUNC_IN float calculatePlaneAreaInCell(const AABB& planeBox)
-{
-	return length(Vec3f(planeBox.minV.x, planeBox.maxV.y, planeBox.maxV.z) - planeBox.minV) * length(Vec3f(planeBox.maxV.x, planeBox.minV.y, planeBox.minV.z) - planeBox.minV);
-}
-CUDA_FUNC_IN AABB calculatePlaneAABBInCell(const AABB& cell, const Vec3f& p, const Vec3f& n, float r)
-{
-	Vec3f down_plane = normalize(cross(Vec3f(1,0,0), n));
-	Vec3f left_plane = normalize(cross(down_plane, n));
-	AABB res = AABB::Identity();
-	res = res.Extend(cell.Clamp(p + r * down_plane));
-	res = res.Extend(cell.Clamp(p + r * left_plane));
-	res = res.Extend(cell.Clamp(p - r * down_plane));
-	res = res.Extend(cell.Clamp(p - r * left_plane));
-	return res;
-}
 CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED, const e_KernelMaterial* mat, const k_PhotonMapCollection<true, k_pPpmPhoton>& photonMap, const k_PhotonMapReg& map)
 {
 	Spectrum Lp = Spectrum(0.0f);
@@ -183,7 +191,7 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED
 	sys.s *= a_rSurfaceUNUSED;
 	Vec3f a = -1.0f * sys.t - sys.s, b = sys.t - sys.s, c = -1.0f * sys.t + sys.s, d = sys.t + sys.s;
 	Vec3f low = min(min(a, b), min(c, d)) + bRec.dg.P, high = max(max(a, b), max(c, d)) + bRec.dg.P;
-	Vec3u lo = map.m_sHash.Transform(low), hi = map.m_sHash.Transform(high); int N = 0, N2 = 0;
+	Vec3u lo = map.m_sHash.Transform(low), hi = map.m_sHash.Transform(high);
 	for(unsigned int a = lo.x; a <= hi.x; a++)
 		for(unsigned int b = lo.y; b <= hi.y; b++)
 			for(unsigned int c = lo.z; c <= hi.z; c++)
@@ -194,30 +202,17 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED
 					k_pPpmPhoton e = loadPhoton(i, photonMap);
 					Vec3f n = e.getNormal(), wi = e.getWi(), P = e.getPos(map.m_sHash, Vec3u(a,b,c));
 					Spectrum l = e.getL();
-					float dist2 = distanceSquared(P, bRec.dg.P); N++;
+					float dist2 = distanceSquared(P, bRec.dg.P);
 					if (dist2 < r2 )//&& dot(n, bRec.dg.sys.n) > 0.8f
 					{
 						bRec.wo = bRec.dg.toLocal(wi);
 						Spectrum bsdfFactor = mat->bsdf.f(bRec);
 						float ke = k_tr(a_rSurfaceUNUSED, math::sqrt(dist2));
-						Lp += PI * ke * l * bsdfFactor / Frame::cosTheta(bRec.wo); N2++;
+						Lp += PI * ke * l * bsdfFactor / Frame::cosTheta(bRec.wo);
 					}
 					i = e.getNext();
 				}
-				/*unsigned int cell_idx = map.m_sHash.Hash(Vec3u(a, b, c));
-				if (cell_idx < map.m_uGridLength)
-				{
-					AABB cell_world = map.m_sHash.getCell(Vec3u(a, b, c));
-					AABB disk_aabb_in_box = calculatePlaneAABBInCell(cell_world, bRec.dg.P, bRec.dg.sys.n, a_rSurfaceUNUSED);
-					AABB plane_aabb_in_box = calculatePlaneAABBInCell(cell_world, bRec.dg.P, bRec.dg.sys.n, map.m_sHash.m_vCellSize.length() * 5);
-					float scale = (calculatePlaneAreaInCell(disk_aabb_in_box)) / calculatePlaneAreaInCell(plane_aabb_in_box);
-					auto& e = g_SurfaceEntries2[cell_idx];
-					//float X = disk_aabb_in_box.maxV.x - disk_aabb_in_box.minV.x, X2 = disk_aabb_in_box.maxV.x * disk_aabb_in_box.maxV.
-					Spectrum m_sValue = e.m_sValues[0];
-					Lp += mat->bsdf.As<diffuse>()->m_reflectance.Evaluate(bRec.dg) * m_sValue / (PI * r2);
-				}*/
 			}
-	//printf("N = %d N2 = %d,   ", N, N2);
 	return Lp / float(photonMap.m_uPhotonNumEmitted);
 }
 
@@ -447,7 +442,6 @@ void k_sPpmTracer::RenderBlock(e_Image* I, int x, int y, int blockW, int blockH)
 	if (m_sPhotonBeams.m_pGrid)
 		ThrowCudaErrors(cudaBindTexture(&offset, &t_PhotonBeams, m_sPhotonBeams.m_pGrid, &cdi2, m_sPhotonBeams.m_uGridLength * sizeof(int2)));
 	//ThrowCudaErrors(cudaMemcpyToSymbol(g_PhotonBeamGrid, &m_sPhotonBeams, sizeof(m_sPhotonBeams)));
-	ThrowCudaErrors(cudaMemcpyToSymbol(g_SurfaceEntries2, &m_pSurfaceValues, sizeof(m_pSurfaceValues)));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_BVHBeamStorage, &m_sBVHBeams, sizeof(m_sBVHBeams)));
 
 	float radius2 = getCurrentRadius2(2);

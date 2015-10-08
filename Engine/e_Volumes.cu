@@ -394,8 +394,6 @@ float e_KernelAggregateVolume::Sample(const Vec3f& p, const Vec3f& wo, CudaRNG& 
 float e_KernelAggregateVolume::p(const Vec3f& p, const Vec3f& wo, const Vec3f& wi, CudaRNG& rng, unsigned int a_NodeIndex)
 {
 	PhaseFunctionSamplingRecord r2(wo, wi);
-	r2.wi = wo;
-	r2.wo = wi;
 	for(unsigned int i = 0; i < m_uVolumeCount; i++)
 		if (m_pVolumes[i].As()->isInVolume(a_NodeIndex) && m_pVolumes[i].WorldBound().Contains(p))
 			return m_pVolumes[i].As()->Func.Evaluate(r2);

@@ -19,7 +19,7 @@
     <Filter Include="Engine\SceneBuilder">
       <UniqueIdentifier>{3bb70ff5-b556-42db-9042-9985093f213c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Integrators\Beams">
+    <Filter Include="Integrators\VolEstimators">
       <UniqueIdentifier>{c37c6e80-ebc7-43f5-9f75-217778385c45}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -296,8 +296,20 @@
     <ClInclude Include="Kernel\k_BVHTracer.h">
       <Filter>Kernel</Filter>
     </ClInclude>
-    <ClInclude Include="Integrators\Beams\k_BeamBVHStorage.h">
-      <Filter>Integrators\Beams</Filter>
+    <ClInclude Include="Integrators\VolEstimators\k_Beam.h">
+      <Filter>Integrators\VolEstimators</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\VolEstimators\k_BeamBeamGrid.h">
+      <Filter>Integrators\VolEstimators</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\VolEstimators\k_BeamBVHStorage.h">
+      <Filter>Integrators\VolEstimators</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\VolEstimators\k_BeamGrid.h">
+      <Filter>Integrators\VolEstimators</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\VolEstimators\k_PointStorage.h">
+      <Filter>Integrators\VolEstimators</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -504,8 +516,14 @@
     <CudaCompile Include="Integrators\k_WavefrontVCM.cu">
       <Filter>Integrators</Filter>
     </CudaCompile>
-    <CudaCompile Include="Integrators\Beams\k_BeamBVHStorage.cu">
-      <Filter>Integrators\Beams</Filter>
+    <CudaCompile Include="Integrators\VolEstimators\k_BeamBeamGrid.cu">
+      <Filter>Integrators\VolEstimators</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Integrators\VolEstimators\k_BeamBVHStorage.cu">
+      <Filter>Integrators\VolEstimators</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Integrators\VolEstimators\k_BeamGrid.cu">
+      <Filter>Integrators\VolEstimators</Filter>
     </CudaCompile>
   </ItemGroup>
 </Project>

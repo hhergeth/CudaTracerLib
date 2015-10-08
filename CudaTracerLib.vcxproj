@@ -183,14 +183,17 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClCompile Include="Engine\SceneBuilder\MD5Parser.cpp" />
     <ClCompile Include="Engine\SceneBuilder\ObjParser.cpp" />
     <ClCompile Include="Engine\SceneBuilder\PlyParser.cpp" />
-    <ClCompile Include="Engine\SceneBuilder\SplitBVHBuilder.cpp" />
+    <ClCompile Include="Engine\SceneBuilder\SplitBVHBuilder.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='CPU_Debug|x64'">MaxSpeed</Optimization>
+      <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='CPU_Debug|x64'">Default</BasicRuntimeChecks>
+      <IntrinsicFunctions Condition="'$(Configuration)|$(Platform)'=='CPU_Debug|x64'">true</IntrinsicFunctions>
+    </ClCompile>
     <ClInclude Include="CudaMemoryManager.h" />
     <ClInclude Include="Engine\e_Buffer_device.h" />
     <ClInclude Include="Engine\e_BVHRebuilder.h" />
     <ClInclude Include="Engine\e_FileTexture_device.h" />
     <ClInclude Include="Engine\e_SceneBVH_device.h" />
     <ClInclude Include="Engine\SceneBuilder\TangentSpaceHelper.h" />
-    <ClInclude Include="Integrators\Beams\k_BeamBVHStorage.h" />
     <ClInclude Include="Integrators\k_GradientDescent.h">
       <FileType>CppCode</FileType>
     </ClInclude>
@@ -206,6 +209,11 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClInclude Include="Integrators\k_WavefrontVCM.h" />
+    <ClInclude Include="Integrators\VolEstimators\k_Beam.h" />
+    <ClInclude Include="Integrators\VolEstimators\k_BeamBeamGrid.h" />
+    <ClInclude Include="Integrators\VolEstimators\k_BeamBVHStorage.h" />
+    <ClInclude Include="Integrators\VolEstimators\k_BeamGrid.h" />
+    <ClInclude Include="Integrators\VolEstimators\k_PointStorage.h" />
     <ClInclude Include="Kernel\k_BVHTracer.h" />
     <ClInclude Include="Kernel\k_RayBuffer.h" />
     <ClInclude Include="VirtualFuncType.h" />
@@ -316,7 +324,6 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <CudaCompile Include="Engine\e_TriangleData.cu" />
     <CudaCompile Include="Engine\e_TriIntersectorData.cu" />
     <CudaCompile Include="Engine\e_Volumes.cu" />
-    <CudaCompile Include="Integrators\Beams\k_BeamBVHStorage.cu" />
     <CudaCompile Include="Integrators\k_BDPT.cu" />
     <CudaCompile Include="Integrators\k_FastTracer.cu">
       <PtxAsOptionV Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</PtxAsOptionV>
@@ -333,6 +340,9 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <CudaCompile Include="Integrators\k_sPpmTracer_PhotonPass.cu" />
     <CudaCompile Include="Integrators\k_VCM.cu" />
     <CudaCompile Include="Integrators\k_WavefrontVCM.cu" />
+    <CudaCompile Include="Integrators\VolEstimators\k_BeamBeamGrid.cu" />
+    <CudaCompile Include="Integrators\VolEstimators\k_BeamBVHStorage.cu" />
+    <CudaCompile Include="Integrators\VolEstimators\k_BeamGrid.cu" />
     <CudaCompile Include="Kernel\k_BlockSampler.cu" />
     <CudaCompile Include="Kernel\k_BSDFVisualizer.cu" />
     <CudaCompile Include="Kernel\k_TraceAlgorithms.cu" />

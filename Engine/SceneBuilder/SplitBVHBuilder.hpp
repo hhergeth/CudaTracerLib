@@ -40,15 +40,6 @@ All rights reserved.
 //These classes are based on "understanding-the-efficiency-of-ray-traversal-on-gpus" with slight modifications.
 //The main algorithm is 100% their great work!
 
-enum BVH_STAT
-{
-	BVH_STAT_NODE_COUNT,
-	BVH_STAT_INNER_COUNT,
-	BVH_STAT_LEAF_COUNT,
-	BVH_STAT_TRIANGLE_COUNT,
-	BVH_STAT_CHILDNODE_COUNT,
-};
-
 class BVHNode
 {
 	unsigned int left, right;
@@ -118,7 +109,7 @@ public:
 	class Platform
 	{
 	public:
-		Platform()                                                                                                          { m_SAHNodeCost = 1.f; m_SAHTriangleCost = 1.f; m_nodeBatchSize = 1; m_triBatchSize = 1; m_minLeafSize = 1; m_maxLeafSize = 0x7FFFFFF; }
+		Platform()                                                                                                          { m_SAHNodeCost = 1.f; m_SAHTriangleCost = 1.f; m_nodeBatchSize = 1; m_triBatchSize = 1; m_minLeafSize = 1; m_maxLeafSize = 0x7FFFFFF; m_objectSplits = m_spatialSplits = true; }
 		//Platform(float nodeCost=1.f, float triCost=1.f, int nodeBatchSize=1, int triBatchSize=1) { m_SAHNodeCost = nodeCost; m_SAHTriangleCost = triCost; m_nodeBatchSize = nodeBatchSize; m_triBatchSize = triBatchSize; m_minLeafSize=1; m_maxLeafSize=0x7FFFFFF; }
 
 
@@ -144,6 +135,8 @@ public:
 		int   getMinLeafSize() const                        { return m_minLeafSize; }
 		int   getMaxLeafSize() const                        { return m_maxLeafSize; }
 
+		bool	m_objectSplits;
+		bool	m_spatialSplits;
 	public:
 		float   m_SAHNodeCost;
 		float   m_SAHTriangleCost;
