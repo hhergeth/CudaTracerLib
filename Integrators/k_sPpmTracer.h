@@ -3,7 +3,9 @@
 #include "..\Kernel\k_Tracer.h"
 #include "k_PhotonMapHelper.h"
 #include "../CudaMemoryManager.h"
-#include "VolEstimators\k_Beam.h"
+#include "VolEstimators\k_BeamBeamGrid.h"
+#include "VolEstimators\k_BeamBVHStorage.h"
+#include "VolEstimators\k_BeamGrid.h"
 
 struct k_AdaptiveEntry
 {
@@ -34,27 +36,6 @@ private:
 	k_AdaptiveEntry* E;
 };
 
-struct k_BeamMap
-{
-	unsigned int m_uIndex;
-	unsigned int m_uNumEntries, m_uGridEntries;
-	Vec2i* m_pDeviceData;
-};
-
-#include "VolEstimators\k_BeamBVHStorage.h"
-
-struct k_BeamGrid
-{
-	k_Beam* m_pDeviceBeams;
-	unsigned int m_uBeamIdx;
-	unsigned int m_uBeamLength;
-
-	Vec2i* m_pGrid;
-	unsigned int m_uGridIdx;
-	unsigned int m_uGridLength;
-	unsigned int m_uGridOffset;
-};
-
 enum
 {
 	PPM_Photons_Per_Thread = 12,
@@ -67,35 +48,31 @@ enum
 	PPM_slots_per_block = PPM_photons_per_block * PPM_MaxRecursion,
 };
 
-class k_sPpmTracer : public k_Tracer<true, true>
+class k_sPpmTracer : public k_Tracer<true, true>, public IRadiusProvider
 {
 private:
-	k_BeamBVHStorage m_sBVHBeams;
-	k_PhotonMapCollection<true, k_pPpmPhoton> m_sMaps;
-	k_BeamMap m_sBeams;
-	k_BeamGrid m_sPhotonBeams;
+	e_SpatialLinkedMap<k_pPpmPhoton> m_sSurfaceMap;
+	IVolumeEstimator* m_pVolumeEstimator;
 
-	bool m_bDirect;
 	float m_fLightVisibility;
 
 	float m_fInitialRadius;
-	unsigned long long m_uPhotonsEmitted;
+	unsigned int m_uPhotonEmittedPass;
+	unsigned long long m_uTotalPhotonsEmitted;
 
 	unsigned int m_uBlocksPerLaunch;
-
-	bool m_bLongRunning;
 
 	k_AdaptiveEntry* m_pEntries;
 	float r_min, r_max;
 
 public:
-	bool m_bVisualizeGrid;
-	unsigned int m_uVisLastMax;
 	bool m_bFinalGather;
+	bool m_bDirect;
+
 	k_sPpmTracer();
 	virtual ~k_sPpmTracer()
 	{
-		m_sMaps.Free();
+		m_sSurfaceMap.Free();
 		CUDA_FREE(m_pEntries);
 	}
 	virtual void Resize(unsigned int _w, unsigned int _h);
@@ -106,7 +83,7 @@ public:
 	{
 		return math::pow(math::pow(initial_r, exp) / math::pow(float(iteration), 0.5f * (1 - ALPHA)), 1.0f / exp);
 	}
-	float getCurrentRadius2(float exp)
+	virtual float getCurrentRadius(float exp) const
 	{
 		return getCurrentRadius(m_fInitialRadius, m_uPassesDone, exp);
 	}
@@ -117,6 +94,4 @@ protected:
 private:
 	void doPhotonPass();
 	void doStartPass(float r, float rd);
-	void estimatePerPixelRadius();
-	void visualizeGrid(e_Image* I);
 };

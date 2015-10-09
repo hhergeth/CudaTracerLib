@@ -6,50 +6,35 @@
 #include "../Engine/e_Node.h"
 #include "../Engine/e_Mesh.h"
 
-#define LNG 100
-#define SER_NAME "photonMapBuf.dat"
-
 k_sPpmTracer::k_sPpmTracer()
-	: m_pEntries(0), m_bFinalGather(false), m_bVisualizeGrid(false), m_fLightVisibility(1), m_sBVHBeams(10 * 1024, 0)
+	: m_pEntries(0), m_bFinalGather(false), m_fLightVisibility(1)
 {
 #ifdef NDEBUG
 	m_uBlocksPerLaunch = 180;
 #else
 	m_uBlocksPerLaunch = 1;
 #endif
-	m_uPhotonsEmitted = -1;
-	m_bLongRunning = false;
+	m_uTotalPhotonsEmitted = -1;
 	unsigned int numPhotons = (m_uBlocksPerLaunch + 2) * PPM_slots_per_block;
-	unsigned int linkedListLength = numPhotons * 10;
-	m_sMaps = k_PhotonMapCollection<true, k_pPpmPhoton>(numPhotons, LNG*LNG*LNG, linkedListLength);
-	m_sBeams.m_pDeviceData = 0;
-	m_sPhotonBeams.m_pGrid = 0;
-	m_sPhotonBeams.m_pDeviceBeams = 0;
-	
-	m_sBeams.m_uGridEntries = LNG*LNG*LNG;
-	m_sBeams.m_uNumEntries = m_sBeams.m_uGridEntries * (1 + 20);
-	//CUDA_MALLOC(&m_sBeams.m_pDeviceData, sizeof(Vec2i) * m_sBeams.m_uNumEntries);
-
-	m_sPhotonBeams.m_uBeamIdx = 0;
-	m_sPhotonBeams.m_uBeamLength = 100000;
-	//CUDA_MALLOC(&m_sPhotonBeams.m_pDeviceBeams, sizeof(k_Beam) * m_sPhotonBeams.m_uBeamLength);
-	m_sPhotonBeams.m_uGridIdx = 0;
-	m_sPhotonBeams.m_uGridOffset = LNG*LNG*LNG;
-	m_sPhotonBeams.m_uGridLength = m_sPhotonBeams.m_uGridOffset * (1 + 1000);
-	//CUDA_MALLOC(&m_sPhotonBeams.m_pGrid, sizeof(Vec2i) * m_sPhotonBeams.m_uGridLength);
+	m_sSurfaceMap = e_SpatialLinkedMap<k_pPpmPhoton>(250, numPhotons * PPM_MaxRecursion);
+	//m_pVolumeEstimator = new k_PointStorage(100, numPhotons * PPM_MaxRecursion / 2);
+	//m_pVolumeEstimator = new k_BeamGrid(100, numPhotons * PPM_MaxRecursion / 2);
+	//m_pVolumeEstimator = new k_BeamBVHStorage(numPhotons/50, 0);
+	m_pVolumeEstimator = new k_BeamBeamGrid(30, numPhotons * PPM_MaxRecursion / 2);
 }
 
 void k_sPpmTracer::PrintStatus(std::vector<std::string>& a_Buf) const
 {
-	double pC = floor((double)m_uPhotonsEmitted / 1000000.0);
+	double pC = floor((double)m_uTotalPhotonsEmitted / 1000000.0);
 	a_Buf.push_back(format("Photons emitted : %d[Mil]", (int)pC));
-	double pCs = m_uPhotonsEmitted / m_fAccRuntime / 1000000.0f;
+	double pCs = m_uTotalPhotonsEmitted / m_fAccRuntime / 1000000.0f;
 	a_Buf.push_back(format("Photons/Sec : %f", (float)pCs));
 	a_Buf.push_back(format("Light Visibility : %f", m_fLightVisibility));
-	a_Buf.push_back(format("Photons per pass : %d*100,000", m_sMaps.m_uPhotonBufferLength / 100000));
-	if (m_bVisualizeGrid)
-		a_Buf.push_back(format("Max #Photons per cell : %d", m_uVisLastMax));
+	a_Buf.push_back(format("Photons per pass : %d*100,000", m_sSurfaceMap.numData / 100000));
 	a_Buf.push_back(format("Final gather %d", m_bFinalGather));
+	a_Buf.push_back(format("%.2f%% Surf Photons", (float)m_sSurfaceMap.deviceDataIdx / m_sSurfaceMap.numData * 100));
+	a_Buf.push_back("Volumeric Estimator : ");
+	m_pVolumeEstimator->PrintStatus(a_Buf);
 }
 
 void k_sPpmTracer::CreateSliders(SliderCreateCallback a_Callback) const
@@ -112,21 +97,13 @@ void k_sPpmTracer::DoRender(e_Image* I)
 {
 	//I->Clear();
 	doPhotonPass();
-	if (m_uPhotonsEmitted == 0)
-	{
-		//estimatePerPixelRadius();
-	}
-	m_uPhotonsEmitted += m_sMaps.m_uPhotonNumEmitted;
-	if (m_bVisualizeGrid)
-		visualizeGrid(I);
-	else k_Tracer<true, true>::DoRender(I);
+	m_uTotalPhotonsEmitted += m_uPhotonEmittedPass;
+	k_Tracer<true, true>::DoRender(I);
 
 	//k_AdaptiveStruct str(r_min, r_max, m_pEntries, w, m_uPassesDone);
 	//k_AdaptiveEntry ent;
 	//ThrowCudaErrors(cudaMemcpy(&ent, &str(lastPix.x, lastPix.y), sizeof(ent), cudaMemcpyDeviceToHost));
 	//printf("{r = %f, rd = %f}, r = %f, {min = %f, max = %f}\n", ent.r, ent.rd, getCurrentRadius2(2), str.r_min, str.r_max);
-
-	m_sMaps.StartNewPass();
 }
 
 void k_sPpmTracer::Debug(e_Image* I, const Vec2i& pixel)
@@ -136,7 +113,6 @@ void k_sPpmTracer::Debug(e_Image* I, const Vec2i& pixel)
 
 void k_sPpmTracer::StartNewTrace(e_Image* I)
 {
-	m_sBVHBeams.m_pScene = m_pScene;
 	m_bDirect = !m_pScene->getVolumes().hasElements();
 #ifndef _DEBUG
 	m_fLightVisibility = k_Tracer::GetLightVisibility(m_pScene, 1);
@@ -145,7 +121,7 @@ void k_sPpmTracer::StartNewTrace(e_Image* I)
 		m_bDirect = m_fLightVisibility > 0.5f;
 	//m_bDirect = 0;
 	k_Tracer<true, true>::StartNewTrace(I);
-	m_uPhotonsEmitted = 0;
+	m_uTotalPhotonsEmitted = 0;
 #ifndef _DEBUG
 	AABB m_sEyeBox = GetEyeHitPointBox(m_pScene, true);
 #else
@@ -167,13 +143,11 @@ void k_sPpmTracer::StartNewTrace(e_Image* I)
 			if (mats(j)->GetBSSRDF(dg, &bssrdf))
 			{
 				volBox = volBox.Extend(m_pScene->getNodeBox(it));
-				m_bLongRunning |= 1;
 			}
 		}
 	}
-	//volBox = m_pScene->getKernelSceneData().m_sBox;
-	m_sMaps.StartNewRendering(m_sEyeBox, volBox, r);
-	m_sMaps.StartNewPass();
+	m_sSurfaceMap.SetSceneDimensions(m_sEyeBox, r);
+	m_pVolumeEstimator->StartNewRendering(volBox, r);
 
 	float r_scene = m_sEyeBox.Size().length() / 2;
 	r_min = 10e-7f * r_scene;

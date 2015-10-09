@@ -14,12 +14,9 @@ struct k_BeamGrid : public k_PointStorage
 
 	}
 
-	k_BeamGrid(unsigned int gridDim, unsigned int numPhotons)
-		: k_PointStorage(gridDim, numPhotons)
+	k_BeamGrid(unsigned int gridDim, unsigned int numPhotons, int N = 20, float nnSearch = 1)
+		: k_PointStorage(gridDim, numPhotons), photonDensNum(nnSearch)
 	{
-		const int N = 20;
-		photonDensNum = 2;
-
 		m_uGridEntries = gridDim*gridDim*gridDim;
 		m_uNumEntries = m_uGridEntries * (1 + N);
 		CUDA_MALLOC(&m_pDeviceData, sizeof(Vec2i) * m_uNumEntries);
@@ -31,7 +28,18 @@ struct k_BeamGrid : public k_PointStorage
 		CUDA_FREE(m_pDeviceData);
 	}
 
+	virtual size_t getSize() const
+	{
+		return sizeof(*this);
+	}
+
 	virtual void PrepareForRendering();
+
+	virtual void PrintStatus(std::vector<std::string>& a_Buf) const
+	{
+		k_PointStorage::PrintStatus(a_Buf);
+		a_Buf.push_back(format("%.2f%% Beam indices", (float)m_uIndex / m_uNumEntries * 100));
+	}
 
 	template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum L_Volume(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr)
 	{
@@ -52,9 +60,9 @@ struct k_BeamGrid : public k_PointStorage
 					float l1 = dot(ph.p - r.origin, r.direction) / dot(r.direction, r.direction);
 					if (distanceSquared(ph.p, r(l1)) < ph.rad && rayT <= l1 && l1 <= cellEndT)
 					{
-						float p = vol.p(P, r.direction, wi, rng);
+						float p = vol.p(ph.p, r.direction, ph.wi, rng);
 						Spectrum tauToPhoton = (-Tau - vol.tau(r, rayT, l1)).exp();
-						L_n += p * ph.phi / (PI * m_uNumEmitted * r_p2) * tauToPhoton;
+						L_n += p * ph.phi / (PI * m_uNumEmitted * ph.rad) * tauToPhoton;
 					}
 				}
 			}

@@ -6,9 +6,8 @@
 
 class e_DynamicScene;
 
-class k_BeamBVHStorage
+class k_BeamBVHStorage : public IVolumeEstimator
 {
-public:
 	unsigned int m_uNumEmitted;
 	k_Beam* m_pDeviceBeams;
 	k_Beam* m_pHostBeams;
@@ -22,29 +21,40 @@ public:
 	std::vector<k_Beam>* m_sHostBVHBeams;
 	e_DynamicScene* m_pScene;
 	float m_fCurrentRadiusVol;
-
+public:
 	k_BeamBVHStorage(){}
 	k_BeamBVHStorage(unsigned int nBeams, e_DynamicScene* S);
-	void Free();
+	virtual void Free();
 
-	void StartNewPass(float r3)
+	virtual void StartNewPass(const IRadiusProvider* radProvider, e_DynamicScene* scene)
 	{
+		m_pScene = scene;
 		m_uBeamIdx = 0;
 		m_uNumEmitted = 0;
-		m_fCurrentRadiusVol = r3;
+		m_fCurrentRadiusVol = radProvider->getCurrentRadius(1);
 	}
 
-	void StartNewRendering(const AABB& box, float a_InitRadius)
+	virtual void StartNewRendering(const AABB& box, float a_InitRadius)
 	{
 
 	}
 
-	bool isFull() const
+	virtual bool isFull() const
 	{
 		return m_uBeamIdx >= m_uNumBeams;
 	}
 
-	void PrepareForRendering();
+	virtual size_t getSize() const
+	{
+		return sizeof(*this);
+	}
+
+	virtual void PrintStatus(std::vector<std::string>& a_Buf) const
+	{
+		a_Buf.push_back(format("%.2f%% Vol Beams", (float)m_uBeamIdx / m_uNumBeams * 100));
+	}
+
+	virtual void PrepareForRendering();
 
 	CUDA_ONLY_FUNC void StoreBeam(const k_Beam& b, bool firstStore)
 	{
@@ -93,6 +103,6 @@ public:
 			}
 		});
 		Tr = (-vol.tau(r, tmin, tmax)).exp();
-		return L_n / (a_r * getNumEmitted());
+		return L_n / (a_r * m_uNumEmitted);
 	}
 };

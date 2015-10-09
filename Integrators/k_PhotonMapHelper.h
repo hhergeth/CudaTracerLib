@@ -38,13 +38,12 @@ enum PhotonType
 struct k_pPpmPhoton
 {
 private:
-	Vec3f Pos;
-	//unsigned int pos;
 	RGBE L;
 	unsigned short Wi;
 	unsigned short Nor;
 	unsigned int typeNextField;
 public:
+	Vec3f Pos;
 	CUDA_FUNC_IN k_pPpmPhoton(){}
 	CUDA_FUNC_IN k_pPpmPhoton(const Spectrum& l, const Vec3f& wi, const Vec3f& n, PhotonType type)
 	{

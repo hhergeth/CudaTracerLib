@@ -81,7 +81,7 @@ public:
 	e_PhaseFunction Func;
 	float4x4 WorldToVolume, VolumeToWorld;
 
-	e_BaseVolumeRegion()
+	CUDA_FUNC_IN e_BaseVolumeRegion()
 	{
 		m_uNodeIndex = 0xffffffff;
 	}
@@ -121,7 +121,7 @@ public:
 		le = Spectrum(emit);
 	}
 
-	e_HomogeneousVolumeDensity(const e_PhaseFunction& func, const float4x4& ToWorld, const Spectrum& sa, const Spectrum& ss, const Spectrum& emit)
+	CUDA_FUNC_IN e_HomogeneousVolumeDensity(const e_PhaseFunction& func, const float4x4& ToWorld, const Spectrum& sa, const Spectrum& ss, const Spectrum& emit)
 	{
 		e_BaseVolumeRegion::Func = func;
 		VolumeToWorld = ToWorld;

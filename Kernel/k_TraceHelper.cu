@@ -81,9 +81,8 @@ bool k_TraceRay(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result)
 		e_Node* N = g_SceneData.m_sNodeData.Data + nodeIdx;
 		e_KernelMesh mesh = g_SceneData.m_sMeshData[N->m_uMeshIndex];
 		//transform a_Result->m_fDist to local system
-		float4x4 modl, modl2;
+		float4x4 modl;
 		loadInvModl(nodeIdx, &modl);
-		loadModl(nodeIdx, &modl2);
 		Vec3f d = modl.TransformDirection(dir), o = modl.TransformPoint(ori);
 		return k_TraceRayTemplate(Ray(o, d), a_Result->m_fDist, [&](int triIdx)
 		{

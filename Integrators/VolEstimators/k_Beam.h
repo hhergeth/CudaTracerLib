@@ -2,6 +2,8 @@
 #include "../../Defines.h"
 #include "../../MathTypes.h"
 #include <Kernel/k_TraceHelper.h>
+#include <vector>
+#include <Base/Platform.h>
 
 struct k_Beam
 {
@@ -44,6 +46,33 @@ CUDA_FUNC_IN float skew_lines(const Ray& r, const Ray& r2, float& t1, float& t2)
 
 	return D;
 }
+
+class IRadiusProvider
+{
+public:
+	virtual float getCurrentRadius(float exp) const = 0;
+};
+
+class IVolumeEstimator
+{
+public:
+	virtual void Free()
+	{
+
+	}
+
+	virtual void StartNewPass(const IRadiusProvider* radProvider, e_DynamicScene* scene) = 0;
+
+	virtual void StartNewRendering(const AABB& box, float a_InitRadius) = 0;
+
+	virtual bool isFull() const = 0;
+
+	virtual void PrepareForRendering() = 0;
+
+	virtual size_t getSize() const = 0;
+
+	virtual void PrintStatus(std::vector<std::string>& a_Buf) const = 0;
+};
 
 template<bool USE_GLOBAL> struct VolHelper
 {

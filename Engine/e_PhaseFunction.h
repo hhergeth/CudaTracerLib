@@ -26,8 +26,8 @@ struct e_BasePhaseFunction : public e_BaseType//, public e_BaseTypeHelper<440891
 {
 	EPhaseFunctionType type;
 
-	e_BasePhaseFunction(){}
-	e_BasePhaseFunction(EPhaseFunctionType t)
+	CUDA_FUNC_IN e_BasePhaseFunction(){}
+	CUDA_FUNC_IN e_BasePhaseFunction(EPhaseFunctionType t)
 		: type(t)
 	{
 
@@ -55,7 +55,7 @@ struct e_HGPhaseFunction : public e_BasePhaseFunction//, public e_DerivedTypeHel
 struct e_IsotropicPhaseFunction : public e_BasePhaseFunction//, public e_DerivedTypeHelper<2>
 {
 	TYPE_FUNC(2)
-	e_IsotropicPhaseFunction()
+	CUDA_FUNC_IN e_IsotropicPhaseFunction()
 		: e_BasePhaseFunction((EPhaseFunctionType)(pEIsotropic | pEAngleDependence))
 	{
 	}
@@ -103,7 +103,7 @@ struct e_RayleighPhaseFunction : public e_BasePhaseFunction//, public e_DerivedT
 struct CUDA_ALIGN(16) e_PhaseFunction : public CudaVirtualAggregate<e_BasePhaseFunction, e_HGPhaseFunction, e_IsotropicPhaseFunction, e_KajiyaKayPhaseFunction, e_RayleighPhaseFunction>
 {
 public:
-	e_PhaseFunction()
+	CUDA_FUNC_IN e_PhaseFunction()
 	{
 		type = 0;
 	}

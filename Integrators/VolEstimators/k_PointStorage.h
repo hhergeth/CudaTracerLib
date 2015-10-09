@@ -2,7 +2,7 @@
 #include "k_Beam.h"
 #include <Engine/e_SpatialGrid.h>
 
-struct k_PointStorage
+struct k_PointStorage : public IVolumeEstimator
 {
 	struct volPhoton
 	{
@@ -37,9 +37,9 @@ struct k_PointStorage
 		m_sStorage.Free();
 	}
 
-	virtual void StartNewPass(float r3)
+	virtual void StartNewPass(const IRadiusProvider* radProvider, e_DynamicScene* scene)
 	{
-		m_fCurrentRadiusVol = r3;
+		m_fCurrentRadiusVol = radProvider->getCurrentRadius(3);
 		m_uNumEmitted = 0;
 		m_sStorage.ResetBuffer();
 	}
@@ -52,6 +52,16 @@ struct k_PointStorage
 	virtual bool isFull() const
 	{
 		return m_sStorage.isFull();
+	}
+
+	virtual size_t getSize() const
+	{
+		return sizeof(*this);
+	}
+
+	virtual void PrintStatus(std::vector<std::string>& a_Buf) const
+	{
+		a_Buf.push_back(format("%.2f%% Vol Photons", (float)m_sStorage.deviceDataIdx / m_sStorage.numData * 100));
 	}
 
 	virtual void PrepareForRendering()
@@ -70,7 +80,7 @@ struct k_PointStorage
 			Platform::Increment(&m_uNumEmitted);
 	}
 
-	template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum L_Volume(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr) const
+	template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum L_Volume(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr)
 	{
 		Spectrum Tau = Spectrum(0.0f);
 		float Vs = 1.0f / ((4.0f / 3.0f) * PI * a_r * a_r * a_r * m_uNumEmitted), r2 = a_r * a_r;
@@ -92,12 +102,12 @@ struct k_PointStorage
 					float p = vol.p(x, r.direction, ph.wi, rng);
 					float l1 = dot(ph.p - r.origin, r.direction) / dot(r.direction, r.direction);
 					Spectrum tauToPhoton = (-Tau - g_SceneData.m_sVolume.tau(r, a, l1)).exp();
-					L_n += p * l * Vs * tauToPhoton * d;
+					L_n += p * ph.phi * Vs * tauToPhoton * d;
 				}
 			});
-			Spectrum tauDelta = vol.tau(r, a, a + d, a_NodeIndex);
+			Spectrum tauDelta = vol.tau(r, a, a + d);
 			Tau += tauDelta;
-			L_n += vol.Lve(x, -1.0f * r.direction, a_NodeIndex) * d;
+			L_n += vol.Lve(x, -1.0f * r.direction) * d;
 			a += d;
 		}
 		Tr = (-Tau).exp();

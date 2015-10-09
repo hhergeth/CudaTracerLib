@@ -2,21 +2,21 @@
 #include "k_Beam.h"
 #include <Engine/e_SpatialGrid.h>
 
-struct k_BeamBeamGrid
+struct k_BeamBeamGrid : public IVolumeEstimator
 {
+	e_SpatialLinkedMap<int> m_sStorage;
+
 	k_Beam* m_pDeviceBeams;
 	unsigned int m_uBeamIdx;
 	unsigned int m_uBeamLength;
 
-	e_SpatialLinkedMap<int> m_sStorage;
-
 	unsigned int m_uNumEmitted;
 	float m_fCurrentRadiusVol;
 
-	k_BeamBeamGrid(unsigned int gridDim, unsigned int numPhotons, int N = 100)
-		: m_sStorage(gridDim, gridDim * gridDim * gridDim * N)
+	k_BeamBeamGrid(unsigned int gridDim, unsigned int numBeams, int N = 100)
+		: m_sStorage(gridDim, gridDim * gridDim * gridDim * N), m_uBeamLength(numBeams)
 	{
-		CUDA_MALLOC(&m_pDeviceBeams, sizeof(k_Beam) * numPhotons);
+		CUDA_MALLOC(&m_pDeviceBeams, sizeof(k_Beam) * m_uBeamLength);
 	}
 
 	virtual void Free()
@@ -25,11 +25,12 @@ struct k_BeamBeamGrid
 		CUDA_FREE(m_pDeviceBeams);
 	}
 
-	virtual void StartNewPass(float r3)
+	virtual void StartNewPass(const IRadiusProvider* radProvider, e_DynamicScene* scene)
 	{
-		m_fCurrentRadiusVol = r3;
+		m_fCurrentRadiusVol = radProvider->getCurrentRadius(1);
 		m_uNumEmitted = 0;
 		m_uBeamIdx = 0;
+		m_sStorage.ResetBuffer();
 	}
 
 	virtual void StartNewRendering(const AABB& box, float a_InitRadius)
@@ -42,6 +43,17 @@ struct k_BeamBeamGrid
 		return m_uBeamIdx >= m_uBeamLength;
 	}
 
+	virtual void PrintStatus(std::vector<std::string>& a_Buf) const
+	{
+		a_Buf.push_back(format("%.2f%% Vol Beams", (float)m_sStorage.deviceDataIdx / m_sStorage.numData * 100));
+		a_Buf.push_back(format("%.2f%% Beam indices", (float)m_uBeamIdx / m_uBeamLength * 100));
+	}
+
+	virtual size_t getSize() const
+	{
+		return sizeof(*this);
+	}
+
 	virtual void PrepareForRendering()
 	{
 
@@ -49,11 +61,11 @@ struct k_BeamBeamGrid
 
 	CUDA_ONLY_FUNC void StoreBeam(const k_Beam& b, bool firstStore)
 	{
-		unsigned int i = atomicInc(&m_uBeamIdx, (unsigned int)-1);
-		if (i < m_uBeamLength)
+		unsigned int beam_idx = atomicInc(&m_uBeamIdx, (unsigned int)-1);
+		if (beam_idx < m_uBeamLength)
 		{
-			m_pDeviceBeams[i] = b;
-
+			m_pDeviceBeams[beam_idx] = b;
+			
 			struct hashPos
 			{
 				unsigned long long flags;
@@ -85,11 +97,11 @@ struct k_BeamBeamGrid
 			//Vec3u lastMin(M), lastMax(M);
 			hashPos H1, H2;
 #ifdef ISCUDA
-			TraverseGrid(r, m_sStorage.hashMap, 0, t, [&](float minT, float rayT, float maxT, float cellEndT, Vec3u& cell_pos, bool& cancelTraversal)
+			TraverseGrid(Ray(b.pos, b.dir), m_sStorage.hashMap, 0, b.t, [&](float minT, float rayT, float maxT, float cellEndT, Vec3u& cell_pos, bool& cancelTraversal)
 			{
 				H1 = H2;
-				Frame f_ray(r.direction);
-				Vec3f disk_a = r(rayT) + f_ray.toWorld(Vec3f(-1, -1, 0)) * m_fCurrentRadiusVol, disk_b = r(rayT) + f_ray.toWorld(Vec3f(1, 1, 0)) * m_fCurrentRadiusVol;
+				Frame f_ray(b.dir);
+				Vec3f disk_a = b.pos + b.dir * rayT + f_ray.toWorld(Vec3f(-1, -1, 0)) * m_fCurrentRadiusVol, disk_b = b.pos + b.dir * rayT + f_ray.toWorld(Vec3f(1, 1, 0)) * m_fCurrentRadiusVol;
 				Vec3f min_disk = min(disk_a, disk_b), max_disk = max(disk_a, disk_b);
 				m_sStorage.ForAllCells(min_disk, max_disk, [&](const Vec3u& cell_idx)
 				{
@@ -105,14 +117,10 @@ struct k_BeamBeamGrid
 							break;
 						}
 					if (found)
-						continue;
+						return;
 					if (i_L < N_L)
 						cell_list[i_L++] = grid_idx;
-					unsigned int grid_entriy_idx = atomicInc(&m_uGridIdx, 0xffffffff);
-					if (grid_entriy_idx >= m_uGridLength)
-						return;
-					unsigned int next_grid_entry_idx = atomicExch(&m_pGrid[grid_idx].y, grid_entriy_idx);
-					m_pGrid[grid_entriy_idx] = Vec2i(beam_idx, next_grid_entry_idx);
+					m_sStorage.store(cell_idx, beam_idx);
 				});
 				if (i_L == N_L)
 					printf("cell_list full\n");
@@ -132,14 +140,14 @@ struct k_BeamBeamGrid
 
 	}
 
-	template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum L_Volume(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr) const
+	template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum L_Volume(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr)
 	{
 		Spectrum L_n = Spectrum(0.0f), Tau = Spectrum(0.0f);
 		TraverseGrid(r, m_sStorage.hashMap, tmin, tmax, [&](float minT, float rayT, float maxT, float cellEndT, Vec3u& cell_pos, bool& cancelTraversal)
 		{
 			m_sStorage.ForAll(cell_pos, [&](unsigned int ABC, int beam_idx)
 			{
-				k_Beam B = m_pDeviceBeams[beam.x];
+				k_Beam B = m_pDeviceBeams[beam_idx];
 				float t1, t2;
 				skew_lines(r, Ray(B.pos, B.dir), t1, t2);
 				Vec3f p_b = B.pos + t2 * B.dir, p_c = r.origin + t1 * r.direction;//m_sStorage.hashMap.Transform(p_b) == cell_pos && 
@@ -147,7 +155,7 @@ struct k_BeamBeamGrid
 				{
 					Spectrum tauC = Tau + vol.tau(r, rayT, t1);
 					Spectrum tauP = vol.tau(Ray(B.pos, B.dir), 0, t2);
-					float p = vol.p(p_b, (p_c - p_b).normalized(), -B.dir, rng, a_NodeIndex);
+					float p = vol.p(p_b, (p_c - p_b).normalized(), -B.dir, rng);
 					float sin_theta_b = math::sqrt(1 - math::sqr(dot(r.direction, B.dir) / (r.direction.length() * B.dir.length())));
 					L_n += 1.0f / (m_uNumEmitted * a_r) * p * B.Phi * (-tauC - tauP).exp() / sin_theta_b;
 				}

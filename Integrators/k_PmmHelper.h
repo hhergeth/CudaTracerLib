@@ -310,19 +310,18 @@ struct DirectionModel
 		gmm = GaussianMixtureModel<2, K>::Random(rng, VEC<float, 2>() % 0 % 0, VEC<float, 2>() % 1 % 1);
 	}
 
-	template<int max_SAMPLES> CUDA_FUNC_IN void Update(const e_SpatialLinkedMap<SpatialEntry>& sMap, const Vec3f& mi, const Vec3f& ma, float ny)
+	template<int MAX_SAMPLES> CUDA_FUNC_IN void Update(e_SpatialLinkedMap<SpatialEntry>& sMap, const Vec3f& mi, const Vec3f& ma, float ny)
 	{
-		qMatrix<float, 2, 1> samples[max_SAMPLES];
+		qMatrix<float, 2, 1> samples[MAX_SAMPLES];
 		int N = 0;
-		for(e_SpatialLinkedMap<SpatialEntry>::iterator it = sMap.begin(mi, ma); it != sMap.end(mi, ma); ++it)
+		sMap.ForAll(mi, ma, [&](unsigned int idx, SpatialEntry& ent)
 		{
-			samples[N++] = HemishphereToSquare(it->wi);
-			if(N == max_SAMPLES)
-				break;
-		}
+			if (N < MAX_SAMPLES)
+				samples[N++] = HemishphereToSquare(ent.wi);
+		});
 		numSamples += N;
 		if(N)
-			gmm.OnlineEM<max_SAMPLES>(stats, samples, N, ny, numSamples, 1);
+			gmm.OnlineEM<MAX_SAMPLES>(stats, samples, N, ny, numSamples, 1);
 	}
 
 	CUDA_FUNC_IN Vec3f Sample(CudaRNG& rng)
