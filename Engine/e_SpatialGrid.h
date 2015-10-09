@@ -22,7 +22,7 @@ template<typename T> struct e_SpatialLinkedMap
 public:
 	typedef e_SpatialLinkedMap_volume_iterator<T> iterator;
 
-	e_SpatialLinkedMap(){}
+	CUDA_FUNC_IN e_SpatialLinkedMap(){}
 	e_SpatialLinkedMap(unsigned int gridSize, unsigned int numData)
 		: numData(numData), gridSize(gridSize)
 	{
@@ -46,26 +46,71 @@ public:
 		ThrowCudaErrors(cudaMemset(deviceMap, -1, sizeof(unsigned int) * gridSize * gridSize * gridSize));
 	}
 
-	CUDA_FUNC_IN void store(const Vec3f& p, const T& v)
+	CUDA_FUNC_IN bool isFull() const
+	{
+		return deviceDataIdx >= numData;
+	}
+
+	CUDA_FUNC_IN bool store(const Vec3f& p, const T& v)
 	{
 		//build linked list and spatial map
 		unsigned int data_idx = Platform::Increment(&deviceDataIdx);
 		if(deviceDataIdx >= numData)
-			return;
+			return false;
 		unsigned int map_idx = hashMap.Hash(p);
 		unsigned int old_idx = Platform::Exchange(deviceMap + map_idx, data_idx);
 		//copy actual data
 		deviceData[data_idx].value = v;
 		deviceData[data_idx].nextIdx = old_idx;
+		return true;
 	}
 
 	CUDA_FUNC_IN e_SpatialLinkedMap_volume_iterator<T> begin(const Vec3f& p) const;
 
-	CUDA_FUNC_IN e_SpatialLinkedMap_volume_iterator<T> end(const Vec3f& max) const;
+	CUDA_FUNC_IN e_SpatialLinkedMap_volume_iterator<T> end(const Vec3f& p) const;
 
 	CUDA_FUNC_IN e_SpatialLinkedMap_volume_iterator<T> begin(const Vec3f& min, const Vec3f& max) const;
 
 	CUDA_FUNC_IN e_SpatialLinkedMap_volume_iterator<T> end(const Vec3f& min, const Vec3f& max) const;
+
+	template<typename CLB> CUDA_FUNC_IN void ForAll(const Vec3f& p, const CLB& clb)
+	{
+		auto e = end(p);
+		for (auto it = begin(p); it != e; ++it)
+			clb(it.getDataIdx(), *it);
+	}
+
+	template<typename CLB> CUDA_FUNC_IN void ForAll(const Vec3f& min, const Vec3f& max, const CLB& clb)
+	{
+		auto e = end(min, max);
+		for (auto it = begin(min, max); it != e; ++it)
+			clb(it.getDataIdx(), *it);
+	}
+
+	template<typename CLB> CUDA_FUNC_IN void ForAll(const Vec3u& p, const CLB& clb)
+	{
+		auto e = e_SpatialLinkedMap_volume_iterator<T>(*this, p, p, true);
+		for (auto it = e_SpatialLinkedMap_volume_iterator<T>(*this, p, p, false); it != e; ++it)
+			clb(it.getDataIdx(), *it);
+	}
+
+	template<typename CLB> CUDA_FUNC_IN void ForAll(const Vec3u& min, const Vec3u& max, const CLB& clb) 
+	{
+		auto e = e_SpatialLinkedMap_volume_iterator<T>(*this, min, max, true);
+		for (auto it = e_SpatialLinkedMap_volume_iterator<T>(*this, min, max, false); it != e; ++it)
+			clb(it.getDataIdx(), *it);
+	}
+
+	template<typename CLB> CUDA_FUNC_IN void ForAllCells(const Vec3u& min, const Vec3u& max, const CLB& clb)
+	{
+		Vec3u min_cell = hashMap.Transform(min_disk), max_cell = hashMap.Transform(max_disk);
+		for (unsigned int ax = min_cell.x; ax <= max_cell.x; ax++)
+			for (unsigned int ay = min_cell.y; ay <= max_cell.y; ay++)
+				for (unsigned int az = min_cell.z; az <= max_cell.z; az++)
+				{
+					clb(Vec3u(ax,ay,z));
+				}
+	}
 
 	//internal
 
@@ -86,18 +131,18 @@ public:
 
 	CUDA_FUNC_IN T& operator()(unsigned int idx)
 	{
-		return deviceData[idx];
+		return deviceData[idx].value;
 	}
 };
 
 template<typename T> struct e_SpatialLinkedMap_volume_iterator
 {
-	const e_SpatialLinkedMap<T>& map;
+	e_SpatialLinkedMap<T>& map;
 	Vec3u low, high, diff;// := [low, high)
 	unsigned int dataIdx, flatGridIdx;
 
 	CUDA_FUNC_IN e_SpatialLinkedMap_volume_iterator(const e_SpatialLinkedMap<T>& m, const Vec3u& mi, const Vec3u& ma, bool isEnd)
-		: map(m), low(mi), high(ma + Vec3u(1)), diff(high - low)
+		: map((e_SpatialLinkedMap<T>&)m), low(mi), high(ma + Vec3u(1)), diff(high - low)
 	{
 		flatGridIdx = isEnd ? diff.x * diff.y * diff.z : 0;
 		dataIdx = isEnd ? unsigned int(-1) : m.idx(mi);
@@ -128,6 +173,16 @@ template<typename T> struct e_SpatialLinkedMap_volume_iterator
 		return &map(dataIdx);
 	}
 
+	CUDA_FUNC_IN T& operator*()
+	{
+		return map(dataIdx);
+	}
+
+	CUDA_FUNC_IN T* operator->()
+	{
+		return &map(dataIdx);
+	}
+
 	CUDA_FUNC_IN bool operator==(const e_SpatialLinkedMap_volume_iterator<T>& rhs) const
 	{
 		return dataIdx == rhs.dataIdx && flatGridIdx == rhs.flatGridIdx;
@@ -136,6 +191,11 @@ template<typename T> struct e_SpatialLinkedMap_volume_iterator
 	CUDA_FUNC_IN bool operator!=(const e_SpatialLinkedMap_volume_iterator<T>& rhs) const
 	{
 		return !operator==(rhs);
+	}
+
+	CUDA_FUNC_IN unsigned int getDataIdx() const
+	{
+		return dataIdx;
 	}
 };
 

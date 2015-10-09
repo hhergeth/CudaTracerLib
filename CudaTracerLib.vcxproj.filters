@@ -516,9 +516,6 @@
     <CudaCompile Include="Integrators\k_WavefrontVCM.cu">
       <Filter>Integrators</Filter>
     </CudaCompile>
-    <CudaCompile Include="Integrators\VolEstimators\k_BeamBeamGrid.cu">
-      <Filter>Integrators\VolEstimators</Filter>
-    </CudaCompile>
     <CudaCompile Include="Integrators\VolEstimators\k_BeamBVHStorage.cu">
       <Filter>Integrators\VolEstimators</Filter>
     </CudaCompile>

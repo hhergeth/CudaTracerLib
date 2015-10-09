@@ -88,32 +88,6 @@ CUDA_FUNC_IN bool storeBeam(const Ray& r, float t, const Spectrum& phi, float a_
 #endif
 	return true;
 }
-CUDA_FUNC_IN AABB calculatePlaneAABBInCell(const AABB& cell, const Vec3f& p, const Vec3f& n, float r)
-{
-	Vec3f cellSize = cell.Size();
-	AABB res = AABB::Identity();
-	for (int a = 0; a < 3; a++)
-	{
-		Vec3f d(0.0f); d[a] = 1;
-		for (int l = 0; l < 4; l++)
-		{
-			Vec3f a1(0.0f); a1[(a + 1) % 3] = cellSize[(a + 1) % 3];
-			Vec3f o = l == 0 ? cell.minV : (l == 2 ? cell.maxV : (l == 1 ? cell.minV + a1 : cell.maxV - a1));
-			d = l < 2 ? d : -d;
-			if (n[a] != 0)
-			{
-				float lambda = p[a] - o[a];
-				if (lambda > 0 && lambda < cellSize[a])
-				{
-					Vec3f x = o + lambda * d;
-					x = p + (p - x) * min(distance(p, x), r);
-					res = res.Extend(x);
-				}
-			}
-		}
-	}
-	return res;
-}
 template<bool DIRECT> __global__ void k_PhotonPass(int photons_per_thread, bool final_gather, float a_r)
 {
 	CudaRNG rng = g_RNGData();
@@ -149,7 +123,7 @@ template<bool DIRECT> __global__ void k_PhotonPass(int photons_per_thread, bool 
 			{
 				if (g_BeamGrid.m_pDeviceBeams)
 					wasStored |= storeBeam(r, mRec.t, throughput * Le, a_r);
-				wasStored2 |= g_BVHBeams.insertBeam(k_Beam(r.origin, r.direction, mRec.t, throughput * Le));
+				g_BVHBeams.StoreBeam(k_Beam(r.origin, r.direction, mRec.t, throughput * Le), !wasStored2); wasStored2 = true;
 				throughput *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
 				if (!g_BeamGrid.m_pDeviceBeams)
 					wasStored |= storePhoton(mRec.p, throughput * Le, -r.direction, Vec3f(0, 0, 0), PhotonType::pt_Volume, g_Map, final_gather);
@@ -171,25 +145,7 @@ template<bool DIRECT> __global__ void k_PhotonPass(int photons_per_thread, bool 
 				r2.getBsdfSample(-wo, r(r2.m_fDist), bRec, ETransportMode::EImportance, &rng);
 				if ((DIRECT && depth > 0) || !DIRECT)
 					if (r2.getMat().bsdf.hasComponent(ESmooth) && dot(bRec.dg.sys.n, wo) > 0.0f)
-					{
 						wasStored |= storePhoton(dg.P, throughput * Le, wo, bRec.dg.sys.n, delta ? PhotonType::pt_Caustic : PhotonType::pt_Diffuse, g_Map, final_gather);
-
-						/*AABB plane_box = calculatePlaneAABBInCell(g_Map.m_sSurfaceMap.m_sHash.getCell(g_Map.m_sSurfaceMap.m_sHash.Transform(dg.P)), dg.P, dg.sys.n, a_r);
-						Vec2f xy(0.0f);
-
-						unsigned int cell_idx = g_Map.m_sSurfaceMap.m_sHash.Hash(dg.P);
-						if (cell_idx < g_Map.m_sSurfaceMap.m_uGridLength)
-						{
-							auto& entry = g_SurfaceEntries[cell_idx];
-							auto f = throughput * Le * Frame::cosTheta(bRec.wi);
-							float coeffs[] = {1 + xy.x * xy.y - xy.x - xy.y, xy.x - xy.x * xy.y, xy.x * xy.y, xy.x * xy.y};
-							for (int corner = 0; corner < 4; corner++)
-							{
-								for (int s_i = 0; s_i < 3; s_i++)
-									atomicAdd(&entry.m_sValues[corner][s_i], f[s_i] * coeffs[corner]);
-							}
-						}*/
-					}
 				Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
 				delta = bRec.sampledType & ETypeCombinations::EDelta;
 				if (!bssrdf && r2.getMat().GetBSSRDF(bRec.dg, &bssrdf))
@@ -207,8 +163,6 @@ template<bool DIRECT> __global__ void k_PhotonPass(int photons_per_thread, bool 
 		}
 		if (wasStored)
 			atomicInc(&g_Map.m_uPhotonNumEmitted, 0xffffffff);
-		if (wasStored2)
-			atomicInc(&g_BVHBeams.m_uNumEmitted, 0xffffffff);
 	}
 	if (threadIdx.x == 0)
 		atomicOr((int*)&g_HasVolumePhotons, __any(hasVolPhotons));
@@ -294,7 +248,7 @@ __global__ void checkGrid()
 void k_sPpmTracer::doPhotonPass()
 {
 	bool hasVol = false;
-	m_sBVHBeams.StartRendering();
+	m_sBVHBeams.StartNewPass(getCurrentRadius2(3));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_BVHBeams, &m_sBVHBeams, sizeof(m_sBVHBeams)));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_Map, &m_sMaps, sizeof(m_sMaps)));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_HasVolumePhotons, &hasVol, sizeof(bool)));
@@ -318,7 +272,7 @@ void k_sPpmTracer::doPhotonPass()
 
 	ThrowCudaErrors(cudaMemcpyFromSymbol(&hasVol, g_HasVolumePhotons, sizeof(bool)));
 	ThrowCudaErrors(cudaMemcpyFromSymbol(&m_sBVHBeams, g_BVHBeams, sizeof(m_sBVHBeams)));
-	m_sBVHBeams.BuildStorage(getCurrentRadius2(3)*10, m_pScene);
+	m_sBVHBeams.PrepareForRendering();
 
 	if (hasVol && m_sBeams.m_pDeviceData)
 	{

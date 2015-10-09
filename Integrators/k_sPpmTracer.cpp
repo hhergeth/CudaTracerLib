@@ -10,7 +10,7 @@
 #define SER_NAME "photonMapBuf.dat"
 
 k_sPpmTracer::k_sPpmTracer()
-	: m_pEntries(0), m_bFinalGather(false), m_bVisualizeGrid(false), m_fLightVisibility(1), m_sBVHBeams(10 * 1024)
+	: m_pEntries(0), m_bFinalGather(false), m_bVisualizeGrid(false), m_fLightVisibility(1), m_sBVHBeams(10 * 1024, 0)
 {
 #ifdef NDEBUG
 	m_uBlocksPerLaunch = 180;
@@ -136,6 +136,7 @@ void k_sPpmTracer::Debug(e_Image* I, const Vec2i& pixel)
 
 void k_sPpmTracer::StartNewTrace(e_Image* I)
 {
+	m_sBVHBeams.m_pScene = m_pScene;
 	m_bDirect = !m_pScene->getVolumes().hasElements();
 #ifndef _DEBUG
 	m_fLightVisibility = k_Tracer::GetLightVisibility(m_pScene, 1);

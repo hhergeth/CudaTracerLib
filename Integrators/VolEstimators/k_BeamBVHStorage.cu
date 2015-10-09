@@ -3,8 +3,8 @@
 #include "../../Engine/SceneBuilder/SplitBVHBuilder.hpp"
 #include "../../Engine/e_DynamicScene.h"
 
-k_BeamBVHStorage::k_BeamBVHStorage(unsigned int nBeams)
-	: m_uNumNodes(0), m_uBeamIdx(-1), m_uNumDeviceBVHBeams(0)
+k_BeamBVHStorage::k_BeamBVHStorage(unsigned int nBeams, e_DynamicScene* S)
+	: m_uNumNodes(0), m_uBeamIdx(-1), m_uNumDeviceBVHBeams(0), m_pScene(S)
 {
 	m_uNumBeams = nBeams;
 	CUDA_MALLOC(&m_pDeviceBeams, m_uNumBeams * sizeof(k_Beam));
@@ -13,7 +13,21 @@ k_BeamBVHStorage::k_BeamBVHStorage(unsigned int nBeams)
 
 }
 
-void k_BeamBVHStorage::BuildStorage(float max_query_radius, e_DynamicScene* a_Scene)
+void k_BeamBVHStorage::Free()
+{
+	CUDA_FREE(m_pDeviceBeams);
+	delete[] m_pHostBeams;
+	if (m_pDeviceNodes)
+		CUDA_FREE(m_pDeviceNodes);
+	if (m_pHostNodes)
+		delete[] m_pHostNodes;
+	if (m_pDeviceBVHBeams)
+		CUDA_FREE(m_pDeviceBVHBeams);
+	if (m_sHostBVHBeams)
+		delete m_sHostBVHBeams;
+}
+
+void k_BeamBVHStorage::PrepareForRendering()
 {
 	class BuilderCLB : public IBVHBuilderCallback
 	{
@@ -70,8 +84,8 @@ void k_BeamBVHStorage::BuildStorage(float max_query_radius, e_DynamicScene* a_Sc
 
 	//shorten beams to create better bvh
 	m_sHostBVHBeams->clear();
-	m_sHostBVHBeams->reserve(size_t(m_uBeamIdx * m_pHostBeams->t / (2.0f * max_query_radius)));
-	auto data = a_Scene->getKernelSceneData(false);
+	m_sHostBVHBeams->reserve(size_t(m_uBeamIdx * m_pHostBeams->t / (2.0f * m_fCurrentRadiusVol)));
+	auto data = m_pScene->getKernelSceneData(false);
 	for (size_t i = 0; i < m_uBeamIdx; i++)
 	{
 		float t = 0;
@@ -79,13 +93,13 @@ void k_BeamBVHStorage::BuildStorage(float max_query_radius, e_DynamicScene* a_Sc
 		Spectrum tau(1.0f);
 		while (t < b.t)
 		{
-			tau += data.m_sVolume.tau(Ray(b.pos, b.dir), t, t + 2 * max_query_radius);
-			m_sHostBVHBeams->push_back(k_Beam(b.pos + b.dir * t, b.dir, min(2 * max_query_radius, b.t - t), b.Phi * (-tau).exp()));
-			t += 2 * max_query_radius;
+			tau += data.m_sVolume.tau(Ray(b.pos, b.dir), t, t + 2 * m_fCurrentRadiusVol);
+			m_sHostBVHBeams->push_back(k_Beam(b.pos + b.dir * t, b.dir, min(2 * m_fCurrentRadiusVol, b.t - t), b.Phi * (-tau).exp()));
+			t += 2 * m_fCurrentRadiusVol;
 		}
 	}
 
-	BuilderCLB clb(&m_sHostBVHBeams->operator[](0), (unsigned int)m_sHostBVHBeams->size(), max_query_radius);
+	BuilderCLB clb(&m_sHostBVHBeams->operator[](0), (unsigned int)m_sHostBVHBeams->size(), m_fCurrentRadiusVol);
 	auto plat = SplitBVHBuilder::Platform();
 	SplitBVHBuilder builder(&clb, plat, SplitBVHBuilder::BuildParams());
 	builder.run();
@@ -110,9 +124,4 @@ void k_BeamBVHStorage::BuildStorage(float max_query_radius, e_DynamicScene* a_Sc
 	}
 	memcpy(m_pHostNodes, &clb.m_sBVHNodes[0], m_uNumNodes);
 	CUDA_MEMCPY_TO_DEVICE(m_pDeviceNodes, &clb.m_sBVHNodes[0], (unsigned int)clb.m_sBVHNodes.size() * sizeof(e_BVHNodeData));
-
-	size_t offset;
-	cudaChannelFormatDesc cdf4 = cudaCreateChannelDesc<float4>();
-	//t_BVHNodes = new texture<float4, 1>();
-	//ThrowCudaErrors(cudaBindTexture(&offset, (texture<float4, 1>*)t_BVHNodes, m_pDeviceNodes, &cdf4, m_uNumNodes * sizeof(e_BVHNodeData)));
 }

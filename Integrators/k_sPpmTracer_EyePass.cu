@@ -103,25 +103,6 @@ template<bool VOL> CUDA_DEVICE Spectrum L_Volume2(float a_r, CudaRNG& rng, const
 	return L_n;
 }
 
-CUDA_FUNC_IN float skew_lines(const Ray& r, const Ray& r2, float& t1, float& t2)
-{
-	if (absdot(r.direction.normalized(), r2.direction.normalized()) > 1 - 1e-2f)
-		return FLT_MAX;
-
-	float v1dotv2 = dot(r.direction, r2.direction), v1p2 = r.direction.lenSqr(), v2p2 = r2.direction.lenSqr();
-	float x = dot(r2.origin - r.origin, r.direction), y = dot(r2.origin - r.origin, r2.direction);
-	float dc = 1.0f / (v1dotv2 * v1dotv2 - v1p2 * v2p2);
-	t1 = dc * (-v2p2 * x + v1dotv2 * y);
-	t2 = dc * (-v1dotv2 * x + v1p2 * y);	
-	
-	float D = math::abs(dot(cross(r.direction, r2.direction).normalized(), r.origin - r2.origin));
-	float d = (r(t1) - r2(t2)).length();
-	float err = math::abs(D - d);
-	if (err > 0.1f)
-		printf("D = %f, d = %f, r1 = {(%f,%f,%f), (%f,%f,%f)}, r2 = {(%f,%f,%f), (%f,%f,%f)}\n", D, d, r.origin.x, r.origin.y, r.origin.z, r.direction.x, r.direction.y, r.direction.z, r2.origin.x, r2.origin.y, r2.origin.z, r2.direction.x, r2.direction.y, r2.direction.z);
-
-	return D;
-}
 template<bool VOL> CUDA_DEVICE Spectrum L_Volume3(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const Spectrum& sigt, const Spectrum& sigs, Spectrum& Tr, const k_PhotonMapCollection<true, k_pPpmPhoton>& photonMap, unsigned int a_NodeIndex = 0xffffffff)
 {
 	Spectrum L_n = Spectrum(0.0f), Tau = Spectrum(0.0f);
@@ -179,7 +160,7 @@ template<bool VOL> CUDA_DEVICE Spectrum L_Volume(float a_r, CudaRNG& rng, const 
 		}
 	});
 	Tr = (-g_SceneData.m_sVolume.tau(r, tmin, tmax)).exp();
-	return L_n / (a_r * g_BVHBeamStorage.getNumEmitted());
+	return L_n / (a_r * g_BVHBeamStorage.m_uNumEmitted);
 }
 
 CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED, const e_KernelMaterial* mat, const k_PhotonMapCollection<true, k_pPpmPhoton>& photonMap, const k_PhotonMapReg& map)
