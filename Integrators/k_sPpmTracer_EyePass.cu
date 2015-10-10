@@ -130,7 +130,7 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 			if (DIRECT)
 				L += throughput * UniformSampleOneLight(bRec, r2.getMat(), rng);
 			L += throughput * r2.Le(bRec.dg.P, bRec.dg.sys, -r.direction);//either it's the first bounce or it's a specular reflection
-			const e_KernelBSSRDF* bssrdf;
+			const e_VolumeRegion* bssrdf;
 			if (r2.getMat().GetBSSRDF(bRec.dg, &bssrdf))
 			{
 				Spectrum t_f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
@@ -138,13 +138,7 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 				Ray rTrans = Ray(bRec.dg.P, bRec.getOutgoing());
 				TraceResult r3 = k_TraceRay(rTrans);
 				Spectrum Tr;
-				e_VolumeRegion reg;
-				e_PhaseFunction func;
-				func.SetData(e_IsotropicPhaseFunction());
-				reg.SetData(e_HomogeneousVolumeDensity(func, float4x4::Translate(Vec3f(0.5f)) % float4x4::Scale(Vec3f(1e5f)), bssrdf->sig_a, bssrdf->sigp_s, Spectrum(0.0f)));
-				const float a = 1e10f;
-				reg.As<e_HomogeneousVolumeDensity>()->WorldToVolume = float4x4::Translate(Vec3f(0.5f)) % float4x4::Scale(Vec3f(0.5f/a));
-				L += throughput * ((VolEstimator*)g_VolEstimator2)->L_Volume(a_rVolume, rng, rTrans, 0, r3.m_fDist, VolHelper<false>(&reg), Tr);
+				L += throughput * ((VolEstimator*)g_VolEstimator2)->L_Volume(a_rVolume, rng, rTrans, 0, r3.m_fDist, VolHelper<false>(bssrdf), Tr);
 				//throughput = throughput * Tr;//break;
 			}
 			bool hasSmooth = r2.getMat().bsdf.hasComponent(ESmooth),

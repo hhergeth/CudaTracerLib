@@ -137,7 +137,7 @@ void k_sPpmTracer::StartNewTrace(e_Image* I)
 		e_StreamReference<e_KernelMaterial> mats = m_pScene->getMats(it);
 		for (unsigned int j = 0; j < mats.getLength(); j++)
 		{
-			const e_KernelBSSRDF* bssrdf;
+			const e_VolumeRegion* bssrdf;
 			DifferentialGeometry dg;
 			ZERO_MEM(dg);
 			if (mats(j)->GetBSSRDF(dg, &bssrdf))

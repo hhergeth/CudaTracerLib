@@ -1,5 +1,14 @@
 #include "e_Material.h"
 
+void initbssrdf(e_VolumeRegion& reg)
+{
+	const float a = 1e10f;
+	e_PhaseFunction func;
+	func.SetData(e_IsotropicPhaseFunction());
+	reg.SetData(e_HomogeneousVolumeDensity(func, (float4x4::Translate(Vec3f(0.5f)) % float4x4::Scale(Vec3f(0.5f / a))).inverse(), Spectrum(0.0f), Spectrum(0.0f), Spectrum(0.0f)));
+	reg.As()->Update();
+}
+
 e_KernelMaterial::e_KernelMaterial()
 {
 	parallaxMinSamples = 10;
@@ -12,6 +21,7 @@ e_KernelMaterial::e_KernelMaterial()
 	bsdf.setTypeToken(0);
 	usedBssrdf = 0;
 	AlphaMap.used = NormalMap.used = HeightMap.used = 0;
+	initbssrdf(bssrdf);
 }
 
 e_KernelMaterial::e_KernelMaterial(const std::string& name)
@@ -26,6 +36,7 @@ e_KernelMaterial::e_KernelMaterial(const std::string& name)
 	bsdf.setTypeToken(0);
 	usedBssrdf = 0;
 	AlphaMap.used = NormalMap.used = HeightMap.used = 0;
+	initbssrdf(bssrdf);
 }
 
 CUDA_FUNC_IN Vec2f parallaxOcclusion(const Vec2f& texCoord, e_KernelMIPMap* tex, const Vec3f& vViewTS, float HeightScale, int MinSamples, int MaxSamples)
@@ -140,17 +151,9 @@ float e_KernelMaterial::SampleAlphaMap(const DifferentialGeometry& uv) const
 	else return 1.0f;
 }
 
-bool e_KernelMaterial::GetBSSRDF(const DifferentialGeometry& uv, const e_KernelBSSRDF** res) const
+bool e_KernelMaterial::GetBSSRDF(const DifferentialGeometry& uv, const e_VolumeRegion** res) const
 {
 	if (usedBssrdf)
 		*res = &bssrdf;
 	return !!usedBssrdf;
-}
-
-void e_KernelMaterial::setBssrdf(const Spectrum& sig_a, const Spectrum& sigp_s, float e)
-{
-	usedBssrdf = 1;
-	bssrdf.e = e;
-	bssrdf.sig_a = sig_a;
-	bssrdf.sigp_s = sigp_s;
 }

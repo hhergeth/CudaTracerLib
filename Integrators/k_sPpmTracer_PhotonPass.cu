@@ -33,21 +33,25 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 		bool delta = false;
 		MediumSamplingRecord mRec;
 		bool medium = false;
-		const e_KernelBSSRDF* bssrdf = 0;
+		const e_VolumeRegion* bssrdf = 0;
 
 		while (++depth < PPM_MaxRecursion && !g_SurfaceMap.isFull() && !Le.isZero())
 		{
 			TraceResult r2 = k_TraceRay(r);
 			float minT, maxT;
 			if ((!bssrdf && V.HasVolumes() && V.IntersectP(r, 0, r2.m_fDist, &minT, &maxT) && V.sampleDistance(r, 0, r2.m_fDist, rng, mRec))
-				|| (bssrdf && sampleDistanceHomogenous(r, 0, r2.m_fDist, rng.randomFloat(), mRec, bssrdf->sig_a, bssrdf->sigp_s)))
+				|| (bssrdf && bssrdf->sampleDistance(r, 0, r2.m_fDist, rng.randomFloat(), mRec)))
 			{
 				((VolEstimator*)g_VolEstimator)->StoreBeam(k_Beam(r.origin, r.direction, mRec.t, throughput * Le), !wasStoredVolume);
 				throughput *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
 				((VolEstimator*)g_VolEstimator)->StorePhoton(mRec.p, -r.direction, throughput * Le, !wasStoredVolume);
 				wasStoredVolume = true;
 				if (bssrdf)
-					r.direction = Warp::squareToUniformSphere(rng.randomFloat2());
+				{
+					PhaseFunctionSamplingRecord mRec(-r.direction);
+					throughput *= bssrdf->As()->Func.Sample(mRec, rng);
+					r.direction = mRec.wi;
+				}
 				else throughput *= V.Sample(mRec.p, -r.direction, rng, &r.direction);
 				r.origin = mRec.p;
 				delta = false;
