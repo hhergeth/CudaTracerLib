@@ -69,8 +69,9 @@ public:
 
 	template<typename CLB> CUDA_FUNC_IN void ForAll(const Vec3u& p, const CLB& clb)
 	{
-		unsigned int i0 = hashMap.Hash(p), i = deviceMap[i0];
-		while (i != 0xffffffff && i != 0xffffff)
+		const unsigned int N_MAX = 100;
+		unsigned int i0 = hashMap.Hash(p), i = deviceMap[i0], N = 0;
+		while (i != 0xffffffff && i != 0xffffff && N++ < N_MAX)
 		{
 			clb(i, deviceData[i].value);
 			i = deviceData[i].nextIdx;
