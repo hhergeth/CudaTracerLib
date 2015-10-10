@@ -19,8 +19,10 @@ bool e_BaseVolumeRegion::IntersectP(const Ray &ray, const float minT, const floa
 Spectrum e_HomogeneousVolumeDensity::tau(const Ray &ray, const float minT, const float maxT) const
 {
 	float t0, t1;
-	if(!IntersectP(ray, minT, maxT, &t0, &t1))
+	if (!IntersectP(ray, minT, maxT, &t0, &t1))
+	{
 		return Spectrum(0.0f);
+	}
 	return length(ray(t0) - ray(t1)) * (sig_a + sig_s);
 }
 

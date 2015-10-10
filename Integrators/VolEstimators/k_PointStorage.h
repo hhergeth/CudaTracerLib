@@ -101,7 +101,7 @@ struct k_PointStorage : public IVolumeEstimator
 				{
 					float p = vol.p(x, r.direction, ph.wi, rng);
 					float l1 = dot(ph.p - r.origin, r.direction) / dot(r.direction, r.direction);
-					Spectrum tauToPhoton = (-Tau - g_SceneData.m_sVolume.tau(r, a, l1)).exp();
+					Spectrum tauToPhoton = (-Tau - vol.tau(r, a, l1)).exp();
 					L_n += p * ph.phi * Vs * tauToPhoton * d;
 				}
 			});

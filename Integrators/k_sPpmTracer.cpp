@@ -18,9 +18,9 @@ k_sPpmTracer::k_sPpmTracer()
 	unsigned int numPhotons = (m_uBlocksPerLaunch + 2) * PPM_slots_per_block;
 	m_sSurfaceMap = e_SpatialLinkedMap<k_pPpmPhoton>(250, numPhotons * PPM_MaxRecursion);
 	//m_pVolumeEstimator = new k_PointStorage(100, numPhotons * PPM_MaxRecursion / 2);
-	//m_pVolumeEstimator = new k_BeamGrid(100, numPhotons * PPM_MaxRecursion / 2);
+	m_pVolumeEstimator = new k_BeamGrid(100, numPhotons * PPM_MaxRecursion / 4);
 	//m_pVolumeEstimator = new k_BeamBVHStorage(numPhotons/50, 0);
-	m_pVolumeEstimator = new k_BeamBeamGrid(30, numPhotons * PPM_MaxRecursion / 2);
+	//m_pVolumeEstimator = new k_BeamBeamGrid(30, numPhotons * PPM_MaxRecursion / 2);
 }
 
 void k_sPpmTracer::PrintStatus(std::vector<std::string>& a_Buf) const

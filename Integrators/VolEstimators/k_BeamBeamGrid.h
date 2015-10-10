@@ -45,8 +45,8 @@ struct k_BeamBeamGrid : public IVolumeEstimator
 
 	virtual void PrintStatus(std::vector<std::string>& a_Buf) const
 	{
-		a_Buf.push_back(format("%.2f%% Vol Beams", (float)m_sStorage.deviceDataIdx / m_sStorage.numData * 100));
-		a_Buf.push_back(format("%.2f%% Beam indices", (float)m_uBeamIdx / m_uBeamLength * 100));
+		a_Buf.push_back(format("%.2f%% Beam grid indices", (float)m_sStorage.deviceDataIdx / m_sStorage.numData * 100));
+		a_Buf.push_back(format("%.2f%% Beams", (float)m_uBeamIdx / m_uBeamLength * 100));
 	}
 
 	virtual size_t getSize() const
