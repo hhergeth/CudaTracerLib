@@ -8,6 +8,12 @@
 
 #define ALPHA (2.0f / 3.0f)
 
+CUDA_FUNC_IN float getCurrentRadius(float initial_r, unsigned int iteration, float exp)
+{
+	//return math::pow(math::pow(initial_r, exp) / math::pow(float(iteration), 0.5f * (1 - ALPHA)), 1.0f / exp);
+	return initial_r * math::pow(iteration, (ALPHA - 1) / exp);
+}
+
 CUDA_FUNC_IN float k(float t)
 {
 	//float t2 = t * t;

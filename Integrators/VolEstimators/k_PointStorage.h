@@ -49,9 +49,19 @@ struct k_PointStorage : public IVolumeEstimator
 		m_sStorage.SetSceneDimensions(box, a_InitRadius);
 	}
 
-	virtual bool isFull() const
+	CUDA_FUNC_IN bool isFullK() const
 	{
 		return m_sStorage.isFull();
+	}
+
+	virtual bool isFull() const
+	{
+		return isFullK();
+	}
+
+	virtual unsigned int getNumEmitted() const
+	{
+		return m_uNumEmitted;
 	}
 
 	virtual size_t getSize() const

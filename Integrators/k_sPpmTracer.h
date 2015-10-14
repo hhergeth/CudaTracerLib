@@ -65,6 +65,8 @@ private:
 	k_AdaptiveEntry* m_pEntries;
 	float r_min, r_max;
 
+	unsigned int k_Intial;
+	float m_fIntitalRadMin, m_fIntitalRadMax;
 public:
 	bool m_bFinalGather;
 	bool m_bDirect;
@@ -79,13 +81,15 @@ public:
 	virtual void Debug(e_Image* I, const Vec2i& pixel);
 	virtual void PrintStatus(std::vector<std::string>& a_Buf) const;
 	virtual void CreateSliders(SliderCreateCallback a_Callback) const;
-	CUDA_FUNC_IN static float getCurrentRadius(float initial_r, unsigned int iteration, float exp)
-	{
-		return math::pow(math::pow(initial_r, exp) / math::pow(float(iteration), 0.5f * (1 - ALPHA)), 1.0f / exp);
-	}
 	virtual float getCurrentRadius(float exp) const
 	{
-		return getCurrentRadius(m_fInitialRadius, m_uPassesDone, exp);
+		return ::getCurrentRadius(m_fInitialRadius, m_uPassesDone, exp);
+	}
+	float getRadiusAt(int x, int y) const;
+	void getCurrentRMinRMax(float& rMin, float& rMax) const
+	{
+		rMin = ::getCurrentRadius(r_min, m_uPassesDone, 2);
+		rMax = ::getCurrentRadius(r_max, m_uPassesDone, 2);
 	}
 protected:
 	virtual void DoRender(e_Image* I);
@@ -93,5 +97,5 @@ protected:
 	virtual void RenderBlock(e_Image* I, int x, int y, int blockW, int blockH);
 private:
 	void doPhotonPass();
-	void doStartPass(float r, float rd);
+	void doPerPixelRadiusEstimation();
 };

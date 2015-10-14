@@ -391,6 +391,12 @@
       <Filter>Integrators</Filter>
     </ClCompile>
     <ClCompile Include="CudaMemoryManager.cpp" />
+    <ClCompile Include="Integrators\VolEstimators\k_BeamBVHStorage.cpp">
+      <Filter>Integrators\VolEstimators</Filter>
+    </ClCompile>
+    <ClCompile Include="Integrators\VolEstimators\k_BeamBeamGrid.cpp">
+      <Filter>Integrators\VolEstimators</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="Base\CudaRandom.cu">
@@ -515,9 +521,6 @@
     </CudaCompile>
     <CudaCompile Include="Integrators\k_WavefrontVCM.cu">
       <Filter>Integrators</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Integrators\VolEstimators\k_BeamBVHStorage.cu">
-      <Filter>Integrators\VolEstimators</Filter>
     </CudaCompile>
     <CudaCompile Include="Integrators\VolEstimators\k_BeamGrid.cu">
       <Filter>Integrators\VolEstimators</Filter>

@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="CPU_Debug|x64">
       <Configuration>CPU_Debug</Configuration>
@@ -165,10 +165,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClCompile Include="Defines.cpp" />
     <ClCompile Include="Engine\e_AnimatedMesh.cpp" />
     <ClCompile Include="Engine\e_BVHRebuilder.cpp" />
-    <ClCompile Include="Engine\e_Core.cpp">
-      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">/d1reportSingleClassLayoutmpHlp %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='CPU_Debug|x64'">/d1reportSingleClassLayoutmpHlp %(AdditionalOptions)</AdditionalOptions>
-    </ClCompile>
+    <ClCompile Include="Engine\e_Core.cpp" />
     <ClCompile Include="Engine\e_DynamicScene.cpp" />
     <ClCompile Include="Engine\e_FileTexture.cpp" />
     <ClCompile Include="Engine\e_Image.cpp" />
@@ -183,25 +180,21 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClCompile Include="Engine\SceneBuilder\MD5Parser.cpp" />
     <ClCompile Include="Engine\SceneBuilder\ObjParser.cpp" />
     <ClCompile Include="Engine\SceneBuilder\PlyParser.cpp" />
-    <ClCompile Include="Engine\SceneBuilder\SplitBVHBuilder.cpp">
-      <Optimization Condition="'$(Configuration)|$(Platform)'=='CPU_Debug|x64'">MaxSpeed</Optimization>
-      <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='CPU_Debug|x64'">Default</BasicRuntimeChecks>
-      <IntrinsicFunctions Condition="'$(Configuration)|$(Platform)'=='CPU_Debug|x64'">true</IntrinsicFunctions>
-    </ClCompile>
+    <ClCompile Include="Engine\SceneBuilder\SplitBVHBuilder.cpp" />
     <ClInclude Include="CudaMemoryManager.h" />
     <ClInclude Include="Engine\e_Buffer_device.h" />
     <ClInclude Include="Engine\e_BVHRebuilder.h" />
     <ClInclude Include="Engine\e_FileTexture_device.h" />
     <ClInclude Include="Engine\e_SceneBVH_device.h" />
     <ClInclude Include="Engine\SceneBuilder\TangentSpaceHelper.h" />
-    <ClInclude Include="Integrators\k_GradientDescent.h">
-      <FileType>CppCode</FileType>
-    </ClInclude>
+    <ClInclude Include="Integrators\k_GradientDescent.h" />
     <ClCompile Include="Engine\SceneBuilder\TangentSpaceHelper.cpp" />
     <ClCompile Include="Integrators\k_GradientDescent.cpp" />
     <ClCompile Include="Integrators\k_PmmTracer.cpp" />
     <ClCompile Include="Integrators\k_sPpmTracer.cpp" />
     <ClCompile Include="Integrators\k_WavefrontVCM.cpp" />
+    <ClCompile Include="Integrators\VolEstimators\k_BeamBeamGrid.cpp" />
+    <ClCompile Include="Integrators\VolEstimators\k_BeamBVHStorage.cpp" />
     <ClCompile Include="Kernel\k_Tracer.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
@@ -325,22 +318,15 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <CudaCompile Include="Engine\e_TriIntersectorData.cu" />
     <CudaCompile Include="Engine\e_Volumes.cu" />
     <CudaCompile Include="Integrators\k_BDPT.cu" />
-    <CudaCompile Include="Integrators\k_FastTracer.cu">
-      <PtxAsOptionV Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</PtxAsOptionV>
-      <PtxAsOptionV Condition="'$(Configuration)|$(Platform)'=='CPU_Debug|x64'">false</PtxAsOptionV>
-      <PtxAsOptionV Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</PtxAsOptionV>
-    </CudaCompile>
+    <CudaCompile Include="Integrators\k_FastTracer.cu" />
     <CudaCompile Include="Integrators\k_PathTracer.cu" />
     <CudaCompile Include="Integrators\k_PhotonTracer.cu" />
     <CudaCompile Include="Integrators\k_PmmTracer.cu" />
     <CudaCompile Include="Integrators\k_PrimTracer.cu" />
-    <CudaCompile Include="Integrators\k_sPpmTracer_EyePass.cu">
-      <GPUDebugInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</GPUDebugInfo>
-    </CudaCompile>
+    <CudaCompile Include="Integrators\k_sPpmTracer_EyePass.cu" />
     <CudaCompile Include="Integrators\k_sPpmTracer_PhotonPass.cu" />
     <CudaCompile Include="Integrators\k_VCM.cu" />
     <CudaCompile Include="Integrators\k_WavefrontVCM.cu" />
-    <CudaCompile Include="Integrators\VolEstimators\k_BeamBVHStorage.cu" />
     <CudaCompile Include="Integrators\VolEstimators\k_BeamGrid.cu" />
     <CudaCompile Include="Kernel\k_BlockSampler.cu" />
     <CudaCompile Include="Kernel\k_BSDFVisualizer.cu" />

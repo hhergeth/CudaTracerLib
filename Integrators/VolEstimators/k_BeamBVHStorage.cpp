@@ -1,3 +1,4 @@
+#include <StdAfx.h>
 #include "k_BeamBVHStorage.h"
 #include "../../CudaMemoryManager.h"
 #include "../../Engine/SceneBuilder/SplitBVHBuilder.hpp"

@@ -39,9 +39,19 @@ public:
 
 	}
 
-	virtual bool isFull() const
+	CUDA_FUNC_IN bool isFullK() const
 	{
 		return m_uBeamIdx >= m_uNumBeams;
+	}
+
+	virtual bool isFull() const
+	{
+		return isFullK();
+	}
+
+	virtual unsigned int getNumEmitted() const
+	{
+		return m_uNumEmitted;
 	}
 
 	virtual size_t getSize() const

@@ -39,11 +39,7 @@ private:
 	unsigned long long m_uPhotonsEmitted;
 	float getCurrentRadius(int exp)
 	{
-		float f = 1;
-		for (unsigned int k = 1; k < m_uPassesDone; k++)
-			f *= (k + ALPHA) / k;
-		f = math::pow(m_fInitialRadius, float(exp)) * f * 1.0f / float(m_uPassesDone);
-		return math::pow(f, 1.0f / float(exp));
+		return ::getCurrentRadius(m_fInitialRadius, m_uPassesDone, exp);
 	}
 private:
 	unsigned int m_uNumLightRays;

@@ -164,7 +164,7 @@ template<typename F> CUDA_FUNC_IN void TraverseGrid(const Ray& r, float tmin, fl
 		int stepAxis = cmpToAxis[bits];
 		clb(minT, rayT, maxT, min(NextCrossingT[stepAxis], maxT), Pos, cancelTraversal);
 		Pos[stepAxis] += Step[stepAxis];
-		if (Pos[stepAxis] > gridSize[stepAxis] || maxT < NextCrossingT[stepAxis])
+		if (Pos[stepAxis] >= gridSize[stepAxis] || maxT < NextCrossingT[stepAxis])
 			break;
 		rayT = NextCrossingT[stepAxis];
 		NextCrossingT[stepAxis] += DeltaT[stepAxis];
