@@ -147,6 +147,15 @@ public:
 		return Vec2f(1 - a, a * sample.y);
 	}
 
+	CUDA_FUNC_IN static Vec2f squareToStdNormal(const Vec2f& sample)
+	{
+		float r = math::sqrt(-2 * math::log(1 - sample.x)),
+			phi = 2 * PI * sample.y;
+		Vec2f result;
+		sincos(phi, &result.y, &result.x);
+		return result * r;
+	}
+
 	CUDA_FUNC_IN static float squareToStdNormalPdf(const Vec2f &pos)
 	{
 		return INV_TWOPI * math::exp(-(pos.x*pos.x + pos.y*pos.y) / 2.0f);

@@ -18,6 +18,15 @@ struct e_MeshPartLight
 {
 	FixedString<32> MatName;
 	Spectrum L;
+	e_MeshPartLight()
+	{
+
+	}
+	e_MeshPartLight(const std::string& name, const Spectrum& l)
+		: MatName(name), L(l)
+	{
+
+	}
 };
 
 #define MESH_STATIC_TOKEN 1
@@ -44,8 +53,7 @@ public:
 	e_StreamReference<e_BVHNodeData> m_sNodeInfo;
 	e_StreamReference<e_TriIntersectorData> m_sIntInfo;
 	e_StreamReference<e_TriIntersectorData2> m_sIndicesInfo;
-	e_MeshPartLight m_sLights[MAX_AREALIGHT_NUM];
-	unsigned int m_uUsedLights;
+	std::vector<e_MeshPartLight> m_sAreaLights;
 	FixedString<64> m_uPath;
 public:
 	e_Mesh(const std::string& path, IInStream& a_In, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4, e_Stream<char>* a_Stream5);

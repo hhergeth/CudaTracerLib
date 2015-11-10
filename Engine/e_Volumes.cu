@@ -316,14 +316,14 @@ bool e_VolumeGrid::sampleDistance(const Ray& ray, float minT, float maxT, float 
 	return success && mRec.pdfSuccess > 0;
 }
 
-bool e_KernelAggregateVolume::IntersectP(const Ray &ray, float minT, float maxT, float *t0, float *t1, unsigned int a_NodeIndex) const
+bool e_KernelAggregateVolume::IntersectP(const Ray &ray, float minT, float maxT, float *t0, float *t1) const
 {
 	*t0 = FLT_MAX;
 	*t1 = -FLT_MAX;
 	for(unsigned int i = 0; i < m_uVolumeCount; i++)
 	{
 		float a, b;
-		if (m_pVolumes[i].As()->isInVolume(a_NodeIndex) && m_pVolumes[i].IntersectP(ray, minT, maxT, &a, &b))
+		if (m_pVolumes[i].IntersectP(ray, minT, maxT, &a, &b))
 		{
 			*t0 = min(*t0, a);
 			*t1 = max(*t1, b);
@@ -332,57 +332,52 @@ bool e_KernelAggregateVolume::IntersectP(const Ray &ray, float minT, float maxT,
 	return (*t0 < *t1);
 }
 
-Spectrum e_KernelAggregateVolume::sigma_a(const Vec3f& p, const Vec3f& w, unsigned int a_NodeIndex) const
+Spectrum e_KernelAggregateVolume::sigma_a(const Vec3f& p, const Vec3f& w) const
 {
 	Spectrum s = Spectrum(0.0f);
 	for(unsigned int i = 0; i < m_uVolumeCount; i++)
-		if (m_pVolumes[i].As()->isInVolume(a_NodeIndex))
 			s += m_pVolumes[i].sigma_a(p, w);
 	return s;
 }
 
-Spectrum e_KernelAggregateVolume::sigma_s(const Vec3f& p, const Vec3f& w, unsigned int a_NodeIndex) const
+Spectrum e_KernelAggregateVolume::sigma_s(const Vec3f& p, const Vec3f& w) const
 {
 	Spectrum s = Spectrum(0.0f);
 	for(unsigned int i = 0; i < m_uVolumeCount; i++)
-		if (m_pVolumes[i].As()->isInVolume(a_NodeIndex))
 			s += m_pVolumes[i].sigma_s(p, w);
 	return s;
 }
 
-Spectrum e_KernelAggregateVolume::Lve(const Vec3f& p, const Vec3f& w, unsigned int a_NodeIndex) const
+Spectrum e_KernelAggregateVolume::Lve(const Vec3f& p, const Vec3f& w) const
 {
 	Spectrum s = Spectrum(0.0f);
 	for(unsigned int i = 0; i < m_uVolumeCount; i++)
-		if (m_pVolumes[i].As()->isInVolume(a_NodeIndex))
 			s += m_pVolumes[i].Lve(p, w);
 	return s;
 }
 
-Spectrum e_KernelAggregateVolume::sigma_t(const Vec3f &p, const Vec3f &wo, unsigned int a_NodeIndex) const
+Spectrum e_KernelAggregateVolume::sigma_t(const Vec3f &p, const Vec3f &wo) const
 {
 	Spectrum s = Spectrum(0.0f);
 	for(unsigned int i = 0; i < m_uVolumeCount; i++)
-		if (m_pVolumes[i].As()->isInVolume(a_NodeIndex))
 			s += m_pVolumes[i].sigma_t(p, wo);
 	return s;
 }
 
-Spectrum e_KernelAggregateVolume::tau(const Ray &ray, float minT, float maxT, unsigned int a_NodeIndex) const
+Spectrum e_KernelAggregateVolume::tau(const Ray &ray, float minT, float maxT) const
 {
 	Spectrum s = Spectrum(0.0f);
 	for(unsigned int i = 0; i < m_uVolumeCount; i++)
-		if (m_pVolumes[i].As()->isInVolume(a_NodeIndex))
 			s += m_pVolumes[i].tau(ray, minT, maxT);
 	return s;
 }
 
-float e_KernelAggregateVolume::Sample(const Vec3f& p, const Vec3f& wo, CudaRNG& rng, Vec3f* wi, unsigned int a_NodeIndex)
+float e_KernelAggregateVolume::Sample(const Vec3f& p, const Vec3f& wo, CudaRNG& rng, Vec3f* wi)
 {
 	PhaseFunctionSamplingRecord r2(wo);
 	r2.wi = wo;
 	for(unsigned int i = 0; i < m_uVolumeCount; i++)
-		if (m_pVolumes[i].As()->isInVolume(a_NodeIndex) && m_pVolumes[i].WorldBound().Contains(p))
+		if (m_pVolumes[i].WorldBound().Contains(p))
 		{
 			float pdf;
 			float pf = m_pVolumes[i].As()->Func.Sample(r2, pdf, rng);
@@ -393,11 +388,11 @@ float e_KernelAggregateVolume::Sample(const Vec3f& p, const Vec3f& wo, CudaRNG& 
 	return 0.0f;
 }
 
-float e_KernelAggregateVolume::p(const Vec3f& p, const Vec3f& wo, const Vec3f& wi, CudaRNG& rng, unsigned int a_NodeIndex)
+float e_KernelAggregateVolume::p(const Vec3f& p, const Vec3f& wo, const Vec3f& wi, CudaRNG& rng)
 {
 	PhaseFunctionSamplingRecord r2(wo, wi);
 	for(unsigned int i = 0; i < m_uVolumeCount; i++)
-		if (m_pVolumes[i].As()->isInVolume(a_NodeIndex) && m_pVolumes[i].WorldBound().Contains(p))
+		if (m_pVolumes[i].WorldBound().Contains(p))
 			return m_pVolumes[i].As()->Func.Evaluate(r2);
 	return 0.0f;
 }
@@ -409,9 +404,9 @@ CUDA_FUNC_IN int ffsn(unsigned int v, int n) {
 	return v & ~(v - 1); // extract the least significant bit
 }
 
-bool e_KernelAggregateVolume::sampleDistance(const Ray& ray, float minT, float maxT, CudaRNG& rng, MediumSamplingRecord& mRec, unsigned int a_NodeIndex) const
+bool e_KernelAggregateVolume::sampleDistance(const Ray& ray, float minT, float maxT, CudaRNG& rng, MediumSamplingRecord& mRec) const
 {
-	if (m_uVolumeCount == 1 && m_pVolumes[0].As()->isInVolume(a_NodeIndex) && m_pVolumes[0].WorldBound().Intersect(ray))
+	if (m_uVolumeCount == 1 && m_pVolumes[0].WorldBound().Intersect(ray))
 		return m_pVolumes[0].sampleDistance(ray, minT, maxT, rng.randomFloat(), mRec);
 	else if (m_uVolumeCount == 1)
 		return false;
@@ -419,7 +414,7 @@ bool e_KernelAggregateVolume::sampleDistance(const Ray& ray, float minT, float m
 	float n = 0;
 	unsigned int flag = 0;
 	for (unsigned int i = 0; i < m_uVolumeCount; i++)
-		if (m_pVolumes[i].As()->isInVolume(a_NodeIndex) && m_pVolumes[i].WorldBound().Intersect(ray))
+		if (m_pVolumes[i].WorldBound().Intersect(ray))
 		{
 			n++;
 			flag |= 1 << i;

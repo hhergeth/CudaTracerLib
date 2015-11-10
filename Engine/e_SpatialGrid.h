@@ -48,6 +48,25 @@ public:
 		return deviceDataIdx >= numData;
 	}
 
+	CUDA_ONLY_FUNC unsigned int allocStorage(unsigned int n)
+	{
+		unsigned int idx = atomicAdd(&deviceDataIdx, n);
+		return idx;
+	}
+
+	CUDA_ONLY_FUNC void store(const Vec3u& p, const T& v, unsigned int data_idx)
+	{
+		unsigned int map_idx = hashMap.Hash(p);
+#ifdef ISCUDA
+		unsigned int old_idx = atomicExch(deviceMap + map_idx, data_idx);
+#else
+		unsigned int old_idx = Platform::Exchange(deviceMap + map_idx, data_idx);
+#endif
+		//copy actual data
+		deviceData[data_idx].value = v;
+		deviceData[data_idx].nextIdx = old_idx;
+	}
+
 	CUDA_ONLY_FUNC bool store(const Vec3u& p, const T& v)
 	{
 		//build linked list and spatial map
@@ -55,7 +74,11 @@ public:
 		if (data_idx >= numData)
 			return false;
 		unsigned int map_idx = hashMap.Hash(p);
+#ifdef ISCUDA
+		unsigned int old_idx = atomicExch(deviceMap + map_idx, data_idx);
+#else
 		unsigned int old_idx = Platform::Exchange(deviceMap + map_idx, data_idx);
+#endif
 		//copy actual data
 		deviceData[data_idx].value = v;
 		deviceData[data_idx].nextIdx = old_idx;
@@ -67,15 +90,32 @@ public:
 		return store(hashMap.Transform(p), v);
 	}
 
-	template<typename CLB> CUDA_FUNC_IN void ForAll(const Vec3u& p, const CLB& clb)
+	template<unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX, typename CLB> CUDA_FUNC_IN void ForAll(const Vec3u& p, const CLB& clb)
 	{
-		const unsigned int N_MAX = 100;
 		unsigned int i0 = hashMap.Hash(p), i = deviceMap[i0], N = 0;
-		while (i != 0xffffffff && i != 0xffffff && N++ < N_MAX)
+		while (i != UINT_MAX && i != 0xffffff && N++ < MAX_ENTRIES_PER_CELL)
 		{
 			clb(i, deviceData[i].value);
 			i = deviceData[i].nextIdx;
 		}
+	}
+
+	template<unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX, typename CLB> CUDA_FUNC_IN void ForAll(const Vec3u& min, const Vec3u& max, const CLB& clb)
+	{
+		ForAllCells(min, max, [&](const Vec3u& cell_idx)
+		{
+			ForAll<MAX_ENTRIES_PER_CELL>(cell_idx, clb);
+		});
+	}
+
+	template<unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX, typename CLB> CUDA_FUNC_IN void ForAll(const Vec3f& p, const CLB& clb)
+	{
+		ForAll<MAX_ENTRIES_PER_CELL>(hashMap.Transform(p), clb);
+	}
+
+	template<unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX, typename CLB> CUDA_FUNC_IN void ForAll(const Vec3f& min, const Vec3f& max, const CLB& clb)
+	{
+		ForAll<MAX_ENTRIES_PER_CELL>(hashMap.Transform(min), hashMap.Transform(max), clb);
 	}
 
 	template<typename CLB> CUDA_FUNC_IN void ForAllCells(const Vec3u& min_cell, const Vec3u& max_cell, const CLB& clb)
@@ -88,27 +128,14 @@ public:
 				}
 	}
 
-	template<typename CLB> CUDA_FUNC_IN void ForAll(const Vec3u& min, const Vec3u& max, const CLB& clb)
-	{
-		ForAllCells(min, max, [&](const Vec3u& cell_idx)
-		{
-			ForAll(cell_idx, clb);
-		});
-	}
-
-	template<typename CLB> CUDA_FUNC_IN void ForAll(const Vec3f& p, const CLB& clb)
-	{
-		ForAll(hashMap.Transform(p), clb);
-	}
-
-	template<typename CLB> CUDA_FUNC_IN void ForAll(const Vec3f& min, const Vec3f& max, const CLB& clb)
-	{
-		ForAll(hashMap.Transform(min), hashMap.Transform(max), clb);
-	}
-
 	template<typename CLB> CUDA_FUNC_IN void ForAllCells(const Vec3f& min, const Vec3f& max, const CLB& clb)
 	{
 		ForAllCells(hashMap.Transform(min), hashMap.Transform(max), clb);
+	}
+
+	template<typename CLB> CUDA_FUNC_IN void ForAllCells(const CLB& clb)
+	{
+		ForAllCells(Vec3u(0), Vec3u(hashMap.m_fGridSize - 1), clb);
 	}
 
 	CUDA_FUNC_IN const T& operator()(unsigned int idx) const

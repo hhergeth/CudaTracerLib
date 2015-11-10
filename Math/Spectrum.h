@@ -418,6 +418,10 @@ public:
 	CUDA_HOST CUDA_DEVICE void toHSL(float& h, float& s, float& l) const;
 
 	void fromContinuousSpectrum(const float* wls, const float* vals, unsigned int N);
+
+	//samples a wavelength and appropriate Spectrum from this one using the sample provided
+	//E[SampleSpectrum(this)) = this
+	CUDA_HOST CUDA_DEVICE Spectrum SampleSpectrum(float& w, float sample) const;
 };
 
 class SpectrumHelper

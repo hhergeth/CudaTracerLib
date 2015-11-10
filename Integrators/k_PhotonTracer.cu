@@ -35,6 +35,50 @@ CUDA_FUNC_IN void handleSurfaceInteraction(const Spectrum& weight, BSDFSamplingR
 	}
 }
 
+CUDA_FUNC_IN Vec3f refract(const Vec3f &wi, float cosThetaT, float eta)
+{
+	float scale = -(cosThetaT < 0 ? (1.0f / eta) : eta);
+	return Vec3f(scale*wi.x, scale*wi.y, cosThetaT);
+}
+CUDA_FUNC_IN Vec3f reflect(const Vec3f &wi)
+{
+	return Vec3f(-wi.x, -wi.y, wi.z);
+}
+CUDA_FUNC_IN Spectrum sample(const Spectrum& s_, BSDFSamplingRecord& bRec, CudaRNG& rng)
+{
+	float w;
+	Spectrum s = s_.SampleSpectrum(w, rng.randomFloat());
+	for (int i = 0; i < 3; i++)
+		if (s_[i] != 0)
+			s[i] /= s_[i];
+
+	Vec3f B(1.03961212f, 0.231792344f, 1.01046945f), C(6.00069867e-3f, 2.00179144e-2f, 1.03560653e2f);
+	float w_mu = w / 1e3;
+	float eta = math::safe_sqrt(1 + ((B * w_mu * w_mu) / (Vec3f(w_mu * w_mu) - C)).sum());
+	//float eta = math::lerp(1.4f, 1.8f, (w - 300) / (600));
+	//float eta = 1.5f;
+
+	float cosThetaT;
+	float F = MonteCarlo::fresnelDielectricExt(Frame::cosTheta(bRec.wi), cosThetaT, eta);
+	Vec2f sample = rng.randomFloat2();
+	if (sample.x <= F) {
+		bRec.sampledType = EDeltaReflection;
+		bRec.wo = reflect(bRec.wi);
+		bRec.eta = 1.0f;
+
+		return Spectrum(1.0f);
+	}
+	else {
+		bRec.sampledType = EDeltaTransmission;
+		bRec.wo = refract(bRec.wi, cosThetaT, eta);
+		bRec.eta = cosThetaT < 0 ? eta : (1.0f / eta);
+
+		float factor = (bRec.mode == ERadiance) ? (cosThetaT < 0 ? (1.0f / eta) : eta) : 1.0f;
+
+		return s * (factor * factor);
+	}
+}
+
 CUDA_FUNC_IN void doWork(e_Image& g_Image, CudaRNG& rng)
 {
 	PositionSamplingRecord pRec;
@@ -55,9 +99,10 @@ CUDA_FUNC_IN void doWork(e_Image& g_Image, CudaRNG& rng)
 	{
 		r2.getBsdfSample(r, bRec, ETransportMode::EImportance, &rng);
 		
-		handleSurfaceInteraction(power * throughput, bRec, r2, g_Image, rng);
+		if (r2.getMat().bsdf.getTypeToken() != -1)
+			handleSurfaceInteraction(power * throughput, bRec, r2, g_Image, rng);
 
-		Spectrum bsdfWeight = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
+		Spectrum bsdfWeight = r2.getMat().bsdf.getTypeToken() == -1 ? sample(power * throughput, bRec, rng) : r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
 
 		r = Ray(bRec.dg.P, bRec.getOutgoing());
 		r2.Init();

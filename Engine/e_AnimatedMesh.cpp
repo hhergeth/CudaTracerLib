@@ -91,7 +91,6 @@ e_AnimatedMesh::e_AnimatedMesh(const std::string& path, IInStream& a_In, e_Strea
 void e_AnimatedMesh::CreateNewMesh(e_AnimatedMesh* A, e_Stream<e_TriIntersectorData>* a_Stream0, e_Stream<e_TriangleData>* a_Stream1, e_Stream<e_BVHNodeData>* a_Stream2, e_Stream<e_TriIntersectorData2>* a_Stream3, e_Stream<e_KernelMaterial>* a_Stream4, e_Stream<char>* a_Stream5)
 {
 	A->m_uType = MESH_ANIMAT_TOKEN;
-	A->m_uUsedLights = 0;
 	A->m_sLocalBox = m_sLocalBox;
 	A->m_sMatInfo = m_sMatInfo;
 	A->m_sIndicesInfo = a_Stream3->malloc(m_sIndicesInfo, true);

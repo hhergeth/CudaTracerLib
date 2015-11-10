@@ -368,15 +368,12 @@ void compileply(IInStream& istream, FileOutputStream& a_Out)
 	delete [] Normals;
 	delete [] Tangents;
 
-	e_MeshPartLight m_sLights[MAX_AREALIGHT_NUM];
-	Platform::SetMemory(m_sLights, sizeof(m_sLights));
 	e_KernelMaterial defaultMat("Default_Material");
 	diffuse mat;
 	mat.m_reflectance = CreateTexture(Spectrum(1,0,0));
 	defaultMat.bsdf.SetData(mat);
 	a_Out << box;
-	a_Out.Write(m_sLights, sizeof(m_sLights));
-	a_Out << 0;
+	a_Out << (unsigned int)0;
 	a_Out << (unsigned int)(indexCount / 3);
 	a_Out.Write(&triData[0], sizeof(e_TriangleData) * (int)(indexCount / 3));
 	a_Out << 1;

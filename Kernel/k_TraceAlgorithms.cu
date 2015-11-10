@@ -17,13 +17,13 @@ float G(const Vec3f& N_x, const Vec3f& N_y, const Vec3f& x, const Vec3f& y)
 	return absdot(N_x, theta) * absdot(N_y, -theta) / distanceSquared(x, y);
 }
 
-Spectrum Transmittance(const Ray& r, float tmin, float tmax, unsigned int a_NodeIndex)
+Spectrum Transmittance(const Ray& r, float tmin, float tmax)
 {
 	if (g_SceneData.m_sVolume.HasVolumes())
 	{
 		float a, b;
-		g_SceneData.m_sVolume.IntersectP(r, tmin, tmax, &a, &b, a_NodeIndex);
-		return (-g_SceneData.m_sVolume.tau(r, a, b, a_NodeIndex)).exp();
+		g_SceneData.m_sVolume.IntersectP(r, tmin, tmax, &a, &b);
+		return (-g_SceneData.m_sVolume.tau(r, a, b)).exp();
 	}
 	return Spectrum(1.0f);
 }

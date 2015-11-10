@@ -74,7 +74,7 @@ template<bool REGULAR> struct k_HashGrid
 		}
 		else
 		{
-			return Vec3u(0xffffffff);
+			return Vec3u(UINT_MAX);
 		}
 	}
 

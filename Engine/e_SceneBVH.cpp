@@ -56,9 +56,9 @@ e_SceneBVH::e_SceneBVH(size_t a_NodeCount)
 	m_pNodes = new e_Stream<e_BVHNodeData>(a_NodeCount * 2);//largest binary tree has the same amount of inner nodes
 	m_pTransforms = new e_Stream<float4x4>(a_NodeCount);
 	m_pInvTransforms = new e_Stream<float4x4>(a_NodeCount);
-	tr_ref = m_pTransforms->malloc(m_pTransforms->numElements());
-	iv_tr_ref = m_pInvTransforms->malloc(m_pInvTransforms->numElements());
-	node_ref = m_pNodes->malloc(m_pNodes->numElements());
+	tr_ref = m_pTransforms->malloc(m_pTransforms->getBufferLength());
+	iv_tr_ref = m_pInvTransforms->malloc(m_pInvTransforms->getBufferLength());
+	node_ref = m_pNodes->malloc(m_pNodes->getBufferLength());
 	for (unsigned int i = 0; i < a_NodeCount; i++)
 		*tr_ref(i) = *iv_tr_ref(i) = float4x4::Identity();
 	m_pBuilder = new e_BVHRebuilder(node_ref(), node_ref.getLength(), (unsigned int)a_NodeCount, 0, 0);
@@ -73,6 +73,10 @@ e_SceneBVH::~e_SceneBVH()
 
 void e_SceneBVH::setTransform(e_BufferReference<e_Node, e_Node> n, const float4x4& mat)
 {
+	if (n.getIndex() >= m_pTransforms->getBufferLength())
+	{
+		throw std::runtime_error("The number of nodes can not be enlarged!");
+	}
 	unsigned int nodeIdx = n.getIndex();
 	*m_pTransforms[0](nodeIdx).operator->() = mat;
 	*m_pInvTransforms[0](nodeIdx).operator->() = mat.inverse();

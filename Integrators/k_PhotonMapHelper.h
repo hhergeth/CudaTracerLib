@@ -25,7 +25,7 @@ CUDA_FUNC_IN float k_tr(float r, float t)
 {
 	//if (t > r)
 	//	printf("t : %f, r : %f", t, r);
-	return k(t / r) / (PI * r * r);
+	return k(t / r) / (r * r);
 }
 
 CUDA_FUNC_IN float k_tr(float r, const Vec3f& t)
@@ -314,7 +314,7 @@ typedef k_PhotonMap<k_HashGrid_Reg> k_PhotonMapReg;
 #ifdef __CUDACC__
 template<typename PHOTON> CUDA_ONLY_FUNC bool storePhoton(const Vec3f& pos, const Spectrum& phi, const Vec3f& wi, const Vec3f& n, PhotonType type, k_PhotonMapCollection<true, PHOTON>& g_Map, bool final_gather)
 {
-	unsigned int p_idx = atomicInc(&g_Map.m_uPhotonNumStored, 0xffffffff);
+	unsigned int p_idx = atomicInc(&g_Map.m_uPhotonNumStored, UINT_MAX);
 	if (p_idx < g_Map.m_uPhotonBufferLength)
 	{
 		{
@@ -329,7 +329,7 @@ template<typename PHOTON> CUDA_ONLY_FUNC bool storePhoton(const Vec3f& pos, cons
 		//if this photon is caustic we will also have to store it in the diffuse map
 		if (type == PhotonType::pt_Caustic && final_gather)
 		{
-			p_idx = atomicInc(&g_Map.m_uPhotonNumStored, 0xffffffff);
+			p_idx = atomicInc(&g_Map.m_uPhotonNumStored, UINT_MAX);
 			if (p_idx < g_Map.m_uPhotonBufferLength)
 			{
 				PHOTON p = PHOTON(phi, wi, n, PhotonType::pt_Diffuse);
@@ -348,7 +348,7 @@ template<typename PHOTON> CUDA_ONLY_FUNC bool storePhoton(const Vec3f& pos, cons
 
 template<typename PHOTON> CUDA_ONLY_FUNC bool storePhoton(const Vec3f& pos, const Spectrum& phi, const Vec3f& wi, const Vec3f& n, PhotonType type, k_PhotonMapCollection<false, PHOTON>& g_Map, PHOTON** resPhoton = 0)
 {
-	unsigned int p_idx = atomicInc(&g_Map.m_uPhotonNumStored, 0xffffffff);
+	unsigned int p_idx = atomicInc(&g_Map.m_uPhotonNumStored, UINT_MAX);
 	if (p_idx < g_Map.m_uPhotonBufferLength)
 	{
 		PHOTON p = PHOTON(phi, wi, n, type);

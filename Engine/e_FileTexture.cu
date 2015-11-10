@@ -1,6 +1,5 @@
 #include "StdAfx.h"
 #include "e_FileTexture.h"
-#include "e_ErrorHandler.h"
 #include "e_FileTextureHelper.h"
 #include "../Base/FileStream.h"
 #include "../CudaMemoryManager.h"

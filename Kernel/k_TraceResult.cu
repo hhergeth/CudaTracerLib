@@ -28,21 +28,17 @@ void TraceResult::getBsdfSample(const Vec3f& wi, const Vec3f& p, BSDFSamplingRec
 Spectrum TraceResult::Le(const Vec3f& p, const Frame& sys, const Vec3f& w) const
 {
 	unsigned int i = LightIndex();
-	if (i == 0xffffffff)
+	if (i == UINT_MAX)
 		return Spectrum(0.0f);
 	else return g_SceneData.m_sLightData[i].eval(p, sys, w);
 }
 
 unsigned int TraceResult::LightIndex() const
 {
-	unsigned int mi = m_pTri->getMatIndex(m_pNode->m_uMaterialOffset);
-	e_KernelMaterial* mats = g_SceneData.m_sMatData.Data;
-	e_KernelMaterial* mat = mats + mi;
-	unsigned int i = mat->NodeLightIndex;
-	if (i == 0xffffffff)
-		return 0xffffffff;
-	unsigned int j = m_pNode->m_uLightIndices[i];
-	return j;
+	unsigned int nli = getMat().NodeLightIndex;
+	if (nli == UINT_MAX)
+		return UINT_MAX;
+	return m_pNode->m_uLights(nli);
 }
 
 unsigned int TraceResult::getNodeIndex() const

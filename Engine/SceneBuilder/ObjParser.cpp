@@ -1162,9 +1162,7 @@ void compileobj(IInStream& in, FileOutputStream& a_Out)
 	ImportState state;
 	parse(state, in);
 
-	e_MeshPartLight m_sLights[MAX_AREALIGHT_NUM];
-	Platform::SetMemory(m_sLights, sizeof(m_sLights));
-	int c = 0, lc = 0;
+	std::vector<e_MeshPartLight> lights;
 	std::vector<e_KernelMaterial> matData;
 	matData.reserve(state.materialHash.vec.size());
 	for (size_t i = 0; i < state.materialHash.vec.size(); i++)
@@ -1206,11 +1204,7 @@ void compileobj(IInStream& in, FileOutputStream& a_Out)
 		}
 
 		if (length(M.emission))
-		{
-			m_sLights[lc].L = Spectrum(M.emission.x, M.emission.y, M.emission.z);
-			m_sLights[lc].MatName = M.Name;
-			mat.NodeLightIndex = lc++;
-		}
+			lights.push_back(e_MeshPartLight(M.Name, Spectrum(M.emission.x, M.emission.y, M.emission.z)));
 		matData.push_back(mat);
 	}
 
@@ -1246,6 +1240,7 @@ void compileobj(IInStream& in, FileOutputStream& a_Out)
 #endif
 
 	AABB box = AABB::Identity();
+	unsigned int triCount = 0;
 	for (unsigned int submesh = 0; submesh < state.subMeshes.size(); submesh++)
 	{
 		int matIndex = state.materialHash.searchi(state.subMeshes[submesh].material.Name);
@@ -1266,13 +1261,14 @@ void compileobj(IInStream& in, FileOutputStream& a_Out)
 				n[j] = normalize(normals[l]);
 #endif
 			}
-			triData[c++] = e_TriangleData(p, (unsigned char)matIndex, t, n, ta, bi);
+			triData[triCount++] = e_TriangleData(p, (unsigned char)matIndex, t, n, ta, bi);
 		}
 	}
 
 	a_Out << box;
-	a_Out.Write(m_sLights, sizeof(m_sLights));
-	a_Out << lc;
+	a_Out << (unsigned int)lights.size();
+	if (lights.size())
+		a_Out.Write(&lights[0], lights.size() * sizeof(e_MeshPartLight));
 	a_Out << m_numTriangles;
 	a_Out.Write(triData, sizeof(e_TriangleData) * m_numTriangles);
 	a_Out << (unsigned int)matData.size();

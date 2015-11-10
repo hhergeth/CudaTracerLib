@@ -46,7 +46,7 @@ __global__ void pathCreateKernel(unsigned int w, unsigned int h, k_PTDBuffer g_I
 		dat.y = y;
 		dat.throughput = W;
 		dat.L = Spectrum(0.0f);
-		dat.dIdx = 0xffffffff;
+		dat.dIdx = UINT_MAX;
 	} while (true);
 }
 
@@ -134,7 +134,7 @@ template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(unsigned int N, 
 		}
 
 		rayData dat = g_Intersector(rayidx);
-		if (NEXT_EVENT_EST && pass > 0 && dat.dIdx != 0xffffffff)
+		if (NEXT_EVENT_EST && pass > 0 && dat.dIdx != UINT_MAX)
 		{
 			traversalResult& res = g_Intersector.res(dat.dIdx, 1);
 			traversalRay& ray = g_Intersector(dat.dIdx, 1);
@@ -162,7 +162,7 @@ template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(unsigned int N, 
 			DifferentialGeometry dg;
 			BSDFSamplingRecord bRec(dg);
 			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
-			if (pass == 0 || dat.dIdx == 0xffffffff)
+			if (pass == 0 || dat.dIdx == UINT_MAX)
 				dat.L += r2.Le(bRec.dg.P, bRec.dg.sys, -r.direction) * dat.throughput;
 			if (pass + 1 != max_PASS)
 			{
@@ -193,7 +193,7 @@ template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(unsigned int N, 
 					ray3.a = Vec4f(bRec.dg.P, 1e-2f);
 					ray3.b = Vec4f(dRec.d, FLT_MAX);
 				}
-				else dat.dIdx = 0xffffffff;
+				else dat.dIdx = UINT_MAX;
 				dat.throughput *= f;
 				g_Intersector2(idx2) = dat;
 			}

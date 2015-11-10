@@ -11,7 +11,7 @@
 unsigned int Platform::Increment(unsigned int* add)
 {
 #if defined(ISCUDA)
-	return atomicInc(add, 0xffffffff);
+	return atomicInc(add, UINT_MAX);
 #elif defined(ISWINDOWS)
 	return InterlockedIncrement(add);
 #elif defined(ISUNIX)

@@ -77,7 +77,7 @@ CUDA_FUNC_IN void BPT(const Vec2f& pixelPosition, k_BlockSampleImage& img, CudaR
 		cameraState.dVCM /= math::abs(Frame::cosTheta(bRec.wi));
 		cameraState.dVC /= math::abs(Frame::cosTheta(bRec.wi));
 
-		if (r2.LightIndex() != 0xffffffff)
+		if (r2.LightIndex() != UINT_MAX)
 		{
 			acc += pathWeight(force_s, force_t, 0, camPathLength) * cameraState.throughput * gatherLight(cameraState, bRec, r2, rng, camPathLength, use_mis);
 			break;

@@ -95,7 +95,7 @@ class s10e5
   CUDA_FUNC_IN s10e5 ();			// no initialization
   CUDA_FUNC_IN s10e5 (float f);
   CUDA_FUNC_IN s10e5 (unsigned short s);
-  CUDA_FUNC_IN float ToFloat()
+  CUDA_FUNC_IN float ToFloat() const
   {
 	  return (float)*this;
   }

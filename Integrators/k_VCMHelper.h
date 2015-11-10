@@ -328,7 +328,7 @@ template<bool TEST_VISIBILITY = true> CUDA_FUNC_IN Spectrum connectVertices(BPTV
 			 for (unsigned int c = lo.z; c <= hi.z; c++)
 			 {
 		 unsigned int i0 = map.m_sSurfaceMap.m_sHash.Hash(Vec3u(a, b, c)), i = map.m_sSurfaceMap.m_pDeviceHashGrid[i0], count = 0;
-		 while (i != 0xffffffff && i != 0xffffff && count++<100)
+		 while (i != UINT_MAX && i != 0xffffff && count++<100)
 		 {
 			 k_MISPhoton e = map.m_pPhotons[i];
 			 Vec3f n = e.getNormal(), wi = e.getWi(), P = e.getPos(map.m_sSurfaceMap.m_sHash, Vec3u(a, b, c));
@@ -345,7 +345,7 @@ template<bool TEST_VISIBILITY = true> CUDA_FUNC_IN Spectrum connectVertices(BPTV
 				 const float misWeight = 1.f / (wLight + 1.f + wCamera);
 
 				 float ke = k_tr(a_rSurfaceUNUSED, math::sqrt(dist2));
-				 Lp += (use_mis ? misWeight : 1.0f) * PI * ke * l * bsdfFactor / Frame::cosTheta(bRec.wo);
+				 Lp += (use_mis ? misWeight : 1.0f) * ke * l * bsdfFactor / Frame::cosTheta(bRec.wo);
 			 }
 			 i = e.getNext();
 		 }

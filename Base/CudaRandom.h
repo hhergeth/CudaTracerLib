@@ -21,7 +21,7 @@ public:
 
 	CUDA_FUNC_IN float randomFloat()
 	{
-		return float(randomUint()) / float(0xffffffff);
+		return float(randomUint()) / float(UINT_MAX);
 	}
 };
 
@@ -37,14 +37,14 @@ public:
 	CUDA_FUNC_IN unsigned int randomUint()
 	{
 		const unsigned int a = 16807;
-		const unsigned int m = 2147483647;
+		const unsigned int m = UINT_MAX;
 		X_i = (unsigned int(X_i * a)) % m;
 		return X_i;
 	}
 
 	CUDA_FUNC_IN float randomFloat()
 	{
-		return randomUint() / float(2147483647);
+		return randomUint() / float(UINT_MAX);
 	}
 };
 
@@ -81,7 +81,7 @@ public:
 
 	CUDA_FUNC_IN float randomFloat()
 	{
-		return float(randomUint()) / float(0xffffffff);
+		return float(randomUint()) / float(UINT_MAX);
 	}
 };
 
@@ -111,7 +111,7 @@ public:
 
 	CUDA_FUNC_IN float randomFloat()
 	{
-		return float(randomUint()) / float(0xffffffff);
+		return float(randomUint()) / float(UINT_MAX);
 	}
 };
 

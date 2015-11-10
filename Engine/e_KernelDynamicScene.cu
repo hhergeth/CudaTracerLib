@@ -5,7 +5,7 @@
 const e_KernelLight* e_KernelDynamicScene::sampleLight(float& emPdf, Vec2f& sample) const
 {
 	unsigned int index = m_emitterPDF.SampleReuse(sample.x, emPdf);
-	if (index == 0xffffffff)
+	if (index == UINT_MAX)
 		return 0;
 	return m_sLightData.Data + g_SceneData.m_uEmitterIndices[index];
 }
@@ -31,14 +31,14 @@ bool e_KernelDynamicScene::Occluded(const Ray& r, float tmin, float tmax, TraceR
 
 Spectrum e_KernelDynamicScene::EvalEnvironment(const Ray& r) const
 {
-	if(m_uEnvMapIndex != 0xffffffff)
+	if (m_uEnvMapIndex != UINT_MAX)
 		return m_sLightData[m_uEnvMapIndex].As<e_InfiniteLight>()->evalEnvironment(r);
 	else return Spectrum(0.0f);
 }
 
 Spectrum e_KernelDynamicScene::EvalEnvironment(const Ray& r, const Ray& rX, const Ray& rY) const
 {
-	if (m_uEnvMapIndex != 0xffffffff)
+	if (m_uEnvMapIndex != UINT_MAX)
 		return m_sLightData[m_uEnvMapIndex].As<e_InfiniteLight>()->evalEnvironment(r, rX, rY);
 	else return Spectrum(0.0f);
 }

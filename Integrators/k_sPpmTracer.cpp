@@ -16,11 +16,11 @@ k_sPpmTracer::k_sPpmTracer()
 #endif
 	m_uTotalPhotonsEmitted = -1;
 	unsigned int numPhotons = (m_uBlocksPerLaunch + 2) * PPM_slots_per_block;
-	m_sSurfaceMap = e_SpatialLinkedMap<k_pPpmPhoton>(250, numPhotons * PPM_MaxRecursion / 5);
-	m_pVolumeEstimator = new k_PointStorage(100, numPhotons * PPM_MaxRecursion / 2);
+	m_sSurfaceMap = e_SpatialLinkedMap<k_pPpmPhoton>(250, numPhotons * PPM_MaxRecursion / 10);
+	m_pVolumeEstimator = new k_PointStorage(100, numPhotons * PPM_MaxRecursion / 10);
 	//m_pVolumeEstimator = new k_BeamGrid(100, numPhotons * PPM_MaxRecursion / 10, 20, 10);
-	//m_pVolumeEstimator = new k_BeamBVHStorage(numPhotons/50, 0);
-	//m_pVolumeEstimator = new k_BeamBeamGrid(30, 1000000, 1000);
+	//m_pVolumeEstimator = new k_BeamBVHStorage(10000, 0);
+	//m_pVolumeEstimator = new k_BeamBeamGrid(30, 50000, 1000);
 }
 
 void k_sPpmTracer::PrintStatus(std::vector<std::string>& a_Buf) const
@@ -97,7 +97,7 @@ void print(k_PhotonMapCollection& m_sMaps, k_PhotonMap<k_HashGrid_Reg>& m_Map, s
 static Vec2i lastPix = Vec2i(0,0);
 void k_sPpmTracer::DoRender(e_Image* I)
 {
-	//I->Clear();
+	I->Clear();
 	//if (m_uTotalPhotonsEmitted == 0)
 	{
 		doPhotonPass();
@@ -111,11 +111,13 @@ void k_sPpmTracer::DoRender(e_Image* I)
 	//printf("{r = %f, rd = %f}, r = %f, {min = %f, max = %f}\n", ent.r, ent.rd, getCurrentRadius2(2), str.r_min, str.r_max);
 }
 
-float k_sPpmTracer::getRadiusAt(int x, int y) const
+void k_sPpmTracer::getRadiusAt(int x, int y, float& r, float& rd) const
 {
 	k_AdaptiveEntry e;
 	ThrowCudaErrors(cudaMemcpy(&e, m_pEntries + w * y + x, sizeof(e), cudaMemcpyDeviceToHost));
-	return ::getCurrentRadius(e.r, m_uPassesDone, 2);
+	//r = ::getCurrentRadius(e.r, m_uPassesDone, 2);
+	r = e.r;
+	rd = e.rd;
 }
 
 void k_sPpmTracer::StartNewTrace(e_Image* I)

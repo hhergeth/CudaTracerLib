@@ -14,7 +14,7 @@
 #include <FreeImage.h>
 
 e_Image::e_Image(int xRes, int yRes, unsigned int viewGLTexture)
-	: xResolution(xRes), yResolution(yRes), lastSplatVal(0)
+	: xResolution(xRes), yResolution(yRes), lastSplatVal(0), m_fOutScale(1)
 {
 	ownsTarget = false;
 	drawStyle = ImageDrawType::Normal;
@@ -32,7 +32,7 @@ e_Image::e_Image(int xRes, int yRes, unsigned int viewGLTexture)
 
 #ifdef ISWINDOWS
 e_Image::e_Image(int xRes, int yRes, ID3D11Resource *pD3DResource)
-	: xResolution(xRes), yResolution(yRes), lastSplatVal(0)
+	: xResolution(xRes), yResolution(yRes), lastSplatVal(0), m_fOutScale(1)
 {
 ownsTarget = false;
 	drawStyle = ImageDrawType::Normal;
@@ -50,7 +50,7 @@ ownsTarget = false;
 #endif
 
 e_Image::e_Image(int xRes, int yRes, RGBCOL* target)
-	: xResolution(xRes), yResolution(yRes), lastSplatVal(0)
+	: xResolution(xRes), yResolution(yRes), lastSplatVal(0), m_fOutScale(1)
 {
 	ThrowCudaErrors();
 	drawStyle = ImageDrawType::Normal;

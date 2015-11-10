@@ -103,7 +103,7 @@ public:
 	{
 		if (!light.Is<e_DiffuseLight>())
 			return false;
-		return r2.getNodeIndex() == light.As<e_DiffuseLight>()->m_uNodeIdx && r2.LightIndex() != 0xffffffff;
+		return r2.getNodeIndex() == light.As<e_DiffuseLight>()->m_uNodeIdx && r2.LightIndex() != UINT_MAX;
 	}
 
 	virtual Vec3f getPos() const

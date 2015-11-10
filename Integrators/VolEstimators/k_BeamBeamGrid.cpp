@@ -1,6 +1,9 @@
 #include <StdAfx.h>
 #include "k_BeamBeamGrid.h"
 #include <set>
+#include <Base/Timer.h>
+#include <Math/Compression.h>
+#include <Math/half.h>
 
 void k_BeamBeamGrid::StartNewPass(const IRadiusProvider* radProvider, e_DynamicScene* scene)
 {
@@ -17,11 +20,31 @@ void k_BeamBeamGrid::StartNewPass(const IRadiusProvider* radProvider, e_DynamicS
 
 void k_BeamBeamGrid::PrepareForRendering()
 {
+	std::cout << "m_uNumEmitted = " << m_uNumEmitted << "\n";
 	/*e_SpatialLinkedMap<int>::linkedEntry* entries = new e_SpatialLinkedMap<int>::linkedEntry[m_sStorage.numData];
-	cudaMemcpy(entries, m_sStorage.deviceData, m_sStorage.numData * sizeof(e_SpatialLinkedMap<int>::linkedEntry), cudaMemcpyDeviceToHost);
+	ThrowCudaErrors(cudaMemcpy(entries, m_sStorage.deviceData, m_sStorage.numData * sizeof(e_SpatialLinkedMap<int>::linkedEntry), cudaMemcpyDeviceToHost));
 	unsigned int I = m_sStorage.gridSize * m_sStorage.gridSize * m_sStorage.gridSize;
 	unsigned int* grid = new unsigned int[I];
-	cudaMemcpy(grid, m_sStorage.deviceMap, I * sizeof(unsigned int), cudaMemcpyDeviceToHost);*/
+	ThrowCudaErrors(cudaMemcpy(grid, m_sStorage.deviceMap, I * sizeof(unsigned int), cudaMemcpyDeviceToHost));
+	unsigned int* denseGrid = new unsigned int[m_sStorage.numData + I];
+	std::cout << "denseGrid size = " << (((m_sStorage.numData + I) * sizeof(unsigned int)) / (1024 * 1024)) << "[MB]\n";
+	Platform::SetMemory(denseGrid, sizeof(unsigned int) * (m_sStorage.numData + I), UINT_MAX);
+
+	unsigned int d_idx = I;
+	InstructionTimer T;
+	T.StartTimer();
+	m_sStorage.ForAllCells([&](const Vec3u& cell_idx)
+	{
+		unsigned int i = m_sStorage.hashMap.Hash(cell_idx), j = grid[i], start = d_idx, n = 0;
+		m_sStorage.ForAll(cell_idx, [&](unsigned int abc, int p_idx)
+		{
+			denseGrid[d_idx++] = p_idx;
+			n++;
+		});
+		denseGrid[i] = start != d_idx ? ((n << 24) | start) : UINT_MAX;
+	});
+	std::cout << "dense grid creation took : " << T.EndTimer() << "[Sec]\n";*/
+
 	/*m_sStorage.deviceData = entries;
 	m_sStorage.deviceMap = grid;
 	Ray r = g_SceneData.GenerateSensorRay(200, 200);

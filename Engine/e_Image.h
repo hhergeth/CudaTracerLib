@@ -103,9 +103,12 @@ public:
 	void copyToHost();
 	void SaveToMemory(void** mem, size_t& size, const std::string& type);
 	static void ComputeDiff(const e_Image& A, const e_Image& B, e_Image& dest, float scale);
+	void setOutputScale(float f){ m_fOutScale = f; }
 private:
 	FIBITMAP* toFreeImage();
 	void InternalUpdateDisplay();
+
+	float m_fOutScale;
 	bool m_bDoUpdate;
 	e_Filter filter;
 	Pixel *cudaPixels;

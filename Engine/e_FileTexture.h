@@ -21,7 +21,7 @@ class e_MIPMap
 public:
 	e_ImageFilter m_uFilterMode;
 	std::string m_pPath;
-	e_MIPMap() {m_pDeviceData = 0; m_uWidth = m_uHeight = m_uBpp = 0xffffffff;}
+	e_MIPMap() { m_pDeviceData = 0; m_uWidth = m_uHeight = m_uBpp = UINT_MAX; }
 	e_MIPMap(const std::string& a_InputFile, IInStream& a_In);
 	void Free();
 	static void CompileToBinary(const std::string& a_InputFile, FileOutputStream& a_Out, bool a_MipMap);

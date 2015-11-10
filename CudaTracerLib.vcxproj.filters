@@ -122,9 +122,6 @@
     <ClInclude Include="Engine\e_DynamicScene.h">
       <Filter>Engine</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\e_ErrorHandler.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
     <ClInclude Include="Engine\e_FileTexture.h">
       <Filter>Engine</Filter>
     </ClInclude>
@@ -310,6 +307,9 @@
     </ClInclude>
     <ClInclude Include="Integrators\VolEstimators\k_PointStorage.h">
       <Filter>Integrators\VolEstimators</Filter>
+    </ClInclude>
+    <ClInclude Include="Base\FixedSizeArray.h">
+      <Filter>Base</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

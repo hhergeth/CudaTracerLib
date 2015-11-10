@@ -46,11 +46,13 @@ e_Mesh::e_Mesh(const std::string& path, IInStream& a_In, e_Stream<e_TriIntersect
 	: m_uPath(path)
 {
 	m_uType = MESH_STATIC_TOKEN;
-	int abc = sizeof(e_TriangleData), abc2 = sizeof(m_sLights);
 
 	a_In >> m_sLocalBox;
-	a_In.Read(m_sLights, sizeof(m_sLights));
-	a_In >> m_uUsedLights;
+	unsigned int numLights;
+	a_In >> numLights;
+	m_sAreaLights.resize(numLights);
+	if (numLights)
+		a_In.Read(&m_sAreaLights[0], numLights * sizeof(e_MeshPartLight));
 
 	unsigned int m_uTriangleCount;
 	a_In >> m_uTriangleCount;
@@ -112,7 +114,9 @@ e_SceneInitData e_Mesh::ParseBinary(const std::string& a_InputFile)
 	FileInputStream a_In(a_InputFile);
 	AABB m_sLocalBox;
 	a_In >> m_sLocalBox;
-	a_In.Move(sizeof(e_MeshPartLight) * MAX_AREALIGHT_NUM + 8);
+	unsigned int numLights;
+	a_In >> numLights;
+	a_In.Move(sizeof(e_MeshPartLight) * numLights);
 #define PRINT(n, t) { a_In.Move(n * sizeof(t)); Platform::OutputDebug(format("Buf : %s, length : %llu, size : %llu[MB]\n", #t, size_t(n), size_t((n) * sizeof(t) / (1024 * 1024))));}
 	unsigned int m_uTriangleCount;
 	a_In >> m_uTriangleCount;
@@ -138,15 +142,9 @@ e_SceneInitData e_Mesh::ParseBinary(const std::string& a_InputFile)
 
 void e_Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2f* uvs, const unsigned int* indices, unsigned int nIndices, const e_KernelMaterial& mat, const Spectrum& Le, FileOutputStream& a_Out)
 {
-	e_MeshPartLight m_sLights[MAX_AREALIGHT_NUM];
-	Platform::SetMemory(m_sLights, sizeof(m_sLights));
-	unsigned int lightCount = 0;
+	std::vector<e_MeshPartLight> lights;
 	if(!Le.isZero())
-	{
-		m_sLights[0].L = Le;
-		m_sLights[0].MatName = mat.Name;
-		lightCount++;
-	}
+		lights.push_back(e_MeshPartLight(mat.Name, Le));
 	Vec3f p[3];
 	Vec3f n[3];
 	Vec3f ta[3];
@@ -182,8 +180,9 @@ void e_Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Ve
 		triData[triIndex++] = e_TriangleData(p, 0, t, n, ta, bi);
 	}
 	a_Out << box;
-	a_Out.Write(m_sLights, sizeof(m_sLights));
-	a_Out << lightCount;
+	a_Out << (unsigned int)lights.size();
+	if (lights.size())
+		a_Out.Write(&lights[0], lights.size() * sizeof(e_MeshPartLight));
 	a_Out << numTriangles;
 	a_Out.Write(triData, sizeof(e_TriangleData) * numTriangles);
 	a_Out << (unsigned int)1;
@@ -199,15 +198,7 @@ void e_Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Ve
 
 void e_Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2f** uvs, unsigned int nUV_Sets, const unsigned int* indices, unsigned int nIndices, const std::vector<e_KernelMaterial>& mats, const std::vector<Spectrum>& Les, const std::vector<unsigned int>& subMeshes, const unsigned char* extraData, FileOutputStream& a_Out)
 {
-	e_MeshPartLight m_sLights[MAX_AREALIGHT_NUM];
-	Platform::SetMemory(m_sLights, sizeof(m_sLights));
-	unsigned int lightCount = 0;
-	if(!Les[0].isZero())
-	{
-		m_sLights[lightCount].L = Les[0];
-		m_sLights[0].MatName = mats[0].Name;
-		lightCount++;
-	}
+	std::vector<e_MeshPartLight> lights;
 	Vec3f p[3];
 	Vec3f n[3];
 	Vec3f ta[3];
@@ -262,16 +253,13 @@ void e_Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Ve
 			pc += subMeshes[si];
 			si++;
 			if(!Les[si].isZero())
-			{
-				m_sLights[lightCount].L = Les[si];
-				m_sLights[lightCount].MatName = mats[si].Name;
-				lightCount++;
-			}
+				lights.push_back(e_MeshPartLight(mats[si].Name, Les[si]));
 		}
 	}
 	a_Out << box;
-	a_Out.Write(m_sLights, sizeof(m_sLights));
-	a_Out << lightCount;
+	a_Out << (unsigned int)lights.size();
+	if (lights.size())
+		a_Out.Write(&lights[0], lights.size() * sizeof(e_MeshPartLight));
 	a_Out << numTriangles;
 	a_Out.Write(triData, sizeof(e_TriangleData) * numTriangles);
 	a_Out << (unsigned int)mats.size();

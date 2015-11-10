@@ -87,8 +87,6 @@ void compilemd5(IInStream& in, std::vector<IInStream*>& animFiles, FileOutputStr
 
 	std::vector<e_TriangleData> triData;
 	std::vector<e_KernelMaterial> matData;
-	e_MeshPartLight m_sLights[MAX_AREALIGHT_NUM];
-	unsigned int lc = 0;
 	diffuse stdMaterial;
 	stdMaterial.m_reflectance = CreateTexture(Spectrum(1, 0, 0));
 
@@ -124,8 +122,7 @@ void compilemd5(IInStream& in, std::vector<IInStream*>& animFiles, FileOutputStr
 	}
 
 	a_Out << box;
-	a_Out.Write(m_sLights, sizeof(m_sLights));
-	a_Out << lc;
+	a_Out << (unsigned int)0;
 
 	a_Out << (unsigned int)triData.size();
 	a_Out.Write(&triData[0], sizeof(e_TriangleData) * (unsigned int)triData.size());

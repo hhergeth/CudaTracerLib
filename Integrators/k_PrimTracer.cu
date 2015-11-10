@@ -23,7 +23,7 @@ CUDA_FUNC_IN Spectrum trace(Ray& r, const Ray& rX, const Ray& rY, CudaRNG& rng, 
 		BSDFSamplingRecord bRec(dg);
 		r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
 		dg.computePartials(r, rX, rY);
-		return Spectrum(absdot(dg.n, -r.direction));
+		//return Spectrum(absdot(dg.n, -r.direction));
 		//return Spectrum(dg.dvdx, dg.dvdy, 0);
 		//Vec3f n = (bRec.dg.sys.n + Vec3f(1)) / 2;
 		//return Spectrum(n.x, n.y, n.z);

@@ -80,7 +80,7 @@ CUDA_FUNC_IN void VCM(const Vec2f& pixelPosition, k_BlockSampleImage& img, CudaR
 		cameraState.dVC /= math::abs(Frame::cosTheta(bRec.wi));
 		cameraState.dVM /= math::abs(Frame::cosTheta(bRec.wi));
 
-		if (r2.LightIndex() != 0xffffffff)
+		if (r2.LightIndex() != UINT_MAX)
 		{
 			acc += cameraState.throughput * gatherLight(cameraState, bRec, r2, rng, camPathLength, true);
 			break;
@@ -177,6 +177,6 @@ k_VCM::k_VCM()
 {
 	int gridLength = 100;
 	int numPhotons = 1024 * 1024 * 5;
-	m_sPhotonMapsCurrent = k_PhotonMapCollection<false, k_MISPhoton>(numPhotons, gridLength*gridLength*gridLength, 0xffffffff);
-	m_sPhotonMapsNext = k_PhotonMapCollection<false, k_MISPhoton>(numPhotons, gridLength*gridLength*gridLength, 0xffffffff);
+	m_sPhotonMapsCurrent = k_PhotonMapCollection<false, k_MISPhoton>(numPhotons, gridLength*gridLength*gridLength, UINT_MAX);
+	m_sPhotonMapsNext = k_PhotonMapCollection<false, k_MISPhoton>(numPhotons, gridLength*gridLength*gridLength, UINT_MAX);
 }

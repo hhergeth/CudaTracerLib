@@ -8,9 +8,32 @@
 #include "e_FileTexture.h"
 #include <crtdbg.h>
 #include "../Kernel/k_Tracer.h"
+#include <ctime>
+
+void testPrisma()
+{
+	float x, y, Y;
+	CudaRNG rng;
+	rng.Initialize(12434363, 6242574, (int)time(0));
+
+	Spectrum s(rng.randomFloat(), rng.randomFloat(), rng.randomFloat());
+	s.toYxy(Y, x, y);
+	s *= 10000;
+	Spectrum sum(0.0f);
+	float sumw = 0;
+	const int N = 1000;
+	for (int i = 0; i < N; i++)
+	{
+		float w;
+		sum += s.SampleSpectrum(w, rng.randomFloat()) / float(N);
+		sumw += w / float(N);
+	}
+	Spectrum diff = sum - s;
+	Spectrum div = sum / s;
+	float d = diff.abs().max();
+}
 
 #include "e_Grid.h"
-
 CUDA_FUNC_IN float SH(float f)
 {
 	return f >= 0 ? 1 : 0;
@@ -102,9 +125,9 @@ int test(CudaRNG& rng, const k_HashGrid_Reg& grid, const AABB& box, Ray& r, floa
 	}
 	return cv;
 }
-void InitializeCuda4Tracer(const std::string& dataPath)
+void testGrid()
 {
-	/*CudaRNG rng;
+	CudaRNG rng;
 	rng.Initialize(123, 456, 789);
 	k_HashGrid_Reg grid(AABB(Vec3f(-100), Vec3f(100)), 0, 100 * 100 * 100);
 	//Ray r(Vec3f(0), Vec3f(0, 0, 1));
@@ -113,20 +136,23 @@ void InitializeCuda4Tracer(const std::string& dataPath)
 	int maxq = 0;
 	for (int i = 0; i < 1000000; i++)
 	{
-		Ray r(math::lerp(box.minV, box.maxV, rng.randomFloat3()), Warp::squareToUniformSphere(rng.randomFloat2()));
-		float rad, tend;
-		int q = test(rng, grid, box, r, rad, tend);
-		if (q > 250)
-		{
-			std::cout << "rad = " << rad << ", tend = " << tend << "\n";
-			std::cout << format("r.origin = Vec3f(%f, %f, %f )", r.origin.x, r.origin.y, r.origin.z);
-			std::cout << format("r.direction = Vec3f(%f, %f, %f )", r.direction.x, r.direction.y, r.direction.z);
-		}
-		maxq = max(q, maxq);
-		std::cout << " : ";
+	Ray r(math::lerp(box.minV, box.maxV, rng.randomFloat3()), Warp::squareToUniformSphere(rng.randomFloat2()));
+	float rad, tend;
+	int q = test(rng, grid, box, r, rad, tend);
+	if (q > 250)
+	{
+	std::cout << "rad = " << rad << ", tend = " << tend << "\n";
+	std::cout << format("r.origin = Vec3f(%f, %f, %f )", r.origin.x, r.origin.y, r.origin.z);
+	std::cout << format("r.direction = Vec3f(%f, %f, %f )", r.direction.x, r.direction.y, r.direction.z);
+	}
+	maxq = max(q, maxq);
+	std::cout << " : ";
 	}
 	std::cout << "\nTraversal test passed!\nQ = " << maxq << "\n";
-	*/
+}
+
+void InitializeCuda4Tracer(const std::string& dataPath)
+{
 #ifndef NDEBUG
 	//_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF | _CRTDBG_CHECK_ALWAYS_DF);
 	//_CrtSetDbgFlag(_CrtSetDbgFlag(0) | _CRTDBG_CHECK_ALWAYS_DF);
@@ -136,6 +162,9 @@ void InitializeCuda4Tracer(const std::string& dataPath)
 	SpectrumHelper::StaticInitialize();
 	FreeImage_Initialise();
 	e_RoughTransmittanceManager::StaticInitialize(dataPath);
+
+	//testPrisma();
+	//testGrid();
 }
 
 void DeInitializeCuda4Tracer()

@@ -155,12 +155,12 @@ public:
 		return CTVirtualHelper::Contains_Type<SpecializedType, Types...>();
 	}
 
-	unsigned int getTypeToken()
+	CUDA_FUNC_IN unsigned int getTypeToken() const
 	{
 		return type;
 	}
 
-	void setTypeToken(unsigned int t)
+	CUDA_FUNC_IN void setTypeToken(unsigned int t)
 	{
 		type = t;
 	}

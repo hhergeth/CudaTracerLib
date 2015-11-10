@@ -137,7 +137,7 @@ CUDA_GLOBAL void evalPass(e_Image img, k_SamplerpixelData* lumData, float* block
 		float w_i = weight(ent, true);
 		
 		if (w_i > 1e-5f)
-			atomicInc(contribPixels + idx2, 0xffffffff);
+			atomicInc(contribPixels + idx2, UINT_MAX);
 		atomicAdd(blockData + idx2, deviceWeight[idx2] * w_i);
 	}
 }

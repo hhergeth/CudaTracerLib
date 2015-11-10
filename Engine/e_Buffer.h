@@ -1,3 +1,7 @@
+//WARNING
+//This header can not be included in any *.cu file due to a bug in nvcc (CUDA 7.5)
+//WARNING
+
 #pragma once
 #include <stdio.h>
 #include <map>
@@ -22,20 +26,24 @@ public:
 
 	virtual e_BufferIterator<H, D> end() = 0;
 
+	virtual e_BufferReference<H, D> operator()(size_t i, size_t l = 1) = 0;
+
 	bool hasElements()
 	{
 		return hasMoreThanElements(0);
 	}
 
-	bool hasMoreThanElements(size_t i)
+	virtual bool hasMoreThanElements(size_t i)
 	{
 		return num_in_iterator(*this, i) > i;
 	}
 
-	size_t numElements()
+	virtual size_t numElements()
 	{
 		return num_in_iterator(*this, MINUS_ONE);
 	}
+
+	virtual e_BufferReference<H, D> translate(e_Variable<D> var) = 0;
 };
 template<typename T> using e_StreamRange = e_BufferRange<T, T>;
 
@@ -92,7 +100,7 @@ public:
 		delete m_uDeallocated;
 	}
 
-	size_t numElements()
+	size_t getBufferLength() const
 	{
 		return m_uLength;
 	}
@@ -223,7 +231,7 @@ public:
 		ThrowCudaErrors(cudaMemcpy(this->host + ref.p, device + ref.p, sizeof(H) * ref.l, cudaMemcpyDeviceToHost));
 	}
 
-	e_BufferReference<H, D> operator()(size_t i, size_t l = 1)
+	virtual e_BufferReference<H, D> operator()(size_t i, size_t l = 1)
 	{
 		if (i >= m_uPos)
 			throw std::runtime_error("Invalid idx!");
@@ -240,6 +248,24 @@ public:
 		return e_BufferIterator<H, D>(*this, m_uPos);
 	}
 
+	virtual size_t numElements()
+	{
+		if (m_uDeallocated->empty())
+			return m_uPos;
+		size_t p = m_uPos;
+		for (range_set_t::iterator it = m_uDeallocated->begin(); it != m_uDeallocated->end(); it++)
+		{
+			size_t n = it->upper() - it->lower();
+			p -= n;
+		}
+		return p;
+	}
+
+	virtual bool hasMoreThanElements(size_t i)
+	{
+		return numElements() > i;
+	}
+
 	size_t getDeviceSizeInBytes() const
 	{
 		return m_uLength * sizeof(D);
@@ -247,7 +273,7 @@ public:
 
 	virtual e_KernelBuffer<D> getKernelData(bool devicePointer = true) const = 0;
 
-	e_BufferReference<H, D> translate(e_Variable<D> var)
+	virtual e_BufferReference<H, D> translate(e_Variable<D> var)
 	{
 		size_t idx = var.device - device;
 		return e_BufferReference<H, D>(this, idx, 1);

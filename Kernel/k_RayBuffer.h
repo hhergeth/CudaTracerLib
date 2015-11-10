@@ -57,16 +57,16 @@ public:
 		for (int i = 0; i < N; i++)
 			m_cInsertCounters[i] = 0;
 	}
-	void setNumRays(unsigned int num, unsigned int bufIdx = 0xffffffff)
+	void setNumRays(unsigned int num, unsigned int bufIdx = UINT_MAX)
 	{
-		if (bufIdx == 0xffffffff)
+		if (bufIdx == UINT_MAX)
 			for (int i = 0; i < N; i++)
 				m_cInsertCounters[i] = num;
 		else m_cInsertCounters[bufIdx] = num;
 	}
-	unsigned int getNumRays(unsigned int bufIdx = 0xffffffff)
+	unsigned int getNumRays(unsigned int bufIdx = UINT_MAX)
 	{
-		if (bufIdx == 0xffffffff)
+		if (bufIdx == UINT_MAX)
 		{
 			unsigned int s = 0;
 			for (int i = 0; i < N; i++)

@@ -7,7 +7,7 @@ k_WavefrontVCM::k_WavefrontVCM(unsigned int a_NumLightRays)
 
 	int gridLength = 100;
 	int numPhotons = a_NumLightRays * MAX_LIGHT_SUB_PATH_LENGTH;
-	m_sPhotonMapsNext = k_PhotonMapCollection<false, k_MISPhoton>(numPhotons, gridLength*gridLength*gridLength, 0xffffffff);
+	m_sPhotonMapsNext = k_PhotonMapCollection<false, k_MISPhoton>(numPhotons, gridLength*gridLength*gridLength, UINT_MAX);
 }
 
 CUDA_CONST float mMisVcWeightFactor;
@@ -224,7 +224,7 @@ CUDA_GLOBAL void extendCameraRays(unsigned int N, e_Image I, int iteration, bool
 			ent.state.dVC /= math::abs(Frame::cosTheta(bRec.wi));
 			ent.state.dVM /= math::abs(Frame::cosTheta(bRec.wi));
 
-			if (r2.LightIndex() != 0xffffffff)
+			if (r2.LightIndex() != UINT_MAX)
 				ent.acc += ent.state.throughput * gatherLight(ent.state, bRec, r2, rng, iteration + 1, true);
 
 			if (r2.getMat().bsdf.hasComponent(ESmooth))

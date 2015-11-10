@@ -13,6 +13,7 @@ struct k_AdaptiveEntry
 	float psi, psi2;
 	float I, I2;
 	float pl;
+	int n1, n2;
 };
 
 struct k_AdaptiveStruct
@@ -85,7 +86,7 @@ public:
 	{
 		return ::getCurrentRadius(m_fInitialRadius, m_uPassesDone, exp);
 	}
-	float getRadiusAt(int x, int y) const;
+	void getRadiusAt(int x, int y, float& r, float& rd) const;
 	void getCurrentRMinRMax(float& rMin, float& rMax) const
 	{
 		rMin = ::getCurrentRadius(r_min, m_uPassesDone, 2);

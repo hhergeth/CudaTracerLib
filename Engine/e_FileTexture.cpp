@@ -1,6 +1,5 @@
 #include "StdAfx.h"
 #include "e_FileTexture.h"
-#include "e_ErrorHandler.h"
 #include "e_FileTextureHelper.h"
 #include "..\Base\FileStream.h"
 #include "../CudaMemoryManager.h"
@@ -16,12 +15,7 @@ e_MIPMap::e_MIPMap(const std::string& a_InputFile, IInStream& a_In)
 	a_In.operator>>(*(int*)&m_uFilterMode);
 	a_In >> m_uLevels;
 	a_In >> m_uSize;
-	if(CUDA_MALLOC(&m_pDeviceData, m_uSize))
-	{
-		cudaError_t r = cudaGetLastError();
-		std::cout << cudaGetErrorString(r) << "\n";
-		BAD_CUDA_ALLOC(m_uSize)
-	}
+	CUDA_MALLOC(&m_pDeviceData, m_uSize);
 	m_pHostData = (unsigned int*)malloc(m_uSize);
 	a_In.Read(m_pHostData, m_uSize);
 	ThrowCudaErrors(cudaMemcpy(m_pDeviceData, m_pHostData, m_uSize, cudaMemcpyHostToDevice));

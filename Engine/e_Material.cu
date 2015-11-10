@@ -16,7 +16,7 @@ e_KernelMaterial::e_KernelMaterial()
 	enableParallaxOcclusion = false;
 	Name = "NoNameMaterial";
 	HeightScale = 1.0f;
-	NodeLightIndex = 0xffffffff;
+	NodeLightIndex = UINT_MAX;
 	m_fAlphaThreshold = 1.0f;
 	bsdf.setTypeToken(0);
 	usedBssrdf = 0;
@@ -31,7 +31,7 @@ e_KernelMaterial::e_KernelMaterial(const std::string& name)
 	enableParallaxOcclusion = false;
 	Name = name;
 	HeightScale = 1.0f;
-	NodeLightIndex = 0xffffffff;
+	NodeLightIndex = UINT_MAX;
 	m_fAlphaThreshold = 1.0f;
 	bsdf.setTypeToken(0);
 	usedBssrdf = 0;
