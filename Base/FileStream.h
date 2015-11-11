@@ -4,7 +4,7 @@
 #include <fstream>
 #include <MathTypes.h>
 #include "FixedString.h"
-#include <Engine/e_Buffer_device.h>
+#include <Engine/Buffer_device.h>
 
 namespace CudaTracerLib {
 
@@ -101,7 +101,7 @@ public:
 	DCL_IN(float4x4)
 #undef DCL_IN
 
-	template<typename H, typename D> IInStream& operator>>(e_BufferReference<H, D> rhs)
+	template<typename H, typename D> IInStream& operator>>(BufferReference<H, D> rhs)
 	{
 		Read(rhs(0), rhs.getHostSize());
 		rhs.Invalidate();
@@ -237,7 +237,7 @@ public:
 	DCL_OUT(float4x4)
 #undef DCL_OUT
 
-	template<typename H, typename D> FileOutputStream& operator<<(e_BufferReference<H, D> rhs)
+	template<typename H, typename D> FileOutputStream& operator<<(BufferReference<H, D> rhs)
 	{
 		_Write(rhs(0), rhs.getHostSize());
 		return *this;

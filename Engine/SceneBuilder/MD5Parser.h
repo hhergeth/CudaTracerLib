@@ -50,7 +50,7 @@ public:
 	Vec3f pos;
 };
 
-class Mesh {
+class Md5Mesh {
 public:
 	std::string texture;
 	std::vector<Vertex> verts;
@@ -131,7 +131,7 @@ public:
 	TOKEN getNextToken(std::ifstream &fin, std::string *tokStr = NULL);
 	int numJoints;
 	int numMeshes;
-	std::vector<Mesh*> meshes;
+	std::vector<Md5Mesh*> meshes;
 	std::vector<Joint> joints;
 	std::vector<Anim*> anims;
 };

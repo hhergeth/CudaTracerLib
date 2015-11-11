@@ -1,8 +1,8 @@
 #include <StdAfx.h>
-#include <Engine/e_Mesh.h>
-#include <Engine/e_TriangleData.h>
-#include <Engine/e_Material.h>
-#include <Engine/e_TriIntersectorData.h>
+#include <Engine/Mesh.h>
+#include <Engine/TriangleData.h>
+#include <Engine/Material.h>
+#include <Engine/TriIntersectorData.h>
 #include "TangentSpaceHelper.h"
 #include "Importer.h"
 #include <boost/algorithm/string.hpp>
@@ -610,7 +610,7 @@ enum TextureType
 	TextureType_Max
 };
 
-struct Material
+struct ObjMaterial
 {
 	std::string		Name;
 	int				IlluminationModel;
@@ -625,7 +625,7 @@ struct Material
 	std::string     textures[TextureType_Max];
 	int				submesh;
 
-	Material(void)
+	ObjMaterial(void)
 	{
 		diffuse = Vec4f(0.75f, 0.75f, 0.75f, 1.0f);
 		specular = Vec3f(0.5f);
@@ -647,10 +647,10 @@ struct TextureSpec
 
 struct MatHash
 {
-	std::vector<Material> vec;
+	std::vector<ObjMaterial> vec;
 	std::map<std::string, int> map;
 
-	void add(const std::string& name, const Material& mat)
+	void add(const std::string& name, const ObjMaterial& mat)
 	{
 		map[name] = (int)vec.size();
 		vec.push_back(mat);
@@ -761,7 +761,7 @@ bool parseTexture(const char*& ptr, TextureSpec& value, const std::string& dirNa
 struct SubMesh
 {
 	std::vector<Vec3i>   indices;
-	Material        material;
+	ObjMaterial        material;
 
 	SubMesh()
 	{
@@ -815,7 +815,7 @@ struct ImportState
 void loadMtl(ImportState& s, IInStream& mtlIn, const std::string& dirName)
 {
 	char ptrLast[256];
-	Material* mat = NULL;
+	ObjMaterial* mat = NULL;
 	std::string lineS;
 	while (mtlIn.getline(lineS))
 	{
@@ -834,7 +834,7 @@ void loadMtl(ImportState& s, IInStream& mtlIn, const std::string& dirName)
 				s.materialHash.add(std::string(ptrLast), *mat);
 			if (!s.materialHash.contains(std::string(ptr)))
 			{
-				mat = new Material();
+				mat = new ObjMaterial();
 				Platform::SetMemory(ptrLast, sizeof(ptrLast));
 				memcpy(ptrLast, ptr, strlen(ptr));
 				mat->Name = std::string(ptrLast);
@@ -960,7 +960,7 @@ void loadMtl(ImportState& s, IInStream& mtlIn, const std::string& dirName)
 		s.materialHash.add(std::string(ptrLast), *mat);
 }
 
-static e_Texture CreateTexture(const char* p, const Spectrum& col)
+static Texture CreateTexture(const char* p, const Spectrum& col)
 {
 	if (p && *p)
 		return CreateTexture(p);
@@ -1164,13 +1164,13 @@ void compileobj(IInStream& in, FileOutputStream& a_Out)
 	ImportState state;
 	parse(state, in);
 
-	std::vector<e_MeshPartLight> lights;
-	std::vector<e_KernelMaterial> matData;
+	std::vector<MeshPartLight> lights;
+	std::vector<Material> matData;
 	matData.reserve(state.materialHash.vec.size());
 	for (size_t i = 0; i < state.materialHash.vec.size(); i++)
 	{
-		Material M = state.materialHash.vec[i];
-		e_KernelMaterial mat(M.Name.c_str());
+		ObjMaterial M = state.materialHash.vec[i];
+		Material mat(M.Name.c_str());
 		float f = 0.0f;
 		if (M.IlluminationModel == 2)
 		{
@@ -1206,13 +1206,13 @@ void compileobj(IInStream& in, FileOutputStream& a_Out)
 		}
 
 		if (length(M.emission))
-			lights.push_back(e_MeshPartLight(M.Name, Spectrum(M.emission.x, M.emission.y, M.emission.z)));
+			lights.push_back(MeshPartLight(M.Name, Spectrum(M.emission.x, M.emission.y, M.emission.z)));
 		matData.push_back(mat);
 	}
 
 	unsigned int m_numTriangles = (unsigned int)state.numTriangles();
 	unsigned int m_numVertices = (unsigned int)state.vertices.size();
-	e_TriangleData* triData = new e_TriangleData[m_numTriangles];
+	TriangleData* triData = new TriangleData[m_numTriangles];
 	Vec3f p[3];
 	Vec3f n[3];
 	Vec3f ta[3];
@@ -1263,18 +1263,18 @@ void compileobj(IInStream& in, FileOutputStream& a_Out)
 				n[j] = normalize(normals[l]);
 #endif
 			}
-			triData[triCount++] = e_TriangleData(p, (unsigned char)matIndex, t, n, ta, bi);
+			triData[triCount++] = TriangleData(p, (unsigned char)matIndex, t, n, ta, bi);
 		}
 	}
 
 	a_Out << box;
 	a_Out << (unsigned int)lights.size();
 	if (lights.size())
-		a_Out.Write(&lights[0], lights.size() * sizeof(e_MeshPartLight));
+		a_Out.Write(&lights[0], lights.size() * sizeof(MeshPartLight));
 	a_Out << m_numTriangles;
-	a_Out.Write(triData, sizeof(e_TriangleData) * m_numTriangles);
+	a_Out.Write(triData, sizeof(TriangleData) * m_numTriangles);
 	a_Out << (unsigned int)matData.size();
-	a_Out.Write(&matData[0], sizeof(e_KernelMaterial) * (unsigned int)matData.size());
+	a_Out.Write(&matData[0], sizeof(Material) * (unsigned int)matData.size());
 	ConstructBVH(&positions[0], (unsigned int*)&indices[0], m_numVertices, m_numTriangles * 3, a_Out);
 	delete[] triData;
 }

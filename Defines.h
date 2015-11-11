@@ -128,7 +128,7 @@ public:
 	{
 	}
 	/*
-	template<typename U, typename V> CUDA_HOST e_Variable(e_BufferReference<U, V> r)
+	template<typename U, typename V> CUDA_HOST e_Variable(BufferReference<U, V> r)
 	{
 	host = (T*)r.operator->();
 	device = (T*)r.getDevice();

@@ -19,8 +19,17 @@
     <Filter Include="Engine\SceneBuilder">
       <UniqueIdentifier>{3bb70ff5-b556-42db-9042-9985093f213c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Integrators\VolEstimators">
-      <UniqueIdentifier>{c37c6e80-ebc7-43f5-9f75-217778385c45}</UniqueIdentifier>
+    <Filter Include="Integrators\Bidirectional">
+      <UniqueIdentifier>{4ff85851-60fe-4165-913d-dcec7036b355}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Integrators\Parametric Mixture Models">
+      <UniqueIdentifier>{be2fb4a9-acbb-4cdb-9ed6-c7b80a7b0e1a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Integrators\Progressive Photon Mapping">
+      <UniqueIdentifier>{13ec0f1a-4ad4-49bb-b6c0-58b27f4c56fe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Integrators\Progressive Photon Mapping\VolEstimators">
+      <UniqueIdentifier>{141cc77f-7452-4ddf-b2dc-97edd74dcf74}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -80,160 +89,13 @@
     <ClInclude Include="Math\Warp.h">
       <Filter>Math</Filter>
     </ClInclude>
-    <ClInclude Include="Kernel\k_BlockSampler.h">
-      <Filter>Kernel</Filter>
-    </ClInclude>
-    <ClInclude Include="Kernel\k_TraceAlgorithms.h">
-      <Filter>Kernel</Filter>
-    </ClInclude>
-    <ClInclude Include="Kernel\k_TraceHelper.h">
-      <Filter>Kernel</Filter>
-    </ClInclude>
-    <ClInclude Include="Kernel\k_Tracer.h">
-      <Filter>Kernel</Filter>
-    </ClInclude>
     <ClInclude Include="Engine\SceneBuilder\Importer.h">
       <Filter>Engine\SceneBuilder</Filter>
     </ClInclude>
     <ClInclude Include="Engine\SceneBuilder\MD5Parser.h">
       <Filter>Engine\SceneBuilder</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\e_Volumes.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_AnimatedMesh.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_BSDF.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_BSDF_Complex.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_BSDF_Simple.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_Buffer.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_Core.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_DynamicScene.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_FileTexture.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_FileTextureHelper.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_Filter.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_Grid.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_Image.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_KernelDynamicScene.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_KernelTexture.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_Light.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_Material.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_MaterialLib.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_Mesh.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_MeshCompiler.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_MicrofacetDistribution.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_Node.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_PhaseFunction.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_RoughTransmittance.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_Samples.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_SceneBVH.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_SceneInitData.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_Sensor.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_ShapeSet.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_SpatialGrid.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_TriangleData.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Integrators\k_BDPT.h">
-      <Filter>Integrators</Filter>
-    </ClInclude>
-    <ClInclude Include="Integrators\k_FastTracer.h">
-      <Filter>Integrators</Filter>
-    </ClInclude>
-    <ClInclude Include="Integrators\k_PathTracer.h">
-      <Filter>Integrators</Filter>
-    </ClInclude>
-    <ClInclude Include="Integrators\k_PhotonTracer.h">
-      <Filter>Integrators</Filter>
-    </ClInclude>
-    <ClInclude Include="Integrators\k_PmmHelper.h">
-      <Filter>Integrators</Filter>
-    </ClInclude>
-    <ClInclude Include="Integrators\k_PmmTracer.h">
-      <Filter>Integrators</Filter>
-    </ClInclude>
-    <ClInclude Include="Integrators\k_PrimTracer.h">
-      <Filter>Integrators</Filter>
-    </ClInclude>
-    <ClInclude Include="Integrators\k_sPpmTracer.h">
-      <Filter>Integrators</Filter>
-    </ClInclude>
     <ClInclude Include="StdAfx.h" />
-    <ClInclude Include="Engine\e_DifferentialGeometry.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_AbstractEmitter.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Integrators\k_VCMHelper.h">
-      <Filter>Integrators</Filter>
-    </ClInclude>
-    <ClInclude Include="Integrators\k_VCM.h">
-      <Filter>Integrators</Filter>
-    </ClInclude>
-    <ClInclude Include="Integrators\k_PhotonMapHelper.h">
-      <Filter>Integrators</Filter>
-    </ClInclude>
-    <ClInclude Include="Kernel\k_BSDFVisualizer.h">
-      <Filter>Kernel</Filter>
-    </ClInclude>
     <ClInclude Include="Math\Vector.h">
       <Filter>Math</Filter>
     </ClInclude>
@@ -243,14 +105,8 @@
     <ClInclude Include="Engine\SceneBuilder\SplitBVHBuilder.hpp">
       <Filter>Engine\SceneBuilder</Filter>
     </ClInclude>
-    <ClInclude Include="Kernel\k_TraceResult.h">
-      <Filter>Kernel</Filter>
-    </ClInclude>
     <ClInclude Include="Base\FixedString.h">
       <Filter>Base</Filter>
-    </ClInclude>
-    <ClInclude Include="Integrators\k_GradientDescent.h">
-      <Filter>Integrators</Filter>
     </ClInclude>
     <ClInclude Include="Math\PathDifferientials.h">
       <Filter>Math</Filter>
@@ -258,63 +114,213 @@
     <ClInclude Include="Math\qMatrixWrapper.h">
       <Filter>Math</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\e_FileTexture_device.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_Buffer_device.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_SceneBVH_device.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Kernel\k_BlockSampler_device.h">
-      <Filter>Kernel</Filter>
-    </ClInclude>
     <ClInclude Include="Engine\SceneBuilder\TangentSpaceHelper.h">
       <Filter>Engine\SceneBuilder</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\e_BVHRebuilder.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
     <ClInclude Include="VirtualFuncType.h" />
     <ClInclude Include="CudaMemoryManager.h" />
-    <ClInclude Include="Integrators\k_WavefrontVCM.h">
-      <Filter>Integrators</Filter>
-    </ClInclude>
-    <ClInclude Include="Kernel\k_RayBuffer.h">
-      <Filter>Kernel</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\e_TriIntersectorData.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Kernel\k_BVHTracer.h">
-      <Filter>Kernel</Filter>
-    </ClInclude>
-    <ClInclude Include="Integrators\VolEstimators\k_Beam.h">
-      <Filter>Integrators\VolEstimators</Filter>
-    </ClInclude>
-    <ClInclude Include="Integrators\VolEstimators\k_BeamBeamGrid.h">
-      <Filter>Integrators\VolEstimators</Filter>
-    </ClInclude>
-    <ClInclude Include="Integrators\VolEstimators\k_BeamBVHStorage.h">
-      <Filter>Integrators\VolEstimators</Filter>
-    </ClInclude>
-    <ClInclude Include="Integrators\VolEstimators\k_BeamGrid.h">
-      <Filter>Integrators\VolEstimators</Filter>
-    </ClInclude>
-    <ClInclude Include="Integrators\VolEstimators\k_PointStorage.h">
-      <Filter>Integrators\VolEstimators</Filter>
-    </ClInclude>
     <ClInclude Include="Base\FixedSizeArray.h">
       <Filter>Base</Filter>
+    </ClInclude>
+    <ClInclude Include="Kernel\BlockSampler.h">
+      <Filter>Kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="Kernel\BlockSampler_device.h">
+      <Filter>Kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="Kernel\BSDFVisualizer.h">
+      <Filter>Kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="Kernel\BVHTracer.h">
+      <Filter>Kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="Kernel\RayBuffer.h">
+      <Filter>Kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="Kernel\TraceAlgorithms.h">
+      <Filter>Kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="Kernel\TraceHelper.h">
+      <Filter>Kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="Kernel\Tracer.h">
+      <Filter>Kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="Kernel\TraceResult.h">
+      <Filter>Kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\FastTracer.h">
+      <Filter>Integrators</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\GradientDescent.h">
+      <Filter>Integrators</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\PathTracer.h">
+      <Filter>Integrators</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\PhotonMapHelper.h">
+      <Filter>Integrators</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\PhotonTracer.h">
+      <Filter>Integrators</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\PrimTracer.h">
+      <Filter>Integrators</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\Bidirectional\BDPT.h">
+      <Filter>Integrators\Bidirectional</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\Bidirectional\VCM.h">
+      <Filter>Integrators\Bidirectional</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\Bidirectional\VCMHelper.h">
+      <Filter>Integrators\Bidirectional</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\Bidirectional\WavefrontVCM.h">
+      <Filter>Integrators\Bidirectional</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\Parametric Mixture Models\PmmHelper.h">
+      <Filter>Integrators\Parametric Mixture Models</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\Parametric Mixture Models\PmmTracer.h">
+      <Filter>Integrators\Parametric Mixture Models</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\Progressive Photon Mapping\VolEstimators\Beam.h">
+      <Filter>Integrators\Progressive Photon Mapping\VolEstimators</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\Progressive Photon Mapping\VolEstimators\BeamBeamGrid.h">
+      <Filter>Integrators\Progressive Photon Mapping\VolEstimators</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\Progressive Photon Mapping\VolEstimators\BeamBVHStorage.h">
+      <Filter>Integrators\Progressive Photon Mapping\VolEstimators</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\Progressive Photon Mapping\VolEstimators\BeamGrid.h">
+      <Filter>Integrators\Progressive Photon Mapping\VolEstimators</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\Progressive Photon Mapping\VolEstimators\PointStorage.h">
+      <Filter>Integrators\Progressive Photon Mapping\VolEstimators</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\Progressive Photon Mapping\PPPMTracer.h">
+      <Filter>Integrators\Progressive Photon Mapping</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\MeshCompiler.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\MicrofacetDistribution.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Node.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\PhaseFunction.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\RoughTransmittance.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Samples.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\SceneBVH.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\SceneBVH_device.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\SceneInitData.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Sensor.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\ShapeSet.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\SpatialGrid.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\TriangleData.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\TriIntersectorData.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Volumes.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\AbstractEmitter.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\AnimatedMesh.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\BSDF.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\BSDF_Complex.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\BSDF_Simple.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Buffer.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Buffer_device.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\BVHRebuilder.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Core.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\DifferentialGeometry.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\DynamicScene.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Filter.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Grid.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Image.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\KernelDynamicScene.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\KernelTexture.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Light.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Material.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\MaterialLib.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Mesh.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\MIPMapHelper.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\MIPMap.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\MIPMap_device.h">
+      <Filter>Engine</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Base\FileStream.cpp">
       <Filter>Base</Filter>
-    </ClCompile>
-    <ClCompile Include="Kernel\k_Tracer.cpp">
-      <Filter>Kernel</Filter>
     </ClCompile>
     <ClCompile Include="Engine\SceneBuilder\Importer.cpp">
       <Filter>Engine\SceneBuilder</Filter>
@@ -328,71 +334,74 @@
     <ClCompile Include="Engine\SceneBuilder\PlyParser.cpp">
       <Filter>Engine\SceneBuilder</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\e_AnimatedMesh.cpp">
-      <Filter>Engine</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\e_Core.cpp">
-      <Filter>Engine</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\e_DynamicScene.cpp">
-      <Filter>Engine</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\e_FileTexture.cpp">
-      <Filter>Engine</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\e_Image.cpp">
-      <Filter>Engine</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\e_MaterialLib.cpp">
-      <Filter>Engine</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\e_Mesh.cpp">
-      <Filter>Engine</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\e_MeshCompiler.cpp">
-      <Filter>Engine</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\e_SceneBVH.cpp">
-      <Filter>Engine</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\e_ShapeSet.cpp">
-      <Filter>Engine</Filter>
-    </ClCompile>
-    <ClCompile Include="Integrators\k_PmmTracer.cpp">
-      <Filter>Integrators</Filter>
-    </ClCompile>
-    <ClCompile Include="Integrators\k_sPpmTracer.cpp">
-      <Filter>Integrators</Filter>
-    </ClCompile>
     <ClCompile Include="stdafx.cpp" />
-    <ClCompile Include="Engine\e_Node.cpp">
-      <Filter>Engine</Filter>
-    </ClCompile>
     <ClCompile Include="Defines.cpp" />
     <ClCompile Include="Engine\SceneBuilder\SplitBVHBuilder.cpp">
       <Filter>Engine\SceneBuilder</Filter>
     </ClCompile>
-    <ClCompile Include="Integrators\k_GradientDescent.cpp">
-      <Filter>Integrators</Filter>
-    </ClCompile>
     <ClCompile Include="Engine\SceneBuilder\TangentSpaceHelper.cpp">
       <Filter>Engine\SceneBuilder</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\e_BVHRebuilder.cpp">
-      <Filter>Engine</Filter>
     </ClCompile>
     <ClCompile Include="Engine\SceneBuilder\md5Compiler.cpp">
       <Filter>Engine\SceneBuilder</Filter>
     </ClCompile>
-    <ClCompile Include="Integrators\k_WavefrontVCM.cpp">
+    <ClCompile Include="CudaMemoryManager.cpp" />
+    <ClCompile Include="Kernel\Tracer.cpp">
+      <Filter>Kernel</Filter>
+    </ClCompile>
+    <ClCompile Include="Integrators\GradientDescent.cpp">
       <Filter>Integrators</Filter>
     </ClCompile>
-    <ClCompile Include="CudaMemoryManager.cpp" />
-    <ClCompile Include="Integrators\VolEstimators\k_BeamBVHStorage.cpp">
-      <Filter>Integrators\VolEstimators</Filter>
+    <ClCompile Include="Integrators\Bidirectional\WavefrontVCM.cpp">
+      <Filter>Integrators\Bidirectional</Filter>
     </ClCompile>
-    <ClCompile Include="Integrators\VolEstimators\k_BeamBeamGrid.cpp">
-      <Filter>Integrators\VolEstimators</Filter>
+    <ClCompile Include="Integrators\Parametric Mixture Models\PmmTracer.cpp">
+      <Filter>Integrators\Parametric Mixture Models</Filter>
+    </ClCompile>
+    <ClCompile Include="Integrators\Progressive Photon Mapping\VolEstimators\BeamBeamGrid.cpp">
+      <Filter>Integrators\Progressive Photon Mapping\VolEstimators</Filter>
+    </ClCompile>
+    <ClCompile Include="Integrators\Progressive Photon Mapping\VolEstimators\BeamBVHStorage.cpp">
+      <Filter>Integrators\Progressive Photon Mapping\VolEstimators</Filter>
+    </ClCompile>
+    <ClCompile Include="Integrators\Progressive Photon Mapping\PPPMTracer.cpp">
+      <Filter>Integrators\Progressive Photon Mapping</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Node.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\SceneBVH.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\ShapeSet.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\AnimatedMesh.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\BVHRebuilder.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Core.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\DynamicScene.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Image.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\MaterialLib.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Mesh.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\MeshCompiler.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\MIPMap.cpp">
+      <Filter>Engine</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -411,116 +420,116 @@
     <CudaCompile Include="Math\Spline.cu">
       <Filter>Math</Filter>
     </CudaCompile>
-    <CudaCompile Include="Kernel\k_BlockSampler.cu">
-      <Filter>Kernel</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Kernel\k_TraceAlgorithms.cu">
-      <Filter>Kernel</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Kernel\k_TraceHelper.cu">
-      <Filter>Kernel</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Kernel\k_Tracer.cu">
-      <Filter>Kernel</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Engine\e_AnimatedMesh.cu">
-      <Filter>Engine</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Engine\e_BSDF_Complex.cu">
-      <Filter>Engine</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Engine\e_BSDF_Simple.cu">
-      <Filter>Engine</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Engine\e_FileTexture.cu">
-      <Filter>Engine</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Engine\e_Image.cu">
-      <Filter>Engine</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Engine\e_KernelDynamicScene.cu">
-      <Filter>Engine</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Engine\e_Light.cu">
-      <Filter>Engine</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Engine\e_Material.cu">
-      <Filter>Engine</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Engine\e_MicrofacetDistribution.cu">
-      <Filter>Engine</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Engine\e_PhaseFunction.cu">
-      <Filter>Engine</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Engine\e_RoughTransmittance.cu">
-      <Filter>Engine</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Engine\e_Sensor.cu">
-      <Filter>Engine</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Engine\e_ShapeSet.cu">
-      <Filter>Engine</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Engine\e_TriangleData.cu">
-      <Filter>Engine</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Engine\e_Volumes.cu">
-      <Filter>Engine</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Integrators\k_BDPT.cu">
-      <Filter>Integrators</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Integrators\k_FastTracer.cu">
-      <Filter>Integrators</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Integrators\k_PathTracer.cu">
-      <Filter>Integrators</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Integrators\k_PhotonTracer.cu">
-      <Filter>Integrators</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Integrators\k_PmmTracer.cu">
-      <Filter>Integrators</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Integrators\k_PrimTracer.cu">
-      <Filter>Integrators</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Integrators\k_sPpmTracer_EyePass.cu">
-      <Filter>Integrators</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Integrators\k_sPpmTracer_PhotonPass.cu">
-      <Filter>Integrators</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Engine\e_DifferentialGeometry.cu">
-      <Filter>Engine</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Integrators\k_VCM.cu">
-      <Filter>Integrators</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Kernel\k_BSDFVisualizer.cu">
-      <Filter>Kernel</Filter>
-    </CudaCompile>
     <CudaCompile Include="Math\float4x4.cu">
       <Filter>Math</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Kernel\k_TraceResult.cu">
-      <Filter>Kernel</Filter>
     </CudaCompile>
     <CudaCompile Include="Math\Sampling.cu">
       <Filter>Math</Filter>
     </CudaCompile>
-    <CudaCompile Include="Engine\e_Samples.cu">
-      <Filter>Engine</Filter>
+    <CudaCompile Include="Kernel\BlockSampler.cu">
+      <Filter>Kernel</Filter>
     </CudaCompile>
-    <CudaCompile Include="Engine\e_TriIntersectorData.cu">
-      <Filter>Engine</Filter>
+    <CudaCompile Include="Kernel\BSDFVisualizer.cu">
+      <Filter>Kernel</Filter>
     </CudaCompile>
-    <CudaCompile Include="Integrators\k_WavefrontVCM.cu">
+    <CudaCompile Include="Kernel\TraceAlgorithms.cu">
+      <Filter>Kernel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Kernel\TraceHelper.cu">
+      <Filter>Kernel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Kernel\Tracer.cu">
+      <Filter>Kernel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Kernel\TraceResult.cu">
+      <Filter>Kernel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Integrators\FastTracer.cu">
       <Filter>Integrators</Filter>
     </CudaCompile>
-    <CudaCompile Include="Integrators\VolEstimators\k_BeamGrid.cu">
-      <Filter>Integrators\VolEstimators</Filter>
+    <CudaCompile Include="Integrators\PathTracer.cu">
+      <Filter>Integrators</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Integrators\PhotonTracer.cu">
+      <Filter>Integrators</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Integrators\PrimTracer.cu">
+      <Filter>Integrators</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Integrators\Bidirectional\BDPT.cu">
+      <Filter>Integrators\Bidirectional</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Integrators\Bidirectional\VCM.cu">
+      <Filter>Integrators\Bidirectional</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Integrators\Bidirectional\WavefrontVCM.cu">
+      <Filter>Integrators\Bidirectional</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Integrators\Parametric Mixture Models\PmmTracer.cu">
+      <Filter>Integrators\Parametric Mixture Models</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Integrators\Progressive Photon Mapping\VolEstimators\BeamGrid.cu">
+      <Filter>Integrators\Progressive Photon Mapping\VolEstimators</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Integrators\Progressive Photon Mapping\PPPMTracer_EyePass.cu">
+      <Filter>Integrators\Progressive Photon Mapping</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Integrators\Progressive Photon Mapping\PPPMTracer_PhotonPass.cu">
+      <Filter>Integrators\Progressive Photon Mapping</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\MicrofacetDistribution.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\PhaseFunction.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\RoughTransmittance.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\Samples.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\Sensor.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\ShapeSet.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\TriangleData.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\TriIntersectorData.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\Volumes.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\AnimatedMesh.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\BSDF_Complex.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\BSDF_Simple.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\DifferentialGeometry.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\Image.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\KernelDynamicScene.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\Light.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\Material.cu">
+      <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Engine\MIPMap.cu">
+      <Filter>Engine</Filter>
     </CudaCompile>
   </ItemGroup>
 </Project>

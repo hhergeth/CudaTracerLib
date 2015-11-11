@@ -1,23 +1,23 @@
 #include <StdAfx.h>
-#include <Engine/e_AnimatedMesh.h>
+#include <Engine/AnimatedMesh.h>
 #include "TangentSpaceHelper.h"
 #include <Engine/SceneBuilder/Importer.h>
 #include "MD5Parser.h"
 #include "Importer.h"
 #include <Base/FileStream.h>
-#include <Engine/e_TriangleData.h>
-#include <Engine/e_Material.h>
-#include <Engine/e_TriIntersectorData.h>
+#include <Engine/TriangleData.h>
+#include <Engine/Material.h>
+#include <Engine/TriIntersectorData.h>
 
 namespace CudaTracerLib {
 
-void build_e_Animation(Anim* A, MD5Model* M, e_Animation& res, const std::string& name, const std::vector<float4x4>& inverseJoints)
+void build_Animation(Anim* A, MD5Model* M, Animation& res, const std::string& name, const std::vector<float4x4>& inverseJoints)
 {
 	res.m_sName = name;
 	res.m_uFrameRate = A->bFrameRate;
 	for (int idxFrame = 0; idxFrame < A->numbFrames; idxFrame++)
 	{
-		e_Frame frame;
+		AnimationFrame frame;
 		const bFrame& F = A->bFrames[idxFrame];
 		for (int j = 0; j < F.joints.size(); j++)
 		{
@@ -43,14 +43,14 @@ void compilemd5(IInStream& in, std::vector<IInStream*>& animFiles, FileOutputStr
 	std::vector<uint3> triData2;
 	std::vector<Vec3f> v_Pos;
 	std::vector<Vec2f> tCoord;
-	std::vector<e_AnimatedVertex> v_Data;
+	std::vector<AnimatedVertex> v_Data;
 	std::vector<unsigned int> tData;
 	unsigned int off = 0;
 	for (int i = 0; i < M.meshes.size(); i++)
 	{
 		for (int v = 0; v < M.meshes[i]->verts.size(); v++)
 		{
-			e_AnimatedVertex av;
+			AnimatedVertex av;
 			Vec3f pos = Vec3f(0);
 			Vertex& V = M.meshes[i]->verts[v];
 			int a = min(8, V.weightCount);
@@ -87,17 +87,17 @@ void compilemd5(IInStream& in, std::vector<IInStream*>& animFiles, FileOutputStr
 		v_Data[v].m_fBitangent = v_BiTangents[v];
 	}
 
-	std::vector<e_TriangleData> triData;
-	std::vector<e_KernelMaterial> matData;
+	std::vector<TriangleData> triData;
+	std::vector<Material> matData;
 	diffuse stdMaterial;
 	stdMaterial.m_reflectance = CreateTexture(Spectrum(1, 0, 0));
 
 	off = 0;
 	for (int s = 0; s < M.meshes.size(); s++)
 	{
-		Mesh* sm = M.meshes[s];
+		Md5Mesh* sm = M.meshes[s];
 
-		e_KernelMaterial mat(sm->texture.c_str());
+		Material mat(sm->texture.c_str());
 		mat.NodeLightIndex = -1;
 		mat.bsdf.SetData(stdMaterial);
 		matData.push_back(mat);
@@ -115,7 +115,7 @@ void compilemd5(IInStream& in, std::vector<IInStream*>& animFiles, FileOutputStr
 				T[j] = sm->verts[v - off].tc;
 				box = box.Extend(P[j]);
 			}
-			e_TriangleData d(P, s, T, N, Tan, BiTan);
+			TriangleData d(P, s, T, N, Tan, BiTan);
 			triData.push_back(d);
 			Vec3u q = *(Vec3u*)&sm->tris[t].v + Vec3u(off);
 			triData2.push_back(q);
@@ -127,9 +127,9 @@ void compilemd5(IInStream& in, std::vector<IInStream*>& animFiles, FileOutputStr
 	a_Out << (unsigned int)0;
 
 	a_Out << (unsigned int)triData.size();
-	a_Out.Write(&triData[0], sizeof(e_TriangleData) * (unsigned int)triData.size());
+	a_Out.Write(&triData[0], sizeof(TriangleData) * (unsigned int)triData.size());
 	a_Out << (unsigned int)matData.size();
-	a_Out.Write(&matData[0], sizeof(e_KernelMaterial) * (unsigned int)matData.size());
+	a_Out.Write(&matData[0], sizeof(Material) * (unsigned int)matData.size());
 	BVH_Construction_Result bvh;
 	ConstructBVH(&v_Pos[0], (unsigned int*)&triData2[0], (int)v_Pos.size(), (int)triData2.size() * 3, a_Out, &bvh);
 
@@ -143,11 +143,11 @@ void compilemd5(IInStream& in, std::vector<IInStream*>& animFiles, FileOutputStr
 		inverseJoints.push_back((float4x4::Translate(M.joints[i].pos) % M.joints[i].quat.toMatrix()).inverse());
 	for (int a = 0; a < M.anims.size(); a++)
 	{
-		e_Animation anim;
-		build_e_Animation(M.anims[a], &M, anim, animFiles[a]->getFilePath(), inverseJoints);
+		Animation anim;
+		build_Animation(M.anims[a], &M, anim, animFiles[a]->getFilePath(), inverseJoints);
 		anim.serialize(a_Out);
 	}
-	a_Out.Write(&v_Data[0], (unsigned int)v_Pos.size() * sizeof(e_AnimatedVertex));
+	a_Out.Write(&v_Data[0], (unsigned int)v_Pos.size() * sizeof(AnimatedVertex));
 	a_Out.Write(&triData2[0], (unsigned int)triData2.size() * sizeof(uint3));
 	///delete[] v_Data;
 	//delete[] v_Pos;

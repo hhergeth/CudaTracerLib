@@ -1,6 +1,6 @@
 #pragma once
 #include <MathTypes.h>
-#include <Engine/e_TriIntersectorData.h>
+#include <Engine/TriIntersectorData.h>
 #include <Base/Timer.h>
 #include <vector>
 #include <functional>
@@ -22,7 +22,7 @@ public:
 	virtual void HandleBoundingBox(const AABB& box)
 	{
 	}
-	virtual e_BVHNodeData* HandleNodeAllocation(int* index) = 0;
+	virtual BVHNodeData* HandleNodeAllocation(int* index) = 0;
 	virtual void HandleStartNode(int startNode) = 0;
 	virtual bool SplitNode(unsigned int index, int dim, float pos, AABB& lBox, AABB& rBox, const AABB& refBox) const
 	{

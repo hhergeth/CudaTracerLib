@@ -17,15 +17,15 @@ class clb : public IBVHBuilderCallback
 		return Iab ? Iab[i * 3 + o] : (i * 3 + o);
 	}
 public:
-	std::vector<e_BVHNodeData>& nodes;
-	std::vector<e_TriIntersectorData>& tris;
-	std::vector<e_TriIntersectorData2>& indices;
+	std::vector<BVHNodeData>& nodes;
+	std::vector<TriIntersectorData>& tris;
+	std::vector<TriIntersectorData2>& indices;
 	AABB box;
 	int startNode;
 	//unsigned int L0, L1;
 	unsigned int l0, l1;
 public:
-	clb(unsigned int _v, unsigned int _i, const Vec3f* _V, const unsigned int* _I, std::vector<e_BVHNodeData>& A, std::vector<e_TriIntersectorData>& B, std::vector<e_TriIntersectorData2>& C)
+	clb(unsigned int _v, unsigned int _i, const Vec3f* _V, const unsigned int* _I, std::vector<BVHNodeData>& A, std::vector<TriIntersectorData>& B, std::vector<TriIntersectorData2>& C)
 		: V(_V), Iab(_I), v(_v), i(_i), nodes(A), tris(B), indices(C), l0(0), l1(0)
 	{
 	}
@@ -52,7 +52,7 @@ public:
 	{
 		this->box = box;
 	}
-	virtual e_BVHNodeData* HandleNodeAllocation(int* index)
+	virtual BVHNodeData* HandleNodeAllocation(int* index)
 	{
 		size_t n = l0++;
 		if (n >= nodes.size())
@@ -153,13 +153,13 @@ void ConstructBVH(const Vec3f* vertices, const unsigned int* indices, int vCount
 	SplitBVHBuilder bu(&c, P, SplitBVHBuilder::BuildParams()); bu.run();
 	O << (unsigned long long)c.l0;
 	if (c.l0)
-		O.Write(&c.nodes[0], (unsigned int)c.l0 * sizeof(e_BVHNodeData));
+		O.Write(&c.nodes[0], (unsigned int)c.l0 * sizeof(BVHNodeData));
 	O << (unsigned long long)c.l1;
 	if (c.l1)
-		O.Write(&c.tris[0], (unsigned int)c.l1 * sizeof(e_TriIntersectorData));
+		O.Write(&c.tris[0], (unsigned int)c.l1 * sizeof(TriIntersectorData));
 	O << (unsigned long long)c.l1;
 	if (c.l1)
-		O.Write(&c.indices[0], (unsigned int)c.l1 * sizeof(e_TriIntersectorData2));
+		O.Write(&c.indices[0], (unsigned int)c.l1 * sizeof(TriIntersectorData2));
 }
 
 }

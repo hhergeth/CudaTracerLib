@@ -1,8 +1,8 @@
 #include <StdAfx.h>
-#include <Engine/e_Mesh.h>
-#include <Engine/e_TriangleData.h>
-#include <Engine/e_Material.h>
-#include <Engine/e_TriIntersectorData.h>
+#include <Engine/Mesh.h>
+#include <Engine/TriangleData.h>
+#include <Engine/Material.h>
+#include <Engine/TriIntersectorData.h>
 #include <fstream>
 #include <iostream>
 #include <istream>
@@ -347,7 +347,7 @@ void compileply(IInStream& istream, FileOutputStream& a_Out)
 
 	Vec3f* Normals = new Vec3f[vertexCount], *Tangents = new Vec3f[vertexCount];
 	ComputeTangentSpace(Vertices, TexCoords, Indices, vertexCount, faceCount, Normals, Tangents);
-	e_TriangleData* triData = new e_TriangleData[indexCount / 3];
+	TriangleData* triData = new TriangleData[indexCount / 3];
 	Vec3f p[3];
 	Vec3f n[3];
 	Vec3f ta[3];
@@ -365,21 +365,21 @@ void compileply(IInStream& istream, FileOutputStream& a_Out)
 			n[j] = normalize(Normals[l]);
 			box = box.Extend(p[j]);
 		}
-		triData[t / 3] = e_TriangleData(p, (unsigned char)0, te, n, ta, bi);
+		triData[t / 3] = TriangleData(p, (unsigned char)0, te, n, ta, bi);
 	}
 	delete[] Normals;
 	delete[] Tangents;
 
-	e_KernelMaterial defaultMat("Default_Material");
+	Material defaultMat("Default_Material");
 	diffuse mat;
 	mat.m_reflectance = CreateTexture(Spectrum(1, 0, 0));
 	defaultMat.bsdf.SetData(mat);
 	a_Out << box;
 	a_Out << (unsigned int)0;
 	a_Out << (unsigned int)(indexCount / 3);
-	a_Out.Write(&triData[0], sizeof(e_TriangleData) * (int)(indexCount / 3));
+	a_Out.Write(&triData[0], sizeof(TriangleData) * (int)(indexCount / 3));
 	a_Out << 1;
-	a_Out.Write(&defaultMat, sizeof(e_KernelMaterial) * 1);
+	a_Out.Write(&defaultMat, sizeof(Material) * 1);
 	ConstructBVH(Vertices, Indices, vertexCount, faceCount * 3, a_Out);
 	::free(Vertices);
 	::free(Indices);

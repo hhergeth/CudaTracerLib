@@ -1,7 +1,7 @@
+// MD5 Loader, by A.J. Tavakoli
 #include "StdAfx.h"
 #include "MD5Parser.h"
 #include <boost/algorithm/string.hpp>
-// MD5 Loader, by A.J. Tavakoli
 #include <iostream>
 #include <string>
 #include <cstdlib>
@@ -400,7 +400,7 @@ void MD5Model::readMeshEl(std::ifstream &fin) {
 	if (t != TOKEN_LBRACE)
 		throw Exception("MD5Model::readMeshEl(): expected { to follow 'mesh'");
 
-	Mesh *mesh = new Mesh;
+	Md5Mesh *mesh = new Md5Mesh;
 
 	// read in all mesh information in block until '}' is hit
 	// (if EOF is reached before this, then the read*() methods

@@ -10,7 +10,7 @@ namespace CudaTracerLib {
 		return id; \
 		}
 
-struct e_BaseType
+struct BaseType
 {
 	virtual void Update()
 	{

@@ -180,7 +180,7 @@ int handleNode(std::vector<BVHNode>& nodes, BVHNode* n, IBVHBuilderCallback* clb
 		else
 		{
 			int idx;
-			e_BVHNodeData* node = clb->HandleNodeAllocation(&idx);
+			BVHNodeData* node = clb->HandleNodeAllocation(&idx);
 			int idx2 = -1;
 			AABB box;
 			for (unsigned int j = n->getLeft(); j < n->getRight(); j++)
@@ -202,7 +202,7 @@ int handleNode(std::vector<BVHNode>& nodes, BVHNode* n, IBVHBuilderCallback* clb
 	else
 	{
 		int idx;
-		e_BVHNodeData* node = clb->HandleNodeAllocation(&idx);
+		BVHNodeData* node = clb->HandleNodeAllocation(&idx);
 		int a = handleNode(nodes, &nodes[n->getLeft()], clb, m_Indices, level + 1, idx);
 		int b = handleNode(nodes, &nodes[n->getRight()], clb, m_Indices, level + 1, idx);
 		clb->setSibling(a, b);
