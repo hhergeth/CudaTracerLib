@@ -4,19 +4,21 @@
 #include <Engine/e_DynamicScene.h>
 #include <Engine/e_Light.h>
 
+namespace CudaTracerLib {
+
 CUDA_DEVICE uint3 g_EyeHitBoxMin;
 CUDA_DEVICE uint3 g_EyeHitBoxMax;
 template<bool RECURSIVE> __global__ void k_GuessPass(int w, int h, float scx, float scy)
 {
 	unsigned int x = threadIdx.x + blockDim.x * blockIdx.x, y = threadIdx.y + blockDim.y * blockIdx.y;
 	CudaRNG rng = g_RNGData();
-	if(x < w && y < h)
+	if (x < w && y < h)
 	{
 		Ray r = g_SceneData.GenerateSensorRay(float(x * scx), float(y * scy));
 		TraceResult r2;
 		r2.Init();
 		int d = -1;
-		while(k_TraceRay(r.direction, r.origin, &r2) && ++d < 5)
+		while (k_TraceRay(r.direction, r.origin, &r2) && ++d < 5)
 		{
 			DifferentialGeometry dg;
 			BSDFSamplingRecord bRec(dg);
@@ -32,7 +34,7 @@ template<bool RECURSIVE> __global__ void k_GuessPass(int w, int h, float scx, fl
 			atomicMax(&g_EyeHitBoxMax.y, q.y);
 			atomicMax(&g_EyeHitBoxMax.z, q.z);
 			r2.Init();
-			if(!RECURSIVE)
+			if (!RECURSIVE)
 				break;
 		}
 	}
@@ -48,9 +50,9 @@ AABB k_TracerBase::GetEyeHitPointBox(e_DynamicScene* m_pScene, bool recursive)
 	k_INITIALIZE(m_pScene, g_sRngs);
 	int qw = 128, qh = 128, p0 = 16;
 	float a = (float)m_pScene->getCamera()->As()->m_resolution.x / qw, b = (float)m_pScene->getCamera()->As()->m_resolution.y / qh;
-	if(recursive)
-		k_GuessPass<true> <<<dim3( qw/p0, qh/p0, 1), dim3(p0, p0, 1)>>>(qw, qh, a, b);
-	else k_GuessPass<false> <<<dim3( qw/p0, qh/p0, 1), dim3(p0, p0, 1)>>>(qw, qh, a, b);
+	if (recursive)
+		k_GuessPass<true> << <dim3(qw / p0, qh / p0, 1), dim3(p0, p0, 1) >> >(qw, qh, a, b);
+	else k_GuessPass<false> << <dim3(qw / p0, qh / p0, 1), dim3(p0, p0, 1) >> >(qw, qh, a, b);
 	ThrowCudaErrors(cudaDeviceSynchronize());
 	uint3 minU, maxU;
 	ThrowCudaErrors(cudaMemcpyFromSymbol(&minU, g_EyeHitBoxMin, 12));
@@ -150,4 +152,6 @@ void k_TracerBase::RenderDepth(e_Image* img, e_DynamicScene* s)
 	k_INITIALIZE(s, g_sRngs);
 	depthKernel << <dim3(img->getWidth() / 16 + 1, img->getHeight() / 16 + 1), dim3(16, 16) >> >(*img);
 	ThrowCudaErrors(cudaDeviceSynchronize());
+}
+
 }

@@ -5,6 +5,8 @@
 #include <Base/FixedString.h>
 #include <vector>
 
+namespace CudaTracerLib {
+
 struct e_KernelMesh
 {
 	unsigned int m_uTriangleOffset;
@@ -67,3 +69,5 @@ public:
 	static void CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2f** uvs, unsigned int nUV_Sets, const unsigned int* indices, unsigned int nIndices, const std::vector<e_KernelMaterial>& mats, const std::vector<Spectrum>& Le, const std::vector<unsigned int>& subMeshes, const unsigned char* extraData, FileOutputStream& out);
 	static e_SceneInitData ParseBinary(const std::string& a_InputFile);
 };
+
+}

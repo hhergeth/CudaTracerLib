@@ -3,6 +3,8 @@
 #include <Math/Vector.h>
 #include <Math/AABB.h>
 
+namespace CudaTracerLib {
+
 struct Ray;
 
 struct e_TriIntersectorData2
@@ -129,3 +131,5 @@ struct e_BVHNodeData
 		else setRight(box);
 	}
 };
+
+}

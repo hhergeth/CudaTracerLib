@@ -6,8 +6,10 @@
 
 //MipMap evaluation copied from Mitsuba.
 
-template <typename Scalar> CUDA_FUNC_IN int floorToInt(Scalar value) { return (int)floor(value); }
-template <typename Scalar> CUDA_FUNC_IN int ceilToInt(Scalar value) { return (int)ceil(value); }
+namespace CudaTracerLib {
+
+template <typename Scalar> CUDA_FUNC_IN int floorToInt(Scalar value) { return (int)math::floor(value); }
+template <typename Scalar> CUDA_FUNC_IN int ceilToInt(Scalar value) { return (int)math::ceil(value); }
 
 CUDA_FUNC_IN float hypot2(float a, float b)
 {
@@ -30,7 +32,7 @@ Spectrum e_KernelMIPMap::Texel(unsigned int level, const Vec2f& a_UV) const
 		data = m_pHostData + (m_sOffsets[level] + y * i + x);
 #endif
 		Spectrum s;
-		if(m_uType == vtRGBE)
+		if (m_uType == vtRGBE)
 			s.fromRGBE(*(RGBE*)data);
 		else s.fromRGBCOL(*(RGBCOL*)data);
 		return s;
@@ -39,11 +41,11 @@ Spectrum e_KernelMIPMap::Texel(unsigned int level, const Vec2f& a_UV) const
 
 Spectrum e_KernelMIPMap::triangle(unsigned int level, const Vec2f& a_UV) const
 {
-	level = math::clamp(level, 0u, m_uLevels-1);
+	level = math::clamp(level, 0u, m_uLevels - 1);
 	Vec2f s = Vec2f(m_uWidth >> level, m_uHeight >> level), is = Vec2f(1) / s;
 	Vec2f l = a_UV * s;// - make_float2(0.5f)
 	float ds = math::frac(l.x), dt = math::frac(l.y);
-	return (1.f-ds) * (1.f-dt) * Texel(level, a_UV) +
+	return (1.f - ds) * (1.f - dt) * Texel(level, a_UV) +
 		(1.f - ds) * dt       * Texel(level, a_UV + Vec2f(0, is.y)) +
 		ds       * (1.f - dt) * Texel(level, a_UV + Vec2f(is.x, 0)) +
 		ds       * dt       * Texel(level, a_UV + Vec2f(is.x, is.y));
@@ -71,8 +73,8 @@ Spectrum e_KernelMIPMap::evalEWA(unsigned int level, const Vec2f &uv, float A, f
 	int v0 = ceilToInt(v - deltaV), v1 = floorToInt(v + deltaV);
 
 	float As = A * MTS_MIPMAP_LUT_SIZE,
-		  Bs = B * MTS_MIPMAP_LUT_SIZE,
-		  Cs = C * MTS_MIPMAP_LUT_SIZE;
+		Bs = B * MTS_MIPMAP_LUT_SIZE,
+		Cs = C * MTS_MIPMAP_LUT_SIZE;
 
 	Spectrum result(0.0f);
 	float denominator = 0.0f;
@@ -124,11 +126,11 @@ float e_KernelMIPMap::SampleAlpha(const Vec2f& uv) const
 	unsigned int x = (unsigned int)l.x, y = (unsigned int)l.y, level = 0;
 	void* data;
 #ifdef ISCUDA
-			data = m_pDeviceData + (m_sOffsets[level] + y * (m_uWidth >> level) + x);
+	data = m_pDeviceData + (m_sOffsets[level] + y * (m_uWidth >> level) + x);
 #else
-			data = m_pHostData + (m_sOffsets[level] + y * (m_uWidth >> level) + x);
+	data = m_pHostData + (m_sOffsets[level] + y * (m_uWidth >> level) + x);
 #endif
-	if(m_uType == vtRGBE)
+	if (m_uType == vtRGBE)
 		return 1.0f;
 	else return float(((RGBCOL*)data)->w) / 255.0f;
 }
@@ -144,7 +146,7 @@ Spectrum e_KernelMIPMap::Sample(const Vec2f& a_UV, float width) const
 	{
 		int iLevel = math::Floor2Int(level);
 		float delta = level - iLevel;
-		return (1.f-delta) * triangle(iLevel, a_UV) + delta * triangle(iLevel+1, a_UV);
+		return (1.f - delta) * triangle(iLevel, a_UV) + delta * triangle(iLevel + 1, a_UV);
 	}
 }
 
@@ -154,15 +156,15 @@ Spectrum e_KernelMIPMap::Sample(float width, int x, int y) const
 	int level = (int)math::clamp(l, 0.0f, float(m_uLevels - 1));
 	void* data;
 #ifdef ISCUDA
-		data = m_pDeviceData + (m_sOffsets[level] + y * (m_uWidth >> level) + x);
+	data = m_pDeviceData + (m_sOffsets[level] + y * (m_uWidth >> level) + x);
 #else
-		data = m_pHostData + (m_sOffsets[level] + y * (m_uWidth >> level) + x);
+	data = m_pHostData + (m_sOffsets[level] + y * (m_uWidth >> level) + x);
 #endif
 	Spectrum s;
-	if(m_uType == vtRGBE)
+	if (m_uType == vtRGBE)
 		s.fromRGBE(*(RGBE*)data);
 	else s.fromRGBCOL(*(RGBCOL*)data);
-	return s;	
+	return s;
 }
 
 void e_KernelMIPMap::evalGradient(const Vec2f& uv, Spectrum* gradient) const
@@ -193,7 +195,7 @@ Spectrum e_KernelMIPMap::eval(const Vec2f& uv, const Vec2f& d0, const Vec2f& d1)
 
 	/* Convert into texel coordinates */
 	float du0 = d0.x * m_fDim.x, dv0 = d0.y * m_fDim.y,
-		  du1 = d1.x * m_fDim.x, dv1 = d1.y * m_fDim.y;
+		du1 = d1.x * m_fDim.x, dv1 = d1.y * m_fDim.y;
 
 	/* Turn the texture-space Jacobian into the coefficients of an
 	implicitly defined ellipse. */
@@ -218,7 +220,7 @@ Spectrum e_KernelMIPMap::eval(const Vec2f& uv, const Vec2f& d0, const Vec2f& d1)
 		{
 			float a = level - ilevel;
 			return triangle(ilevel, uv) * (1.0f - a)
-				 + triangle(ilevel + 1, uv) * a;
+				+ triangle(ilevel + 1, uv) * a;
 		}
 	}
 	else
@@ -254,7 +256,7 @@ Spectrum e_KernelMIPMap::eval(const Vec2f& uv, const Vec2f& d0, const Vec2f& d1)
 			return triangle(ilevel, uv);
 		else
 			return evalEWA(ilevel, uv, A, B, C) * (1.0f - a) +
-				   evalEWA(ilevel + 1, uv, A, B, C) * a;
+			evalEWA(ilevel + 1, uv, A, B, C) * a;
 	}
 }
 
@@ -263,16 +265,16 @@ struct MapPoint
 	CUDA_FUNC_IN Vec2f cubizePoint4(Vec3f& position, int& face)
 	{
 		Vec3f q = position.abs();
-		if(q.x > q.y && q.x > q.z)
+		if (q.x > q.y && q.x > q.z)
 			face = 0;
-		else if(q.y > q.z)
+		else if (q.y > q.z)
 			face = 1;
 		else face = 2;
 		int f = face;
 		float* val = (float*)&position;
 		face = 2 * face + (val[face] > 0 ? 0 : 1);
 
-		int2 uvIdxs[3] = {make_int2(2, 1), make_int2(0, 2), make_int2(0, 1)};
+		int2 uvIdxs[3] = { make_int2(2, 1), make_int2(0, 2), make_int2(0, 1) };
 		float sc = val[uvIdxs[f].x], tc = val[uvIdxs[f].y], w = math::abs(val[f]);
 		float sign1 = (face == 0 || face == 5) ? -1 : 1, sign2 = face == 2 ? 1 : -1;
 		return (Vec2f(sc * sign1, tc * sign2) / w + Vec2f(1)) / 2.0f;
@@ -286,7 +288,7 @@ struct MapPoint
 		Vec3f d = Vec3f(sinPhi*sinTheta, cosTheta, -cosPhi*sinTheta);
 		int face;
 		Vec2f uv = cubizePoint4(d, face);
-		if(face == 2 || face == 3)
+		if (face == 2 || face == 3)
 			x = (x + int(w) / 4) % int(w);
 		Spectrum s = maps[face].Load(int(uv.x * (maps[face].w - 1)), int((1.0f - uv.y) * (maps[face].h - 1)));
 		float r, g, b;
@@ -299,7 +301,7 @@ CUDA_CONST imgData mapsCuda[6];
 __global__ void generateSkydome(unsigned int w, unsigned int h, Vec3f* Target)
 {
 	unsigned int x = blockDim.x * blockIdx.x + threadIdx.x, y = blockDim.y * blockIdx.y + threadIdx.y;
-	if(x < w && y < h)
+	if (x < w && y < h)
 	{
 		unsigned int xp = x;
 		Vec3f c = MapPoint()(w, h, xp, y, mapsCuda);
@@ -321,14 +323,14 @@ void e_MIPMap::CreateSphericalSkydomeTexture(const std::string& front, const std
 	FIBITMAP* bitmap = FreeImage_AllocateT(FIT_RGBF, w, h, 32);
 	Vec3f* B = (Vec3f*)FreeImage_GetBits(bitmap);
 	const bool useCuda = true;
-	if(useCuda)
+	if (useCuda)
 	{
 		imgData mapsC[6];
-		for(int i = 0; i < 6; i++)
+		for (int i = 0; i < 6; i++)
 		{
 			mapsC[i] = maps[i];
 			CUDA_MALLOC(&mapsC[i].data, 4 * maps[i].w * maps[i].h);
-			cudaMemcpy(mapsC[i].data, maps[i].data, 4 * maps[i].w * maps[i].h, cudaMemcpyHostToDevice); 
+			cudaMemcpy(mapsC[i].data, maps[i].data, 4 * maps[i].w * maps[i].h, cudaMemcpyHostToDevice);
 		}
 		ThrowCudaErrors(cudaMemcpyToSymbol(mapsCuda, &mapsC[0], sizeof(mapsCuda)));
 		void* T;
@@ -337,13 +339,13 @@ void e_MIPMap::CreateSphericalSkydomeTexture(const std::string& front, const std
 		ThrowCudaErrors(cudaDeviceSynchronize());
 		ThrowCudaErrors(cudaMemcpy(B, T, sizeof(Vec3f) * w * h, cudaMemcpyDeviceToHost));
 		CUDA_FREE(T);
-		for(int i = 0; i < 6; i++)
+		for (int i = 0; i < 6; i++)
 			CUDA_FREE(mapsC[i].data);
 	}
 	else
 	{
-		for(unsigned int x = 0; x < w; x++)
-			for(unsigned int y = 0; y < h; y++)
+		for (unsigned int x = 0; x < w; x++)
+			for (unsigned int y = 0; y < h; y++)
 			{
 				unsigned int xp = x;
 				Vec3f c = M(w, h, xp, y, maps);
@@ -353,7 +355,7 @@ void e_MIPMap::CreateSphericalSkydomeTexture(const std::string& front, const std
 	if (!FreeImage_Save(FIF_EXR, bitmap, outFile.c_str()))
 		throw std::runtime_error(std::string(__FUNCTION__) + " :: FreeImage_Save");
 	FreeImage_Unload(bitmap);
-	for(int i = 0; i < 6; i++)
+	for (int i = 0; i < 6; i++)
 		free(maps[i].data);
 }
 
@@ -506,11 +508,11 @@ void e_MIPMap::CreateRelaxedConeMap(const std::string& a_InputFile, FileOutputSt
 			imgData[j * data.w + i] = make_float2(d, c);
 		}
 	a_Out.Write(imgData, data.w * data.h * sizeof(float2));
-	delete [] imgData;
-	
+	delete[] imgData;
+
 	unsigned int m_sOffsets[MAX_MIPS];
 	a_Out.Write(m_sOffsets, sizeof(m_sOffsets));
-	for (int i = 0; i<MTS_MIPMAP_LUT_SIZE; ++i)
+	for (int i = 0; i < MTS_MIPMAP_LUT_SIZE; ++i)
 	{
 		float r2 = (float)i / (float)(MTS_MIPMAP_LUT_SIZE - 1);
 		float val = math::exp(-2.0f * r2) - math::exp(-2.0f);
@@ -519,4 +521,6 @@ void e_MIPMap::CreateRelaxedConeMap(const std::string& a_InputFile, FileOutputSt
 
 	free(data.data);
 	free(hostData);
+}
+
 }

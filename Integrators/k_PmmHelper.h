@@ -8,6 +8,8 @@
 #include <qMatrixHelper.h>
 #include <Base/CudaRandom.h>
 
+namespace CudaTracerLib {
+
 CUDA_FUNC_IN float randomNormal(CudaRNG& rng)
 {
 	return math::sqrt(-2.0f * logf(rng.randomFloat())) * cosf(2.0f * PI * rng.randomFloat());
@@ -69,7 +71,7 @@ template<int D, int K> struct GaussianMixtureModel
 		CUDA_FUNC_IN vec sample(CudaRNG& rng) const
 		{
 			vec x;
-			for(int i = 0; i < D; i++)
+			for (int i = 0; i < D; i++)
 				x(i, 0) = randomNormal(rng);
 			return Q * x + mean;
 		}
@@ -78,13 +80,13 @@ template<int D, int K> struct GaussianMixtureModel
 		{
 			vec mean;
 			mat coVar;
-			for(int i = 0; i < D; i++)
+			for (int i = 0; i < D; i++)
 				mean(i, 0) = rng.randomFloat();
 			float d = 0.2f;
 			vec l = min + (max - min) * d, h = min + (max - min) * (1.0f - d);
 			mean = l + mean.MulElement(h - l);
-			for(int i = 0; i < D; i++)
-				for(int j = 0; j < D; j++)
+			for (int i = 0; i < D; i++)
+				for (int j = 0; j < D; j++)
 					coVar(i, j) = rng.randomFloat();
 			coVar = coVar + coVar;
 			coVar = coVar + float(D) * mat::Id();
@@ -103,7 +105,7 @@ template<int D, int K> struct GaussianMixtureModel
 	CUDA_FUNC_IN float p(const vec& x) const
 	{
 		float p = 0;
-		for(int i = 0; i < K; i++)
+		for (int i = 0; i < K; i++)
 			p += components[i].p(x) * weights[i];
 		return p;
 	}
@@ -112,9 +114,9 @@ template<int D, int K> struct GaussianMixtureModel
 	{
 		float U = rng.randomFloat();
 		float s = 0;
-		for(int i = 0; i < K; i++)
+		for (int i = 0; i < K; i++)
 		{
-			if(s <= U && U < s + weights[i])
+			if (s <= U && U < s + weights[i])
 				return components[i].sample(rng);
 			s += weights[i];
 		}
@@ -124,7 +126,7 @@ template<int D, int K> struct GaussianMixtureModel
 	CUDA_FUNC_IN float L(const qMatrix<float, D, 1>* samples, int N) const
 	{
 		float s = 0;
-		for(int i = 0; i < N; i++)
+		for (int i = 0; i < N; i++)
 			s += log(p(samples[i]));
 		return s;
 	}
@@ -132,7 +134,7 @@ template<int D, int K> struct GaussianMixtureModel
 	CUDA_FUNC_IN static GaussianMixtureModel<D, K> Random(CudaRNG& rng, const vec& mi, const vec& ma)
 	{
 		GaussianMixtureModel<D, K> res;
-		for(int i = 0; i < K; i++)
+		for (int i = 0; i < K; i++)
 		{
 			res.weights[i] = 1.0f / float(K);
 			res.components[i] = Component::Random(rng, mi, ma);
@@ -192,12 +194,12 @@ template<int D, int K> struct GaussianMixtureModel
 			ss = ss + stat.ss;
 		}
 	};
-	
+
 	CUDA_FUNC_IN void RecomputeFromStats(const SufStat* stats, int n, float w)
 	{
 		const float a = 2.01f, b = 5.0f * math::pow(10, -4), v = 1.01f;
 		mat b_nI = b / float(n) * mat::Id();
-		for(int j = 0; j < K; j++)
+		for (int j = 0; j < K; j++)
 		{
 			weights[j] = (stats[j].u / w + (v - 1) / float(n)) / (1 + K * (v - 1) / float(n));
 			vec mu = stats[j].s / stats[j].u;
@@ -211,20 +213,20 @@ template<int D, int K> struct GaussianMixtureModel
 	template<int max_SAMPLES> CUDA_FUNC_IN void OnlineEM(SufStat* stats, const vec* samples, int N, float ny, int n_all, float w_all)
 	{
 		float gamma[max_SAMPLES][K];
-		for(int q = 0; q < N; q++)
+		for (int q = 0; q < N; q++)
 		{
 			float sumRes = 0;
-			for(int h = 0; h < K; h++)
+			for (int h = 0; h < K; h++)
 				sumRes += weights[h] * components[h].p(samples[q]);
 
-			for(int j = 0; j < K; j++)
+			for (int j = 0; j < K; j++)
 				gamma[q][j] = weights[j] * components[j].p(samples[q]) / sumRes;
 		}
-		for(int j = 0; j < K; j++)
+		for (int j = 0; j < K; j++)
 		{
 			SufStat s;
 			s.zero();
-			for(int q = 0; q < N; q++)
+			for (int q = 0; q < N; q++)
 				s.add(SufStat(samples[q], gamma[q][j]));
 			s.mul(1.0f / float(N));
 			stats[j] = stats[j] * (1.0f - ny) + s * ny;
@@ -235,7 +237,7 @@ template<int D, int K> struct GaussianMixtureModel
 	static GaussianMixtureModel<D, K> BatchEM(const vec* samples, int N)
 	{
 		vec mi = vec::Ones() * FLT_MAX, ma = vec::Ones() * -FLT_MAX;
-		for(int i = 0; i < N; i++)
+		for (int i = 0; i < N; i++)
 		{
 			mi = minimize(mi, samples[i]);
 			ma = maximize(ma, samples[i]);
@@ -246,7 +248,7 @@ template<int D, int K> struct GaussianMixtureModel
 		rng.Initialize(0, 1234, 0);
 		GaussianMixtureModel<D, K> res = Random(rng);
 		std::vector<std::vector<float>> gamma;
-		for(int i = 0; i < N; i++)
+		for (int i = 0; i < N; i++)
 		{
 			gamma.push_back(std::vector<float>());
 			gamma[i].resize(K);
@@ -257,19 +259,19 @@ template<int D, int K> struct GaussianMixtureModel
 		do
 		{
 			L_old = L_new;
-			for(int q = 0; q < N; q++)
+			for (int q = 0; q < N; q++)
 			{
 				float sumRes = 0;
-				for(int h = 0; h < K; h++)
+				for (int h = 0; h < K; h++)
 					sumRes += res.weights[h] * res.components[h].p(samples[q]);
 
-				for(int j = 0; j < K; j++)
+				for (int j = 0; j < K; j++)
 					gamma[q][j] = res.weights[j] * res.components[j].p(samples[q]) / sumRes;
 			}
-			for(int j = 0; j < K; j++)
+			for (int j = 0; j < K; j++)
 			{
 				SufStat s;
-				for(int q = 0; q < N; q++)
+				for (int q = 0; q < N; q++)
 					s.add(SufStat(samples[q], gamma[q][j]));
 				s.mul(1.0f / float(N));
 				stats[j] = s;
@@ -320,7 +322,7 @@ struct DirectionModel
 				samples[N++] = HemishphereToSquare(ent.wi);
 		});
 		numSamples += N;
-		if(N)
+		if (N)
 			gmm.OnlineEM<MAX_SAMPLES>(stats, samples, N, ny, numSamples, 1);
 	}
 
@@ -332,3 +334,5 @@ struct DirectionModel
 };
 
 void plotModel(const DirectionModel& model);
+
+}

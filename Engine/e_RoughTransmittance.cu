@@ -3,11 +3,13 @@
 #include <Base/FileStream.h>
 #include <CudaMemoryManager.h>
 
+namespace CudaTracerLib {
+
 e_RoughTransmittance::e_RoughTransmittance(const std::string& name)
 {
 	FileInputStream I(name.c_str());
 	const char header[] = "MTS_TRANSMITTANCE";
-	char *fileHeader = (char *) alloca(strlen(header));
+	char *fileHeader = (char *)alloca(strlen(header));
 	I.Read(fileHeader, (unsigned int)strlen(header));
 	if (memcmp(fileHeader, header, strlen(header)) != 0)
 		throw std::runtime_error("Invalid filetype for rough transmittance!");
@@ -26,9 +28,9 @@ e_RoughTransmittance::e_RoughTransmittance(const std::string& name)
 	I.Read(temp, (unsigned int)(m_transSize + m_diffTransSize) * sizeof(float));
 	float *ptr = temp;
 	size_t fdrEntry = 0, dataEntry = 0;
-	for (size_t i=0; i<2*m_etaSamples; ++i) {
-		for (size_t j=0; j<m_alphaSamples; ++j) {
-			for (size_t k=0; k<m_thetaSamples; ++k)
+	for (size_t i = 0; i < 2 * m_etaSamples; ++i) {
+		for (size_t j = 0; j < m_alphaSamples; ++j) {
+			for (size_t k = 0; k < m_thetaSamples; ++k)
 				m_transHost[dataEntry++] = *ptr++;
 			m_diffTransHost[fdrEntry++] = *ptr++;
 		}
@@ -38,7 +40,7 @@ e_RoughTransmittance::e_RoughTransmittance(const std::string& name)
 	CUDA_MALLOC(&m_diffTransDevice, sizeof(float) * m_diffTransSize);
 	ThrowCudaErrors(cudaMemcpy(m_transDevice, m_transHost, sizeof(float) * m_transSize, cudaMemcpyHostToDevice));
 	ThrowCudaErrors(cudaMemcpy(m_diffTransDevice, m_diffTransHost, sizeof(float) * m_diffTransSize, cudaMemcpyHostToDevice));
-	if(I.getPos() != I.getFileSize())
+	if (I.getPos() != I.getFileSize())
 		throw std::runtime_error(__FUNCTION__);
 }
 
@@ -53,7 +55,7 @@ void e_RoughTransmittance::Free()
 float e_RoughTransmittance::Evaluate(float cosTheta, float alpha, float eta) const
 {
 	float warpedCosTheta = math::pow(math::abs(cosTheta), (float) 0.25f),
-			  result;
+		result;
 
 	if (cosTheta < 0)
 	{
@@ -78,9 +80,9 @@ float e_RoughTransmittance::Evaluate(float cosTheta, float alpha, float eta) con
 
 	/* Transform the roughness and IOR values into the warped parameter space */
 	float warpedAlpha = math::pow((alpha - m_alphaMin)
-			/ (m_alphaMax-m_alphaMin), (float) 0.25f);
+		/ (m_alphaMax - m_alphaMin), (float) 0.25f);
 	float warpedEta = math::pow((eta - m_etaMin)
-			/ (m_etaMax-m_etaMin), (float) 0.25f);
+		/ (m_etaMax - m_etaMin), (float) 0.25f);
 
 	result = Spline::evalCubicInterp3D(Vec3f(warpedCosTheta, warpedAlpha, warpedEta),
 		data, make_uint3((unsigned int)m_thetaSamples, (unsigned int)m_alphaSamples, (unsigned int)m_etaSamples),
@@ -109,13 +111,13 @@ float e_RoughTransmittance::EvaluateDiffuse(float alpha, float eta) const
 
 	/* Transform the roughness and IOR values into the warped parameter space */
 	float warpedAlpha = math::pow((alpha - m_alphaMin)
-			/ (m_alphaMax-m_alphaMin), (float) 0.25f);
+		/ (m_alphaMax - m_alphaMin), (float) 0.25f);
 	float warpedEta = math::pow((eta - m_etaMin)
-			/ (m_etaMax-m_etaMin), (float) 0.25f);
+		/ (m_etaMax - m_etaMin), (float) 0.25f);
 
 	result = Spline::evalCubicInterp2D(Vec2f(warpedAlpha, warpedEta), data,
 		make_uint2((unsigned int)m_alphaSamples, (unsigned int)m_etaSamples), Vec2f(0.0f), Vec2f(1.0f));
-	return min((float) 1.0f, max((float) 0.0f,  result));
+	return min((float) 1.0f, max((float) 0.0f, result));
 }
 
 static e_RoughTransmittance m_sObjectsHost[3];
@@ -131,7 +133,7 @@ void e_RoughTransmittanceManager::StaticInitialize(const std::string& a_Path)
 
 void e_RoughTransmittanceManager::StaticDeinitialize()
 {
-	for(int i = 0; i < 3; i++)
+	for (int i = 0; i < 3; i++)
 		m_sObjectsHost[i].Free();
 }
 
@@ -153,4 +155,6 @@ float e_RoughTransmittanceManager::EvaluateDiffuse(MicrofacetDistribution::EType
 	e_RoughTransmittance* o = m_sObjectsHost;
 #endif
 	return o[(unsigned int)type].EvaluateDiffuse(alpha, eta);
+}
+
 }

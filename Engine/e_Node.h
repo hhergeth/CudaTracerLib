@@ -3,6 +3,8 @@
 #include <MathTypes.h>
 #include <Base/FixedSizeArray.h>
 
+namespace CudaTracerLib {
+
 class e_Mesh;
 struct e_KernelMaterial;
 template<typename H, typename D> class e_BufferReference;
@@ -19,3 +21,5 @@ public:
 	e_Node(unsigned int MeshIndex, e_Mesh* mesh, e_BufferReference<e_KernelMaterial, e_KernelMaterial> mat);
 	AABB getWorldBox(e_Mesh* mesh, const float4x4& mat) const;
 };
+
+}

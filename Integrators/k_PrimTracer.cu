@@ -5,6 +5,8 @@
 #include <CudaMemoryManager.h>
 #include <Engine/e_FileTexture.h>
 
+namespace CudaTracerLib {
+
 enum
 {
 	MaxBlockHeight = 6,
@@ -16,7 +18,7 @@ CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_NextRayCounter2;
 CUDA_FUNC_IN Spectrum trace(Ray& r, const Ray& rX, const Ray& rY, CudaRNG& rng, float& depth)
 {
 	TraceResult r2 = k_TraceRay(r);
-	if(r2.hasHit())
+	if (r2.hasHit())
 	{
 		depth = CalcZBufferDepth(g_SceneData.m_Camera.As()->m_fNearFarDepths.x, g_SceneData.m_Camera.As()->m_fNearFarDepths.y, r2.m_fDist);
 		DifferentialGeometry dg;
@@ -32,13 +34,13 @@ CUDA_FUNC_IN Spectrum trace(Ray& r, const Ray& rX, const Ray& rY, CudaRNG& rng, 
 		//return L + r2.getMat().bsdf.getDiffuseReflectance(bRec);
 		Spectrum f = L + r2.getMat().bsdf.sample(bRec, rng.randomFloat2()) * through;
 		int depth = 0;
-		while(r2.getMat().bsdf.hasComponent(EDelta) && depth < 5)
+		while (r2.getMat().bsdf.hasComponent(EDelta) && depth < 5)
 		{
 			depth++;
 			r = Ray(r(r2.m_fDist), bRec.getOutgoing());
 			r2 = k_TraceRay(r);
 			through *= Transmittance(r, 0, r2.m_fDist);
-			if(r2.hasHit())
+			if (r2.hasHit())
 			{
 				r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
 				//f *= r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
@@ -63,7 +65,7 @@ CUDA_FUNC_IN Spectrum traceR(Ray& r, CudaRNG& rng)
 	bool specBounce = false;
 	DifferentialGeometry dg;
 	BSDFSamplingRecord bRec(dg);
-	while(k_TraceRay(r.direction, r.origin, &r2) && depth++ < 5)
+	while (k_TraceRay(r.direction, r.origin, &r2) && depth++ < 5)
 	{
 		c *= Transmittance(r, 0, r2.m_fDist);
 		r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
@@ -74,23 +76,23 @@ CUDA_FUNC_IN Spectrum traceR(Ray& r, CudaRNG& rng)
 		Spectrum im = g_SceneData.sampleSensorDirect(dRecSensor, rng.randomFloat2());
 		if(!g_SceneData.Occluded(Ray(r(r2.m_fDist), dRecLight.d), 0, dRecLight.dist))
 		{
-			return im * 1000000.0f;
+		return im * 1000000.0f;
 
-			float3 wi = normalize(dRecLight.p - r(r2.m_fDist));
-			float3 wo = normalize(dRecSensor.p - r(r2.m_fDist));
-			bRec.wi = bRec.map.sys.toLocal(wo);
-			bRec.wo = bRec.map.sys.toLocal(wi);
-			Spectrum f = r2.getMat().bsdf.f(bRec);
-			float pdf = r2.getMat().bsdf.pdf(bRec);
-			//return absdot(wi, bRec.map.sys.n) * absdot(wo, bRec.map.sys.n) * f / pdf * le;
-			float pdf2 = 1.0f / (absdot(wo, bRec.map.sys.n) * absdot(wo, bRec.map.sys.n) * absdot(wo, bRec.map.sys.n)) * 1.0f / (dRecLight.dist * dRecLight.dist);
-			return le * f / (pdf / pdf2);
+		float3 wi = normalize(dRecLight.p - r(r2.m_fDist));
+		float3 wo = normalize(dRecSensor.p - r(r2.m_fDist));
+		bRec.wi = bRec.map.sys.toLocal(wo);
+		bRec.wo = bRec.map.sys.toLocal(wi);
+		Spectrum f = r2.getMat().bsdf.f(bRec);
+		float pdf = r2.getMat().bsdf.pdf(bRec);
+		//return absdot(wi, bRec.map.sys.n) * absdot(wo, bRec.map.sys.n) * f / pdf * le;
+		float pdf2 = 1.0f / (absdot(wo, bRec.map.sys.n) * absdot(wo, bRec.map.sys.n) * absdot(wo, bRec.map.sys.n)) * 1.0f / (dRecLight.dist * dRecLight.dist);
+		return le * f / (pdf / pdf2);
 		}
 		else return 0.0f;*/
 		//return Spectrum(dot(bRec.ng, -r.direction));
-		if(depth == 1 || specBounce || !DIRECT)
+		if (depth == 1 || specBounce || !DIRECT)
 			L += r2.Le(r(r2.m_fDist), bRec.dg.sys, -r.direction);
-		if(DIRECT)
+		if (DIRECT)
 			L += c * UniformSampleAllLights(bRec, r2.getMat(), 1, rng);
 		float pdf;
 		Spectrum f = r2.getMat().bsdf.sample(bRec, pdf, rng.randomFloat2());
@@ -101,7 +103,7 @@ CUDA_FUNC_IN Spectrum traceR(Ray& r, CudaRNG& rng)
 		else break;
 
 		c = c * f;
-		if((bRec.sampledType & EDiffuse) == EDiffuse)
+		if ((bRec.sampledType & EDiffuse) == EDiffuse)
 		{
 			L += c;
 			break;
@@ -111,7 +113,7 @@ CUDA_FUNC_IN Spectrum traceR(Ray& r, CudaRNG& rng)
 		r.direction = bRec.getOutgoing();
 		r2.Init();
 	}
-	if(!r2.hasHit())
+	if (!r2.hasHit())
 		L += c * g_SceneData.EvalEnvironment(r);
 	return L;
 }
@@ -130,10 +132,10 @@ CUDA_FUNC_IN Spectrum traceS(Ray& r, CudaRNG& rng)
 	bRec.wo = bRec.dg.toLocal(dRec.d);
 	Spectrum f = r2.getMat().bsdf.f(bRec);
 	if (r2.getMat().bsdf.hasComponent(ETypeCombinations::EDiffuse))
-		return f * ::V(bRec.dg.P, dRec.p) / r2.getMat().bsdf.pdf(bRec) * Frame::cosTheta(bRec.wo);
+		return f * V(bRec.dg.P, dRec.p) / r2.getMat().bsdf.pdf(bRec) * Frame::cosTheta(bRec.wo);
 	else if (r2.getMat().bsdf.hasComponent(ETypeCombinations::EDelta))
-		return ::V(bRec.dg.P, dRec.p);
-	else return r2.getMat().bsdf.sample(bRec, Vec2f(0.0f)) * Frame::cosTheta(bRec.wo) * ::V(bRec.dg.P, dRec.p);
+		return V(bRec.dg.P, dRec.p);
+	else return r2.getMat().bsdf.sample(bRec, Vec2f(0.0f)) * Frame::cosTheta(bRec.wo) * V(bRec.dg.P, dRec.p);
 }
 
 CUDA_FUNC_IN Spectrum traceGame(Ray& r, const Ray& rX, const Ray& rY, CudaRNG& rng, float& zDepth)
@@ -212,8 +214,8 @@ CUDA_FUNC_IN Vec3f sample_normal(const Vec3f& pos)
 	float l = sample_tex(pos - Vec3f(o, 0, 0)).x, r = sample_tex(pos + Vec3f(o, 0, 0)).x;
 	float d = sample_tex(pos - Vec3f(0, o, 0)).x, u = sample_tex(pos + Vec3f(0, o, 0)).x;
 
-	Vec3f va = normalize(Vec3f(2*o, 0, r - l));
-	Vec3f vb = normalize(Vec3f(0, 2*o, u - d));
+	Vec3f va = normalize(Vec3f(2 * o, 0, r - l));
+	Vec3f vb = normalize(Vec3f(0, 2 * o, u - d));
 	return normalize(cross(va, vb));
 
 	//if (r - l != 0)
@@ -251,7 +253,7 @@ CUDA_FUNC_IN Spectrum traceTerrain(Ray& r, CudaRNG& rng)
 		float d = lastD = c*h / (ray_ratio - c * r.direction.y);
 		pos += r.direction * d;
 	}
-	if (leftBox )//|| N > cone_steps - 2
+	if (leftBox)//|| N > cone_steps - 2
 		return Spectrum(0, 1, 0);
 	//return length(pos - r.origin);
 
@@ -278,13 +280,13 @@ __global__ void primaryKernel(int width, int height, e_Image g_Image, bool depth
 		const int tidx = threadIdx.x;
 		volatile int& rayBase = nextRayArray[threadIdx.y];
 
-		const bool          terminated     = 1;//nodeAddr == EntrypointSentinel;
+		const bool          terminated = 1;//nodeAddr == EntrypointSentinel;
 		const unsigned int  maskTerminated = __ballot(terminated);
-		const int           numTerminated  = __popc(maskTerminated);
-		const int           idxTerminated  = __popc(maskTerminated & ((1u<<tidx)-1));	
+		const int           numTerminated = __popc(maskTerminated);
+		const int           idxTerminated = __popc(maskTerminated & ((1u << tidx) - 1));
 
-		if(terminated)
-		{			
+		if (terminated)
+		{
 			if (idxTerminated == 0)
 				rayBase = atomicAdd(&g_NextRayCounter2, numTerminated);
 
@@ -298,12 +300,11 @@ __global__ void primaryKernel(int width, int height, e_Image g_Image, bool depth
 		Spectrum imp = g_SceneData.m_Camera.sampleRayDifferential(r, rX, rY, Vec2f(x, y), rng.randomFloat2());
 		float d;
 		Spectrum L = imp * trace(r, rX, rY, rng, d);
-			
+
 		g_Image.AddSample(x, y, L);
 		if (depthImage)
 			g_DepthImage2.SetSample(x, y, *(RGBCOL*)&d);
-	}
-	while(true);
+	} while (true);
 	g_RNGData(rng);
 }
 
@@ -311,7 +312,7 @@ __global__ void primaryKernel(int width, int height, e_Image g_Image, bool depth
 __global__ void primaryKernelBlocked(int width, int height, e_Image g_Image, bool depthImage, Spectrum* lastImage1, Spectrum* lastImage2, e_Sensor lastSensor, int nIteration)
 {
 	CudaRNG rng = g_RNGData();
-	int x = 2*(blockIdx.x * blockDim.x + threadIdx.x), y = 2*(blockIdx.y * blockDim.y + threadIdx.y);
+	int x = 2 * (blockIdx.x * blockDim.x + threadIdx.x), y = 2 * (blockIdx.y * blockDim.y + threadIdx.y);
 	if (x < width && y < height)
 	{
 		DifferentialGeometry dg;
@@ -364,19 +365,19 @@ __global__ void primaryKernelBlocked(int width, int height, e_Image g_Image, boo
 
 			/*if (nIteration > 2)
 			{
-				DirectSamplingRecord dRec(primaryRay(primaryRes.m_fDist), Vec3f(0.0f));
-				lastSensor.sampleDirect(dRec, Vec2f(0, 0));
-				if (dRec.pdf)
-				{
-					int oy = int(dRec.uv.y) / 2, ox = int(dRec.uv.x) / 2, w2 = width / 2;
-					Spectrum lu = lastImage1[oy * w2 + ox], ru = lastImage1[oy * w2 + min(w2 - 1, ox + 1)],
-						ld = lastImage1[min(height/2 - 1, oy + 1) * w2 + ox], rd = lastImage1[min(height/2 - 1, oy + 1) * w2 + min(w2 - 1, ox + 1)];
-					Spectrum lL = math::bilerp(dRec.uv - dRec.uv.floor(), lu, ru, ld, rd);
-					//Spectrum lL = lastImage1[oy * w2 + ox];
-					//Spectrum lL = (lu + ru + ld + rd) / 4.0f;
-					const float p = 0.5f;
-					L_indirect = p * lL + (1 - p) * L_indirect;
-				}
+			DirectSamplingRecord dRec(primaryRay(primaryRes.m_fDist), Vec3f(0.0f));
+			lastSensor.sampleDirect(dRec, Vec2f(0, 0));
+			if (dRec.pdf)
+			{
+			int oy = int(dRec.uv.y) / 2, ox = int(dRec.uv.x) / 2, w2 = width / 2;
+			Spectrum lu = lastImage1[oy * w2 + ox], ru = lastImage1[oy * w2 + min(w2 - 1, ox + 1)],
+			ld = lastImage1[min(height/2 - 1, oy + 1) * w2 + ox], rd = lastImage1[min(height/2 - 1, oy + 1) * w2 + min(w2 - 1, ox + 1)];
+			Spectrum lL = math::bilerp(dRec.uv - dRec.uv.floor(), lu, ru, ld, rd);
+			//Spectrum lL = lastImage1[oy * w2 + ox];
+			//Spectrum lL = (lu + ru + ld + rd) / 4.0f;
+			const float p = 0.5f;
+			L_indirect = p * lL + (1 - p) * L_indirect;
+			}
 			}
 			lastImage2[y / 2 * width / 2 + x / 2] = L_indirect;*/
 		}
@@ -386,7 +387,7 @@ __global__ void primaryKernelBlocked(int width, int height, e_Image g_Image, boo
 		accuData = Spectrum(0.0f);
 		__syncthreads();
 		for (int i = 0; i < SPECTRUM_SAMPLES; i++)
-			atomicAdd(&accuData[i], L_indirect[i]);
+		atomicAdd(&accuData[i], L_indirect[i]);
 		__syncthreads();
 		L_indirect = accuData / (blockDim.x * blockDim.y);*/
 
@@ -396,18 +397,18 @@ __global__ void primaryKernelBlocked(int width, int height, e_Image g_Image, boo
 		int filterW = 2;
 		e_GaussianFilter filt(filterW*2, filterW*2, 0.5f);
 		int xstart = math::clamp((int)threadIdx.x - filterW / 2, filterW / 2+1, BLOCK_SIZE - filterW / 2-1),
-			ystart = math::clamp((int)threadIdx.y - filterW / 2, filterW / 2+1, BLOCK_SIZE - filterW / 2-1);
+		ystart = math::clamp((int)threadIdx.y - filterW / 2, filterW / 2+1, BLOCK_SIZE - filterW / 2-1);
 		Spectrum filterVal(0.0f);
 		float filterWeight = 0.0f;
 		for (int i = -filterW/2; i <= filterW/2; i++)
-			for (int j = -filterW / 2; j <= filterW / 2; j++)
-			{
-				float f = filt.Evaluate(i,j);
-				Spectrum v;
-				v.fromRGBCOL(indirectData[(ystart + j) * blockDim.x + xstart + i]);
-				filterVal += v * f;
-				filterWeight += f;
-			}
+		for (int j = -filterW / 2; j <= filterW / 2; j++)
+		{
+		float f = filt.Evaluate(i,j);
+		Spectrum v;
+		v.fromRGBCOL(indirectData[(ystart + j) * blockDim.x + xstart + i]);
+		filterVal += v * f;
+		filterWeight += f;
+		}
 		L_indirect = filterVal / filterWeight;*/
 
 		for (int i = 0; i < 4; i++)
@@ -426,7 +427,7 @@ __global__ void debugPixe2l(unsigned int width, unsigned int height, Vec2i p)
 	Ray r = g_SceneData.GenerateSensorRay(p.x, p.y);
 	CudaRNG rng = g_RNGData();
 	float d;
-	Spectrum q =  trace(r, r, r, rng, d);
+	Spectrum q = trace(r, r, r, rng, d);
 	q = traceTerrain(r, rng);
 }
 
@@ -512,4 +513,6 @@ void k_PrimTracer::Resize(unsigned int _w, unsigned int _h)
 	Platform::SetMemory(&lastSensor, sizeof(lastSensor));
 	iterations = 0;
 	k_Tracer<false, false>::Resize(_w, _h);
+}
+
 }

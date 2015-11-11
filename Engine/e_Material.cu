@@ -1,5 +1,7 @@
 #include "e_Material.h"
 
+namespace CudaTracerLib {
+
 void initbssrdf(e_VolumeRegion& reg)
 {
 	const float a = 1e10f;
@@ -92,7 +94,7 @@ CUDA_FUNC_IN Vec2f parallaxOcclusion(const Vec2f& texCoord, e_KernelMIPMap* tex,
 
 bool e_KernelMaterial::SampleNormalMap(DifferentialGeometry& dg, const Vec3f& wi) const
 {
-	if(NormalMap.used)
+	if (NormalMap.used)
 	{
 		Vec3f n;
 		NormalMap.tex.Evaluate(dg).toLinearRGB(n.x, n.y, n.z);
@@ -136,7 +138,7 @@ bool e_KernelMaterial::SampleNormalMap(DifferentialGeometry& dg, const Vec3f& wi
 
 float e_KernelMaterial::SampleAlphaMap(const DifferentialGeometry& uv) const
 {
-	if(AlphaMap.used)
+	if (AlphaMap.used)
 	{//return 1;
 		if (AlphaMap.tex.Is<e_ImageTexture>())
 		{
@@ -144,7 +146,7 @@ float e_KernelMaterial::SampleAlphaMap(const DifferentialGeometry& uv) const
 			return AlphaMap.tex.As<e_ImageTexture>()->tex->SampleAlpha(uv2) != 1 ? 0 : 1;
 		}
 		Spectrum s = AlphaMap.tex.Evaluate(uv);
-		if(s.isZero())
+		if (s.isZero())
 			return 0.0f;
 		else return 1.0f;
 	}
@@ -156,4 +158,6 @@ bool e_KernelMaterial::GetBSSRDF(const DifferentialGeometry& uv, const e_VolumeR
 	if (usedBssrdf)
 		*res = &bssrdf;
 	return !!usedBssrdf;
+}
+
 }

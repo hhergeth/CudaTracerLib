@@ -4,6 +4,8 @@
 
 //Implementation and interface copied from Mitsuba.
 
+namespace CudaTracerLib {
+
 class e_RoughTransmittance
 {
 	size_t m_etaSamples;
@@ -31,3 +33,5 @@ public:
 	CUDA_DEVICE CUDA_HOST static float Evaluate(MicrofacetDistribution::EType type, float cosTheta, float alpha = 0.0f, float eta = 0.0f);
 	CUDA_DEVICE CUDA_HOST static float EvaluateDiffuse(MicrofacetDistribution::EType type, float alpha = 0, float eta = 0);
 };
+
+}

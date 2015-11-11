@@ -6,6 +6,8 @@
 #include "SceneBuilder/SplitBVHBuilder.hpp"
 #include "e_BVHRebuilder.h"
 
+namespace CudaTracerLib {
+
 bool e_SceneBVH::Build(e_Stream<e_Node>* node_stream, e_Buffer<e_Mesh, e_KernelMesh>* mesh_buf)
 {
 	class provider : public ISpatialInfoProvider
@@ -145,4 +147,6 @@ AABB e_SceneBVH::getSceneBox()
 void e_SceneBVH::printGraph(const std::string& path)
 {
 	m_pBuilder->printGraph(path);
+}
+
 }

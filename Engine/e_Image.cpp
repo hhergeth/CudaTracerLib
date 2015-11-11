@@ -13,6 +13,8 @@
 #define FREEIMAGE_LIB
 #include <FreeImage.h>
 
+namespace CudaTracerLib {
+
 e_Image::e_Image(int xRes, int yRes, unsigned int viewGLTexture)
 	: xResolution(xRes), yResolution(yRes), lastSplatVal(0), m_fOutScale(1)
 {
@@ -34,7 +36,7 @@ e_Image::e_Image(int xRes, int yRes, unsigned int viewGLTexture)
 e_Image::e_Image(int xRes, int yRes, ID3D11Resource *pD3DResource)
 	: xResolution(xRes), yResolution(yRes), lastSplatVal(0), m_fOutScale(1)
 {
-ownsTarget = false;
+	ownsTarget = false;
 	drawStyle = ImageDrawType::Normal;
 	setStdFilter();
 	CUDA_MALLOC(&cudaPixels, sizeof(Pixel) * xResolution * yResolution);
@@ -60,7 +62,7 @@ e_Image::e_Image(int xRes, int yRes, RGBCOL* target)
 	outState = 2;
 	isMapped = 0;
 	this->viewTarget = target;
-	if(!viewTarget)
+	if (!viewTarget)
 	{
 		CUDA_MALLOC(&viewTarget, sizeof(RGBCOL) * xRes * yRes);
 		ownsTarget = true;
@@ -72,9 +74,9 @@ void e_Image::Free()
 	ThrowCudaErrors();
 	delete hostPixels;
 	CUDA_FREE(cudaPixels);
-	if(ownsTarget)
+	if (ownsTarget)
 		CUDA_FREE(viewTarget);
-	if(outState == 1)
+	if (outState == 1)
 		ThrowCudaErrors(cudaGraphicsUnregisterResource(viewCudaResource));
 }
 
@@ -168,7 +170,7 @@ void e_Image::SaveToMemory(void** mem, size_t& size, const std::string& type)
 void e_Image::StartRendering()
 {
 	m_bDoUpdate = false;
-	if(outState == 1)
+	if (outState == 1)
 	{
 		ThrowCudaErrors(cudaGraphicsMapResources(1, &viewCudaResource));
 		ThrowCudaErrors(cudaGraphicsSubResourceGetMappedArray(&viewCudaArray, viewCudaResource, 0, 0));
@@ -188,13 +190,15 @@ void e_Image::DoUpdateDisplay(float splat)
 
 void e_Image::EndRendering()
 {
-	if(m_bDoUpdate)
+	if (m_bDoUpdate)
 		InternalUpdateDisplay();
 	m_bDoUpdate = false;
-	if(outState == 1)
+	if (outState == 1)
 	{
 		ThrowCudaErrors(cudaDestroySurfaceObject(viewCudaSurfaceObject));
 		ThrowCudaErrors(cudaGraphicsUnmapResources(1, &viewCudaResource));
 	}
 	isMapped = 0;
+}
+
 }

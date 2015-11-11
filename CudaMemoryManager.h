@@ -7,6 +7,8 @@
 #include "cuda_runtime.h"
 #include <Base/Platform.h>
 
+namespace CudaTracerLib {
+
 struct CudaMemoryEntry
 {
 	void* address;
@@ -36,3 +38,5 @@ public:
 #define CUDA_FREE(v) CudaMemoryManager::Cuda_free_managed(v, std::string(__FUNCSIG__))
 #define CUDA_MEMCPY_TO_HOST(dest,src,length) ThrowCudaErrors(cudaMemcpy(dest, src, length, cudaMemcpyDeviceToHost))
 #define CUDA_MEMCPY_TO_DEVICE(dest,src,length) ThrowCudaErrors(cudaMemcpy(dest, src, length, cudaMemcpyHostToDevice))
+
+}

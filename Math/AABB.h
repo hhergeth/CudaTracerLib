@@ -3,6 +3,8 @@
 #include "float4x4.h"
 #include "Ray.h"
 
+namespace CudaTracerLib {
+
 struct AABB
 {
 	Vec3f minV;
@@ -25,18 +27,18 @@ struct AABB
 		Vec3f a = (maxV - minV);
 		return a.x * a.y * a.z;
 	}
-	CUDA_FUNC_IN float w() const { return maxV[0]-minV[0]; }
-	CUDA_FUNC_IN float h() const { return maxV[1]-minV[1]; }
-	CUDA_FUNC_IN float d() const { return maxV[2]-minV[2]; }
+	CUDA_FUNC_IN float w() const { return maxV[0] - minV[0]; }
+	CUDA_FUNC_IN float h() const { return maxV[1] - minV[1]; }
+	CUDA_FUNC_IN float d() const { return maxV[2] - minV[2]; }
 	CUDA_FUNC_IN AABB Transform(const float4x4& mat) const
 	{
 		//http://dev.theomader.com/transform-bounding-boxes/
 		Vec3f xa = mat.Right() * minV.x,
-			  xb = mat.Right() * maxV.x;
+			xb = mat.Right() * maxV.x;
 		Vec3f ya = mat.Up() * minV.y,
-			  yb = mat.Up() * maxV.y;
+			yb = mat.Up() * maxV.y;
 		Vec3f za = mat.Forward() * minV.z,
-			  zb = mat.Forward() * maxV.z;
+			zb = mat.Forward() * maxV.z;
 		return AABB(
 			min(xa, xb) + min(ya, yb) + min(za, zb) + mat.Translation(),
 			max(xa, xb) + max(ya, yb) + max(za, zb) + mat.Translation()
@@ -49,7 +51,7 @@ struct AABB
 		AABB b;
 		b.minV = minV;
 		b.maxV = maxV;
-		for(int i = 0; i < 3; i++)
+		for (int i = 0; i < 3; i++)
 			if (math::abs(b.maxV[i] - b.minV[i]) < EPSILON)
 			{
 				b.maxV[i] += (float)EPSILON;
@@ -127,9 +129,9 @@ struct AABB
 		float mi = math::spanBeginKepler(tx1, tx2, ty1, ty2, tz1, tz2, 0);
 		float ma = math::spanEndKepler(tx1, tx2, ty1, ty2, tz1, tz2, FLT_MAX);
 		bool b = ma > mi && ma > 0;
-		if(min && b)
+		if (min && b)
 			*min = mi;
-		if(max && b)
+		if (max && b)
 			*max = ma;
 		return b;
 	}
@@ -145,9 +147,9 @@ struct AABB
 		float mi = math::spanBeginKepler(tx1, tx2, ty1, ty2, tz1, tz2, 0);
 		float ma = math::spanEndKepler(tx1, tx2, ty1, ty2, tz1, tz2, FLT_MAX);
 		bool b = ma > mi && ma > 0;
-		if(min && b)
+		if (min && b)
 			*min = mi;
-		if(max && b)
+		if (max && b)
 			*max = ma;
 		return b;
 	}
@@ -163,3 +165,5 @@ struct AABB
 		return os;
 	}
 };
+
+}

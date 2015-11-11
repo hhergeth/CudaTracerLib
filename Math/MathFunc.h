@@ -4,6 +4,8 @@
 #include <math.h>
 #include <float.h>
 
+namespace CudaTracerLib {
+
 #define PI     3.14159265358979f
 #define INV_PI (1.0f / PI)
 #define INV_TWOPI (1.0f / (2.0f * PI))
@@ -151,7 +153,7 @@ public:
 		return max(a, b, c);
 #endif
 	}
-	
+
 	CUDA_FUNC_IN static float fmin_fmin(float a, float b, float c) { return int_as_float_(min_min(float_as_int_(a), float_as_int_(b), float_as_int_(c))); }
 	CUDA_FUNC_IN static float fmin_fmax(float a, float b, float c) { return int_as_float_(min_max(float_as_int_(a), float_as_int_(b), float_as_int_(c))); }
 	CUDA_FUNC_IN static float fmax_fmin(float a, float b, float c) { return int_as_float_(max_min(float_as_int_(a), float_as_int_(b), float_as_int_(c))); }
@@ -383,3 +385,4 @@ public:
 	template <class A, class B> CUDA_FUNC_IN static A lerp(const A& a, const A& b, const B& t) { return (A)(a * ((B)1 - t) + b * t); }
 };
 
+}

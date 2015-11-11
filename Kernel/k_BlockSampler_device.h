@@ -1,6 +1,8 @@
 #pragma once
 #include <Engine/e_Image.h>
 
+namespace CudaTracerLib {
+
 struct k_SamplerpixelData;
 
 #ifdef _DEBUG
@@ -39,3 +41,5 @@ public:
 	virtual void getBlockCoords(unsigned int idx, unsigned int& x, unsigned int& y, unsigned int& w, unsigned int& h, bool ignoreData = false) const = 0;
 	virtual k_BlockSampleImage getBlockImage() const = 0;
 };
+
+}

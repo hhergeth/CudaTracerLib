@@ -1,5 +1,7 @@
 #pragma once
 
+namespace CudaTracerLib {
+
 struct float4x4;
 struct e_BVHNodeData;
 
@@ -11,3 +13,5 @@ struct e_KernelSceneBVH
 	float4x4* m_pNodeTransforms;
 	float4x4* m_pInvNodeTransforms;
 };
+
+}

@@ -3,6 +3,8 @@
 #include <Kernel/k_Tracer.h>
 #include <Engine/e_Light.h>
 
+namespace CudaTracerLib {
+
 struct e_KernelMIPMap;
 class e_MIPMap;
 template<typename H, typename D> class e_Buffer;
@@ -35,3 +37,5 @@ protected:
 		I->Clear();
 	}
 };
+
+}

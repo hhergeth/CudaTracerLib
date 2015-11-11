@@ -9,6 +9,9 @@
 #include <crtdbg.h>
 #include <Kernel/k_Tracer.h>
 #include <ctime>
+#include "e_Grid.h"
+
+namespace CudaTracerLib {
 
 void testPrisma()
 {
@@ -33,7 +36,6 @@ void testPrisma()
 	float d = diff.abs().max();
 }
 
-#include "e_Grid.h"
 CUDA_FUNC_IN float SH(float f)
 {
 	return f >= 0 ? 1 : 0;
@@ -178,5 +180,4 @@ void DeInitializeCuda4Tracer()
 #endif
 }
 
-
-
+}

@@ -2,6 +2,8 @@
 #include <MathTypes.h>
 #include <CudaMemoryManager.h>
 
+namespace CudaTracerLib {
+
 float CudaRNG::randomFloat()
 {
 #ifdef ISCUDA
@@ -45,7 +47,7 @@ void CudaRNGBuffer::Free()
 
 void CudaRNGBuffer::createGenerators(unsigned int a_Spacing, unsigned int a_Offset)
 {
-	for(unsigned int i = 0; i < m_uNumGenerators; i++)
+	for (unsigned int i = 0; i < m_uNumGenerators; i++)
 	{
 		(m_pHostGenerators + i)->Initialize(i, a_Spacing, a_Offset);
 	}
@@ -94,5 +96,7 @@ void CudaRNGBuffer::operator()(CudaRNG& val)
 
 void CudaRNGBuffer::NextPass()
 {
+
+}
 
 }

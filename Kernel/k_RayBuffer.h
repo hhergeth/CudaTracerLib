@@ -3,6 +3,8 @@
 #include <Defines.h>
 #include <CudaMemoryManager.h>
 
+namespace CudaTracerLib {
+
 template<typename T, int N> struct k_RayBuffer
 {
 private:
@@ -108,3 +110,5 @@ public:
 		return insertBase + idxTerminated;
 	}
 };
+
+}

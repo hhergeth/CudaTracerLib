@@ -2,6 +2,8 @@
 #include "e_Node.h"
 #include <Math/Compression.h>
 
+namespace CudaTracerLib {
+
 #ifdef EXT_TRI
 
 e_TriangleData::e_TriangleData(const Vec3f* P, unsigned char matIndex, const Vec2f* T, const Vec3f* N, const Vec3f* Tan, const Vec3f* BiTan)
@@ -20,12 +22,12 @@ void e_TriangleData::setUvSetData(int setId, const Vec2f& a, const Vec2f& b, con
 }
 
 void e_TriangleData::setData(const Vec3f& v0, const Vec3f& v1, const Vec3f& v2,
-							 const Vec3f& n0, const Vec3f& n1, const Vec3f& n2)
+	const Vec3f& n0, const Vec3f& n1, const Vec3f& n2)
 {
 	uint3 uvset = m_sDeviceData.UVSets[0];
 	Vec2f   t0 = Vec2f(half(unsigned short(uvset.x)), half(unsigned short(uvset.x >> 16))),
-			t1 = Vec2f(half(unsigned short(uvset.y)), half(unsigned short(uvset.y >> 16))),
-			t2 = Vec2f(half(unsigned short(uvset.z)), half(unsigned short(uvset.z >> 16)));
+		t1 = Vec2f(half(unsigned short(uvset.y)), half(unsigned short(uvset.y >> 16))),
+		t2 = Vec2f(half(unsigned short(uvset.z)), half(unsigned short(uvset.z >> 16)));
 
 	Vec3f dP1 = v1 - v0, dP2 = v2 - v0;
 	Vec2f dUV1 = t1 - t0, dUV2 = t2 - t0;
@@ -39,7 +41,7 @@ void e_TriangleData::setData(const Vec3f& v0, const Vec3f& v1, const Vec3f& v2,
 	else
 	{
 		float invDet = 1.0f / determinant;
-		dpdu = (( dUV2.y * dP1 - dUV1.y * dP2) * invDet);
+		dpdu = ((dUV2.y * dP1 - dUV1.y * dP2) * invDet);
 		dpdv = ((-dUV2.x * dP1 + dUV1.x * dP2) * invDet);
 	}
 
@@ -81,8 +83,8 @@ void e_TriangleData::fillDG(const float4x4& localToWorld, const float4x4& worldT
 	{
 		uint3 uvset = m_sDeviceData.UVSets[i];
 		Vec2f   ta = Vec2f(half(unsigned short(uvset.x)), half(unsigned short(uvset.x >> 16))),
-				tb = Vec2f(half(unsigned short(uvset.y)), half(unsigned short(uvset.y >> 16))),
-				tc = Vec2f(half(unsigned short(uvset.z)), half(unsigned short(uvset.z >> 16)));
+			tb = Vec2f(half(unsigned short(uvset.y)), half(unsigned short(uvset.y >> 16))),
+			tc = Vec2f(half(unsigned short(uvset.z)), half(unsigned short(uvset.z >> 16)));
 		dg.uv[i] = u * ta + v * tb + w * tc;
 	}
 	dg.extraData = nme.y >> 24;
@@ -124,3 +126,5 @@ void e_TriangleData::getNormals(Vec3f& n0, Vec3f& n1, Vec3f& n2)
 }
 
 #endif
+
+}

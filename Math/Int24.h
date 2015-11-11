@@ -1,12 +1,15 @@
 #pragma once
 
 #include <Defines.h>
+#include <iostream>
+
+namespace CudaTracerLib {
 
 const int INT24_MAX = 8388607;
 
 //3 byte signed integer datatype
 //http://stackoverflow.com/questions/2682725/int24-24-bit-integral-datatype
-class Int24
+struct Int24
 {
 protected:
 	unsigned char m_Internal[3];
@@ -17,17 +20,17 @@ public:
 
 	CUDA_FUNC_IN Int24(const int val)
 	{
-		*this   = val;
+		*this = val;
 	}
 
 	CUDA_FUNC_IN Int24(const Int24& val)
 	{
-		*this   = val;
+		*this = val;
 	}
 
 	CUDA_FUNC_IN operator int() const
 	{
-		if ( m_Internal[2] & 0x80 ) // Is this a negative?  Then we need to siingn extend.
+		if (m_Internal[2] & 0x80) // Is this a negative?  Then we need to siingn extend.
 		{
 			return (0xff << 24) | (m_Internal[2] << 16) | (m_Internal[1] << 8) | (m_Internal[0] << 0);
 		}
@@ -44,18 +47,18 @@ public:
 
 	CUDA_FUNC_IN Int24& operator =(const Int24& input)
 	{
-		m_Internal[0]   = input.m_Internal[0];
-		m_Internal[1]   = input.m_Internal[1];
-		m_Internal[2]   = input.m_Internal[2];
+		m_Internal[0] = input.m_Internal[0];
+		m_Internal[1] = input.m_Internal[1];
+		m_Internal[2] = input.m_Internal[2];
 
 		return *this;
 	}
 
 	CUDA_FUNC_IN Int24& operator =(const int input)
 	{
-		m_Internal[0]   = ((unsigned char*)&input)[0];
-		m_Internal[1]   = ((unsigned char*)&input)[1];
-		m_Internal[2]   = ((unsigned char*)&input)[2];
+		m_Internal[0] = ((unsigned char*)&input)[0];
+		m_Internal[1] = ((unsigned char*)&input)[1];
+		m_Internal[2] = ((unsigned char*)&input)[2];
 
 		return *this;
 	}
@@ -64,44 +67,44 @@ public:
 
 	CUDA_FUNC_IN Int24 operator +(const Int24& val) const
 	{
-		return Int24( (int)*this + (int)val );
+		return Int24((int)*this + (int)val);
 	}
 
 	CUDA_FUNC_IN Int24 operator -(const Int24& val) const
 	{
-		return Int24( (int)*this - (int)val );
+		return Int24((int)*this - (int)val);
 	}
 
 	CUDA_FUNC_IN Int24 operator *(const Int24& val) const
 	{
-		return Int24( (int)*this * (int)val );
+		return Int24((int)*this * (int)val);
 	}
 
 	CUDA_FUNC_IN Int24 operator /(const Int24& val) const
 	{
-		return Int24( (int)*this / (int)val );
+		return Int24((int)*this / (int)val);
 	}
 
 	/***********************************************/
 
 	CUDA_FUNC_IN Int24 operator +(const int val) const
 	{
-		return Int24( (int)*this + val );
+		return Int24((int)*this + val);
 	}
 
 	CUDA_FUNC_IN Int24 operator -(const int val) const
 	{
-		return Int24( (int)*this - val );
+		return Int24((int)*this - val);
 	}
 
 	CUDA_FUNC_IN Int24 operator *(const int val) const
 	{
-		return Int24( (int)*this * val );
+		return Int24((int)*this * val);
 	}
 
 	CUDA_FUNC_IN Int24 operator /(const int val) const
 	{
-		return Int24( (int)*this / val );
+		return Int24((int)*this / val);
 	}
 
 	/***********************************************/
@@ -110,25 +113,25 @@ public:
 
 	CUDA_FUNC_IN Int24& operator +=(const Int24& val)
 	{
-		*this   = *this + val;
+		*this = *this + val;
 		return *this;
 	}
 
 	CUDA_FUNC_IN Int24& operator -=(const Int24& val)
 	{
-		*this   = *this - val;
+		*this = *this - val;
 		return *this;
 	}
 
 	CUDA_FUNC_IN Int24& operator *=(const Int24& val)
 	{
-		*this   = *this * val;
+		*this = *this * val;
 		return *this;
 	}
 
 	CUDA_FUNC_IN Int24& operator /=(const Int24& val)
 	{
-		*this   = *this / val;
+		*this = *this / val;
 		return *this;
 	}
 
@@ -136,25 +139,25 @@ public:
 
 	CUDA_FUNC_IN Int24& operator +=(const int val)
 	{
-		*this   = *this + val;
+		*this = *this + val;
 		return *this;
 	}
 
 	CUDA_FUNC_IN Int24& operator -=(const int val)
 	{
-		*this   = *this - val;
+		*this = *this - val;
 		return *this;
 	}
 
 	CUDA_FUNC_IN Int24& operator *=(const int val)
 	{
-		*this   = *this * val;
+		*this = *this * val;
 		return *this;
 	}
 
 	CUDA_FUNC_IN Int24& operator /=(const int val)
 	{
-		*this   = *this / val;
+		*this = *this / val;
 		return *this;
 	}
 
@@ -163,12 +166,12 @@ public:
 
 	CUDA_FUNC_IN Int24 operator >>(const int val) const
 	{
-		return Int24( (int)*this >> val );
+		return Int24((int)*this >> val);
 	}
 
 	CUDA_FUNC_IN Int24 operator <<(const int val) const
 	{
-		return Int24( (int)*this << val );
+		return Int24((int)*this << val);
 	}
 
 	/***********************************************/
@@ -200,7 +203,7 @@ public:
 
 	CUDA_FUNC_IN Int24 operator -()
 	{
-		return Int24( -(int)*this );
+		return Int24(-(int)*this);
 	}
 
 	/***********************************************/
@@ -270,4 +273,12 @@ public:
 
 	/***********************************************/
 	/***********************************************/
+
+	friend std::ostream& operator<< (std::ostream & os, const Int24& rhs)
+	{
+		os << rhs.operator int();
+		return os;
+	}
 };
+
+}

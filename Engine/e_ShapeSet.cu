@@ -3,6 +3,8 @@
 #include "e_Samples.h"
 #include "e_TriIntersectorData.h"
 
+namespace CudaTracerLib {
+
 void ShapeSet::SamplePosition(PositionSamplingRecord& pRec, const Vec2f& spatialSample) const
 {
 	float pdf;
@@ -15,4 +17,6 @@ void ShapeSet::SamplePosition(PositionSamplingRecord& pRec, const Vec2f& spatial
 	pRec.pdf = 1.0f / sumArea;
 	pRec.measure = EArea;
 	pRec.uv = bary;
+}
+
 }

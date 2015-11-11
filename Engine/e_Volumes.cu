@@ -4,6 +4,8 @@
 #include "e_Samples.h"
 #include "e_Grid.h"
 
+namespace CudaTracerLib {
+
 bool e_BaseVolumeRegion::IntersectP(const Ray &ray, const float minT, const float maxT, float *t0, float *t1) const
 {
 	Ray r = ray * WorldToVolume;
@@ -28,7 +30,55 @@ Spectrum e_HomogeneousVolumeDensity::tau(const Ray &ray, const float minT, const
 
 bool e_HomogeneousVolumeDensity::sampleDistance(const Ray& ray, float minT, float maxT, float rand, MediumSamplingRecord& mRec) const
 {
-	return sampleDistanceHomogenous(ray, minT, maxT, rand, mRec, sig_a, sig_s);
+	float m_mediumSamplingWeight = -1;
+	Spectrum sig_t = sig_a + sig_s, albedo = sig_s / sig_t;
+	for (int i = 0; i < 2; i++)
+		if (albedo[i] > m_mediumSamplingWeight && sig_t[i] != 0)
+			m_mediumSamplingWeight = albedo[i];
+	if (m_mediumSamplingWeight > 0)
+		m_mediumSamplingWeight = max(m_mediumSamplingWeight, 0.5f);
+	float sampledDistance = FLT_MAX;
+	int channel = int(rand * SPECTRUM_SAMPLES);
+	rand = (rand - channel * 1.0f / SPECTRUM_SAMPLES) * SPECTRUM_SAMPLES;
+	if (rand < m_mediumSamplingWeight)
+	{
+		rand /= m_mediumSamplingWeight;
+		float samplingDensity = sig_t[channel];
+		sampledDistance = -logf(1 - rand) / samplingDensity;
+	}
+	bool success = true;
+	if (sampledDistance < maxT - minT)
+	{
+		mRec.t = minT + sampledDistance;
+		mRec.p = ray(mRec.t);
+		mRec.sigmaA = sig_a;
+		mRec.sigmaS = sig_s;
+		if (mRec.p == ray.origin)
+			success = false;
+	}
+	else
+	{
+		sampledDistance = maxT - minT;
+		success = false;
+	}
+
+	mRec.pdfFailure = 0;
+	mRec.pdfSuccess = 0;
+	for (int i = 0; i < SPECTRUM_SAMPLES; i++)
+	{
+		float t = math::exp(-sig_t[i] * sampledDistance);
+		mRec.pdfFailure += t;
+		mRec.pdfSuccess += sig_t[i] * t;
+	}
+	mRec.pdfFailure /= SPECTRUM_SAMPLES;
+	mRec.pdfSuccess /= SPECTRUM_SAMPLES;
+	mRec.transmittance = (sig_t * (-sampledDistance)).exp();
+	mRec.pdfSuccessRev = mRec.pdfSuccess = mRec.pdfSuccess * m_mediumSamplingWeight;
+	mRec.pdfFailure = m_mediumSamplingWeight * mRec.pdfFailure + (1 - m_mediumSamplingWeight);
+	if (mRec.transmittance.max() < 1e-10f)
+		mRec.transmittance = Spectrum(0.0f);
+
+	return success;
 }
 
 e_DenseVolGridBaseType::e_DenseVolGridBaseType(e_Stream<char>* a_Buffer, Vec3u dim, size_t sizePerElement)
@@ -87,7 +137,7 @@ void e_VolumeGrid::Update()
 Spectrum e_VolumeGrid::tau(const Ray &ray, const float minT, const float maxT) const
 {
 	float t0, t1;
-	float length = ::length(ray.direction);
+	float length = CudaTracerLib::length(ray.direction);
 	if (length == 0.f) return 0.f;
 	Ray rn(ray.origin, ray.direction / length);
 	if (!IntersectP(rn, minT * length, maxT * length, &t0, &t1)) return 0.;
@@ -294,7 +344,7 @@ bool e_VolumeGrid::invertDensityIntegral(const Ray& ray, float t0, float t1, flo
 bool e_VolumeGrid::sampleDistance(const Ray& ray, float minT, float maxT, float sample, MediumSamplingRecord& mRec) const
 {
 	float t0, t1;
-	float length = ::length(ray.direction);
+	float length = CudaTracerLib::length(ray.direction);
 	if (length == 0.f) return 0.f;
 	Ray rn(ray.origin, ray.direction / length);
 	if (!IntersectP(rn, minT * length, maxT * length, &t0, &t1)) return 0.;
@@ -438,4 +488,6 @@ e_KernelAggregateVolume::e_KernelAggregateVolume(e_Stream<e_VolumeRegion>* D, bo
 	box = AABB::Identity();
 	for (unsigned int i = 0; i < m_uVolumeCount; i++)
 		box = box.Extend(D->operator()(i)->WorldBound());
+}
+
 }

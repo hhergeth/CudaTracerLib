@@ -4,6 +4,8 @@
 #include <Kernel/k_RayBuffer.h>
 #include "k_VCMHelper.h"
 
+namespace CudaTracerLib {
+
 //in vertices
 #define MAX_LIGHT_SUB_PATH_LENGTH 6
 
@@ -39,7 +41,7 @@ private:
 	unsigned long long m_uPhotonsEmitted;
 	float getCurrentRadius(int exp)
 	{
-		return ::getCurrentRadius(m_fInitialRadius, m_uPassesDone, exp);
+		return CudaTracerLib::getCurrentRadius(m_fInitialRadius, m_uPassesDone, exp);
 	}
 private:
 	unsigned int m_uNumLightRays;
@@ -51,3 +53,5 @@ private:
 protected:
 	virtual float getSplatScale();
 };
+
+}

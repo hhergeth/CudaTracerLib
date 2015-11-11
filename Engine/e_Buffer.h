@@ -18,6 +18,8 @@
 #include <CudaMemoryManager.h>
 #include <VirtualFuncType.h>
 
+namespace CudaTracerLib {
+
 template<typename H, typename D> class e_BufferIterator;
 template<typename H, typename D> class e_BufferRange
 {
@@ -203,9 +205,11 @@ public:
 
 	void UpdateInvalidated()
 	{
-		struct f{ void operator()(e_BufferReference<H, D> r)
-		{ 
-		} };
+		struct f{
+			void operator()(e_BufferReference<H, D> r)
+			{
+			}
+		};
 		f _f;
 		UpdateInvalidated(_f);
 	}
@@ -475,3 +479,4 @@ public:
 	}
 };
 
+}

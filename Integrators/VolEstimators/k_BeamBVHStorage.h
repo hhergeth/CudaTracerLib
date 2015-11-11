@@ -4,6 +4,8 @@
 #include <Kernel/k_BVHTracer.h>
 #include <vector>
 
+namespace CudaTracerLib {
+
 class e_DynamicScene;
 
 class k_BeamBVHStorage : public IVolumeEstimator
@@ -98,3 +100,5 @@ public:
 
 	template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum L_Volume(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr) const;
 };
+
+}

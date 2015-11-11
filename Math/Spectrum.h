@@ -4,6 +4,8 @@
 
 //The general design of the class is copied from PBRT, the conversion/integration routines from Mitsuba.
 
+namespace CudaTracerLib {
+
 #define SPECTRUM_SAMPLES 3
 
 #define SPECTRUM_min_WAVELENGTH   360
@@ -20,33 +22,33 @@ public:
 	CUDA_FUNC_IN TSpectrum() { }
 
 	CUDA_FUNC_IN TSpectrum(Scalar v) {
-		for (int i=0; i<N; i++)
+		for (int i = 0; i < N; i++)
 			s[i] = v;
 	}
 
 	/// Copy a spectral power distribution
 	CUDA_FUNC_IN TSpectrum(Scalar spec[N]) {
-		for(int i = 0; i < N; i++)
+		for (int i = 0; i < N; i++)
 			s[i] = spec[i];
 	}
 
 	/// Initialize with a TSpectrum data type based on a alternate representation
 	template <typename AltScalar> CUDA_FUNC_IN TSpectrum(const TSpectrum<AltScalar, N> &v) {
-		for (int i=0; i<N; ++i)
-			s[i] = (Scalar) v[i];
+		for (int i = 0; i < N; ++i)
+			s[i] = (Scalar)v[i];
 	}
 
 	/// Add two spectral power distributions
 	CUDA_FUNC_IN TSpectrum operator+(const TSpectrum &spec) const {
 		TSpectrum value = *this;
-		for (int i=0; i<N; i++)
+		for (int i = 0; i < N; i++)
 			value.s[i] += spec.s[i];
 		return value;
 	}
 
 	/// Add a spectral power distribution to this instance
 	CUDA_FUNC_IN TSpectrum& operator+=(const TSpectrum &spec) {
-		for (int i=0; i<N; i++)
+		for (int i = 0; i < N; i++)
 			s[i] += spec.s[i];
 		return *this;
 	}
@@ -54,14 +56,14 @@ public:
 	/// Subtract a spectral power distribution
 	CUDA_FUNC_IN TSpectrum operator-(const TSpectrum &spec) const {
 		TSpectrum value = *this;
-		for (int i=0; i<N; i++)
+		for (int i = 0; i < N; i++)
 			value.s[i] -= spec.s[i];
 		return value;
 	}
 
 	/// Subtract a spectral power distribution from this instance
 	CUDA_FUNC_IN TSpectrum& operator-=(const TSpectrum &spec) {
-		for (int i=0; i<N; i++)
+		for (int i = 0; i < N; i++)
 			s[i] -= spec.s[i];
 		return *this;
 	}
@@ -69,7 +71,7 @@ public:
 	/// Multiply by a scalar
 	CUDA_FUNC_IN TSpectrum operator*(Scalar f) const {
 		TSpectrum value = *this;
-		for (int i=0; i<N; i++)
+		for (int i = 0; i < N; i++)
 			value.s[i] *= f;
 		return value;
 	}
@@ -81,7 +83,7 @@ public:
 
 	/// Multiply by a scalar
 	CUDA_FUNC_IN TSpectrum& operator*=(Scalar f) {
-		for (int i=0; i<N; i++)
+		for (int i = 0; i < N; i++)
 			s[i] *= f;
 		return *this;
 	}
@@ -89,21 +91,21 @@ public:
 	/// Perform a component-wise multiplication by another spectrum
 	CUDA_FUNC_IN TSpectrum operator*(const TSpectrum &spec) const {
 		TSpectrum value = *this;
-		for (int i=0; i<N; i++)
+		for (int i = 0; i < N; i++)
 			value.s[i] *= spec.s[i];
 		return value;
 	}
 
 	/// Perform a component-wise multiplication by another spectrum
 	CUDA_FUNC_IN TSpectrum& operator*=(const TSpectrum &spec) {
-		for (int i=0; i<N; i++)
+		for (int i = 0; i < N; i++)
 			s[i] *= spec.s[i];
 		return *this;
 	}
 
 	/// Perform a component-wise division by another spectrum
 	CUDA_FUNC_IN TSpectrum& operator/=(const TSpectrum &spec) {
-		for (int i=0; i<N; i++)
+		for (int i = 0; i < N; i++)
 			s[i] /= spec.s[i];
 		return *this;
 	}
@@ -111,7 +113,7 @@ public:
 	/// Perform a component-wise division by another spectrum
 	CUDA_FUNC_IN TSpectrum operator/(const TSpectrum &spec) const {
 		TSpectrum value = *this;
-		for (int i=0; i<N; i++)
+		for (int i = 0; i < N; i++)
 			value.s[i] /= spec.s[i];
 		return value;
 	}
@@ -119,14 +121,14 @@ public:
 	CUDA_FUNC_IN TSpectrum operator/(Scalar f) const {
 		TSpectrum value = *this;
 		Scalar recip = 1.0f / f;
-		for (int i=0; i<N; i++)
+		for (int i = 0; i < N; i++)
 			value.s[i] *= recip;
 		return value;
 	}
 
 	/// Equality test
 	CUDA_FUNC_IN bool operator==(const TSpectrum &spec) const {
-		for (int i=0; i<N; i++) {
+		for (int i = 0; i < N; i++) {
 			if (s[i] != spec.s[i])
 				return false;
 		}
@@ -146,14 +148,14 @@ public:
 	/// Divide by a scalar
 	CUDA_FUNC_IN TSpectrum& operator/=(Scalar f) {
 		Scalar recip = 1.0f / f;
-		for (int i=0; i<N; i++)
+		for (int i = 0; i < N; i++)
 			s[i] *= recip;
 		return *this;
 	}
 
 	/// Check for NaNs
 	CUDA_FUNC_IN bool isNaN() const {
-		for (int i=0; i<N; i++)
+		for (int i = 0; i < N; i++)
 			if (isnan(s[i]))
 				return true;
 		return false;
@@ -161,7 +163,7 @@ public:
 
 	/// Returns whether the spectrum only contains valid (non-NaN, nonnegative) samples
 	CUDA_FUNC_IN bool isValid() const {
-		for (int i=0; i<N; i++)
+		for (int i = 0; i < N; i++)
 			if (!isfinite(s[i]) || s[i] < 0.0f)
 				return false;
 		return true;
@@ -169,14 +171,14 @@ public:
 
 	/// Multiply-accumulate operation, adds \a weight * \a spec
 	CUDA_FUNC_IN void addWeighted(Scalar weight, const TSpectrum &spec) {
-		for (int i=0; i<N; i++)
+		for (int i = 0; i < N; i++)
 			s[i] += weight * spec.s[i];
 	}
 
 	/// Return the average over all wavelengths
 	CUDA_FUNC_IN Scalar average() const {
 		Scalar result = 0.0f;
-		for (int i=0; i<N; i++)
+		for (int i = 0; i < N; i++)
 			result += s[i];
 		return result * (1.0f / N);
 	}
@@ -184,7 +186,7 @@ public:
 	/// Component-wise square root
 	CUDA_FUNC_IN TSpectrum sqrt() const {
 		TSpectrum value;
-		for (int i=0; i<N; i++)
+		for (int i = 0; i < N; i++)
 			value.s[i] = math::sqrt(s[i]);
 		return value;
 	}
@@ -192,7 +194,7 @@ public:
 	/// Component-wise abs
 	CUDA_FUNC_IN TSpectrum abs() const {
 		TSpectrum value;
-		for(int i = 0; i < N; i++)
+		for (int i = 0; i < N; i++)
 			value.s[i] = math::abs(s[i]);
 		return value;
 	}
@@ -200,7 +202,7 @@ public:
 	/// Component-wise saturate
 	CUDA_FUNC_IN TSpectrum saturate() const {
 		TSpectrum value;
-		for(int i = 0; i < N; i++)
+		for (int i = 0; i < N; i++)
 			value.s[i] = math::clamp01(s[i]);
 		return value;
 	}
@@ -208,7 +210,7 @@ public:
 	/// Component-wise square root
 	CUDA_FUNC_IN TSpectrum safe_sqrt() const {
 		TSpectrum value;
-		for (int i=0; i<N; i++)
+		for (int i = 0; i < N; i++)
 			value.s[i] = math::safe_sqrt(s[i]);
 		return value;
 	}
@@ -216,7 +218,7 @@ public:
 	/// Component-wise exponentation
 	CUDA_FUNC_IN TSpectrum exp() const {
 		TSpectrum value;
-		for (int i=0; i<N; i++)
+		for (int i = 0; i < N; i++)
 			value.s[i] = math::exp(s[i]);
 		return value;
 	}
@@ -224,29 +226,29 @@ public:
 	/// Component-wise power
 	CUDA_FUNC_IN TSpectrum pow(Scalar f) const {
 		TSpectrum value;
-		for (int i=0; i<N; i++)
+		for (int i = 0; i < N; i++)
 			value.s[i] = math::pow(s[i], f);
 		return value;
 	}
 
 	/// math::clamp negative values
 	CUDA_FUNC_IN void clampNegative() {
-		for (int i=0; i<N; i++)
+		for (int i = 0; i < N; i++)
 			s[i] = ::max((Scalar) 0.0f, s[i]);
 	}
 
 	/// Return the highest-valued spectral sample
 	CUDA_FUNC_IN Scalar max() const {
 		Scalar result = s[0];
-		for (int i=1; i<N; i++)
-			result = ::max(result, s[i]);
+		for (int i = 1; i < N; i++)
+			result = CudaTracerLib::max(result, s[i]);
 		return result;
 	}
 
 	/// Return the lowest-valued spectral sample
 	CUDA_FUNC_IN Scalar min() const {
 		Scalar result = s[0];
-		for (int i=1; i<N; i++)
+		for (int i = 1; i < N; i++)
 			result = ::min(result, s[i]);
 		return result;
 	}
@@ -254,7 +256,7 @@ public:
 	/// Negate
 	CUDA_FUNC_IN TSpectrum operator-() const {
 		TSpectrum value;
-		for (int i=0; i<N; i++)
+		for (int i = 0; i < N; i++)
 			value.s[i] = -s[i];
 		return value;
 	}
@@ -271,7 +273,7 @@ public:
 
 	/// Check if this spectrum is zero at all wavelengths
 	CUDA_FUNC_IN bool isZero() const {
-		for (int i=0; i<N; i++) {
+		for (int i = 0; i < N; i++) {
 			if (s[i] != 0.0f)
 				return false;
 		}
@@ -299,7 +301,7 @@ template <class T2, int L2> inline std::ostream& operator << (std::ostream & str
 template<typename T, int N> CUDA_FUNC_IN TSpectrum<T, N> max(const TSpectrum<T, N>& a, const TSpectrum<T, N>& b)
 {
 	TSpectrum<T, N> r;
-	for(int i = 0; i < N; i++)
+	for (int i = 0; i < N; i++)
 		r[i] = max(a[i], b[i]);
 	return r;
 }
@@ -307,7 +309,7 @@ template<typename T, int N> CUDA_FUNC_IN TSpectrum<T, N> max(const TSpectrum<T, 
 template<typename T, int N> CUDA_FUNC_IN TSpectrum<T, N> min(const TSpectrum<T, N>& a, const TSpectrum<T, N>& b)
 {
 	TSpectrum<T, N> r;
-	for(int i = 0; i < N; i++)
+	for (int i = 0; i < N; i++)
 		r[i] = min(a[i], b[i]);
 	return r;
 }
@@ -336,24 +338,24 @@ public:
 
 	/// Initialize with a TSpectrum data type based on a alternate representation
 	template <typename AltScalar> CUDA_FUNC_IN explicit Spectrum(const TSpectrum<AltScalar, SPECTRUM_SAMPLES> &v) {
-		for (int i=0; i<SPECTRUM_SAMPLES; ++i)
-			s[i] = (Scalar) v[i];
+		for (int i = 0; i < SPECTRUM_SAMPLES; ++i)
+			s[i] = (Scalar)v[i];
 	}
 
 	/// Create a new spectral power distribution with all samples set to the given value
 	explicit CUDA_FUNC_IN Spectrum(float v) {
-		for (int i=0; i<SPECTRUM_SAMPLES; i++)
+		for (int i = 0; i < SPECTRUM_SAMPLES; i++)
 			s[i] = v;
 	}
 
 	/// Copy a spectral power distribution
 	explicit CUDA_FUNC_IN Spectrum(float value[SPECTRUM_SAMPLES]) {
-		for(int i = 0; i < SPECTRUM_SAMPLES; i++)
+		for (int i = 0; i < SPECTRUM_SAMPLES; i++)
 			s[i] = value[i];
 	}
 
 	CUDA_FUNC_IN bool operator==(const Spectrum &val) const {
-		for (int i=0; i<SPECTRUM_SAMPLES; i++) {
+		for (int i = 0; i < SPECTRUM_SAMPLES; i++) {
 			if (s[i] != val.s[i])
 				return false;
 		}
@@ -463,9 +465,9 @@ public:
 		const float YWeight[3] = { 0.212671f, 0.715160f, 0.072169f };
 		return YWeight[0] * v.x + YWeight[1] * v.y + YWeight[2] * v.z;
 	}
- 
+
 #define toInt(x) (int((float)math::pow(math::clamp01(x),1.0f/1.2f)*255.0f+0.5f))
-//#define toInt(x) (unsigned char(x * 255.0f))
+	//#define toInt(x) (unsigned char(x * 255.0f))
 
 	static CUDA_FUNC_IN RGBCOL Float4ToCOLORREF(const Vec4f& c)
 	{
@@ -491,8 +493,8 @@ public:
 	static CUDA_FUNC_IN RGBE Float3ToRGBE(const Vec3f& c)
 	{
 		float v = c.max();
-		if(v < 1e-32)
-			return make_uchar4(0,0,0,0);
+		if (v < 1e-32)
+			return make_uchar4(0, 0, 0, 0);
 		else
 		{
 			int e;
@@ -503,7 +505,7 @@ public:
 
 	static CUDA_FUNC_IN Vec3f RGBEToFloat3(RGBE a)
 	{
-		float f = ldexp(1.0f, a.w - (int)(128+8));
+		float f = ldexp(1.0f, a.w - (int)(128 + 8));
 		return Vec3f((float)a.x * f, (float)a.y * f, (float)a.z * f);
 	}
 
@@ -516,9 +518,9 @@ public:
 	static CUDA_FUNC_IN Vec3f RGBToXYZ(const Vec3f& c)
 	{
 		Vec3f r;
-		r.x = dot(Vec3f(0.5767309f,  0.1855540f,  0.1881852f), c);
-		r.y = dot(Vec3f(0.2973769f,  0.6273491f,  0.0752741f), c);
-		r.z = dot(Vec3f(0.0270343f,  0.0706872f,  0.9911085f), c);
+		r.x = dot(Vec3f(0.5767309f, 0.1855540f, 0.1881852f), c);
+		r.y = dot(Vec3f(0.2973769f, 0.6273491f, 0.0752741f), c);
+		r.z = dot(Vec3f(0.0270343f, 0.0706872f, 0.9911085f), c);
 		return r;
 	}
 
@@ -526,8 +528,8 @@ public:
 	{
 		Vec3f r;
 		r.x = dot(Vec3f(2.0413690f, -0.5649464f, -0.3446944f), c);
-		r.y = dot(Vec3f(-0.9692660f,  1.8760108f,  0.0415560f), c);
-		r.z = dot(Vec3f(0.0134474f, -0.1183897f,  1.0154096f), c);
+		r.y = dot(Vec3f(-0.9692660f, 1.8760108f, 0.0415560f), c);
+		r.z = dot(Vec3f(0.0134474f, -0.1183897f, 1.0154096f), c);
 		return r;
 	}
 
@@ -546,3 +548,5 @@ public:
 		return r;
 	}
 };
+
+}

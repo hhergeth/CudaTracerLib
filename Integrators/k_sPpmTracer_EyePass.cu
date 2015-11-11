@@ -3,6 +3,8 @@
 #include <Kernel/k_TraceAlgorithms.h>
 #include <Math/half.h>
 
+namespace CudaTracerLib {
+
 CUDA_CONST e_SpatialLinkedMap<k_pPpmPhoton> g_SurfMap;
 CUDA_CONST unsigned int g_NumPhotonEmitted2;
 CUDA_CONST CUDA_ALIGN(16) unsigned char g_VolEstimator2[Dmax4(sizeof(k_PointStorage), sizeof(k_BeamGrid), sizeof(k_BeamBeamGrid), sizeof(k_BeamBVHStorage))];
@@ -26,7 +28,7 @@ template<bool USE_GLOBAL> Spectrum k_BeamBeamGrid::L_Volume(float a_r, CudaRNG& 
 				Spectrum camera_sc = vol.sigma_s(r(t1), r.direction);
 				float p = vol.p(r(t1), r.direction, B.dir, rng);
 
-				L_n += camera_sc * p * B.Phi * (-photon_tau).exp() * (-camera_tau).exp() / ( m_fCurrentRadiusVol * m_uNumEmitted);
+				L_n += camera_sc * p * B.Phi * (-photon_tau).exp() * (-camera_tau).exp() / (m_fCurrentRadiusVol * m_uNumEmitted);
 			}
 		});
 		float localDist = cellEndT - rayT;
@@ -81,7 +83,7 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED
 	const Spectrum& importance, int a_PassIndex, k_BlockSampleImage& img)
 {
 	//Adaptive Progressive Photon Mapping Implementation
-	k_AdaptiveEntry ent = A(x,y);
+	k_AdaptiveEntry ent = A(x, y);
 	Vec3f ur = bRec.dg.sys.t * ent.rd, vr = bRec.dg.sys.s * ent.rd;
 	float r = max(2 * ent.rd, ent.r);
 	Vec3f a = r*(-bRec.dg.sys.t - bRec.dg.sys.s) + bRec.dg.P, b = r*(bRec.dg.sys.t - bRec.dg.sys.s) + bRec.dg.P, c = r*(-bRec.dg.sys.t + bRec.dg.sys.s) + bRec.dg.P, d = r*(bRec.dg.sys.t + bRec.dg.sys.s) + bRec.dg.P;
@@ -97,8 +99,8 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED
 			const Vec3f e_l = bRec.dg.P - ph.Pos;
 			float k_rd = k_tr(ent.rd, e_l);
 			float laplu = k_tr(ent.rd, e_l + ur) + k_tr(ent.rd, e_l - ur) - 2 * k_rd,
-				  laplv = k_tr(ent.rd, e_l + vr) + k_tr(ent.rd, e_l - vr) - 2 * k_rd,
-				  lapl = psi / (ent.rd * ent.rd) * (laplu + laplv);
+				laplv = k_tr(ent.rd, e_l + vr) + k_tr(ent.rd, e_l - vr) - 2 * k_rd,
+				lapl = psi / (ent.rd * ent.rd) * (laplu + laplv);
 			ent.I += laplu / (ent.rd * ent.rd);
 			ent.I2 += lapl * lapl;
 			ent.n1++;
@@ -138,7 +140,7 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED
 	qs.fromHSL(2.0f / 3.0f * (1 - math::clamp01(t)), 1, 0.5f);//0 -> 1 : Dark Blue -> Light Blue -> Green -> Yellow -> Red
 	img.Add(x, y, qs);
 
-	A(x,y) = ent;
+	A(x, y) = ent;
 	return Lp;
 }
 
@@ -230,17 +232,17 @@ __global__ void k_EyePass2(Vec2i off, int w, int h, float a_PassIndex, float a_r
 	/*Ray r = g_SceneData.GenerateSensorRay(pixel.x, pixel.y);
 	k_BeamBeamGrid* grid = (k_BeamBeamGrid*)g_VolEstimator2;
 	int n = 0;
-#ifdef ISCUDA
+	#ifdef ISCUDA
 	TraverseGrid(r, grid->m_sStorage.hashMap, 0, FLT_MAX, [&](float minT, float rayT, float maxT, float cellEndT, Vec3u& cell_pos, bool& cancelTraversal)
 	{
-		grid->m_sStorage.ForAll(cell_pos, [&](unsigned int ABC, int beam_idx)
-		{
-			n += beam_idx == 1234;
-			//if(pixel.x == 200 && pixel.y == 200)
-			//	printf("(%u, %d), ", ABC, beam_idx);
-		});
+	grid->m_sStorage.ForAll(cell_pos, [&](unsigned int ABC, int beam_idx)
+	{
+	n += beam_idx == 1234;
+	//if(pixel.x == 200 && pixel.y == 200)
+	//	printf("(%u, %d), ", ABC, beam_idx);
 	});
-#endif
+	});
+	#endif
 	img.Add(pixel.x, pixel.y, Spectrum(n!=0));*/
 	float rq = (getCurrentRadius(A(pixel.x, pixel.y).r, a_PassIndex, 2) - a_rSurface) / getCurrentRadius(rMax, a_PassIndex, 2);
 	img.Add(pixel.x, pixel.y, Spectrum(rq > 0 ? rq : 0, rq < 0 ? -rq : 0, 0));
@@ -326,24 +328,24 @@ __global__ void k_PerPixelRadiusEst(int w, int h, float r_max, float r_1, k_Adap
 		TraceResult r2 = k_TraceRay(r);
 		if (r2.hasHit())
 		{
-			const float search_rad = r_1;
-			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
-			Frame sys = Frame(bRec.dg.n);
-			sys.t *= search_rad;
-			sys.s *= search_rad;
-			Vec3f a = -1.0f * sys.t - sys.s, b = sys.t - sys.s, c = -1.0f * sys.t + sys.s, d = sys.t + sys.s;
-			Vec3f low = min(min(a, b), min(c, d)) + bRec.dg.P, high = max(max(a, b), max(c, d)) + bRec.dg.P;
-			int k_found = 0;
-#ifdef ISCUDA
-			g_SurfMap.ForAll(low, high, [&](unsigned int p_idx, const k_pPpmPhoton& ph)
-			{
-				float dist2 = distanceSquared(ph.Pos, bRec.dg.P);
-				if (dist2 < search_rad * search_rad && dot(ph.getNormal(), bRec.dg.sys.n) > 0.9f)
-					k_found++;
-			});
-#endif
-			float density = max(k_found, 1) / (PI * search_rad * search_rad);
-			e.r = math::sqrt(k_toFind / (PI * density));
+		const float search_rad = r_1;
+		r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
+		Frame sys = Frame(bRec.dg.n);
+		sys.t *= search_rad;
+		sys.s *= search_rad;
+		Vec3f a = -1.0f * sys.t - sys.s, b = sys.t - sys.s, c = -1.0f * sys.t + sys.s, d = sys.t + sys.s;
+		Vec3f low = min(min(a, b), min(c, d)) + bRec.dg.P, high = max(max(a, b), max(c, d)) + bRec.dg.P;
+		int k_found = 0;
+		#ifdef ISCUDA
+		g_SurfMap.ForAll(low, high, [&](unsigned int p_idx, const k_pPpmPhoton& ph)
+		{
+		float dist2 = distanceSquared(ph.Pos, bRec.dg.P);
+		if (dist2 < search_rad * search_rad && dot(ph.getNormal(), bRec.dg.sys.n) > 0.9f)
+		k_found++;
+		});
+		#endif
+		float density = max(k_found, 1) / (PI * search_rad * search_rad);
+		e.r = math::sqrt(k_toFind / (PI * density));
 		}
 		else e.r = r_1;*/
 		atomicMin(&g_MinRad, floatToOrderedInt(e.r));
@@ -366,4 +368,6 @@ void k_sPpmTracer::doPerPixelRadiusEstimation()
 	m_fIntitalRadMin = orderedIntToFloat(a);
 	m_fIntitalRadMax = orderedIntToFloat(b);
 	std::cout << "m_fIntitalRadMin = " << m_fIntitalRadMin << ", m_fIntitalRadMax = " << m_fIntitalRadMax << "\n";
+}
+
 }

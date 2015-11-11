@@ -2,6 +2,8 @@
 
 #include "FixedSizeArray.h"
 
+namespace CudaTracerLib {
+
 template<int LENGTH> struct FixedString : public FixedSizeArray<char, LENGTH>
 {
 	FixedString()
@@ -30,5 +32,7 @@ template<int LENGTH> struct FixedString : public FixedSizeArray<char, LENGTH>
 	{
 		return buffer;
 	}
-	
+
 };
+
+}

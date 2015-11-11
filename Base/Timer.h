@@ -2,6 +2,8 @@
 
 #include <chrono>
 
+namespace CudaTracerLib {
+
 //High resolution timer, measuring in seconds(with fractions)
 class InstructionTimer
 {
@@ -24,3 +26,5 @@ public:
 		return (double)std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count() / 1000.0;
 	}
 };
+
+}

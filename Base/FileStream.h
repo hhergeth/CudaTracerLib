@@ -6,19 +6,7 @@
 #include "FixedString.h"
 #include <Engine/e_Buffer_device.h>
 
-#define DCL_IN(TYPE) \
-	IInStream& operator>>(TYPE& rhs) \
-	{ \
-		Read(rhs); \
-		return *this; \
-	}
-
-#define DCL_OUT(TYPE) \
-	FileOutputStream& operator<<(TYPE rhs) \
-	{ \
-		Write(rhs); \
-		return *this; \
-	}
+namespace CudaTracerLib {
 
 class IInStream
 {
@@ -35,12 +23,12 @@ public:
 	{
 		return m_uFileSize;
 	}
-	bool eof(){return getPos() == getFileSize();}
+	bool eof(){ return getPos() == getFileSize(); }
 	virtual void Move(int off) = 0;
 	virtual void Close() = 0;
 	template<typename T> bool get(T& c)
 	{
-		if(getPos() + sizeof(T) <= getFileSize())
+		if (getPos() + sizeof(T) <= getFileSize())
 		{
 			Read(&c, sizeof(T));
 			return true;
@@ -85,6 +73,12 @@ public:
 			*this >> arr(i);
 	}
 public:
+#define DCL_IN(TYPE) \
+	IInStream& operator>>(TYPE& rhs) \
+	{ \
+		Read(rhs); \
+		return *this; \
+	}
 	DCL_IN(char)
 	DCL_IN(short)
 	DCL_IN(int)
@@ -105,6 +99,7 @@ public:
 	DCL_IN(AABB)
 	DCL_IN(Ray)
 	DCL_IN(float4x4)
+#undef DCL_IN
 
 	template<typename H, typename D> IInStream& operator>>(e_BufferReference<H, D> rhs)
 	{
@@ -214,6 +209,12 @@ public:
 		for (size_t i = 0; i < arr.size(); i++)
 			*this << arr(i);
 	}
+#define DCL_OUT(TYPE) \
+	FileOutputStream& operator<<(TYPE rhs) \
+		{ \
+		Write(rhs); \
+		return *this; \
+		}
 	DCL_OUT(char)
 	DCL_OUT(short)
 	DCL_OUT(int)
@@ -234,6 +235,7 @@ public:
 	DCL_OUT(AABB)
 	DCL_OUT(Ray)
 	DCL_OUT(float4x4)
+#undef DCL_OUT
 
 	template<typename H, typename D> FileOutputStream& operator<<(e_BufferReference<H, D> rhs)
 	{
@@ -241,3 +243,5 @@ public:
 		return *this;
 	}
 };
+
+}

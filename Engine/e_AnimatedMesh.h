@@ -4,6 +4,8 @@
 #include <vector>
 #include <queue>
 
+namespace CudaTracerLib {
+
 struct CUDA_ALIGN(16) e_AnimatedVertex
 {
 	Vec3f m_fVertexPos;
@@ -81,9 +83,9 @@ public:
 	void ComputeFrameIndex(float t, unsigned int a_Anim, unsigned int* a_FrameIndex, float* a_lerp)
 	{
 		float a = (float)m_pAnimations[a_Anim].m_uFrameRate * t;
-		if(a_lerp)
+		if (a_lerp)
 			*a_lerp = math::frac(a);
-		if(a_FrameIndex)
+		if (a_FrameIndex)
 			*a_FrameIndex = unsigned int(a) % m_pAnimations[a_Anim].m_pFrames.size();
 	}
 	unsigned int numAntimations()
@@ -95,3 +97,5 @@ public:
 		return m_pAnimations[i].m_sName;
 	}
 };
+
+}

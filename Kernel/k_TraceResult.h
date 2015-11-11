@@ -2,6 +2,8 @@
 
 #include <MathTypes.h>
 
+namespace CudaTracerLib {
+
 struct BSDFSamplingRecord;
 struct DifferentialGeometry;
 class e_Node;
@@ -40,3 +42,5 @@ struct TraceResult
 	//wi towards p, wo away
 	CUDA_DEVICE CUDA_HOST void getBsdfSample(const Vec3f& wi, const Vec3f& p, BSDFSamplingRecord& bRec, ETransportMode mode, CudaRNG* rng, const Vec3f* wo = 0) const;
 };
+
+}

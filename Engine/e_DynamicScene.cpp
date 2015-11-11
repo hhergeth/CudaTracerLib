@@ -17,6 +17,8 @@
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
 
+namespace CudaTracerLib {
+
 using namespace boost::filesystem;
 using namespace boost::algorithm;
 
@@ -133,20 +135,20 @@ e_DynamicScene::e_DynamicScene(e_Sensor* C, e_SceneInitData a_Data, IFileManager
 }
 
 void e_DynamicScene::Free()
-{ 
+{
 #define DEALLOC(x) { delete x; x = 0;}
 	DEALLOC(m_pTriDataStream)
-	DEALLOC(m_pTriIntStream)
-	DEALLOC(m_pBVHStream)
-	DEALLOC(m_pBVHIndicesStream)
-	DEALLOC(m_pMaterialBuffer)
-	DEALLOC(m_pTextureBuffer)
-	DEALLOC(m_pMeshBuffer)
-	DEALLOC(m_pNodeStream)
-	DEALLOC(m_pAnimStream)
-	DEALLOC(m_pLightStream)
-	DEALLOC(m_pVolumes)
-	CUDA_FREE(m_pDeviceTmpFloats);
+		DEALLOC(m_pTriIntStream)
+		DEALLOC(m_pBVHStream)
+		DEALLOC(m_pBVHIndicesStream)
+		DEALLOC(m_pMaterialBuffer)
+		DEALLOC(m_pTextureBuffer)
+		DEALLOC(m_pMeshBuffer)
+		DEALLOC(m_pNodeStream)
+		DEALLOC(m_pAnimStream)
+		DEALLOC(m_pLightStream)
+		DEALLOC(m_pVolumes)
+		CUDA_FREE(m_pDeviceTmpFloats);
 	free(m_pHostTmpFloats);
 #undef DEALLOC
 	delete m_pBVH;
@@ -168,7 +170,7 @@ e_StreamReference<e_Node> e_DynamicScene::CreateNode(const std::string& a_Token,
 	{
 		IInStream* xmshStream = 0;
 		bool freeStream = false;
-		if(token.find(".xmsh") == std::string::npos)
+		if (token.find(".xmsh") == std::string::npos)
 		{
 			path cmpFilePath = path(m_pFileManager->getCompiledMeshPath(a_Token)).replace_extension(".xmsh");
 			create_directories(cmpFilePath.parent_path());
@@ -190,9 +192,9 @@ e_StreamReference<e_Node> e_DynamicScene::CreateNode(const std::string& a_Token,
 		else xmshStream = &in;
 		unsigned int t;
 		*xmshStream >> t;
-		if(t == (unsigned int)e_MeshCompileType::Static)
+		if (t == (unsigned int)e_MeshCompileType::Static)
 			new(M(0)) e_Mesh(token, *xmshStream, m_pTriIntStream, m_pTriDataStream, m_pBVHStream, m_pBVHIndicesStream, m_pMaterialBuffer, m_pAnimStream);
-		else if(t == (unsigned int)e_MeshCompileType::Animated) 
+		else if (t == (unsigned int)e_MeshCompileType::Animated)
 			new(M(0)) e_AnimatedMesh(token, *xmshStream, m_pTriIntStream, m_pTriDataStream, m_pBVHStream, m_pBVHIndicesStream, m_pMaterialBuffer, m_pAnimStream);
 		else throw std::runtime_error("Mesh file parser error.");
 		if (freeStream)
@@ -200,7 +202,7 @@ e_StreamReference<e_Node> e_DynamicScene::CreateNode(const std::string& a_Token,
 		m_pMeshBuffer->Invalidate(M);
 		M->m_sMatInfo.Invalidate();
 	}
-	else if(M->m_uType == MESH_ANIMAT_TOKEN)
+	else if (M->m_uType == MESH_ANIMAT_TOKEN)
 	{
 		e_BufferReference<e_Mesh, e_KernelMesh> oldM = M;
 		M = m_pMeshBuffer->malloc(1);
@@ -235,7 +237,7 @@ e_StreamReference<e_Node> e_DynamicScene::CreateNode(unsigned int a_TriangleCoun
 {
 	e_StreamReference<e_Node> N = m_pNodeStream->malloc(1);
 	e_StreamReference<e_KernelMaterial> m2 = m_pMaterialBuffer->malloc(a_MaterialCount);
-	for(unsigned int i = 0; i < a_MaterialCount; i++)
+	for (unsigned int i = 0; i < a_MaterialCount; i++)
 	{
 		m2(i) = e_KernelMaterial("auto generated material");
 		m2(i)->bsdf.SetData(diffuse(CreateTexture(Spectrum(0.5f))));
@@ -271,7 +273,7 @@ e_BufferReference<e_MIPMap, e_KernelMIPMap> e_DynamicScene::LoadTexture(const st
 	}
 	bool load;
 	e_BufferReference<e_MIPMap, e_KernelMIPMap> T = m_pTextureBuffer->LoadCached(file, load);
-	if(load)
+	if (load)
 	{
 		path cmpFilePath(m_pFileManager->getCompiledTexturePath(rawFilePath.filename().string()));
 		create_directories(path(cmpFilePath).parent_path());
@@ -289,13 +291,13 @@ e_BufferReference<e_MIPMap, e_KernelMIPMap> e_DynamicScene::LoadTexture(const st
 		I.Close();
 		T.Invalidate();
 	}
-	if(!T->getKernelData().m_pDeviceData)
+	if (!T->getKernelData().m_pDeviceData)
 		throw std::runtime_error(__FUNCTION__);
 	m_pTextureBuffer->UpdateInvalidated();
 	return T;
 }
 
-size_t e_DynamicScene::enumerateLights(e_StreamReference<e_Node> node, std::function<void (e_StreamReference<e_KernelLight>)> clb)
+size_t e_DynamicScene::enumerateLights(e_StreamReference<e_Node> node, std::function<void(e_StreamReference<e_KernelLight>)> clb)
 {
 	for (size_t i = 0; i < node->m_uLights.size(); i++)
 	{
@@ -307,7 +309,7 @@ size_t e_DynamicScene::enumerateLights(e_StreamReference<e_Node> node, std::func
 
 void e_DynamicScene::SetNodeTransform(const float4x4& mat, e_StreamReference<e_Node> n)
 {
-	for(unsigned int i = 0; i < n.getLength(); i++)
+	for (unsigned int i = 0; i < n.getLength(); i++)
 		m_pBVH->setTransform(n(i), mat);
 	n.Invalidate();
 	enumerateLights(n, [&](e_StreamReference<e_KernelLight> l)
@@ -325,7 +327,7 @@ void e_DynamicScene::InvalidateNodesInBVH(e_StreamReference<e_Node> n)
 void e_DynamicScene::InvalidateMeshesInBVH(e_BufferReference<e_Mesh, e_KernelMesh> m)
 {
 	for (e_Stream<e_Node>::iterator it = m_pNodeStream->begin(); it != m_pNodeStream->end(); ++it)
-		if(it->m_uMeshIndex == m.getIndex())
+		if (it->m_uMeshIndex == m.getIndex())
 			InvalidateNodesInBVH(*it);
 }
 
@@ -341,7 +343,7 @@ bool e_DynamicScene::UpdateScene()
 	for (size_t n_idx = 0; n_idx < m_sRemovedNodes.size(); n_idx++)
 	{
 		e_StreamReference<e_Node> ref = m_sRemovedNodes[n_idx];
-		
+
 		m_pMeshBuffer->Release(getMesh(ref)->m_uPath);
 
 		//remove all area lights
@@ -468,17 +470,17 @@ void e_DynamicScene::instanciateNodeMaterials(e_StreamReference<e_Node> n)
 size_t e_DynamicScene::getCudaBufferSize()
 {
 	size_t i = m_pAnimStream->getDeviceSizeInBytes() +
-					m_pTriDataStream->getDeviceSizeInBytes() + 
-					m_pTriIntStream->getDeviceSizeInBytes() +
-					m_pBVHStream->getDeviceSizeInBytes() +
-					m_pBVHIndicesStream->getDeviceSizeInBytes() +
-					m_pMaterialBuffer->getDeviceSizeInBytes() +
-					m_pTextureBuffer->getDeviceSizeInBytes() +
-					m_pMeshBuffer->getDeviceSizeInBytes() +
-					m_pNodeStream->getDeviceSizeInBytes() +
-					m_pBVH->getDeviceSizeInBytes() +
-					m_pLightStream->getDeviceSizeInBytes() +
-					m_pVolumes->getDeviceSizeInBytes();
+		m_pTriDataStream->getDeviceSizeInBytes() +
+		m_pTriIntStream->getDeviceSizeInBytes() +
+		m_pBVHStream->getDeviceSizeInBytes() +
+		m_pBVHIndicesStream->getDeviceSizeInBytes() +
+		m_pMaterialBuffer->getDeviceSizeInBytes() +
+		m_pTextureBuffer->getDeviceSizeInBytes() +
+		m_pMeshBuffer->getDeviceSizeInBytes() +
+		m_pNodeStream->getDeviceSizeInBytes() +
+		m_pBVH->getDeviceSizeInBytes() +
+		m_pLightStream->getDeviceSizeInBytes() +
+		m_pVolumes->getDeviceSizeInBytes();
 	for (e_Buffer<e_MIPMap, e_KernelMIPMap>::iterator it = m_pTextureBuffer->begin(); it != m_pTextureBuffer->end(); ++it)
 		i += it->getBufferSize();
 	return i;
@@ -488,11 +490,11 @@ std::string e_DynamicScene::printInfo()
 {
 	const int L = 40;
 #define PRINT(BUF) \
-	{ \
+		{ \
 		float s = BUF->getDeviceSizeInBytes(), per = s / n * 100; \
 		size_t mb = s / (1024 * 1024);\
 		str << #BUF << std::setw(L - std::string(#BUF).size()) << std::setfill(' ') << std::right << per << "%, " << mb << "[MB]\n"; \
-	}
+		}
 	size_t n = getCudaBufferSize();
 	std::ostringstream str;
 	str.precision(2);
@@ -520,7 +522,7 @@ std::string e_DynamicScene::printInfo()
 AABB e_DynamicScene::getNodeBox(e_StreamReference<e_Node> n)
 {
 	AABB r = AABB::Identity();
-	for(unsigned int i = 0; i < n.getLength(); i++)
+	for (unsigned int i = 0; i < n.getLength(); i++)
 		r = r.Extend(n(i)->getWorldBox(getMesh(n(i)), GetNodeTransform(n(i))));
 	return r;
 }
@@ -563,7 +565,7 @@ ShapeSet e_DynamicScene::CreateShape(e_StreamReference<e_Node> Node, const std::
 {
 	e_BufferReference<e_Mesh, e_KernelMesh> m = getMesh(Node);
 	unsigned int matIdx = -1;
-		
+
 	e_StreamReference<e_KernelMaterial> mInfo = m->m_sMatInfo;
 	for (unsigned int j = 0; j < mInfo.getLength(); j++)
 	{
@@ -576,24 +578,24 @@ ShapeSet e_DynamicScene::CreateShape(e_StreamReference<e_Node> Node, const std::
 	}
 	if (matIdx == -1)
 		throw std::runtime_error("Could not find material name in mesh!");
-	if(a_Mi)
+	if (a_Mi)
 		*a_Mi = matIdx;
 
 	std::vector<e_StreamReference<e_TriIntersectorData>> n;
 	std::vector<e_StreamReference<e_TriIntersectorData2>> n2;
 	int i = 0, e = m->m_sIntInfo.getLength();
-	while(i < e)
+	while (i < e)
 	{
 		e_StreamReference<e_TriIntersectorData> sec = m->m_sIntInfo.operator()(i);
 		e_StreamReference<e_TriIntersectorData2> sec2 = m->m_sIndicesInfo.operator()(i);
 		unsigned int i2 = sec2->getIndex();
 		e_TriangleData* d = m->m_sTriInfo(i2);
 		bool clb = m_sShapeCreationClb ? m_sShapeCreationClb(m->m_sTriInfo(i2), sec) : true;
-		if(d->getMatIndex(0) == matIdx && clb)//do not use Node->m_uMaterialOffset, cause mi is local...
+		if (d->getMatIndex(0) == matIdx && clb)//do not use Node->m_uMaterialOffset, cause mi is local...
 		{
 			unsigned int k = 0;
 			for (; k < n.size(); k++)
-				if(n2[k]->getIndex() == i2)
+				if (n2[k]->getIndex() == i2)
 					break;
 			if (k == n.size())
 			{
@@ -643,8 +645,8 @@ e_StreamReference<e_VolumeRegion> e_DynamicScene::AddVolume(int w, int h, int d,
 }
 
 e_StreamReference<e_VolumeRegion> e_DynamicScene::AddVolume(int wA, int hA, int dA,
-															int wS, int hS, int dS,
-															int wL, int hL, int dL, const float4x4& worldToVol, const e_PhaseFunction& p)
+	int wS, int hS, int dS,
+	int wL, int hL, int dL, const float4x4& worldToVol, const e_PhaseFunction& p)
 {
 	e_StreamReference<e_VolumeRegion> r2 = m_pVolumes->malloc(1);
 	e_VolumeRegion r;
@@ -673,10 +675,10 @@ e_StreamReference<e_KernelMaterial> e_DynamicScene::getMats(e_StreamReference<e_
 e_StreamReference<e_KernelMaterial> e_DynamicScene::getMat(e_StreamReference<e_Node> n, const std::string& name)
 {
 	e_StreamReference<e_KernelMaterial> m = getMats(n);
-	for(unsigned int i = 0; i < m.getLength(); i++)
+	for (unsigned int i = 0; i < m.getLength(); i++)
 	{
 		const std::string& a = m(i)->Name;
-		if(a == name)
+		if (a == name)
 		{
 			m(i).Invalidate();
 			return m(i);
@@ -687,7 +689,7 @@ e_StreamReference<e_KernelMaterial> e_DynamicScene::getMat(e_StreamReference<e_N
 
 e_StreamReference<e_KernelLight> e_DynamicScene::setEnvironementMap(const Spectrum& power, const std::string& file)
 {
-	if(m_uEnvMapIndex != -1)
+	if (m_uEnvMapIndex != -1)
 	{
 		//TODO
 	}
@@ -752,4 +754,6 @@ unsigned int e_DynamicScene::getLightCount()
 e_BufferReference<e_KernelLight, e_KernelLight> e_DynamicScene::createLight()
 {
 	return m_pLightStream->malloc(1);
+}
+
 }

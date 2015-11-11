@@ -1,6 +1,8 @@
 #pragma once
 #include <MathTypes.h>
 
+namespace CudaTracerLib {
+
 #define MAX_MIPS 16
 #define MTS_MIPMAP_LUT_SIZE 64
 
@@ -75,3 +77,5 @@ private:
 	CUDA_DEVICE CUDA_HOST Spectrum triangle(unsigned int level, const Vec2f& a_UV) const;
 	CUDA_DEVICE CUDA_HOST Spectrum evalEWA(unsigned int level, const Vec2f &uv, float A, float B, float C) const;
 };
+
+}

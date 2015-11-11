@@ -6,6 +6,8 @@
 
 //Implementation of most methods copied from Mitsuba.
 
+namespace CudaTracerLib {
+
 CUDA_FUNC_IN float intervalToTent(float sample)
 {
 	float sign;
@@ -13,7 +15,8 @@ CUDA_FUNC_IN float intervalToTent(float sample)
 	if (sample < 0.5f) {
 		sign = 1;
 		sample *= 2;
-	} else {
+	}
+	else {
 		sign = -1;
 		sample = 2 * (sample - 0.5f);
 	}
@@ -56,11 +59,13 @@ public:
 	}
 
 	CUDA_FUNC_IN static float squareToCosineHemispherePdf(const Vec3f &d)
-		{ return INV_PI * Frame::cosTheta(d); }
+	{
+		return INV_PI * Frame::cosTheta(d);
+	}
 
 	CUDA_FUNC_IN static Vec3f squareToUniformCone(float cosCutoff, const Vec2f &sample)
 	{
-		float cosTheta = (1-sample.x) + sample.x * cosCutoff;
+		float cosTheta = (1 - sample.x) + sample.x * cosCutoff;
 		float sinTheta = math::sqrt(1.0f - cosTheta * cosTheta);
 
 		float sinPhi, cosPhi;
@@ -70,7 +75,7 @@ public:
 	}
 
 	CUDA_FUNC_IN static float squareToUniformConePdf(float cosCutoff) {
-		return INV_TWOPI / (1-cosCutoff);
+		return INV_TWOPI / (1 - cosCutoff);
 	}
 
 	CUDA_FUNC_IN static Vec2f squareToUniformDisk(const Vec2f &sample)
@@ -82,7 +87,7 @@ public:
 		return Vec2f(
 			cosPhi * r,
 			sinPhi * r
-		);
+			);
 	}
 
 	CUDA_FUNC_IN static float squareToUniformDiskPdf() { return INV_PI; }
@@ -99,10 +104,11 @@ public:
 			r = phi = 0;
 		} if (r1*r1 > r2*r2) {
 			r = r1;
-			phi = (PI/4.0f) * (r2/r1);
-		} else {
+			phi = (PI / 4.0f) * (r2 / r1);
+		}
+		else {
 			r = r2;
-			phi = (PI/2.0f) - (r1/r2) * (PI/4.0f);
+			phi = (PI / 2.0f) - (r1 / r2) * (PI / 4.0f);
 		}
 
 		float cosPhi, sinPhi;
@@ -113,27 +119,30 @@ public:
 
 	CUDA_FUNC_IN static Vec2f uniformDiskToSquareConcentric(const Vec2f &p)
 	{
-		float r   = math::sqrt(p.x * p.x + p.y * p.y),
-		phi = atan2(p.y, p.x),
-		a, b;
+		float r = math::sqrt(p.x * p.x + p.y * p.y),
+			phi = atan2(p.y, p.x),
+			a, b;
 
-		if (phi < -PI/4) {
+		if (phi < -PI / 4) {
 			/* in range [-pi/4,7pi/4] */
-			phi += 2*PI;
+			phi += 2 * PI;
 		}
 
-		if (phi < PI/4) { /* region 1 */
+		if (phi < PI / 4) { /* region 1 */
 			a = r;
-			b = phi * a / (PI/4);
-		} else if (phi < 3*PI/4) { /* region 2 */
+			b = phi * a / (PI / 4);
+		}
+		else if (phi < 3 * PI / 4) { /* region 2 */
 			b = r;
-			a = -(phi - PI/2) * b / (PI/4);
-		} else if (phi < 5*PI/4) { /* region 3 */
+			a = -(phi - PI / 2) * b / (PI / 4);
+		}
+		else if (phi < 5 * PI / 4) { /* region 3 */
 			a = -r;
-			b = (phi - PI) * a / (PI/4);
-		} else { /* region 4 */
+			b = (phi - PI) * a / (PI / 4);
+		}
+		else { /* region 4 */
 			b = -r;
-			a = -(phi - 3*PI/2) * b / (PI/4);
+			a = -(phi - 3 * PI / 2) * b / (PI / 4);
 		}
 
 		return Vec2f(0.5f * (a + 1), 0.5f * (b + 1));
@@ -166,21 +175,24 @@ public:
 		return Vec2f(
 			intervalToTent(sample.x),
 			intervalToTent(sample.y)
-		);
+			);
 	}
 
 	CUDA_FUNC_IN static float intervalToNonuniformTent(float a, float b, float c, float sample)
 	{
 		float factor;
 
-		if (sample * (c-a) < b-a) {
-			factor = a-b;
-			sample *= (a-c)/(a-b);
-		} else {
-			factor = c-b;
-			sample = (a-c)/(b-c) * (sample - (a-b)/(a-c));
+		if (sample * (c - a) < b - a) {
+			factor = a - b;
+			sample *= (a - c) / (a - b);
+		}
+		else {
+			factor = c - b;
+			sample = (a - c) / (b - c) * (sample - (a - b) / (a - c));
 		}
 
-		return b + factor * (1-math::sqrt(sample));
+		return b + factor * (1 - math::sqrt(sample));
 	}
 };
+
+}

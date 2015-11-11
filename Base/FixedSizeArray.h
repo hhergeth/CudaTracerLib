@@ -4,6 +4,8 @@
 #include "Platform.h"
 #include <vector>
 
+namespace CudaTracerLib {
+
 template<typename T, int LENGTH, bool RESET = true, unsigned char RESET_VALUE = 0> struct FixedSizeArray
 {
 	FixedSizeArray()
@@ -105,3 +107,5 @@ protected:
 	unsigned int length;
 	T buffer[LENGTH];
 };
+
+}

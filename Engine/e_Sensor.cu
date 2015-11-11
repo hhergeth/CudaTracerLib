@@ -1,5 +1,7 @@
 #include "e_Sensor.h"
 
+namespace CudaTracerLib {
+
 Spectrum e_SphericalCamera::sampleRay(Ray &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const
 {
 	float sinPhi, cosPhi, sinTheta, cosTheta;
@@ -22,9 +24,9 @@ Spectrum e_SphericalCamera::sampleDirect(DirectSamplingRecord &dRec, const Vec2f
 	dRec.uv = Vec2f(
 		math::modulo(atan2f(d.x, -d.z) * INV_TWOPI, 1.0f) * m_resolution.x,
 		(1.0f - math::safe_acos(d.y) * INV_PI) * m_resolution.y
-	);
+		);
 
-	float sinTheta = math::safe_sqrt(1-d.y*d.y);
+	float sinTheta = math::safe_sqrt(1 - d.y*d.y);
 
 	dRec.p = toWorld.Translation();
 	dRec.d = (dRec.p - dRec.ref) * invDist;
@@ -33,7 +35,7 @@ Spectrum e_SphericalCamera::sampleDirect(DirectSamplingRecord &dRec, const Vec2f
 	dRec.pdf = 1;
 	dRec.measure = EDiscrete;
 
-	return Spectrum((1/(2 * PI * PI * max(sinTheta, EPSILON))) * invDist * invDist);
+	return Spectrum((1 / (2 * PI * PI * max(sinTheta, EPSILON))) * invDist * invDist);
 }
 
 float e_SphericalCamera::pdfDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
@@ -42,7 +44,7 @@ float e_SphericalCamera::pdfDirection(const DirectionSamplingRecord &dRec, const
 		return 0.0f;
 
 	Vec3f d = toWorldInverse.TransformDirection(dRec.d);
-	float sinTheta = math::safe_sqrt(1-d.y*d.y);
+	float sinTheta = math::safe_sqrt(1 - d.y*d.y);
 
 	return 1 / (2 * PI * PI * max(sinTheta, EPSILON));
 }
@@ -53,7 +55,7 @@ Spectrum e_SphericalCamera::evalDirection(const DirectionSamplingRecord &dRec, c
 		return Spectrum(0.0f);
 
 	Vec3f d = toWorldInverse.TransformDirection(dRec.d);
-	float sinTheta = math::safe_sqrt(1-d.y*d.y);
+	float sinTheta = math::safe_sqrt(1 - d.y*d.y);
 
 	return Spectrum(1 / (2 * PI * PI * max(sinTheta, EPSILON)));
 }
@@ -63,9 +65,9 @@ bool e_SphericalCamera::getSamplePosition(const PositionSamplingRecord &pRec, co
 	Vec3f d = normalize(toWorldInverse.TransformDirection(dRec.d));
 
 	samplePosition = Vec2f(
-		math::modulo(atan2(d.x, -d.z) * INV_TWOPI, (float) 1) * m_resolution.x,
+		math::modulo(atan2(d.x, -d.z) * INV_TWOPI, (float)1) * m_resolution.x,
 		(1.0f - math::safe_acos(d.y) * INV_PI) * m_resolution.y
-	);
+		);
 
 	return true;
 }
@@ -86,7 +88,7 @@ void e_PerspectiveCamera::Update()
 		- m_sampleToCamera.TransformPoint(Vec3f(0.0f));
 
 	Vec3f	min = m_sampleToCamera.TransformPoint(Vec3f(0, 0, 0)),
-			max = m_sampleToCamera.TransformPoint(Vec3f(1, 1, 0));
+		max = m_sampleToCamera.TransformPoint(Vec3f(1, 1, 0));
 	m_imageRect = AABB(min / min.z, max / max.z);
 	m_imageRect.minV.z = -FLT_MAX; m_imageRect.maxV.z = FLT_MAX;
 	m_normalization = 1.0f / (m_imageRect.Size().x * m_imageRect.Size().y);
@@ -104,8 +106,8 @@ float e_PerspectiveCamera::importance(const Vec3f &d) const
 	float invCosTheta = 1.0f / cosTheta;
 	Vec2f p = Vec2f(d.x * invCosTheta, d.y * invCosTheta);
 
-		/* Check if the point lies inside the chosen crop rectangle */
-	if (!m_imageRect.Contains(Vec3f(p,0)))
+	/* Check if the point lies inside the chosen crop rectangle */
+	if (!m_imageRect.Contains(Vec3f(p, 0)))
 		return 0.0f;
 	return invCosTheta * invCosTheta * invCosTheta * m_normalization;
 }
@@ -162,8 +164,8 @@ Spectrum e_PerspectiveCamera::sampleDirect(DirectSamplingRecord &dRec, const Vec
 	dRec.uv.y *= m_resolution.y;
 
 	Vec3f localD = refP;
-	float dist	  = length(localD),
-		  invDist = 1.0f / dist;
+	float dist = length(localD),
+		invDist = 1.0f / dist;
 	localD *= invDist;
 
 	dRec.p = toWorld.Translation();
@@ -215,8 +217,8 @@ bool e_PerspectiveCamera::getSamplePosition(const PositionSamplingRecord &pRec, 
 		return false;
 
 	samplePosition = Vec2f(
-			screenSample.x * m_resolution.x,
-			screenSample.y * m_resolution.y);
+		screenSample.x * m_resolution.x,
+		screenSample.y * m_resolution.y);
 
 	return true;
 }
@@ -238,7 +240,7 @@ void e_ThinLensCamera::Update()
 	m_aperturePdf = 1 / (PI * m_apertureRadius * m_apertureRadius);
 
 	Vec3f	min = m_sampleToCamera.TransformPoint(Vec3f(0, 0, 0)),
-			max = m_sampleToCamera.TransformPoint(Vec3f(1, 1, 0));
+		max = m_sampleToCamera.TransformPoint(Vec3f(1, 1, 0));
 	AABB m_imageRect = AABB(min / min.z, max / max.z);
 	m_normalization = 1.0f / (m_imageRect.Size().x * m_imageRect.Size().y);
 }
@@ -281,7 +283,7 @@ Spectrum e_ThinLensCamera::sampleRay(Ray &ray, const Vec2f &pixelSample, const V
 	/* Turn these into a normalized ray direction, and
 		adjust the ray interval accordingly */
 	Vec3f d = normalize(focusP - apertureP);
-		
+
 	ray = Ray(toWorld.TransformPoint(apertureP), toWorld.TransformDirection(d));
 
 	return Spectrum(1.0f);
@@ -326,7 +328,7 @@ Spectrum e_ThinLensCamera::sampleDirect(DirectSamplingRecord &dRec, const Vec2f 
 		aperture position to the reference point */
 	Vec3f localD = (refP - apertureP);
 	float dist = length(localD),
-			invDist = 1.0f / dist;
+		invDist = 1.0f / dist;
 	localD *= invDist;
 
 	float value = importance(apertureP, localD, &dRec.uv);
@@ -339,7 +341,7 @@ Spectrum e_ThinLensCamera::sampleDirect(DirectSamplingRecord &dRec, const Vec2f 
 	dRec.d = (dRec.p - dRec.ref) * invDist;
 	dRec.dist = dist;
 	dRec.n = toWorld.Forward();
-	dRec.pdf = m_aperturePdf * dist*dist/(Frame::cosTheta(localD));
+	dRec.pdf = m_aperturePdf * dist*dist / (Frame::cosTheta(localD));
 	dRec.measure = ESolidAngle;
 
 	/* intentionally missing a cosine factor wrt. the aperture
@@ -457,7 +459,7 @@ Spectrum e_OrthographicCamera::sampleDirect(DirectSamplingRecord &dRec, const Ve
 	dRec.d = -dRec.n;
 	dRec.dist = localP.z;
 	dRec.uv = Vec2f(sample.x * m_resolution.x,
-						  sample.y * m_resolution.y);
+		sample.y * m_resolution.y);
 	dRec.pdf = 1.0f;
 	dRec.measure = EDiscrete;
 
@@ -474,7 +476,7 @@ Spectrum e_OrthographicCamera::samplePosition(PositionSamplingRecord &pRec, cons
 		samplePos.y = (extra->y + sample.y) * m_invResolution.y;
 	}
 
-	pRec.uv = Vec2f(samplePos.x * m_resolution.x,	samplePos.y * m_resolution.y);
+	pRec.uv = Vec2f(samplePos.x * m_resolution.x, samplePos.y * m_resolution.y);
 
 	Vec3f nearP = m_sampleToCamera.TransformPoint(samplePos);
 
@@ -495,7 +497,7 @@ bool e_OrthographicCamera::getSamplePosition(const PositionSamplingRecord &pRec,
 		return false;
 
 	samplePosition = Vec2f(sample.x * m_resolution.x,
-		                    sample.y * m_resolution.y);
+		sample.y * m_resolution.y);
 	return true;
 }
 
@@ -534,8 +536,8 @@ Spectrum e_TelecentricCamera::sampleRay(Ray &ray, const Vec2f &pixelSample, cons
 	focusP.z = m_focusDistance;
 
 	/* Compute the ray origin */
-	Vec3f orig = Vec3f(diskSample.x+focusP.x,
-		diskSample.y+focusP.y, 0.0f);
+	Vec3f orig = Vec3f(diskSample.x + focusP.x,
+		diskSample.y + focusP.y, 0.0f);
 
 	ray = Ray(toWorld.TransformPoint(orig), toWorld.TransformDirection(focusP - orig));
 
@@ -572,16 +574,16 @@ Spectrum e_TelecentricCamera::sampleDirect(DirectSamplingRecord &dRec, const Vec
 	}
 
 	/* Circle of confusion */
-	float radius = math::abs(localP.z - f) * apertureRadius/f;
+	float radius = math::abs(localP.z - f) * apertureRadius / f;
 	radius += apertureRadius;
 
 	/* Sample the ray origin */
 	Vec2f disk = Warp::squareToUniformDiskConcentric(sample);
-	Vec3f diskP = Vec3f(disk.x*radius+localP.x, disk.y*radius+localP.y, 0.0f);
+	Vec3f diskP = Vec3f(disk.x*radius + localP.x, disk.y*radius + localP.y, 0.0f);
 
 	/* Compute the intersection with the focal plane */
 	Vec3f localD = localP - diskP;
-	Vec3f intersection = diskP + localD * (f/localD.z);
+	Vec3f intersection = diskP + localD * (f / localD.z);
 
 	/* Determine the associated sample coordinates */
 	Vec3f uv = m_cameraToSample.TransformPoint(intersection);
@@ -669,7 +671,7 @@ void e_Sensor::SetToWorld(const Vec3f& pos, const float4x4& _rot)
 void e_Sensor::SetToWorld(const Vec3f& pos, const Vec3f& _f)
 {
 	Vec3f f = normalize(_f);
-	Vec3f r = normalize(cross(f, Vec3f(0,1,0)));
+	Vec3f r = normalize(cross(f, Vec3f(0, 1, 0)));
 	Vec3f u = normalize(cross(r, f));
 	SetToWorld(pos, pos + f, u);
 }
@@ -699,4 +701,6 @@ float4x4 e_Sensor::getProjectionMatrix() const
 {
 	float4x4 q = float4x4::Translate(-1, -1, 0) % float4x4::Scale(Vec3f(2, 2, 1)) % As()->m_cameraToSample;
 	return q;
+}
+
 }

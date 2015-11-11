@@ -5,6 +5,8 @@
 #include "e_Mesh.h"
 #include <algorithm>
 
+namespace CudaTracerLib {
+
 #define NO_NODE 0x76543210
 
 //bvh tree rotations from
@@ -147,7 +149,7 @@ public:
 	}
 	virtual void HandleBoundingBox(const AABB& box)
 	{
-		
+
 	}
 	virtual e_BVHNodeData* HandleNodeAllocation(int* index)
 	{
@@ -454,7 +456,7 @@ e_BVHRebuilder::e_BVHRebuilder(e_BVHNodeData* data, unsigned int a_BVHNodeLength
 }
 
 e_BVHRebuilder::e_BVHRebuilder(e_Mesh* mesh, ISpatialInfoProvider* data)
-	: m_pBVHData(mesh->m_sNodeInfo(0)), m_uBVHDataLength(mesh->m_sNodeInfo.getLength()), m_uBvhNodeCount(0), startNode(-1), 
+	: m_pBVHData(mesh->m_sNodeInfo(0)), m_uBVHDataLength(mesh->m_sNodeInfo.getLength()), m_uBvhNodeCount(0), startNode(-1),
 	m_pBVHIndices(mesh->m_sIndicesInfo(0)), m_uBVHIndicesLength(mesh->m_sIndicesInfo.getLength()), m_UBVHIndicesCount(0),
 	m_uModifiedCount(0), m_pData(data)
 {
@@ -616,7 +618,7 @@ int e_BVHRebuilder::numberGrandchildren(BVHIndex idx, int localChildIdx)
 float e_BVHRebuilder::sah(BVHIndex idx, int localChildIdx, int localGrandChildIdx)
 {
 	BVHIndex childIdx = children(idx)[localChildIdx], otherChildIdx = children(idx)[1 - localChildIdx],
-			 grandChildIdx = children(otherChildIdx)[localGrandChildIdx], otherGrandChildIdx = children(otherChildIdx)[1 - localGrandChildIdx];
+		grandChildIdx = children(otherChildIdx)[localGrandChildIdx], otherGrandChildIdx = children(otherChildIdx)[1 - localGrandChildIdx];
 
 	float childRhsArea = getBox(grandChildIdx).Area();
 	int childRhsNum = numLeafs(grandChildIdx);
@@ -651,15 +653,15 @@ void e_BVHRebuilder::setChild(BVHIndex nodeIdx, BVHIndex childIdx, int localIdxT
 	m_pBVHData[nodeIdx.innerIdx()].setChild(localIdxToSetTo, childIdx.ToNative(), getBox(childIdx));
 	if (childIdx.isLeaf())
 		enumerateLeaf(childIdx, [&](int i)
-		{
-			auto& nodes = objectToBVHNodes[i];
-			auto it = std::find(nodes.begin(), nodes.end(), oldParent);
-			if (oldParent != BVHIndex::INVALID() && it == nodes.end())
-				throw std::runtime_error(__FUNCTION__);
-			if (it == nodes.end())
-				objectToBVHNodes[i].push_back(nodeIdx);
-			else *it = nodeIdx;
-		});
+	{
+		auto& nodes = objectToBVHNodes[i];
+		auto it = std::find(nodes.begin(), nodes.end(), oldParent);
+		if (oldParent != BVHIndex::INVALID() && it == nodes.end())
+			throw std::runtime_error(__FUNCTION__);
+		if (it == nodes.end())
+			objectToBVHNodes[i].push_back(nodeIdx);
+		else *it = nodeIdx;
+	});
 	else
 	{
 		m_pBVHData[childIdx.innerIdx()].setParent(nodeIdx.ToNative());
@@ -768,4 +770,6 @@ void e_BVHRebuilder::printGraph(const std::string& path)
 	writeGraphPart(BVHIndex::FromNative(startNode), BVHIndex::INVALID(), file);
 	file << "}";
 	file.close();
+}
+
 }

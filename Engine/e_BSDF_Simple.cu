@@ -2,6 +2,8 @@
 #include <Base/CudaRandom.h>
 #include "e_RoughTransmittance.h"
 
+namespace CudaTracerLib {
+
 Spectrum roughdiffuse::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 {
 	if (!(bRec.typeMask & EGlossyReflection) || measure != ESolidAngle
@@ -1402,4 +1404,6 @@ float hk::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 		return pdf;
 	}
 	return 0.0f;
+}
+
 }

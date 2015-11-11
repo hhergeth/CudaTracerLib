@@ -6,6 +6,8 @@
 #include "e_Volumes.h"
 #include "e_Sensor.h"
 
+namespace CudaTracerLib {
+
 struct e_KernelLight;
 class e_Node;
 struct e_KernelMesh;
@@ -79,3 +81,5 @@ struct e_KernelDynamicScene
 
 	CUDA_DEVICE CUDA_HOST const e_KernelLight* sampleLight(float& emPdf, Vec2f& sample) const;
 };
+
+}

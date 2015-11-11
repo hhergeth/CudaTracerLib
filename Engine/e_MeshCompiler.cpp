@@ -8,13 +8,16 @@
 #include <boost/algorithm/string.hpp>
 using namespace boost::filesystem;
 
-bool hasEnding (std::string const &fullString, std::string const &_ending)
+namespace CudaTracerLib {
+
+bool hasEnding(std::string const &fullString, std::string const &_ending)
 {
 	std::string ending = _ending;
 	boost::algorithm::to_lower(ending);
 	if (fullString.length() >= ending.length()) {
-		return (0 == fullString.compare (fullString.length() - ending.length(), ending.length(), ending));
-	} else {
+		return (0 == fullString.compare(fullString.length() - ending.length(), ending.length(), ending));
+	}
+	else {
 		return false;
 	}
 }
@@ -22,7 +25,7 @@ bool hasEnding (std::string const &fullString, std::string const &_ending)
 bool e_ObjCompiler::IsApplicable(const std::string& a_InputFile, IInStream& in, e_MeshCompileType* out)
 {
 	bool b = hasEnding(a_InputFile, ".obj");
-	if(out && b)
+	if (out && b)
 		*out = e_MeshCompileType::Static;
 	return b;
 }
@@ -35,7 +38,7 @@ void e_ObjCompiler::Compile(IInStream& in, FileOutputStream& a_Out)
 bool e_Md5Compiler::IsApplicable(const std::string& a_InputFile, IInStream& in, e_MeshCompileType* out)
 {
 	bool b = hasEnding(a_InputFile, ".md5mesh");
-	if(out && b)
+	if (out && b)
 		*out = e_MeshCompileType::Animated;
 	return b;
 }
@@ -64,7 +67,7 @@ void e_Md5Compiler::Compile(IInStream& in, FileOutputStream& a_Out)
 bool e_PlyCompiler::IsApplicable(const std::string& a_InputFile, IInStream& in, e_MeshCompileType* out)
 {
 	bool b = hasEnding(a_InputFile, ".ply");
-	if(b)
+	if (b)
 	{
 		char magic[4];
 		magic[3] = 0;
@@ -72,7 +75,7 @@ bool e_PlyCompiler::IsApplicable(const std::string& a_InputFile, IInStream& in, 
 		b = std::string(magic) == "ply";
 		in.Move(-3);
 	}
-	if(out && b)
+	if (out && b)
 		*out = e_MeshCompileType::Static;
 	return b;
 }
@@ -85,16 +88,18 @@ void e_PlyCompiler::Compile(IInStream& in, FileOutputStream& a_Out)
 void e_MeshCompilerManager::Compile(IInStream& in, const std::string& a_InputFile, FileOutputStream& a_Out, e_MeshCompileType* out)
 {
 	e_MeshCompileType t;
-	for(unsigned int i = 0; i < m_sCompilers.size(); i++)
+	for (unsigned int i = 0; i < m_sCompilers.size(); i++)
 	{
 		bool b = m_sCompilers[i]->IsApplicable(a_InputFile, in, &t);
-		if(b)
+		if (b)
 		{
-			if(out)
+			if (out)
 				*out = t;
 			a_Out << (unsigned int)t;
 			m_sCompilers[i]->Compile(in, a_Out);
 			break;
 		}
 	}
+}
+
 }

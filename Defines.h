@@ -3,6 +3,8 @@
 #include <malloc.h>
 #include <stdlib.h>
 
+namespace CudaTracerLib {
+
 #define EXT_TRI
 #define NUM_UV_SETS 1
 #define MAX_AREALIGHT_NUM 2
@@ -13,7 +15,7 @@
 #define ISUNIX
 #endif
 
-//__forceinline__
+	//__forceinline__
 #define CUDA_INLINE inline
 
 #ifdef __CUDACC__
@@ -46,22 +48,22 @@
 
 #if _DEBUG
 #if __CUDACC__
-	#define CT_ASSERT(X) ((X) ? ((void)0) : printf("Assertion failed!\n%s:%d\n%s", __FILE__, __LINE__, #X))
+#define CT_ASSERT(X) ((X) ? ((void)0) : printf("Assertion failed!\n%s:%d\n%s", __FILE__, __LINE__, #X))
 #else
-	#define CT_ASSERT(X) ((X) ? ((void)0) : fail("Assertion failed!\n%s:%d\n%s", __FILE__, __LINE__, #X))
+#define CT_ASSERT(X) ((X) ? ((void)0) : fail("Assertion failed!\n%s:%d\n%s", __FILE__, __LINE__, #X))
 #endif
 #else
 #   define CT_ASSERT(X) ((void)0)
 #endif
 
 #if defined(__CUDACC__) // NVCC
-   #define CUDA_ALIGN(n) __align__(n)
+#define CUDA_ALIGN(n) __align__(n)
 #elif defined(__GNUC__) // GCC
-  #define CUDA_ALIGN(n) __attribute__((aligned(n)))
+#define CUDA_ALIGN(n) __attribute__((aligned(n)))
 #elif defined(_MSC_VER) // MSVC
-  #define CUDA_ALIGN(n) __declspec(align(n))
+#define CUDA_ALIGN(n) __declspec(align(n))
 #else
-  #error "Please provide a definition for MY_ALIGN macro for your host compiler!"
+#error "Please provide a definition for MY_ALIGN macro for your host compiler!"
 #endif
 
 void fail(const char* format, ...);
@@ -111,9 +113,9 @@ template<typename T> inline void ZeroMemoryCuda(T* cudaVar)
 }
 #define ZeroSymbol(SYMBOL) \
 	{ \
-		void* tar = 0; \
-		cudaError_t r = cudaGetSymbolAddress(&tar, SYMBOL); \
-		CudaSetToZero(tar, sizeof(SYMBOL)); \
+	void* tar = 0; \
+	cudaError_t r = cudaGetSymbolAddress(&tar, SYMBOL); \
+	CudaSetToZero(tar, sizeof(SYMBOL)); \
 	}
 
 #pragma warning(disable: 4244)
@@ -128,8 +130,8 @@ public:
 	/*
 	template<typename U, typename V> CUDA_HOST e_Variable(e_BufferReference<U, V> r)
 	{
-		host = (T*)r.operator->();
-		device = (T*)r.getDevice();
+	host = (T*)r.operator->();
+	device = (T*)r.getDevice();
 	}*/
 	CUDA_FUNC_IN e_Variable(T* h, T* d)
 		: host(h), device(d)
@@ -165,3 +167,5 @@ public:
 		return e_Variable<T>((T*)host, (T*)device);
 	}
 };
+
+}

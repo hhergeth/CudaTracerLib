@@ -2,6 +2,8 @@
 
 #include <Kernel/k_Tracer.h>
 
+namespace CudaTracerLib {
+
 class k_PathTracer : public k_Tracer<true, true>
 {
 public:
@@ -14,3 +16,5 @@ public:
 protected:
 	virtual void RenderBlock(e_Image* I, int x, int y, int blockW, int blockH);
 };
+
+}

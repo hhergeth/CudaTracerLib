@@ -2,6 +2,8 @@
 
 #include <Kernel/k_Tracer.h>
 
+namespace CudaTracerLib {
+
 class k_PrimTracer : public k_Tracer<false, false>
 {
 	Spectrum* m_pDeviceLastImage1, *m_pDeviceLastImage2;
@@ -16,3 +18,5 @@ public:
 protected:
 	virtual void DoRender(e_Image* I);
 };
+
+}

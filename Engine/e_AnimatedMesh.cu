@@ -5,6 +5,8 @@
 #include "e_Material.h"
 #include "e_TriIntersectorData.h"
 
+namespace CudaTracerLib {
+
 //low...high
 //x=(0,1,2,3), y=(4,5,6,7)
 #define SELECT(x,y,o) o < 4 ? (x >> (o * 8)) : (x >> (o * 8 - 32))
@@ -15,7 +17,7 @@ CUDA_ONLY_FUNC float4x4 d_Compute(float4x4* a_Matrices, const e_AnimatedVertex& 
 	float4x4 mat;
 	mat.zeros();
 	unsigned long long idx = v.m_cBoneIndices, wgt = v.m_fBoneWeights;
-	for(int i = 0; i < 8; i++)
+	for (int i = 0; i < 8; i++)
 	{
 		int j = idx & 0xff;
 		float w = (wgt & 0xff) / 255.0f;
@@ -30,7 +32,7 @@ CUDA_ONLY_FUNC float4x4 d_Compute(float4x4* a_Matrices, const e_AnimatedVertex& 
 __global__ void g_ComputeVertices(e_TmpVertex* a_Dest, e_AnimatedVertex* a_Source, float4x4* a_Matrices, float4x4* a_Matrices2, float a_lerp, unsigned int a_VCount)
 {
 	unsigned int N = blockIdx.x * blockDim.x + threadIdx.x;
-	if(N < a_VCount)
+	if (N < a_VCount)
 	{
 		e_AnimatedVertex v = a_Source[N];
 		float4x4 mat0 = d_Compute(a_Matrices, v);
@@ -52,7 +54,7 @@ __global__ void g_ComputeVertices(e_TmpVertex* a_Dest, e_AnimatedVertex* a_Sourc
 __global__ void g_ComputeTriangles(e_TmpVertex* a_Tmp, uint3* a_TriData, e_TriangleData* a_TriData2, unsigned int a_TCount)
 {
 	unsigned int N = blockIdx.x * blockDim.x + threadIdx.x;
-	if(N < a_TCount)
+	if (N < a_TCount)
 	{
 		uint3 t = a_TriData[N];
 #ifdef EXT_TRI
@@ -157,4 +159,6 @@ void e_AnimatedMesh::k_ComputeState(unsigned int a_Anim, unsigned int a_Frame, f
 	m_sIndicesInfo.Invalidate();
 	m_sLocalBox = m_pBuilder->getBox();
 	ThrowCudaErrors(cudaDeviceSynchronize());
+}
+
 }

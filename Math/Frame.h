@@ -4,6 +4,8 @@
 
 //Implementation copied from Mitsuba. Slight additions with respect to matrices.
 
+namespace CudaTracerLib {
+
 CUDA_FUNC_IN void coordinateSystem(const Vec3f& a, Vec3f& s, Vec3f& t)
 {
 	if (math::abs(a.x) > math::abs(a.y))
@@ -25,7 +27,7 @@ struct Frame
 	Vec3f n;
 	CUDA_FUNC_IN Frame() { }
 	CUDA_FUNC_IN Frame(const Vec3f &s, const Vec3f &t, const Vec3f &n)
-	 : s(s), t(t), n(n) {
+		: s(s), t(t), n(n) {
 	}
 	CUDA_FUNC_IN Frame(const Vec3f &n) : n(normalize(n)) {
 		coordinateSystem(n, s, t);
@@ -36,7 +38,7 @@ struct Frame
 			dot(v, s),
 			dot(v, t),
 			dot(v, n)
-		);
+			);
 	}
 	CUDA_FUNC_IN Vec3f toWorld(const Vec3f &v) const {
 		return s * v.x + t * v.y + n * v.z;
@@ -103,7 +105,7 @@ struct Frame
 		float sinTheta = Frame::sinTheta(v);
 		if (sinTheta == 0.0f)
 			return 1.0f;
-		return math::clamp(v.y / sinTheta, (float) -1.0f, (float) 1.0f);
+		return math::clamp(v.y / sinTheta, (float)-1.0f, (float) 1.0f);
 	}
 
 	/** \brief Assuming that the given direction is in the local coordinate
@@ -112,7 +114,7 @@ struct Frame
 		float sinTheta = Frame::sinTheta(v);
 		if (sinTheta == 0.0f)
 			return 1.0f;
-		return math::clamp(v.x / sinTheta, (float) -1.0f, (float) 1.0f);
+		return math::clamp(v.x / sinTheta, (float)-1.0f, (float) 1.0f);
 	}
 
 	/** \brief Assuming that the given direction is in the local coordinate
@@ -153,3 +155,5 @@ struct Frame
 		return os;
 	}
 };
+
+}

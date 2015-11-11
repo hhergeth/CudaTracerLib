@@ -2,6 +2,8 @@
 #include "k_Beam.h"
 #include <Engine/e_SpatialGrid.h>
 
+namespace CudaTracerLib {
+
 struct k_PointStorage : public IVolumeEstimator
 {
 	struct volPhoton
@@ -124,3 +126,5 @@ struct k_PointStorage : public IVolumeEstimator
 		return L_n;
 	}
 };
+
+}

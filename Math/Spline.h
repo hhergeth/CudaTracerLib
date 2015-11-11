@@ -5,6 +5,8 @@
 
 //Implementation copied from Mitsuba.
 
+namespace CudaTracerLib {
+
 class Spline
 {
 public:
@@ -19,3 +21,5 @@ public:
 	CUDA_DEVICE CUDA_HOST static float evalCubicInterp3D(const Vec3f &p, const float *values, const uint3 &size, const Vec3f &min, const Vec3f &max, bool extrapolate = false);
 	CUDA_DEVICE CUDA_HOST static float evalCubicInterp3DN(const Vec3f &p, const float **nodes_, const float *values, const uint3 &size, bool extrapolate = false);
 };
+
+}

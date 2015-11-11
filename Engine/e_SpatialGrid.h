@@ -3,6 +3,8 @@
 #include "e_Grid.h"
 #include <CudaMemoryManager.h>
 
+namespace CudaTracerLib {
+
 //a mapping from R^3 -> T^n, ie. associating variable number of values with each point in the grid
 template<typename T> struct e_SpatialLinkedMap
 {
@@ -203,3 +205,5 @@ public:
 		return gridSize * gridSize * gridSize;
 	}
 };
+
+}

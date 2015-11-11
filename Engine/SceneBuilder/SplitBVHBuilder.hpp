@@ -5,6 +5,8 @@
 #include <vector>
 #include <functional>
 
+namespace CudaTracerLib {
+
 class IBVHBuilderCallback
 {
 public:
@@ -56,9 +58,9 @@ class SplitBVHBuilder
 private:
 	enum
 	{
-		MaxDepth        = 64,
+		MaxDepth = 64,
 		MaxSpatialDepth = 48,
-		NumSpatialBins  = 128,
+		NumSpatialBins = 128,
 	};
 
 	struct Reference
@@ -173,26 +175,26 @@ public:
 	};
 
 	SplitBVHBuilder(IBVHBuilderCallback* clb, const Platform& P, const BuildParams& stats);
-							~SplitBVHBuilder    (void);
+	~SplitBVHBuilder(void);
 
-	void                run                 (void);
+	void                run(void);
 
 private:
-	static bool             sortCompare         (void* data, int idxA, int idxB);
-	static void             sortSwap            (void* data, int idxA, int idxB);
+	static bool             sortCompare(void* data, int idxA, int idxB);
+	static void             sortSwap(void* data, int idxA, int idxB);
 
 	unsigned int                buildNode(NodeSpec spec, int level, float progressStart, float progressEnd);
 	unsigned int                createLeaf(const NodeSpec& spec);
 
 	ObjectSplit             findObjectSplit(const NodeSpec& spec, float nodeSAH);
-	void                    performObjectSplit  (NodeSpec& left, NodeSpec& right, const NodeSpec& spec, const ObjectSplit& split);
+	void                    performObjectSplit(NodeSpec& left, NodeSpec& right, const NodeSpec& spec, const ObjectSplit& split);
 
 	SpatialSplit            findSpatialSplit(const NodeSpec& spec, float nodeSAH);
-	void                    performSpatialSplit (NodeSpec& left, NodeSpec& right, const NodeSpec& spec, const SpatialSplit& split);
+	void                    performSpatialSplit(NodeSpec& left, NodeSpec& right, const NodeSpec& spec, const SpatialSplit& split);
 	void                    splitReference(Reference& left, Reference& right, const Reference& ref, int dim, float pos);
 
 private:
-							SplitBVHBuilder     (const SplitBVHBuilder&); // forbidden
+	SplitBVHBuilder(const SplitBVHBuilder&); // forbidden
 	SplitBVHBuilder&        operator=           (const SplitBVHBuilder&); // forbidden
 
 private:
@@ -214,3 +216,5 @@ private:
 
 	InstructionTimer m_Timer;
 };
+
+}

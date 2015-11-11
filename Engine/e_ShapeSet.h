@@ -2,6 +2,8 @@
 
 #include <MathTypes.h>
 
+namespace CudaTracerLib {
+
 struct e_TriIntersectorData;
 struct PositionSamplingRecord;
 template<typename H, typename D> class e_BufferReference;
@@ -14,7 +16,7 @@ struct CUDA_ALIGN(16) ShapeSet
 		CUDA_ALIGN(16) Vec3f p[3];
 		float area;
 		e_Variable<e_TriIntersectorData> iDat;
-		
+
 		AABB box() const;
 		void Recalculate(const float4x4& mat);
 	};
@@ -50,3 +52,5 @@ private:
 	float sumArea;
 	unsigned int count;
 };
+
+}

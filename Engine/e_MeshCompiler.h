@@ -3,6 +3,8 @@
 #include <Base/FileStream.h>
 #include <vector>
 
+namespace CudaTracerLib {
+
 void compileply(IInStream& in, FileOutputStream& a_Out);
 void compileobj(IInStream& in, FileOutputStream& a_Out);
 void compilemd5(IInStream& in, std::vector<IInStream*>& animFiles, FileOutputStream& a_Out);
@@ -54,7 +56,7 @@ public:
 	}
 	~e_MeshCompilerManager()
 	{
-		for(unsigned int i = 0; i < m_sCompilers.size(); i++)
+		for (unsigned int i = 0; i < m_sCompilers.size(); i++)
 			delete m_sCompilers[i];
 	}
 	void Compile(IInStream& in, const std::string& a_Token, FileOutputStream& a_Out, e_MeshCompileType* out = 0);
@@ -63,3 +65,5 @@ public:
 		m_sCompilers.push_back(C);
 	}
 };
+
+}

@@ -3,6 +3,8 @@
 #include <Kernel/k_TraceAlgorithms.h>
 #include <Engine/e_DynamicScene.h>
 
+namespace CudaTracerLib {
+
 CUDA_DEVICE e_Image g_DepthImage;
 
 enum
@@ -51,7 +53,7 @@ __global__ void pathCreateKernel(unsigned int w, unsigned int h, k_PTDBuffer g_I
 }
 
 __global__ void doDirectKernel(unsigned int w, unsigned int h, k_PTDBuffer g_Intersector, e_Image I, float SCALE, bool depthImage)
-{ 
+{
 	int rayidx;
 	__shared__ volatile int nextRayArray[MaxBlockHeight];
 	do
@@ -173,7 +175,7 @@ template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(unsigned int N, 
 						f = f / f.max();
 					else goto labelAdd;
 				}
-				unsigned int idx2 =  g_Intersector2.insertRay(0);
+				unsigned int idx2 = g_Intersector2.insertRay(0);
 				traversalRay& ray2 = g_Intersector2(idx2, 0);
 				ray2.a = Vec4f(bRec.dg.P, 1e-2f);
 				ray2.b = Vec4f(bRec.getOutgoing(), FLT_MAX);
@@ -218,7 +220,7 @@ void k_FastTracer::doDirect(e_Image* I)
 	cudaMemcpyToSymbol(g_NextRayCounterFT, &zero, sizeof(zero));
 	pathCreateKernel << < dim3(180, 1, 1), dim3(32, 6, 1) >> >(w, h, *buf);
 	buf->setNumRays(w * h, 0);
-	
+
 	buf->IntersectBuffers<false>(false);
 
 	I->Clear();
@@ -249,8 +251,7 @@ void k_FastTracer::doPath(e_Image* I)
 		cudaMemcpyFromSymbol(srcBuf, g_Intersector, sizeof(*srcBuf));
 		cudaMemcpyFromSymbol(destBuf, g_Intersector2, sizeof(*destBuf));
 		swapk(srcBuf, destBuf);
-	}
-	while (srcBuf->getNumRays(0) && ++pass < max_PASS);
+	} while (srcBuf->getNumRays(0) && ++pass < max_PASS);
 	cudaMemGetInfo(&free, &total);
 }
 
@@ -261,10 +262,12 @@ void k_FastTracer::DoRender(e_Image* I)
 	{
 		cudaMemcpyToSymbol(g_DepthImage, depthImage, sizeof(e_Image));
 		depthImage->StartRendering();
-	}	
+	}
 	if (pathTracer)
 		doPath(I);
 	else doDirect(I);
 	if (depthImage)
 		depthImage->EndRendering();
+}
+
 }

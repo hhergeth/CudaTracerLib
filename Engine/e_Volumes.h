@@ -6,6 +6,8 @@
 
 //Implementation and interface copied from Mitsuba as well as PBRT.
 
+namespace CudaTracerLib {
+
 template<typename T> class e_Stream;
 
 struct MediumSamplingRecord
@@ -20,59 +22,6 @@ struct MediumSamplingRecord
 	float pdfSuccessRev;
 	float pdfFailure;
 };
-
-CUDA_FUNC_IN bool sampleDistanceHomogenous(const Ray& ray, float minT, float maxT, float rand, MediumSamplingRecord& mRec, const Spectrum& sig_a, const Spectrum& sig_s)
-{
-	float m_mediumSamplingWeight = -1;
-	Spectrum sig_t = sig_a + sig_s, albedo = sig_s / sig_t;
-	for (int i = 0; i < 2; i++)
-	if (albedo[i] > m_mediumSamplingWeight && sig_t[i] != 0)
-		m_mediumSamplingWeight = albedo[i];
-	if (m_mediumSamplingWeight > 0)
-		m_mediumSamplingWeight = max(m_mediumSamplingWeight, 0.5f);
-	float sampledDistance = FLT_MAX;
-	int channel = int(rand * SPECTRUM_SAMPLES);
-	rand = (rand - channel * 1.0f / SPECTRUM_SAMPLES) * SPECTRUM_SAMPLES;
-	if (rand < m_mediumSamplingWeight)
-	{
-		rand /= m_mediumSamplingWeight;
-		float samplingDensity = sig_t[channel];
-		sampledDistance = -logf(1 - rand) / samplingDensity;
-	}
-	bool success = true;
-	if (sampledDistance < maxT - minT)
-	{
-		mRec.t = minT + sampledDistance;
-		mRec.p = ray(mRec.t);
-		mRec.sigmaA = sig_a;
-		mRec.sigmaS = sig_s;
-		if (mRec.p == ray.origin)
-			success = false;
-	}
-	else
-	{
-		sampledDistance = maxT - minT;
-		success = false;
-	}
-
-	mRec.pdfFailure = 0;
-	mRec.pdfSuccess = 0;
-	for (int i = 0; i < SPECTRUM_SAMPLES; i++)
-	{
-		float t = math::exp(-sig_t[i] * sampledDistance);
-		mRec.pdfFailure += t;
-		mRec.pdfSuccess += sig_t[i] * t;
-	}
-	mRec.pdfFailure /= SPECTRUM_SAMPLES;
-	mRec.pdfSuccess /= SPECTRUM_SAMPLES;
-	mRec.transmittance = (sig_t * (-sampledDistance)).exp();
-	mRec.pdfSuccessRev = mRec.pdfSuccess = mRec.pdfSuccess * m_mediumSamplingWeight;
-	mRec.pdfFailure = m_mediumSamplingWeight * mRec.pdfFailure + (1 - m_mediumSamplingWeight);
-	if (mRec.transmittance.max() < 1e-10f)
-		mRec.transmittance = Spectrum(0.0f);
-
-	return success;
-}
 
 struct e_BaseVolumeRegion : public e_BaseType//, public e_BaseTypeHelper<5001046>
 {
@@ -95,9 +44,9 @@ public:
 	{
 		Vec3f pl = WorldToVolume.TransformPoint(p);
 		return pl.x >= 0 && pl.y >= 0 && pl.z >= 0 &&
-			   pl.x <= 1 && pl.y <= 1 && pl.z <= 1;
+			pl.x <= 1 && pl.y <= 1 && pl.z <= 1;
 	}
-	
+
 	CUDA_DEVICE CUDA_HOST bool IntersectP(const Ray &ray, const float minT, const float maxT, float *t0, float *t1) const;
 };
 
@@ -184,9 +133,9 @@ public:
 	void Set(const T& val)
 	{
 		for (int i = 0; i < dim.x; i++)
-		for (int j = 0; j < dim.y; j++)
-		for (int k = 0; k < dim.z; k++)
-			value(i, j, k) = val;
+			for (int j = 0; j < dim.y; j++)
+				for (int k = 0; k < dim.z; k++)
+					value(i, j, k) = val;
 	}
 	CUDA_FUNC_IN unsigned int idx(unsigned int i, unsigned int j, unsigned int k) const
 	{
@@ -264,7 +213,7 @@ public:
 	CUDA_DEVICE CUDA_HOST float integrateDensity(const Ray& ray, float minT, float maxT) const;
 
 	CUDA_DEVICE CUDA_HOST bool invertDensityIntegral(const Ray& ray, float minT, float maxT, float desiredDensity,
-													 float &integratedDensity, float &t, float &densityAtMinT, float &densityAtT) const;
+		float &integratedDensity, float &t, float &densityAtMinT, float &densityAtT) const;
 
 	CUDA_DEVICE CUDA_HOST Spectrum tau(const Ray &ray, const float minT, const float maxT) const;
 
@@ -350,37 +299,37 @@ public:
 	}
 
 	CALLER(sigma_a)
-	CUDA_FUNC_IN Spectrum sigma_a(const Vec3f& p, const Vec3f& w) const
+		CUDA_FUNC_IN Spectrum sigma_a(const Vec3f& p, const Vec3f& w) const
 	{
 		return sigma_a_Caller<Spectrum>(*this, p, w);
 	}
 
 	CALLER(sigma_s)
-	CUDA_FUNC_IN Spectrum sigma_s(const Vec3f& p, const Vec3f& w) const
+		CUDA_FUNC_IN Spectrum sigma_s(const Vec3f& p, const Vec3f& w) const
 	{
 		return sigma_s_Caller<Spectrum>(*this, p, w);
 	}
 
 	CALLER(Lve)
-	CUDA_FUNC_IN Spectrum Lve(const Vec3f& p, const Vec3f& w) const
+		CUDA_FUNC_IN Spectrum Lve(const Vec3f& p, const Vec3f& w) const
 	{
 		return Lve_Caller<Spectrum>(*this, p, w);
 	}
 
 	CALLER(sigma_t)
-	CUDA_FUNC_IN Spectrum sigma_t(const Vec3f &p, const Vec3f &wo) const
+		CUDA_FUNC_IN Spectrum sigma_t(const Vec3f &p, const Vec3f &wo) const
 	{
 		return sigma_t_Caller<Spectrum>(*this, p, wo);
 	}
 
 	CALLER(tau)
-	CUDA_FUNC_IN Spectrum tau(const Ray &ray, float minT, float maxT) const
+		CUDA_FUNC_IN Spectrum tau(const Ray &ray, float minT, float maxT) const
 	{
 		return tau_Caller<Spectrum>(*this, ray, minT, maxT);
 	}
 
 	CALLER(sampleDistance)
-	CUDA_FUNC_IN bool sampleDistance(const Ray& ray, float minT, float maxT, float sample, MediumSamplingRecord& mRec) const
+		CUDA_FUNC_IN bool sampleDistance(const Ray& ray, float minT, float maxT, float sample, MediumSamplingRecord& mRec) const
 	{
 		return sampleDistance_Caller<bool>(*this, ray, minT, maxT, sample, mRec);
 	}
@@ -388,7 +337,7 @@ public:
 
 struct e_KernelAggregateVolume
 {
-	enum{MAX_VOL_COUNT = 16};
+	enum{ MAX_VOL_COUNT = 16 };
 public:
 	unsigned int m_uVolumeCount;
 	e_VolumeRegion m_pVolumes[MAX_VOL_COUNT];
@@ -433,3 +382,5 @@ public:
 		return false;
 	}
 };
+
+}

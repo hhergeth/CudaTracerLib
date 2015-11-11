@@ -11,6 +11,8 @@
 #include "e_Material.h"
 #include "e_TriIntersectorData.h"
 
+namespace CudaTracerLib {
+
 #define NO_NODE 0x76543210
 void write(int idx, const e_BVHNodeData* nodes, int parent, std::ofstream& f, int& leafC)
 {
@@ -121,21 +123,21 @@ e_SceneInitData e_Mesh::ParseBinary(const std::string& a_InputFile)
 	unsigned int m_uTriangleCount;
 	a_In >> m_uTriangleCount;
 	PRINT(m_uTriangleCount, e_TriangleData)
-	unsigned int m_uMaterialCount;
+		unsigned int m_uMaterialCount;
 	a_In >> m_uMaterialCount;
 	PRINT(m_uMaterialCount, e_KernelMaterial)
-	unsigned long long m_uNodeSize;
+		unsigned long long m_uNodeSize;
 	a_In >> m_uNodeSize;
 	PRINT(m_uNodeSize, e_BVHNodeData)
-	unsigned long long m_uIntSize;
+		unsigned long long m_uIntSize;
 	a_In >> m_uIntSize;
 	PRINT(m_uIntSize, e_TriIntersectorData)
-	unsigned long long m_uIndicesSize;
+		unsigned long long m_uIndicesSize;
 	a_In >> m_uIndicesSize;
 	PRINT(m_uIndicesSize, e_TriIntersectorData2)
 #undef PRINT
 #undef PRINT2
-	a_In.Close();
+		a_In.Close();
 	Platform::OutputDebug(format("return CreateForSpecificMesh(%d, %d, %d, %d, 255, a_Lights);\n", m_uTriangleCount, m_uIntSize, m_uNodeSize, m_uIndicesSize));
 	return e_SceneInitData::CreateForSpecificMesh(m_uTriangleCount, m_uIntSize, m_uNodeSize, m_uIndicesSize, 255, 16, 16, 8);
 }
@@ -143,7 +145,7 @@ e_SceneInitData e_Mesh::ParseBinary(const std::string& a_InputFile)
 void e_Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2f* uvs, const unsigned int* indices, unsigned int nIndices, const e_KernelMaterial& mat, const Spectrum& Le, FileOutputStream& a_Out)
 {
 	std::vector<e_MeshPartLight> lights;
-	if(!Le.isZero())
+	if (!Le.isZero())
 		lights.push_back(e_MeshPartLight(mat.Name, Le));
 	Vec3f p[3];
 	Vec3f n[3];
@@ -162,15 +164,15 @@ void e_Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Ve
 	ComputeTangentSpace(vertices, uvs, indices, nVertices, numTriangles, v_Normals, v_Tangents, v_BiTangents);
 #endif
 	AABB box = AABB::Identity();
-	for(size_t ti = 0; ti < numTriangles; ti++)
+	for (size_t ti = 0; ti < numTriangles; ti++)
 	{
-		for(size_t j = 0; j < 3; j++)
+		for (size_t j = 0; j < 3; j++)
 		{
 			size_t l = indices ? indices[ti * 3 + j] : ti * 3 + j;
 			p[j] = vertices[l];
 			box = box.Extend(p[j]);
 #ifdef EXT_TRI
-			if(uvs)
+			if (uvs)
 				t[j] = uvs[l];
 			ta[j] = normalize(v_Tangents[l]);
 			bi[j] = normalize(v_BiTangents[l]);
@@ -189,11 +191,11 @@ void e_Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Ve
 	a_Out.Write(&mat, sizeof(e_KernelMaterial));
 	ConstructBVH(vertices, indices, nVertices, numTriangles * 3, a_Out);
 #ifdef EXT_TRI
-	delete [] v_Normals;
-	delete [] v_Tangents;
-	delete [] v_BiTangents;
+	delete[] v_Normals;
+	delete[] v_Tangents;
+	delete[] v_BiTangents;
 #endif
-	delete [] triData;
+	delete[] triData;
 }
 
 void e_Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2f** uvs, unsigned int nUV_Sets, const unsigned int* indices, unsigned int nIndices, const std::vector<e_KernelMaterial>& mats, const std::vector<Spectrum>& Les, const std::vector<unsigned int>& subMeshes, const unsigned char* extraData, FileOutputStream& a_Out)
@@ -217,7 +219,7 @@ void e_Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Ve
 #endif
 	AABB box = AABB::Identity();
 	unsigned int si = 0, pc = 0;
-	for(size_t ti = 0; ti < numTriangles; ti++)
+	for (size_t ti = 0; ti < numTriangles; ti++)
 	{
 		e_TriangleData tri;
 		for (unsigned int uvIdx = 0; uvIdx < Dmin2(nUV_Sets, NUM_UV_SETS); uvIdx++)
@@ -229,7 +231,7 @@ void e_Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Ve
 			}
 			tri.setUvSetData(uvIdx, t[0], t[1], t[2]);
 		}
-		for(size_t j = 0; j < 3; j++)
+		for (size_t j = 0; j < 3; j++)
 		{
 			size_t l = indices ? indices[ti * 3 + j] : ti * 3 + j;
 			p[j] = vertices[l];
@@ -241,18 +243,18 @@ void e_Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Ve
 #endif
 		}
 		tri.setData(p[0], p[1], p[2], n[0], n[1], n[2]);
-		
+
 #ifdef EXT_TRI
-		if(extraData)
-			for(int j = 0; j < 3; j++)
+		if (extraData)
+			for (int j = 0; j < 3; j++)
 				tri.m_sHostData.ExtraData = extraData[indices ? indices[ti * 3 + j] : ti * 3 + j];
 #endif
 		triData[triIndex++] = tri;
-		if(subMeshes[si] + pc <= ti)
+		if (subMeshes[si] + pc <= ti)
 		{
 			pc += subMeshes[si];
 			si++;
-			if(!Les[si].isZero())
+			if (!Les[si].isZero())
 				lights.push_back(e_MeshPartLight(mats[si].Name, Les[si]));
 		}
 	}
@@ -266,9 +268,11 @@ void e_Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Ve
 	a_Out.Write(&mats[0], sizeof(e_KernelMaterial) * (unsigned int)mats.size());
 	ConstructBVH(vertices, indices, nVertices, numTriangles * 3, a_Out);
 #ifdef EXT_TRI
-	delete [] v_Normals;
-	delete [] v_Tangents;
-	delete [] v_BiTangents;
+	delete[] v_Normals;
+	delete[] v_Tangents;
+	delete[] v_BiTangents;
 #endif
-	delete [] triData;
+	delete[] triData;
+}
+
 }

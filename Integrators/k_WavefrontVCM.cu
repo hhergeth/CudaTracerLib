@@ -1,5 +1,7 @@
 #include "k_WavefrontVCM.h"
 
+namespace CudaTracerLib {
+
 k_WavefrontVCM::k_WavefrontVCM(unsigned int a_NumLightRays)
 	: m_uNumLightRays(a_NumLightRays), m_sLightBufA(a_NumLightRays), m_sLightBufB(a_NumLightRays), m_sCamBufA(blockSize * blockSize), m_sCamBufB(blockSize * blockSize)
 {
@@ -53,7 +55,7 @@ CUDA_GLOBAL void extendLighRays(unsigned int N, BPTVertex* g_pLightVertices, e_I
 			BPTVertex v;
 			v.mat = 0;
 			r2.getBsdfSample(ent.state.r, v.bRec, ETransportMode::EImportance, &rng);
-			
+
 			if (vOff > 1 || true)
 				ent.state.dVCM *= r2.m_fDist * r2.m_fDist;
 			ent.state.dVCM /= math::abs(Frame::cosTheta(v.bRec.wi));
@@ -302,4 +304,6 @@ void k_WavefrontVCM::RenderBlock(e_Image* I, int x, int y, int blockW, int block
 float k_WavefrontVCM::getSplatScale()
 {
 	return k_Tracer<true, true>::getSplatScale() * (w * h) / m_uNumLightRays;
+}
+
 }

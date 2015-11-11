@@ -4,6 +4,8 @@
 #include <Engine/SceneBuilder/SplitBVHBuilder.hpp>
 #include <Engine/e_DynamicScene.h>
 
+namespace CudaTracerLib {
+
 k_BeamBVHStorage::k_BeamBVHStorage(unsigned int nBeams, e_DynamicScene* S)
 	: m_uNumNodes(0), m_uBeamIdx(-1), m_uNumDeviceBVHBeams(0), m_pScene(S)
 {
@@ -125,4 +127,6 @@ void k_BeamBVHStorage::PrepareForRendering()
 	}
 	memcpy(m_pHostNodes, &clb.m_sBVHNodes[0], m_uNumNodes);
 	CUDA_MEMCPY_TO_DEVICE(m_pDeviceNodes, &clb.m_sBVHNodes[0], (unsigned int)clb.m_sBVHNodes.size() * sizeof(e_BVHNodeData));
+}
+
 }

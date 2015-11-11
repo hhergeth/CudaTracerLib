@@ -3,6 +3,8 @@
 #include <MathTypes.h>
 #include <VirtualFuncType.h>
 
+namespace CudaTracerLib {
+
 enum EEmitterType {
 	/// Emission profile contains a Dirac delta term with respect to direction
 	EDeltaDirection = 0x01,
@@ -37,3 +39,5 @@ struct e_AbstractEmitter : public e_BaseType
 		return (m_Type & EOnSurface) != 0;
 	}
 };
+
+}

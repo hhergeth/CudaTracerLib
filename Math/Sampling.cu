@@ -2,6 +2,8 @@
 #include <Base/CudaRandom.h>
 #include <Base/STL.h>
 
+namespace CudaTracerLib {
+
 unsigned int MonteCarlo::sampleReuse(float *cdf, unsigned int size, float &sample, float& pdf)
 {
 	const float *entry = STL_lower_bound(cdf, cdf + size + 1, sample);
@@ -15,7 +17,7 @@ void MonteCarlo::stratifiedSample1D(CudaRNG& random, float *dest, int count, boo
 {
 	float invCount = 1.0f / count;
 
-	for (int i = 0; i<count; i++) {
+	for (int i = 0; i < count; i++) {
 		float offset = jitter ? random.randomFloat() : 0.5f;
 		*dest++ = (i + offset) * invCount;
 	}
@@ -26,7 +28,7 @@ void MonteCarlo::stratifiedSample2D(CudaRNG& random, Vec2f *dest, int countX, in
 	float invCountX = 1.0f / countX;
 	float invCountY = 1.0f / countY;
 
-	for (int x = 0; x<countX; x++) {
+	for (int x = 0; x < countX; x++) {
 		for (int y = 0; y<countY; y++) {
 			float offsetX = jitter ? random.randomFloat() : 0.5f;
 			float offsetY = jitter ? random.randomFloat() : 0.5f;
@@ -84,4 +86,6 @@ void MonteCarlo::latinHypercube(CudaRNG& random, float *dest, unsigned int nSamp
 			swapk(dest + nDim * j + i, dest + nDim * other + i);
 		}
 	}
+}
+
 }

@@ -7,6 +7,8 @@
 #include <thrust/device_vector.h>
 #include <numeric>*/
 
+namespace CudaTracerLib {
+
 #define MAX_R 16
 #define MAX_F 8
 #define nlBlockSize 16
@@ -135,7 +137,7 @@ CUDA_GLOBAL void evalPass(e_Image img, k_SamplerpixelData* lumData, float* block
 		if (x % blockSize == 0 && y % blockSize == 0)
 			deviceNumSamples[idx2] = (unsigned int)ent.n;
 		float w_i = weight(ent, true);
-		
+
 		if (w_i > 1e-5f)
 			atomicInc(contribPixels + idx2, UINT_MAX);
 		atomicAdd(blockData + idx2, deviceWeight[idx2] * w_i);
@@ -207,7 +209,7 @@ void k_BlockSampler::AddPass()
 
 	const int N = 5;
 	m_uPassesDone++;
-	if (0&&(m_uPassesDone % N) == 0)
+	if (0 && (m_uPassesDone % N) == 0)
 	{
 		ThrowCudaErrors(cudaMemcpy(m_pDeviceWeight, m_pHostWeight, sizeof(float) * totalNumBlocks(), cudaMemcpyHostToDevice));
 		ThrowCudaErrors(cudaMemset(m_pDeviceContribPixels, 0, sizeof(unsigned int) * totalNumBlocks()));
@@ -224,15 +226,15 @@ void k_BlockSampler::AddPass()
 		//m_uNumBlocksToLaunch = totalNumBlocks() / 2;
 		/*float w_max = 0;
 		for (unsigned int i = 0; i < totalNumBlocks(); i++)
-			w_max = max(w_max, m_pHostBlockData[i]);
+		w_max = max(w_max, m_pHostBlockData[i]);
 		m_uNumBlocksToLaunch = 0;
 		cudaMemcpy(&g_IndicesH2[0], m_pDeviceIndexData, sizeof(unsigned int) * totalNumBlocks(), cudaMemcpyDeviceToHost);
 		for (unsigned int i = 0; i < totalNumBlocks(); i++)
 		{
-			float wd = m_pHostBlockData[g_IndicesH2[i]] / w_max;
-			float rnd = float(rand()) / float(RAND_MAX);
-			if (rnd < wd)
-				m_pHostIndexData[m_uNumBlocksToLaunch++] = g_IndicesH2[i];
+		float wd = m_pHostBlockData[g_IndicesH2[i]] / w_max;
+		float rnd = float(rand()) / float(RAND_MAX);
+		if (rnd < wd)
+		m_pHostIndexData[m_uNumBlocksToLaunch++] = g_IndicesH2[i];
 		}*/
 		//copyKernel << <dim3(m_uNumBlocksToLaunch, BLOCK_FACTOR * BLOCK_FACTOR), dim3(32, 32) >> >(*img, m_pLumData, m_pDeviceIndexData, nx);
 		for (unsigned int i = 0; i < totalNumBlocks(); i++)
@@ -312,17 +314,17 @@ struct Colorizer
 		return (f - min) / (max - min);
 		/*if (math::abs(f - avg) < stdDev)
 		{
-			float l = (f - avg) / stdDev;
-			return mappedAvg + mappedDev * l;
+		float l = (f - avg) / stdDev;
+		return mappedAvg + mappedDev * l;
 		}
 		else
 		{
-			float s = math::sign(f - avg);
-			float b = avg + stdDev * s;
-			float m = mappedAvg + mappedDev * s;
-			float l = math::abs(f - b);
-			float range = 0.5f - mappedDev;
-			return m + l * range * s;
+		float s = math::sign(f - avg);
+		float b = avg + stdDev * s;
+		float m = mappedAvg + mappedDev * s;
+		float l = math::abs(f - b);
+		float range = 0.5f - mappedDev;
+		return m + l * range * s;
 		}*/
 	}
 
@@ -359,4 +361,6 @@ void k_BlockSampler::DrawVariance(bool blocks) const
 	Colorizer col = Colorizer::FromData(m_pHostBlockData, totalNumBlocks());
 	drawPass << < dim3(img->getWidth() / 32 + 1, img->getHeight() / 32 + 1), dim3(32, 32) >> >(*img, m_pLumData, m_pDeviceBlockData, m_pDeviceContribPixels, col, blocks, numBlocksRow());
 	img->disableUpdate();
+}
+
 }

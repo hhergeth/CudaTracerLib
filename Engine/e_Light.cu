@@ -4,6 +4,8 @@
 #include "e_FileTexture.h"
 #include <Math/Sampling.h>
 
+namespace CudaTracerLib {
+
 Spectrum e_PointLight::sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const
 {
 	ray = Ray(lightPos, Warp::squareToUniformSphere(directionalSample));
@@ -103,7 +105,7 @@ Spectrum e_DiffuseLight::sampleDirect(DirectSamplingRecord &dRec, const Vec2f &_
 		float lambda = dot(tri.p[0], n) - dot(dRec.ref, n);// := (p_0 * n - p * n) / (n * n)
 		dRec.p = dRec.ref + lambda * n;
 		bool inTriangle = Barycentric(dRec.p, tri.p[0], tri.p[1], tri.p[2], dRec.uv.x, dRec.uv.y);
-		if(!inTriangle)
+		if (!inTriangle)
 		{
 			dRec.pdf = 0.0f;
 			return Spectrum(0.0f);
@@ -149,7 +151,8 @@ float e_DiffuseLight::pdfDirect(const DirectSamplingRecord &dRec) const
 			return pdfPos;
 		else
 			return 0.0f;
-	} else {
+	}
+	else {
 		return 0.0f;
 	}
 }
@@ -265,7 +268,7 @@ e_SpotLight::e_SpotLight(Vec3f p, Vec3f t, Spectrum L, float width, float fall)
 
 Spectrum e_SpotLight::sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const
 {
-	Vec3f local = Warp::squareToUniformCone( m_cosCutoffAngle, directionalSample);
+	Vec3f local = Warp::squareToUniformCone(m_cosCutoffAngle, directionalSample);
 	ray = Ray(Position, ToWorld.toWorld(local));
 	float dirPdf = Warp::squareToUniformConePdf(m_cosCutoffAngle);
 	return m_intensity * falloffCurve(local) / dirPdf;
@@ -303,7 +306,7 @@ Spectrum e_SpotLight::sampleDirection(DirectionSamplingRecord &dRec, PositionSam
 	dRec.d = ToWorld.toWorld(d);
 	dRec.pdf = Warp::squareToUniformConePdf(m_cosCutoffAngle);
 	dRec.measure = ESolidAngle;
-	return evalDirection(dRec, pRec)/dRec.pdf;
+	return evalDirection(dRec, pRec) / dRec.pdf;
 }
 
 Spectrum e_SpotLight::falloffCurve(const Vec3f &d) const
@@ -321,7 +324,7 @@ e_InfiniteLight::e_InfiniteLight(e_Stream<char>* a_Buffer, e_BufferReference<e_M
 	: e_LightBase(false), radianceMap(mip->getKernelData()), m_scale(scale), m_pSceneBox(scenBox)
 {
 	m_size = Vec2f(radianceMap.m_uWidth, radianceMap.m_uHeight);
-	unsigned int nEntries = (unsigned int) (m_size.x + 1) * (unsigned int) m_size.y;
+	unsigned int nEntries = (unsigned int)(m_size.x + 1) * (unsigned int)m_size.y;
 	e_StreamReference<char> m1 = a_Buffer->malloc(nEntries * sizeof(float)), m2 = a_Buffer->malloc((m_size.y + 1) * sizeof(float)), m3 = a_Buffer->malloc(m_size.y * sizeof(float));
 	m_cdfCols = m1.AsVar<float>();
 	m_cdfRows = m2.AsVar<float>();
@@ -329,33 +332,33 @@ e_InfiniteLight::e_InfiniteLight(e_Stream<char>* a_Buffer, e_BufferReference<e_M
 	unsigned int colPos = 0, rowPos = 0;
 	float rowSum = 0.0f;
 	m_cdfRows[rowPos++] = 0;
-	for (int y=0; y<m_size.y; ++y)
+	for (int y = 0; y < m_size.y; ++y)
 	{
 		float colSum = 0;
 
 		m_cdfCols[colPos++] = 0;
-		for (int x=0; x<m_size.x; ++x)
+		for (int x = 0; x < m_size.x; ++x)
 		{
 			Spectrum value = radianceMap.Sample(0, x, y);
 
 			colSum += value.getLuminance();
-			m_cdfCols[colPos++] = (float) colSum;
+			m_cdfCols[colPos++] = (float)colSum;
 		}
 
-		float normalization = 1.0f / (float) colSum;
-		for (int x=1; x<m_size.x; ++x)
-			m_cdfCols[colPos-x-1] *= normalization;
-		m_cdfCols[colPos-1] = 1.0f;
+		float normalization = 1.0f / (float)colSum;
+		for (int x = 1; x < m_size.x; ++x)
+			m_cdfCols[colPos - x - 1] *= normalization;
+		m_cdfCols[colPos - 1] = 1.0f;
 
 		float weight = sinf((y + 0.5f) * PI / float(m_size.y));
 		m_rowWeights[y] = weight;
 		rowSum += colSum * weight;
-		m_cdfRows[rowPos++] = (float) rowSum;
+		m_cdfRows[rowPos++] = (float)rowSum;
 	}
-	float normalization = 1.0f / (float) rowSum;
-	for (int y=1; y<m_size.y; ++y)
-		m_cdfRows[rowPos-y-1] *= normalization;
-	m_cdfRows[rowPos-1] = 1.0f;
+	float normalization = 1.0f / (float)rowSum;
+	for (int y = 1; y < m_size.y; ++y)
+		m_cdfRows[rowPos - y - 1] *= normalization;
+	m_cdfRows[rowPos - 1] = 1.0f;
 	m_normalization = 1.0f / (rowSum * (2 * PI / m_size.x) * (PI / m_size.y));
 	m_pixelSize = Vec2f(2 * PI / m_size.x, PI / m_size.y);
 	m1.Invalidate(); m2.Invalidate(); m3.Invalidate();
@@ -426,7 +429,7 @@ Spectrum e_InfiniteLight::sampleDirection(DirectionSamplingRecord &dRec, Positio
 
 	dRec.measure = ESolidAngle;
 	dRec.pdf = pdf;
-	dRec.d = m_worldTransform .TransformDirection(-d);
+	dRec.d = m_worldTransform.TransformDirection(-d);
 
 	/* Be wary of roundoff errors */
 	if (value.isZero() || pdf == 0)
@@ -443,7 +446,7 @@ Spectrum e_InfiniteLight::evalDirection(const DirectionSamplingRecord &dRec, con
 	Vec2f uv = Vec2f(
 		atan2f(v.x, -v.z) * INV_TWOPI,
 		math::safe_acos(v.y) * INV_PI
-	);
+		);
 
 	return radianceMap.Sample(uv, 0) * m_normalization;
 }
@@ -452,29 +455,29 @@ void e_InfiniteLight::internalSampleDirection(Vec2f sample, Vec3f &d, Spectrum &
 {
 	float qpdf;
 	unsigned int	row = MonteCarlo::sampleReuse(m_cdfRows.operator->(), m_size.y, sample.y, qpdf),
-					col = MonteCarlo::sampleReuse(m_cdfCols.operator->() + row * unsigned int(m_size.x + 1), m_size.x, sample.x, qpdf);
+		col = MonteCarlo::sampleReuse(m_cdfCols.operator->() + row * unsigned int(m_size.x + 1), m_size.x, sample.x, qpdf);
 
 	/* Using the remaining bits of precision to shift the sample by an offset
 		drawn from a tent function. This effectively creates a sampling strategy
 		for a linearly interpolated environment map */
-		
+
 	Vec2f pos = Vec2f(col, row) + Warp::squareToTent(sample);
 	//Vec2f pos = sample * m_size;
 
 	/* Bilinearly interpolate colors from the adjacent four neighbors */
 	int xPos = math::clamp(math::Floor2Int(pos.x), 0, int(m_size.x - 1)), yPos = math::clamp(math::Floor2Int(pos.y), 0, int(m_size.y - 1));
 	float dx1 = pos.x - xPos, dx2 = 1.0f - dx1,
-		  dy1 = pos.y - yPos, dy2 = 1.0f - dy1;
+		dy1 = pos.y - yPos, dy2 = 1.0f - dy1;
 
 	Spectrum value1 = radianceMap.Sample(0, xPos, yPos) * dx2 * dy2
-		            + radianceMap.Sample(0, xPos + 1, yPos) * dx1 * dy2;
+		+ radianceMap.Sample(0, xPos + 1, yPos) * dx1 * dy2;
 	Spectrum value2 = radianceMap.Sample(0, xPos, yPos + 1) * dx2 * dy1
-		            + radianceMap.Sample(0, xPos + 1, yPos + 1) * dx1 * dy1;
+		+ radianceMap.Sample(0, xPos + 1, yPos + 1) * dx1 * dy1;
 
 	/* Compute the final color and probability density of the sample */
 	value = (value1 + value2) * m_scale;
-	pdf = (value1.getLuminance() * m_rowWeights[(int)math::clamp(float(yPos),   0.0f, m_size.y-1.0f)] +
-		    value2.getLuminance() * m_rowWeights[(int)math::clamp(float(yPos+1), 0.0f, m_size.y-1.0f)]) * m_normalization;
+	pdf = (value1.getLuminance() * m_rowWeights[(int)math::clamp(float(yPos), 0.0f, m_size.y - 1.0f)] +
+		value2.getLuminance() * m_rowWeights[(int)math::clamp(float(yPos + 1), 0.0f, m_size.y - 1.0f)]) * m_normalization;
 
 	/* Turn into a proper direction on the sphere */
 	float sinPhi, cosPhi, sinTheta, cosTheta;
@@ -490,19 +493,19 @@ float e_InfiniteLight::internalPdfDirection(const Vec3f &d) const
 	Vec2f uv = Vec2f(
 		atan2f(d.x, -d.z) * INV_TWOPI,
 		math::safe_acos(d.y) * INV_PI
-	);
+		);
 	float u = uv.x * m_size.x - 0.5f, v = uv.y * m_size.y - 0.5f;
 	int xPos = math::Floor2Int(u), yPos = math::Floor2Int(v);
 	float dx1 = u - xPos, dx2 = 1.0f - dx1,
-		    dy1 = v - yPos, dy2 = 1.0f - dy1;
+		dy1 = v - yPos, dy2 = 1.0f - dy1;
 	Spectrum value1 = radianceMap.Sample(0, xPos, yPos) * dx2 * dy2
-		            + radianceMap.Sample(0, xPos + 1, yPos) * dx1 * dy2;
+		+ radianceMap.Sample(0, xPos + 1, yPos) * dx1 * dy2;
 	Spectrum value2 = radianceMap.Sample(0, xPos, yPos + 1) * dx2 * dy1
-		            + radianceMap.Sample(0, xPos + 1, yPos + 1) * dx1 * dy1;
-	float sinTheta = math::safe_sqrt(1-d.y*d.y);
-	return (value1.getLuminance() * m_rowWeights[math::clamp(yPos,   0, (int)m_size.y-1)] +
-		    value2.getLuminance() * m_rowWeights[math::clamp(yPos+1, 0, (int)m_size.y-1)])
-			* m_normalization / max(math::abs(sinTheta), EPSILON);
+		+ radianceMap.Sample(0, xPos + 1, yPos + 1) * dx1 * dy1;
+	float sinTheta = math::safe_sqrt(1 - d.y*d.y);
+	return (value1.getLuminance() * m_rowWeights[math::clamp(yPos, 0, (int)m_size.y - 1)] +
+		value2.getLuminance() * m_rowWeights[math::clamp(yPos + 1, 0, (int)m_size.y - 1)])
+		* m_normalization / max(math::abs(sinTheta), EPSILON);
 }
 
 Spectrum e_InfiniteLight::evalEnvironment(const Ray &ray) const
@@ -513,7 +516,7 @@ Spectrum e_InfiniteLight::evalEnvironment(const Ray &ray) const
 	Vec2f uv = Vec2f(
 		atan2f(v.x, -v.z) * INV_TWOPI,
 		math::safe_acos(v.y) * INV_PI
-	);
+		);
 
 	Spectrum value = radianceMap.Sample(uv, 0);
 
@@ -531,15 +534,17 @@ Spectrum e_InfiniteLight::evalEnvironment(const Ray &ray, const Ray& rX, const R
 		);
 
 	Vec3f  dvdx = rX.direction - v,
-			dvdy = rY.direction - v;
+		dvdy = rY.direction - v;
 
 	float	t1 = INV_TWOPI / (v.x*v.x + v.z*v.z),
-			t2 = -INV_PI / max(math::safe_sqrt(1.0f - v.y*v.y), 1e-4f);
+		t2 = -INV_PI / max(math::safe_sqrt(1.0f - v.y*v.y), 1e-4f);
 
 	Vec2f	dudx = Vec2f(t1 * (dvdx.z*v.x - dvdx.x*v.z), t2 * dvdx.y),
-			dudy = Vec2f(t1 * (dvdy.z*v.x - dvdy.x*v.z), t2 * dvdy.y);
+		dudy = Vec2f(t1 * (dvdy.z*v.x - dvdy.x*v.z), t2 * dvdy.y);
 
 	Spectrum value = radianceMap.eval(uv, dudx, dudy);
 
 	return value * m_scale;
+}
+
 }

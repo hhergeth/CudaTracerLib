@@ -2,6 +2,9 @@
 #include <Math/Sampling.h>
 
 //Implementation copied from Mitsuba.
+
+namespace CudaTracerLib {
+
 void DifferentialGeometry::computePartials(const Ray& r, const Ray& rx, const Ray& ry)
 {
 	float A[2][2], Bx[2], By[2], x[2];
@@ -52,7 +55,7 @@ void DifferentialGeometry::computePartials(const Ray& r, const Ray& rx, const Ra
 	A[1][1] = dpdvA[axes[1]];
 
 	Vec3f px = rx.origin + rx.direction * tx,
-		  py = ry.origin + ry.direction * ty;
+		py = ry.origin + ry.direction * ty;
 	float pA[] = { P.x, P.y, P.z };
 	float pxA[] = { px.x, px.y, px.z };
 	float pyA[] = { py.x, py.y, py.z };
@@ -83,4 +86,6 @@ void DifferentialGeometry::computePartials(const Ray& r, const Ray& rx, const Ra
 		dudy = 0;
 		dvdy = 1;
 	}
+}
+
 }

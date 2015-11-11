@@ -1,6 +1,8 @@
 #include "e_TriIntersectorData.h"
 #include <MathTypes.h>
 
+namespace CudaTracerLib {
+
 void e_TriIntersectorData::setData(const Vec3f& a, const Vec3f& b, const Vec3f& c)
 {
 	//if(absdot(normalize(cross(a - c, b - c)), make_float3(1, 0, 0)) < 0.05f)
@@ -77,4 +79,6 @@ bool e_TriIntersectorData::Intersect(const Ray& r, float* dist, Vec2f* bary) con
 		}
 	}
 	return false;
+}
+
 }

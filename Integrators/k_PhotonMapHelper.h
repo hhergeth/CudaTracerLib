@@ -6,6 +6,8 @@
 #include <Base/FileStream.h>
 #include <CudaMemoryManager.h>
 
+namespace CudaTracerLib {
+
 #define ALPHA (2.0f / 3.0f)
 
 CUDA_FUNC_IN float getCurrentRadius(float initial_r, unsigned int iteration, float exp)
@@ -365,3 +367,5 @@ template<typename PHOTON> CUDA_ONLY_FUNC bool storePhoton(const Vec3f& pos, cons
 	else return false;
 }
 #endif
+
+}

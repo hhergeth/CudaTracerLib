@@ -2,6 +2,8 @@
 
 #include <Math/AABB.h>
 
+namespace CudaTracerLib {
+
 template<bool REGULAR> struct k_HashGrid
 {
 	unsigned int m_fGridSize;
@@ -20,7 +22,7 @@ template<bool REGULAR> struct k_HashGrid
 		float e = 0.015f, e2 = 1.0f + e;
 		m_sBox.maxV = m + q * e2;
 		m_sBox.minV = m - q * e2;
-		m_fGridSize = (int)floor(math::pow(a_NumEntries, 1.0f/3.0f));
+		m_fGridSize = (int)math::floor(math::pow(a_NumEntries, 1.0f / 3.0f));
 		m_vMin = m_sBox.minV;
 		m_vInvSize = Vec3f(1.0f) / m_sBox.Size() * (m_fGridSize - 1);
 		m_vCellSize = m_sBox.Size() / (m_fGridSize - 1);
@@ -29,7 +31,7 @@ template<bool REGULAR> struct k_HashGrid
 	CUDA_FUNC_IN unsigned int hash6432shift(unsigned long long key) const
 	{
 		key = (~key) + (key << 18); // key = (key << 18) - key - 1;
-		key = key ^ (key >>  31);
+		key = key ^ (key >> 31);
 		key = key * 21; // key = (key + (key << 2)) + (key << 4);
 		key = key ^ (key >> 11);
 		key = key + (key << 6);
@@ -38,7 +40,7 @@ template<bool REGULAR> struct k_HashGrid
 
 	CUDA_FUNC_IN unsigned int Hash(const Vec3u& p) const
 	{
-		if(REGULAR)
+		if (REGULAR)
 		{
 			unsigned int h = p.z * m_fGridSize * m_fGridSize + p.y * m_fGridSize + p.x;
 			if (h > N)
@@ -60,7 +62,7 @@ template<bool REGULAR> struct k_HashGrid
 			beta = (sign(p) + Vec4f(1.0)) * Vec4f(0.5) * m;
 			n = (p + beta);
 
-			return (unsigned int)math::floor( math::frac(dot(n / m, Vec4f(1.0, -1.0, 1.0, -1.0))) * N );
+			return (unsigned int)math::floor(math::frac(dot(n / m, Vec4f(1.0, -1.0, 1.0, -1.0))) * N);
 		}
 	}
 
@@ -106,7 +108,7 @@ template<bool REGULAR> struct k_HashGrid
 		Vec3f m = clamp01((p - low) / m_vCellSize) * 255.0f;
 		return (unsigned int(m.x) << 16) | (unsigned int(m.y) << 8) | (unsigned int(m.z));
 	}
-	
+
 	CUDA_FUNC_IN Vec3f DecodePos(unsigned int p, const Vec3u& i) const
 	{
 		unsigned int q = 0x00ff0000, q2 = 0x0000ff00, q3 = 0x000000ff;
@@ -174,4 +176,6 @@ template<typename F> CUDA_FUNC_IN void TraverseGrid(const Ray& r, float tmin, fl
 template<typename F> CUDA_FUNC_IN void TraverseGrid(const Ray& r, const k_HashGrid_Reg& grid, float tmin, float tmax, F& clb)
 {
 	return TraverseGrid(r, tmin, tmax, clb, grid.m_sBox, Vec3f(grid.m_fGridSize));
+}
+
 }

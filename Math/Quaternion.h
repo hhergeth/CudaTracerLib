@@ -3,6 +3,8 @@
 #include "MathFunc.h"
 #include "Vector.h"
 
+namespace CudaTracerLib {
+
 class Quaternion
 {
 public:
@@ -17,7 +19,7 @@ public:
 	CUDA_FUNC_IN Quaternion(float x, float y, float z)
 	{
 		float w = 1.0f - x*x - y*y - z*z;
-		w = w < 0.0 ? 0.0f : (float)-sqrt( double(w) );
+		w = w < 0.0 ? 0.0f : (float)-sqrt(double(w));
 		val = Vec4f(x, y, z, w);
 		normalize();
 	}
@@ -97,13 +99,13 @@ public:
 		val.y = val.w*q.val.y + val.y*q.val.w + val.z*q.val.x - val.x*q.val.z;
 		val.z = val.w*q.val.z + val.z*q.val.w + val.x*q.val.y - val.y*q.val.x;
 		return *this;
-	}    
+	}
 	CUDA_FUNC_IN static Quaternion buildFromAxisAngle(const Vec3f& axis, float angle)
 	{
-		float radians = (angle/180.0f)*3.14159f;
+		float radians = (angle / 180.0f)*3.14159f;
 
 		// cache this, since it is used multiple times below
-		float sinThetaDiv2 = (float)sin( (radians/2.0f) );
+		float sinThetaDiv2 = (float)sin((radians / 2.0f));
 
 		Quaternion ret;
 		// now calculate the components of the quaternion	
@@ -111,29 +113,29 @@ public:
 		ret.val.y = axis.y * sinThetaDiv2;
 		ret.val.z = axis.z * sinThetaDiv2;
 
-		ret.val.w = (float)cos( (radians/2.0f) );
+		ret.val.w = (float)cos((radians / 2.0f));
 		return ret;
 	}
 	CUDA_FUNC_IN void normalize()
 	{
-		val = ::normalize(val);
+		val = CudaTracerLib::normalize(val);
 	}
 	CUDA_FUNC_IN Quaternion conjugate() const { return Quaternion(-val.x, -val.y, -val.z, val.w); }
 	CUDA_FUNC_IN float length() const
 	{
-		return ::length(val);
+		return CudaTracerLib::length(val);
 	}
 	CUDA_FUNC_IN Quaternion pow(float t) const
 	{
-		Quaternion result(0,0,0,0);
+		Quaternion result(0, 0, 0, 0);
 
 		if (math::abs(val.w) < 0.9999)
 		{
 			float alpha = (float)acos(val.w);
 			float newAlpha = alpha * t;
 
-			result.val.w = (float)cos( newAlpha);
-			float fact = float( sin(newAlpha) / sin(alpha) );
+			result.val.w = (float)cos(newAlpha);
+			float fact = float(sin(newAlpha) / sin(alpha));
 			result.val.x *= fact;
 			result.val.y *= fact;
 			result.val.z *= fact;
@@ -164,7 +166,7 @@ public:
 
 		float cosOmega = q1.val.w * q2.val.w + q1.val.x * q2.val.x + q1.val.y * q2.val.y + q1.val.z * q2.val.z;
 
-		if ( cosOmega < 0.0f )
+		if (cosOmega < 0.0f)
 		{
 			_q2.val.x = -_q2.val.x;
 			_q2.val.y = -_q2.val.y;
@@ -174,20 +176,20 @@ public:
 		}
 
 		float k0, k1;
-		if ( cosOmega > 0.99999f )
+		if (cosOmega > 0.99999f)
 		{
 			k0 = 1.0f - t;
 			k1 = t;
 		}
 		else
 		{
-			float sinOmega = (float)sqrt( 1.0f - cosOmega*cosOmega );
-			float omega = (float)atan2( sinOmega, cosOmega );
+			float sinOmega = (float)sqrt(1.0f - cosOmega*cosOmega);
+			float omega = (float)atan2(sinOmega, cosOmega);
 
-			float invSinOmega = 1.0f/sinOmega;
+			float invSinOmega = 1.0f / sinOmega;
 
-			k0 = float( sin(((1.0f - t)*omega)) )*invSinOmega;
-			k1 = float( sin(t*omega) )*invSinOmega;
+			k0 = float(sin(((1.0f - t)*omega)))*invSinOmega;
+			k1 = float(sin(t*omega))*invSinOmega;
 		}
 		result.val.x = q1.val.x * k0 + _q2.val.x * k1;
 		result.val.y = q1.val.y * k0 + _q2.val.y * k1;
@@ -197,11 +199,11 @@ public:
 		return result;
 	}
 
-	friend std::ostream& operator<< (std::ostream & os, const Quaternion& rhs);
+	friend std::ostream& operator<< (std::ostream & os, const Quaternion& rhs)
+	{
+		os << rhs.val;
+		return os;
+	}
 };
 
-inline std::ostream& operator<< (std::ostream & os, const Quaternion& rhs)
-{
-	os << rhs.val;
-	return os;
 }

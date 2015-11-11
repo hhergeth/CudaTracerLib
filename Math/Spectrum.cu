@@ -1,6 +1,10 @@
 #include "Spectrum.h"
 #include "Integrator.h"
 #include <Base/STL.h>
+#include <vector>
+#include <algorithm>
+
+namespace CudaTracerLib {
 
 #ifdef DEBUG
 	#define Integrate_Steps 100
@@ -258,19 +262,19 @@ RGBE Spectrum::toRGBE() const
 	float r, g, b;
 	toLinearRGB(r, g, b);
 	/* Find the largest contribution */
-	float max = ::max(r, g, b);
+	float max_ = CudaTracerLib::max(r, g, b);
 	RGBE rgbe;
-	if (max < 1e-32) {
+	if (max_ < 1e-32) {
 		rgbe.x = rgbe.y = rgbe.z = rgbe.w = 0;
 	} else {
 		int e;
 		/* Extract exponent and convert the fractional part into
 		 the [0..255] range. Afterwards, divide by max so that
 		 any color component multiplied by the result will be in [0,255] */
-		max = frexp(max, &e) * (float) 256 / max;
-		rgbe.x = (unsigned char) (r * max);
-		rgbe.y = (unsigned char) (g * max);
-		rgbe.z = (unsigned char) (b * max);
+		max_ = frexp(max_, &e) * (float) 256 / max_;
+		rgbe.x = (unsigned char) (r * max_);
+		rgbe.y = (unsigned char) (g * max_);
+		rgbe.z = (unsigned char) (b * max_);
 		rgbe.w = e+128; /* Exponent value in bias format */
 	}
 	return rgbe;
@@ -370,7 +374,7 @@ void Spectrum::toHSL(float& h, float& s, float& l) const
 {
 	float r,g,b;
 	toLinearRGB(r,g,b);
-	float max = ::max(r, g, b), min = ::min(r, g, b);
+	float max = CudaTracerLib::max(r, g, b), min = CudaTracerLib::min(r, g, b);
 	l = (max + min) / 2;
 	h = s = 0;
 	if(max != min)
@@ -550,8 +554,6 @@ Spectrum Spectrum::SampleSpectrum(float& w, float sample) const
 	return Spectrum(0.0f);
 }
 
-#include <vector>
-#include <algorithm>
 struct InterpolatedSpectrum
 {
 	const float* m_wavelengths, *m_values;
@@ -1454,3 +1456,5 @@ const float RGBIllum2SpecBlue_entries[RGB2Spec_samples] = {
 		1.5535067531939065e-01,   1.4878477178237029e-01,
 		1.6624255403475907e-01,   1.6997613960634927e-01,
 		1.5769743995852967e-01,   1.9069090525482305e-01 };
+
+}

@@ -4,6 +4,8 @@
 #include "Vector.h"
 #include "float4x4.h"
 
+namespace CudaTracerLib {
+
 template<typename T, int N, typename INTERNAL> qMatrix<T, N, 1> Q(const VectorBase<T, N, INTERNAL>& v)
 {
 	qMatrix<T, N, 1> r;
@@ -36,4 +38,6 @@ template<typename T> qMatrix<T, 4, 4> Q(const float4x4& A)
 		for (int j = 0; j < 4; j++)
 			r(i, j) = A(i, j);
 	return r;
+}
+
 }

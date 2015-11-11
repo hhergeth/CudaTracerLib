@@ -9,6 +9,8 @@
 #include <Engine/e_Material.h>
 #include <Engine/e_TriIntersectorData.h>
 
+namespace CudaTracerLib {
+
 void build_e_Animation(Anim* A, MD5Model* M, e_Animation& res, const std::string& name, const std::vector<float4x4>& inverseJoints)
 {
 	res.m_sName = name;
@@ -149,4 +151,6 @@ void compilemd5(IInStream& in, std::vector<IInStream*>& animFiles, FileOutputStr
 	a_Out.Write(&triData2[0], (unsigned int)triData2.size() * sizeof(uint3));
 	///delete[] v_Data;
 	//delete[] v_Pos;
+}
+
 }

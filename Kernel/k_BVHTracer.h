@@ -1,8 +1,10 @@
 #pragma once
+		 
+#include <Defines.h>
+#include <MathTypes.h>
+#include <Engine/e_TriIntersectorData.h>
 
-#include "../Defines.h"
-#include "../MathTypes.h"
-#include "../Engine/e_TriIntersectorData.h"
+namespace CudaTracerLib {
 
 #ifdef __CUDACC__
 template<typename CLB> CUDA_FUNC_IN bool k_TraceRayTemplate(const Ray& r, float& rayT, const CLB& clb, texture<float4, 1> bvhNodes_texture, e_BVHNodeData* hosthNodes, int bvhNodesOffset = 0, int startNode = 0)
@@ -154,8 +156,8 @@ template<typename CLB> CUDA_FUNC_IN bool k_TraceRayTemplate(const Ray& r, float&
 		{
 			const float4 n0xy = data[bvhNodesOffset + nodeAddr + 0];
 			const float4 n1xy = data[bvhNodesOffset + nodeAddr + 1];
-			const float4 nz =   data[bvhNodesOffset + nodeAddr + 2];
-			const float4 tmp =  data[bvhNodesOffset + nodeAddr + 3];
+			const float4 nz = data[bvhNodesOffset + nodeAddr + 2];
+			const float4 tmp = data[bvhNodesOffset + nodeAddr + 3];
 			Vec2i  cnodes = *(Vec2i*)&tmp;
 
 			const float c0lox = n0xy.x * idirx - oodx;
@@ -229,4 +231,6 @@ template<typename CLB> CUDA_FUNC_IN bool k_TraceRayTemplate(const Ray& r, float&
 		}
 	}
 	return found;
+}
+
 }

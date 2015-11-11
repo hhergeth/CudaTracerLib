@@ -1,6 +1,8 @@
 #include "e_Samples.h"
 #include "e_DifferentialGeometry.h"
 
+namespace CudaTracerLib {
+
 Vec3f BSDFSamplingRecord::getOutgoing()
 {
 	return normalize(dg.toWorld(wo));
@@ -33,3 +35,4 @@ BSDFSamplingRecord& BSDFSamplingRecord::operator=(const BSDFSamplingRecord& othe
 	return *this;
 }
 
+}

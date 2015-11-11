@@ -1,6 +1,8 @@
 #pragma once
 #include "k_PointStorage.h"
 
+namespace CudaTracerLib {
+
 struct k_BeamGrid : public k_PointStorage
 {
 	e_SpatialLinkedMap<int> m_sBeamGridStorage;
@@ -56,7 +58,7 @@ struct k_BeamGrid : public k_PointStorage
 		Spectrum L_n = Spectrum(0.0f);
 		TraverseGrid(r, m_sStorage.hashMap, tmin, tmax, [&](float minT, float rayT, float maxT, float cellEndT, Vec3u& cell_pos, bool& cancelTraversal)
 		{
-			m_sBeamGridStorage.ForAll(cell_pos, [&](unsigned int , unsigned int beam_idx)
+			m_sBeamGridStorage.ForAll(cell_pos, [&](unsigned int, unsigned int beam_idx)
 			{
 				const volPhoton& ph = m_sStorage(beam_idx);
 				float l1 = dot(ph.p - r.origin, r.direction) / dot(r.direction, r.direction);
@@ -76,3 +78,5 @@ struct k_BeamGrid : public k_PointStorage
 		return L_n;
 	}
 };
+
+}

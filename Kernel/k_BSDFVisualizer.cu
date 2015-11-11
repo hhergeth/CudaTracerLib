@@ -8,6 +8,8 @@
 #include <Engine/e_FileTexture.h>
 #include <Base/FileStream.h>
 
+namespace CudaTracerLib {
+
 CUDA_FUNC_IN Vec3f hemishphere(const Vec2f& q)
 {
 	Vec2f f = q * 2 - Vec2f(1);
@@ -133,9 +135,9 @@ void k_BSDFVisualizer::setSkydome(const char* compiledPath)
 	m_pBuffer = new e_Stream<char>(1024 * 1024 * 32);
 	m_pBuffer2 = new e_Buffer<e_MIPMap, e_KernelMIPMap>(3);
 	FileInputStream in(compiledPath);
-	e_BufferReference<e_MIPMap, e_KernelMIPMap> mip = m_pBuffer2->malloc(1); 
+	e_BufferReference<e_MIPMap, e_KernelMIPMap> mip = m_pBuffer2->malloc(1);
 	m_pMipMap = new (mip.operator->())e_MIPMap(in.getFilePath(), in);
-	in.Close();	
+	in.Close();
 	m_pLight = new e_InfiniteLight(m_pBuffer, mip, Spectrum(1.0f), new AABB(Vec3f(0), Vec3f(1)));
 }
 
@@ -147,4 +149,6 @@ k_BSDFVisualizer::~k_BSDFVisualizer()
 		m_pBuffer2->Free();
 	if (m_pLight)
 		delete m_pLight;
+}
+
 }

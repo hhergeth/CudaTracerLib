@@ -6,6 +6,8 @@
 //Compresses normalized float3s to ushorts. Either by using spherical coordinates, which are heavy on ALUs.
 //The alternative is scaling the x and y components to [0,255] and storing the z in one bit of the others data.
 
+namespace CudaTracerLib {
+
 #define SPHERICAL_COMPRESSION
 
 #ifdef SPHERICAL_COMPRESSION
@@ -64,4 +66,6 @@ CUDA_FUNC_IN Vec3f Uchar3ToNormalizedFloat3(uchar3 v)
 #define CNV(x) (float(x) - 127.0f) / 127.0f
 	return Vec3f(CNV(v.x), CNV(v.y), CNV(v.z));
 #undef CNV
+}
+
 }

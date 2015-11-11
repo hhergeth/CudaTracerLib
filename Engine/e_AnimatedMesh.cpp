@@ -8,6 +8,8 @@
 #include "e_Material.h"
 #include "e_TriIntersectorData.h"
 
+namespace CudaTracerLib {
+
 e_BufferReference<char, char> malloc_aligned(e_Stream<char>* stream, unsigned int a_Count, unsigned int a_Alignment)
 {
 	e_BufferReference<char, char> ref = stream->malloc(a_Count + a_Alignment * 2);
@@ -17,7 +19,7 @@ e_BufferReference<char, char> malloc_aligned(e_Stream<char>* stream, unsigned in
 	{
 		unsigned int end = ref.getIndex() + off + a_Count;
 		e_BufferReference<char, char> refFreeFront = e_BufferReference<char, char>(stream, ref.getIndex(), off),
-									  refFreeTail = e_BufferReference<char, char>(stream, end, ref.getLength() - off - a_Count);
+			refFreeTail = e_BufferReference<char, char>(stream, end, ref.getLength() - off - a_Count);
 		stream->dealloc(refFreeFront);
 		if (refFreeTail.getLength() != 0)
 			stream->dealloc(refFreeTail);
@@ -73,7 +75,7 @@ e_AnimatedMesh::e_AnimatedMesh(const std::string& path, IInStream& a_In, e_Strea
 {
 	m_uType = MESH_ANIMAT_TOKEN;
 	a_In.Read(&k_Data, sizeof(k_Data));
-	for(unsigned int i = 0; i < k_Data.m_uAnimCount; i++)
+	for (unsigned int i = 0; i < k_Data.m_uAnimCount; i++)
 	{
 		e_Animation A;
 		A.deSerialize(a_In, a_Stream5);
@@ -98,9 +100,11 @@ void e_AnimatedMesh::CreateNewMesh(e_AnimatedMesh* A, e_Stream<e_TriIntersectorD
 	A->m_sNodeInfo = a_Stream2->malloc(m_sNodeInfo, true);
 	A->m_sIntInfo = a_Stream0->malloc(m_sIntInfo, true);
 	A->m_pBuilder = 0;
-	
+
 	A->k_Data = k_Data;
 	A->m_pAnimations = m_pAnimations;
 	A->m_sVertices = m_sVertices;
 	A->m_sTriangles = m_sTriangles;
+}
+
 }

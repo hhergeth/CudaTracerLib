@@ -2,6 +2,8 @@
 #include "CudaMemoryManager.h"
 #include <Kernel/k_Tracer.h>
 
+namespace CudaTracerLib {
+
 std::map<void*, CudaMemoryEntry> CudaMemoryManager::alloced_entries;
 std::vector<CudaMemoryEntry> CudaMemoryManager::freed_entries;
 
@@ -33,4 +35,6 @@ cudaError_t CudaMemoryManager::Cuda_free_managed(void* v, const std::string& cal
 	cudaError_t r = cudaFree(v);
 	ThrowCudaErrors(r);
 	return r;
+}
+
 }

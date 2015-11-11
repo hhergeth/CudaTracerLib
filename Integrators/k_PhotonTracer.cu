@@ -4,6 +4,8 @@
 #include <Engine/e_Light.h>
 #include <Engine/e_Sensor.h>
 
+namespace CudaTracerLib {
+
 enum
 {
 	MaxBlockHeight = 6,
@@ -15,7 +17,7 @@ CUDA_FUNC_IN void handleEmission(const Spectrum& weight, const PositionSamplingR
 {
 	DirectSamplingRecord dRec(pRec.p, pRec.n);
 	Spectrum value = weight * g_SceneData.sampleSensorDirect(dRec, rng.randomFloat2());
-	if (!value.isZero() && ::V(dRec.p, dRec.ref))
+	if (!value.isZero() && V(dRec.p, dRec.ref))
 	{
 		const e_KernelLight* emitter = (const e_KernelLight*)pRec.object;
 		value *= emitter->evalDirection(DirectionSamplingRecord(dRec.d), pRec);
@@ -27,11 +29,11 @@ CUDA_FUNC_IN void handleSurfaceInteraction(const Spectrum& weight, BSDFSamplingR
 {
 	DirectSamplingRecord dRec(bRec.dg.P, bRec.dg.sys.n);
 	Spectrum value = weight * g_SceneData.sampleSensorDirect(dRec, rng.randomFloat2());
-	if(!value.isZero() && ::V(dRec.p, dRec.ref))
+	if (!value.isZero() && V(dRec.p, dRec.ref))
 	{
 		bRec.wo = bRec.dg.toLocal(dRec.d);
 		value *= r2.getMat().bsdf.f(bRec);
-		g_Image.Splat(dRec.uv.x, dRec.uv.y,  value);
+		g_Image.Splat(dRec.uv.x, dRec.uv.y, value);
 	}
 }
 
@@ -85,7 +87,7 @@ CUDA_FUNC_IN void doWork(e_Image& g_Image, CudaRNG& rng)
 	Spectrum power = g_SceneData.sampleEmitterPosition(pRec, rng.randomFloat2()), throughput = Spectrum(1.0f);
 
 	handleEmission(power, pRec, g_Image, rng);
-	
+
 	DirectionSamplingRecord dRec;
 	power *= ((const e_KernelLight*)pRec.object)->sampleDirection(dRec, pRec, rng.randomFloat2());
 
@@ -95,10 +97,10 @@ CUDA_FUNC_IN void doWork(e_Image& g_Image, CudaRNG& rng)
 	int depth = -1;
 	DifferentialGeometry dg;
 	BSDFSamplingRecord bRec(dg);
-	while(++depth < 12 && k_TraceRay(r.direction, r.origin, &r2))
+	while (++depth < 12 && k_TraceRay(r.direction, r.origin, &r2))
 	{
 		r2.getBsdfSample(r, bRec, ETransportMode::EImportance, &rng);
-		
+
 		if (r2.getMat().bsdf.getTypeToken() != -1)
 			handleSurfaceInteraction(power * throughput, bRec, r2, g_Image, rng);
 
@@ -106,13 +108,13 @@ CUDA_FUNC_IN void doWork(e_Image& g_Image, CudaRNG& rng)
 
 		r = Ray(bRec.dg.P, bRec.getOutgoing());
 		r2.Init();
-		if(bsdfWeight.isZero())
+		if (bsdfWeight.isZero())
 			break;
 		throughput *= bsdfWeight;
-		if(depth > 5)
+		if (depth > 5)
 		{
 			float q = min(throughput.max(), 0.95f);
-			if(rng.randomFloat() >= q)
+			if (rng.randomFloat() >= q)
 				break;
 			throughput /= q;
 		}
@@ -153,4 +155,6 @@ void k_PhotonTracer::Debug(e_Image* I, const Vec2i& pixel)
 	CudaRNG rng = g_RNGData();
 	doWork(*I, rng);
 	g_RNGData(rng);
+}
+
 }

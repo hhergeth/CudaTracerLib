@@ -2,6 +2,8 @@
 #include <type_traits>
 #include <memory>
 
+namespace CudaTracerLib {
+
 #define TYPE_FUNC(id) \
 	static CUDA_FUNC_IN unsigned int TYPE() \
 		{ \
@@ -76,21 +78,21 @@ namespace CTVirtualHelper
 #define CALLER(FUNC_NAME) \
 	private: \
 	template<typename R, typename T, typename... Args> CUDA_FUNC_IN R FUNC_NAME##ABC(CTVirtualHelper::Typer<Args...> typ, Args&&... args) const \
-	{ \
+		{ \
 		if (this->Is<T>()) \
 			return this->As<T>()->FUNC_NAME(args...); \
 		return R(); \
-	} \
+		} \
 	template<typename R, typename T, typename T2, typename... REST, typename... Args> CUDA_FUNC_IN R FUNC_NAME##ABC(CTVirtualHelper::Typer<Args...> typ, Args&&... args) const \
-	{ \
+		{ \
 		if (this->Is<T>()) \
 			return this->As<T>()->FUNC_NAME(args...); \
 		return FUNC_NAME##ABC<R, T2, REST...>(CTVirtualHelper::Typer<Args...>(), CTVirtualHelper::forward<Args>(args)...); \
-	} \
+		} \
 	template<typename R, template <class, class...> class A, class BaseType, class... Types, typename... Args> CUDA_FUNC_IN R FUNC_NAME##_Caller(const A<BaseType, Types...>& obj, Args&&... args) const \
-	{ \
+		{ \
 		return FUNC_NAME##ABC<R, Types...>(CTVirtualHelper::Typer<Args...>(), CTVirtualHelper::forward<Args>(args)...); \
-	} \
+		} \
 	public:
 
 template<typename BaseType, typename... Types> struct CudaVirtualAggregate
@@ -170,3 +172,5 @@ public:
 		SetVtable<Types...>();
 	}
 };
+
+}

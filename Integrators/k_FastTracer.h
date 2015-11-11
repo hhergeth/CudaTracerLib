@@ -4,6 +4,8 @@
 #include <CudaMemoryManager.h>
 #include <Kernel/k_RayBuffer.h>
 
+namespace CudaTracerLib {
+
 struct rayData
 {
 	Spectrum throughput;
@@ -23,7 +25,7 @@ public:
 	k_FastTracer(bool doPT = false)
 		: bufA(0), bufB(0), pathTracer(doPT), depthImage(0)
 	{
-		
+
 	}
 	~k_FastTracer()
 	{
@@ -59,3 +61,5 @@ private:
 	void doDirect(e_Image* I);
 	void doPath(e_Image* I);
 };
+
+}

@@ -3,6 +3,8 @@
 #include <string>
 #include <cstdarg>
 
+namespace CudaTracerLib {
+
 class Platform
 {
 public:
@@ -34,4 +36,6 @@ inline std::string format(const char *fmt, ...)
 	std::string buf = vformat(fmt, ap);
 	va_end(ap);
 	return buf;
+}
+
 }

@@ -4,6 +4,8 @@
 #include <FreeImage.h>
 #include "e_FileTexture.h"
 
+namespace CudaTracerLib {
+
 struct imgData
 {
 	unsigned int w, h;
@@ -13,7 +15,7 @@ struct imgData
 	CUDA_FUNC_IN Spectrum Load(int x, int y)
 	{
 		Spectrum s;
-		if(type == vtRGBE)
+		if (type == vtRGBE)
 			s.fromRGBE(((RGBE*)data)[y * w + x]);
 		else s.fromRGBCOL(((RGBCOL*)data)[y * w + x]);
 		return s;
@@ -41,14 +43,14 @@ inline void resize(imgData* d)
 inline bool parseImage(const std::string& a_InputFile, imgData* data)
 {
 	FREE_IMAGE_FORMAT fif = FreeImage_GetFileType(a_InputFile.c_str(), 0);
-	if(fif == FIF_UNKNOWN)
+	if (fif == FIF_UNKNOWN)
 	{
 		fif = FreeImage_GetFIFFromFilename(a_InputFile.c_str());
 	}
-	if((fif != FIF_UNKNOWN) && FreeImage_FIFSupportsReading(fif))
+	if ((fif != FIF_UNKNOWN) && FreeImage_FIFSupportsReading(fif))
 	{
 		FIBITMAP *dib = FreeImage_Load(fif, a_InputFile.c_str(), 0);
-		if(!dib)
+		if (!dib)
 			return false;
 		unsigned int w = FreeImage_GetWidth(dib);
 		unsigned int h = FreeImage_GetHeight(dib);
@@ -63,45 +65,45 @@ inline bool parseImage(const std::string& a_InputFile, imgData* data)
 		if (((imageType == FIT_RGBAF) && (bpp == 128)) || ((imageType == FIT_RGBF) && (bpp == 96)))
 		{
 			type = e_Texture_DataType::vtRGBE;
-				for (unsigned int y = 0; y < h; ++y)
+			for (unsigned int y = 0; y < h; ++y)
+			{
+				FIRGBAF *pixel = (FIRGBAF *)bits;
+				for (unsigned int x = 0; x < w; ++x)
 				{
-						FIRGBAF *pixel = (FIRGBAF *)bits;
-						for (unsigned int x = 0; x < w; ++x)
-						{
-							//*tar++ = Float4ToCOLORREF(make_float4(pixel->red, pixel->green, pixel->blue, pixel->alpha));
-							*(RGBE*)tar++ = SpectrumConverter::Float3ToRGBE(Vec3f(pixel->red, pixel->green, pixel->blue));
-							pixel = (FIRGBAF*)((long long)pixel + bpp / 8);
-						}
-						bits += pitch;
+					//*tar++ = Float4ToCOLORREF(make_float4(pixel->red, pixel->green, pixel->blue, pixel->alpha));
+					*(RGBE*)tar++ = SpectrumConverter::Float3ToRGBE(Vec3f(pixel->red, pixel->green, pixel->blue));
+					pixel = (FIRGBAF*)((long long)pixel + bpp / 8);
 				}
+				bits += pitch;
+			}
 		}
 		else if ((imageType == FIT_BITMAP) && ((bpp == 32) || (bpp == 24)))
 		{
 
-				for (unsigned int y = 0; y < h; ++y)
+			for (unsigned int y = 0; y < h; ++y)
+			{
+				BYTE *pixel = (BYTE *)bits;
+				for (unsigned int x = 0; x < w; ++x)
 				{
-						BYTE *pixel = (BYTE *)bits;
-						for (unsigned int x = 0; x < w; ++x)
-						{
-							BYTE r = pixel[FI_RGBA_RED], g = pixel[FI_RGBA_GREEN], b = pixel[FI_RGBA_BLUE], a = bpp == 32 ? pixel[FI_RGBA_ALPHA] : 255;
-							*tar++ = make_uchar4(r, g, b, a);
-							pixel += bpp / 8;
-						}
-						bits += pitch;
+					BYTE r = pixel[FI_RGBA_RED], g = pixel[FI_RGBA_GREEN], b = pixel[FI_RGBA_BLUE], a = bpp == 32 ? pixel[FI_RGBA_ALPHA] : 255;
+					*tar++ = make_uchar4(r, g, b, a);
+					pixel += bpp / 8;
 				}
+				bits += pitch;
+			}
 		}
 		else if (bpp == 8)
 		{
-				for (unsigned int y = 0; y < h; ++y)
+			for (unsigned int y = 0; y < h; ++y)
+			{
+				BYTE pixel;
+				for (unsigned int x = 0; x < w; ++x)
 				{
-						BYTE pixel;
-						for (unsigned int x = 0; x < w; ++x)
-						{
-							FreeImage_GetPixelIndex(dib, x, y, &pixel);
-							*tar++ = make_uchar4(pixel, pixel, pixel, 255);
-						}
-						bits += pitch;
+					FreeImage_GetPixelIndex(dib, x, y, &pixel);
+					*tar++ = make_uchar4(pixel, pixel, pixel, 255);
 				}
+				bits += pitch;
+			}
 		}
 		FreeImage_Unload(dib);
 
@@ -115,4 +117,6 @@ inline bool parseImage(const std::string& a_InputFile, imgData* data)
 	{
 		return false;
 	}
+}
+
 }

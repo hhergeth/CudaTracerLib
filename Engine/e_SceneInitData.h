@@ -1,5 +1,7 @@
 #pragma once
 
+namespace CudaTracerLib {
+
 struct e_SceneInitData
 {
 	unsigned int m_uNumTriangles;
@@ -60,3 +62,5 @@ struct e_SceneInitData
 		return r;
 	}
 };
+
+}

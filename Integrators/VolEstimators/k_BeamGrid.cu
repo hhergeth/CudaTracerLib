@@ -1,5 +1,7 @@
 #include "k_BeamGrid.h"
 
+namespace CudaTracerLib {
+
 CUDA_CONST e_SpatialLinkedMap<k_PointStorage::volPhoton> g_PhotonStorage;
 CUDA_DEVICE e_SpatialLinkedMap<int> g_BeamGridStorage;
 
@@ -38,4 +40,6 @@ void k_BeamGrid::PrepareForRendering()
 	buildBeams << <dim3(l2, l2, l2), dim3(l, l, l) >> >(m_fCurrentRadiusVol, m_sStorage.hashMap.m_fGridSize, photonDensNum);
 	ThrowCudaErrors(cudaMemcpyFromSymbol(&m_sStorage, g_PhotonStorage, sizeof(m_sStorage)));
 	ThrowCudaErrors(cudaMemcpyFromSymbol(&m_sBeamGridStorage, g_BeamGridStorage, sizeof(m_sBeamGridStorage)));
+}
+
 }

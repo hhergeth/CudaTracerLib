@@ -3,6 +3,8 @@
 #include "e_BSDF.h"
 #include "e_Volumes.h"
 
+namespace CudaTracerLib {
+
 struct e_KernelMaterial
 {
 public:
@@ -35,7 +37,7 @@ public:
 	CUDA_DEVICE CUDA_HOST bool GetBSSRDF(const DifferentialGeometry& uv, const e_VolumeRegion** res) const;
 	template<typename L> void LoadTextures(L& callback)
 	{
-		if(NormalMap.used && NormalMap.tex.Is<e_ImageTexture>())
+		if (NormalMap.used && NormalMap.tex.Is<e_ImageTexture>())
 			NormalMap.tex.As<e_ImageTexture>()->LoadTextures(callback);
 		if (HeightMap.used && HeightMap.tex.Is<e_ImageTexture>())
 			HeightMap.tex.As<e_ImageTexture>()->LoadTextures(callback);
@@ -72,7 +74,7 @@ public:
 	}
 	void SetHeightMap(const e_Texture& tex)
 	{
-		if(NormalMap.used)
+		if (NormalMap.used)
 			throw std::runtime_error("Cannot set both height and normal map!");
 		HeightMap.used = true;
 		HeightMap.tex = tex;
@@ -91,3 +93,5 @@ public:
 		SetAlphaMap(CreateTexture(path));
 	}
 };
+
+}

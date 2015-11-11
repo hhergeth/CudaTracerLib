@@ -1,6 +1,8 @@
 #include "e_BSDF.h"
 #include "e_RoughTransmittance.h"
 
+namespace CudaTracerLib {
+
 Spectrum coating::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &_sample) const
 {
 	bool sampleSpecular = (bRec.typeMask & EDeltaReflection) != 0;
@@ -14,7 +16,7 @@ Spectrum coating::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &_sam
 
 	float probSpecular = (R12*m_specularSamplingWeight) /
 		(R12*m_specularSamplingWeight +
-		(1-R12) * (1-m_specularSamplingWeight));
+		(1 - R12) * (1 - m_specularSamplingWeight));
 
 	bool choseSpecular = sampleSpecular;
 
@@ -22,7 +24,8 @@ Spectrum coating::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &_sam
 	if (sampleSpecular && sampleNested) {
 		if (sample.x < probSpecular) {
 			sample.x /= probSpecular;
-		} else {
+		}
+		else {
 			sample.x = (sample.x - probSpecular) / (1 - probSpecular);
 			choseSpecular = false;
 		}
@@ -33,9 +36,10 @@ Spectrum coating::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &_sam
 		bRec.wo = reflect(bRec.wi);
 		bRec.eta = 1.0f;
 		pdf = sampleNested ? probSpecular : 1.0f;
-		return m_specularReflectance.Evaluate(bRec.dg) * (R12/pdf);
-	} else {
-		if (R12 == 1.0f) 
+		return m_specularReflectance.Evaluate(bRec.dg) * (R12 / pdf);
+	}
+	else {
+		if (R12 == 1.0f)
 			return Spectrum(0.0f);
 
 		Vec3f wiBackup = bRec.wi;
@@ -50,12 +54,12 @@ Spectrum coating::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &_sam
 		Spectrum sigmaA = m_sigmaA.Evaluate(bRec.dg) * m_thickness;
 		if (!sigmaA.isZero())
 			result *= (-sigmaA *
-				(1/math::abs(Frame::cosTheta(wiPrime)) +
-					1/math::abs(Frame::cosTheta(woPrime)))).exp();
+			(1 / math::abs(Frame::cosTheta(wiPrime)) +
+			1 / math::abs(Frame::cosTheta(woPrime)))).exp();
 
 		float R21;
 		bRec.wo = refractOut(woPrime, R21);
-		if (R21 == 1.0f) 
+		if (R21 == 1.0f)
 			return Spectrum(0.0f);
 
 		if (sampleSpecular) {
@@ -80,10 +84,11 @@ Spectrum coating::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 	bool sampleNested = (bRec.typeMask & m_nested.getType() & EAll) != 0;
 
 	if (measure == EDiscrete && sampleSpecular &&
-			math::abs(dot(reflect(bRec.wi), bRec.wo)-1) < DeltaEpsilon) {
+		math::abs(dot(reflect(bRec.wi), bRec.wo) - 1) < DeltaEpsilon) {
 		return m_specularReflectance.Evaluate(bRec.dg) *
 			MonteCarlo::fresnelDielectricExt(math::abs(Frame::cosTheta(bRec.wi)), m_eta);
-	} else if (sampleNested) {
+	}
+	else if (sampleNested) {
 		float R12, R21;
 		BSDFSamplingRecord bRecInt(bRec);
 		bRecInt.wi = refractIn(bRec.wi, R12);
@@ -93,17 +98,17 @@ Spectrum coating::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 			return Spectrum(0.0f);
 
 		Spectrum result = m_nested.f(bRecInt, measure)
-			* (1-R12) * (1-R21);
+			* (1 - R12) * (1 - R21);
 
 		Spectrum sigmaA = m_sigmaA.Evaluate(bRec.dg) * m_thickness;
 		if (!sigmaA.isZero())
 			result *= (-sigmaA *
-				(1/math::abs(Frame::cosTheta(bRecInt.wi)) +
-					1/math::abs(Frame::cosTheta(bRecInt.wo)))).exp();
+			(1 / math::abs(Frame::cosTheta(bRecInt.wi)) +
+			1 / math::abs(Frame::cosTheta(bRecInt.wo)))).exp();
 
 		if (measure == ESolidAngle) {
 			result *= m_invEta * m_invEta *
-					Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo)
+				Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo)
 				/ (Frame::cosTheta(bRecInt.wi) * Frame::cosTheta(bRecInt.wo));
 		}
 
@@ -123,12 +128,13 @@ float coating::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 
 	float probSpecular = (R12*m_specularSamplingWeight) /
 		(R12*m_specularSamplingWeight +
-		(1-R12) * (1-m_specularSamplingWeight));
+		(1 - R12) * (1 - m_specularSamplingWeight));
 
 	if (measure == EDiscrete && sampleSpecular &&
-			math::abs(dot(reflect(bRec.wi), bRec.wo)-1) < DeltaEpsilon) {
+		math::abs(dot(reflect(bRec.wi), bRec.wo) - 1) < DeltaEpsilon) {
 		return sampleNested ? probSpecular : 1.0f;
-	} else if (sampleNested) {
+	}
+	else if (sampleNested) {
 		float R21;
 		BSDFSamplingRecord bRecInt(bRec);
 		bRecInt.wi = wiPrime;
@@ -141,10 +147,11 @@ float coating::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 
 		if (measure == ESolidAngle)
 			pdf *= m_invEta * m_invEta * Frame::cosTheta(bRec.wo)
-			        / Frame::cosTheta(bRecInt.wo);
+			/ Frame::cosTheta(bRecInt.wo);
 
 		return sampleSpecular ? (pdf * (1 - probSpecular)) : pdf;
-	} else {
+	}
+	else {
 		return 0.0f;
 	}
 }
@@ -169,11 +176,12 @@ Spectrum roughcoating::sample(BSDFSamplingRecord &bRec, float &_pdf, const Vec2f
 		/* Reallocate samples */
 		probSpecular = (probSpecular*m_specularSamplingWeight) /
 			(probSpecular*m_specularSamplingWeight +
-			(1-probSpecular) * (1-m_specularSamplingWeight));
+			(1 - probSpecular) * (1 - m_specularSamplingWeight));
 
 		if (sample.y < probSpecular) {
 			sample.y /= probSpecular;
-		} else {
+		}
+		else {
 			sample.y = (sample.y - probSpecular) / (1 - probSpecular);
 			choseSpecular = false;
 		}
@@ -185,11 +193,12 @@ Spectrum roughcoating::sample(BSDFSamplingRecord &bRec, float &_pdf, const Vec2f
 		bRec.wo = reflect(bRec.wi, m);
 		bRec.sampledType = EGlossyReflection;
 		bRec.eta = 1.0f;
-		
+
 		/* Side check */
 		if (Frame::cosTheta(bRec.wo) * Frame::cosTheta(bRec.wi) <= 0)
 			return Spectrum(0.0f);
-	} else {
+	}
+	else {
 		Vec3f wiBackup = bRec.wi;
 		bRec.wi = refractTo(EInterior, bRec.wi);
 		Spectrum result = m_nested.sample(bRec, _pdf, sample);
@@ -223,7 +232,7 @@ Spectrum roughcoating::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 	Spectrum result(0.0f);
 	if (hasSpecular && Frame::cosTheta(bRec.wo) * Frame::cosTheta(bRec.wi) > 0) {
 		/* Calculate the reflection half-vector */
-		const Vec3f H = normalize(bRec.wo+bRec.wi)
+		const Vec3f H = normalize(bRec.wo + bRec.wi)
 			* math::signum(Frame::cosTheta(bRec.wo));
 
 		/* Evaluate the microsurface normal distribution */
@@ -254,13 +263,13 @@ Spectrum roughcoating::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 		Spectrum sigmaA = m_sigmaA.Evaluate(bRec.dg) * m_thickness;
 		if (!sigmaA.isZero())
 			nestedResult *= (-sigmaA *
-				(1/math::abs(Frame::cosTheta(bRecInt.wi)) +
-					1/math::abs(Frame::cosTheta(bRecInt.wo)))).exp();
+			(1 / math::abs(Frame::cosTheta(bRecInt.wi)) +
+			1 / math::abs(Frame::cosTheta(bRecInt.wo)))).exp();
 
 		if (measure == ESolidAngle) {
 			/* Solid angle compression & irradiance conversion factors */
 			nestedResult *= m_invEta * m_invEta *
-					Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo)
+				Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo)
 				/ (Frame::cosTheta(bRecInt.wi) * Frame::cosTheta(bRecInt.wo));
 		}
 
@@ -276,8 +285,8 @@ float roughcoating::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 	bool hasSpecular = (bRec.typeMask & EGlossyReflection) != 0 && measure == ESolidAngle;
 
 	/* Calculate the reflection half-vector */
-	const Vec3f H = normalize(bRec.wo+bRec.wi)
-			* math::signum(Frame::cosTheta(bRec.wo));
+	const Vec3f H = normalize(bRec.wo + bRec.wi)
+		* math::signum(Frame::cosTheta(bRec.wo));
 
 	/* Evaluate the roughness texture */
 	float alpha = m_alpha.Evaluate(bRec.dg).average();
@@ -286,15 +295,16 @@ float roughcoating::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 	float probNested, probSpecular;
 	if (hasSpecular && hasNested) {
 		/* Find the probability of sampling the specular component */
-		probSpecular = 1-e_RoughTransmittanceManager::Evaluate(m_distribution.m_type, Frame::cosTheta(bRec.wi), alpha, m_eta);
+		probSpecular = 1 - e_RoughTransmittanceManager::Evaluate(m_distribution.m_type, Frame::cosTheta(bRec.wi), alpha, m_eta);
 
 		/* Reallocate samples */
 		probSpecular = (probSpecular*m_specularSamplingWeight) /
 			(probSpecular*m_specularSamplingWeight +
-			(1-probSpecular) * (1-m_specularSamplingWeight));
+			(1 - probSpecular) * (1 - m_specularSamplingWeight));
 
 		probNested = 1 - probSpecular;
-	} else {
+	}
+	else {
 		probNested = probSpecular = 1.0f;
 	}
 
@@ -318,7 +328,7 @@ float roughcoating::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 
 		if (measure == ESolidAngle) {
 			prob *= m_invEta * m_invEta * Frame::cosTheta(bRec.wo)
-			        / Frame::cosTheta(bRecInt.wo);
+				/ Frame::cosTheta(bRecInt.wo);
 		}
 
 		result += prob * probNested;
@@ -348,7 +358,7 @@ Spectrum blend::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &_sampl
 	pdf *= weights[entry];
 
 	EMeasure measure = BSDF::getMeasure(bRec.sampledType);
-	for (size_t i = 0; i<2; ++i) {
+	for (size_t i = 0; i < 2; ++i) {
 		if (entry == i)
 			continue;
 		pdf += bsdfs[i].pdf(bRec, measure) * weights[i];
@@ -360,11 +370,13 @@ Spectrum blend::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &_sampl
 Spectrum blend::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 {
 	float weight = math::clamp(this->weight.Evaluate(bRec.dg).average(), 0.0f, 1.0f);
-	return bsdfs[0].f(bRec, measure) * (1-weight) + bsdfs[1].f(bRec, measure) * weight;
+	return bsdfs[0].f(bRec, measure) * (1 - weight) + bsdfs[1].f(bRec, measure) * weight;
 }
 
 float blend::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 {
 	float weight = math::clamp(this->weight.Evaluate(bRec.dg).average(), 0.0f, 1.0f);
-	return bsdfs[0].pdf(bRec, measure) * (1-weight) + bsdfs[1].pdf(bRec, measure) * weight;
+	return bsdfs[0].pdf(bRec, measure) * (1 - weight) + bsdfs[1].pdf(bRec, measure) * weight;
+}
+
 }

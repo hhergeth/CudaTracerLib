@@ -2,17 +2,19 @@
 
 #include "e_Filter.h"
 
-enum ImageDrawType
-{
-	Normal,
-	HDR,
-};
-
 #ifdef ISWINDOWS
 struct ID3D11Resource;
 #endif
 
 struct FIBITMAP;
+
+namespace CudaTracerLib {
+
+enum ImageDrawType
+{
+	Normal,
+	HDR,
+};
 
 class e_Image
 {
@@ -46,7 +48,7 @@ public:
 	void setStdFilter()
 	{
 		e_Filter flt;
-		flt.SetData(e_BoxFilter(1,1));
+		flt.SetData(e_BoxFilter(1, 1));
 		setFilter(flt);
 	}
 	void setFilter(const e_Filter& filt)
@@ -86,7 +88,7 @@ public:
 		return drawStyle;
 	}
 	void DoUpdateDisplay(float splat);
-	RGBCOL* getCudaPixels(){return viewTarget;}
+	RGBCOL* getCudaPixels(){ return viewTarget; }
 	CUDA_FUNC_IN Spectrum getPixel(int x, int y)
 	{
 		return getPixel(y * xResolution + x)->toSpectrum(lastSplatVal);
@@ -137,6 +139,6 @@ private:
 
 	bool ownsTarget;
 	RGBCOL* viewTarget;
-
-
 };
+
+}

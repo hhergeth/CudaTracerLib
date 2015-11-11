@@ -5,6 +5,8 @@
 #include <Math/Compression.h>
 #include <Math/half.h>
 
+namespace CudaTracerLib {
+
 void k_BeamBeamGrid::StartNewPass(const IRadiusProvider* radProvider, e_DynamicScene* scene)
 {
 	m_fCurrentRadiusVol = radProvider->getCurrentRadius(1);
@@ -35,13 +37,13 @@ void k_BeamBeamGrid::PrepareForRendering()
 	T.StartTimer();
 	m_sStorage.ForAllCells([&](const Vec3u& cell_idx)
 	{
-		unsigned int i = m_sStorage.hashMap.Hash(cell_idx), j = grid[i], start = d_idx, n = 0;
-		m_sStorage.ForAll(cell_idx, [&](unsigned int abc, int p_idx)
-		{
-			denseGrid[d_idx++] = p_idx;
-			n++;
-		});
-		denseGrid[i] = start != d_idx ? ((n << 24) | start) : UINT_MAX;
+	unsigned int i = m_sStorage.hashMap.Hash(cell_idx), j = grid[i], start = d_idx, n = 0;
+	m_sStorage.ForAll(cell_idx, [&](unsigned int abc, int p_idx)
+	{
+	denseGrid[d_idx++] = p_idx;
+	n++;
+	});
+	denseGrid[i] = start != d_idx ? ((n << 24) | start) : UINT_MAX;
 	});
 	std::cout << "dense grid creation took : " << T.EndTimer() << "[Sec]\n";*/
 
@@ -51,28 +53,30 @@ void k_BeamBeamGrid::PrepareForRendering()
 	int n = 0;
 	TraverseGrid(r, m_sStorage.hashMap, 0, FLT_MAX, [&](float minT, float rayT, float maxT, float cellEndT, Vec3u& cell_pos, bool& cancelTraversal)
 	{
-		m_sStorage.ForAll(cell_pos, [&](unsigned int ABC, int beam_idx)
-		{
-			n += beam_idx == 0;
-			//if(pixel.x == 200 && pixel.y == 200)
-			//	printf(", %d", ABC);
-		});
+	m_sStorage.ForAll(cell_pos, [&](unsigned int ABC, int beam_idx)
+	{
+	n += beam_idx == 0;
+	//if(pixel.x == 200 && pixel.y == 200)
+	//	printf(", %d", ABC);
+	});
 	});
 	std::cout << n;*/
 	/*std::set<unsigned int> buf;
 	std::vector<unsigned int> cells;
 	for (unsigned int i = 0; i < I; i++)
 	{
-		buf.clear();
-		unsigned int n = grid[i];
-		while (n != UINT_MAX)
-		{
-			if (entries[n].value == 1)
-				cells.push_back(i);
-			if (buf.find(entries[n].value) != buf.end())
-				std::cout << "dup = " << i << "\n";
-			buf.insert(entries[n].value);
-			n = entries[n].nextIdx;
-		}
+	buf.clear();
+	unsigned int n = grid[i];
+	while (n != UINT_MAX)
+	{
+	if (entries[n].value == 1)
+	cells.push_back(i);
+	if (buf.find(entries[n].value) != buf.end())
+	std::cout << "dup = " << i << "\n";
+	buf.insert(entries[n].value);
+	n = entries[n].nextIdx;
+	}
 	}*/
+}
+
 }

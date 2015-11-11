@@ -5,6 +5,8 @@
 
 //Implementation and interface copied from Mitsuba as well as PBRT.
 
+namespace CudaTracerLib {
+
 struct PhaseFunctionSamplingRecord;
 struct CudaRNG;
 
@@ -13,13 +15,13 @@ struct CudaRNG;
 enum EPhaseFunctionType
 {
 	/// Completely isotropic 1/(4 pi) phase function
-	pEIsotropic       = 0x01,
+	pEIsotropic = 0x01,
 	/// The phase function only depends on \c dot(wi,wo)
 	pEAngleDependence = 0x04,
 	/// The opposite of \ref EAngleDependence (there is an arbitrary dependence)
-	pEAnisotropic     = 0x02,
+	pEAnisotropic = 0x02,
 	/// The phase function is non symmetric, i.e. eval(wi,wo) != eval(wo, wi)
-	pENonSymmetric    = 0x08
+	pENonSymmetric = 0x08
 };
 
 struct e_BasePhaseFunction : public e_BaseType//, public e_BaseTypeHelper<4408912>
@@ -37,7 +39,7 @@ struct e_BasePhaseFunction : public e_BaseType//, public e_BaseTypeHelper<440891
 struct e_HGPhaseFunction : public e_BasePhaseFunction//, public e_DerivedTypeHelper<1>
 {
 	TYPE_FUNC(1)
-	float m_g;
+		float m_g;
 
 	e_HGPhaseFunction(){}
 	e_HGPhaseFunction(float g)
@@ -55,7 +57,7 @@ struct e_HGPhaseFunction : public e_BasePhaseFunction//, public e_DerivedTypeHel
 struct e_IsotropicPhaseFunction : public e_BasePhaseFunction//, public e_DerivedTypeHelper<2>
 {
 	TYPE_FUNC(2)
-	CUDA_FUNC_IN e_IsotropicPhaseFunction()
+		CUDA_FUNC_IN e_IsotropicPhaseFunction()
 		: e_BasePhaseFunction((EPhaseFunctionType)(pEIsotropic | pEAngleDependence))
 	{
 	}
@@ -70,9 +72,9 @@ struct e_IsotropicPhaseFunction : public e_BasePhaseFunction//, public e_Derived
 struct e_KajiyaKayPhaseFunction : public e_BasePhaseFunction//, public e_DerivedTypeHelper<3>
 {
 	TYPE_FUNC(3)
-	float m_ks, m_kd, m_exponent, m_normalization;
+		float m_ks, m_kd, m_exponent, m_normalization;
 	Vec3f orientation;
-	
+
 	e_KajiyaKayPhaseFunction(){}
 	e_KajiyaKayPhaseFunction(float ks, float kd, float e, Vec3f o);
 
@@ -88,7 +90,7 @@ struct e_KajiyaKayPhaseFunction : public e_BasePhaseFunction//, public e_Derived
 struct e_RayleighPhaseFunction : public e_BasePhaseFunction//, public e_DerivedTypeHelper<4>
 {
 	TYPE_FUNC(4)
-	e_RayleighPhaseFunction()
+		e_RayleighPhaseFunction()
 		: e_BasePhaseFunction(EPhaseFunctionType::pEIsotropic)
 	{
 	}
@@ -114,13 +116,13 @@ public:
 	}
 
 	CALLER(Evaluate)
-	CUDA_FUNC_IN float Evaluate(const PhaseFunctionSamplingRecord &pRec) const
+		CUDA_FUNC_IN float Evaluate(const PhaseFunctionSamplingRecord &pRec) const
 	{
 		return Evaluate_Caller<float>(*this, pRec);
 	}
 
 	CALLER(Sample)
-	CUDA_FUNC_IN float Sample(PhaseFunctionSamplingRecord &pRec, CudaRNG& sampler) const
+		CUDA_FUNC_IN float Sample(PhaseFunctionSamplingRecord &pRec, CudaRNG& sampler) const
 	{
 		return Sample_Caller<float>(*this, pRec, sampler);
 	}
@@ -131,7 +133,7 @@ public:
 	}
 
 	CALLER(pdf)
-	CUDA_FUNC_IN float pdf(const PhaseFunctionSamplingRecord &pRec) const
+		CUDA_FUNC_IN float pdf(const PhaseFunctionSamplingRecord &pRec) const
 	{
 		return Evaluate(pRec);
 	}
@@ -142,4 +144,6 @@ template<typename T> e_PhaseFunction CreatePhaseFunction(const T& val)
 	e_PhaseFunction r;
 	r.SetData(val);
 	return r;
+}
+
 }

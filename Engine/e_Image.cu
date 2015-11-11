@@ -8,6 +8,8 @@
 #include <cuda_d3d11_interop.h>
 #endif
 
+namespace CudaTracerLib {
+
 void e_Image::AddSample(float sx, float sy, const Spectrum &_L)
 {
 	if (_L.isNaN() || !_L.isValid())
@@ -375,4 +377,6 @@ void e_Image::DrawSamplePlacement(int numPasses)
 		rtm_NumSamples << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(cudaPixels, T2, xResolution, yResolution, numPasses);
 	else rtm_NumSamples << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(cudaPixels, T1, xResolution, yResolution, numPasses);
 	disableUpdate();
+}
+
 }

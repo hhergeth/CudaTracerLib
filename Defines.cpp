@@ -10,6 +10,8 @@
 #include <Windows.h>
 #endif
 
+namespace CudaTracerLib {
+
 void fail(const char* format, ...)
 {
 	va_list arglist;
@@ -56,4 +58,6 @@ void CudaSetToZero(void* dest, size_t length)
 			*((unsigned long long*)zeroBuf + i) = 0;
 	}
 	ThrowCudaErrors(cudaMemcpy(dest, zeroBuf, length, cudaMemcpyHostToDevice));
+}
+
 }

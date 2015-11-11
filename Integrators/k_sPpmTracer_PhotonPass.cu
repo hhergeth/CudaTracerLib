@@ -3,6 +3,8 @@
 #include <Kernel/k_TraceAlgorithms.h>
 #include <Math/half.h>
 
+namespace CudaTracerLib {
+
 void k_BeamBeamGrid::StoreBeam(const k_Beam& b, bool firstStore)
 {
 	unsigned int beam_idx = atomicInc(&m_uBeamIdx, (unsigned int)-1);
@@ -168,4 +170,6 @@ void k_sPpmTracer::doPhotonPass()
 	m_uPhotonEmittedPass = max(m_uPhotonEmittedPass, m_pVolumeEstimator->getNumEmitted());
 	if (m_uTotalPhotonsEmitted == 0)
 		doPerPixelRadiusEstimation();
+}
+
 }

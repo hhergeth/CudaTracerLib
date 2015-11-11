@@ -5,6 +5,8 @@
 #include <Engine/e_Light.h>
 #include <Engine/e_Samples.h>
 
+namespace CudaTracerLib {
+
 void TraceResult::getBsdfSample(const Ray& r, BSDFSamplingRecord& bRec, ETransportMode mode, CudaRNG* rng, const Vec3f* wo) const
 {
 	getBsdfSample(r.direction, r(m_fDist), bRec, mode, rng, wo);
@@ -58,10 +60,12 @@ unsigned int TraceResult::getTriIndex() const
 
 void TraceResult::fillDG(DifferentialGeometry& dg) const
 {
-	::fillDG(m_fBaryCoords, m_pTri, m_pNode, dg);
+	CudaTracerLib::fillDG(m_fBaryCoords, m_pTri, m_pNode, dg);
 }
 
 unsigned int TraceResult::getMatIndex() const
 {
 	return m_pTri->getMatIndex(m_pNode->m_uMaterialOffset);
+}
+
 }

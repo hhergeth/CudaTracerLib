@@ -4,6 +4,8 @@
 
 //Matrix class for vectors in R^3x1 i.e. column vectors.
 
+namespace CudaTracerLib {
+
 struct CUDA_ALIGN(16) float4x4
 {
 	float data[16];
@@ -17,9 +19,9 @@ public:
 	}
 
 	CUDA_FUNC_IN static float4x4 As(float xx, float yx, float zx, float wx,
-									float xy, float yy, float zy, float wy,
-									float xz, float yz, float zz, float wz,
-									float xw, float yw, float zw, float ww)
+		float xy, float yy, float zy, float wy,
+		float xz, float yz, float zz, float wz,
+		float xw, float yw, float zw, float ww)
 	{
 		float4x4 r;
 		r.row(0, Vec4f(xx, yx, zx, wx));
@@ -71,8 +73,8 @@ public:
 	//operators
 	/*CUDA_FUNC_IN void operator *= (const float4x4& b)
 	{
-		float4x4 a = *this;
-		*this = a * b;
+	float4x4 a = *this;
+	*this = a * b;
 	}*/
 
 	CUDA_FUNC_IN float4x4 operator + (const float4x4& a) const
@@ -83,7 +85,7 @@ public:
 				r(i, j) = operator()(i, j) + a(i, j);
 		return r;
 	}
-	
+
 	CUDA_FUNC_IN float4x4 operator % (const float4x4& a) const
 	{
 		float4x4 r;
@@ -395,14 +397,14 @@ public:
 		return TransformDirection(Vec3f(0, 1, 0));
 	}
 
-	friend std::ostream& operator<< (std::ostream & os, const float4x4& rhs);
+	friend std::ostream& operator<< (std::ostream & os, const float4x4& rhs)
+	{
+		os << "[" << rhs.row(0)
+			<< "\n " << rhs.row(1)
+			<< "\n " << rhs.row(2)
+			<< "\n " << rhs.row(3) << "\n]";
+		return os;
+	}
 };
 
-inline std::ostream& operator<< (std::ostream & os, const float4x4& rhs)
-{
-	os << "[" << rhs.row(0)
-		<< "\n " << rhs.row(1)
-		<< "\n " << rhs.row(2)
-		<< "\n " << rhs.row(3) << "\n]";
-	return os;
 }

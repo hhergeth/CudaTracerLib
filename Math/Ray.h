@@ -1,13 +1,15 @@
 #pragma once
 #include <MathTypes.h>
 
+namespace CudaTracerLib {
+
 struct Ray
 {
-public: 
-  Vec3f origin;
-  Vec3f direction;
-  
-public: 
+public:
+	Vec3f origin;
+	Vec3f direction;
+
+public:
 	CUDA_FUNC Ray()
 	{
 	}
@@ -15,7 +17,7 @@ public:
 		: origin(orig), direction(dir)
 	{
 	}
-	CUDA_FUNC_IN void NormalizeRayDirection( void ) { direction = normalize(direction); }	
+	CUDA_FUNC_IN void NormalizeRayDirection(void) { direction = normalize(direction); }
 
 	CUDA_FUNC_IN Ray operator *(const float4x4& m) const
 	{
@@ -26,12 +28,12 @@ public:
 		return origin + d * direction;
 	}
 
-	friend std::ostream& operator<< (std::ostream & os, const Ray& rhs);
+	friend std::ostream& operator<< (std::ostream & os, const Ray& rhs)
+	{
+		os << "[" << rhs.origin << ", " << rhs.direction << "]";
+		return os;
+	}
 };
 
-inline std::ostream& operator<< (std::ostream & os, const Ray& rhs)
-{
-	os << "[" << rhs.origin << ", " << rhs.direction << "]";
-	return os;
-}
 
+}

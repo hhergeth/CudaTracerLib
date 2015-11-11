@@ -3,12 +3,14 @@
 #include "k_TraceHelper.h"
 #include "k_BlockSampler.h"
 
+namespace CudaTracerLib {
+
 CudaRNGBuffer k_TracerBase::g_sRngs;
 static bool initrng = false;
 
 void k_TracerBase::InitRngs(unsigned int N)
 {
-	if(!initrng)
+	if (!initrng)
 	{
 		initrng = 1;
 		g_sRngs = CudaRNGBuffer(N);
@@ -43,4 +45,6 @@ k_BlockSampleImage k_TracerBase::getDeviceBlockSampler() const
 void k_TracerBase::allocateBlockSampler(e_Image* I)
 {
 	m_pBlockSampler = new k_BlockSampler(I);
+}
+
 }

@@ -6,6 +6,8 @@
 #include <fstream>
 #include <bitset>
 
+namespace CudaTracerLib {
+
 class ISpatialInfoProvider
 {
 public:
@@ -48,7 +50,7 @@ class e_BVHRebuilder
 	std::vector<BVHNodeInfo> bvhNodeData;
 	std::vector<std::vector<BVHIndex>> objectToBVHNodes;
 
-	enum{MAX_NODES = 1024 * 1024 * 32};
+	enum{ MAX_NODES = 1024 * 1024 * 32 };
 
 	std::bitset<MAX_NODES> nodesToRecompute;
 	std::set<unsigned int> nodesToInsert;
@@ -99,3 +101,5 @@ private:
 	bool removeObjectFromLeaf(BVHIndex leafIdx, unsigned int objIdx);
 	void writeGraphPart(BVHIndex idx, BVHIndex parent, std::ofstream& f);
 };
+
+}

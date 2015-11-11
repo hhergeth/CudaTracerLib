@@ -3,6 +3,8 @@
 #include <Math/PathDifferientials.h>
 #include <assert.h>
 
+namespace CudaTracerLib {
+
 void TracePath(Ray r, std::vector<PathVertex*>& p, int N2, ETransportMode mode, CudaRNG& rng)
 {
 	TraceResult r2 = k_TraceRay(r);
@@ -31,7 +33,7 @@ Path ConnectPaths(const std::vector<PathVertex*>& cameraPath, const std::vector<
 		for (std::vector<PathVertex*>::const_iterator it2 = emitterPath.begin(); it2 != emitterPath.end(); ++it2)
 		{
 			bool b1 = s == -1 || it1 - cameraPath.begin() == s, b2 = t == -1 || it2 - emitterPath.begin() == t;
-			if (::V((*it1)->getPos(), (*it2)->getPos()) && p.vertices.size() > 1 && b1 && b2)
+			if (V((*it1)->getPos(), (*it2)->getPos()) && p.vertices.size() > 1 && b1 && b2)
 			{
 				int i = it2 - emitterPath.begin();
 				for (int j = i; j >= 0; j--)
@@ -80,7 +82,7 @@ void ConstructPath(const Vec2i& pixel, Path& P, int s, int t)
 
 qMatrix<float, 1, 4> dG_du12_v12(const Path& P, size_t i)
 {
-	return ::dG_du12_v12(P.vertices[i]->getPos(), P.vertices[i + 1]->getPos(), P.vertices[i]->getSys(), P.vertices[i + 1]->getSys());
+	return CudaTracerLib::dG_du12_v12(P.vertices[i]->getPos(), P.vertices[i + 1]->getPos(), P.vertices[i]->getSys(), P.vertices[i + 1]->getSys());
 }
 
 qMatrix<float, 1, 4> dI_du12_v12(const Path& P)
@@ -95,7 +97,7 @@ qMatrix<float, 1, 4> dLe_du12_v12(const Path& P)
 
 qMatrix<float, 1, 6> dfi_du123_v123(const Path& P, size_t i)
 {
-	return ::dfi_diffuse_du123_v123(P.vertices[i - 1]->getPos(), P.vertices[i]->getPos(), P.vertices[i + 1]->getPos(), P.vertices[i - 1]->getSys(), P.vertices[i]->getSys(), P.vertices[i + 1]->getSys(), 1);
+	return CudaTracerLib::dfi_diffuse_du123_v123(P.vertices[i - 1]->getPos(), P.vertices[i]->getPos(), P.vertices[i + 1]->getPos(), P.vertices[i - 1]->getSys(), P.vertices[i]->getSys(), P.vertices[i + 1]->getSys(), 1);
 }
 
 template<typename MAT, int L> inline void set(MAT& M, const qMatrix<float, 1, L>& v, int i, int j)
@@ -127,7 +129,7 @@ template<int N> struct diff_helper
 			for (int j = 1; j < k; j++)
 			{
 				a[3 + 2 * (j - 1) + 0] = ((SurfacePathVertex*)P.vertices[j])->hasSampledDelta ? 1.0f : P.f_i(j).average();
-				a[3 + 2 * (j - 1) + 1] = PathVertex::G(P.vertices[j], P.vertices[j +1]);
+				a[3 + 2 * (j - 1) + 1] = PathVertex::G(P.vertices[j], P.vertices[j + 1]);
 			}
 			float lhs = 1, rhs = 1;
 			for (int i = 1; i <= n - 1; i++)
@@ -150,7 +152,7 @@ template<int N> struct diff_helper
 			for (int j = 1; j <= k - 1; j++)
 			{
 				set(M, dfi_du123_v123(P, j), 3 + 2 * (j - 1) + 0, 2 * (j - 1));
-				set(M, dG_du12_v12(P, j), 3 + 2 * (j-1) + 1, 2 * j);
+				set(M, dG_du12_v12(P, j), 3 + 2 * (j - 1) + 1, 2 * j);
 			}
 			//std::cout << M.ToString("M") << "\n";
 
@@ -177,113 +179,115 @@ std::vector<Vec2f> DifferientiatePath(Path& P)
 /*
 void OptimizePath(Path& P)
 {
-	class ipprob : public TNLP
-	{
-		Path& P;
-		const float bounds;
-	public:
-		ipprob(Path& p)
-			: P(p), bounds(10)
-		{
+class ipprob : public TNLP
+{
+Path& P;
+const float bounds;
+public:
+ipprob(Path& p)
+: P(p), bounds(10)
+{
 
-		}
-		virtual bool get_nlp_info(Index& n, Index& m, Index& nnz_jac_g,
-			Index& nnz_h_lag, IndexStyleEnum& index_style)
-		{
-			n = P.vertices.size() * 2;
-			m = 1;
-			nnz_jac_g = 1;
-			nnz_h_lag = n* n;
-			index_style = IndexStyleEnum::C_STYLE;
-			return true;
-		}
-		virtual bool get_bounds_info(Index n, Number* x_l, Number* x_u,
-			Index m, Number* g_l, Number* g_u)
-		{
-			for (int i = 0; i < n; i++) {
-				x_l[i] = -bounds;
-				x_u[i] = +bounds;
-			}
-			g_l[0] = g_u[0] = 0;
-			return true;
-		}
-		virtual bool get_starting_point(Index n, bool init_x, Number* x,
-			bool init_z, Number* z_L, Number* z_U,
-			Index m, bool init_lambda,
-			Number* lambda)
-		{
-			if (init_x)
-				for (int i = 0; i < n; i++)
-					x[i] = 0;
-			assert(init_z == false && init_lambda == false);
+}
+virtual bool get_nlp_info(Index& n, Index& m, Index& nnz_jac_g,
+Index& nnz_h_lag, IndexStyleEnum& index_style)
+{
+n = P.vertices.size() * 2;
+m = 1;
+nnz_jac_g = 1;
+nnz_h_lag = n* n;
+index_style = IndexStyleEnum::C_STYLE;
+return true;
+}
+virtual bool get_bounds_info(Index n, Number* x_l, Number* x_u,
+Index m, Number* g_l, Number* g_u)
+{
+for (int i = 0; i < n; i++) {
+x_l[i] = -bounds;
+x_u[i] = +bounds;
+}
+g_l[0] = g_u[0] = 0;
+return true;
+}
+virtual bool get_starting_point(Index n, bool init_x, Number* x,
+bool init_z, Number* z_L, Number* z_U,
+Index m, bool init_lambda,
+Number* lambda)
+{
+if (init_x)
+for (int i = 0; i < n; i++)
+x[i] = 0;
+assert(init_z == false && init_lambda == false);
 
-			return true;
-		}
-		virtual bool eval_f(Index n, const Number* x, bool new_x,
-			Number& obj_value)
-		{
-			Path p = P.Clone();
-			float* d = (float*)alloca(sizeof(float) * n);
-			for (int i = 0; i < n; i++)
-				d[i] = (float)x[i];
-			p.applyDiffX(d);
-			obj_value = p.f().average();
-			return true;
-		}
-		virtual bool eval_grad_f(Index n, const Number* x, bool new_x,
-			Number* grad_f)
-		{
-			Path p = P.Clone();
-			float* d = (float*)alloca(sizeof(float) * n);
-			for (int i = 0; i < n; i++)
-				d[i] = (float)x[i];
-			p.applyDiffX(d);
-			std::vector<Vec2f> g = DifferientiatePath(p);
-			assert(g.size() == 2 * n);
-			for (size_t i = 0; i < g.size(); i++)
-			{
-				grad_f[2 * i + 0] = g[i].x;
-				grad_f[2 * i + 1] = g[i].y;
-			}
-			return true;
-		}
-		virtual bool eval_g(Index n, const Number* x, bool new_x,
-			Index m, Number* g)
-		{
-			assert(m == 1);
-			g[0] = 0;
-			return true;
-		}
-		virtual bool eval_jac_g(Index n, const Number* x, bool new_x,
-			Index m, Index nele_jac, Index* iRow,
-			Index *jCol, Number* values)
-		{
-			assert(m == 1);
-			if (values == 0)
-				iRow[0] = jCol[0] = 0;
-			else values[0] = 0;
-			return true;
-		}
-		virtual void finalize_solution(SolverReturn status,
-			Index n, const Number* x, const Number* z_L, const Number* z_U,
-			Index m, const Number* g, const Number* lambda,
-			Number obj_value,
-			const IpoptData* ip_data,
-			IpoptCalculatedQuantities* ip_cq)
-		{
-			float* d = (float*)alloca(sizeof(float) * n);
-			for (int i = 0; i < n; i++)
-				d[i] = (float)x[i];
-			P.applyDiffX(d);
-		}
-	};
+return true;
+}
+virtual bool eval_f(Index n, const Number* x, bool new_x,
+Number& obj_value)
+{
+Path p = P.Clone();
+float* d = (float*)alloca(sizeof(float) * n);
+for (int i = 0; i < n; i++)
+d[i] = (float)x[i];
+p.applyDiffX(d);
+obj_value = p.f().average();
+return true;
+}
+virtual bool eval_grad_f(Index n, const Number* x, bool new_x,
+Number* grad_f)
+{
+Path p = P.Clone();
+float* d = (float*)alloca(sizeof(float) * n);
+for (int i = 0; i < n; i++)
+d[i] = (float)x[i];
+p.applyDiffX(d);
+std::vector<Vec2f> g = DifferientiatePath(p);
+assert(g.size() == 2 * n);
+for (size_t i = 0; i < g.size(); i++)
+{
+grad_f[2 * i + 0] = g[i].x;
+grad_f[2 * i + 1] = g[i].y;
+}
+return true;
+}
+virtual bool eval_g(Index n, const Number* x, bool new_x,
+Index m, Number* g)
+{
+assert(m == 1);
+g[0] = 0;
+return true;
+}
+virtual bool eval_jac_g(Index n, const Number* x, bool new_x,
+Index m, Index nele_jac, Index* iRow,
+Index *jCol, Number* values)
+{
+assert(m == 1);
+if (values == 0)
+iRow[0] = jCol[0] = 0;
+else values[0] = 0;
+return true;
+}
+virtual void finalize_solution(SolverReturn status,
+Index n, const Number* x, const Number* z_L, const Number* z_U,
+Index m, const Number* g, const Number* lambda,
+Number obj_value,
+const IpoptData* ip_data,
+IpoptCalculatedQuantities* ip_cq)
+{
+float* d = (float*)alloca(sizeof(float) * n);
+for (int i = 0; i < n; i++)
+d[i] = (float)x[i];
+P.applyDiffX(d);
+}
+};
 
-	ipprob p(P);
-	SmartPtr<IpoptApplication> app = IpoptApplicationFactory();
-	app->Options()->SetNumericValue("tol", 1e-9);
-	app->Options()->SetStringValue("mu_strategy", "adaptive");
-	app->Options()->SetStringValue("output_file", "ipopt.out");
-	Ipopt::ApplicationReturnStatus status = app->Initialize();
-	status = app->OptimizeTNLP(&p);
+ipprob p(P);
+SmartPtr<IpoptApplication> app = IpoptApplicationFactory();
+app->Options()->SetNumericValue("tol", 1e-9);
+app->Options()->SetStringValue("mu_strategy", "adaptive");
+app->Options()->SetStringValue("output_file", "ipopt.out");
+Ipopt::ApplicationReturnStatus status = app->Initialize();
+status = app->OptimizeTNLP(&p);
 }
 */
+
+}

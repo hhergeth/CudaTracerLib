@@ -2,6 +2,8 @@
 
 #include <MathTypes.h>
 
+namespace CudaTracerLib {
+
 struct TraceResult;
 struct BSDFSamplingRecord;
 struct e_KernelMaterial;
@@ -16,3 +18,5 @@ CUDA_HOST CUDA_DEVICE Spectrum Transmittance(const Ray& r, float tmin, float tma
 CUDA_HOST CUDA_DEVICE Spectrum UniformSampleAllLights(const BSDFSamplingRecord& bRec, const e_KernelMaterial& mat, int nSamples, CudaRNG& rng, bool attenuated = false);
 
 CUDA_HOST CUDA_DEVICE Spectrum UniformSampleOneLight(const BSDFSamplingRecord& bRec, const e_KernelMaterial& mat, CudaRNG& rng, bool attenuated = false);
+
+}

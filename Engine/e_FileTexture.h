@@ -2,6 +2,8 @@
 #include "e_FileTexture_device.h"
 #include <Base/FixedString.h>
 
+namespace CudaTracerLib {
+
 class IInStream;
 class FileOutputStream;
 
@@ -38,3 +40,5 @@ public:
 		return m_uSize;
 	}
 };
+
+}

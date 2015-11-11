@@ -2,6 +2,8 @@
 #include <Kernel/k_TraceHelper.h>
 #include "e_Light.h"
 
+namespace CudaTracerLib {
+
 const e_KernelLight* e_KernelDynamicScene::sampleLight(float& emPdf, Vec2f& sample) const
 {
 	if (m_sLightData.UsedCount == 0)
@@ -62,8 +64,8 @@ Spectrum e_KernelDynamicScene::sampleEmitterDirect(DirectSamplingRecord &dRec, c
 	{
 		/*if (testVisibility && Occluded(Ray(dRec.ref, dRec.n), 0, dRec.dist))
 		{
-			dRec.object = 0;
-			return Spectrum(0.0f);
+		dRec.object = 0;
+		return Spectrum(0.0f);
 		}*/
 		dRec.pdf *= emPdf;
 		value /= emPdf;
@@ -83,8 +85,8 @@ Spectrum e_KernelDynamicScene::sampleSensorDirect(DirectSamplingRecord &dRec, co
 	{
 		/*if (testVisibility && Occluded(Ray(dRec.ref, dRec.d), 0, dRec.dist))
 		{
-			dRec.object = 0;
-			return Spectrum(0.0f);
+		dRec.object = 0;
+		return Spectrum(0.0f);
 		}*/
 		dRec.object = &g_SceneData;
 		return value;
@@ -151,4 +153,6 @@ Spectrum e_KernelDynamicScene::sampleSensorRay(Ray& ray, const e_Sensor*& sensor
 {
 	sensor = &m_Camera;
 	return sensor->sampleRay(ray, spatialSample, directionalSample);
+}
+
 }

@@ -2,6 +2,8 @@
 
 #include <Defines.h>
 
+namespace CudaTracerLib {
+
 #define MINUS_ONE std::numeric_limits<size_t>::max()
 
 template<typename T> struct e_KernelBuffer
@@ -79,9 +81,9 @@ public:
 
 	/*e_BufferReference<H, D>& operator= (const e_BufferReference<H, D>& src)
 	{
-		if (*this != src)
-			buf->memcpy_(*this, src);
-		return *this;
+	if (*this != src)
+	buf->memcpy_(*this, src);
+	return *this;
 	}*/
 
 	unsigned int getIndex() const
@@ -140,3 +142,5 @@ private:
 };
 
 template<typename T> using e_StreamReference = e_BufferReference<T, T>;
+
+}

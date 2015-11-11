@@ -10,6 +10,8 @@
 #include <Base/FileStream.h>
 #include <map>
 
+namespace CudaTracerLib {
+
 typedef unsigned char       U8;
 typedef unsigned short      U16;
 typedef unsigned int        U32;
@@ -1275,4 +1277,6 @@ void compileobj(IInStream& in, FileOutputStream& a_Out)
 	a_Out.Write(&matData[0], sizeof(e_KernelMaterial) * (unsigned int)matData.size());
 	ConstructBVH(&positions[0], (unsigned int*)&indices[0], m_numVertices, m_numTriangles * 3, a_Out);
 	delete[] triData;
+}
+
 }

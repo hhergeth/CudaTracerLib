@@ -4,6 +4,8 @@
 #include <Engine/e_SpatialGrid.h>
 #include "k_PmmHelper.h"
 
+namespace CudaTracerLib {
+
 void plotPoints(Vec3f* dirs, unsigned int N);
 
 struct SpatialEntry;
@@ -29,3 +31,5 @@ private:
 	e_SpatialLinkedMap<SpatialEntry> sMap;
 	e_SpatialSet<DirectionModel> dMap;
 };
+
+}

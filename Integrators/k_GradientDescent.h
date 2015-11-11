@@ -8,6 +8,8 @@
 #include <Engine/e_DifferentialGeometry.h>
 #include <Engine/e_Material.h>
 
+namespace CudaTracerLib {
+
 class PathVertex
 {
 public:
@@ -28,14 +30,14 @@ public:
 
 	static float G(const PathVertex* v1, const PathVertex* v2)
 	{
-		return ::G(v1->getNor(), v2->getNor(), v1->getPos(), v2->getPos());
+		return CudaTracerLib::G(v1->getNor(), v2->getNor(), v1->getPos(), v2->getPos());
 		//Vec3f w = v2->getPos() - v1->getPos();
 		//float l = length(w);
 		//w /= l;
 		//float cos1 = dot(w, v1->getNor()), cos2 = -dot(w, v2->getNor());
 		//return cos1 * cos2 / (l * l);
 	}
-}; 
+};
 
 class SurfacePathVertex : public PathVertex
 {
@@ -47,7 +49,7 @@ public:
 	SurfacePathVertex(const TraceResult& r)
 		: res(r)
 	{
-		
+
 	}
 
 	virtual bool sameSurface(const TraceResult& r2) const
@@ -286,3 +288,5 @@ inline void ConstructPath(int x, int y, Path& P, int s, int t)
 std::vector<Vec2f> DifferientiatePath(Path& P);
 
 void OptimizePath(Path& P);
+
+}

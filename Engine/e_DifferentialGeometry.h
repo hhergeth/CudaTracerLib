@@ -2,6 +2,8 @@
 
 #include <MathTypes.h>
 
+namespace CudaTracerLib {
+
 struct DifferentialGeometry
 {
 	Vec3f P;
@@ -29,3 +31,5 @@ struct DifferentialGeometry
 		return sys.toLocal(v);
 	}
 };
+
+}

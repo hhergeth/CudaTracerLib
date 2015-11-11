@@ -4,6 +4,8 @@
 #include <Kernel/k_TraceAlgorithms.h>
 #include "k_VCMHelper.h"
 
+namespace CudaTracerLib {
+
 CUDA_FUNC_IN float pathWeight(int force_s, int force_t, int s, int t)
 {
 	if (force_s != -1 && force_t != -1 && (s != force_s || t != force_t))
@@ -12,7 +14,7 @@ CUDA_FUNC_IN float pathWeight(int force_s, int force_t, int s, int t)
 }
 
 CUDA_FUNC_IN void BPT(const Vec2f& pixelPosition, k_BlockSampleImage& img, CudaRNG& rng, unsigned int w, unsigned int h,
-					  bool use_mis, int force_s, int force_t, float LScale)
+	bool use_mis, int force_s, int force_t, float LScale)
 {
 	float mLightSubPathCount = 1 * 1;
 	const float etaVCM = (PI * 1) * mLightSubPathCount;
@@ -101,7 +103,7 @@ CUDA_FUNC_IN void BPT(const Vec2f& pixelPosition, k_BlockSampleImage& img, CudaR
 }
 
 __global__ void pathKernel(unsigned int w, unsigned int h, int xoff, int yoff, k_BlockSampleImage img,
-		bool use_mis, int force_s, int force_t, float LScale)
+	bool use_mis, int force_s, int force_t, float LScale)
 {
 	Vec2i pixel = k_TracerBase::getPixelPos(xoff, yoff);
 	CudaRNG rng = g_RNGData();
@@ -123,4 +125,6 @@ void k_BDPT::Debug(e_Image* I, const Vec2i& pixel)
 	k_BlockSampleImage img = getDeviceBlockSampler();
 	BPT(Vec2f(pixel), img, rng, w, h, use_mis, force_s, force_t, LScale);
 	g_RNGData(rng);
+}
+
 }

@@ -1,5 +1,7 @@
 #include "float4x4.h"
 
+namespace CudaTracerLib {
+
 float4x4 float4x4::inverse() const
 {
 	float4x4 Q = *this;
@@ -61,4 +63,6 @@ float4x4 float4x4::inverse() const
 		d10, d11, d12, d13,
 		d20, d21, d22, d23,
 		d30, d31, d32, d33);
+}
+
 }

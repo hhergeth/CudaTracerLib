@@ -6,6 +6,8 @@
 #include <Engine/e_Node.h>
 #include <Engine/e_Mesh.h>
 
+namespace CudaTracerLib {
+
 k_sPpmTracer::k_sPpmTracer()
 	: m_pEntries(0), m_bFinalGather(false), m_fLightVisibility(1), k_Intial(25)
 {
@@ -25,7 +27,7 @@ k_sPpmTracer::k_sPpmTracer()
 
 void k_sPpmTracer::PrintStatus(std::vector<std::string>& a_Buf) const
 {
-	double pC = floor((double)m_uTotalPhotonsEmitted / 1000000.0);
+	double pC = math::floor((double)m_uTotalPhotonsEmitted / 1000000.0);
 	a_Buf.push_back(format("Photons emitted : %d[Mil]", (int)pC));
 	double pCs = m_uTotalPhotonsEmitted / m_fAccRuntime / 1000000.0f;
 	double pCsLast = m_uPhotonEmittedPass / m_fLastRuntime / 1000000.0f;
@@ -48,53 +50,53 @@ void k_sPpmTracer::CreateSliders(SliderCreateCallback a_Callback) const
 void k_sPpmTracer::Resize(unsigned int _w, unsigned int _h)
 {
 	k_Tracer<true, true>::Resize(_w, _h);
-	if(m_pEntries)
+	if (m_pEntries)
 		CUDA_FREE(m_pEntries);
 	CUDA_MALLOC(&m_pEntries, sizeof(k_AdaptiveEntry) * _w * _h);
 }
 /*
 void print(k_PhotonMapCollection& m_sMaps, k_PhotonMap<k_HashGrid_Reg>& m_Map, std::string name)
 {
-	k_pPpmPhoton* photons = new k_pPpmPhoton[m_sMaps.m_uPhotonBufferLength];
-	unsigned int* grid = new unsigned int[m_Map.m_uGridLength];
-	cudaMemcpy(photons, m_sMaps.m_pPhotons, sizeof(k_pPpmPhoton) * m_sMaps.m_uPhotonBufferLength, cudaMemcpyDeviceToHost);
-	cudaMemcpy(grid, m_Map.m_pDeviceHashGrid, sizeof(unsigned int) * m_Map.m_uGridLength, cudaMemcpyDeviceToHost);
-			
-	unsigned int usedCells = 0, maxCount = 0;
-	unsigned char* counts = new unsigned char[m_Map.m_uGridLength];
-	for(unsigned int i = 0; i < m_Map.m_uGridLength; i++)
-	{
-		if(grid[i] != -1)
-		{
-			usedCells++;
-			k_pPpmPhoton* p = photons + grid[i];
-			unsigned int c = 1;
-			for( ; p->next != -1; c++)
-				p = photons + p->next;
-			counts[i] = c;
-			maxCount = max(maxCount, c);
-		}
-		else
-		{
-			counts[i] = 0;
-		}
-	}
-	OutputStream os(name.c_str());
-	float avgNum = float(m_sMaps.m_uPhotonBufferLength) / float(usedCells), f1 = float(usedCells) / float(m_Map.m_uGridLength);
-	os << m_Map.m_sHash.m_fGridSize;
-	os << (int)avgNum * 2;
-	os.Write(counts, sizeof(unsigned char) * m_Map.m_uGridLength);
-	os.Close();
-	float var = 0;
-	int avg = (int)avgNum;
-	for(unsigned int i = 0; i < m_Map.m_uGridLength; i++)
-		if(counts[i])
-			var += (counts[i] - avg) * (counts[i] - avg) / float(usedCells);
-	std::string s = format("max : %d, avg : %f, used cells : %f, var : %f\n", maxCount, avgNum, f1, math::sqrt(var));
-	std::cout << s;
-	OutputDebugString(s.c_str());
+k_pPpmPhoton* photons = new k_pPpmPhoton[m_sMaps.m_uPhotonBufferLength];
+unsigned int* grid = new unsigned int[m_Map.m_uGridLength];
+cudaMemcpy(photons, m_sMaps.m_pPhotons, sizeof(k_pPpmPhoton) * m_sMaps.m_uPhotonBufferLength, cudaMemcpyDeviceToHost);
+cudaMemcpy(grid, m_Map.m_pDeviceHashGrid, sizeof(unsigned int) * m_Map.m_uGridLength, cudaMemcpyDeviceToHost);
+
+unsigned int usedCells = 0, maxCount = 0;
+unsigned char* counts = new unsigned char[m_Map.m_uGridLength];
+for(unsigned int i = 0; i < m_Map.m_uGridLength; i++)
+{
+if(grid[i] != -1)
+{
+usedCells++;
+k_pPpmPhoton* p = photons + grid[i];
+unsigned int c = 1;
+for( ; p->next != -1; c++)
+p = photons + p->next;
+counts[i] = c;
+maxCount = max(maxCount, c);
+}
+else
+{
+counts[i] = 0;
+}
+}
+OutputStream os(name.c_str());
+float avgNum = float(m_sMaps.m_uPhotonBufferLength) / float(usedCells), f1 = float(usedCells) / float(m_Map.m_uGridLength);
+os << m_Map.m_sHash.m_fGridSize;
+os << (int)avgNum * 2;
+os.Write(counts, sizeof(unsigned char) * m_Map.m_uGridLength);
+os.Close();
+float var = 0;
+int avg = (int)avgNum;
+for(unsigned int i = 0; i < m_Map.m_uGridLength; i++)
+if(counts[i])
+var += (counts[i] - avg) * (counts[i] - avg) / float(usedCells);
+std::string s = format("max : %d, avg : %f, used cells : %f, var : %f\n", maxCount, avgNum, f1, math::sqrt(var));
+std::cout << s;
+OutputDebugString(s.c_str());
 }*/
-static Vec2i lastPix = Vec2i(0,0);
+static Vec2i lastPix = Vec2i(0, 0);
 void k_sPpmTracer::DoRender(e_Image* I)
 {
 	//I->Clear();
@@ -162,4 +164,6 @@ void k_sPpmTracer::StartNewTrace(e_Image* I)
 	float r_scene = m_sEyeBox.Size().length() / 2;
 	r_min = 1e-6f * r_scene;
 	r_max = 1e-1f * r_scene;
+}
+
 }

@@ -7,6 +7,8 @@
 #include "VolEstimators/k_BeamBVHStorage.h"
 #include "VolEstimators/k_BeamGrid.h"
 
+namespace CudaTracerLib {
+
 struct k_AdaptiveEntry
 {
 	float r, rd;
@@ -84,13 +86,13 @@ public:
 	virtual void CreateSliders(SliderCreateCallback a_Callback) const;
 	virtual float getCurrentRadius(float exp) const
 	{
-		return ::getCurrentRadius(m_fInitialRadius, m_uPassesDone, exp);
+		return CudaTracerLib::getCurrentRadius(m_fInitialRadius, m_uPassesDone, exp);
 	}
 	void getRadiusAt(int x, int y, float& r, float& rd) const;
 	void getCurrentRMinRMax(float& rMin, float& rMax) const
 	{
-		rMin = ::getCurrentRadius(r_min, m_uPassesDone, 2);
-		rMax = ::getCurrentRadius(r_max, m_uPassesDone, 2);
+		rMin = CudaTracerLib::getCurrentRadius(r_min, m_uPassesDone, 2);
+		rMax = CudaTracerLib::getCurrentRadius(r_max, m_uPassesDone, 2);
 	}
 protected:
 	virtual void DoRender(e_Image* I);
@@ -100,3 +102,5 @@ private:
 	void doPhotonPass();
 	void doPerPixelRadiusEstimation();
 };
+
+}

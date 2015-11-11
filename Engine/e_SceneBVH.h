@@ -5,6 +5,8 @@
 #include <set>
 #include "e_Buffer_device.h"
 
+namespace CudaTracerLib {
+
 class e_Node;
 class e_Mesh;
 struct e_KernelMesh;
@@ -38,3 +40,5 @@ public:
 	AABB getSceneBox();
 	void printGraph(const std::string& path);
 };
+
+}

@@ -1,5 +1,7 @@
 #include "k_VCM.h"
 
+namespace CudaTracerLib {
+
 CUDA_DEVICE k_PhotonMapCollection<false, k_MISPhoton> g_CurrentMap, g_NextMap;
 
 CUDA_FUNC_IN void VCM(const Vec2f& pixelPosition, k_BlockSampleImage& img, CudaRNG& rng, int w, int h, float a_Radius, int a_NumIteration)
@@ -120,17 +122,17 @@ __global__ void pathKernel(unsigned int w, unsigned int h, int xoff, int yoff, k
 
 /*__global__ void buildHashGrid2()
 {
-	unsigned int idx = threadIdx.y * blockDim.x + threadIdx.x + blockDim.x * blockDim.y * blockIdx.x;
-	if (idx < g_NextMap.m_uPhotonNumEmitted)
-	{
-		k_pPpmPhoton& e = g_NextMap.m_pPhotons[idx];
-		Vec3f pos = g_NextMap.m_pPhotonPositions[idx];
-		const k_PhotonMap<k_HashGrid_Reg>& map = (&g_NextMap.m_sSurfaceMap)[e.getType()];
-		e.setPos(map.m_sHash, map.m_sHash.Transform(pos), pos);
-		unsigned int i = map.m_sHash.Hash(pos);
-		unsigned int k = atomicExch(map.m_pDeviceHashGrid + i, idx);
-		e.setNext(k);
-	}
+unsigned int idx = threadIdx.y * blockDim.x + threadIdx.x + blockDim.x * blockDim.y * blockIdx.x;
+if (idx < g_NextMap.m_uPhotonNumEmitted)
+{
+k_pPpmPhoton& e = g_NextMap.m_pPhotons[idx];
+Vec3f pos = g_NextMap.m_pPhotonPositions[idx];
+const k_PhotonMap<k_HashGrid_Reg>& map = (&g_NextMap.m_sSurfaceMap)[e.getType()];
+e.setPos(map.m_sHash, map.m_sHash.Transform(pos), pos);
+unsigned int i = map.m_sHash.Hash(pos);
+unsigned int k = atomicExch(map.m_pDeviceHashGrid + i, idx);
+e.setNext(k);
+}
 }*/
 
 void k_VCM::RenderBlock(e_Image* I, int x, int y, int blockW, int blockH)
@@ -179,4 +181,6 @@ k_VCM::k_VCM()
 	int numPhotons = 1024 * 1024 * 5;
 	m_sPhotonMapsCurrent = k_PhotonMapCollection<false, k_MISPhoton>(numPhotons, gridLength*gridLength*gridLength, UINT_MAX);
 	m_sPhotonMapsNext = k_PhotonMapCollection<false, k_MISPhoton>(numPhotons, gridLength*gridLength*gridLength, UINT_MAX);
+}
+
 }

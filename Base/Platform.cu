@@ -8,6 +8,8 @@
 
 #endif
 
+namespace CudaTracerLib {
+
 unsigned int Platform::Increment(unsigned int* add)
 {
 #if defined(ISCUDA)
@@ -26,7 +28,7 @@ unsigned int Platform::Add(unsigned int* add, unsigned int val)
 #if defined(ISCUDA)
 	return atomicAdd(add, val);
 #elif defined(ISWINDOWS)
-	return InterlockedAdd((long*)add, val);	
+	return InterlockedAdd((long*)add, val);
 #elif defined(ISUNIX)
 	unsigned int v = *add;
 	*add += val;
@@ -39,7 +41,7 @@ unsigned int Platform::Exchange(unsigned int* add, unsigned int val)
 #if defined(ISCUDA)
 	return atomicExch(add, val);
 #elif defined(ISWINDOWS)
-	return InterlockedExchange(add, val);	
+	return InterlockedExchange(add, val);
 #elif defined(ISUNIX)
 	unsigned int old = *add;
 	*add = val;
@@ -70,4 +72,6 @@ void Platform::OutputDebug(const std::string& msg)
 #elif defined(ISUNIX)
 
 #endif
+}
+
 }

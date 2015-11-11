@@ -3,6 +3,8 @@
 #include "e_Buffer.h"
 #include "e_TriIntersectorData.h"
 
+namespace CudaTracerLib {
+
 AABB ShapeSet::triData::box() const
 {
 	AABB b = AABB::Identity();
@@ -47,4 +49,6 @@ void ShapeSet::Recalculate(const float4x4& mat, e_Stream<char>* buffer)
 	//pdf values have to be converted to normalized cdf
 	for (unsigned int i = 0; i <= count; i++)
 		areaDistribution[i] = areaDistribution[i] / sumArea;
+}
+
 }

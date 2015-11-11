@@ -10,6 +10,8 @@
 #include <Math/Sampling.h>
 #include <VirtualFuncType.h>
 
+namespace CudaTracerLib {
+
 #define NUM_TEX_PER_BSDF 10
 
 struct BSDF : public e_BaseType//, public e_BaseTypeHelper<4608834>
@@ -62,11 +64,14 @@ public:
 	{
 		if (componentType & ESmooth) {
 			return ESolidAngle;
-		} else if (componentType & EDelta) {
+		}
+		else if (componentType & EDelta) {
 			return EDiscrete;
-		} else if (componentType & EDelta1D) {
+		}
+		else if (componentType & EDelta1D) {
 			return ELength;
-		} else {
+		}
+		else {
 			return ESolidAngle; // will never be reached^^
 		}
 	}
@@ -86,7 +91,7 @@ struct BSDFFirst : public CudaVirtualAggregate<BSDF, diffuse, roughdiffuse, diel
 {
 public:
 	CALLER(sample)
-	CUDA_FUNC_IN Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &_sample) const
+		CUDA_FUNC_IN Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &_sample) const
 	{
 		return sample_Caller<Spectrum>(*this, bRec, pdf, _sample);
 	}
@@ -96,12 +101,12 @@ public:
 		return sample(bRec, p, _sample);
 	}
 	CALLER(f)
-	CUDA_FUNC_IN Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
+		CUDA_FUNC_IN Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
 	{
 		return f_Caller<Spectrum>(*this, bRec, measure);
 	}
 	CALLER(pdf)
-	CUDA_FUNC_IN float pdf(const BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
+		CUDA_FUNC_IN float pdf(const BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
 	{
 		return pdf_Caller<float>(*this, bRec, measure);
 	}
@@ -123,7 +128,7 @@ public:
 
 	}
 	CALLER(sample)
-	CUDA_FUNC_IN Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &_sample) const
+		CUDA_FUNC_IN Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &_sample) const
 	{
 		return sample_Caller<Spectrum>(*this, bRec, pdf, _sample);
 	}
@@ -133,12 +138,12 @@ public:
 		return sample(bRec, pdf, _sample);
 	}
 	CALLER(f)
-	CUDA_FUNC_IN Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
+		CUDA_FUNC_IN Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
 	{
 		return f_Caller<Spectrum>(*this, bRec, measure);
 	}
 	CALLER(pdf)
-	CUDA_FUNC_IN float pdf(const BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
+		CUDA_FUNC_IN float pdf(const BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
 	{
 		return pdf_Caller<float>(*this, bRec, measure);
 	}
@@ -150,3 +155,5 @@ public:
 		return ((BSDF*)Data)->hasComponent(type);
 	}
 };
+
+}

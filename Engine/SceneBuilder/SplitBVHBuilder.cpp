@@ -1,6 +1,8 @@
 #include <StdAfx.h>
 #include "SplitBVHBuilder.hpp"
 
+namespace CudaTracerLib {
+
 template<typename T> void removeSwap(std::vector<T>& vec, int i)
 {
 	T val = vec[vec.size() - 1];
@@ -139,10 +141,10 @@ void sort(void* data, int start, int end, SortCompareFunc compareFunc, SortSwapF
 
 SplitBVHBuilder::SplitBVHBuilder(IBVHBuilderCallback* clb, const Platform& P, const BuildParams& stats)
 	: m_pClb(clb),
-	m_platform      (P),
+	m_platform(P),
 	m_params(stats),
-	m_minOverlap    (0.0f),
-	m_sortDim       (-1)
+	m_minOverlap(0.0f),
+	m_sortDim(-1)
 {
 	for (int i = 0; i < 3; i++)
 		for (int j = 0; j < NumSpatialBins; j++)
@@ -257,7 +259,7 @@ void SplitBVHBuilder::run(void)
 
 	// Done.
 	*(bool*)&m_params.enablePrints = false;
-		printf("SplitBVHBuilder: progress %.0f%%\n",
+	printf("SplitBVHBuilder: progress %.0f%%\n",
 		100.0f);
 
 	m_pClb->HandleBoundingBox(rootSpec.bounds);
@@ -296,7 +298,7 @@ unsigned int SplitBVHBuilder::buildNode(NodeSpec spec, int level, float progress
 {
 	// Display progress.
 
-	if ( m_Timer.EndTimer() >= 1.0f)
+	if (m_Timer.EndTimer() >= 1.0f)
 	{
 		printf("SplitBVHBuilder: progress %.0f%%\r",
 			progressStart * 100.0f);
@@ -636,3 +638,5 @@ void SplitBVHBuilder::splitReference(Reference& left, Reference& right, const Re
 }
 
 //------------------------------------------------------------------------
+
+}

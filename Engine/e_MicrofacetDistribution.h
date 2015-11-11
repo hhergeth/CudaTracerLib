@@ -4,15 +4,17 @@
 
 //Implementation and interface copied from Mitsuba.
 
+namespace CudaTracerLib {
+
 struct MicrofacetDistribution
 {
 	enum EType {
 		/// Beckmann distribution derived from Gaussian random surfaces
-		EBeckmann         = 0,
+		EBeckmann = 0,
 		/// Long-tailed distribution proposed by Walter et al.
-		EGGX              = 1,
+		EGGX = 1,
 		/// Classical Phong distribution
-		EPhong            = 2,
+		EPhong = 2,
 		/// Anisotropic distribution by Ashikhmin and Shirley
 		EAshikhminShirley = 3
 	};
@@ -32,13 +34,13 @@ struct MicrofacetDistribution
 	}
 	CUDA_DEVICE CUDA_HOST float pdf(const Vec3f &m, float alphaU, float alphaV) const;
 	CUDA_FUNC_IN void sampleFirstQuadrant(float alphaU, float alphaV, float u1, float u2,
-			float &phi, float &cosTheta) const {
+		float &phi, float &cosTheta) const {
 		if (alphaU == alphaV)
 			phi = PI * u1 * 0.5f;
 		else
 			phi = std::atan(
-				math::sqrt((alphaU + 1.0f) / (alphaV + 1.0f)) *
-				std::tan(PI * u1 * 0.5f));
+			math::sqrt((alphaU + 1.0f) / (alphaV + 1.0f)) *
+			std::tan(PI * u1 * 0.5f));
 		const float cosPhi = std::cos(phi), sinPhi = std::sin(phi);
 		cosTheta = math::pow(u2, 1.0f /
 			(alphaU * cosPhi * cosPhi + alphaV * sinPhi * sinPhi + 1.0f));
@@ -54,3 +56,5 @@ struct MicrofacetDistribution
 	}
 	CUDA_DEVICE CUDA_HOST float G(const Vec3f &wi, const Vec3f &wo, const Vec3f &m, float alphaU, float alphaV) const;
 };
+
+}

@@ -4,6 +4,8 @@
 #include <Engine/e_Material.h>
 #include <Engine/e_Light.h>
 
+namespace CudaTracerLib {
+
 bool V(const Vec3f& a, const Vec3f& b, TraceResult* res)
 {
 	Vec3f d = b - a;
@@ -33,7 +35,7 @@ CUDA_FUNC_IN Spectrum EstimateDirect(BSDFSamplingRecord bRec, const e_KernelMate
 	DirectSamplingRecord dRec(bRec.dg.P, bRec.dg.sys.n);
 	Spectrum value = light->sampleDirect(dRec, rng.randomFloat2());
 	Spectrum retVal(0.0f);
-	if(!value.isZero())
+	if (!value.isZero())
 	{
 		Vec3f oldWo = bRec.wo;
 		bRec.wo = normalize(bRec.dg.toLocal(dRec.d));
@@ -57,11 +59,11 @@ Spectrum UniformSampleAllLights(const BSDFSamplingRecord& bRec, const e_KernelMa
 {
 	//only sample the relevant lights and assume the others emit the same
 	Spectrum L = Spectrum(0.0f);
-	for(unsigned int i = 0; i < g_SceneData.m_sLightData.UsedCount; i++)
+	for (unsigned int i = 0; i < g_SceneData.m_sLightData.UsedCount; i++)
 	{
 		e_KernelLight* light = g_SceneData.m_sLightData.Data + i;
 		Spectrum Ld = Spectrum(0.0f);
-		for(int j = 0; j < nSamples; j++)
+		for (int j = 0; j < nSamples; j++)
 		{
 			Ld += EstimateDirect((BSDFSamplingRecord&)bRec, mat, light, EBSDFType(EAll & ~EDelta), rng, attenuated);
 		}
@@ -78,4 +80,6 @@ Spectrum UniformSampleOneLight(const BSDFSamplingRecord& bRec, const e_KernelMat
 	float pdf;
 	const e_KernelLight* light = g_SceneData.sampleLight(pdf, sample);
 	return EstimateDirect((BSDFSamplingRecord&)bRec, mat, light, EBSDFType(EAll & ~EDelta), rng, attenuated) / pdf;
+}
+
 }

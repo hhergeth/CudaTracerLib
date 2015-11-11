@@ -7,6 +7,8 @@
 #include "e_ShapeSet.h"
 #include <functional>
 
+namespace CudaTracerLib {
+
 struct e_TmpVertex;
 class e_AnimatedMesh;
 template<typename H, typename D> class e_BufferReference;
@@ -85,8 +87,8 @@ public:
 	e_BufferReference<e_VolumeRegion, e_VolumeRegion> AddVolume(int w, int h, int d, const float4x4& worldToVol, const e_PhaseFunction& p);
 	//Creates a volume with seperate grid sizes for absorption, scattering and emission and a transformation \ref worldToVol
 	e_BufferReference<e_VolumeRegion, e_VolumeRegion> AddVolume(int wA, int hA, int dA,
-																int wS, int hS, int dS,
-																int wL, int hL, int dL, const float4x4& worldToVol, const e_PhaseFunction& p);
+		int wS, int hS, int dS,
+		int wL, int hL, int dL, const float4x4& worldToVol, const e_PhaseFunction& p);
 
 	void ReloadTextures();
 	float4x4 GetNodeTransform(e_BufferReference<e_Node, e_Node> n);
@@ -135,7 +137,7 @@ public:
 	e_BufferRange<e_MIPMap, e_KernelMIPMap>& getTextures();
 	e_BufferRange<e_Mesh, e_KernelMesh>& getMeshes();
 	e_BufferRange<e_KernelMaterial, e_KernelMaterial>& getMateriales();
-	
+
 	//Returns the aabb of the submesh with name \ref name, returning the material index optionally in \ref a_Mi
 	AABB getAABB(e_BufferReference<e_Node, e_Node> Node, const std::string& name, unsigned int* a_Mi = 0);
 	e_BufferReference<e_Mesh, e_KernelMesh> getMesh(e_BufferReference<e_Node, e_Node> n);
@@ -158,3 +160,5 @@ public:
 		return i;
 	}
 };
+
+}

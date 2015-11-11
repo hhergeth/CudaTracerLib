@@ -4,6 +4,8 @@
 
 //Implementation and interface copied from Mitsuba.
 
+namespace CudaTracerLib {
+
 struct CudaRNG;
 struct DifferentialGeometry;
 
@@ -32,60 +34,60 @@ enum EBSDFType {
 	// =============================================================
 
 	/// 'null' scattering event, i.e. particles do not undergo deflection
-	ENull                 = 0x00001,
+	ENull = 0x00001,
 	/// Ideally diffuse reflection
-	EDiffuseReflection    = 0x00002,
+	EDiffuseReflection = 0x00002,
 	/// Ideally diffuse transmission
-	EDiffuseTransmission  = 0x00004,
+	EDiffuseTransmission = 0x00004,
 	/// Glossy reflection
-	EGlossyReflection     = 0x00008,
+	EGlossyReflection = 0x00008,
 	/// Glossy transmission
-	EGlossyTransmission   = 0x00010,
+	EGlossyTransmission = 0x00010,
 	/// Reflection into a discrete set of directions
-	EDeltaReflection      = 0x00020,
+	EDeltaReflection = 0x00020,
 	/// Transmission into a discrete set of directions
-	EDeltaTransmission    = 0x00040,
+	EDeltaTransmission = 0x00040,
 	/// Reflection into a 1D space of directions
-	EDelta1DReflection    = 0x00080,
+	EDelta1DReflection = 0x00080,
 	/// Transmission into a 1D space of directions
-	EDelta1DTransmission  = 0x00100,
+	EDelta1DTransmission = 0x00100,
 
 	// =============================================================
 	//!                   Other lobe attributes
 	// =============================================================
 	/// The lobe is not invariant to rotation around the normal
-	EAnisotropic          = 0x01000,
+	EAnisotropic = 0x01000,
 	/// The BSDF depends on the UV coordinates
-	ESpatiallyVarying     = 0x02000,
+	ESpatiallyVarying = 0x02000,
 	/// Flags non-symmetry (e.g. transmission in dielectric materials)
-	ENonSymmetric         = 0x04000,
+	ENonSymmetric = 0x04000,
 	/// Supports interactions on the front-facing side
-	EFrontSide            = 0x08000,
+	EFrontSide = 0x08000,
 	/// Supports interactions on the back-facing side
-	EBackSide             = 0x10000,
+	EBackSide = 0x10000,
 	/// Uses extra random numbers from the supplied sampler instance
-	EUsesSampler          = 0x20000,
+	EUsesSampler = 0x20000,
 };
 
 enum ETypeCombinations {
 	/// Any reflection component (scattering into discrete, 1D, or 2D set of directions)
-	EReflection   = EDiffuseReflection | EDeltaReflection
-		| EDelta1DReflection | EGlossyReflection,
+	EReflection = EDiffuseReflection | EDeltaReflection
+	| EDelta1DReflection | EGlossyReflection,
 	/// Any transmission component (scattering into discrete, 1D, or 2D set of directions)
 	ETransmission = EDiffuseTransmission | EDeltaTransmission
-		| EDelta1DTransmission | EGlossyTransmission | ENull,
+	| EDelta1DTransmission | EGlossyTransmission | ENull,
 	/// Diffuse scattering into a 2D set of directions
-	EDiffuse      = EDiffuseReflection | EDiffuseTransmission,
+	EDiffuse = EDiffuseReflection | EDiffuseTransmission,
 	/// Non-diffuse scattering into a 2D set of directions
-	EGlossy       = EGlossyReflection | EGlossyTransmission,
+	EGlossy = EGlossyReflection | EGlossyTransmission,
 	/// Scattering into a 2D set of directions
-	ESmooth       = EDiffuse | EGlossy,
+	ESmooth = EDiffuse | EGlossy,
 	/// Scattering into a discrete set of directions
-	EDelta        = ENull | EDeltaReflection | EDeltaTransmission,
+	EDelta = ENull | EDeltaReflection | EDeltaTransmission,
 	/// Scattering into a 1D space of directions
-	EDelta1D      = EDelta1DReflection | EDelta1DTransmission,
+	EDelta1D = EDelta1DReflection | EDelta1DTransmission,
 	/// Any kind of scattering
-	EAll          = EDiffuse | EGlossy | EDelta | EDelta1D
+	EAll = EDiffuse | EGlossy | EDelta | EDelta1D
 };
 
 struct PositionSamplingRecord
@@ -161,7 +163,7 @@ struct PhaseFunctionSamplingRecord
 	CUDA_FUNC_IN void reverse()
 	{
 		swapk(&wo, &wi);
-		mode = (ETransportMode) (1-mode);
+		mode = (ETransportMode)(1 - mode);
 	}
 };
 
@@ -182,3 +184,5 @@ struct BSDFSamplingRecord
 	CUDA_DEVICE CUDA_HOST Vec3f getOutgoing();
 	CUDA_DEVICE CUDA_HOST BSDFSamplingRecord& operator=(const BSDFSamplingRecord& other);
 };
+
+}

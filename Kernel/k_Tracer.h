@@ -4,10 +4,12 @@
 #include "k_BlockSampler_device.h"
 #include <Engine/e_Material.h>
 
+namespace CudaTracerLib {
+
 class e_DynamicScene;
 class k_BlockSampler;
 
-typedef void (*SliderCreateCallback)(float, float, bool, float*, std::string);
+typedef void(*SliderCreateCallback)(float, float, bool, float*, std::string);
 
 CUDA_FUNC_IN float CalcZBufferDepth(float n, float f, float z)
 {
@@ -205,7 +207,7 @@ protected:
 	}
 	virtual void StartNewTrace(e_Image* I)
 	{
-		
+
 	}
 	virtual float getSplatScale()
 	{
@@ -214,3 +216,5 @@ protected:
 		else return 0;
 	}
 };
+
+}

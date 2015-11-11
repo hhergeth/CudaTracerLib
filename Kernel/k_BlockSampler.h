@@ -3,6 +3,8 @@
 #include <MathTypes.h>
 #include "k_BlockSampler_device.h"
 
+namespace CudaTracerLib {
+
 struct k_SamplerpixelData
 {
 	float E, E2;
@@ -88,3 +90,5 @@ public:
 		return m_pHostWeight[idx];
 	}
 };
+
+}

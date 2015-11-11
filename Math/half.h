@@ -2,6 +2,9 @@
 
 #include <Defines.h>
 #include "Vector.h"
+#include <iostream>
+
+namespace CudaTracerLib {
 
 ///////////////////////////////////////////////////////////////////////////
 //
@@ -87,82 +90,88 @@
 //
 //---------------------------------------------------------------------------
 
-class s10e5
+struct s10e5
 {
- public:
+public:
 
-  // constructors
-  CUDA_FUNC_IN s10e5 ();			// no initialization
-  CUDA_FUNC_IN s10e5 (float f);
-  CUDA_FUNC_IN s10e5 (unsigned short s);
-  CUDA_FUNC_IN float ToFloat() const
-  {
-	  return (float)*this;
-  }
+	// constructors
+	CUDA_FUNC_IN s10e5();			// no initialization
+	CUDA_FUNC_IN s10e5(float f);
+	CUDA_FUNC_IN s10e5(unsigned short s);
+	CUDA_FUNC_IN float ToFloat() const
+	{
+		return (float)*this;
+	}
 
-  // convert-out
-  CUDA_FUNC_IN operator		float () const;
+	// convert-out
+	CUDA_FUNC_IN operator float() const;
 
-  // unary operators
-  CUDA_FUNC_IN s10e5		operator - () const;
+	// unary operators
+	CUDA_FUNC_IN s10e5		operator - () const;
 
-  // assign and op-assign
+	// assign and op-assign
 
-  CUDA_FUNC_IN s10e5 &		operator = (s10e5  h);
-  CUDA_FUNC_IN s10e5 &		operator = (float f);
+	CUDA_FUNC_IN s10e5 &		operator = (s10e5  h);
+	CUDA_FUNC_IN s10e5 &		operator = (float f);
 
-  CUDA_FUNC_IN s10e5 &		operator += (s10e5  h);
-  CUDA_FUNC_IN s10e5 &		operator += (float f);
+	CUDA_FUNC_IN s10e5 &		operator += (s10e5  h);
+	CUDA_FUNC_IN s10e5 &		operator += (float f);
 
-  CUDA_FUNC_IN s10e5 &		operator -= (s10e5  h);
-  CUDA_FUNC_IN s10e5 &		operator -= (float f);
+	CUDA_FUNC_IN s10e5 &		operator -= (s10e5  h);
+	CUDA_FUNC_IN s10e5 &		operator -= (float f);
 
-  CUDA_FUNC_IN s10e5 &		operator *= (s10e5  h);
-  CUDA_FUNC_IN s10e5 &		operator *= (float f);
+	CUDA_FUNC_IN s10e5 &		operator *= (s10e5  h);
+	CUDA_FUNC_IN s10e5 &		operator *= (float f);
 
-  CUDA_FUNC_IN s10e5 &		operator /= (s10e5  h);
-  CUDA_FUNC_IN s10e5 &		operator /= (float f);
+	CUDA_FUNC_IN s10e5 &		operator /= (s10e5  h);
+	CUDA_FUNC_IN s10e5 &		operator /= (float f);
 
 
-  //---------------------------------------------------------
-  // Round to n-bit precision (n should be between 0 and 10).
-  // After rounding, the significand's 10-n least significant
-  // bits will be zero.
-  //---------------------------------------------------------
+	//---------------------------------------------------------
+	// Round to n-bit precision (n should be between 0 and 10).
+	// After rounding, the significand's 10-n least significant
+	// bits will be zero.
+	//---------------------------------------------------------
 
-  CUDA_FUNC_IN s10e5		round(unsigned int n) const;
+	CUDA_FUNC_IN s10e5		round(unsigned int n) const;
 
-  // ------------------------------ predicates ------------------------------
-  // Use these with the syntax "if (x.isZero()) { ... }"
-  CUDA_FUNC_IN bool	isFinite() const;       // true iff normal, subnormal or zero
-  CUDA_FUNC_IN bool	isNormalized() const;	 // true iff normal
-  CUDA_FUNC_IN bool	isDenormalized() const; // true iff subnormal
-  CUDA_FUNC_IN bool	isZero() const;         // true iff zero or negative-zero
-  CUDA_FUNC_IN bool	isNan() const;          // true iff NAN
-  CUDA_FUNC_IN bool	isInfinity() const;     // true iff infinite
-  CUDA_FUNC_IN bool	isNegative() const;     // true iff negative (includes negative NANs)
+	// ------------------------------ predicates ------------------------------
+	// Use these with the syntax "if (x.isZero()) { ... }"
+	CUDA_FUNC_IN bool	isFinite() const;       // true iff normal, subnormal or zero
+	CUDA_FUNC_IN bool	isNormalized() const;	 // true iff normal
+	CUDA_FUNC_IN bool	isDenormalized() const; // true iff subnormal
+	CUDA_FUNC_IN bool	isZero() const;         // true iff zero or negative-zero
+	CUDA_FUNC_IN bool	isNan() const;          // true iff NAN
+	CUDA_FUNC_IN bool	isInfinity() const;     // true iff infinite
+	CUDA_FUNC_IN bool	isNegative() const;     // true iff negative (includes negative NANs)
 
-  // ---------------------------- special values ----------------------------
-  CUDA_FUNC_IN static s10e5		posInf(); // returns +infinity
-  CUDA_FUNC_IN static s10e5		negInf(); // returns -infinity
-  CUDA_FUNC_IN static s10e5		qNan();   // returns a quiet NAN (0.11111.1111111111)
-  CUDA_FUNC_IN static s10e5		Indet();  // "indeterminate" NAN (0.11111.1000000000)
-  CUDA_FUNC_IN static s10e5		sNan();   // signaling NAN (0.11111.0111111111)
+	// ---------------------------- special values ----------------------------
+	CUDA_FUNC_IN static s10e5		posInf(); // returns +infinity
+	CUDA_FUNC_IN static s10e5		negInf(); // returns -infinity
+	CUDA_FUNC_IN static s10e5		qNan();   // returns a quiet NAN (0.11111.1111111111)
+	CUDA_FUNC_IN static s10e5		Indet();  // "indeterminate" NAN (0.11111.1000000000)
+	CUDA_FUNC_IN static s10e5		sNan();   // signaling NAN (0.11111.0111111111)
 
-  // --------------------- access to raw representation ---------------------
-  CUDA_FUNC_IN unsigned short	bits() const;
-  CUDA_FUNC_IN void			setBits(unsigned short bits);
+	// --------------------- access to raw representation ---------------------
+	CUDA_FUNC_IN unsigned short	bits() const;
+	CUDA_FUNC_IN void			setBits(unsigned short bits);
 
- public:
-  // This union gives us an easy way to examine and/or set the individual
-  // bit-fields of an s23e8.
-  union u_u32_s23e8 {
-	unsigned int i;
-	float	 f;
-  };
+	friend std::ostream& operator<< (std::ostream & os, const s10e5& rhs)
+	{
+		os << rhs.ToFloat();
+		return os;
+	}
 
- private:
-  unsigned short	_h;
+public:
+	// This union gives us an easy way to examine and/or set the individual
+	// bit-fields of an s23e8.
+	union u_u32_s23e8 {
+		unsigned int i;
+		float	 f;
+	};
+
+private:
+	unsigned short	_h;
 };
 
 
@@ -177,33 +186,33 @@ class s10e5
 #define S10E5_max	65504.0		// Largest positive s10e5
 
 #define S10E5_EPSILON	0.00097656	// Smallest positive e for which
-					// s10e5 (1.0 + e) != s10e5 (1.0)
+// s10e5 (1.0 + e) != s10e5 (1.0)
 
 #define S10E5_MANT_DIG	11		// Number of digits in mantissa
-					// (significand + hidden leading 1)
+// (significand + hidden leading 1)
 
 #define S10E5_DIG	2		// Number of base 10 digits that
-					// can be represented without change
+// can be represented without change
 
 #define S10E5_RADIX	2		// Base of the exponent
 
 #define S10E5_min_EXP	-13		// Minimum negative integer such that
-					// S10E5_RADIX raised to the power of
-					// one less than that integer is a
-					// normalized s10e5
+// S10E5_RADIX raised to the power of
+// one less than that integer is a
+// normalized s10e5
 
 #define S10E5_max_EXP	16		// Maximum positive integer such that
-					// S10E5_RADIX raised to the power of
-					// one less than that integer is a
-					// normalized s10e5
+// S10E5_RADIX raised to the power of
+// one less than that integer is a
+// normalized s10e5
 
 #define S10E5_min_10_EXP	-4		// Minimum positive integer such
-					// that 10 raised to that power is
-					// a normalized s10e5
+// that 10 raised to that power is
+// a normalized s10e5
 
 #define S10E5_max_10_EXP	4		// Maximum positive integer such
-					// that 10 raised to that power is
-					// a normalized s10e5
+// that 10 raised to that power is
+// a normalized s10e5
 
 
 //---------------------------------------------------------------------------
@@ -318,57 +327,63 @@ class s10e5
 //---------------------------------------------------------------------------
 
 
-inline s10e5::s10e5 () { } // no initialization
+inline s10e5::s10e5() { } // no initialization
 
 // -------------------------- in-convert from s23e8 -------------------------
 
-inline s10e5::s10e5 (float f)
+inline s10e5::s10e5(float f)
 {
-  u_u32_s23e8 x;
+	u_u32_s23e8 x;
 
-  x.f = f;
+	x.f = f;
 
-  register int e = (x.i >> 23) & 0x000000ff;
-  register int s = (x.i >> 16) & 0x00008000;
-  register int m = x.i & 0x007fffff;
+	register int e = (x.i >> 23) & 0x000000ff;
+	register int s = (x.i >> 16) & 0x00008000;
+	register int m = x.i & 0x007fffff;
 
-  e = e - 127;
-  if (e == 128) {
-	// infinity or NAN; preserve the leading bits of mantissa
-	// because they tell whether it's a signaling of quiet NAN
-	_h = s | (31 << 10) | (m >> 13);
-  } else if (e > 15) {
-	// overflow to infinity
-	_h = s | (31 << 10);
-  } else if (e > -15) {
-	// normalized case
-	if ((m & 0x00003fff) == 0x00001000) {
-	  // tie, round down to even
-	  _h = s | ((e+15) << 10) | (m >> 13);
-	} else {
-	  // all non-ties, and tie round up to even
-	  _h = s | ((e+15) << 10) | ((m + 0x00001000) >> 13);
+	e = e - 127;
+	if (e == 128) {
+		// infinity or NAN; preserve the leading bits of mantissa
+		// because they tell whether it's a signaling of quiet NAN
+		_h = s | (31 << 10) | (m >> 13);
 	}
-  } else if (e > -25) {
-	// convert to subnormal
-	m |= 0x00800000; // restore the implied bit
-	e = -14 - e; // shift count
-	m >>= e; // M now in position but 2^13 too big
-	if ((m & 0x00003fff) == 0x00001000) {
-	  // tie round down to even
-	} else {
-	  // all non-ties, and tie round up to even
-	  m += (1 << 12); // m += 0x00001000
+	else if (e > 15) {
+		// overflow to infinity
+		_h = s | (31 << 10);
 	}
-	m >>= 13;
-	_h = s | m;
-  } else {
-	// zero, or underflow
-	_h = s;
-  }
+	else if (e > -15) {
+		// normalized case
+		if ((m & 0x00003fff) == 0x00001000) {
+			// tie, round down to even
+			_h = s | ((e + 15) << 10) | (m >> 13);
+		}
+		else {
+			// all non-ties, and tie round up to even
+			_h = s | ((e + 15) << 10) | ((m + 0x00001000) >> 13);
+		}
+	}
+	else if (e > -25) {
+		// convert to subnormal
+		m |= 0x00800000; // restore the implied bit
+		e = -14 - e; // shift count
+		m >>= e; // M now in position but 2^13 too big
+		if ((m & 0x00003fff) == 0x00001000) {
+			// tie round down to even
+		}
+		else {
+			// all non-ties, and tie round up to even
+			m += (1 << 12); // m += 0x00001000
+		}
+		m >>= 13;
+		_h = s | m;
+	}
+	else {
+		// zero, or underflow
+		_h = s;
+	}
 }
 
-inline s10e5::s10e5 (unsigned short s)
+inline s10e5::s10e5(unsigned short s)
 {
 	_h = s;
 }
@@ -376,37 +391,40 @@ inline s10e5::s10e5 (unsigned short s)
 
 // ------------------------ out-convert s10e5 to s23e8 ----------------------
 
-inline s10e5::operator float () const
+inline s10e5::operator float() const
 {
 #ifdef ISCUDA
 	return __half2float(_h);
 #else
-  register int s = _h & 0x8000;
-  register int e = (_h & 0x7c00) >> 10;
-  register int m = _h & 0x03ff;
-  u_u32_s23e8 x;
+	register int s = _h & 0x8000;
+	register int e = (_h & 0x7c00) >> 10;
+	register int m = _h & 0x03ff;
+	u_u32_s23e8 x;
 
-  s <<= 16;
-  if (e == 31) {
-	// infinity or NAN
-	e = 255 << 23;
-	m <<= 13;
-	x.i = s | e | m;
-  } else if (e > 0) {
-	// normalized
-	e = e + (127 - 15);
-	e <<= 23;
-	m <<= 13;
-	x.i = s | e | m;
-  } else if (m == 0) {
-	// zero
-	x.i = s;
-  } else {
-	// subnormal, value is m times 2^-24
-	x.f = ((float) m);
-	x.i = s | (x.i - (24 << 23));
-  }
-  return(x.f);
+	s <<= 16;
+	if (e == 31) {
+		// infinity or NAN
+		e = 255 << 23;
+		m <<= 13;
+		x.i = s | e | m;
+	}
+	else if (e > 0) {
+		// normalized
+		e = e + (127 - 15);
+		e <<= 23;
+		m <<= 13;
+		x.i = s | e | m;
+	}
+	else if (m == 0) {
+		// zero
+		x.i = s;
+	}
+	else {
+		// subnormal, value is m times 2^-24
+		x.f = ((float)m);
+		x.i = s | (x.i - (24 << 23));
+	}
+	return(x.f);
 #endif
 }
 
@@ -417,57 +435,57 @@ inline s10e5::operator float () const
 // %%% this routine does not handle subnormals properly
 //-------------------------
 
-inline s10e5 s10e5::round (unsigned int n) const
+inline s10e5 s10e5::round(unsigned int n) const
 {
-  //
-  // Parameter check.
-  //
+	//
+	// Parameter check.
+	//
 
-  if (n >= 10)
-	return *this;
+	if (n >= 10)
+		return *this;
 
-  //
-  // Disassemble h into the sign, s,
-  // and the combined exponent and significand, e.
-  //
+	//
+	// Disassemble h into the sign, s,
+	// and the combined exponent and significand, e.
+	//
 
-  unsigned short s = _h & 0x8000;
-  unsigned short e = _h & 0x7fff;
+	unsigned short s = _h & 0x8000;
+	unsigned short e = _h & 0x7fff;
 
-  //
-  // Round the exponent and significand to the nearest value
-  // where ones occur only in the (10-n) most significant bits.
-  // Note that the exponent adjusts automatically if rounding
-  // up causes the significand to overflow.
-  //
+	//
+	// Round the exponent and significand to the nearest value
+	// where ones occur only in the (10-n) most significant bits.
+	// Note that the exponent adjusts automatically if rounding
+	// up causes the significand to overflow.
+	//
 
-  e >>= 9 - n;
-  e  += e & 1;
-  e <<= 9 - n;
+	e >>= 9 - n;
+	e += e & 1;
+	e <<= 9 - n;
 
-  //
-  // Check for exponent overflow.
-  //
+	//
+	// Check for exponent overflow.
+	//
 
-  if (e >= 0x7c00)
+	if (e >= 0x7c00)
 	{
-	  //
-	  // Overflow occurred -- truncate instead of rounding.
-	  //
+		//
+		// Overflow occurred -- truncate instead of rounding.
+		//
 
-	  e = _h;
-	  e >>= 10 - n;
-	  e <<= 10 - n;
+		e = _h;
+		e >>= 10 - n;
+		e <<= 10 - n;
 	}
 
-  //
-  // Put the original sign bit back.
-  //
+	//
+	// Put the original sign bit back.
+	//
 
-  s10e5 h;
-  h._h = s | e;
+	s10e5 h;
+	h._h = s | e;
 
-  return h;
+	return h;
 }
 
 
@@ -478,89 +496,119 @@ inline s10e5 s10e5::round (unsigned int n) const
 // ------------------------------- assignment -------------------------------
 
 inline s10e5 & s10e5::operator = (s10e5 h)
-{ _h = h._h; return *this; }
+{
+	_h = h._h; return *this;
+}
 
 inline s10e5 & s10e5::operator = (float f)
-{ *this = s10e5 (f); return *this; }
+{
+	*this = s10e5(f); return *this;
+}
 
 // ---------------------------- unary operators -----------------------------
 
 inline s10e5 s10e5::operator - () const
-{ s10e5 h; h._h = _h ^ 0x8000; return h; }
+{
+	s10e5 h; h._h = _h ^ 0x8000; return h;
+}
 
 // ---------------------- assign with binary operator -----------------------
 
 inline s10e5 & s10e5::operator += (s10e5 h)
-{ *this = s10e5 (float (*this) + float (h)); return *this; }
+{
+	*this = s10e5(float(*this) + float(h)); return *this;
+}
 
 inline s10e5 & s10e5::operator += (float f)
-{ *this = s10e5 (float (*this) + f); return *this; }
+{
+	*this = s10e5(float(*this) + f); return *this;
+}
 
 inline s10e5 & s10e5::operator -= (s10e5 h)
-{ *this = s10e5 (float (*this) - float (h)); return *this; }
+{
+	*this = s10e5(float(*this) - float(h)); return *this;
+}
 
 inline s10e5 & s10e5::operator -= (float f)
-{ *this = s10e5 (float (*this) - f); return *this; }
+{
+	*this = s10e5(float(*this) - f); return *this;
+}
 
 inline s10e5 & s10e5::operator *= (s10e5 h)
-{ *this = s10e5 (float (*this) * float (h)); return *this; }
+{
+	*this = s10e5(float(*this) * float(h)); return *this;
+}
 
 inline s10e5 & s10e5::operator *= (float f)
-{ *this = s10e5 (float (*this) * f); return *this; }
+{
+	*this = s10e5(float(*this) * f); return *this;
+}
 
 inline s10e5 & s10e5::operator /= (s10e5 h)
-{ *this = s10e5 (float (*this) / float (h)); return *this; }
+{
+	*this = s10e5(float(*this) / float(h)); return *this;
+}
 
 inline s10e5 & s10e5::operator /= (float f)
-{ *this = s10e5 (float (*this) / f); return *this; }
+{
+	*this = s10e5(float(*this) / f); return *this;
+}
 
 // ------------------------------- predicates -------------------------------
 
-inline bool s10e5::isFinite () const
-{ unsigned short e = (_h >> 10) & 0x001f; return e < 31; }
-
-inline bool s10e5::isNormalized () const
-{ unsigned short e = (_h >> 10) & 0x001f; return e > 0 && e < 31; }
-
-inline bool s10e5::isDenormalized () const
+inline bool s10e5::isFinite() const
 {
-  unsigned short e = (_h >> 10) & 0x001f;
-  unsigned short m =  _h & 0x3ff;
-  return e == 0 && m != 0;
+	unsigned short e = (_h >> 10) & 0x001f; return e < 31;
 }
 
-inline bool s10e5::isZero () const
-{ return (_h & 0x7fff) == 0; }
-
-inline bool s10e5::isNan () const
+inline bool s10e5::isNormalized() const
 {
-  unsigned short e = (_h >> 10) & 0x001f;
-  unsigned short m =  _h & 0x3ff;
-  return e == 31 && m != 0;
+	unsigned short e = (_h >> 10) & 0x001f; return e > 0 && e < 31;
 }
 
-inline bool s10e5::isInfinity () const
+inline bool s10e5::isDenormalized() const
 {
-  unsigned short e = (_h >> 10) & 0x001f;
-  unsigned short m =  _h & 0x3ff;
-  return e == 31 && m == 0;
+	unsigned short e = (_h >> 10) & 0x001f;
+	unsigned short m = _h & 0x3ff;
+	return e == 0 && m != 0;
 }
 
-inline bool s10e5::isNegative () const
-{ return (_h & 0x8000) != 0; }
+inline bool s10e5::isZero() const
+{
+	return (_h & 0x7fff) == 0;
+}
+
+inline bool s10e5::isNan() const
+{
+	unsigned short e = (_h >> 10) & 0x001f;
+	unsigned short m = _h & 0x3ff;
+	return e == 31 && m != 0;
+}
+
+inline bool s10e5::isInfinity() const
+{
+	unsigned short e = (_h >> 10) & 0x001f;
+	unsigned short m = _h & 0x3ff;
+	return e == 31 && m == 0;
+}
+
+inline bool s10e5::isNegative() const
+{
+	return (_h & 0x8000) != 0;
+}
 
 // ----------------------------- special values -----------------------------
 
-inline s10e5 s10e5::posInf () { s10e5 h; h._h = 0x7c00; return h; }
-inline s10e5 s10e5::negInf () { s10e5 h; h._h = 0xfc00; return h; }
-inline s10e5 s10e5::qNan () { s10e5 h; h._h = 0x7fff; return h; }
-inline s10e5 s10e5::sNan () { s10e5 h; h._h = 0x7dff; return h; }
-inline s10e5 s10e5::Indet () { s10e5 h; h._h = 0x7e00; return h; }
+inline s10e5 s10e5::posInf() { s10e5 h; h._h = 0x7c00; return h; }
+inline s10e5 s10e5::negInf() { s10e5 h; h._h = 0xfc00; return h; }
+inline s10e5 s10e5::qNan() { s10e5 h; h._h = 0x7fff; return h; }
+inline s10e5 s10e5::sNan() { s10e5 h; h._h = 0x7dff; return h; }
+inline s10e5 s10e5::Indet() { s10e5 h; h._h = 0x7e00; return h; }
 
 // ---------------------- access to raw representation ----------------------
 
-inline unsigned short s10e5::bits () const { return _h; }
-inline void s10e5::setBits (unsigned short bits) { _h = bits; }
+inline unsigned short s10e5::bits() const { return _h; }
+inline void s10e5::setBits(unsigned short bits) { _h = bits; }
 
 typedef s10e5 half;
 
@@ -629,3 +677,5 @@ struct half4
 		return Vec4f(x.ToFloat(), y.ToFloat(), z.ToFloat(), w.ToFloat());
 	}
 };
+
+}

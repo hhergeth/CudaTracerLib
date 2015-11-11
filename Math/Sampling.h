@@ -3,6 +3,8 @@
 #include "Vector.h"
 #include "Spectrum.h"
 
+namespace CudaTracerLib {
+
 struct CudaRNG;
 
 //Implementation of most methods copied from Mitsuba, some are PBRT material too.
@@ -98,25 +100,25 @@ public:
 			if (sx > sy) {
 				// Handle first region of disk
 				r = sx;
-				if (sy > 0.0) theta = sy/r;
-				else          theta = 8.0f + sy/r;
+				if (sy > 0.0) theta = sy / r;
+				else          theta = 8.0f + sy / r;
 			}
 			else {
 				// Handle second region of disk
 				r = sy;
-				theta = 2.0f - sx/r;
+				theta = 2.0f - sx / r;
 			}
 		}
 		else {
 			if (sx <= sy) {
 				// Handle third region of disk
 				r = -sx;
-				theta = 4.0f - sy/r;
+				theta = 4.0f - sy / r;
 			}
 			else {
 				// Handle fourth region of disk
 				r = -sy;
-				theta = 6.0f + sx/r;
+				theta = 6.0f + sx / r;
 			}
 		}
 		theta *= PI / 4.f;
@@ -137,17 +139,17 @@ public:
 	CUDA_DEVICE CUDA_HOST static void StratifiedSample2D(float *samples, int nx, int ny, CudaRNG &rng, bool jitter = true);
 	/*template <typename T> CUDA_FUNC_IN static void Shuffle(T *samp, unsigned int count, unsigned int dims, CudaRNG &rng)
 	{
-		for (unsigned int i = 0; i < count; ++i)
-		{
-			unsigned int other = i + (rng.randomUint() % (count - i));
-			for (unsigned int j = 0; j < dims; ++j)
-				swapk(samp[dims*i + j], samp[dims*other + j]);
-		}
+	for (unsigned int i = 0; i < count; ++i)
+	{
+	unsigned int other = i + (rng.randomUint() % (count - i));
+	for (unsigned int j = 0; j < dims; ++j)
+	swapk(samp[dims*i + j], samp[dims*other + j]);
+	}
 	}*/
 
 	CUDA_FUNC_IN static float SphericalTheta(const Vec3f &v)
 	{
-		return acosf(math::clamp(v.z , - 1.f, 1.f));
+		return acosf(math::clamp(v.z, -1.f, 1.f));
 	}
 
 	CUDA_FUNC_IN static float SphericalPhi(const Vec3f &v)
@@ -178,7 +180,7 @@ public:
 			sinTheta * cosPhi,
 			sinTheta * sinPhi,
 			cosTheta
-		);
+			);
 	}
 
 	CUDA_FUNC_IN static Vec2f toSphericalCoordinates(const Vec3f &v)
@@ -186,9 +188,9 @@ public:
 		Vec2f result = Vec2f(
 			acos(v.z),
 			atan2(v.y, v.x)
-		);
+			);
 		if (result.y < 0)
-			result.y += 2*PI;
+			result.y += 2 * PI;
 		return result;
 	}
 
@@ -218,9 +220,9 @@ public:
 			return 0.0f;
 
 		float Rs = (cosThetaI - eta * cosThetaT)
-				 / (cosThetaI + eta * cosThetaT);
+			/ (cosThetaI + eta * cosThetaT);
 		float Rp = (eta * cosThetaI - cosThetaT)
-				 / (eta * cosThetaI + cosThetaT);
+			/ (eta * cosThetaI + cosThetaT);
 
 		/* No polarization -- return the unpolarized reflectance */
 		return 0.5f * (Rs * Rs + Rp * Rp);
@@ -234,8 +236,8 @@ public:
 
 		/* Using Snell's law, calculate the squared sine of the
 		   angle between the normal and the transmitted ray */
-		float scale = (cosThetaI_ > 0) ? 1.0f/eta : eta,
-			  cosThetaTSqr = 1.0f - (1.0f-cosThetaI_*cosThetaI_) * (scale*scale);
+		float scale = (cosThetaI_ > 0) ? 1.0f / eta : eta,
+			cosThetaTSqr = 1.0f - (1.0f - cosThetaI_*cosThetaI_) * (scale*scale);
 
 		/* Check for total internal reflection */
 		if (cosThetaTSqr <= 0.0f) {
@@ -248,9 +250,9 @@ public:
 		float cosThetaT = math::safe_sqrt(cosThetaTSqr);
 
 		float Rs = (cosThetaI - eta * cosThetaT)
-				 / (cosThetaI + eta * cosThetaT);
+			/ (cosThetaI + eta * cosThetaT);
 		float Rp = (eta * cosThetaI - cosThetaT)
-				 / (eta * cosThetaI + cosThetaT);
+			/ (eta * cosThetaI + cosThetaT);
 
 		cosThetaT_ = (cosThetaI_ > 0) ? -cosThetaT : cosThetaT;
 
@@ -264,12 +266,12 @@ public:
 		float tmp = (eta*eta + k*k) * cosThetaI2;
 
 		float Rp2 = (tmp - (eta * (2 * cosThetaI)) + 1)
-				  / (tmp + (eta * (2 * cosThetaI)) + 1);
+			/ (tmp + (eta * (2 * cosThetaI)) + 1);
 
 		float tmpF = eta*eta + k*k;
 
 		float Rs2 = (tmpF - (eta * (2 * cosThetaI)) + cosThetaI2) /
-					(tmpF + (eta * (2 * cosThetaI)) + cosThetaI2);
+			(tmpF + (eta * (2 * cosThetaI)) + cosThetaI2);
 
 		return 0.5f * (Rp2 + Rs2);
 	}
@@ -280,12 +282,12 @@ public:
 		Spectrum tmp = (eta*eta + k*k) * cosThetaI2;
 
 		Spectrum Rp2 = (tmp - (eta * (2 * cosThetaI)) + Spectrum(1.0f))
-					 / (tmp + (eta * (2 * cosThetaI)) + Spectrum(1.0f));
+			/ (tmp + (eta * (2 * cosThetaI)) + Spectrum(1.0f));
 
 		Spectrum tmpF = eta*eta + k*k;
 
 		Spectrum Rs2 = (tmpF - (eta * (2 * cosThetaI)) + Spectrum(cosThetaI2)) /
-					   (tmpF + (eta * (2 * cosThetaI)) + Spectrum(cosThetaI2));
+			(tmpF + (eta * (2 * cosThetaI)) + Spectrum(cosThetaI2));
 
 		return 0.5f * (Rp2 + Rs2);
 	}
@@ -294,20 +296,20 @@ public:
 		/* Modified from "Optics" by K.D. Moeller, University Science Books, 1988 */
 
 		float cosThetaI2 = cosThetaI*cosThetaI,
-			  sinThetaI2 = 1-cosThetaI2,
-			  sinThetaI4 = sinThetaI2*sinThetaI2;
+			sinThetaI2 = 1 - cosThetaI2,
+			sinThetaI4 = sinThetaI2*sinThetaI2;
 
 		float temp1 = eta*eta - k*k - sinThetaI2,
-			  a2pb2 = math::sqrt(temp1*temp1 + 4*k*k*eta*eta),
-			  a     = math::sqrt(0.5f * (a2pb2 + temp1));
+			a2pb2 = math::sqrt(temp1*temp1 + 4 * k*k*eta*eta),
+			a = math::sqrt(0.5f * (a2pb2 + temp1));
 
 		float term1 = a2pb2 + cosThetaI2,
-			  term2 = 2*a*cosThetaI;
+			term2 = 2 * a*cosThetaI;
 
 		float Rs2 = (term1 - term2) / (term1 + term2);
 
 		float term3 = a2pb2*cosThetaI2 + sinThetaI4,
-			  term4 = term2*sinThetaI2;
+			term4 = term2*sinThetaI2;
 
 		float Rp2 = Rs2 * (term3 - term4) / (term3 + term4);
 
@@ -318,20 +320,20 @@ public:
 		/* Modified from "Optics" by K.D. Moeller, University Science Books, 1988 */
 
 		float cosThetaI2 = cosThetaI*cosThetaI,
-			  sinThetaI2 = 1-cosThetaI2,
-			  sinThetaI4 = sinThetaI2*sinThetaI2;
+			sinThetaI2 = 1 - cosThetaI2,
+			sinThetaI4 = sinThetaI2*sinThetaI2;
 
 		Spectrum temp1 = eta*eta - k*k - Spectrum(sinThetaI2),
-			a2pb2 = (temp1*temp1 + k*k*eta*eta*4).safe_sqrt(),
-			a     = ((a2pb2 + temp1) * 0.5f).safe_sqrt();
+			a2pb2 = (temp1*temp1 + k*k*eta*eta * 4).safe_sqrt(),
+			a = ((a2pb2 + temp1) * 0.5f).safe_sqrt();
 
 		Spectrum term1 = a2pb2 + Spectrum(cosThetaI2),
-				 term2 = a*(2*cosThetaI);
+			term2 = a*(2 * cosThetaI);
 
 		Spectrum Rs2 = (term1 - term2) / (term1 + term2);
 
 		Spectrum term3 = a2pb2*cosThetaI2 + Spectrum(sinThetaI4),
-				 term4 = term2*sinThetaI2;
+			term4 = term2*sinThetaI2;
 
 		Spectrum Rp2 = Rs2 * (term3 - term4) / (term3 + term4);
 
@@ -339,7 +341,7 @@ public:
 	}
 
 	CUDA_FUNC_IN static Vec3f reflect(const Vec3f &wi, const Vec3f &n) {
-		return 2 * dot(wi, n) * (n) - wi;
+		return 2 * dot(wi, n) * (n)-wi;
 	}
 
 	CUDA_FUNC_IN static Vec3f refract(const Vec3f &wi, const Vec3f &n, float eta, float cosThetaT) {
@@ -359,7 +361,7 @@ public:
 
 		/* Using Snell's law, calculate the squared sine of the
 		   angle between the normal and the transmitted ray */
-		float cosThetaTSqr = 1.0f - (1.0f-cosThetaI*cosThetaI) * (eta*eta);
+		float cosThetaTSqr = 1.0f - (1.0f - cosThetaI*cosThetaI) * (eta*eta);
 
 		/* Check for total internal reflection */
 		if (cosThetaTSqr <= 0.0f)
@@ -389,3 +391,5 @@ public:
 
 	CUDA_DEVICE CUDA_HOST static unsigned int sampleReuse(float *cdf, unsigned int size, float &sample, float& pdf);
 };
+
+}

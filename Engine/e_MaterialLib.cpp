@@ -1,6 +1,8 @@
 #include <StdAfx.h>
 #include "e_MaterialLib.h"
 
+namespace CudaTracerLib {
+
 static MaterialEntry materialData[] = {
 	/* Fitted data from "A Practical Model for Subsurface scattering" (Jensen et al.). No anisotropy data available. */
 	{ "Apple",                      { 2.29f, 2.39f, 1.97f }, { 0.0030f, 0.0034f, 0.046f  }, { 0.0f, 0.0f, 0.0f }, 1.3f },
@@ -71,4 +73,6 @@ size_t e_MaterialLibrary::getNumMats()
 const std::string& e_MaterialLibrary::getMatName(size_t idx)
 {
 	return materialData[idx].name;
+}
+
 }

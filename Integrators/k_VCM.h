@@ -3,6 +3,8 @@
 #include <Kernel/k_Tracer.h>
 #include "k_VCMHelper.h"
 
+namespace CudaTracerLib {
+
 class k_VCM : public k_Tracer<true, true>
 {
 public:
@@ -18,6 +20,8 @@ private:
 	unsigned long long m_uPhotonsEmitted;
 	float getCurrentRadius(int exp)
 	{
-		return ::getCurrentRadius(m_fInitialRadius, m_uPassesDone, exp);;
+		return CudaTracerLib::getCurrentRadius(m_fInitialRadius, m_uPassesDone, exp);;
 	}
 };
+
+}

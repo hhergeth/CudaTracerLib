@@ -13,6 +13,8 @@ All rights reserved.
 */
 //This class is based on "understanding-the-efficiency-of-ray-traversal-on-gpus" with slight modifications.
 
+namespace CudaTracerLib {
+
 template <class T, int L> class Vector;
 
 template <class T, int L, class S> class VectorBase
@@ -35,8 +37,8 @@ public:
 	CUDA_FUNC_IN    T               length(void) const                { return sqrt(lenSqr()); }
 	CUDA_FUNC_IN    S               normalized(T len = (T)1) const        { return operator*(len * math::rcp(length())); }
 	CUDA_FUNC_IN    void            normalize(T len = (T)1)              { set(normalized(len)); }
-	CUDA_FUNC_IN    T               min(void) const                { const T* tp = getPtr(); T r = tp[0]; for (int i = 1; i < L; i++) r = ::min(r, tp[i]); return r; }
-	CUDA_FUNC_IN    T               max(void) const                { const T* tp = getPtr(); T r = tp[0]; for (int i = 1; i < L; i++) r = ::max(r, tp[i]); return r; }
+	CUDA_FUNC_IN    T               min(void) const                { const T* tp = getPtr(); T r = tp[0]; for (int i = 1; i < L; i++) r = CudaTracerLib::min(r, tp[i]); return r; }
+	CUDA_FUNC_IN    T               max(void) const                { const T* tp = getPtr(); T r = tp[0]; for (int i = 1; i < L; i++) r = CudaTracerLib::max(r, tp[i]); return r; }
 	CUDA_FUNC_IN    T               sum(void) const                { const T* tp = getPtr(); T r = tp[0]; for (int i = 1; i < L; i++) r += tp[i]; return r; }
 	CUDA_FUNC_IN    S               abs(void) const                { const T* tp = getPtr(); S r; T* rp = r.getPtr(); for (int i = 0; i < L; i++) rp[i] = math::abs(tp[i]); return r; }
 	CUDA_FUNC_IN	S				sign() const					{ const T* tp = getPtr(); S r; T* rp = r.getPtr(); for (int i = 0; i < L; i++) rp[i] = math::sign(tp[i]); return r; }
@@ -78,8 +80,8 @@ public:
 
 	template <class V> CUDA_FUNC_IN void    set(const VectorBase<T, L, V>& v)          { set(v.getPtr()); }
 	template <class V> CUDA_FUNC_IN T       dot(const VectorBase<T, L, V>& v) const    { const T* tp = getPtr(); const T* vp = v.getPtr(); T r = (T)0; for (int i = 0; i < L; i++) r += tp[i] * vp[i]; return r; }
-	template <class V> CUDA_FUNC_IN S       min(const VectorBase<T, L, V>& v) const    { const T* tp = getPtr(); const T* vp = v.getPtr(); S r; T* rp = r.getPtr(); for (int i = 0; i < L; i++) rp[i] = ::min(tp[i], vp[i]); return r; }
-	template <class V> CUDA_FUNC_IN S       max(const VectorBase<T, L, V>& v) const    { const T* tp = getPtr(); const T* vp = v.getPtr(); S r; T* rp = r.getPtr(); for (int i = 0; i < L; i++) rp[i] = ::max(tp[i], vp[i]); return r; }
+	template <class V> CUDA_FUNC_IN S       min(const VectorBase<T, L, V>& v) const    { const T* tp = getPtr(); const T* vp = v.getPtr(); S r; T* rp = r.getPtr(); for (int i = 0; i < L; i++) rp[i] = CudaTracerLib::min(tp[i], vp[i]); return r; }
+	template <class V> CUDA_FUNC_IN S       max(const VectorBase<T, L, V>& v) const    { const T* tp = getPtr(); const T* vp = v.getPtr(); S r; T* rp = r.getPtr(); for (int i = 0; i < L; i++) rp[i] = CudaTracerLib::max(tp[i], vp[i]); return r; }
 	template <class V, class W> CUDA_FUNC_IN S clamp(const VectorBase<T, L, V>& lo, const VectorBase<T, L, W>& hi) const { const T* tp = getPtr(); const T* lop = lo.getPtr(); const T* hip = hi.getPtr(); S r; T* rp = r.getPtr(); for (int i = 0; i < L; i++) rp[i] = math::clamp(tp[i], lop[i], hip[i]); return r; }
 
 	template <class V> CUDA_FUNC_IN S&      operator=   (const VectorBase<T, L, V>& v)          { set(v); return *(S*)this; }
@@ -359,7 +361,7 @@ template <class T, int L, class S> CUDA_FUNC_IN S operator<<    (const T& a, con
 template <class T, int L, class S> CUDA_FUNC_IN S operator>>    (const T& a, const VectorBase<T, L, S>& b)  { const T* bp = b.getPtr(); S r; T* rp = r.getPtr(); for (int i = 0; i < L; i++) rp[i] = a >> bp[i]; return r; }
 
 template <class T, int L, class S, class V> CUDA_FUNC_IN T dot(const VectorBase<T, L, S>& a, const VectorBase<T, L, V>& b) { return a.dot(b); }
-template <class T, int L, class S, class V> CUDA_FUNC_IN T absdot(const VectorBase<T, L, S>& a, const VectorBase<T, L, V>& b) { return abs(a.dot(b)); }
+template <class T, int L, class S, class V> CUDA_FUNC_IN T absdot(const VectorBase<T, L, S>& a, const VectorBase<T, L, V>& b) { return math::abs(a.dot(b)); }
 template <class T, int L, class S, class V> CUDA_FUNC_IN T distance(const VectorBase<T, L, S>& a, const VectorBase<T, L, V>& b) { return length(a - b); }
 template <class T, int L, class S, class V> CUDA_FUNC_IN T distanceSquared(const VectorBase<T, L, S>& a, const VectorBase<T, L, V>& b) { return (a - b).lenSqr(); }
 
@@ -402,3 +404,5 @@ signABC(Vec2f) signABC(Vec3f) signABC(Vec4f)
 
 #undef minmax
 #undef signABC
+
+}

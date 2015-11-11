@@ -3,6 +3,8 @@
 #include <Base/CudaRandom.h>
 #include <Engine/e_KernelDynamicScene.h>
 
+namespace CudaTracerLib {
+
 extern CUDA_ALIGN(16) CUDA_CONST e_KernelDynamicScene g_SceneDataDevice;
 extern CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_RayTracedCounterDevice;
 extern CUDA_ALIGN(16) CUDA_CONST CudaRNGBuffer g_RNGDataDevice;
@@ -54,3 +56,5 @@ struct CUDA_ALIGN(16) traversalResult
 };
 
 void __internal__IntersectBuffers(int N, traversalRay* a_RayBuffer, traversalResult* a_ResBuffer, bool SKIP_OUTER, bool ANY_HIT);
+
+}

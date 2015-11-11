@@ -5,6 +5,8 @@
 #include "e_AbstractEmitter.h"
 #include <VirtualFuncType.h>
 
+namespace CudaTracerLib {
+
 enum ESensorFlags
 {
 	/// Sensor response contains a Dirac delta term with respect to time
@@ -100,8 +102,8 @@ public:
 struct e_SphericalCamera : public e_SensorBase//, public e_DerivedTypeHelper<1>
 {
 	TYPE_FUNC(1)
-	e_SphericalCamera()
-	: e_SensorBase(EDeltaPosition | EDirectionSampleMapsToPixels)
+		e_SphericalCamera()
+		: e_SensorBase(EDeltaPosition | EDirectionSampleMapsToPixels)
 	{}
 	e_SphericalCamera(int w, int h)
 		: e_SensorBase(EDeltaPosition | EDirectionSampleMapsToPixels)
@@ -181,7 +183,7 @@ struct e_SphericalCamera : public e_SensorBase//, public e_DerivedTypeHelper<1>
 struct e_PerspectiveCamera : public e_SensorBase//, public e_DerivedTypeHelper<2>
 {
 	TYPE_FUNC(2)
-	Vec3f m_dx, m_dy;
+		Vec3f m_dx, m_dy;
 	float m_normalization;
 	AABB m_imageRect;
 public:
@@ -260,7 +262,7 @@ public:
 struct e_ThinLensCamera : public e_SensorBase//, public e_DerivedTypeHelper<3>
 {
 	TYPE_FUNC(3)
-	Vec3f m_dx, m_dy;
+		Vec3f m_dx, m_dy;
 	float m_aperturePdf;
 	float m_normalization;
 	CUDA_DEVICE CUDA_HOST float importance(const Vec3f &p, const Vec3f &d, Vec2f* sample = 0) const;
@@ -349,8 +351,8 @@ public:
 			return false;
 
 		samplePosition = Vec2f(
-				screenSample.x * m_resolution.x,
-				screenSample.y * m_resolution.y);
+			screenSample.x * m_resolution.x,
+			screenSample.y * m_resolution.y);
 
 		return true;
 	}
@@ -538,79 +540,81 @@ public:
 	CUDA_FUNC_IN Ray GenRay(int x, int y)
 	{
 		Ray r;
-		sampleRay(r,Vec2f(x,y),Vec2f(0,0));
+		sampleRay(r, Vec2f(x, y), Vec2f(0, 0));
 		return r;
 	}
 
 	CALLER(sampleRay)
-	CUDA_FUNC_IN Spectrum sampleRay(Ray &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const
+		CUDA_FUNC_IN Spectrum sampleRay(Ray &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const
 	{
 		return sampleRay_Caller<Spectrum>(*this, ray, pixelSample, apertureSample);
 	}
 
 	CALLER(sampleRayDifferential)
-	CUDA_FUNC_IN Spectrum sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const
+		CUDA_FUNC_IN Spectrum sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const
 	{
 		return sampleRayDifferential_Caller<Spectrum>(*this, ray, rayX, rayY, pixelSample, apertureSample);
 	}
 
 	CALLER(eval)
-	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const Vec3f &d) const
+		CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const Vec3f &d) const
 	{
 		return eval_Caller<Spectrum>(*this, p, sys, d);
 	}
 
 	CALLER(sampleDirect)
-	CUDA_FUNC_IN Spectrum sampleDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const
+		CUDA_FUNC_IN Spectrum sampleDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const
 	{
 		return sampleDirect_Caller<Spectrum>(*this, dRec, sample);
 	}
 
 	CALLER(pdfDirect)
-	CUDA_FUNC_IN float pdfDirect(const DirectSamplingRecord &dRec) const
+		CUDA_FUNC_IN float pdfDirect(const DirectSamplingRecord &dRec) const
 	{
 		return pdfDirect_Caller<float>(*this, dRec);
 	}
 
 	CALLER(samplePosition)
-	CUDA_FUNC_IN Spectrum samplePosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const
+		CUDA_FUNC_IN Spectrum samplePosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const
 	{
 		return samplePosition_Caller<Spectrum>(*this, pRec, sample, extra);
 	}
 
 	CALLER(evalPosition)
-	CUDA_FUNC_IN Spectrum evalPosition(const PositionSamplingRecord &pRec) const
+		CUDA_FUNC_IN Spectrum evalPosition(const PositionSamplingRecord &pRec) const
 	{
 		return evalPosition_Caller<Spectrum>(*this, pRec);
 	}
 
 	CALLER(pdfPosition)
-	CUDA_FUNC_IN float pdfPosition(const PositionSamplingRecord &pRec) const
+		CUDA_FUNC_IN float pdfPosition(const PositionSamplingRecord &pRec) const
 	{
 		return pdfPosition_Caller<float>(*this, pRec);
 	}
 
 	CALLER(sampleDirection)
-	CUDA_FUNC_IN Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const
+		CUDA_FUNC_IN Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const
 	{
 		return sampleDirection_Caller<Spectrum>(*this, dRec, pRec, sample, extra);
 	}
 
 	CALLER(pdfDirection)
-	CUDA_FUNC_IN float pdfDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
+		CUDA_FUNC_IN float pdfDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
 	{
 		return pdfDirection_Caller<float>(*this, dRec, pRec);
 	}
 
 	CALLER(evalDirection)
-	CUDA_FUNC_IN Spectrum evalDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
+		CUDA_FUNC_IN Spectrum evalDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
 	{
 		return evalDirection_Caller<Spectrum>(*this, dRec, pRec);
 	}
 
 	CALLER(getSamplePosition)
-	CUDA_FUNC_IN bool getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, Vec2f &samplePosition) const
+		CUDA_FUNC_IN bool getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, Vec2f &samplePosition) const
 	{
 		return getSamplePosition_Caller<bool>(*this, pRec, dRec, samplePosition);
 	}
 };
+
+}

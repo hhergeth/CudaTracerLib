@@ -4,6 +4,8 @@
 #include <Kernel/k_TraceAlgorithms.h>
 #include <Engine/e_Light.h>
 
+namespace CudaTracerLib {
+
 CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_NextRayCounter;
 
 template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(Ray& r, const Ray& rX, const Ray& rY, CudaRNG& rnd)
@@ -25,7 +27,7 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(Ray& r, const Ray& rX, con
 		if (V.HasVolumes() && isInMedium && V.sampleDistance(r, 0, r2.m_fDist, rnd, mRec))
 		{
 			cf *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
-			
+
 			if (DIRECT)//direct sampling
 			{
 				DirectSamplingRecord dRec(mRec.p, Vec3f(0));
@@ -137,7 +139,7 @@ void k_PathTracer::Debug(e_Image* I, const Vec2i& p)
 	k_INITIALIZE(m_pScene, g_sRngs);
 	CudaRNG rng = g_RNGData();
 	Ray r = g_SceneData.GenerateSensorRay(p.x, p.y);
-	r.direction = Vec3f(0,0,1);
+	r.direction = Vec3f(0, 0, 1);
 	PathTrace<true>(r, r, r, rng);
 }
 
@@ -145,7 +147,7 @@ template<bool DIRECT, bool REGU> __global__ void pathKernel2(unsigned int w, uns
 {
 	Vec2i pixel = k_TracerBase::getPixelPos(xoff, yoff);
 	CudaRNG rng = g_RNGData();
-	if(pixel.x < w && pixel.y < h)
+	if (pixel.x < w && pixel.y < h)
 	{
 		Ray r;
 		Spectrum imp = g_SceneData.sampleSensorRay(r, Vec2f(pixel.x, pixel.y), rng.randomFloat2());
@@ -174,4 +176,6 @@ void k_PathTracer::RenderBlock(e_Image* I, int x, int y, int blockW, int blockH)
 			pathKernel2<true, false> << <numBlocks, threadsPerBlock >> > (w, h, x, y, m_pBlockSampler->getBlockImage(), radius2);
 		else pathKernel2<false, false> << <numBlocks, threadsPerBlock >> > (w, h, x, y, m_pBlockSampler->getBlockImage(), radius2);
 	}
+}
+
 }

@@ -5,6 +5,8 @@
 #include <vector>
 #include <Base/Platform.h>
 
+namespace CudaTracerLib {
+
 struct k_Beam
 {
 	Vec3f pos;
@@ -122,3 +124,5 @@ template<bool USE_GLOBAL> struct VolHelper
 		else return vol->As()->Func.Evaluate(rec);
 	}
 };
+
+}

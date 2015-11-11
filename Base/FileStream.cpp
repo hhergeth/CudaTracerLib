@@ -3,6 +3,8 @@
 #include <boost/filesystem.hpp>
 #include <boost/iostreams/device/mapped_file.hpp> 
 
+namespace CudaTracerLib {
+
 bool IInStream::ReadTo(std::string& str, char end)
 {
 	char ch;
@@ -62,7 +64,7 @@ void FileInputStream::Move(int off)
 MemInputStream::MemInputStream(const unsigned char* _buf, size_t length, bool canKeep)
 {
 	path = "";
-	if(canKeep)
+	if (canKeep)
 		this->buf = _buf;
 	else
 	{
@@ -92,7 +94,7 @@ MemInputStream::MemInputStream(const std::string& a_Name)
 
 void MemInputStream::Read(void* a_Data, size_t a_Size)
 {
-	if(a_Size + numBytesRead > m_uFileSize)
+	if (a_Size + numBytesRead > m_uFileSize)
 		throw std::runtime_error("Stream not long enough!");
 	memcpy(a_Data, buf + numBytesRead, a_Size);
 	numBytesRead += a_Size;
@@ -100,7 +102,7 @@ void MemInputStream::Read(void* a_Data, size_t a_Size)
 
 IInStream* OpenFile(const std::string& filename)
 {
-	if(boost::filesystem::file_size(filename) < 1024 * 1024 * 512)
+	if (boost::filesystem::file_size(filename) < 1024 * 1024 * 512)
 		return new MemInputStream(filename);
 	else return new FileInputStream(filename);
 	return 0;
@@ -128,4 +130,6 @@ void FileOutputStream::Close()
 		if (fclose((FILE*)H))
 			throw std::runtime_error("Could not close file!");
 	H = 0;
+}
+
 }

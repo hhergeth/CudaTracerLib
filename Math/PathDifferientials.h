@@ -2,6 +2,8 @@
 #include "qMatrixWrapper.h"
 #include "Frame.h"
 
+namespace CudaTracerLib {
+
 template<typename T, int M, int N> qMatrix<T, 1, N> ddot_dx(const qMatrix<T, M, 1>& a, const qMatrix<T, M, N>& da_dx, const qMatrix<T, M, 1>& b, const qMatrix<T, M, N>& db_dx)
 {
 	return b.transpose() * da_dx + a.transpose() * db_dx;
@@ -32,8 +34,8 @@ qMatrix<float, 3, 4> A(const Frame& i, const Frame& j)
 	return a;
 }
 
-qMatrix<float, 1, 6> dfi_diffuse_du123_v123(const Vec3f& x_prev, const Vec3f& x_i, const Vec3f& x_next, 
-											const Frame& f_prev, const Frame& f_i, const Frame& f_next, float tau)
+qMatrix<float, 1, 6> dfi_diffuse_du123_v123(const Vec3f& x_prev, const Vec3f& x_i, const Vec3f& x_next,
+	const Frame& f_prev, const Frame& f_i, const Frame& f_next, float tau)
 {
 	float d = distance(x_next, x_i), d2 = d * d;
 	qMatrix<float, 3, 4> a = A(f_i, f_next);
@@ -65,4 +67,6 @@ qMatrix<float, 1, 4> dG_du12_v12(const Vec3f& x_i, const Vec3f& x_j, const Frame
 	//qMatrix<float, 1, 3> p1 = c * (b * n_i.transpose() - a * n_j.transpose()), p2 = a * b * 4 * math::sqrt(c) * Q(x_j -  x_i).transpose();
 	//qMatrix<float, 1, 3> p3 = (p1 - p2) / math::sqr(c);
 	//return p3 * A(f_i, f_j);
+}
+
 }

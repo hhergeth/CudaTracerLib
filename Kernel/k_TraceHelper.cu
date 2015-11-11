@@ -11,6 +11,8 @@
 #include <Engine/e_DynamicScene.h>
 #include "k_BVHTracer.h"
 
+namespace CudaTracerLib {
+
 enum
 {
 	MaxBlockHeight = 6,            // Upper bound for blockDim.y.
@@ -915,4 +917,6 @@ void __internal__IntersectBuffers(int N, traversalRay* a_RayBuffer, traversalRes
 	}
 	ThrowCudaErrors(cudaDeviceSynchronize());
 	g_RayTracedCounterHost += N;
+}
+
 }
