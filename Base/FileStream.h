@@ -4,7 +4,7 @@
 #include <fstream>
 #include <MathTypes.h>
 #include "FixedString.h"
-#include "../Engine/e_Buffer_device.h"
+#include <Engine/e_Buffer_device.h>
 
 #define DCL_IN(TYPE) \
 	IInStream& operator>>(TYPE& rhs) \
@@ -75,6 +75,14 @@ public:
 	template<int N> void Read(FixedString<N>& str)
 	{
 		Read((char*)&str, sizeof(FixedString<N>));
+	}
+	template<typename T, int N, bool b, unsigned char c> void Read(FixedSizeArray<T, N, b, c>& arr)
+	{
+		size_t l;
+		*this >> l;
+		arr.resize(l);
+		for (unsigned int i = 0; i < l; i++)
+			*this >> arr(i);
 	}
 public:
 	DCL_IN(char)
@@ -199,6 +207,12 @@ public:
 	template<int N> void Write(const FixedString<N>& str)
 	{
 		Write((char*)&str, sizeof(FixedString<N>));
+	}
+	template<typename T, int N, bool b, unsigned char c> void Write(const FixedSizeArray<T, N, b, c>& arr)
+	{
+		*this << arr.size();
+		for (size_t i = 0; i < arr.size(); i++)
+			*this << arr(i);
 	}
 	DCL_OUT(char)
 	DCL_OUT(short)

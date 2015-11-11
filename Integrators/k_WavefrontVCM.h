@@ -1,7 +1,7 @@
 #pragma once
 
-#include "..\Kernel\k_Tracer.h"
-#include "../Kernel/k_RayBuffer.h"
+#include <Kernel/k_Tracer.h>
+#include <Kernel/k_RayBuffer.h>
 #include "k_VCMHelper.h"
 
 //in vertices

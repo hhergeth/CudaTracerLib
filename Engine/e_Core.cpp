@@ -1,13 +1,13 @@
 #include <StdAfx.h>
 #include "e_Core.h"
-#include "../CudaMemoryManager.h"
-#include "..\MathTypes.h"
+#include <CudaMemoryManager.h>
+#include <MathTypes.h>
 #include "e_RoughTransmittance.h"
 #define FREEIMAGE_LIB
 #include <FreeImage.h>
 #include "e_FileTexture.h"
 #include <crtdbg.h>
-#include "../Kernel/k_Tracer.h"
+#include <Kernel/k_Tracer.h>
 #include <ctime>
 
 void testPrisma()

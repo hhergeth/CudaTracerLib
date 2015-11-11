@@ -1,6 +1,6 @@
 #include "k_BlockSampler.h"
 #include <numeric>
-#include "../CudaMemoryManager.h"
+#include <CudaMemoryManager.h>
 //#include <cuda.h>
 /*#include <thrust/device_ptr.h>
 #include <thrust/sort.h>

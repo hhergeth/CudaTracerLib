@@ -386,4 +386,6 @@ public:
 		float cosThetaT;
 		return MonteCarlo::fresnelDielectricExt(cosThetaI, cosThetaT, eta);
 	}
+
+	CUDA_DEVICE CUDA_HOST static unsigned int sampleReuse(float *cdf, unsigned int size, float &sample, float& pdf);
 };

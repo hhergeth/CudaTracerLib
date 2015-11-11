@@ -1,5 +1,5 @@
 #include <StdAfx.h>
-#include "..\..\Base\FileStream.h"
+#include <Base/FileStream.h>
 #include "Importer.h"
 #include "SplitBVHBuilder.hpp"
 

@@ -1,7 +1,7 @@
 #include "k_BDPT.h"
-#include "..\Kernel\k_TraceHelper.h"
+#include <Kernel/k_TraceHelper.h>
 #include <time.h>
-#include "..\Kernel\k_TraceAlgorithms.h"
+#include <Kernel/k_TraceAlgorithms.h>
 #include "k_VCMHelper.h"
 
 CUDA_FUNC_IN float pathWeight(int force_s, int force_t, int s, int t)

@@ -1,8 +1,8 @@
 #pragma once
-#include "../Defines.h"
-#include "..\Math\AABB.h"
+#include <Defines.h>
+#include <Math/AABB.h>
 #include "e_PhaseFunction.h"
-#include "../VirtualFuncType.h"
+#include <VirtualFuncType.h>
 
 //Implementation and interface copied from Mitsuba as well as PBRT.
 

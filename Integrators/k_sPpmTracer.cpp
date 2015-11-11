@@ -1,10 +1,10 @@
 #include <StdAfx.h>
-#include "../Engine/e_Buffer.h"
+#include <Engine/e_Buffer.h>
 #include "k_sPpmTracer.h"
-#include "..\Base\Timer.h"
-#include "../Engine/e_DynamicScene.h"
-#include "../Engine/e_Node.h"
-#include "../Engine/e_Mesh.h"
+#include <Base/Timer.h>
+#include <Engine/e_DynamicScene.h>
+#include <Engine/e_Node.h>
+#include <Engine/e_Mesh.h>
 
 k_sPpmTracer::k_sPpmTracer()
 	: m_pEntries(0), m_bFinalGather(false), m_fLightVisibility(1), k_Intial(25)
@@ -97,7 +97,7 @@ void print(k_PhotonMapCollection& m_sMaps, k_PhotonMap<k_HashGrid_Reg>& m_Map, s
 static Vec2i lastPix = Vec2i(0,0);
 void k_sPpmTracer::DoRender(e_Image* I)
 {
-	I->Clear();
+	//I->Clear();
 	//if (m_uTotalPhotonsEmitted == 0)
 	{
 		doPhotonPass();

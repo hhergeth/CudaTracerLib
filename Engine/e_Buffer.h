@@ -14,9 +14,9 @@
 #include <boost/icl/interval_set.hpp>
 
 #include "e_Buffer_device.h"
-#include "../Base/Platform.h"
-#include "../CudaMemoryManager.h"
-#include "../VirtualFuncType.h"
+#include <Base/Platform.h>
+#include <CudaMemoryManager.h>
+#include <VirtualFuncType.h>
 
 template<typename H, typename D> class e_BufferIterator;
 template<typename H, typename D> class e_BufferRange

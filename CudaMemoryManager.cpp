@@ -1,6 +1,6 @@
 #include <StdAfx.h>
 #include "CudaMemoryManager.h"
-#include "Kernel/k_Tracer.h"
+#include <Kernel/k_Tracer.h>
 
 std::map<void*, CudaMemoryEntry> CudaMemoryManager::alloced_entries;
 std::vector<CudaMemoryEntry> CudaMemoryManager::freed_entries;

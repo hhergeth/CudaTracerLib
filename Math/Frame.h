@@ -147,11 +147,9 @@ struct Frame
 		return !operator==(frame);
 	}
 
-	friend std::ostream& operator<< (std::ostream & os, const Frame& rhs);
+	friend std::ostream& operator<< (std::ostream & os, const Frame& rhs)
+	{
+		os << "N = " << rhs.n << "\nT = " << rhs.t << "\nB = " << rhs.s;
+		return os;
+	}
 };
-
-inline std::ostream& operator<< (std::ostream & os, const Frame& rhs)
-{
-	os << "N = " << rhs.n << "\nT = " << rhs.t << "\nB = " << rhs.s;
-	return os;
-}

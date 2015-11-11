@@ -1,10 +1,10 @@
 #pragma once
 
-#include "../Kernel/k_Tracer.h"
-#include "../Engine/e_Grid.h"
-#include "../Math//Compression.h"
-#include "../Base/FileStream.h"
-#include "../CudaMemoryManager.h"
+#include <Kernel/k_Tracer.h>
+#include <Engine/e_Grid.h>
+#include <Math/Compression.h>
+#include <Base/FileStream.h>
+#include <CudaMemoryManager.h>
 
 #define ALPHA (2.0f / 3.0f)
 

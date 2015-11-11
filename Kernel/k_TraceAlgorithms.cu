@@ -1,8 +1,8 @@
 #include "k_TraceAlgorithms.h"
 #include "k_TraceHelper.h"
-#include "../Engine/e_Samples.h"
-#include "../Engine/e_Material.h"
-#include "../Engine/e_Light.h"
+#include <Engine/e_Samples.h>
+#include <Engine/e_Material.h>
+#include <Engine/e_Light.h>
 
 bool V(const Vec3f& a, const Vec3f& b, TraceResult* res)
 {
@@ -28,7 +28,7 @@ Spectrum Transmittance(const Ray& r, float tmin, float tmax)
 	return Spectrum(1.0f);
 }
 
-CUDA_FUNC_IN Spectrum EstimateDirect(BSDFSamplingRecord bRec, const e_KernelMaterial& mat, const e_KernelLight* light, unsigned int li, EBSDFType flags, CudaRNG& rng, bool attenuated)
+CUDA_FUNC_IN Spectrum EstimateDirect(BSDFSamplingRecord bRec, const e_KernelMaterial& mat, const e_KernelLight* light, EBSDFType flags, CudaRNG& rng, bool attenuated)
 {
 	DirectSamplingRecord dRec(bRec.dg.P, bRec.dg.sys.n);
 	Spectrum value = light->sampleDirect(dRec, rng.randomFloat2());
@@ -57,14 +57,13 @@ Spectrum UniformSampleAllLights(const BSDFSamplingRecord& bRec, const e_KernelMa
 {
 	//only sample the relevant lights and assume the others emit the same
 	Spectrum L = Spectrum(0.0f);
-	for(unsigned int i = 0; i < g_SceneData.m_uEmitterCount; i++)
+	for(unsigned int i = 0; i < g_SceneData.m_sLightData.UsedCount; i++)
 	{
-		unsigned int l = g_SceneData.m_uEmitterIndices[i];
-		e_KernelLight* light = g_SceneData.m_sLightData.Data + l;
+		e_KernelLight* light = g_SceneData.m_sLightData.Data + i;
 		Spectrum Ld = Spectrum(0.0f);
 		for(int j = 0; j < nSamples; j++)
 		{
-			Ld += EstimateDirect((BSDFSamplingRecord&)bRec, mat, light, l, EBSDFType(EAll & ~EDelta), rng, attenuated);
+			Ld += EstimateDirect((BSDFSamplingRecord&)bRec, mat, light, EBSDFType(EAll & ~EDelta), rng, attenuated);
 		}
 		L += Ld / float(nSamples);
 	}
@@ -73,9 +72,10 @@ Spectrum UniformSampleAllLights(const BSDFSamplingRecord& bRec, const e_KernelMa
 
 Spectrum UniformSampleOneLight(const BSDFSamplingRecord& bRec, const e_KernelMaterial& mat, CudaRNG& rng, bool attenuated)
 {
-	if(!g_SceneData.m_uEmitterCount)
+	if (!g_SceneData.m_sLightData.UsedCount)
 		return Spectrum(0.0f);
-	float emitpdf;
-	unsigned int index = g_SceneData.m_uEmitterIndices[g_SceneData.m_emitterPDF.SampleDiscrete(rng.randomFloat(), &emitpdf)];
-	return float(g_SceneData.m_uEmitterCount) * EstimateDirect((BSDFSamplingRecord&)bRec, mat, g_SceneData.m_sLightData.Data + index, index, EBSDFType(EAll & ~EDelta), rng, attenuated);
+	Vec2f sample = rng.randomFloat2();
+	float pdf;
+	const e_KernelLight* light = g_SceneData.sampleLight(pdf, sample);
+	return EstimateDirect((BSDFSamplingRecord&)bRec, mat, light, EBSDFType(EAll & ~EDelta), rng, attenuated) / pdf;
 }

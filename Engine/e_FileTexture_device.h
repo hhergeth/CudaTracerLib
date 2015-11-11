@@ -1,5 +1,5 @@
 #pragma once
-#include "../MathTypes.h"
+#include <MathTypes.h>
 
 #define MAX_MIPS 16
 #define MTS_MIPMAP_LUT_SIZE 64

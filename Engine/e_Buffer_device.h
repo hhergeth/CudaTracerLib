@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Defines.h"
+#include <Defines.h>
 
 #define MINUS_ONE std::numeric_limits<size_t>::max()
 

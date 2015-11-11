@@ -12,11 +12,13 @@ public:
 	{
 		start = std::chrono::high_resolution_clock::now();
 	}
+	//Returns the elapsed time in seconds
 	double EndTimer()
 	{
 		stop = std::chrono::high_resolution_clock::now();
 		return getElapsedTime();
 	}
+	//Returns the elapsed time in seconds
 	double getElapsedTime()
 	{
 		return (double)std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count() / 1000.0;

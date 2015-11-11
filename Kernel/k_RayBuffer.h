@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../Defines.h"
-#include "../CudaMemoryManager.h"
+#include <Defines.h>
+#include <CudaMemoryManager.h>
 
 template<typename T, int N> struct k_RayBuffer
 {

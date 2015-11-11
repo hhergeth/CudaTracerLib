@@ -1,6 +1,6 @@
 #pragma once
 
-#include "..\MathTypes.h"
+#include <MathTypes.h>
 
 //Implementation and interface copied from Mitsuba.
 

@@ -1,8 +1,8 @@
 #include "k_Tracer.h"
 #include "k_TraceHelper.h"
 #include "k_TraceAlgorithms.h"
-#include "../Engine/e_DynamicScene.h"
-#include "../Engine/e_Light.h"
+#include <Engine/e_DynamicScene.h>
+#include <Engine/e_Light.h>
 
 CUDA_DEVICE uint3 g_EyeHitBoxMin;
 CUDA_DEVICE uint3 g_EyeHitBoxMax;

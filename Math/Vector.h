@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Defines.h"
+#include <Defines.h>
 #include <iostream>
 #pragma warning(push, 3)
 #include <vector_functions.h> // float4, etc.

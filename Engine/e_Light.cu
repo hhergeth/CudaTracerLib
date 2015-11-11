@@ -2,7 +2,7 @@
 #include "e_Light.h"
 #include "e_Mesh.h"
 #include "e_FileTexture.h"
-#include "../Math/Distribution.h"
+#include <Math/Sampling.h>
 
 Spectrum e_PointLight::sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const
 {
@@ -361,7 +361,7 @@ e_InfiniteLight::e_InfiniteLight(e_Stream<char>* a_Buffer, e_BufferReference<e_M
 	m1.Invalidate(); m2.Invalidate(); m3.Invalidate();
 
 	float lvl = 0.65f, qpdf;
-	unsigned int INDEX = sampleReuse(m_cdfRows.operator->(), m_size.y, lvl, qpdf);
+	unsigned int INDEX = MonteCarlo::sampleReuse(m_cdfRows.operator->(), m_size.y, lvl, qpdf);
 
 	m_worldTransform = m_worldTransformInverse = float4x4::Identity();
 }
@@ -451,8 +451,8 @@ Spectrum e_InfiniteLight::evalDirection(const DirectionSamplingRecord &dRec, con
 void e_InfiniteLight::internalSampleDirection(Vec2f sample, Vec3f &d, Spectrum &value, float &pdf) const
 {
 	float qpdf;
-	unsigned int	row = sampleReuse(m_cdfRows.operator->(), m_size.y, sample.y, qpdf),
-					col = sampleReuse(m_cdfCols.operator->() + row * unsigned int(m_size.x + 1), m_size.x, sample.x, qpdf);
+	unsigned int	row = MonteCarlo::sampleReuse(m_cdfRows.operator->(), m_size.y, sample.y, qpdf),
+					col = MonteCarlo::sampleReuse(m_cdfCols.operator->() + row * unsigned int(m_size.x + 1), m_size.x, sample.x, qpdf);
 
 	/* Using the remaining bits of precision to shift the sample by an offset
 		drawn from a tent function. This effectively creates a sampling strategy

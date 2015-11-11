@@ -1,7 +1,7 @@
 #include "e_RoughTransmittance.h"
-#include "..\Math\Spline.h"
-#include "..\Base\FileStream.h"
-#include "../CudaMemoryManager.h"
+#include <Math/Spline.h>
+#include <Base/FileStream.h>
+#include <CudaMemoryManager.h>
 
 e_RoughTransmittance::e_RoughTransmittance(const std::string& name)
 {

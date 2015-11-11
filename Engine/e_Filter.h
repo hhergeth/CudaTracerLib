@@ -1,7 +1,7 @@
 #pragma once
 
 #include <MathTypes.h>
-#include "../VirtualFuncType.h"
+#include <VirtualFuncType.h>
 
 //Implementation and interface designed after PBRT.
 

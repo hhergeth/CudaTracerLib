@@ -1,6 +1,6 @@
 #pragma once
 
-#include "..\Base\FileStream.h"
+#include <Base/FileStream.h>
 #include <vector>
 
 void compileply(IInStream& in, FileOutputStream& a_Out);

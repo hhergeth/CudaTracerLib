@@ -1,6 +1,6 @@
 #include "e_Buffer.h"
 #include "e_Volumes.h"
-#include "../Base/CudaRandom.h"
+#include <Base/CudaRandom.h>
 #include "e_Samples.h"
 #include "e_Grid.h"
 

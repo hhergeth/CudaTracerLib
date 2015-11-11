@@ -1,5 +1,5 @@
 #include "Spline.h"
-#include "..\Base\STL.h"
+#include <Base/STL.h>
 
 float Spline::evalCubicInterp1D(float x, const float *values, size_t size, float min, float max, bool extrapolate)
 {

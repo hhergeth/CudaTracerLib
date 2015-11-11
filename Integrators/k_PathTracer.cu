@@ -1,8 +1,8 @@
 #include "k_PathTracer.h"
-#include "..\Kernel\k_TraceHelper.h"
+#include <Kernel/k_TraceHelper.h>
 #include <time.h>
-#include "..\Kernel\k_TraceAlgorithms.h"
-#include "../Engine/e_Light.h"
+#include <Kernel/k_TraceAlgorithms.h>
+#include <Engine/e_Light.h>
 
 CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_NextRayCounter;
 

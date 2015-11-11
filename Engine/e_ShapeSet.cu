@@ -1,14 +1,13 @@
 #include "e_ShapeSet.h"
-#include "..\Math\Sampling.h"
+#include <Math/Sampling.h>
 #include "e_Samples.h"
 #include "e_TriIntersectorData.h"
-#include "../Math/Distribution.h"
 
 void ShapeSet::SamplePosition(PositionSamplingRecord& pRec, const Vec2f& spatialSample) const
 {
 	float pdf;
 	Vec2f sample = spatialSample;
-	unsigned int index = sampleReuse(areaDistribution.operator*(), count, sample.y, pdf);
+	unsigned int index = MonteCarlo::sampleReuse(areaDistribution.operator*(), count, sample.y, pdf);
 	const triData& sn = triangles[index];
 	Vec2f bary = Warp::squareToUniformTriangle(sample);
 	pRec.p = bary.x * sn.p[0] + bary.y * sn.p[1] + (1.f - bary.x - bary.y) * sn.p[2];

@@ -278,7 +278,6 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="MathTypes.h" />
     <ClInclude Include="Math\AABB.h" />
     <ClInclude Include="Math\Compression.h" />
-    <ClInclude Include="Math\Distribution.h" />
     <ClInclude Include="Math\float4x4.h" />
     <ClInclude Include="Math\Frame.h" />
     <ClInclude Include="Math\half.h" />

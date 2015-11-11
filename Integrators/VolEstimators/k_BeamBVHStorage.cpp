@@ -1,8 +1,8 @@
 #include <StdAfx.h>
 #include "k_BeamBVHStorage.h"
-#include "../../CudaMemoryManager.h"
-#include "../../Engine/SceneBuilder/SplitBVHBuilder.hpp"
-#include "../../Engine/e_DynamicScene.h"
+#include <CudaMemoryManager.h>
+#include <Engine/SceneBuilder/SplitBVHBuilder.hpp>
+#include <Engine/e_DynamicScene.h>
 
 k_BeamBVHStorage::k_BeamBVHStorage(unsigned int nBeams, e_DynamicScene* S)
 	: m_uNumNodes(0), m_uBeamIdx(-1), m_uNumDeviceBVHBeams(0), m_pScene(S)

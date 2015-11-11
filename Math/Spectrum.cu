@@ -1,6 +1,6 @@
 #include "Spectrum.h"
 #include "Integrator.h"
-#include "..\Base\STL.h"
+#include <Base/STL.h>
 
 #ifdef DEBUG
 	#define Integrate_Steps 100

@@ -1,19 +1,21 @@
 #include "e_KernelDynamicScene.h"
-#include "..\Kernel\k_TraceHelper.h"
+#include <Kernel/k_TraceHelper.h>
 #include "e_Light.h"
 
 const e_KernelLight* e_KernelDynamicScene::sampleLight(float& emPdf, Vec2f& sample) const
 {
-	unsigned int index = m_emitterPDF.SampleReuse(sample.x, emPdf);
-	if (index == UINT_MAX)
+	if (m_sLightData.UsedCount == 0)
 		return 0;
-	return m_sLightData.Data + g_SceneData.m_uEmitterIndices[index];
+	unsigned int idx = unsigned int(m_sLightData.UsedCount * sample.x);
+	sample.x = sample.x - idx / float(m_sLightData.UsedCount);
+	emPdf = 1.0f / float(m_sLightData.UsedCount);
+	return m_sLightData.Data + idx;
 }
 
-float e_KernelDynamicScene::pdfLight(const e_KernelLight* light)
+float e_KernelDynamicScene::pdfEmitterDiscrete(const e_KernelLight *emitter) const
 {
-	unsigned int index = light - this->m_sLightData.Data;
-	return m_emitterPDF[index];
+	unsigned int index = emitter - m_sLightData.Data;
+	return 1.0f / float(m_sLightData.UsedCount);
 }
 
 bool e_KernelDynamicScene::Occluded(const Ray& r, float tmin, float tmax, TraceResult* res) const
@@ -43,11 +45,6 @@ Spectrum e_KernelDynamicScene::EvalEnvironment(const Ray& r, const Ray& rX, cons
 	else return Spectrum(0.0f);
 }
 
-float e_KernelDynamicScene::pdfEmitterDiscrete(const e_KernelLight *emitter) const
-{
-	unsigned int index = emitter - m_sLightData.Data;
-	return m_emitterPDF[index];
-}
 
 Spectrum e_KernelDynamicScene::sampleEmitterDirect(DirectSamplingRecord &dRec, const Vec2f &_sample) const
 {

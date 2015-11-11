@@ -2,11 +2,11 @@
 
 #include <math.h>
 #include <cmath>
-#include "../Defines.h"
-#include "../MathTypes.h"
+#include <Defines.h>
+#include <MathTypes.h>
 #include <qMatrixAlgorithms.h>
 #include <qMatrixHelper.h>
-#include "../Base/CudaRandom.h"
+#include <Base/CudaRandom.h>
 
 CUDA_FUNC_IN float randomNormal(CudaRNG& rng)
 {

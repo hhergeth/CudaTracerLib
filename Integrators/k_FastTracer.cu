@@ -1,7 +1,7 @@
 #include "k_FastTracer.h"
-#include "..\Kernel\k_TraceHelper.h"
-#include "..\Kernel\k_TraceAlgorithms.h"
-#include "../Engine/e_DynamicScene.h"
+#include <Kernel/k_TraceHelper.h>
+#include <Kernel/k_TraceAlgorithms.h>
+#include <Engine/e_DynamicScene.h>
 
 CUDA_DEVICE e_Image g_DepthImage;
 

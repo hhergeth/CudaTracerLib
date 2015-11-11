@@ -1,7 +1,7 @@
 #pragma once
 #include "k_TraceResult.h"
-#include "../Base/CudaRandom.h"
-#include "../Engine/e_KernelDynamicScene.h"
+#include <Base/CudaRandom.h>
+#include <Engine/e_KernelDynamicScene.h>
 
 extern CUDA_ALIGN(16) CUDA_CONST e_KernelDynamicScene g_SceneDataDevice;
 extern CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_RayTracedCounterDevice;

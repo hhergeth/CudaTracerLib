@@ -1,7 +1,7 @@
 #pragma once
 
-#include "..\Kernel\k_Tracer.h"
-#include "../Engine/e_Light.h"
+#include <Kernel/k_Tracer.h>
+#include <Engine/e_Light.h>
 
 struct e_KernelMIPMap;
 class e_MIPMap;

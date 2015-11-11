@@ -1,6 +1,6 @@
 #include "k_sPpmTracer.h"
-#include "..\Kernel\k_TraceHelper.h"
-#include "..\Kernel\k_TraceAlgorithms.h"
+#include <Kernel/k_TraceHelper.h>
+#include <Kernel/k_TraceAlgorithms.h>
 #include <Math/half.h>
 
 void k_BeamBeamGrid::StoreBeam(const k_Beam& b, bool firstStore)

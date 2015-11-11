@@ -1,8 +1,8 @@
 #pragma once
 
-#include "..\MathTypes.h"
-#include "..\Kernel\k_TraceAlgorithms.h"
-#include "../Engine/e_Light.h"
+#include <MathTypes.h>
+#include <Kernel/k_TraceAlgorithms.h>
+#include <Engine/e_Light.h>
 #include "k_PhotonMapHelper.h"
 #define NUM_V_PER_PATH 5
 #define MAX_SUB_PATH_LENGTH 10
@@ -99,7 +99,7 @@ CUDA_FUNC_IN void sampleEmitter(BPTSubPathState& v, CudaRNG& rng, float mMisVcWe
 	Spectrum Le = g_SceneData.sampleEmitterPosition(pRec, rng.randomFloat2());
 	const e_KernelLight* l = (const e_KernelLight*)pRec.object;
 	Le *= l->sampleDirection(dRec, pRec, rng.randomFloat2());
-	float emitterPdf = g_SceneData.pdfLight(l);
+	float emitterPdf = g_SceneData.pdfEmitterDiscrete(l);
 
 	v.delta = 0;
 	v.throughput = Le;
@@ -184,7 +184,7 @@ CUDA_FUNC_IN bool sampleScattering(BPTSubPathState& v, BSDFSamplingRecord& bRec,
  CUDA_FUNC_IN Spectrum gatherLight(const BPTSubPathState& cameraState, BSDFSamplingRecord& bRec, const TraceResult& r2, CudaRNG& rng, int subPathLength, bool use_mis)
 {
 	e_KernelLight* l = &g_SceneData.m_sLightData[r2.LightIndex()];
-	float pdfLight = g_SceneData.pdfLight(l);
+	float pdfLight = g_SceneData.pdfEmitterDiscrete(l);
 	PositionSamplingRecord pRec(bRec.dg.P, bRec.dg.sys.n, 0);
 	float directPdfA = l->pdfPosition(pRec);
 	DirectionSamplingRecord dRec(-cameraState.r.direction);
@@ -241,7 +241,7 @@ template<bool TEST_VISIBILITY = true> CUDA_FUNC_IN Spectrum connectToLight(const
 	const e_KernelLight* l = (const e_KernelLight*)dRec.object;
 	if (!l)
 		return Spectrum(0.0f);
-	float pdfLight = g_SceneData.pdfLight(l);
+	float pdfLight = g_SceneData.pdfEmitterDiscrete(l);
 	float directPdfW = dRec.pdf;
 	DirectionSamplingRecord dirRec(-dRec.d);
 	const float emissionPdfW = l->pdfPosition(dRec) * l->pdfDirection(dirRec, dRec) * pdfLight;

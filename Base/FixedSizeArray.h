@@ -94,6 +94,13 @@ template<typename T, int LENGTH, bool RESET = true, unsigned char RESET_VALUE = 
 			throw std::runtime_error("FixedSizeArray not long enough for push_back.");
 		buffer[length++] = val;
 	}
+
+	void resize(size_t l)
+	{
+		if (l > LENGTH)
+			throw std::runtime_error(format("FixedSizeArray is not long enough for resize of %ul.", l));
+		length = (unsigned int)l;
+	}
 protected:
 	unsigned int length;
 	T buffer[LENGTH];

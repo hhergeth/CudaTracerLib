@@ -1,5 +1,5 @@
 #pragma once
-#include "..\Engine\e_Image.h"
+#include <Engine/e_Image.h>
 
 struct k_SamplerpixelData;
 

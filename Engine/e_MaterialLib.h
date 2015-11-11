@@ -1,6 +1,6 @@
 #pragma once
 
-#include "..\MathTypes.h"
+#include <MathTypes.h>
 
 struct MaterialEntry {
 	const std::string name;

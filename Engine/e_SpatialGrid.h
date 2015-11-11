@@ -1,7 +1,7 @@
 #pragma once
 
 #include "e_Grid.h"
-#include "../CudaMemoryManager.h"
+#include <CudaMemoryManager.h>
 
 //a mapping from R^3 -> T^n, ie. associating variable number of values with each point in the grid
 template<typename T> struct e_SpatialLinkedMap

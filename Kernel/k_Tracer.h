@@ -2,7 +2,7 @@
 
 #include "k_TraceHelper.h"
 #include "k_BlockSampler_device.h"
-#include "../Engine/e_Material.h"
+#include <Engine/e_Material.h>
 
 class e_DynamicScene;
 class k_BlockSampler;

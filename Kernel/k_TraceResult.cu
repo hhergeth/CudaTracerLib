@@ -1,9 +1,9 @@
 #include "k_TraceResult.h"
-#include "../Engine/e_TriangleData.h"
-#include "../Engine/e_Node.h"
+#include <Engine/e_TriangleData.h>
+#include <Engine/e_Node.h>
 #include "k_TraceHelper.h"
-#include "../Engine/e_Light.h"
-#include "../Engine/e_Samples.h"
+#include <Engine/e_Light.h>
+#include <Engine/e_Samples.h>
 
 void TraceResult::getBsdfSample(const Ray& r, BSDFSamplingRecord& bRec, ETransportMode mode, CudaRNG* rng, const Vec3f* wo) const
 {

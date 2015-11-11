@@ -115,7 +115,7 @@ e_DynamicScene::e_DynamicScene(e_Sensor* C, e_SceneInitData a_Data, IFileManager
 	: m_uEnvMapIndex(UINT_MAX), m_pCamera(C), m_pHostTmpFloats(0), m_pFileManager(fManager)
 {
 	int nodeC = 1 << 16, tCount = 1 << 16;
-	m_pAnimStream = new e_Stream<char>(a_Data.m_uSizeAnimStream + (a_Data.m_bSupportEnvironmentMap ? sizeof(Distribution2D<4096, 4096>) : 0));
+	m_pAnimStream = new e_Stream<char>(a_Data.m_uSizeAnimStream + (a_Data.m_bSupportEnvironmentMap ? (4096 * 4094 * 8) : 0));
 	m_pTriDataStream = new e_Stream<e_TriangleData>(a_Data.m_uNumTriangles);
 	m_pTriIntStream = new e_Stream<e_TriIntersectorData>(a_Data.m_uNumInt);
 	m_pBVHStream = new e_Stream<e_BVHNodeData>(a_Data.m_uNumBvhNodes);
@@ -437,19 +437,6 @@ e_KernelDynamicScene e_DynamicScene::getKernelSceneData(bool devicePointer)
 	r.m_uEnvMapIndex = m_uEnvMapIndex;
 	r.m_sBox = getSceneBox();
 	r.m_Camera = *m_pCamera;
-
-	float* vals = (float*)alloca(sizeof(float) * m_pLightStream->numElements());
-	int counter = 0;
-	for (e_Stream<e_KernelLight>::iterator it = m_pLightStream->begin(); it != m_pLightStream->end(); ++it)
-	{
-		vals[counter] = 1;
-		r.m_uEmitterIndices[counter++] = it.operator*().getIndex();
-		if (counter >= MAX_LIGHT_COUNT)
-			throw std::runtime_error("Too many lights in scene!");
-	}
-	r.m_emitterPDF = Distribution1D<MAX_LIGHT_COUNT>(vals, counter);
-	r.m_uEmitterCount = counter;
-
 	return r;
 }
 
@@ -565,7 +552,7 @@ e_StreamReference<e_KernelLight> e_DynamicScene::createLight(e_StreamReference<e
 		if (Node->m_uLights.isFull())
 			throw std::runtime_error("Node already has maximum number of area lights!");
 		e_StreamReference<e_KernelLight> c = m_pLightStream->malloc(1);
-		matRef->NodeLightIndex = Node->m_uLights.size();
+		matRef->NodeLightIndex = (unsigned int)Node->m_uLights.size();
 		Node->m_uLights.push_back(c.getIndex());
 		c->SetData(e_DiffuseLight(L, s, Node.getIndex()));
 		return c;

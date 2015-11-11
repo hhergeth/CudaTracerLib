@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../Math/Vector.h"
-#include "../Math/AABB.h"
+#include <Math/Vector.h>
+#include <Math/AABB.h>
 
 struct Ray;
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <MathTypes.h>
-#include "../VirtualFuncType.h"
+#include <VirtualFuncType.h>
 
 enum EEmitterType {
 	/// Emission profile contains a Dirac delta term with respect to direction

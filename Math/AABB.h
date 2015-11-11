@@ -157,11 +157,9 @@ struct AABB
 		return Intersect(r.direction, r.origin, min, max);
 	}
 
-	friend std::ostream& operator<< (std::ostream & os, const AABB& rhs);
+	friend std::ostream& operator<< (std::ostream & os, const AABB& rhs)
+	{
+		os << "[" << rhs.minV << " - " << rhs.maxV << "]";
+		return os;
+	}
 };
-
-inline std::ostream& operator<< (std::ostream & os, const AABB& rhs)
-{
-	os << "[" << rhs.minV << " - " << rhs.maxV << "]";
-	return os;
-}

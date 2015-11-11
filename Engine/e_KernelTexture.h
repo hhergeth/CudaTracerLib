@@ -2,8 +2,8 @@
 
 #include "e_FileTexture_device.h"
 #include "e_DifferentialGeometry.h"
-#include "../Base/FixedString.h"
-#include "../VirtualFuncType.h"
+#include <Base/FixedString.h>
+#include <VirtualFuncType.h>
 
 //Implementation and interface designed after PBRT.
 

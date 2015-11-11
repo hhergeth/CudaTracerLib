@@ -270,9 +270,6 @@
     <ClInclude Include="Kernel\k_BlockSampler_device.h">
       <Filter>Kernel</Filter>
     </ClInclude>
-    <ClInclude Include="Math\Distribution.h">
-      <Filter>Math</Filter>
-    </ClInclude>
     <ClInclude Include="Engine\SceneBuilder\TangentSpaceHelper.h">
       <Filter>Engine\SceneBuilder</Filter>
     </ClInclude>

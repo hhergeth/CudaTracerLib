@@ -1,6 +1,6 @@
 #pragma once
 #include "e_FileTexture_device.h"
-#include "../Base/FixedString.h"
+#include <Base/FixedString.h>
 
 class IInStream;
 class FileOutputStream;

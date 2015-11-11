@@ -1,6 +1,6 @@
 #include "e_TriangleData.h"
 #include "e_Node.h"
-#include "..\Math\Compression.h"
+#include <Math/Compression.h>
 
 #ifdef EXT_TRI
 

@@ -1,6 +1,6 @@
 #pragma once
-#include "../../Defines.h"
-#include "../../MathTypes.h"
+#include <Defines.h>
+#include <MathTypes.h>
 #include <Kernel/k_TraceHelper.h>
 #include <vector>
 #include <Base/Platform.h>

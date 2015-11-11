@@ -1,12 +1,12 @@
 #pragma once
 #include <StdAfx.h>
-#include "../Kernel/k_TraceHelper.h"
-#include "../Kernel/k_TraceAlgorithms.h"
-#include "../Engine/e_Light.h"
-#include "../Engine/e_Sensor.h"
-#include "../Engine/e_Samples.h"
-#include "../Engine/e_DifferentialGeometry.h"
-#include "../Engine/e_Material.h"
+#include <Kernel/k_TraceHelper.h>
+#include <Kernel/k_TraceAlgorithms.h>
+#include <Engine/e_Light.h>
+#include <Engine/e_Sensor.h>
+#include <Engine/e_Samples.h>
+#include <Engine/e_DifferentialGeometry.h>
+#include <Engine/e_Material.h>
 
 class PathVertex
 {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Math/Vector.h"
+#include <Math/Vector.h>
 #include "curand_kernel.h"
 
 class LinearCongruental_GENERATOR

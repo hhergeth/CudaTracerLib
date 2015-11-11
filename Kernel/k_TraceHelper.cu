@@ -1,14 +1,14 @@
 #include "k_TraceHelper.h"
-#include "../Math/Compression.h"
-#include "../Math/half.h"
+#include <Math/Compression.h>
+#include <Math/half.h>
 #include "cuda_runtime.h"
-#include "../Engine/e_Sensor.h"
-#include "../Engine/e_Mesh.h"
-#include "../Engine/e_TriangleData.h"
-#include "../Engine/e_Material.h"
-#include "../Engine/e_TriIntersectorData.h"
-#include "../Engine/e_Node.h"
-#include "../Engine/e_DynamicScene.h"
+#include <Engine/e_Sensor.h>
+#include <Engine/e_Mesh.h>
+#include <Engine/e_TriangleData.h>
+#include <Engine/e_Material.h>
+#include <Engine/e_TriIntersectorData.h>
+#include <Engine/e_Node.h>
+#include <Engine/e_DynamicScene.h>
 #include "k_BVHTracer.h"
 
 enum

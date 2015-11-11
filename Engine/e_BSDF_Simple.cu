@@ -1,5 +1,5 @@
 #include "e_BSDF.h"
-#include "../Base/CudaRandom.h"
+#include <Base/CudaRandom.h>
 #include "e_RoughTransmittance.h"
 
 Spectrum roughdiffuse::f(const BSDFSamplingRecord &bRec, EMeasure measure) const

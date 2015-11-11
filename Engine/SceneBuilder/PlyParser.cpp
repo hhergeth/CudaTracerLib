@@ -1,8 +1,8 @@
 #include <StdAfx.h>
-#include "..\e_Mesh.h"
-#include "../e_TriangleData.h"
-#include "../e_Material.h"
-#include "../e_TriIntersectorData.h"
+#include <Engine/e_Mesh.h>
+#include <Engine/e_TriangleData.h>
+#include <Engine/e_Material.h>
+#include <Engine/e_TriIntersectorData.h>
 #include <fstream>
 #include <iostream>
 #include <istream>
@@ -12,8 +12,8 @@
 #include <cctype>
 #include <intrin.h>
 #include "TangentSpaceHelper.h"
-#include <Engine\SceneBuilder\Importer.h>
-#include "../../Base/FileStream.h"
+#include "Importer.h"
+#include <Base/FileStream.h>
 
 typedef int format_type;
 enum format {

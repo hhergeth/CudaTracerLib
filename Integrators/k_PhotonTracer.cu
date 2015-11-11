@@ -1,8 +1,8 @@
 #include "k_PhotonTracer.h"
-#include "../Kernel/k_TraceHelper.h"
-#include "../Kernel/k_TraceAlgorithms.h"
-#include "../Engine/e_Light.h"
-#include "../Engine/e_Sensor.h"
+#include <Kernel/k_TraceHelper.h>
+#include <Kernel/k_TraceAlgorithms.h>
+#include <Engine/e_Light.h>
+#include <Engine/e_Sensor.h>
 
 enum
 {

@@ -1,6 +1,6 @@
 #include <StdAfx.h>
 #include "k_GradientDescent.h"
-#include "../Math/PathDifferientials.h"
+#include <Math/PathDifferientials.h>
 #include <assert.h>
 
 void TracePath(Ray r, std::vector<PathVertex*>& p, int N2, ETransportMode mode, CudaRNG& rng)

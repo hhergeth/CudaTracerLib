@@ -1,7 +1,7 @@
 #pragma once
 
-#include "..\Kernel\k_Tracer.h"
-#include "..\Engine\e_SpatialGrid.h"
+#include <Kernel/k_Tracer.h>
+#include <Engine/e_SpatialGrid.h>
 #include "k_PmmHelper.h"
 
 void plotPoints(Vec3f* dirs, unsigned int N);

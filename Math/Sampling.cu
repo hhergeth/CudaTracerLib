@@ -1,9 +1,8 @@
 #include "Sampling.h"
-#include "..\Base\CudaRandom.h"
-#include "../Base/STL.h"
-#include "Distribution.h"
+#include <Base/CudaRandom.h>
+#include <Base/STL.h>
 
-unsigned int sampleReuse(float *cdf, unsigned int size, float &sample, float& pdf)
+unsigned int MonteCarlo::sampleReuse(float *cdf, unsigned int size, float &sample, float& pdf)
 {
 	const float *entry = STL_lower_bound(cdf, cdf + size + 1, sample);
 	unsigned int index = (unsigned int)min(max(0, int(entry - cdf) - 1), int(size - 1));

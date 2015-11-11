@@ -1,9 +1,9 @@
 #include "k_PrimTracer.h"
-#include "..\Kernel\k_TraceHelper.h"
-#include "..\Kernel\k_TraceAlgorithms.h"
-#include "../Base/FileStream.h"
-#include "../CudaMemoryManager.h"
-#include "../Engine/e_FileTexture.h"
+#include <Kernel/k_TraceHelper.h>
+#include <Kernel/k_TraceAlgorithms.h>
+#include <Base/FileStream.h>
+#include <CudaMemoryManager.h>
+#include <Engine/e_FileTexture.h>
 
 enum
 {

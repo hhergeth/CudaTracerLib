@@ -1,7 +1,7 @@
 #pragma once
-#include "..\..\MathTypes.h"
-#include "..\e_TriIntersectorData.h"
-#include "../../Base/Timer.h"
+#include <MathTypes.h>
+#include <Engine/e_TriIntersectorData.h>
+#include <Base/Timer.h>
 #include <vector>
 #include <functional>
 

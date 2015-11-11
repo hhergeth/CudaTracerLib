@@ -1,6 +1,6 @@
 #pragma once
 #include <vector>
-#include "..\e_Mesh.h"
+#include <Engine/e_Mesh.h>
 
 struct BVH_Construction_Result
 {

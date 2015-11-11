@@ -1,7 +1,7 @@
 #pragma once
 #include "k_Beam.h"
-#include "../../Engine/e_TriIntersectorData.h"
-#include "../../Kernel/k_BVHTracer.h"
+#include <Engine/e_TriIntersectorData.h>
+#include <Kernel/k_BVHTracer.h>
 #include <vector>
 
 class e_DynamicScene;

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "..\Kernel\k_Tracer.h"
+#include <Kernel/k_Tracer.h>
 
 class k_PrimTracer : public k_Tracer<false, false>
 {

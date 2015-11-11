@@ -1,6 +1,6 @@
 #pragma once
 
-#include "..\MathTypes.h"
+#include <MathTypes.h>
 #include "k_BlockSampler_device.h"
 
 struct k_SamplerpixelData

@@ -1,6 +1,6 @@
 #include "k_sPpmTracer.h"
-#include "..\Kernel\k_TraceHelper.h"
-#include "..\Kernel\k_TraceAlgorithms.h"
+#include <Kernel/k_TraceHelper.h>
+#include <Kernel/k_TraceAlgorithms.h>
 #include <Math/half.h>
 
 CUDA_CONST e_SpatialLinkedMap<k_pPpmPhoton> g_SurfMap;
@@ -192,8 +192,8 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 			if (hasSmooth)
 			{
 				float r = math::clamp(getCurrentRadius(a_AdpEntries(pixel.x, pixel.y).r, a_PassIndex, 2), a_AdpEntries.r_min, a_AdpEntries.r_max);
-				//L += throughput * (hasGlossy ? 0.5f : 1) * L_Surface(bRec, USE_RI ? r : a_rSurface, &r2.getMat());
-				L += throughput * L_Surface(bRec, a_rSurface, &r2.getMat(), a_AdpEntries, pixel.x, pixel.y, importance, a_PassIndex, img);
+				L += throughput * (hasGlossy ? 0.5f : 1) * L_Surface(bRec, USE_RI ? r : a_rSurface, &r2.getMat());
+				//L += throughput * L_Surface(bRec, a_rSurface, &r2.getMat(), a_AdpEntries, pixel.x, pixel.y, importance, a_PassIndex, img);
 				if (!hasSpecGlossy)
 					break;
 			}
@@ -219,7 +219,7 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 			L += throughput * ((VolEstimator*)g_VolEstimator2)->L_Volume(a_rVolume, rng, r, tmin, tmax, VolHelper<true>(), Tr);
 			L += Tr * throughput * g_SceneData.EvalEnvironment(r);
 		}
-		//img.Add(screenPos.x, screenPos.y, L);
+		img.Add(screenPos.x, screenPos.y, L);
 	}
 	g_RNGData(rng);
 }

@@ -1,6 +1,6 @@
 #include "StdAfx.h"
 #include "MD5Parser.h"
-#include <boost\algorithm\string.hpp>
+#include <boost/algorithm/string.hpp>
 
 // MD5 Loader, by A.J. Tavakoli
 

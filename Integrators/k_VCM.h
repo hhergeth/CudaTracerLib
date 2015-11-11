@@ -1,6 +1,6 @@
 #pragma once
 
-#include "..\Kernel\k_Tracer.h"
+#include <Kernel/k_Tracer.h>
 #include "k_VCMHelper.h"
 
 class k_VCM : public k_Tracer<true, true>

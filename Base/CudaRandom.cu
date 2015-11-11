@@ -1,6 +1,6 @@
 #include "CudaRandom.h"
-#include "..\MathTypes.h"
-#include "../CudaMemoryManager.h"
+#include <MathTypes.h>
+#include <CudaMemoryManager.h>
 
 float CudaRNG::randomFloat()
 {

@@ -1,5 +1,5 @@
 #include "e_DifferentialGeometry.h"
-#include "../Math/Sampling.h"
+#include <Math/Sampling.h>
 
 //Implementation copied from Mitsuba.
 void DifferentialGeometry::computePartials(const Ray& r, const Ray& rx, const Ray& ry)

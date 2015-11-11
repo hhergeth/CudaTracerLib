@@ -1,9 +1,9 @@
 #pragma once
 
-#include "..\MathTypes.h"
+#include <MathTypes.h>
 #include "e_Samples.h"
 #include "e_AbstractEmitter.h"
-#include "../VirtualFuncType.h"
+#include <VirtualFuncType.h>
 
 enum ESensorFlags
 {

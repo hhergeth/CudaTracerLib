@@ -1,13 +1,13 @@
 #include <StdAfx.h>
-#include "..\e_Mesh.h"
-#include "../e_TriangleData.h"
-#include "../e_Material.h"
-#include "../e_TriIntersectorData.h"
+#include <Engine/e_Mesh.h>
+#include <Engine/e_TriangleData.h>
+#include <Engine/e_Material.h>
+#include <Engine/e_TriIntersectorData.h>
 #include "TangentSpaceHelper.h"
-#include <Engine\SceneBuilder\Importer.h>
-#include <boost\algorithm\string.hpp>
-#include <boost\filesystem.hpp>
-#include "../../Base/FileStream.h"
+#include "Importer.h"
+#include <boost/algorithm/string.hpp>
+#include <boost/filesystem.hpp>
+#include <Base/FileStream.h>
 #include <map>
 
 typedef unsigned char       U8;

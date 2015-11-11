@@ -1,6 +1,6 @@
 #pragma once
 
-#include "..\Math\AABB.h"
+#include <Math/AABB.h>
 
 template<bool REGULAR> struct k_HashGrid
 {

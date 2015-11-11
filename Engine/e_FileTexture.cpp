@@ -1,8 +1,8 @@
 #include "StdAfx.h"
 #include "e_FileTexture.h"
 #include "e_FileTextureHelper.h"
-#include "..\Base\FileStream.h"
-#include "../CudaMemoryManager.h"
+#include <Base/FileStream.h>
+#include <CudaMemoryManager.h>
 
 e_MIPMap::e_MIPMap(const std::string& a_InputFile, IInStream& a_In)
 	: m_pPath(a_InputFile)

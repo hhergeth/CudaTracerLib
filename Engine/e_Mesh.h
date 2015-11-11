@@ -2,7 +2,7 @@
 
 #include <MathTypes.h>
 #include "e_Buffer_device.h"
-#include "../Base/FixedString.h"
+#include <Base/FixedString.h>
 #include <vector>
 
 struct e_KernelMesh

@@ -7,8 +7,8 @@
 #include "Engine/e_Samples.h"
 #include "Engine/e_PhaseFunction.h"
 #include "e_MicrofacetDistribution.h"
-#include "../Math/Sampling.h"
-#include "../VirtualFuncType.h"
+#include <Math/Sampling.h>
+#include <VirtualFuncType.h>
 
 #define NUM_TEX_PER_BSDF 10
 

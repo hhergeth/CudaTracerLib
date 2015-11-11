@@ -5,7 +5,7 @@
 #include "e_FileTexture_device.h"
 #include "e_AbstractEmitter.h"
 #include "e_Samples.h"
-#include "../VirtualFuncType.h"
+#include <VirtualFuncType.h>
 
 template<typename H, typename D> class e_BufferReference;
 template<typename T> class e_Stream;

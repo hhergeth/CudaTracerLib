@@ -1,7 +1,7 @@
 #pragma once
 
 #include <MathTypes.h>
-#include "..\Math\half.h"
+#include <Math/half.h>
 #include "e_Material.h"
 
 #ifdef EXT_TRI

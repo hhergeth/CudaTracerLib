@@ -4,7 +4,6 @@
 #include "e_Buffer_device.h"
 #include "e_SceneBVH_device.h"
 #include "e_Volumes.h"
-#include "..\Math\Distribution.h"
 #include "e_Sensor.h"
 
 struct e_KernelLight;
@@ -20,7 +19,6 @@ struct e_KernelMaterial;
 struct e_KernelMIPMap;
 struct TraceResult;
 
-#define MAX_LIGHT_COUNT 32
 struct e_KernelDynamicScene
 {
 	e_KernelBuffer<e_TriangleData> m_sTriData;
@@ -36,9 +34,6 @@ struct e_KernelDynamicScene
 	e_KernelSceneBVH m_sSceneBVH;
 	e_KernelAggregateVolume m_sVolume;
 	unsigned int m_uEnvMapIndex;
-	Distribution1D<MAX_LIGHT_COUNT> m_emitterPDF;
-	unsigned int m_uEmitterIndices[MAX_LIGHT_COUNT];
-	unsigned int m_uEmitterCount;
 	AABB m_sBox;
 	e_Sensor m_Camera;
 
@@ -83,5 +78,4 @@ struct e_KernelDynamicScene
 	}
 
 	CUDA_DEVICE CUDA_HOST const e_KernelLight* sampleLight(float& emPdf, Vec2f& sample) const;
-	CUDA_DEVICE CUDA_HOST float pdfLight(const e_KernelLight* light);
 };

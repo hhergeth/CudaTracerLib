@@ -1,11 +1,11 @@
 #pragma once
 
-#include "..\Kernel\k_Tracer.h"
+#include <Kernel/k_Tracer.h>
 #include "k_PhotonMapHelper.h"
-#include "../CudaMemoryManager.h"
-#include "VolEstimators\k_BeamBeamGrid.h"
-#include "VolEstimators\k_BeamBVHStorage.h"
-#include "VolEstimators\k_BeamGrid.h"
+#include <CudaMemoryManager.h>
+#include "VolEstimators/k_BeamBeamGrid.h"
+#include "VolEstimators/k_BeamBVHStorage.h"
+#include "VolEstimators/k_BeamGrid.h"
 
 struct k_AdaptiveEntry
 {

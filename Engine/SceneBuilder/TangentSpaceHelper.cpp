@@ -1,6 +1,6 @@
 #include <StdAfx.h>
 #include "TangentSpaceHelper.h"
-#include "../../Base/Platform.h"
+#include <Base/Platform.h>
 
 //http://www.terathon.com/code/tangent.html
 void ComputeTangentSpace(const Vec3f* V, const Vec2f* T, const unsigned int* I, unsigned int vertexCount, unsigned int triCount, Vec3f* a_Normals, Vec3f* a_Tangents, Vec3f* a_BiTangents, bool flipOrder)

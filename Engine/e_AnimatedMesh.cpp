@@ -2,8 +2,8 @@
 #include "e_AnimatedMesh.h"
 #include "e_Buffer.h"
 #include <MathTypes.h>
-#include "../Base/Platform.h"
-#include "../Base/FileStream.h"
+#include <Base/Platform.h>
+#include <Base/FileStream.h>
 #include "e_TriangleData.h"
 #include "e_Material.h"
 #include "e_TriIntersectorData.h"

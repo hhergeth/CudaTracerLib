@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../MathTypes.h"
+#include <MathTypes.h>
 
 struct TraceResult;
 struct BSDFSamplingRecord;
