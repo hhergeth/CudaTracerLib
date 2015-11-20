@@ -18,9 +18,8 @@ CUDA_FUNC_IN float getCurrentRadius(float initial_r, unsigned int iteration, flo
 
 CUDA_FUNC_IN float k(float t)
 {
-	//float t2 = t * t;
-	//return 1.0f + t2 * t * (-6.0f * t2 + 15.0f * t - 10.0f);
-	return math::clamp01(1.0f + t * t * t * (-6.0f * t * t + 15.0f * t - 10.0f));
+	t = math::clamp01(t);
+	return (1.0f + t * t * t * (-6.0f * t * t + 15.0f * t - 10.0f)) * 2;
 }
 
 CUDA_FUNC_IN float k_tr(float r, float t)
