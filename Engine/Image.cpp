@@ -133,12 +133,12 @@ FIBITMAP* Image::toFreeImage()
 	return bitmap;
 }
 
-void Image::WriteDisplayImage(const std::string& fileName)
+void Image::WriteDisplayImage(const std::string& fileName, const std::string& exif_comment)
 {
 	FIBITMAP* bitmap = toFreeImage();
-
 	FREE_IMAGE_FORMAT ff = FreeImage_GetFIFFromFilename(fileName.c_str());
-	if (!FreeImage_Save(ff, bitmap, fileName.c_str()))
+	int flags = ff == FREE_IMAGE_FORMAT::FIF_JPEG ? JPEG_QUALITYSUPERB : 0;
+	if (!FreeImage_Save(ff, bitmap, fileName.c_str(), flags))
 		throw std::runtime_error("Failed saving Screenshot!");
 	FreeImage_Unload(bitmap);
 }
@@ -148,8 +148,8 @@ void Image::SaveToMemory(void** mem, size_t& size, const std::string& type)
 	FIBITMAP* bitmap = toFreeImage();
 	FREE_IMAGE_FORMAT ff = FreeImage_GetFIFFromFilename(type.c_str());
 	FIMEMORY* str = FreeImage_OpenMemory();
-	int flags = ff == FREE_IMAGE_FORMAT::FIF_JPEG ? JPEG_QUALITYBAD : 0;
-	if (!FreeImage_SaveToMemory(ff, bitmap, str, 0))
+	int flags = ff == FREE_IMAGE_FORMAT::FIF_JPEG ? JPEG_QUALITYSUPERB : 0;
+	if (!FreeImage_SaveToMemory(ff, bitmap, str, flags))
 		throw std::runtime_error("SaveToMemory::FreeImage_SaveToMemory");
 	long file_size = FreeImage_TellMemory(str);
 	if (*mem == 0 || file_size > size)
