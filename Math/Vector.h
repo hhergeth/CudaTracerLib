@@ -39,6 +39,8 @@ public:
 	CUDA_FUNC_IN    void            normalize(T len = (T)1)              { set(normalized(len)); }
 	CUDA_FUNC_IN    T               min(void) const                { const T* tp = getPtr(); T r = tp[0]; for (int i = 1; i < L; i++) r = CudaTracerLib::min(r, tp[i]); return r; }
 	CUDA_FUNC_IN    T               max(void) const                { const T* tp = getPtr(); T r = tp[0]; for (int i = 1; i < L; i++) r = CudaTracerLib::max(r, tp[i]); return r; }
+	CUDA_FUNC_IN    T               arg_min(void) const                { const T* tp = getPtr(); int j = 0; for (int i = 1; i < L; i++) if(tp[i] < tp[j]) j = i; return j; }
+	CUDA_FUNC_IN    T               arg_max(void) const                { const T* tp = getPtr(); int j = 0; for (int i = 1; i < L; i++) if (tp[i] > tp[j]) j = i; return j; }
 	CUDA_FUNC_IN    T               sum(void) const                { const T* tp = getPtr(); T r = tp[0]; for (int i = 1; i < L; i++) r += tp[i]; return r; }
 	CUDA_FUNC_IN    S               abs(void) const                { const T* tp = getPtr(); S r; T* rp = r.getPtr(); for (int i = 0; i < L; i++) rp[i] = math::abs(tp[i]); return r; }
 	CUDA_FUNC_IN	S				sign() const					{ const T* tp = getPtr(); S r; T* rp = r.getPtr(); for (int i = 0; i < L; i++) rp[i] = math::sign(tp[i]); return r; }
