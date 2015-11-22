@@ -62,16 +62,9 @@ bool HomogeneousVolumeDensity::sampleDistance(const Ray& ray, float minT, float 
 		success = false;
 	}
 
-	mRec.pdfFailure = 0;
-	mRec.pdfSuccess = 0;
-	for (int i = 0; i < SPECTRUM_SAMPLES; i++)
-	{
-		float t = math::exp(-sig_t[i] * sampledDistance);
-		mRec.pdfFailure += t;
-		mRec.pdfSuccess += sig_t[i] * t;
-	}
-	mRec.pdfFailure /= SPECTRUM_SAMPLES;
-	mRec.pdfSuccess /= SPECTRUM_SAMPLES;
+	Spectrum t = (-sig_t * sampledDistance).exp();
+	mRec.pdfFailure = t.average();
+	mRec.pdfSuccess = (sig_t * t).average();
 	mRec.transmittance = (sig_t * (-sampledDistance)).exp();
 	mRec.pdfSuccessRev = mRec.pdfSuccess = mRec.pdfSuccess * m_mediumSamplingWeight;
 	mRec.pdfFailure = m_mediumSamplingWeight * mRec.pdfFailure + (1 - m_mediumSamplingWeight);
