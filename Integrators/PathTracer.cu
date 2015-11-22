@@ -137,8 +137,9 @@ void PathTracer::Debug(Image* I, const Vec2i& p)
 {
 	float m = 1.0f*pow(this->m_uPassesDone, -1.0f / 6);
 	k_INITIALIZE(m_pScene, g_sRngs);
-	CudaRNG rng = g_RNGData();
-	Ray r = g_SceneData.GenerateSensorRay(p.x, p.y);
+	CudaRNG rng = g_RNGData();		
+	Ray r, rX, rY;
+	Spectrum throughput = g_SceneData.sampleSensorRay(r, rX, rY, Vec2f(p.x, p.y), rng.randomFloat2());
 	r.direction = Vec3f(0, 0, 1);
 	PathTrace<true>(r, r, r, rng);
 }
@@ -149,9 +150,9 @@ template<bool DIRECT, bool REGU> __global__ void pathKernel2(unsigned int w, uns
 	CudaRNG rng = g_RNGData();
 	if (pixel.x < w && pixel.y < h)
 	{
-		Ray r;
-		Spectrum imp = g_SceneData.sampleSensorRay(r, Vec2f(pixel.x, pixel.y), rng.randomFloat2());
-		Spectrum col = imp * (REGU ? PathTraceRegularization<DIRECT>(r, r, r, rng, m) : PathTrace<DIRECT>(r, r, r, rng));
+		Ray r, rX, rY;
+		Spectrum imp = g_SceneData.sampleSensorRay(r, rX, rY, Vec2f(pixel.x, pixel.y) + +rng.randomFloat2(), rng.randomFloat2());
+		Spectrum col = imp * (REGU ? PathTraceRegularization<DIRECT>(r, rX, rY, rng, m) : PathTrace<DIRECT>(r, rX, rY, rng));
 		img.Add(pixel.x, pixel.y, col);
 	}
 	g_RNGData(rng);
