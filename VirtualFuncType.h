@@ -100,7 +100,7 @@ template<typename BaseType, typename... Types> struct CudaVirtualAggregate
 	enum { DATA_SIZE = CTVirtualHelper::Unifier<Types...>::result };
 
 	static_assert(DATA_SIZE > 0, "CudaVirtualAggregate::Data too  small.");
-	static_assert(DATA_SIZE < 2048, "CudaVirtualAggregate::Data too large.");
+	static_assert(DATA_SIZE < 4096, "CudaVirtualAggregate::Data too large.");
 protected:
 	unsigned int type;
 	CUDA_ALIGN(16) unsigned char Data[DATA_SIZE];

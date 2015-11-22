@@ -9,23 +9,40 @@
 
 namespace CudaTracerLib {
 
+//An affine map from R^2 -> R^2
 struct TextureMapping2D
 {
 	TextureMapping2D(float su = 1, float sv = 1, float du = 0, float dv = 0, int setId = 0)
 	{
-		this->su = su;
-		this->sv = sv;
-		this->du = du;
-		this->dv = dv;
+		m11 = su; m12 = 0;  m13 = du;
+		m21 = 0;  m22 = sv; m23 = dv;
 		this->setId = setId;
 	}
 	CUDA_FUNC_IN Vec2f Map(const DifferentialGeometry& map) const
 	{
-		float u = su * map.uv[setId].x + du;
-		float v = sv * map.uv[setId].y + dv;
-		return Vec2f(u, v);
+		float x = map.uv[setId].x, y = map.uv[setId].y;
+		return TransformPoint(Vec2f(x, y));
 	}
-	float su, sv, du, dv;
+	CUDA_FUNC_IN Vec2f TransformPoint(const Vec2f& p) const
+	{
+		return TransformDirection(p) + Vec2f(m13, m23);
+	}
+	CUDA_FUNC_IN Vec2f TransformDirection(const Vec2f& d) const
+	{
+		return Vec2f(m11 * d.x + m12 * d.y, m21 * d.x + m22 * d.y);
+	}
+	CUDA_FUNC_IN Vec2f TransformPointInverse(const Vec2f& p) const
+	{
+		return TransformDirectionInverse(p - Vec2f(m13, m23));
+	}
+	CUDA_FUNC_IN Vec2f TransformDirectionInverse(const Vec2f& d) const
+	{
+		float q = d.y - m21 / m11 * d.x, p = m22 - m21 / m11 * m12;
+		float y = q / p, x = (d.x - m12 * y) / m11;
+		return Vec2f(x, y);
+	}
+	float m11, m12, m13;
+	float m21, m22, m23;
 	int setId;
 };
 
@@ -119,8 +136,7 @@ struct ImageTexture : public TextureBase//, public e_DerivedTypeHelper<4>
 	{
 		Vec2f uv = mapping.Map(its);
 		if (its.hasUVPartials)
-			return tex->eval(uv, Vec2f(its.dudx * mapping.su, its.dvdx * mapping.sv),
-			Vec2f(its.dudy * mapping.su, its.dvdy * mapping.sv));
+			return tex->eval(uv, mapping.TransformDirection(Vec2f(1, 0)) * Vec2f(its.dudx, its.dvdx), mapping.TransformDirection(Vec2f(0, 1)) * Vec2f(its.dudy, its.dvdy));
 		return tex->Sample(uv);
 	}
 	CUDA_FUNC_IN Spectrum Average()
