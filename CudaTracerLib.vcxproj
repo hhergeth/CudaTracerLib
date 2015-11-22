@@ -161,6 +161,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Base\FileStream.cpp" />
+    <ClCompile Include="Base\Timer.cpp" />
     <ClCompile Include="CudaMemoryManager.cpp" />
     <ClCompile Include="Defines.cpp" />
     <ClCompile Include="Engine\AnimatedMesh.cpp" />

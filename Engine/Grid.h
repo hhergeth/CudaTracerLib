@@ -152,7 +152,7 @@ template<typename F> CUDA_FUNC_IN void TraverseGrid(const Ray& r, float tmin, fl
 	Vec3u Pos = clamp(Vec3u(unsigned int(q.x), unsigned int(q.y), unsigned int(q.z)), Vec3u(0), Vec3u(gridSize.x - 1, gridSize.y - 1, gridSize.z - 1));
 	Vec3i Step(sign<int>(r.direction.x), sign<int>(r.direction.y), sign<int>(r.direction.z));
 	Vec3f inv_d = r.direction;
-	const float ooeps = math::exp2(-40.0f);//80 is too small, will create underflow on GPU
+	const float ooeps = math::exp2(-20.0f);//80 is too small, will create underflow on GPU
 	inv_d.x = 1.0f / (math::abs(inv_d.x) > ooeps ? inv_d.x : copysignf(ooeps, inv_d.x));
 	inv_d.y = 1.0f / (math::abs(inv_d.y) > ooeps ? inv_d.y : copysignf(ooeps, inv_d.y));
 	inv_d.z = 1.0f / (math::abs(inv_d.z) > ooeps ? inv_d.z : copysignf(ooeps, inv_d.z));

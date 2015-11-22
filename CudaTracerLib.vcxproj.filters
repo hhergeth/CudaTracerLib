@@ -403,6 +403,9 @@
     <ClCompile Include="Engine\MIPMap.cpp">
       <Filter>Engine</Filter>
     </ClCompile>
+    <ClCompile Include="Base\Timer.cpp">
+      <Filter>Base</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="Base\CudaRandom.cu">

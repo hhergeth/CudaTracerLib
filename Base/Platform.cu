@@ -74,4 +74,15 @@ void Platform::OutputDebug(const std::string& msg)
 #endif
 }
 
+std::string vformat(const char *fmt, va_list ap)
+{
+	int l = vsnprintf(0, 0, fmt, ap);
+	std::string str;
+	str.resize(l);
+	int n = vsnprintf((char*)str.c_str(), l, fmt, ap);
+	if (n != l)
+		throw std::runtime_error("Error formating string!");
+	return str;
+}
+
 }

@@ -7,7 +7,7 @@
 namespace CudaTracerLib {
 
 #ifdef __CUDACC__
-template<typename CLB> CUDA_FUNC_IN bool TracerayTemplate(const Ray& r, float& rayT, const CLB& clb, texture<float4, 1> bvhNodes_texture, BVHNodeData* hosthNodes, int bvhNodesOffset = 0, int startNode = 0)
+template<typename CLB> CUDA_FUNC_IN bool TracerayTemplate(const Ray& r, float& rayT, const CLB& clb, texture<float4, 1> bvhNodes_texture, const BVHNodeData* hosthNodes, int bvhNodesOffset = 0, int startNode = 0)
 {
 	const int EntrypointSentinel = 0x76543210;
 	if (startNode < 0)
@@ -121,7 +121,7 @@ template<typename CLB> CUDA_FUNC_IN bool TracerayTemplate(const Ray& r, float& r
 	return found;
 }
 #endif
-template<typename CLB> CUDA_FUNC_IN bool TracerayTemplate(const Ray& r, float& rayT, const CLB& clb, BVHNodeData* hosthNodes, BVHNodeData* deviceNodes, int bvhNodesOffset = 0, int startNode = 0)
+template<typename CLB> CUDA_FUNC_IN bool TracerayTemplate(const Ray& r, float& rayT, const CLB& clb, const BVHNodeData* hosthNodes, const BVHNodeData* deviceNodes, int bvhNodesOffset = 0, int startNode = 0)
 {
 #ifdef ISCUDA
 	float4* data = (float4*)deviceNodes;

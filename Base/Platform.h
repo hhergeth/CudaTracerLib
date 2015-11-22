@@ -20,14 +20,7 @@ public:
 
 #define ZERO_MEM(ref) Platform::SetMemory(&ref, sizeof(ref), 0)
 
-inline std::string vformat(const char *fmt, va_list ap)
-{
-	int l = _vscprintf(fmt, ap) + 1;
-	std::string str;
-	str.resize(l);
-	vsprintf((char*)str.c_str(), fmt, ap);
-	return str;
-}
+std::string vformat(const char *fmt, va_list ap);
 
 inline std::string format(const char *fmt, ...)
 {
