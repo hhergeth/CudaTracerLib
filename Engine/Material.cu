@@ -111,7 +111,7 @@ bool Material::SampleNormalMap(DifferentialGeometry& dg, const Vec3f& wi) const
 		if (enableParallaxOcclusion)
 		{
 			uv = parallaxOcclusion(uv, HeightMap.tex.As<ImageTexture>()->tex.operator->(), dg.toLocal(-wi), HeightScale, parallaxMinSamples, parallaxMaxSamples);
-			dg.uv[0] = (uv - Vec2f(map.du, map.dv)) / Vec2f(map.su, map.sv);
+			dg.uv[map.setId] = map.TransformPointInverse(uv);
 		}
 
 		Spectrum grad[2];
