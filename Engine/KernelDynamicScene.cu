@@ -4,7 +4,7 @@
 
 namespace CudaTracerLib {
 
-const KernelLight* KernelDynamicScene::sampleLight(float& emPdf, Vec2f& sample) const
+const KernelLight* KernelDynamicScene::sampleEmitter(float& emPdf, Vec2f& sample) const
 {
 	if (m_sLightData.UsedCount == 0)
 		return 0;
@@ -33,6 +33,14 @@ bool KernelDynamicScene::Occluded(const Ray& r, float tmin, float tmax, TraceRes
 	//return tmin < r2.m_fDist && r2.m_fDist < tmax;
 }
 
+Spectrum KernelDynamicScene::evalTransmittance(const Vec3f& p1, const Vec3f& p2) const
+{
+	Vec3f d = p2 - p1;
+	float l = d.length();
+	d /= l;
+	return (-m_sVolume.tau(Ray(p1, d), 0, l)).exp();
+}
+
 Spectrum KernelDynamicScene::EvalEnvironment(const Ray& r) const
 {
 	if (m_uEnvMapIndex != UINT_MAX)
@@ -47,12 +55,11 @@ Spectrum KernelDynamicScene::EvalEnvironment(const Ray& r, const Ray& rX, const 
 	else return Spectrum(0.0f);
 }
 
-
-Spectrum KernelDynamicScene::sampleEmitterDirect(DirectSamplingRecord &dRec, const Vec2f &_sample) const
+Spectrum KernelDynamicScene::sampleEmitterDirect(DirectSamplingRecord &dRec, const Vec2f &_sample, bool testVisibility) const
 {
 	Vec2f sample = _sample;
 	float emPdf;
-	const KernelLight *emitter = sampleLight(emPdf, sample);
+	const KernelLight *emitter = sampleEmitter(emPdf, sample);
 	if (emitter == 0)
 	{
 		dRec.pdf = 0;
@@ -62,11 +69,11 @@ Spectrum KernelDynamicScene::sampleEmitterDirect(DirectSamplingRecord &dRec, con
 	Spectrum value = emitter->sampleDirect(dRec, sample);
 	if (dRec.pdf != 0)
 	{
-		/*if (testVisibility && Occluded(Ray(dRec.ref, dRec.n), 0, dRec.dist))
+		if (testVisibility && Occluded(Ray(dRec.ref, dRec.n), 0, dRec.dist))
 		{
-		dRec.object = 0;
-		return Spectrum(0.0f);
-		}*/
+			dRec.object = 0;
+			return Spectrum(0.0f);
+		}
 		dRec.pdf *= emPdf;
 		value /= emPdf;
 		dRec.object = emitter;
@@ -78,16 +85,22 @@ Spectrum KernelDynamicScene::sampleEmitterDirect(DirectSamplingRecord &dRec, con
 	}
 }
 
-Spectrum KernelDynamicScene::sampleSensorDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const
+Spectrum KernelDynamicScene::sampleAttenuatedEmitterDirect(DirectSamplingRecord &dRec, const Vec2f &_sample, bool testVisibility) const
+{
+	Spectrum value = sampleEmitterDirect(dRec, _sample, testVisibility);
+	return value * evalTransmittance(dRec.ref, dRec.p);
+}
+
+Spectrum KernelDynamicScene::sampleSensorDirect(DirectSamplingRecord &dRec, const Vec2f &sample, bool testVisibility) const
 {
 	Spectrum value = m_Camera.sampleDirect(dRec, sample);
 	if (dRec.pdf != 0)
 	{
-		/*if (testVisibility && Occluded(Ray(dRec.ref, dRec.d), 0, dRec.dist))
+		if (testVisibility && Occluded(Ray(dRec.ref, dRec.d), 0, dRec.dist))
 		{
-		dRec.object = 0;
-		return Spectrum(0.0f);
-		}*/
+			dRec.object = 0;
+			return Spectrum(0.0f);
+		}
 		dRec.object = &g_SceneData;
 		return value;
 	}
@@ -95,6 +108,12 @@ Spectrum KernelDynamicScene::sampleSensorDirect(DirectSamplingRecord &dRec, cons
 	{
 		return Spectrum(0.0f);
 	}
+}
+
+Spectrum KernelDynamicScene::sampleAttenuatedSensorDirect(DirectSamplingRecord &dRec, const Vec2f &sample, bool testVisibility) const
+{
+	Spectrum value = sampleSensorDirect(dRec, sample, testVisibility);
+	return value * evalTransmittance(dRec.ref, dRec.p);
 }
 
 float KernelDynamicScene::pdfEmitterDirect(const DirectSamplingRecord &dRec) const
@@ -112,7 +131,7 @@ Spectrum KernelDynamicScene::sampleEmitterPosition(PositionSamplingRecord &pRec,
 {
 	Vec2f sample = _sample;
 	float emPdf;
-	const KernelLight *emitter = sampleLight(emPdf, sample);
+	const KernelLight *emitter = sampleEmitter(emPdf, sample);
 
 	Spectrum value = emitter->samplePosition(pRec, sample);
 
@@ -144,7 +163,7 @@ Spectrum KernelDynamicScene::sampleEmitterRay(Ray& ray, const KernelLight*& emit
 {
 	Vec2f sample = spatialSample;
 	float emPdf;
-	emitter = sampleLight(emPdf, sample);
+	emitter = sampleEmitter(emPdf, sample);
 
 	return emitter->sampleRay(ray, sample, directionalSample) / emPdf;
 }

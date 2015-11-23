@@ -78,7 +78,7 @@ Spectrum UniformSampleOneLight(const BSDFSamplingRecord& bRec, const Material& m
 		return Spectrum(0.0f);
 	Vec2f sample = rng.randomFloat2();
 	float pdf;
-	const KernelLight* light = g_SceneData.sampleLight(pdf, sample);
+	const KernelLight* light = g_SceneData.sampleEmitter(pdf, sample);
 	return EstimateDirect((BSDFSamplingRecord&)bRec, mat, light, EBSDFType(EAll & ~EDelta), rng, attenuated) / pdf;
 }
 

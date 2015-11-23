@@ -39,13 +39,16 @@ struct KernelDynamicScene
 	AABB m_sBox;
 	Sensor m_Camera;
 
-	CUDA_HOST CUDA_DEVICE bool Occluded(const Ray& r, float tmin, float tmax, TraceResult* res = 0) const;
+	CUDA_DEVICE CUDA_HOST bool Occluded(const Ray& r, float tmin, float tmax, TraceResult* res = 0) const;
 	CUDA_DEVICE CUDA_HOST Spectrum EvalEnvironment(const Ray& r) const;
 	CUDA_DEVICE CUDA_HOST Spectrum EvalEnvironment(const Ray& r, const Ray& rX, const Ray& rY) const;
+	CUDA_DEVICE CUDA_HOST const KernelLight* sampleEmitter(float& emPdf, Vec2f& sample) const;
 	CUDA_DEVICE CUDA_HOST float pdfEmitterDiscrete(const KernelLight *emitter) const;
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleEmitterDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const;
-	CUDA_DEVICE CUDA_HOST Spectrum sampleSensorDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleEmitterDirect(DirectSamplingRecord &dRec, const Vec2f &sample, bool testVisibility = false) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleAttenuatedEmitterDirect(DirectSamplingRecord &dRec, const Vec2f &sample, bool testVisibility = false) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleSensorDirect(DirectSamplingRecord &dRec, const Vec2f &sample, bool testVisibility = false) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleAttenuatedSensorDirect(DirectSamplingRecord &dRec, const Vec2f &sample, bool testVisibility = false) const;
 	CUDA_DEVICE CUDA_HOST float pdfEmitterDirect(const DirectSamplingRecord &dRec) const;
 	CUDA_DEVICE CUDA_HOST float pdfSensorDirect(const DirectSamplingRecord &dRec) const;
 
@@ -56,6 +59,8 @@ struct KernelDynamicScene
 
 	CUDA_DEVICE CUDA_HOST Spectrum sampleEmitterRay(Ray& ray, const KernelLight*& emitter, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum sampleSensorRay(Ray& ray, const Sensor*& emitter, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
+
+	CUDA_DEVICE CUDA_HOST Spectrum evalTransmittance(const Vec3f& p1, const Vec3f& p2) const;
 
 	CUDA_FUNC_IN Spectrum sampleEmitterRay(Ray& ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const
 	{
@@ -79,7 +84,6 @@ struct KernelDynamicScene
 		return r;
 	}
 
-	CUDA_DEVICE CUDA_HOST const KernelLight* sampleLight(float& emPdf, Vec2f& sample) const;
 };
 
 }
