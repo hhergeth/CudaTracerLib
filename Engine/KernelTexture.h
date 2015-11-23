@@ -41,6 +41,14 @@ struct TextureMapping2D
 		float y = q / p, x = (d.x - m12 * y) / m11;
 		return Vec2f(x, y);
 	}
+	CUDA_FUNC_IN void differentiate(const DifferentialGeometry& map,
+									float& dsdx, float& dsdy, float& dtdx, float& dtdy) const
+	{
+		dsdx = m11 * map.dudx + m12 * map.dvdx;
+		dsdy = m11 * map.dudy + m12 * map.dvdy;
+		dtdx = m21 * map.dudx + m22 * map.dvdx;
+		dtdy = m21 * map.dudy + m22 * map.dvdy;
+	}
 	float m11, m12, m13;
 	float m21, m22, m23;
 	int setId;
@@ -136,8 +144,14 @@ struct ImageTexture : public TextureBase//, public e_DerivedTypeHelper<4>
 	{
 		Vec2f uv = mapping.Map(its);
 		if (its.hasUVPartials)
-			return tex->eval(uv, mapping.TransformDirection(Vec2f(1, 0)) * Vec2f(its.dudx, its.dvdx), mapping.TransformDirection(Vec2f(0, 1)) * Vec2f(its.dudy, its.dvdy));
-		return tex->Sample(uv);
+		{
+			float dsdx, dsdy,
+				  dtdx, dtdy;
+			mapping.differentiate(its, dsdx, dsdy, dtdx, dtdy);
+			return tex->eval(uv, Vec2f(dsdx, dtdx), Vec2f(dsdy, dtdy));
+		}
+		//	return tex->eval(uv, mapping.TransformDirection(Vec2f(1, 0)) * Vec2f(its.dudx, its.dvdx), mapping.TransformDirection(Vec2f(0, 1)) * Vec2f(its.dudy, its.dvdy));
+		else return tex->Sample(uv);
 	}
 	CUDA_FUNC_IN Spectrum Average()
 	{

@@ -219,17 +219,6 @@ public:
 		return (180.f / (float)PI) * rad;
 	}
 
-	CUDA_FUNC_IN static float Log2(float x)
-	{
-		float invLog2 = 1.f / logf(2.f);
-		return logf(x) * invLog2;
-	}
-
-	CUDA_FUNC_IN static int Log2Int(float v)
-	{
-		return Floor2Int(Log2(v));
-	}
-
 	CUDA_FUNC_IN static bool IsPowerOf2(int v)
 	{
 		return (v & (v - 1)) == 0;
@@ -303,6 +292,11 @@ public:
 #else
 		return ::logf(a) / ::logf(2.0f);
 #endif
+	}
+
+	CUDA_FUNC_IN static int Log2Int(float v)
+	{
+		return Floor2Int(log2(v));
 	}
 
 	CUDA_FUNC_IN static float sin(float a)

@@ -18,7 +18,8 @@ enum ImageFilter
 {
 	TEXTURE_Point,
 	TEXTURE_Bilinear,
-	TEXTURE_Anisotropic
+	TEXTURE_Anisotropic,
+	TEXTURE_Trilinear,
 };
 
 enum Texture_DataType

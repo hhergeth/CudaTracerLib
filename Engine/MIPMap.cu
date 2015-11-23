@@ -188,14 +188,26 @@ void KernelMIPMap::evalGradient(const Vec2f& uv, Spectrum* gradient) const
 
 Spectrum KernelMIPMap::eval(const Vec2f& uv, const Vec2f& d0, const Vec2f& d1) const
 {
+	/* Convert into texel coordinates */
+	float du0 = d0.x * m_fDim.x, dv0 = d0.y * m_fDim.y,
+		  du1 = d1.x * m_fDim.x, dv1 = d1.y * m_fDim.y,
+		  du = (du0 + du1) / 2.0f, dv = (dv0 + dv1) / 2.0f;
+
 	if (m_uFilterMode == TEXTURE_Point)
 		return Texel(0, uv);
 	else if (m_uFilterMode == TEXTURE_Bilinear)
 		return triangle(0, uv);
+	else if (m_uFilterMode == TEXTURE_Trilinear)
+	{
+		float levela = math::log2(m_fDim.x / math::abs(du)),
+			  levelb = math::log2(m_fDim.y / math::abs(dv)),
+			  level = m_uLevels - math::clamp((levela + levelb) / 2.0f, 1.0f, (float)m_uLevels);
+		int iLevel = math::floor(level), iLevel2 = math::clamp(iLevel + 1, 0, (int)m_uLevels - 1);
+		float p = level - iLevel;
+		Spectrum texelA = triangle(iLevel, uv), texelB = triangle(iLevel2, uv);
+		return p * texelA + (1 - p) * texelB;
+	}
 
-	/* Convert into texel coordinates */
-	float du0 = d0.x * m_fDim.x, dv0 = d0.y * m_fDim.y,
-		du1 = d1.x * m_fDim.x, dv1 = d1.y * m_fDim.y;
 
 	/* Turn the texture-space Jacobian into the coefficients of an
 	implicitly defined ellipse. */

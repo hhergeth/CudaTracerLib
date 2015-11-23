@@ -65,7 +65,7 @@ void ConstructPath(const Vec2i& pixel, Path& P, int s, int t)
 	float f = rng.randomFloat();
 	Vec2f f2 = rng.randomFloat2();
 	LightPathVertex* l_v = new LightPathVertex();
-	l_v->light = *g_SceneData.sampleLight(f, f2);
+	l_v->light = *g_SceneData.sampleEmitter(f, f2);
 	PositionSamplingRecord pRec;
 	DirectionSamplingRecord dRec;
 	l_v->light.samplePosition(pRec, Vec2f(1.0f / 3.0f));
