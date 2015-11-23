@@ -53,11 +53,11 @@ public:
 	}
 	unsigned int totalNumBlocks() const
 	{
-		return ((img->getWidth() + blockSize - 1) / blockSize) * ((img->getHeight() + blockSize - 1) / blockSize);
+		return ((img->getWidth() + BLOCK_SAMPLER_BlockSize - 1) / BLOCK_SAMPLER_BlockSize) * ((img->getHeight() + BLOCK_SAMPLER_BlockSize - 1) / BLOCK_SAMPLER_BlockSize);
 	}
 	unsigned int numBlocksRow() const
 	{
-		return (img->getWidth() + blockSize - 1) / blockSize;
+		return (img->getWidth() + BLOCK_SAMPLER_BlockSize - 1) / BLOCK_SAMPLER_BlockSize;
 	}
 	virtual void getBlockCoords(unsigned int idx, unsigned int& x, unsigned int& y, unsigned int& w, unsigned int& h, bool ignoreData = false) const
 	{
@@ -65,9 +65,9 @@ public:
 			idx = m_pHostIndexData[idx];
 		unsigned int ix = idx % numBlocksRow();
 		unsigned int iy = idx / numBlocksRow();
-		x = ix * blockSize;
-		y = iy * blockSize;
-		unsigned int x2 = (ix + 1) * blockSize, y2 = (iy + 1) * blockSize;
+		x = ix * BLOCK_SAMPLER_BlockSize;
+		y = iy * BLOCK_SAMPLER_BlockSize;
+		unsigned int x2 = (ix + 1) * BLOCK_SAMPLER_BlockSize, y2 = (iy + 1) * BLOCK_SAMPLER_BlockSize;
 		w = min(img->getWidth(), x2) - x;
 		h = min(img->getHeight(), y2) - y;
 	}

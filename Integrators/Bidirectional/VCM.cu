@@ -138,7 +138,7 @@ e.setNext(k);
 void k_VCM::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 {
 	float radius = getCurrentRadius(2);
-	pathKernel << < numBlocks, threadsPerBlock >> >(w, h, x, y, m_pBlockSampler->getBlockImage(), radius, m_uPassesDone);
+	pathKernel << < BLOCK_SAMPLER_LAUNCH_CONFIG >> >(w, h, x, y, m_pBlockSampler->getBlockImage(), radius, m_uPassesDone);
 }
 
 void k_VCM::DoRender(Image* I)

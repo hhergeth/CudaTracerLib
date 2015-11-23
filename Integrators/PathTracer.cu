@@ -168,14 +168,14 @@ void PathTracer::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 	if (m_Regularization)
 	{
 		if (m_Direct)
-			pathKernel2<true, true> << <numBlocks, threadsPerBlock >> > (w, h, x, y, m_pBlockSampler->getBlockImage(), radius2);
-		else pathKernel2<false, true> << <numBlocks, threadsPerBlock >> > (w, h, x, y, m_pBlockSampler->getBlockImage(), radius2);
+			pathKernel2<true, true> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> > (w, h, x, y, m_pBlockSampler->getBlockImage(), radius2);
+		else pathKernel2<false, true> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> > (w, h, x, y, m_pBlockSampler->getBlockImage(), radius2);
 	}
 	else
 	{
 		if (m_Direct)
-			pathKernel2<true, false> << <numBlocks, threadsPerBlock >> > (w, h, x, y, m_pBlockSampler->getBlockImage(), radius2);
-		else pathKernel2<false, false> << <numBlocks, threadsPerBlock >> > (w, h, x, y, m_pBlockSampler->getBlockImage(), radius2);
+			pathKernel2<true, false> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> > (w, h, x, y, m_pBlockSampler->getBlockImage(), radius2);
+		else pathKernel2<false, false> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> > (w, h, x, y, m_pBlockSampler->getBlockImage(), radius2);
 	}
 }
 

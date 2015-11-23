@@ -29,8 +29,8 @@ public:
 	CUDA_DEVICE static Vec2i getPixelPos(unsigned int xoff, unsigned int yoff)
 	{
 #ifdef ISCUDA
-		unsigned int x = xoff + blockIdx.x * threadsPerBlock.x + threadIdx.x;
-		unsigned int y = yoff + blockIdx.y * threadsPerBlock.y + threadIdx.y;
+		unsigned int x = xoff + blockIdx.x * BLOCK_SAMPLER_ThreadsPerBlock.x + threadIdx.x;
+		unsigned int y = yoff + blockIdx.y * BLOCK_SAMPLER_ThreadsPerBlock.y + threadIdx.y;
 		return Vec2i(x, y);
 #else
 		return Vec2i(xoff, yoff);
@@ -194,12 +194,12 @@ protected:
 		}
 		else
 		{
-			int nx = (I->getWidth() + blockSize - 1) / blockSize, ny = (I->getHeight() + blockSize - 1) / blockSize;
+			int nx = (I->getWidth() + BLOCK_SAMPLER_BlockSize - 1) / BLOCK_SAMPLER_BlockSize, ny = (I->getHeight() + BLOCK_SAMPLER_BlockSize - 1) / BLOCK_SAMPLER_BlockSize;
 			for (int ix = 0; ix < nx; ix++)
 				for (int iy = 0; iy < ny; iy++)
 				{
-					int x = ix * blockSize, y = iy * blockSize;
-					int x2 = (ix + 1) * blockSize, y2 = (iy + 1) * blockSize;
+					int x = ix * BLOCK_SAMPLER_BlockSize, y = iy * BLOCK_SAMPLER_BlockSize;
+					int x2 = (ix + 1) * BLOCK_SAMPLER_BlockSize, y2 = (iy + 1) * BLOCK_SAMPLER_BlockSize;
 					int bw = min(int(w), x2) - x, bh = min(int(h), y2) - y;
 					RenderBlock(I, x, y, bw, bh);
 				}

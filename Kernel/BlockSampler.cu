@@ -2,10 +2,9 @@
 #include <numeric>
 #include <CudaMemoryManager.h>
 //#include <cuda.h>
-/*#include <thrust/device_ptr.h>
+#include <thrust/device_ptr.h>
 #include <thrust/sort.h>
 #include <thrust/device_vector.h>
-#include <numeric>*/
 
 namespace CudaTracerLib {
 
@@ -111,13 +110,13 @@ void BlockSampleImage::Add(int x, int y, const Spectrum& c)
 {
 	img.AddSample(x, y, c);
 #ifdef ISCUDA
-	/*float l = math::clamp(c.average(), 0.0f, 1000.0f);
+	float l = math::clamp(c.average(), 0.0f, 1000.0f);
 	unsigned int i = y * w + x;
 	SamplerpixelData& pix = m_pLumData[i];
 	pix.E += l;
 	pix.E2 += l * l;
 	pix.flag = 1;
-	pix.n++;*/
+	pix.n++;
 #endif
 }
 
@@ -125,16 +124,16 @@ CUDA_GLOBAL void evalPass(Image img, SamplerpixelData* lumData, float* blockData
 {
 	unsigned int x = threadIdx.x + blockDim.x * blockIdx.x, y = threadIdx.y + blockDim.y * blockIdx.y;
 
-	unsigned int ix = x / blockSize, iy = y / blockSize;
-	unsigned int x2 = (ix + 1) * blockSize, y2 = (iy + 1) * blockSize;
-	unsigned int bw = min(img.getWidth(), x2) - ix * blockSize;
-	unsigned int bh = min(img.getHeight(), y2) - iy * blockSize;
+	unsigned int ix = x / BLOCK_SAMPLER_BlockSize, iy = y / BLOCK_SAMPLER_BlockSize;
+	unsigned int x2 = (ix + 1) * BLOCK_SAMPLER_BlockSize, y2 = (iy + 1) * BLOCK_SAMPLER_BlockSize;
+	unsigned int bw = min(img.getWidth(), x2) - ix * BLOCK_SAMPLER_BlockSize;
+	unsigned int bh = min(img.getHeight(), y2) - iy * BLOCK_SAMPLER_BlockSize;
 	int idx2 = iy * nx + ix;
 
 	if (x < img.getWidth() && y < img.getHeight())
 	{
 		SamplerpixelData& ent = lumData[y * img.getWidth() + x];
-		if (x % blockSize == 0 && y % blockSize == 0)
+		if (x % BLOCK_SAMPLER_BlockSize == 0 && y % BLOCK_SAMPLER_BlockSize == 0)
 			deviceNumSamples[idx2] = (unsigned int)ent.n;
 		float w_i = weight(ent, true);
 
@@ -209,7 +208,7 @@ void BlockSampler::AddPass()
 
 	const int N = 5;
 	m_uPassesDone++;
-	if (0 && (m_uPassesDone % N) == 0)
+	if ((m_uPassesDone % N) == 0)
 	{
 		ThrowCudaErrors(cudaMemcpy(m_pDeviceWeight, m_pHostWeight, sizeof(float) * totalNumBlocks(), cudaMemcpyHostToDevice));
 		ThrowCudaErrors(cudaMemset(m_pDeviceContribPixels, 0, sizeof(unsigned int) * totalNumBlocks()));
@@ -220,23 +219,23 @@ void BlockSampler::AddPass()
 		ThrowCudaErrors(cudaMemcpy(m_pHostSamplesData, m_pDeviceSamplesData, sizeof(unsigned int) * totalNumBlocks(), cudaMemcpyDeviceToHost));
 		ThrowCudaErrors(cudaMemcpy(m_pDeviceIndexData, &g_IndicesH[0], totalNumBlocks() * sizeof(unsigned int), cudaMemcpyHostToDevice));
 		ThrowCudaErrors(cudaMemcpy(m_pHostContribPixels, m_pDeviceContribPixels, sizeof(unsigned int) * totalNumBlocks(), cudaMemcpyDeviceToHost));
-		//thrust::sort(thrust::device_ptr<unsigned int>(m_pDeviceIndexData), thrust::device_ptr<unsigned int>(m_pDeviceIndexData + totalNumBlocks()), order(m_pDeviceBlockData, m_pDeviceContribPixels));
+		thrust::sort(thrust::device_ptr<unsigned int>(m_pDeviceIndexData), thrust::device_ptr<unsigned int>(m_pDeviceIndexData + totalNumBlocks()), order(m_pDeviceBlockData, m_pDeviceContribPixels));
 		hasValidData = true;
 		ThrowCudaErrors(cudaMemcpy(m_pHostIndexData, m_pDeviceIndexData, sizeof(unsigned int) * totalNumBlocks(), cudaMemcpyDeviceToHost));
-		//m_uNumBlocksToLaunch = totalNumBlocks() / 2;
-		/*float w_max = 0;
+		m_uNumBlocksToLaunch = totalNumBlocks() / 2;
+		float w_max = 0;
 		for (unsigned int i = 0; i < totalNumBlocks(); i++)
-		w_max = max(w_max, m_pHostBlockData[i]);
+			w_max = max(w_max, m_pHostBlockData[i]);
 		m_uNumBlocksToLaunch = 0;
 		cudaMemcpy(&g_IndicesH2[0], m_pDeviceIndexData, sizeof(unsigned int) * totalNumBlocks(), cudaMemcpyDeviceToHost);
 		for (unsigned int i = 0; i < totalNumBlocks(); i++)
 		{
-		float wd = m_pHostBlockData[g_IndicesH2[i]] / w_max;
-		float rnd = float(rand()) / float(RAND_MAX);
-		if (rnd < wd)
-		m_pHostIndexData[m_uNumBlocksToLaunch++] = g_IndicesH2[i];
-		}*/
-		//copyKernel << <dim3(m_uNumBlocksToLaunch, BLOCK_FACTOR * BLOCK_FACTOR), dim3(32, 32) >> >(*img, m_pLumData, m_pDeviceIndexData, nx);
+			float wd = m_pHostBlockData[g_IndicesH2[i]] / w_max;
+			float rnd = float(rand()) / float(RAND_MAX);
+			if (rnd < wd)
+				m_pHostIndexData[m_uNumBlocksToLaunch++] = g_IndicesH2[i];
+		}
+//		copyKernel << <dim3(m_uNumBlocksToLaunch, BLOCK_FACTOR * BLOCK_FACTOR), dim3(32, 32) >> >(*img, m_pLumData, m_pDeviceIndexData, nx);
 		for (unsigned int i = 0; i < totalNumBlocks(); i++)
 			m_pHostBlockData[i] /= float(m_pHostContribPixels[i]);
 		m_uNumBlocksToLaunch = 0;
@@ -344,7 +343,7 @@ struct Colorizer
 CUDA_GLOBAL void drawPass(Image img, SamplerpixelData* lumData, float* blockData, unsigned int* contribPixels, Colorizer col, bool blocks, int nx)
 {
 	unsigned int x = threadIdx.x + blockDim.x * blockIdx.x, y = threadIdx.y + blockDim.y * blockIdx.y;
-	unsigned int ix = x / blockSize, iy = y / blockSize;
+	unsigned int ix = x / BLOCK_SAMPLER_BlockSize, iy = y / BLOCK_SAMPLER_BlockSize;
 	unsigned int idx2 = iy * nx + ix;
 	if (x < img.getWidth() && y < img.getHeight())
 	{

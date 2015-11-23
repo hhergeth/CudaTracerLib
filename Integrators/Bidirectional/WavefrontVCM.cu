@@ -3,7 +3,7 @@
 namespace CudaTracerLib {
 
 k_WavefrontVCM::k_WavefrontVCM(unsigned int a_NumLightRays)
-	: m_uNumLightRays(a_NumLightRays), m_sLightBufA(a_NumLightRays), m_sLightBufB(a_NumLightRays), m_sCamBufA(blockSize * blockSize), m_sCamBufB(blockSize * blockSize)
+	: m_uNumLightRays(a_NumLightRays), m_sLightBufA(a_NumLightRays), m_sLightBufB(a_NumLightRays), m_sCamBufA(BLOCK_SAMPLER_BlockSize * BLOCK_SAMPLER_BlockSize), m_sCamBufB(BLOCK_SAMPLER_BlockSize * BLOCK_SAMPLER_BlockSize)
 {
 	ThrowCudaErrors(CUDA_MALLOC(&m_pDeviceLightVertices, sizeof(BPTVertex) * MAX_LIGHT_SUB_PATH_LENGTH * a_NumLightRays));
 
@@ -278,9 +278,9 @@ void k_WavefrontVCM::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 	unsigned int zero = 0;
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_sCamBufA, &m_sCamBufA, sizeof(m_sCamBufA)));
 	m_sCamBufA.Clear();
-	createCameraRays << <numBlocks, threadsPerBlock >> >(x, y, blockW, blockH, w, h);
+	createCameraRays << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(x, y, blockW, blockH, w, h);
 	ThrowCudaErrors(cudaThreadSynchronize());
-	m_sCamBufA.setNumRays(blockSize * blockSize, 0);
+	m_sCamBufA.setNumRays(BLOCK_SAMPLER_BlockSize * BLOCK_SAMPLER_BlockSize, 0);
 
 	k_WVCM_CamBuffer* srcBuf = &m_sCamBufA, *destBuf = &m_sCamBufB;
 	int i = 0;

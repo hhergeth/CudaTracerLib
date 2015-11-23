@@ -114,7 +114,7 @@ __global__ void pathKernel(unsigned int w, unsigned int h, int xoff, int yoff, B
 
 void k_BDPT::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 {
-	pathKernel << < numBlocks, threadsPerBlock >> >(w, h, x, y, getDeviceBlockSampler(), use_mis, force_s, force_t, LScale);
+	pathKernel << < BLOCK_SAMPLER_LAUNCH_CONFIG >> >(w, h, x, y, getDeviceBlockSampler(), use_mis, force_s, force_t, LScale);
 }
 
 void k_BDPT::Debug(Image* I, const Vec2i& pixel)

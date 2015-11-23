@@ -16,19 +16,6 @@ namespace CudaTracerLib {
 
 class VertexHash
 {
-	struct CmpVec3i
-	{
-		bool operator()(const Vec3i& lhs, const Vec3i& rhs) const
-		{
-			long long A = (long long(lhs.x) << 32) | (long long(lhs.y)), B = (long long(rhs.x) << 32) | (long long(rhs.y));
-			if (lhs.z < rhs.z)
-				return true;
-			else if (rhs.z < lhs.z)
-				return false;
-			else return A < B;
-		}
-	};
-
 	struct key_hash : public std::unary_function<Vec3i, std::size_t>
 	{
 		std::size_t operator()(const Vec3i& k) const
@@ -57,7 +44,7 @@ public:
 		{
 			auto a = entries.find(key);
 			if (a->first != key)
-				throw std::runtime_error("Error hashing obj vertex index tuples!");
+				throw std::runtime_error("Error hashing obj vertex index tuples!");//safeguard against older hashing strategies
 			val = a->second;
 			return true;
 		}
