@@ -16,7 +16,7 @@ CUDA_DEVICE unsigned int g_NextRayCounter3;
 CUDA_FUNC_IN void handleEmission(const Spectrum& weight, const PositionSamplingRecord& pRec, Image& g_Image, CudaRNG& rng)
 {
 	DirectSamplingRecord dRec(pRec.p, pRec.n);
-	Spectrum value = weight * g_SceneData.sampleSensorDirect(dRec, rng.randomFloat2());
+	Spectrum value = weight * g_SceneData.sampleAttenuatedSensorDirect(dRec, rng.randomFloat2());
 	if (!value.isZero() && V(dRec.p, dRec.ref))
 	{
 		const KernelLight* emitter = (const KernelLight*)pRec.object;
@@ -28,12 +28,24 @@ CUDA_FUNC_IN void handleEmission(const Spectrum& weight, const PositionSamplingR
 CUDA_FUNC_IN void handleSurfaceInteraction(const Spectrum& weight, BSDFSamplingRecord& bRec, const TraceResult& r2, Image& g_Image, CudaRNG& rng)
 {
 	DirectSamplingRecord dRec(bRec.dg.P, bRec.dg.sys.n);
-	Spectrum value = weight * g_SceneData.sampleSensorDirect(dRec, rng.randomFloat2());
+	Spectrum value = weight * g_SceneData.sampleAttenuatedSensorDirect(dRec, rng.randomFloat2());
 	if (!value.isZero() && V(dRec.p, dRec.ref))
 	{
 		bRec.wo = bRec.dg.toLocal(dRec.d);
 		value *= r2.getMat().bsdf.f(bRec);
 		g_Image.Splat(dRec.uv.x, dRec.uv.y, value);
+	}
+}
+
+CUDA_FUNC_IN void handleMediumInteraction(const Spectrum& weight, MediumSamplingRecord& mRec, const Vec3f& wi, const TraceResult& r2, Image& g_Image, CudaRNG& rng)
+{
+	DirectSamplingRecord dRec(mRec.p, Vec3f(0));
+	Spectrum value = weight * g_SceneData.sampleAttenuatedSensorDirect(dRec, rng.randomFloat2());
+	if (!value.isZero() && V(dRec.p, dRec.ref))
+	{
+		value *= g_SceneData.m_sVolume.p(mRec.p, wi, (dRec.ref - dRec.p).normalized(), rng);
+		if (!value.isZero())
+			g_Image.Splat(dRec.uv.x, dRec.uv.y, value);
 	}
 }
 
@@ -81,6 +93,9 @@ CUDA_FUNC_IN Spectrum sample(const Spectrum& s_, BSDFSamplingRecord& bRec, CudaR
 	}
 }
 
+//if (r2.getMat().bsdf.getTypeToken() != UINT_MAX)
+//r2.getMat().bsdf.getTypeToken() == UINT_MAX ? sample(power * throughput, bRec, rng) : 
+
 CUDA_FUNC_IN void doWork(Image& g_Image, CudaRNG& rng)
 {
 	PositionSamplingRecord pRec;
@@ -97,26 +112,62 @@ CUDA_FUNC_IN void doWork(Image& g_Image, CudaRNG& rng)
 	int depth = -1;
 	DifferentialGeometry dg;
 	BSDFSamplingRecord bRec(dg);
-	while (++depth < 12 && Traceray(r.direction, r.origin, &r2))
+
+	KernelAggregateVolume& V = g_SceneData.m_sVolume;
+	bool delta = false;
+	MediumSamplingRecord mRec;
+	bool medium = false;
+	const VolumeRegion* bssrdf = 0;
+
+	while (++depth < 12 && !throughput.isZero())
 	{
-		r2.getBsdfSample(r, bRec, ETransportMode::EImportance, &rng);
-
-		if (r2.getMat().bsdf.getTypeToken() != UINT_MAX)
-			handleSurfaceInteraction(power * throughput, bRec, r2, g_Image, rng);
-
-		Spectrum bsdfWeight = r2.getMat().bsdf.getTypeToken() == UINT_MAX ? sample(power * throughput, bRec, rng) : r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
-
-		r = Ray(bRec.dg.P, bRec.getOutgoing());
-		r2.Init();
-		if (bsdfWeight.isZero())
-			break;
-		throughput *= bsdfWeight;
-		if (depth > 5)
+		TraceResult r2 = Traceray(r);
+		float minT, maxT;
+		if ((!bssrdf && V.HasVolumes() && V.IntersectP(r, 0, r2.m_fDist, &minT, &maxT) && V.sampleDistance(r, 0, r2.m_fDist, rng, mRec)) || (bssrdf && bssrdf->sampleDistance(r, 0, r2.m_fDist, rng.randomFloat(), mRec)))
 		{
-			float q = min(throughput.max(), 0.95f);
-			if (rng.randomFloat() >= q)
-				break;
-			throughput /= q;
+			throughput *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
+			handleMediumInteraction(power * throughput, mRec, -r.direction, r2, g_Image, rng);
+			if (bssrdf)
+			{
+				PhaseFunctionSamplingRecord mRec(-r.direction);
+				throughput *= bssrdf->As()->Func.Sample(mRec, rng);
+				r.direction = mRec.wi;
+			}
+			else throughput *= V.Sample(mRec.p, -r.direction, rng, &r.direction);
+			r.origin = mRec.p;
+			delta = false;
+			medium = true;
+		}
+		else if (!r2.hasHit())
+			break;
+		else
+		{
+			if (medium)
+				throughput *= mRec.transmittance / mRec.pdfFailure;
+			Vec3f wo = bssrdf ? r.direction : -r.direction;
+			r2.getBsdfSample(-wo, r(r2.m_fDist), bRec, ETransportMode::EImportance, &rng);
+			handleSurfaceInteraction(power * throughput, bRec, r2, g_Image, rng);
+			Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
+			delta = bRec.sampledType & ETypeCombinations::EDelta;
+			if (!bssrdf && r2.getMat().GetBSSRDF(bRec.dg, &bssrdf))
+				bRec.wo.z *= -1.0f;
+			else
+			{
+				if (!bssrdf)
+					throughput *= f;
+				bssrdf = 0;
+				medium = false;
+			}
+
+			if (depth > 5)
+			{
+				float q = min(throughput.max(), 0.95f);
+				if (rng.randomFloat() >= q)
+					break;
+				throughput /= q;
+			}
+
+			r = Ray(bRec.dg.P, bRec.getOutgoing());
 		}
 	}
 }

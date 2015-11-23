@@ -45,10 +45,10 @@ struct KernelDynamicScene
 	CUDA_DEVICE CUDA_HOST const KernelLight* sampleEmitter(float& emPdf, Vec2f& sample) const;
 	CUDA_DEVICE CUDA_HOST float pdfEmitterDiscrete(const KernelLight *emitter) const;
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleEmitterDirect(DirectSamplingRecord &dRec, const Vec2f &sample, bool testVisibility = false) const;
-	CUDA_DEVICE CUDA_HOST Spectrum sampleAttenuatedEmitterDirect(DirectSamplingRecord &dRec, const Vec2f &sample, bool testVisibility = false) const;
-	CUDA_DEVICE CUDA_HOST Spectrum sampleSensorDirect(DirectSamplingRecord &dRec, const Vec2f &sample, bool testVisibility = false) const;
-	CUDA_DEVICE CUDA_HOST Spectrum sampleAttenuatedSensorDirect(DirectSamplingRecord &dRec, const Vec2f &sample, bool testVisibility = false) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleEmitterDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleAttenuatedEmitterDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleSensorDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleAttenuatedSensorDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const;
 	CUDA_DEVICE CUDA_HOST float pdfEmitterDirect(const DirectSamplingRecord &dRec) const;
 	CUDA_DEVICE CUDA_HOST float pdfSensorDirect(const DirectSamplingRecord &dRec) const;
 

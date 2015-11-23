@@ -55,7 +55,7 @@ Spectrum KernelDynamicScene::EvalEnvironment(const Ray& r, const Ray& rX, const 
 	else return Spectrum(0.0f);
 }
 
-Spectrum KernelDynamicScene::sampleEmitterDirect(DirectSamplingRecord &dRec, const Vec2f &_sample, bool testVisibility) const
+Spectrum KernelDynamicScene::sampleEmitterDirect(DirectSamplingRecord &dRec, const Vec2f &_sample) const
 {
 	Vec2f sample = _sample;
 	float emPdf;
@@ -69,11 +69,6 @@ Spectrum KernelDynamicScene::sampleEmitterDirect(DirectSamplingRecord &dRec, con
 	Spectrum value = emitter->sampleDirect(dRec, sample);
 	if (dRec.pdf != 0)
 	{
-		if (testVisibility && Occluded(Ray(dRec.ref, dRec.n), 0, dRec.dist))
-		{
-			dRec.object = 0;
-			return Spectrum(0.0f);
-		}
 		dRec.pdf *= emPdf;
 		value /= emPdf;
 		dRec.object = emitter;
@@ -85,22 +80,17 @@ Spectrum KernelDynamicScene::sampleEmitterDirect(DirectSamplingRecord &dRec, con
 	}
 }
 
-Spectrum KernelDynamicScene::sampleAttenuatedEmitterDirect(DirectSamplingRecord &dRec, const Vec2f &_sample, bool testVisibility) const
+Spectrum KernelDynamicScene::sampleAttenuatedEmitterDirect(DirectSamplingRecord &dRec, const Vec2f &_sample) const
 {
-	Spectrum value = sampleEmitterDirect(dRec, _sample, testVisibility);
+	Spectrum value = sampleEmitterDirect(dRec, _sample);
 	return value * evalTransmittance(dRec.ref, dRec.p);
 }
 
-Spectrum KernelDynamicScene::sampleSensorDirect(DirectSamplingRecord &dRec, const Vec2f &sample, bool testVisibility) const
+Spectrum KernelDynamicScene::sampleSensorDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const
 {
 	Spectrum value = m_Camera.sampleDirect(dRec, sample);
 	if (dRec.pdf != 0)
 	{
-		if (testVisibility && Occluded(Ray(dRec.ref, dRec.d), 0, dRec.dist))
-		{
-			dRec.object = 0;
-			return Spectrum(0.0f);
-		}
 		dRec.object = &g_SceneData;
 		return value;
 	}
@@ -110,9 +100,9 @@ Spectrum KernelDynamicScene::sampleSensorDirect(DirectSamplingRecord &dRec, cons
 	}
 }
 
-Spectrum KernelDynamicScene::sampleAttenuatedSensorDirect(DirectSamplingRecord &dRec, const Vec2f &sample, bool testVisibility) const
+Spectrum KernelDynamicScene::sampleAttenuatedSensorDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const
 {
-	Spectrum value = sampleSensorDirect(dRec, sample, testVisibility);
+	Spectrum value = sampleSensorDirect(dRec, sample);
 	return value * evalTransmittance(dRec.ref, dRec.p);
 }
 
