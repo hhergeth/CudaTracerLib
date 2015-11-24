@@ -16,10 +16,11 @@ CUDA_FUNC_IN float getCurrentRadius(float initial_r, unsigned int iteration, flo
 	return initial_r * math::pow(iteration, (ALPHA - 1) / exp);
 }
 
+//smoothing kernel which integrates [-1, +1] to 1
 CUDA_FUNC_IN float k(float t)
 {
 	t = math::clamp01(t);
-	return (1.0f + t * t * t * (-6.0f * t * t + 15.0f * t - 10.0f)) * 2;
+	return (1.0f + t * t * t * (-6.0f * t * t + 15.0f * t - 10.0f));
 }
 
 CUDA_FUNC_IN float k_tr(float r, float t)
