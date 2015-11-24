@@ -25,14 +25,30 @@ CUDA_FUNC_IN void handleEmission(const Spectrum& weight, const PositionSamplingR
 	}
 }
 
-CUDA_FUNC_IN void handleSurfaceInteraction(const Spectrum& weight, BSDFSamplingRecord& bRec, const TraceResult& r2, Image& g_Image, CudaRNG& rng)
+template<bool CORRECT_DIFFERENTIALS> CUDA_FUNC_IN void handleSurfaceInteraction(const Spectrum& weight, const TraceResult& res, BSDFSamplingRecord& bRec, const TraceResult& r2, Image& g_Image, CudaRNG& rng)
 {
 	DirectSamplingRecord dRec(bRec.dg.P, bRec.dg.sys.n);
 	Spectrum value = weight * g_SceneData.sampleAttenuatedSensorDirect(dRec, rng.randomFloat2());
 	if (!value.isZero() && V(dRec.p, dRec.ref))
 	{
 		bRec.wo = bRec.dg.toLocal(dRec.d);
+
+		//compute pixel differentials
+		if (CORRECT_DIFFERENTIALS)
+		{
+			Ray r, rX, rY;
+			g_SceneData.sampleSensorRay(r, rX, rY, dRec.uv, Vec2f(0));
+			Vec3f oldWi = bRec.wi;
+			r2.getBsdfSample(r, bRec, ETransportMode::EImportance, &rng, &dRec.d);
+			bRec.dg.computePartials(r, rX, rY);
+			bRec.wi = oldWi;
+		}
+
 		value *= r2.getMat().bsdf.f(bRec);
+
+		//remove pixel differentials for further traversal as they no longer make sense
+		bRec.dg.hasUVPartials = false;
+
 		g_Image.Splat(dRec.uv.x, dRec.uv.y, value);
 	}
 }
@@ -96,7 +112,7 @@ CUDA_FUNC_IN Spectrum sample(const Spectrum& s_, BSDFSamplingRecord& bRec, CudaR
 //if (r2.getMat().bsdf.getTypeToken() != UINT_MAX)
 //r2.getMat().bsdf.getTypeToken() == UINT_MAX ? sample(power * throughput, bRec, rng) : 
 
-CUDA_FUNC_IN void doWork(Image& g_Image, CudaRNG& rng)
+template<bool CORRECT_DIFFERENTIALS> CUDA_FUNC_IN void doWork(Image& g_Image, CudaRNG& rng)
 {
 	PositionSamplingRecord pRec;
 	Spectrum power = g_SceneData.sampleEmitterPosition(pRec, rng.randomFloat2()), throughput = Spectrum(1.0f);
@@ -144,9 +160,9 @@ CUDA_FUNC_IN void doWork(Image& g_Image, CudaRNG& rng)
 		{
 			if (medium)
 				throughput *= mRec.transmittance / mRec.pdfFailure;
-			Vec3f wo = bssrdf ? r.direction : -r.direction;
-			r2.getBsdfSample(-wo, r(r2.m_fDist), bRec, ETransportMode::EImportance, &rng);
-			handleSurfaceInteraction(power * throughput, bRec, r2, g_Image, rng);
+			Vec3f wo = bssrdf ? -r.direction : r.direction;
+			r2.getBsdfSample(wo, r(r2.m_fDist), bRec, ETransportMode::EImportance, &rng);
+			handleSurfaceInteraction<CORRECT_DIFFERENTIALS>(power * throughput, r2, bRec, r2, g_Image, rng);
 			Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
 			delta = bRec.sampledType & ETypeCombinations::EDelta;
 			if (!bssrdf && r2.getMat().GetBSSRDF(bRec.dg, &bssrdf))
@@ -172,7 +188,7 @@ CUDA_FUNC_IN void doWork(Image& g_Image, CudaRNG& rng)
 	}
 }
 
-__global__ void pathKernel(unsigned int N, Image g_Image)
+template<bool CORRECT_DIFFERENTIALS> __global__ void pathKernel(unsigned int N, Image g_Image)
 {
 	CudaRNG rng = g_RNGData();
 	__shared__ volatile int nextRayArray[MaxBlockHeight];
@@ -186,7 +202,7 @@ __global__ void pathKernel(unsigned int N, Image g_Image)
 		if (rayidx >= N)
 			break;
 
-		doWork(g_Image, rng);
+		doWork<CORRECT_DIFFERENTIALS>(g_Image, rng);
 	} while (true);
 	g_RNGData(rng);
 }
@@ -196,7 +212,9 @@ void k_PhotonTracer::DoRender(Image* I)
 	unsigned int zero = 0;
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_NextRayCounter3, &zero, sizeof(unsigned int)));
 	k_INITIALIZE(m_pScene, g_sRngs);
-	pathKernel << < 180, dim3(32, MaxBlockHeight, 1) >> >(w * h, *I);
+	if (m_bCorrectDifferentials)
+		pathKernel<true> << < 180, dim3(32, MaxBlockHeight, 1) >> >(w * h, *I);
+	else pathKernel<false> << < 180, dim3(32, MaxBlockHeight, 1) >> >(w * h, *I);
 	ThrowCudaErrors(cudaDeviceSynchronize());
 }
 
@@ -204,7 +222,7 @@ void k_PhotonTracer::Debug(Image* I, const Vec2i& pixel)
 {
 	k_INITIALIZE(m_pScene, g_sRngs);
 	CudaRNG rng = g_RNGData();
-	doWork(*I, rng);
+	doWork<true>(*I, rng);
 	g_RNGData(rng);
 }
 
