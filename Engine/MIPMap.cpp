@@ -38,72 +38,51 @@ void MIPMap::CompileToBinary(const std::string& in, const std::string& out, bool
 	o.Close();
 }
 
-struct sampleHelper
-{
-	imgData* data;
-	void* source, *dest;
-	int w;
-
-	sampleHelper(imgData* d, void* tmp, int i, int _w)
-	{
-		w = _w;
-		data = d;
-		source = i % 2 == 1 ? d->data : tmp;
-		dest = i % 2 == 1 ? tmp : d->data;
-	}
-
-	Vec4f operator()(int x, int y)
-	{
-		if (data->type == vtRGBE)
-			return Vec4f(SpectrumConverter::RGBEToFloat3(((RGBE*)source)[y * w + x]), 1);
-		else return SpectrumConverter::COLORREFToFloat4(((RGBCOL*)source)[y * w + x]);
-	}
-};
-
 void MIPMap::CompileToBinary(const std::string& a_InputFile, FileOutputStream& a_Out, bool a_MipMap)
 {
 	imgData data;
-	if (!parseImage(a_InputFile, &data))
+	if (!parseImage(a_InputFile, data))
 		throw std::runtime_error("Impossible to load texture file!");
-	if (popc(data.w) != 1 || popc(data.h) != 1)
-		resize(&data);
+	if (popc(data.w()) != 1 || popc(data.h()) != 1)
+		data.RescaleToPowerOf2();
 
-	unsigned int nLevels = 1 + math::Log2Int(min(float(data.w), float(data.h)));
+	unsigned int nLevels = 1 + math::Log2Int(min(float(data.w()), float(data.h())));
 	//if(!a_MipMap)
 	//	nLevels = 1;
 	unsigned int size = 0;
-	for (unsigned int i = 0, j = data.w, k = data.h; i < nLevels; i++, j = j >> 1, k = k >> 1)
+	for (unsigned int i = 0, j = data.w(), k = data.h(); i < nLevels; i++, j = j >> 1, k = k >> 1)
 		size += j * k * 4;
-	void* buf = malloc(data.w * data.h * 4);//it will be smaller
 
-	a_Out << data.w;
-	a_Out << data.h;
+	a_Out << data.w();
+	a_Out << data.h();
 	a_Out << unsigned int(4);
-	a_Out << (int)data.type;
+	a_Out << (int)data.t();
 	a_Out << (int)TEXTURE_REPEAT;
 	a_Out << (int)TEXTURE_Anisotropic;
 	a_Out << nLevels;
 	a_Out << size;
-	a_Out.Write(data.data, data.w * data.h * sizeof(RGBCOL));
+	a_Out.Write(data.d(), data.w() * data.h() * sizeof(RGBCOL));
 
+	imgData tmpData;
+	tmpData.Allocate(data.w() * 2, data.h() * 2, data.t());
+	imgData* buffer[2] = { &data, &tmpData };
 	unsigned int m_sOffsets[MAX_MIPS];
 	m_sOffsets[0] = 0;
-	unsigned int off = data.w * data.h;
-	for (unsigned int i = 1, j = data.w / 2, k = data.h / 2; i < nLevels; i++, j >>= 1, k >>= 1)
+	unsigned int off = data.w() * data.h();
+	for (unsigned int i = 1, j = data.w() / 2, k = data.h() / 2; i < nLevels; i++, j >>= 1, k >>= 1)
 	{
-		sampleHelper H(&data, buf, i, j * 2);//last width
+		buffer[0]->SetInfo(j * 2, k * 2, buffer[0]->t()); buffer[1]->SetInfo(j, k, buffer[1]->t());
 		for (unsigned int t = 0; t < k; t++)
 			for (unsigned int s = 0; s < j; s++)
 			{
-				void* tar = (RGBE*)H.dest + t * j + s;
-				Vec4f v = 0.25f * (H(2 * s, 2 * t) + H(2 * s + 1, 2 * t) + H(2 * s, 2 * t + 1) + H(2 * s + 1, 2 * t + 1));
-				if (data.type == vtRGBE)
-					*(RGBE*)tar = SpectrumConverter::Float3ToRGBE(v.getXYZ());
-				else *(RGBCOL*)tar = SpectrumConverter::Float4ToCOLORREF(v);
+				Spectrum v = 0.25f * (buffer[0]->Load(2 * s, 2 * t) + buffer[0]->Load(2 * s + 1, 2 * t) + 
+									  buffer[0]->Load(2 * s, 2 * t + 1) + buffer[0]->Load(2 * s + 1, 2 * t + 1));
+				buffer[1]->Set(v, s, t);
 			}
 		m_sOffsets[i] = off;
 		off += j * k;
-		a_Out.Write(H.dest, j * k * sizeof(RGBCOL));
+		a_Out.Write(buffer[1]->d(), j * k * sizeof(RGBCOL));
+		swapk(&buffer[0], &buffer[1]);
 	}
 	a_Out.Write(m_sOffsets, sizeof(m_sOffsets));
 	for (int i = 0; i < MTS_MIPMAP_LUT_SIZE; ++i)
@@ -112,8 +91,8 @@ void MIPMap::CompileToBinary(const std::string& a_InputFile, FileOutputStream& a
 		float val = math::exp(-2.0f * r2) - math::exp(-2.0f);
 		a_Out << val;
 	}
-	free(data.data);
-	free(buf);
+	data.Free();
+	tmpData.Free();
 }
 
 KernelMIPMap MIPMap::getKernelData()

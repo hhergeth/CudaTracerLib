@@ -3,6 +3,8 @@
 #include "MIPMapHelper.h"
 #include <Base/FileStream.h>
 #include <CudaMemoryManager.h>
+#define FREEIMAGE_LIB
+#include <FreeImage.h>
 
 //MipMap evaluation copied from Mitsuba.
 
@@ -302,7 +304,7 @@ struct MapPoint
 		Vec2f uv = cubizePoint4(d, face);
 		if (face == 2 || face == 3)
 			x = (x + int(w) / 4) % int(w);
-		Spectrum s = maps[face].Load(int(uv.x * (maps[face].w - 1)), int((1.0f - uv.y) * (maps[face].h - 1)));
+		Spectrum s = maps[face].Load(int(uv.x * (maps[face].w() - 1)), int((1.0f - uv.y) * (maps[face].h() - 1)));
 		float r, g, b;
 		s.toLinearRGB(r, g, b);
 		return Vec3f(r, g, b);
@@ -324,14 +326,14 @@ __global__ void generateSkydome(unsigned int w, unsigned int h, Vec3f* Target)
 void MIPMap::CreateSphericalSkydomeTexture(const std::string& front, const std::string& back, const std::string& left, const std::string& right, const std::string& top, const std::string& bottom, const std::string& outFile)
 {
 	imgData maps[6];
-	parseImage(front, maps + 5);
-	parseImage(back, maps + 4);
-	parseImage(left, maps + 1);
-	parseImage(right, maps + 0);
-	parseImage(top, maps + 2);
-	parseImage(bottom, maps + 3);
+	parseImage(front, maps[5]);
+	parseImage(back, maps[4]);
+	parseImage(left, maps[1]);
+	parseImage(right, maps[0]);
+	parseImage(top, maps[2]);
+	parseImage(bottom, maps[3]);
 	MapPoint M;
-	unsigned int w = maps[0].w * 2, h = maps[0].h;
+	unsigned int w = maps[0].w() * 2, h = maps[0].h();
 	FIBITMAP* bitmap = FreeImage_AllocateT(FIT_RGBF, w, h, 32);
 	Vec3f* B = (Vec3f*)FreeImage_GetBits(bitmap);
 	const bool useCuda = true;
@@ -341,18 +343,20 @@ void MIPMap::CreateSphericalSkydomeTexture(const std::string& front, const std::
 		for (int i = 0; i < 6; i++)
 		{
 			mapsC[i] = maps[i];
-			CUDA_MALLOC(&mapsC[i].data, 4 * maps[i].w * maps[i].h);
-			cudaMemcpy(mapsC[i].data, maps[i].data, 4 * maps[i].w * maps[i].h, cudaMemcpyHostToDevice);
+			void* deviceData;
+			CUDA_MALLOC(&deviceData, 4 * maps[i].w() * maps[i].h());
+			mapsC[i].d(deviceData);
+			cudaMemcpy(mapsC[i].d(), maps[i].d(), 4 * maps[i].w() * maps[i].h(), cudaMemcpyHostToDevice);
 		}
 		ThrowCudaErrors(cudaMemcpyToSymbol(mapsCuda, &mapsC[0], sizeof(mapsCuda)));
 		void* T;
 		CUDA_MALLOC(&T, sizeof(Vec3f) * w * h);
-		generateSkydome << <dim3((w + 31) / 32, (h + 31) / 32, 1), dim3(32, 32, 1) >> >(w, h, (Vec3f*)T);
+		generateSkydome << <dim3(w / 32 + 1, h / 32 + 1, 1), dim3(32, 32, 1) >> >(w, h, (Vec3f*)T);
 		ThrowCudaErrors(cudaDeviceSynchronize());
 		ThrowCudaErrors(cudaMemcpy(B, T, sizeof(Vec3f) * w * h, cudaMemcpyDeviceToHost));
 		CUDA_FREE(T);
 		for (int i = 0; i < 6; i++)
-			CUDA_FREE(mapsC[i].data);
+			CUDA_FREE(mapsC[i].d());
 	}
 	else
 	{
@@ -364,16 +368,17 @@ void MIPMap::CreateSphericalSkydomeTexture(const std::string& front, const std::
 				B[y * w + xp] = c;
 			}
 	}
-	if (!FreeImage_Save(FIF_EXR, bitmap, outFile.c_str()))
+	FREE_IMAGE_FORMAT ff = FreeImage_GetFIFFromFilename(outFile.c_str());
+	if (!FreeImage_Save(ff, bitmap, outFile.c_str()))
 		throw std::runtime_error(std::string(__FUNCTION__) + " :: FreeImage_Save");
 	FreeImage_Unload(bitmap);
 	for (int i = 0; i < 6; i++)
-		free(maps[i].data);
+		maps[i].Free();
 }
 
 CUDA_FUNC_IN float sample(imgData& img, const Vec3f& p)
 {
-	Vec2f q = clamp01(p.getXY()) * Vec2f(img.w, img.h);
+	Vec2f q = clamp01(p.getXY()) * Vec2f(img.w(), img.h());
 	return img.Load((int)q.x, (int)q.y).average();
 }
 template<int SEARCH_STEPS> CUDA_FUNC_IN bool text_cords_next_intersection(imgData& img, const Vec3f& pos, const Vec3f& dir, float& height, Vec2f& kw)
@@ -397,22 +402,22 @@ template<int SEARCH_STEPS> CUDA_FUNC_IN bool text_cords_next_intersection(imgDat
 template<int SEARCH_STEPS, int LOOKUP_WIDTH> __global__ void generateRelaxedConeMap(imgData img, float* coneData)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x, y = blockIdx.y * blockDim.y + threadIdx.y;
-	if (x < img.w && y < img.h)
+	if (x < img.w() && y < img.h())
 	{
 		float src_texel_depth = img.Load(x, y).average();
-		float* radius_cone = coneData + (y * img.w + x);
-		const float MAX_CONE_RATIO = ((float)LOOKUP_WIDTH / (float)max(img.w, img.h)) / (1 - src_texel_depth);
+		float* radius_cone = coneData + (y * img.w() + x);
+		const float MAX_CONE_RATIO = ((float)LOOKUP_WIDTH / (float)max(img.w(), img.h())) / (1 - src_texel_depth);
 		*radius_cone = MAX_CONE_RATIO;
-		Vec3f src = Vec3f(float(x) / img.w, float(y) / img.h, src_texel_depth);
-		int xmin = math::clamp(x - LOOKUP_WIDTH, 0, (int)img.w - 1), xmax = math::clamp(x + LOOKUP_WIDTH, 0, (int)img.w - 1);
-		int ymin = math::clamp(y - LOOKUP_WIDTH, 0, (int)img.h - 1), ymax = math::clamp(y + LOOKUP_WIDTH, 0, (int)img.h - 1);
+		Vec3f src = Vec3f(float(x) / img.w(), float(y) / img.h(), src_texel_depth);
+		int xmin = math::clamp(x - LOOKUP_WIDTH, 0, (int)img.w() - 1), xmax = math::clamp(x + LOOKUP_WIDTH, 0, (int)img.w() - 1);
+		int ymin = math::clamp(y - LOOKUP_WIDTH, 0, (int)img.h() - 1), ymax = math::clamp(y + LOOKUP_WIDTH, 0, (int)img.h() - 1);
 		for (int ti = xmin; ti <= xmax; ti++)
 			for (int tj = ymin; tj <= ymax; tj++)
 			{
 				float tj_depth = img.Load(ti, tj).average();
 				if ((ti == x && tj == y) || tj_depth <= src_texel_depth)
 					continue;
-				Vec3f dst = Vec3f(float(ti) / img.w, float(tj) / img.h, tj_depth);
+				Vec3f dst = Vec3f(float(ti) / img.w(), float(tj) / img.h(), tj_depth);
 				float d;
 				Vec2f kw;
 				if (!text_cords_next_intersection<SEARCH_STEPS>(img, src, dst - src, d, kw))
@@ -427,9 +432,9 @@ template<int SEARCH_STEPS, int LOOKUP_WIDTH> __global__ void generateRelaxedCone
 template<int SEARCH_STEPS> __global__ void generateRelaxedConeMap(imgData img, float* coneData, Vec3f Offset)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x, y = blockIdx.y * blockDim.y + threadIdx.y;
-	if (x < img.w && y < img.h)
+	if (x < img.w() && y < img.h())
 	{
-		Vec3f src = Vec3f(float(x) / img.w, float(y) / img.h, 0);
+		Vec3f src = Vec3f(float(x) / img.w(), float(y) / img.h(), 0);
 		Vec3f dst = src + Offset;
 		dst.z = sample(img, dst);
 		Vec3f vec = dst - src;
@@ -445,49 +450,48 @@ template<int SEARCH_STEPS> __global__ void generateRelaxedConeMap(imgData img, f
 		}
 		float src_texel_depth = img.Load(x, y).average();
 		float cone_ratio = (ray_pos.z >= src_texel_depth) ? 1.0 : length(ray_pos.getXY() - src.getXY()) / (src_texel_depth - ray_pos.z);
-		float best_ratio = coneData[y * img.w + x];
+		float best_ratio = coneData[y * img.w() + x];
 		if (cone_ratio > best_ratio)
 			cone_ratio = best_ratio;
-		coneData[y * img.w + x] = cone_ratio;
+		coneData[y * img.w() + x] = cone_ratio;
 	}
 }
 
 void MIPMap::CreateRelaxedConeMap(const std::string& a_InputFile, FileOutputStream& a_Out)
 {
 	imgData data;
-	if (!parseImage(a_InputFile, &data))
+	if (!parseImage(a_InputFile, data))
 		throw std::runtime_error("Impossible to load texture file!");
-	RGBCOL* hostData = (RGBCOL*)data.data;
-	CUDA_MALLOC(&data.data, data.w * data.h * 4);
-	ThrowCudaErrors(cudaMemcpy(data.data, hostData, data.w * data.h * 4, cudaMemcpyHostToDevice));
+	RGBCOL* hostData = (RGBCOL*)data.d(), *deviceData;
+	CUDA_MALLOC(&deviceData, data.w() * data.h() * 4);
+	data.d(deviceData);
+	ThrowCudaErrors(cudaMemcpy(deviceData, hostData, data.w() * data.h() * 4, cudaMemcpyHostToDevice));
 	float* deviceDepthData;
-	CUDA_MALLOC(&deviceDepthData, data.w * data.h * 4);
-	generateRelaxedConeMap<32, 64> << < dim3(data.w / 16, data.h / 16), dim3(16, 16) >> >(data, deviceDepthData);
+	CUDA_MALLOC(&deviceDepthData, data.w() * data.h() * 4);
+	generateRelaxedConeMap<32, 64> << < dim3(data.w() / 16 + 1, data.h() / 16 + 1), dim3(16, 16) >> >(data, deviceDepthData);
 	ThrowCudaErrors();
 
-	CUDA_FREE(data.data);
-	data.data = hostData;
+	CUDA_FREE(deviceData);
+	data.d(hostData);
 
-	//cudaMemcpy(hostData, data.data, data.w * data.h * 4, cudaMemcpyDeviceToHost);
+	float* hostConeData = new float[data.w() * data.h()];
+	ThrowCudaErrors(cudaMemcpy(hostConeData, deviceDepthData, data.w() * data.h() * 4, cudaMemcpyDeviceToHost));
 
-	float* hostConeData = new float[data.w * data.h];
-	ThrowCudaErrors(cudaMemcpy(hostConeData, deviceDepthData, data.w * data.h * 4, cudaMemcpyDeviceToHost));
-
-	float oldw = data.w, oldh = data.h;
-	data.data = hostConeData;
-	resize(&data);
-	hostConeData = (float*)data.data;
+	float oldw = data.w(), oldh = data.h();
+	data.d(hostConeData); //do NOT free the actual image data, this will be done later
+	data.RescaleToPowerOf2();
+	hostConeData = (float*)data.d();
 
 	FREE_IMAGE_FORMAT ff = FIF_PNG;
-	FIBITMAP* bitmap = FreeImage_Allocate(data.w, data.h, 24, 0x000000ff, 0x0000ff00, 0x00ff0000);
+	FIBITMAP* bitmap = FreeImage_Allocate(data.w(), data.h(), 24, 0x000000ff, 0x0000ff00, 0x00ff0000);
 	BYTE* A = FreeImage_GetBits(bitmap);
 	unsigned int pitch = FreeImage_GetPitch(bitmap);
 	int off = 0;
-	for (unsigned int y = 0; y < data.h; y++)
+	for (unsigned int y = 0; y < data.h(); y++)
 	{
-		for (unsigned int x = 0; x < data.w; x++)
+		for (unsigned int x = 0; x < data.w(); x++)
 		{
-			float d = hostConeData[y * data.w + x];
+			float d = hostConeData[y * data.w() + x];
 			unsigned char col = (unsigned char)(d * 255.0f);
 			A[off + x * 3 + 0] = col;
 			A[off + x * 3 + 1] = col;
@@ -499,27 +503,27 @@ void MIPMap::CreateRelaxedConeMap(const std::string& a_InputFile, FileOutputStre
 		throw std::runtime_error(__FUNCTION__);
 	FreeImage_Unload(bitmap);
 
-	a_Out << data.w;
-	a_Out << data.h;
+	a_Out << data.w();
+	a_Out << data.h();
 	a_Out << unsigned int(4);
-	a_Out << (int)data.type;
+	a_Out << (int)data.t();
 	a_Out << (int)TEXTURE_REPEAT;
 	a_Out << (int)TEXTURE_Anisotropic;
 	a_Out << unsigned int(1);
-	a_Out << data.w * data.h * 8;
+	a_Out << data.w() * data.h() * 8;
 
-	float2* imgData = new float2[data.w * data.h];
-	for (unsigned int i = 0; i < data.w; i++)
-		for (unsigned int j = 0; j < data.h; j++)
+	float2* imgData = new float2[data.w() * data.h()];
+	for (unsigned int i = 0; i < data.w(); i++)
+		for (unsigned int j = 0; j < data.h(); j++)
 		{
-			float xs = float(i) / data.w * oldw, ys = float(j) / data.h * oldh;
+			float xs = float(i) / data.w() * oldw, ys = float(j) / data.h() * oldh;
 			Spectrum s;
 			s.fromRGBCOL(hostData[(int)ys * (int)oldw + (int)xs]);
 			float d = s.average();
-			float c = hostConeData[j * data.w + i];
-			imgData[j * data.w + i] = make_float2(d, c);
+			float c = hostConeData[j * data.w() + i];
+			imgData[j * data.w() + i] = make_float2(d, c);
 		}
-	a_Out.Write(imgData, data.w * data.h * sizeof(float2));
+	a_Out.Write(imgData, data.w() * data.h() * sizeof(float2));
 	delete[] imgData;
 
 	unsigned int m_sOffsets[MAX_MIPS];
@@ -531,8 +535,58 @@ void MIPMap::CreateRelaxedConeMap(const std::string& a_InputFile, FileOutputStre
 		a_Out << val;
 	}
 
-	free(data.data);
+	data.Free();
 	free(hostData);
+}
+
+bool parseImage(const std::string& a_InputFile, imgData& data)
+{
+	FREE_IMAGE_FORMAT fif = FreeImage_GetFileType(a_InputFile.c_str(), 0);
+	if (fif == FIF_UNKNOWN)
+	{
+		fif = FreeImage_GetFIFFromFilename(a_InputFile.c_str());
+	}
+	if ((fif != FIF_UNKNOWN) && FreeImage_FIFSupportsReading(fif))
+	{
+		FIBITMAP *dib = FreeImage_Load(fif, a_InputFile.c_str(), 0);
+		if (!dib)
+			return false;
+		unsigned int w = FreeImage_GetWidth(dib);
+		unsigned int h = FreeImage_GetHeight(dib);
+		unsigned int scan_width = FreeImage_GetPitch(dib);
+		unsigned int pitch = FreeImage_GetPitch(dib);
+		FREE_IMAGE_TYPE imageType = FreeImage_GetImageType(dib);
+		unsigned int bpp = FreeImage_GetBPP(dib);
+		BYTE *bits = (BYTE *)FreeImage_GetBits(dib);
+		Texture_DataType type = Texture_DataType::vtRGBCOL;
+		if (((imageType == FIT_RGBAF) && (bpp == 128)) || ((imageType == FIT_RGBF) && (bpp == 96)))
+			type = Texture_DataType::vtRGBE;
+		data.Allocate(w, h, type);
+		for (unsigned int y = 0; y < h; ++y)
+		{
+			for (unsigned int x = 0; x < w; ++x)
+			{
+				FIRGBAF *pixel = (FIRGBAF *)(bits + bpp / 8 * x);
+				BYTE* pixel2 = bits + bpp / 8 * x;
+				BYTE pixel3;
+				if (type == Texture_DataType::vtRGBE)
+					data.SetRGBE(SpectrumConverter::Float3ToRGBE(Vec3f(pixel->red, pixel->green, pixel->blue)), x, y);
+				else if (bpp == 8)
+				{
+					FreeImage_GetPixelIndex(dib, x, y, &pixel3);
+					data.SetRGBCOL(make_uchar4(pixel3, pixel3, pixel3, 255), x, y);
+				}
+				else data.SetRGBCOL(make_uchar4(pixel2[FI_RGBA_RED], pixel2[FI_RGBA_GREEN], pixel2[FI_RGBA_BLUE], bpp == 32 ? pixel2[FI_RGBA_ALPHA] : 255), x, y);
+			}
+			bits += pitch;
+		}
+		FreeImage_Unload(dib);
+		return true;
+	}
+	else
+	{
+		return false;
+	}
 }
 
 }
