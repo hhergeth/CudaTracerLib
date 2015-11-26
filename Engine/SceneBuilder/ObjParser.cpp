@@ -50,7 +50,7 @@ public:
 		}
 		else return false;
 	}
-	int& add(const Vec3i& key, int value)
+	int add(const Vec3i& key, int value)
 	{
 		entries[key] = value;
 		return value;
