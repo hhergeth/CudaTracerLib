@@ -18,6 +18,12 @@ struct TextureMapping2D
 		m21 = 0;  m22 = sv; m23 = dv;
 		this->setId = setId;
 	}
+	TextureMapping2D(const float4x4& mat, int setId = 0)
+	{
+		m11 = mat(0, 0); m12 = mat(0, 1); m13 = mat(0, 3);
+		m21 = mat(1, 0); m22 = mat(1, 1); m23 = mat(1, 3);
+		this->setId = setId;
+	}
 	CUDA_FUNC_IN Vec2f Map(const DifferentialGeometry& map) const
 	{
 		float x = map.uv[setId].x, y = map.uv[setId].y;
@@ -49,6 +55,14 @@ struct TextureMapping2D
 		dtdx = m21 * map.dudx + m22 * map.dvdx;
 		dtdy = m21 * map.dudy + m22 * map.dvdy;
 	}
+	CUDA_FUNC_IN float4x4 ToFloat4x4() const
+	{
+		float4x4 r = float4x4::Identity();
+		r(0, 0) = m11; r(0, 1) = m12; r(0, 3) = m13;
+		r(1, 0) = m21; r(1, 1) = m22; r(1, 3) = m23;
+		return r;
+	}
+public:
 	float m11, m12, m13;
 	float m21, m22, m23;
 	int setId;
