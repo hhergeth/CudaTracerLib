@@ -4,11 +4,11 @@
 
 namespace CudaTracerLib {
 
-class k_PhotonTracer : public Tracer<false, true>
+class PhotonTracer : public Tracer<false, true>
 {
 	bool m_bCorrectDifferentials;
 public:
-	k_PhotonTracer()
+	PhotonTracer()
 		: m_bCorrectDifferentials(false)
 	{
 	}

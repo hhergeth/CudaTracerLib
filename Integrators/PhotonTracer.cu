@@ -207,7 +207,7 @@ template<bool CORRECT_DIFFERENTIALS> __global__ void pathKernel(unsigned int N, 
 	g_RNGData(rng);
 }
 
-void k_PhotonTracer::DoRender(Image* I)
+void PhotonTracer::DoRender(Image* I)
 {
 	unsigned int zero = 0;
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_NextRayCounter3, &zero, sizeof(unsigned int)));
@@ -218,7 +218,7 @@ void k_PhotonTracer::DoRender(Image* I)
 	ThrowCudaErrors(cudaDeviceSynchronize());
 }
 
-void k_PhotonTracer::Debug(Image* I, const Vec2i& pixel)
+void PhotonTracer::Debug(Image* I, const Vec2i& pixel)
 {
 	k_INITIALIZE(m_pScene, g_sRngs);
 	CudaRNG rng = g_RNGData();
