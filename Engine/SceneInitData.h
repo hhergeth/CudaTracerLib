@@ -35,6 +35,7 @@ struct SceneInitData
 	static SceneInitData CreateForScene(unsigned int a_Meshes, unsigned int a_NumObjects, unsigned int a_NumAvgTriPerObj, unsigned int a_NumAvgMatPerObj = 5, unsigned int a_NumLights = 1 << 10, unsigned int a_AnimSize = 0, bool envMap = true)
 	{
 		SceneInitData r;
+		r.m_uNumInt = a_NumObjects * a_NumAvgTriPerObj * 3 / 2;
 		r.m_uNumMeshes = a_Meshes;
 		r.m_bSupportEnvironmentMap = envMap;
 		r.m_uNumTriangles = a_NumObjects * a_NumAvgTriPerObj;
