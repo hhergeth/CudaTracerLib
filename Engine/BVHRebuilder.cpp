@@ -381,7 +381,9 @@ bool BVHRebuilder::Build(ISpatialInfoProvider* data, bool invalidateAll)
 			SplitBVHBuilder bu(&b, Pq, SplitBVHBuilder::BuildParams());
 			bu.run();
 			BuildInfoTree(BVHIndex::FromNative(startNode), BVHIndex::INVALID());
+#ifndef NDEBUG
 			validateTree(BVHIndex::FromNative(startNode), BVHIndex::INVALID());
+#endif
 		}
 		else
 		{
