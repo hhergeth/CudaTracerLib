@@ -21,6 +21,15 @@ void TriangleData::setUvSetData(int setId, const Vec2f& a, const Vec2f& b, const
 	m_sHostData.UV_Sets[setId].TexCoord[2] = *(ushort2*)&c1;
 }
 
+void TriangleData::getUVSetData(int setId, Vec2f& a, Vec2f& b, Vec2f& c)
+{
+#define ToVec2f(V) Vec2f(half(V.x).ToFloat(), half(V.y).ToFloat())
+	a = ToVec2f(m_sHostData.UV_Sets[setId].TexCoord[0]);
+	b = ToVec2f(m_sHostData.UV_Sets[setId].TexCoord[1]);
+	c = ToVec2f(m_sHostData.UV_Sets[setId].TexCoord[2]);
+#undef ToVec2f
+}
+
 void TriangleData::setData(const Vec3f& v0, const Vec3f& v1, const Vec3f& v2,
 	const Vec3f& n0, const Vec3f& n1, const Vec3f& n2)
 {

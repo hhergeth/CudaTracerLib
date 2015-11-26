@@ -45,6 +45,7 @@ public:
 	CUDA_DEVICE CUDA_HOST void setData(const Vec3f& v0, const Vec3f& v1, const Vec3f& v2,
 		const Vec3f& n0, const Vec3f& n1, const Vec3f& n3);
 	void setUvSetData(int setId, const Vec2f& a, const Vec2f& b, const Vec2f& c);
+	void getUVSetData(int setId, Vec2f& a, Vec2f& b, Vec2f& c);
 	CUDA_DEVICE CUDA_HOST void getNormals(Vec3f& n0, Vec3f& n1, Vec3f& n2);
 };
 #else
@@ -75,6 +76,10 @@ struct TriangleData
 	void setUvSetData(int setId, const Vec2f& a, const Vec2f& b, const Vec2f& c)
 	{
 
+	}
+	void getUVSetData(int setId, Vec2f& a, Vec2f& b, Vec2f& c)
+	{
+		a = b = c = Vec2f(0.0f);
 	}
 	CUDA_DEVICE CUDA_HOST void getNormals(Vec3f& n0, Vec3f& n1, Vec3f& n2);
 };
