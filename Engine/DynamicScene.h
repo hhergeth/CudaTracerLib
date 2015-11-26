@@ -136,13 +136,13 @@ public:
 	BufferRange<KernelLight, KernelLight>& getLights();
 	BufferRange<MIPMap, KernelMIPMap>& getTextures();
 	BufferRange<Mesh, KernelMesh>& getMeshes();
-	BufferRange<Material, Material>& getMateriales();
+	BufferRange<Material, Material>& getMaterials();
 
 	//Returns the aabb of the submesh with name \ref name, returning the material index optionally in \ref a_Mi
 	AABB getAABB(BufferReference<Node, Node> Node, const std::string& name, unsigned int* a_Mi = 0);
 	BufferReference<Mesh, KernelMesh> getMesh(BufferReference<Node, Node> n);
-	BufferReference<Material, Material> getMats(BufferReference<Node, Node> n);
-	BufferReference<Material, Material> getMat(BufferReference<Node, Node> n, const std::string& name);
+	BufferReference<Material, Material> getMaterials(BufferReference<Node, Node> n);
+	BufferReference<Material, Material> getMaterial(BufferReference<Node, Node> n, const std::string& name);
 	//Returns the union of all world aabbs of the nodes provided
 	AABB getNodeBox(BufferReference<Node, Node> n);
 	//Returns the aabb containing the scene, this will be faster than calling getNodeBox with all nodes

@@ -65,6 +65,12 @@ class DynamicScene::MatStream : public Stream<Material>
 		}
 	};
 
+protected:
+	virtual void reallocAfterResize()
+	{
+		Stream<Material>::reallocAfterResize();
+		refCounter.resize(this->getBufferLength());
+	}
 public:
 	MatStream(int L)
 		: Stream<Material>(L)
@@ -350,7 +356,7 @@ bool DynamicScene::UpdateScene()
 		removeAllLights(ref);
 
 		//deal with material
-		m_pMaterialBuffer->DecrementRef(getMats(ref));
+		m_pMaterialBuffer->DecrementRef(getMaterials(ref));
 
 		m_pNodeStream->dealloc(ref);
 	}
@@ -445,7 +451,7 @@ KernelDynamicScene DynamicScene::getKernelSceneData(bool devicePointer)
 void DynamicScene::instanciateNodeMaterials(StreamReference<Node> n)
 {
 	StreamReference<Material> newMaterials = m_pMaterialBuffer->malloc(getMesh(n)->m_sMatInfo);
-	m_pMaterialBuffer->DecrementRef(getMats(n));
+	m_pMaterialBuffer->DecrementRef(getMaterials(n));
 	n->m_uMaterialOffset = newMaterials.getIndex();
 	n->m_uInstanciatedMaterial = true;
 	n.Invalidate();
@@ -541,7 +547,7 @@ StreamReference<KernelLight> DynamicScene::createLight(StreamReference<Node> Nod
 {
 	unsigned int mi;
 	ShapeSet s = CreateShape(Node, materialName, &mi);
-	StreamReference<Material> matRef = getMats(Node)(mi);
+	StreamReference<Material> matRef = getMaterials(Node)(mi);
 	if (matRef->NodeLightIndex != -1)
 	{
 		StreamReference<KernelLight> c = m_pLightStream->operator()(Node->m_uLights(matRef->NodeLightIndex));
@@ -612,7 +618,7 @@ ShapeSet DynamicScene::CreateShape(StreamReference<Node> Node, const std::string
 
 void DynamicScene::removeLight(StreamReference<Node> Node, unsigned int mi)
 {
-	unsigned int* a = &getMats(Node)(mi)->NodeLightIndex;
+	unsigned int* a = &getMaterials(Node)(mi)->NodeLightIndex;
 	if (*a == UINT_MAX)
 		return;
 	unsigned int& b = Node->m_uLights(*a);
@@ -623,7 +629,7 @@ void DynamicScene::removeLight(StreamReference<Node> Node, unsigned int mi)
 
 void DynamicScene::removeAllLights(StreamReference<Node> Node)
 {
-	StreamReference<Material> matRef = getMats(Node);
+	StreamReference<Material> matRef = getMaterials(Node);
 	for (unsigned int j = 0; j < matRef.getLength(); j++)
 		removeLight(Node, j);
 }
@@ -665,16 +671,16 @@ BufferReference<Mesh, KernelMesh> DynamicScene::getMesh(StreamReference<Node> n)
 	return m_pMeshBuffer->operator()(n->m_uMeshIndex);
 }
 
-StreamReference<Material> DynamicScene::getMats(StreamReference<Node> n)
+StreamReference<Material> DynamicScene::getMaterials(StreamReference<Node> n)
 {
 	StreamReference<Material> r = m_pMaterialBuffer->operator()(n->m_uMaterialOffset, getMesh(n)->m_sMatInfo.getLength());
 	r.Invalidate();
 	return r;
 }
 
-StreamReference<Material> DynamicScene::getMat(StreamReference<Node> n, const std::string& name)
+StreamReference<Material> DynamicScene::getMaterial(StreamReference<Node> n, const std::string& name)
 {
-	StreamReference<Material> m = getMats(n);
+	StreamReference<Material> m = getMaterials(n);
 	for (unsigned int i = 0; i < m.getLength(); i++)
 	{
 		const std::string& a = m(i)->Name;
@@ -741,7 +747,7 @@ BufferRange<Mesh, KernelMesh>& DynamicScene::getMeshes()
 	return *m_pMeshBuffer;
 }
 
-StreamRange<Material>& DynamicScene::getMateriales()
+StreamRange<Material>& DynamicScene::getMaterials()
 {
 	return *m_pMaterialBuffer;
 }

@@ -66,7 +66,7 @@ protected:
 
 	virtual void updateElement(size_t i) = 0;
 	virtual void copyRange(size_t i, size_t l) = 0;
-	virtual void realloc(){}
+	virtual void reallocAfterResize(){}
 	virtual D* getDeviceMappedData() = 0;
 
 	template<typename H2, typename D2> friend class BufferIterator;
@@ -135,7 +135,7 @@ public:
 			m_uLength = newLength;
 			CUDA_MALLOC(&device, sizeof(D) * newLength);
 			cudaMemset(device, 0, sizeof(D) * newLength);
-			realloc();
+			reallocAfterResize();
 			Invalidate(0, m_uPos);
 			return malloc(a_Length);
 
@@ -366,7 +366,7 @@ protected:
 	{
 		cudaMemcpy(this->device + i, deviceMapped + i, l * sizeof(D), cudaMemcpyHostToDevice);
 	}
-	virtual void realloc()
+	virtual void reallocAfterResize()
 	{
 		free(deviceMapped);
 		deviceMapped = (D*)::malloc(m_uLength * sizeof(D));

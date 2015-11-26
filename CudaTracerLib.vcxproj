@@ -98,6 +98,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <KeepDir>Build\$(Platform)\$(Configuration)\PTX_DIR</KeepDir>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
       <CodeGeneration>compute_30,sm_30</CodeGeneration>
+      <CudaRuntime>Static</CudaRuntime>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='CPU_Debug|x64'">
@@ -123,6 +124,9 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <KeepDir>Build\$(Platform)\$(Configuration)\PTX_DIR</KeepDir>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
       <CodeGeneration>compute_30,sm_30</CodeGeneration>
+      <AdditionalCompilerOptions>
+      </AdditionalCompilerOptions>
+      <CudaRuntime>Static</CudaRuntime>
     </CudaCompile>
     <CudaLink>
       <Optimization>O3</Optimization>
@@ -137,6 +141,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <PreprocessorDefinitions>WIN32;WIN64;_CONSOLE;_CRT_SECURE_NO_WARNINGS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <ShowIncludes>false</ShowIncludes>
+      <BrowseInformation>true</BrowseInformation>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -156,10 +161,14 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <CodeGeneration>compute_30,sm_30</CodeGeneration>
       <FastMath>true</FastMath>
       <Optimization>O3</Optimization>
+      <CudaRuntime>Static</CudaRuntime>
     </CudaCompile>
     <CudaLink>
       <Optimization>O3</Optimization>
     </CudaLink>
+    <Bscmake>
+      <PreserveSbr>true</PreserveSbr>
+    </Bscmake>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Base\FileStream.cpp" />
@@ -199,7 +208,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="Engine\Grid.h" />
     <ClInclude Include="Engine\Image.h" />
     <ClInclude Include="Engine\KernelDynamicScene.h" />
-    <ClInclude Include="Engine\KernelTexture.h" />
+    <ClInclude Include="Engine\Texture.h" />
     <ClInclude Include="Engine\Light.h" />
     <ClInclude Include="Engine\Material.h" />
     <ClInclude Include="Engine\MaterialLib.h" />

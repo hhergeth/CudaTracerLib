@@ -293,9 +293,6 @@
     <ClInclude Include="Engine\KernelDynamicScene.h">
       <Filter>Engine</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\KernelTexture.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
     <ClInclude Include="Engine\Light.h">
       <Filter>Engine</Filter>
     </ClInclude>
@@ -315,6 +312,9 @@
       <Filter>Engine</Filter>
     </ClInclude>
     <ClInclude Include="Engine\MIPMap_device.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Texture.h">
       <Filter>Engine</Filter>
     </ClInclude>
   </ItemGroup>
