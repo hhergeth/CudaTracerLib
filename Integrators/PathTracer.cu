@@ -1,6 +1,5 @@
 #include "PathTracer.h"
 #include <Kernel/TraceHelper.h>
-#include <time.h>
 #include <Kernel/TraceAlgorithms.h>
 #include <Engine/Light.h>
 
@@ -140,8 +139,7 @@ void PathTracer::Debug(Image* I, const Vec2i& p)
 	CudaRNG rng = g_RNGData();		
 	Ray r, rX, rY;
 	Spectrum throughput = g_SceneData.sampleSensorRay(r, rX, rY, Vec2f(p.x, p.y), rng.randomFloat2());
-	r.direction = Vec3f(0, 0, 1);
-	PathTrace<true>(r, r, r, rng);
+	PathTrace<true>(r, rX, rY, rng);
 }
 
 template<bool DIRECT, bool REGU> __global__ void pathKernel2(unsigned int w, unsigned int h, unsigned int xoff, unsigned int yoff, BlockSampleImage img, float m)
