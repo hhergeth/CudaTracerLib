@@ -77,21 +77,21 @@ namespace CTVirtualHelper
 
 #define CALLER(FUNC_NAME) \
 	private: \
-	template<typename R, typename T, typename... Args> CUDA_FUNC_IN R FUNC_NAME##ABC(CTVirtualHelper::Typer<Args...> typ, Args&&... args) const \
+	template<typename R, typename T, typename... Args> CUDA_FUNC_IN R FUNC_NAME##__INTERNAL__CALLER(CTVirtualHelper::Typer<Args...> typ, Args&&... args) const \
 		{ \
 		if (this->Is<T>()) \
 			return this->As<T>()->FUNC_NAME(args...); \
 		return R(); \
 		} \
-	template<typename R, typename T, typename T2, typename... REST, typename... Args> CUDA_FUNC_IN R FUNC_NAME##ABC(CTVirtualHelper::Typer<Args...> typ, Args&&... args) const \
+	template<typename R, typename T, typename T2, typename... REST, typename... Args> CUDA_FUNC_IN R FUNC_NAME##__INTERNAL__CALLER(CTVirtualHelper::Typer<Args...> typ, Args&&... args) const \
 		{ \
 		if (this->Is<T>()) \
 			return this->As<T>()->FUNC_NAME(args...); \
-		return FUNC_NAME##ABC<R, T2, REST...>(CTVirtualHelper::Typer<Args...>(), CTVirtualHelper::forward<Args>(args)...); \
+		return FUNC_NAME##__INTERNAL__CALLER<R, T2, REST...>(CTVirtualHelper::Typer<Args...>(), CTVirtualHelper::forward<Args>(args)...); \
 		} \
 	template<typename R, template <class, class...> class A, class BaseType, class... Types, typename... Args> CUDA_FUNC_IN R FUNC_NAME##_Caller(const A<BaseType, Types...>& obj, Args&&... args) const \
 		{ \
-		return FUNC_NAME##ABC<R, Types...>(CTVirtualHelper::Typer<Args...>(), CTVirtualHelper::forward<Args>(args)...); \
+		return FUNC_NAME##__INTERNAL__CALLER<R, Types...>(CTVirtualHelper::Typer<Args...>(), CTVirtualHelper::forward<Args>(args)...); \
 		} \
 	public:
 
@@ -172,5 +172,12 @@ public:
 		SetVtable<Types...>();
 	}
 };
+
+template<typename AGGREGATE_TYPE, typename SPECIALIZED_TYPE> AGGREGATE_TYPE CreateAggregate(const SPECIALIZED_TYPE& val)
+{
+	AGGREGATE_TYPE agg;
+	agg.SetData(val);//the compiler will check that only applicable types are accepted
+	return agg;
+}
 
 }
