@@ -267,6 +267,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="Integrators\Progressive Photon Mapping\VolEstimators\PointStorage.h" />
     <ClInclude Include="Kernel\BVHTracer.h" />
     <ClInclude Include="Kernel\RayBuffer.h" />
+    <ClInclude Include="Kernel\TracerSettings.h" />
     <ClInclude Include="VirtualFuncType.h" />
   </ItemGroup>
   <ItemGroup>
