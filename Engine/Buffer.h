@@ -89,11 +89,6 @@ public:
 
 	virtual ~BufferBase()
 	{
-		Free();
-	}
-
-	virtual void Free()
-	{
 		for (auto it : *this)
 			(*it).~H();
 		free(host);
@@ -383,10 +378,9 @@ public:
 		deviceMapped = (D*)::malloc(a_NumElements * sizeof(D));
 		memset(deviceMapped, 0, sizeof(D) * a_NumElements);
 	}
-	virtual void Free()
+	virtual ~Buffer()
 	{
 		free(deviceMapped);
-		BufferBase<H, D>::Free();
 	}
 	virtual KernelBuffer<D> getKernelData(bool devicePointer = true) const
 	{

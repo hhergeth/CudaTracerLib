@@ -140,30 +140,25 @@ DynamicScene::DynamicScene(Sensor* C, SceneInitData a_Data, IFileManager* fManag
 	m_pHostTmpFloats = (e_TmpVertex*)malloc(sizeof(e_TmpVertex) * L);
 }
 
-void DynamicScene::Free()
+DynamicScene::~DynamicScene()
 {
 #define DEALLOC(x) { delete x; x = 0;}
 	DEALLOC(m_pTriDataStream)
-		DEALLOC(m_pTriIntStream)
-		DEALLOC(m_pBVHStream)
-		DEALLOC(m_pBVHIndicesStream)
-		DEALLOC(m_pMaterialBuffer)
-		DEALLOC(m_pTextureBuffer)
-		DEALLOC(m_pMeshBuffer)
-		DEALLOC(m_pNodeStream)
-		DEALLOC(m_pAnimStream)
-		DEALLOC(m_pLightStream)
-		DEALLOC(m_pVolumes)
-		CUDA_FREE(m_pDeviceTmpFloats);
+	DEALLOC(m_pTriIntStream)
+	DEALLOC(m_pBVHStream)
+	DEALLOC(m_pBVHIndicesStream)
+	DEALLOC(m_pMaterialBuffer)
+	DEALLOC(m_pTextureBuffer)
+	DEALLOC(m_pMeshBuffer)
+	DEALLOC(m_pNodeStream)
+	DEALLOC(m_pAnimStream)
+	DEALLOC(m_pLightStream)
+	DEALLOC(m_pVolumes)
+	CUDA_FREE(m_pDeviceTmpFloats);
 	free(m_pHostTmpFloats);
 #undef DEALLOC
 	delete m_pBVH;
 	m_pBVH = 0;
-}
-
-DynamicScene::~DynamicScene()
-{
-	Free();
 }
 
 StreamReference<Node> DynamicScene::CreateNode(const std::string& a_Token, IInStream& in, bool force_recompile)

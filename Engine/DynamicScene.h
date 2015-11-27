@@ -62,7 +62,6 @@ protected:
 public:
 	DynamicScene(Sensor* C, SceneInitData a_Data, IFileManager* fManager);
 	~DynamicScene();
-	void Free();
 
 	BufferReference<Node, Node> CreateNode(const std::string& a_MeshFile, bool force_recompile = false);
 	BufferReference<Node, Node> CreateNode(const std::string& a_MeshFile, IInStream& in, bool force_recompile = false);
