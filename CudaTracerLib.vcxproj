@@ -233,6 +233,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClCompile Include="Integrators\Progressive Photon Mapping\VolEstimators\BeamBeamGrid.cpp" />
     <ClCompile Include="Integrators\Progressive Photon Mapping\VolEstimators\BeamBVHStorage.cpp" />
     <ClCompile Include="Kernel\Tracer.cpp" />
+    <ClCompile Include="Kernel\TracerSettings.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='CPU_Debug|x64'">Create</PrecompiledHeader>
@@ -334,7 +335,11 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <CudaCompile Include="Integrators\Bidirectional\WavefrontVCM.cu" />
     <CudaCompile Include="Integrators\FastTracer.cu" />
     <CudaCompile Include="Integrators\Parametric Mixture Models\PmmTracer.cu" />
-    <CudaCompile Include="Integrators\PathTracer.cu" />
+    <CudaCompile Include="Integrators\PathTracer.cu">
+      <AdditionalCompilerOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </AdditionalCompilerOptions>
+      <Warning Condition="'$(Configuration)|$(Platform)'=='Release|x64'">InheritFromHost</Warning>
+    </CudaCompile>
     <CudaCompile Include="Integrators\PhotonTracer.cu" />
     <CudaCompile Include="Integrators\PrimTracer.cu" />
     <CudaCompile Include="Integrators\Progressive Photon Mapping\PPPMTracer_EyePass.cu" />

@@ -409,6 +409,9 @@
     <ClCompile Include="Base\Timer.cpp">
       <Filter>Base</Filter>
     </ClCompile>
+    <ClCompile Include="Kernel\TracerSettings.cpp">
+      <Filter>Kernel</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="Base\CudaRandom.cu">

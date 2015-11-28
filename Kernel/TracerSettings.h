@@ -4,6 +4,8 @@
 #include <vector>
 #include <sstream>
 #include <functional>
+#include <boost/mpl/string.hpp>
+#include <memory>
 
 namespace CudaTracerLib {
 
@@ -70,15 +72,15 @@ template<typename T> class TracerParameter;
 class ITracerParameter
 {
 protected:
-	const IBaseParameterConstraint* constraint;
+	std::unique_ptr<const IBaseParameterConstraint> constraint;
 	ITracerParameter(const IBaseParameterConstraint* constraint)
 		: constraint(constraint)
 	{
 
 	}
 public:
-	virtual const IBaseParameterConstraint* getConstraint() const { return constraint; }
-	template<typename T> const IParameterConstraint<T>* getConstraint() const { return dynamic_cast<const IParameterConstraint<T>*>(constraint); }
+	virtual const IBaseParameterConstraint* getConstraint() const { return constraint.get(); }
+	template<typename T> const IParameterConstraint<T>* getConstraint() const { return dynamic_cast<const IParameterConstraint<T>*>(constraint.get()); }
 	template<typename T> TracerParameter<T>* As() { return dynamic_cast<TracerParameter<T>*>(this); }
 	template<typename T> const TracerParameter<T>* As() const { return dynamic_cast<const TracerParameter<T>*>(this); }
 	template<typename T> bool isOfType() const { return As<T>() != 0; }
@@ -101,7 +103,7 @@ public:
 			value = val;
 		else;
 	}
-	const T& getDefaultValue() const { defaultValue; }
+	const T& getDefaultValue() const { return defaultValue; }
 };
 
 template<typename T> TracerParameter<T>* CreateInterval(const T& val, const T& min, const T& max)
@@ -114,9 +116,39 @@ template<typename T, typename... Ts> TracerParameter<T>* CreateSet(const T& val,
 	return new TracerParameter<T>(val, new SetParameterConstraint<T>(il...));
 }
 
+inline TracerParameter<bool>* CreateSetBool(bool val)
+{
+	return new TracerParameter<bool>(val, new SetParameterConstraint<bool>(true, false));
+}
+
+template<typename T> struct TracerParameterKey
+{
+	const std::string name;
+
+	TracerParameterKey(const std::string& name)
+		: name(name)
+	{
+
+	}
+
+	operator std::string () const
+	{
+		return name;
+	}
+};
+
+#define PARAMETER_KEY(type, name) \
+	struct KEY_##name : public TracerParameterKey<type> \
+	{ \
+		KEY_##name() \
+			: TracerParameterKey(#name) \
+		{ \
+		} \
+	};
+
 class TracerParameterCollection
 {
-	std::map<std::string, ITracerParameter*> parameter;
+	std::map<std::string, std::unique_ptr<ITracerParameter>> parameter;
 	template<typename T, typename... Ts> void add(TracerParameter<T>* a, const std::string& name, Ts&&... rest)
 	{
 		add(a, name);
@@ -124,26 +156,25 @@ class TracerParameterCollection
 	}
 	template<typename T> void add(TracerParameter<T>* a, const std::string& name)
 	{
-		parameter[name] = a;
+		parameter[name] = std::unique_ptr<ITracerParameter>(a);
 	}
 	std::string lastName;
 public:
-	TracerParameterCollection()
+	template<typename... Ts> TracerParameterCollection(Ts&&... rest)
+		: lastName("")
+	{
+		add(rest...);
+	}
+	template<> TracerParameterCollection()
 		: lastName("")
 	{
 
-	}
-	friend TracerParameterCollection& operator<<(TracerParameterCollection& lhs, const std::string& name);
-	friend TracerParameterCollection& operator<<(TracerParameterCollection& lhs, ITracerParameter* para);
-	template<typename... Ts> TracerParameterCollection(Ts&&... rest)
-	{
-		add(rest...);
 	}
 	void iterate(std::function<void(const std::string&, ITracerParameter*)>& f) const
 	{
 		for (auto& i : parameter)
 		{
-			f(i.first, i.second);
+			f(i.first, i.second.get());
 		}
 	}
 	ITracerParameter* operator[](const std::string& name) const
@@ -151,30 +182,26 @@ public:
 		auto it = parameter.find(name);
 		if (it == parameter.end())
 			return 0;
-		else return it->second;
+		else return it->second.get();
 	}
 	template<typename T> TracerParameter<T>* get(const std::string& name) const
 	{
 		return dynamic_cast<TracerParameter<T>*>(operator[](name));
 	}
+	template<typename T> const T& getValue(const std::string& name) const
+	{
+		TracerParameter<T>* p = get<T>(name);
+		if (p)
+			return p->getValue();
+		else throw std::runtime_error("Invalid access to parameter value!");
+	}
+	template<typename T> const T& getValue(const TracerParameterKey<T>& key) const
+	{
+		return getValue<T>(key.operator std::string());
+	}
+	friend TracerParameterCollection& operator<<(TracerParameterCollection& lhs, const std::string& name);
+	friend TracerParameterCollection& operator<<(TracerParameterCollection& lhs, ITracerParameter* para);
 };
-
-TracerParameterCollection& operator<<(TracerParameterCollection& lhs, const std::string& name)
-{
-	if (lhs.lastName.size() != 0)
-		throw std::runtime_error("Invalid state of TracerParameterCollection. Shift Parameter after name!");
-	lhs.lastName = name;
-	return lhs;
-}
-
-TracerParameterCollection& operator<<(TracerParameterCollection& lhs, ITracerParameter* para)
-{
-	if (lhs.lastName.size() == 0)
-		throw std::runtime_error("Invalid state of TracerParameterCollection. Shift Parameter after name!");
-	lhs.parameter[lhs.lastName] = para;
-	lhs.lastName = "";
-	return lhs;
-}
 
 class TracerArguments
 {
@@ -188,10 +215,8 @@ class TracerArguments
 		SET(float, (float)std::atof(value.c_str()));
 #undef SET
 	}
-	std::string lastVal;
 public:
 	TracerArguments()
-		: lastVal("")
 	{
 
 	}
@@ -199,7 +224,6 @@ public:
 	{
 		arguments[name] = value;
 	}
-	friend TracerArguments& operator<<(TracerArguments& lhs, const std::string& val);
 
 	void setToParameters(TracerParameterCollection* parameters) const
 	{
@@ -211,17 +235,5 @@ public:
 		}
 	}
 };
-
-TracerArguments& operator<<(TracerArguments& lhs, const std::string& val)
-{
-	if (lhs.lastVal.size() == 0)
-		lhs.lastVal = val;
-	else
-	{
-		lhs.addArgument(lhs.lastVal, val);
-		lhs.lastVal = "";
-	}
-	return lhs;
-}
 
 }
