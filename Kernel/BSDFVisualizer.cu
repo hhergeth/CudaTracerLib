@@ -129,9 +129,9 @@ void BSDFVisualizer::Debug(Image* I, const Vec2i& p)
 void BSDFVisualizer::setSkydome(const char* compiledPath)
 {
 	if (m_pBuffer)
-		m_pBuffer->Free();
+		delete m_pBuffer;
 	if (m_pBuffer2)
-		m_pBuffer2->Free();
+		delete m_pBuffer2;
 	m_pBuffer = new Stream<char>(1024 * 1024 * 32);
 	m_pBuffer2 = new Buffer<MIPMap, KernelMIPMap>(3);
 	FileInputStream in(compiledPath);
@@ -144,9 +144,9 @@ void BSDFVisualizer::setSkydome(const char* compiledPath)
 BSDFVisualizer::~BSDFVisualizer()
 {
 	if (m_pBuffer)
-		m_pBuffer->Free();
+		delete m_pBuffer;
 	if (m_pBuffer2)
-		m_pBuffer2->Free();
+		delete m_pBuffer2;
 	if (m_pLight)
 		delete m_pLight;
 }

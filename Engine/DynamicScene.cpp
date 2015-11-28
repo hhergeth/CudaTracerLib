@@ -142,6 +142,8 @@ DynamicScene::DynamicScene(Sensor* C, SceneInitData a_Data, IFileManager* fManag
 
 DynamicScene::~DynamicScene()
 {
+	if (m_pBVH == 0)
+		throw std::runtime_error("Trying to destruct scene multiple times!");
 #define DEALLOC(x) { delete x; x = 0;}
 	DEALLOC(m_pTriDataStream)
 	DEALLOC(m_pTriIntStream)

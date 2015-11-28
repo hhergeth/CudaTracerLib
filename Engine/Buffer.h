@@ -89,12 +89,17 @@ public:
 
 	virtual ~BufferBase()
 	{
+		if (device == 0)
+			throw std::runtime_error("Trying to destruct buffer multiple times!");
 		for (auto it : *this)
 			(*it).~H();
 		free(host);
 		CUDA_FREE(device);
 		delete m_uInvalidated;
 		delete m_uDeallocated;
+		device = 0;
+		host = 0;
+		m_uInvalidated = m_uDeallocated = 0;
 	}
 
 	size_t getBufferLength() const
