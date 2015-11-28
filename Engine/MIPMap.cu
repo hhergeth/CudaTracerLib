@@ -487,9 +487,9 @@ void MIPMap::CreateRelaxedConeMap(const std::string& a_InputFile, FileOutputStre
 	BYTE* A = FreeImage_GetBits(bitmap);
 	unsigned int pitch = FreeImage_GetPitch(bitmap);
 	int off = 0;
-	for (unsigned int y = 0; y < data.h(); y++)
+	for ( int y = 0; y < data.h(); y++)
 	{
-		for (unsigned int x = 0; x < data.w(); x++)
+		for ( int x = 0; x < data.w(); x++)
 		{
 			float d = hostConeData[y * data.w() + x];
 			unsigned char col = (unsigned char)(d * 255.0f);
@@ -513,8 +513,8 @@ void MIPMap::CreateRelaxedConeMap(const std::string& a_InputFile, FileOutputStre
 	a_Out << data.w() * data.h() * 8;
 
 	float2* imgData = new float2[data.w() * data.h()];
-	for (unsigned int i = 0; i < data.w(); i++)
-		for (unsigned int j = 0; j < data.h(); j++)
+	for ( int i = 0; i < data.w(); i++)
+		for (int j = 0; j < data.h(); j++)
 		{
 			float xs = float(i) / data.w() * oldw, ys = float(j) / data.h() * oldh;
 			Spectrum s;

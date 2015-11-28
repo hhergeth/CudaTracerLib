@@ -130,7 +130,6 @@ template<bool CORRECT_DIFFERENTIALS> CUDA_FUNC_IN void doWork(Image& g_Image, Cu
 	BSDFSamplingRecord bRec(dg);
 
 	KernelAggregateVolume& V = g_SceneData.m_sVolume;
-	bool delta = false;
 	MediumSamplingRecord mRec;
 	bool medium = false;
 	const VolumeRegion* bssrdf = 0;
@@ -151,7 +150,6 @@ template<bool CORRECT_DIFFERENTIALS> CUDA_FUNC_IN void doWork(Image& g_Image, Cu
 			}
 			else throughput *= V.Sample(mRec.p, -r.direction, rng, &r.direction);
 			r.origin = mRec.p;
-			delta = false;
 			medium = true;
 		}
 		else if (!r2.hasHit())
@@ -164,7 +162,6 @@ template<bool CORRECT_DIFFERENTIALS> CUDA_FUNC_IN void doWork(Image& g_Image, Cu
 			r2.getBsdfSample(wo, r(r2.m_fDist), bRec, ETransportMode::EImportance, &rng);
 			handleSurfaceInteraction<CORRECT_DIFFERENTIALS>(power * throughput, r2, bRec, r2, g_Image, rng);
 			Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
-			delta = bRec.sampledType & ETypeCombinations::EDelta;
 			if (!bssrdf && r2.getMat().GetBSSRDF(bRec.dg, &bssrdf))
 				bRec.wo.z *= -1.0f;
 			else

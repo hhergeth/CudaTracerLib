@@ -25,14 +25,14 @@ CUDA_FUNC_IN Spectrum trace(Ray& r, const Ray& rX, const Ray& rY, CudaRNG& rng, 
 		BSDFSamplingRecord bRec(dg);
 		r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
 		dg.computePartials(r, rX, rY);
-		//return Spectrum(absdot(dg.n, -r.direction));
+		//return Spectrum(absdot(dg.sys.n, -r.direction));
 		//return Spectrum(dg.dvdx, dg.dvdy, 0);
 		//Vec3f n = (bRec.dg.sys.n + Vec3f(1)) / 2;
 		//return Spectrum(n.x, n.y, n.z);
 		Spectrum through = Transmittance(r, 0, r2.m_fDist);
 		Spectrum L = 0.0f;// r2.Le(r(r2.m_fDist), bRec.dg.sys, -r.direction);
 		//return L + r2.getMat().bsdf.getDiffuseReflectance(bRec);
-		Spectrum f = L + r2.getMat().bsdf.sample(bRec, rng.randomFloat2()) * through;
+		Spectrum f = L + r2.getMat().bsdf.sample(bRec, rng.randomFloat2()) * through; return f;
 		int depth = 0;
 		while (r2.getMat().bsdf.hasComponent(EDelta) && depth < 5)
 		{
@@ -431,9 +431,9 @@ __global__ void debugPixe2l(unsigned int width, unsigned int height, Vec2i p)
 	q = traceTerrain(r, rng);
 }
 
-static KernelMIPMap mimMap;
-static size_t pitch;
-static int iterations = 0;
+//static KernelMIPMap mimMap;
+//static size_t pitch;
+//static int iterations = 0;
 void PrimTracer::DoRender(Image* I)
 {
 	if (depthImage)
@@ -482,7 +482,7 @@ void PrimTracer::CreateSliders(SliderCreateCallback a_Callback) const
 PrimTracer::PrimTracer()
 	: m_bDirect(false), depthImage(0), m_pDeviceLastImage1(0), m_pDeviceLastImage2(0)
 {
-	const char* QQ = "../Data/tmp.dat";
+	//const char* QQ = "../Data/tmp.dat";
 	//OutputStream out(QQ);
 	//MIPMap::CreateRelaxedConeMap("../Data/1.bmp", out);
 	//out.Close();
@@ -511,7 +511,7 @@ void PrimTracer::Resize(unsigned int _w, unsigned int _h)
 	cudaMemset(m_pDeviceLastImage1, 0, _w * _h * sizeof(Spectrum));
 	cudaMemset(m_pDeviceLastImage2, 0, _w * _h * sizeof(Spectrum));
 	Platform::SetMemory(&lastSensor, sizeof(lastSensor));
-	iterations = 0;
+	//iterations = 0;
 	Tracer<false, false>::Resize(_w, _h);
 }
 

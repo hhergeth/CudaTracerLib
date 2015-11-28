@@ -16,7 +16,6 @@ const KernelLight* KernelDynamicScene::sampleEmitter(float& emPdf, Vec2f& sample
 
 float KernelDynamicScene::pdfEmitterDiscrete(const KernelLight *emitter) const
 {
-	unsigned int index = emitter - m_sLightData.Data;
 	return 1.0f / float(m_sLightData.UsedCount);
 }
 
