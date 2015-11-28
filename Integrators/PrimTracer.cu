@@ -480,8 +480,9 @@ void PrimTracer::CreateSliders(SliderCreateCallback a_Callback) const
 }
 
 PrimTracer::PrimTracer()
-	: m_bDirect(false), depthImage(0), m_pDeviceLastImage1(0), m_pDeviceLastImage2(0)
+	: depthImage(0), m_pDeviceLastImage1(0), m_pDeviceLastImage2(0)
 {
+	m_sParameters << KEY_Direct() << CreateSetBool(true);
 	//const char* QQ = "../Data/tmp.dat";
 	//OutputStream out(QQ);
 	//MIPMap::CreateRelaxedConeMap("../Data/1.bmp", out);

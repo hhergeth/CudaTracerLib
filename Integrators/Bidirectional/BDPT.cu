@@ -112,18 +112,20 @@ __global__ void pathKernel(unsigned int w, unsigned int h, int xoff, int yoff, B
 	g_RNGData(rng);
 }
 
-void k_BDPT::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
+void BDPT::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 {
-	pathKernel << < BLOCK_SAMPLER_LAUNCH_CONFIG >> >(w, h, x, y, getDeviceBlockSampler(), use_mis, force_s, force_t, LScale);
+	pathKernel << < BLOCK_SAMPLER_LAUNCH_CONFIG >> >(w, h, x, y, getDeviceBlockSampler(), 
+													m_sParameters.getValue(KEY_UseMis()), m_sParameters.getValue(KEY_Force_s()), m_sParameters.getValue(KEY_Force_t()), m_sParameters.getValue(KEY_ResultMultiplier()));
 }
 
-void k_BDPT::Debug(Image* I, const Vec2i& pixel)
+void BDPT::Debug(Image* I, const Vec2i& pixel)
 {
 	k_INITIALIZE(m_pScene, g_sRngs);
 	//Li(*gI, g_RNGData(), pixel.x, pixel.y);
 	CudaRNG rng = g_RNGData();
 	BlockSampleImage img = getDeviceBlockSampler();
-	BPT(Vec2f(pixel), img, rng, w, h, use_mis, force_s, force_t, LScale);
+	BPT(Vec2f(pixel), img, rng, w, h, 
+		m_sParameters.getValue(KEY_UseMis()), m_sParameters.getValue(KEY_Force_s()), m_sParameters.getValue(KEY_Force_t()), m_sParameters.getValue(KEY_ResultMultiplier()));
 	g_RNGData(rng);
 }
 

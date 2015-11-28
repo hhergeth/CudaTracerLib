@@ -4,7 +4,7 @@ namespace CudaTracerLib {
 
 CUDA_DEVICE k_PhotonMapCollection<false, k_MISPhoton> g_CurrentMap, g_NextMap;
 
-CUDA_FUNC_IN void VCM(const Vec2f& pixelPosition, BlockSampleImage& img, CudaRNG& rng, int w, int h, float a_Radius, int a_NumIteration)
+CUDA_FUNC_IN void _VCM(const Vec2f& pixelPosition, BlockSampleImage& img, CudaRNG& rng, int w, int h, float a_Radius, int a_NumIteration)
 {
 	float mLightSubPathCount = 1;
 	const float etaVCM = (PI * a_Radius * a_Radius) * w * h;
@@ -116,7 +116,7 @@ __global__ void pathKernel(unsigned int w, unsigned int h, int xoff, int yoff, B
 	int x = blockIdx.x * blockDim.x + threadIdx.x + xoff, y = blockIdx.y * blockDim.y + threadIdx.y + yoff;
 	CudaRNG rng = g_RNGData();
 	if (x < w && y < h)
-		VCM(Vec2f(x, y), img, rng, w, h, a_Radius, a_NumIteration);
+		_VCM(Vec2f(x, y), img, rng, w, h, a_Radius, a_NumIteration);
 	g_RNGData(rng);
 }
 
@@ -135,13 +135,13 @@ e.setNext(k);
 }
 }*/
 
-void k_VCM::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
+void VCM::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 {
 	float radius = getCurrentRadius(2);
 	pathKernel << < BLOCK_SAMPLER_LAUNCH_CONFIG >> >(w, h, x, y, m_pBlockSampler->getBlockImage(), radius, m_uPassesDone);
 }
 
-void k_VCM::DoRender(Image* I)
+void VCM::DoRender(Image* I)
 {
 	m_sPhotonMapsNext.m_uPhotonNumEmitted = w * h;
 	cudaMemcpyToSymbol(g_CurrentMap, &m_sPhotonMapsCurrent, sizeof(m_sPhotonMapsCurrent));
@@ -159,7 +159,7 @@ void k_VCM::DoRender(Image* I)
 	m_sPhotonMapsNext.StartNewPass();
 }
 
-void k_VCM::StartNewTrace(Image* I)
+void VCM::StartNewTrace(Image* I)
 {
 	Tracer<true, true>::StartNewTrace(I);
 	m_uPhotonsEmitted = 0;
@@ -175,7 +175,7 @@ void k_VCM::StartNewTrace(Image* I)
 	m_sPhotonMapsNext.StartNewPass();
 }
 
-k_VCM::k_VCM()
+VCM::VCM()
 {
 	int gridLength = 100;
 	int numPhotons = 1024 * 1024 * 5;

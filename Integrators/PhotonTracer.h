@@ -6,11 +6,11 @@ namespace CudaTracerLib {
 
 class PhotonTracer : public Tracer<false, true>
 {
-	bool m_bCorrectDifferentials;
 public:
+	PARAMETER_KEY(bool, CorrectDifferentials)
 	PhotonTracer()
-		: m_bCorrectDifferentials(false)
 	{
+		m_sParameters << KEY_CorrectDifferentials() << CreateSetBool(false);
 	}
 	virtual void Debug(Image* I, const Vec2i& pixel);
 	virtual void PrintStatus(std::vector<std::string>& a_Buf) const

@@ -9,7 +9,7 @@ class PrimTracer : public Tracer<false, false>
 	Spectrum* m_pDeviceLastImage1, *m_pDeviceLastImage2;
 	Sensor lastSensor;
 public:
-	bool m_bDirect;
+	PARAMETER_KEY(bool, Direct)
 	Image* depthImage;
 	PrimTracer();
 	virtual void Debug(Image* I, const Vec2i& pixel);

@@ -209,7 +209,7 @@ void PhotonTracer::DoRender(Image* I)
 	unsigned int zero = 0;
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_NextRayCounter3, &zero, sizeof(unsigned int)));
 	k_INITIALIZE(m_pScene, g_sRngs);
-	if (m_bCorrectDifferentials)
+	if (m_sParameters.getValue(KEY_CorrectDifferentials()))
 		pathKernel<true> << < 180, dim3(32, MaxBlockHeight, 1) >> >(w * h, *I);
 	else pathKernel<false> << < 180, dim3(32, MaxBlockHeight, 1) >> >(w * h, *I);
 	ThrowCudaErrors(cudaDeviceSynchronize());

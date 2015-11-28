@@ -5,10 +5,10 @@
 
 namespace CudaTracerLib {
 
-class k_VCM : public Tracer<true, true>
+class VCM : public Tracer<true, true>
 {
 public:
-	k_VCM();
+	VCM();
 protected:
 	virtual void DoRender(Image* I);
 	virtual void StartNewTrace(Image* I);
@@ -20,7 +20,7 @@ private:
 	unsigned long long m_uPhotonsEmitted;
 	float getCurrentRadius(int exp)
 	{
-		return CudaTracerLib::getCurrentRadius(m_fInitialRadius, m_uPassesDone, exp);;
+		return CudaTracerLib::getCurrentRadius(m_fInitialRadius, m_uPassesDone, exp);
 	}
 };
 

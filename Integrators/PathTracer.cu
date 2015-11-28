@@ -163,15 +163,15 @@ void PathTracer::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 	float ALPHA = 0.75f;
 	float radius2 = math::pow(math::pow(m_fInitialRadius, float(2)) / math::pow(float(m_uPassesDone), 0.5f * (1 - ALPHA)), 1.0f / 2.0f);
 
-	if (m_Regularization)
+	if (m_sParameters.getValue(KEY_Regularization()))
 	{
-		if (m_Direct)
+		if (m_sParameters.getValue(KEY_Direct()))
 			pathKernel2<true, true> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> > (w, h, x, y, m_pBlockSampler->getBlockImage(), radius2);
 		else pathKernel2<false, true> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> > (w, h, x, y, m_pBlockSampler->getBlockImage(), radius2);
 	}
 	else
 	{
-		if (m_Direct)
+		if (m_sParameters.getValue(KEY_Direct()))
 			pathKernel2<true, false> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> > (w, h, x, y, m_pBlockSampler->getBlockImage(), radius2);
 		else pathKernel2<false, false> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> > (w, h, x, y, m_pBlockSampler->getBlockImage(), radius2);
 	}

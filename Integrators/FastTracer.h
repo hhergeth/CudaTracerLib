@@ -21,11 +21,11 @@ typedef RayBuffer<rayData, 2> k_PTDBuffer;
 class FastTracer : public Tracer<false, true>
 {
 public:
-	bool pathTracer;
-	FastTracer(bool doPT = false)
-		: bufA(0), bufB(0), pathTracer(doPT), depthImage(0)
+	PARAMETER_KEY(bool, PathTracingMode)
+	FastTracer()
+		: bufA(0), bufB(0), depthImage(0)
 	{
-
+		m_sParameters << KEY_PathTracingMode() << CreateSetBool(false);
 	}
 	~FastTracer()
 	{

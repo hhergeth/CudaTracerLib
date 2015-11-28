@@ -2,7 +2,7 @@
 
 namespace CudaTracerLib {
 
-k_WavefrontVCM::k_WavefrontVCM(unsigned int a_NumLightRays)
+WavefrontVCM::WavefrontVCM(unsigned int a_NumLightRays)
 	: m_uNumLightRays(a_NumLightRays), m_sLightBufA(a_NumLightRays), m_sLightBufB(a_NumLightRays), m_sCamBufA(BLOCK_SAMPLER_BlockSize * BLOCK_SAMPLER_BlockSize), m_sCamBufB(BLOCK_SAMPLER_BlockSize * BLOCK_SAMPLER_BlockSize)
 {
 	ThrowCudaErrors(CUDA_MALLOC(&m_pDeviceLightVertices, sizeof(BPTVertex) * MAX_LIGHT_SUB_PATH_LENGTH * a_NumLightRays));
@@ -95,7 +95,7 @@ CUDA_GLOBAL void extendLighRays(unsigned int N, BPTVertex* g_pLightVertices, Ima
 	g_RNGData(rng);
 }
 
-void k_WavefrontVCM::DoRender(Image* I)
+void WavefrontVCM::DoRender(Image* I)
 {
 	m_uLightOff = 0;
 	k_INITIALIZE(m_pScene, g_sRngs);
@@ -141,7 +141,7 @@ void k_WavefrontVCM::DoRender(Image* I)
 	Tracer<true, true>::DoRender(I);
 }
 
-void k_WavefrontVCM::StartNewTrace(Image* I)
+void WavefrontVCM::StartNewTrace(Image* I)
 {
 	Tracer<true, true>::StartNewTrace(I);
 	m_uPhotonsEmitted = 0;
@@ -273,7 +273,7 @@ CUDA_GLOBAL void extendCameraRays(unsigned int N, Image I, int iteration, bool l
 	g_RNGData(rng);
 }
 
-void k_WavefrontVCM::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
+void WavefrontVCM::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 {
 	unsigned int zero = 0;
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_sCamBufA, &m_sCamBufA, sizeof(m_sCamBufA)));
@@ -301,7 +301,7 @@ void k_WavefrontVCM::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 	m_uLightOff += blockW * blockH;
 }
 
-float k_WavefrontVCM::getSplatScale()
+float WavefrontVCM::getSplatScale()
 {
 	return Tracer<true, true>::getSplatScale() * (w * h) / m_uNumLightRays;
 }

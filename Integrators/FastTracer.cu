@@ -263,7 +263,7 @@ void FastTracer::DoRender(Image* I)
 		cudaMemcpyToSymbol(g_DepthImage, depthImage, sizeof(Image));
 		depthImage->StartRendering();
 	}
-	if (pathTracer)
+	if (m_sParameters.getValue(KEY_PathTracingMode()))
 		doPath(I);
 	else doDirect(I);
 	if (depthImage)

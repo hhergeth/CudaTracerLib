@@ -7,10 +7,11 @@ namespace CudaTracerLib {
 class PathTracer : public Tracer<true, true>
 {
 public:
-	bool m_Direct, m_Regularization;
-	PathTracer(bool direct = false, bool regularization = false)
-		: m_Direct(direct), m_Regularization(regularization)
+	PARAMETER_KEY(bool, Direct)
+	PARAMETER_KEY(bool, Regularization)
+	PathTracer()
 	{
+		m_sParameters << KEY_Direct() << CreateSetBool(true) << KEY_Regularization() << CreateSetBool(false);
 	}
 	virtual void Debug(Image* I, const Vec2i& pixel);
 protected:

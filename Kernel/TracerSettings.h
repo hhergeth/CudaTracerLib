@@ -99,12 +99,17 @@ public:
 	const T& getValue() const { return value; }
 	void setValue(const T& val)
 	{
-		if (getConstraint<T>()->isValid(val))
+		if (getConstraint<T>() && getConstraint<T>()->isValid(val))
 			value = val;
 		else;
 	}
 	const T& getDefaultValue() const { return defaultValue; }
 };
+
+template<typename T> TracerParameter<T>* CreateParameter(const T& val)
+{
+	return new TracerParameter<T>(val, 0);
+}
 
 template<typename T> TracerParameter<T>* CreateInterval(const T& val, const T& min, const T& max)
 {
@@ -121,6 +126,8 @@ inline TracerParameter<bool>* CreateSetBool(bool val)
 	return new TracerParameter<bool>(val, new SetParameterConstraint<bool>(true, false));
 }
 
+//typically this would be the ideal place to use a type as key but sadly nvcc will produce tons of warnings for multichar litearls (CUDA 7.5)
+//and turning this off by passing arguments to cudafe doesn't work
 template<typename T> struct TracerParameterKey
 {
 	const std::string name;
@@ -198,6 +205,13 @@ public:
 	template<typename T> const T& getValue(const TracerParameterKey<T>& key) const
 	{
 		return getValue<T>(key.operator std::string());
+	}
+	template<typename T> void setValue(const TracerParameterKey<T>& key, const T& val)
+	{
+		TracerParameter<T>* p = get<T>(key.operator std::string());
+		if (p)
+			p->setValue(val);
+		else throw std::runtime_error("Invalid access to parameter value!");
 	}
 	friend TracerParameterCollection& operator<<(TracerParameterCollection& lhs, const std::string& name);
 	friend TracerParameterCollection& operator<<(TracerParameterCollection& lhs, ITracerParameter* para);

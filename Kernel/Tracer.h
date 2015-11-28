@@ -3,6 +3,7 @@
 #include "TraceHelper.h"
 #include "BlockSampler_device.h"
 #include <Engine/Material.h>
+#include "TracerSettings.h"
 
 namespace CudaTracerLib {
 
@@ -84,6 +85,7 @@ public:
 		return m_pBlockSampler;
 	}
 	BlockSampleImage getDeviceBlockSampler() const;
+	TracerParameterCollection& getParameters() { return m_sParameters; }
 protected:
 	float m_fLastRuntime;
 	unsigned int m_uLastNumRaysTraced;
@@ -94,6 +96,7 @@ protected:
 	DynamicScene* m_pScene;
 	cudaEvent_t start, stop;
 	IBlockSampler* m_pBlockSampler;
+	TracerParameterCollection m_sParameters;
 	void allocateBlockSampler(Image* I);
 };
 

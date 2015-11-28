@@ -25,10 +25,10 @@ struct k_BPTCamSubPathState
 typedef RayBuffer<k_BPTPathState, 1> k_WVCM_LightBuffer;
 typedef RayBuffer<k_BPTCamSubPathState, 1> k_WVCM_CamBuffer;
 
-class k_WavefrontVCM : public Tracer<true, true>
+class WavefrontVCM : public Tracer<true, true>
 {
 public:
-	k_WavefrontVCM(unsigned int a_NumLightRays = 1024 * 100);
+	WavefrontVCM(unsigned int a_NumLightRays = 1024 * 100);
 protected:
 	virtual void DoRender(Image* I);
 	virtual void StartNewTrace(Image* I);
