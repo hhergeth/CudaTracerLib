@@ -30,12 +30,17 @@ public:
 	}
 	void Free()
 	{
+		if (m_pRayBuffer[0] == 0)
+			throw std::runtime_error("Trying to Free RayBuffer multiple times!");
 		for (int i = 0; i < N; i++)
 		{
 			CUDA_FREE(m_pRayBuffer[i]);
 			CUDA_FREE(m_pResultBuffer[i]);
+			m_pRayBuffer[i] = 0;
+			m_pResultBuffer[i] = 0;
 		}
 		CUDA_FREE(m_pPayloadBuffer);
+		m_pRayBuffer[0] = 0;
 	}
 	template<bool ANY_HIT> unsigned int IntersectBuffers(bool skipOuterTree = false)
 	{

@@ -15,7 +15,7 @@ namespace CudaTracerLib {
 #define ISUNIX
 #endif
 
-	//__forceinline__
+//__forceinline__
 #define CUDA_INLINE inline
 
 #ifdef __CUDACC__
@@ -113,9 +113,23 @@ template<typename T> inline void ZeroMemoryCuda(T* cudaVar)
 }
 #define ZeroSymbol(SYMBOL) \
 	{ \
-	void* tar = 0; \
-	cudaError_t r = cudaGetSymbolAddress(&tar, SYMBOL); \
-	CudaSetToZero(tar, sizeof(SYMBOL)); \
+		void* tar = 0; \
+		ThrowCudaErrors(cudaGetSymbolAddress(&tar, SYMBOL)); \
+		CudaSetToZero(tar, sizeof(SYMBOL)); \
+	}
+
+#define CopyToSymbol(SYMBOL, value) \
+	{ \
+		void* tar = 0; \
+		ThrowCudaErrors(cudaGetSymbolAddress(&tar, SYMBOL)); \
+		ThrowCudaErrors(cudaMemcpy(tar, &value, sizeof(value), cudaMemcpyHostToDevice)); \
+	}
+
+#define CopyFromSymbol(value, SYMBOL) \
+	{ \
+		void* tar = 0; \
+		ThrowCudaErrors(cudaGetSymbolAddress(&tar, SYMBOL)); \
+		cudaMemcpy(&value, tar, sizeof(value), cudaMemcpyDeviceToHost); \
 	}
 
 #pragma warning(disable: 4244)

@@ -25,15 +25,19 @@ cudaError_t CudaMemoryManager::Cuda_malloc_managed(void** v, size_t i, const std
 
 cudaError_t CudaMemoryManager::Cuda_free_managed(void* v, const std::string& callig_func)
 {
+	cudaError_t r = cudaError_t::cudaSuccess;
 	if (alloced_entries.count(v))
 	{
 		CudaMemoryEntry e = alloced_entries[v];
+		if (e.address == 0)
+			throw std::runtime_error("Trying to free cuda memory multiple times!");
 		//alloced_entries.erase(v);
 		e.free_func = callig_func;
 		freed_entries.push_back(e);
+		r = cudaFree(v);
+		ThrowCudaErrors(r);
 	}
-	cudaError_t r = cudaFree(v);
-	ThrowCudaErrors(r);
+	else throw std::runtime_error("Trying to free cuda memory without allocating it correctly!");
 	return r;
 }
 

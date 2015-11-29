@@ -12,7 +12,6 @@ namespace CudaTracerLib {
 
 CUDA_FUNC_IN float getCurrentRadius(float initial_r, unsigned int iteration, float exp)
 {
-	//return math::pow(math::pow(initial_r, exp) / math::pow(float(iteration), 0.5f * (1 - ALPHA)), 1.0f / exp);
 	return initial_r * math::pow(iteration, (ALPHA - 1) / exp);
 }
 
@@ -25,16 +24,13 @@ CUDA_FUNC_IN float k(float t)
 
 CUDA_FUNC_IN float k_tr(float r, float t)
 {
-	//if (t > r)
-	//	printf("t : %f, r : %f", t, r);
 	return k(t / r) / (r * r);
 }
 
-CUDA_FUNC_IN float k_tr(float r, const Vec3f& t)
+template<typename VEC> CUDA_FUNC_IN float k_tr(float r, const VEC& t)
 {
 	return k_tr(r, length(t));
 }
-
 
 enum PhotonType
 {
