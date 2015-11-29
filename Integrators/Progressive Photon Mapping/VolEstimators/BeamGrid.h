@@ -54,7 +54,6 @@ struct BeamGrid : public PointStorage
 	template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum L_Volume(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr)
 	{
 		Spectrum Tau = Spectrum(0.0f);
-		float r2 = a_r * a_r;
 		Spectrum L_n = Spectrum(0.0f);
 		TraverseGrid(r, m_sStorage.hashMap, tmin, tmax, [&](float minT, float rayT, float maxT, float cellEndT, Vec3u& cell_pos, bool& cancelTraversal)
 		{
@@ -65,7 +64,8 @@ struct BeamGrid : public PointStorage
 				if (distanceSquared(ph.p, r(l1)) < ph.rad && rayT <= l1 && l1 <= cellEndT)
 				{
 					float p = vol.p(ph.p, r.direction, ph.wi, rng);
-					Spectrum tauToPhoton = (-Tau - vol.tau(r, rayT, l1)).exp();
+					//Spectrum tauToPhoton = (-Tau - vol.tau(r, rayT, l1)).exp();
+					Spectrum tauToPhoton = (-vol.tau(r, minT, dot(ph.p - r.origin, r.direction))).exp();
 					L_n += p * ph.phi / (PI * m_uNumEmitted * ph.rad) * tauToPhoton;
 				}
 			});

@@ -13,12 +13,91 @@ struct Beam
 	Vec3f dir;
 	float t;
 	Spectrum Phi;
-	unsigned int lastEntry;
-	Beam(){}
+	CUDA_FUNC_IN Beam(){}
 	CUDA_FUNC_IN Beam(const Vec3f& p, const Vec3f& d, float t, const Spectrum& ph)
-		: pos(p), dir(d), t(t), Phi(ph), lastEntry(0)
+		: pos(p), dir(d), t(t), Phi(ph)
 	{
 
+	}
+
+	CUDA_FUNC_IN AABB getAABB(float r) const
+	{
+		const Vec3f beamStart = pos;
+		const Vec3f beamEnd = pos + dir * t;
+		const Vec3f startMargins(r);
+		const Vec3f endMargins(r);
+		const Vec3f minPt = min(beamStart - startMargins, beamEnd - endMargins);
+		const Vec3f maxPt = max(beamStart + startMargins, beamEnd + endMargins);
+		return AABB(minPt, maxPt);
+	}
+
+	CUDA_FUNC_IN AABB getSegmentAABB(float splitMin, float splitMax, float r) const
+	{
+		splitMin *= t;
+		splitMax *= t;
+		const Vec3f beamStart = pos + dir * splitMin;
+		const Vec3f beamEnd = pos + dir * splitMax;
+		const Vec3f startMargins(r);
+		const Vec3f endMargins(r);
+		const Vec3f minPt = min(beamStart - startMargins, beamEnd - endMargins);
+		const Vec3f maxPt = max(beamStart + startMargins, beamEnd + endMargins);
+		return AABB(minPt, maxPt);
+	}
+
+	CUDA_FUNC_IN static bool testIntersectionBeamBeam(
+		const Vec3f& O1,
+		const Vec3f& d1,
+		const float minT1,
+		const float maxT1,
+		const Vec3f& O2,
+		const Vec3f& d2,
+		const float minT2,
+		const float maxT2,
+		const float maxDistSqr,
+		float& oDistance,
+		float& oSinTheta,
+		float& oT1,
+		float& oT2)
+	{
+		const Vec3f  d1d2c = cross(d1, d2);
+		const float sinThetaSqr = dot(d1d2c, d1d2c); // Square of the sine between the two lines (||cross(d1, d2)|| = sinTheta).
+
+		const float ad = dot((O2 - O1), d1d2c);
+
+		// Lines too far apart.
+		if (ad*ad >= maxDistSqr*sinThetaSqr)//multiply 1/l * 1/l to the rhs, l = sqrt(sinThetaSqr)
+			return false;
+
+		// Cosine between the two lines.
+		const float d1d2 = dot(d1, d2);
+		const float d1d2Sqr = d1d2*d1d2;
+		const float d1d2SqrMinus1 = d1d2Sqr - 1.0f;
+
+		// Parallel lines?
+		if (d1d2SqrMinus1 < 1e-5f && d1d2SqrMinus1 > -1e-5f)
+			return false;
+
+		const float d1O1 = dot(d1, O1);
+		const float d1O2 = dot(d1, O2);
+
+		oT1 = (d1O1 - d1O2 - d1d2 * (dot(d2, O1) - dot(d2, O2))) / d1d2SqrMinus1;
+
+		// Out of range on ray 1.
+		if (oT1 <= minT1 || oT1 >= maxT1)
+			return false;
+
+		oT2 = (oT1 + d1O1 - d1O2) / d1d2;
+		// Out of range on ray 2.
+		if (oT2 <= minT2 || oT2 >= maxT2 || isnan(oT2))
+			return false;
+
+		const float sinTheta = math::sqrt(sinThetaSqr);
+
+		oDistance = math::abs(ad) / sinTheta;
+
+		oSinTheta = sinTheta;
+
+		return true; // Found an intersection.
 	}
 };
 
@@ -28,26 +107,6 @@ inline unsigned int atomicInc(unsigned int* i, unsigned int j)
 	return Platform::Increment(i);
 }
 #endif
-
-CUDA_FUNC_IN float skew_lines(const Ray& r, const Ray& r2, float& t1, float& t2)
-{
-	if (absdot(r.direction.normalized(), r2.direction.normalized()) > 1 - 1e-2f)
-		return FLT_MAX;
-
-	float v1dotv2 = dot(r.direction, r2.direction), v1p2 = r.direction.lenSqr(), v2p2 = r2.direction.lenSqr();
-	float x = dot(r2.origin - r.origin, r.direction), y = dot(r2.origin - r.origin, r2.direction);
-	float dc = 1.0f / (v1dotv2 * v1dotv2 - v1p2 * v2p2);
-	t1 = dc * (-v2p2 * x + v1dotv2 * y);
-	t2 = dc * (-v1dotv2 * x + v1p2 * y);
-
-	float D = math::abs(dot(cross(r.direction, r2.direction).normalized(), r.origin - r2.origin));
-	float d = (r(t1) - r2(t2)).length();
-	float err = math::abs(D - d);
-	if (err > 0.1f)
-		printf("D = %f, d = %f, r1 = {(%f,%f,%f), (%f,%f,%f)}, r2 = {(%f,%f,%f), (%f,%f,%f)}\n", D, d, r.origin.x, r.origin.y, r.origin.z, r.direction.x, r.direction.y, r.direction.z, r2.origin.x, r2.origin.y, r2.origin.z, r2.direction.x, r2.direction.y, r2.direction.z);
-
-	return D;
-}
 
 class IRadiusProvider
 {

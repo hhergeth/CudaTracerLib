@@ -10,22 +10,57 @@ class DynamicScene;
 
 class BeamBVHStorage : public IVolumeEstimator
 {
+	class BuilderCLB;
+public:
 	unsigned int m_uNumEmitted;
+
 	Beam* m_pDeviceBeams;
 	Beam* m_pHostBeams;
-	unsigned int m_uNumBeams;
-	BVHNodeData* m_pDeviceNodes;
-	BVHNodeData* m_pHostNodes;
-	unsigned int m_uNumNodes;
 	unsigned int m_uBeamIdx;
-	Beam* m_pDeviceBVHBeams;
-	unsigned int m_uNumDeviceBVHBeams;
-	std::vector<Beam>* m_sHostBVHBeams;
+	unsigned int m_uNumBeams;
+
+	BVHNodeData* m_pDeviceNodes;
+	unsigned int m_uDeviceNumNodes;
+	std::vector<BVHNodeData> m_sHostNodes;
+
+	struct BeamRef
+	{
+		float t_min, t_max;
+		Beam beam;
+		CUDA_FUNC_IN BeamRef()
+		{
+
+		}
+		CUDA_FUNC_IN BeamRef(const Beam& beam, float a, float b)
+			: idx(0), t_min(a), t_max(b), beam(beam)
+		{
+
+		}
+		CUDA_FUNC_IN void setLast()
+		{
+			idx = 1;
+		}
+		CUDA_FUNC_IN bool isLast() const
+		{
+			return idx != 0;
+		}
+		CUDA_FUNC_IN unsigned int getIdx() const
+		{
+			return UINT_MAX;
+		}
+	private:
+		unsigned int idx;
+	};
+	std::vector<BeamRef> m_sHostRefs, m_sHostReorderedRefs;
+	unsigned int m_uNumDeviceRefs;
+	BeamRef* m_pDeviceRefs;
+
 	DynamicScene* m_pScene;
 	float m_fCurrentRadiusVol;
-public:
+	AABB volBox;
+
 	BeamBVHStorage(){}
-	BeamBVHStorage(unsigned int nBeams, DynamicScene* S);
+	BeamBVHStorage(unsigned int nBeams);
 	virtual void Free();
 
 	virtual void StartNewPass(const IRadiusProvider* radProvider, DynamicScene* scene)
@@ -38,7 +73,7 @@ public:
 
 	virtual void StartNewRendering(const AABB& box, float a_InitRadius)
 	{
-
+		volBox = box;
 	}
 
 	CUDA_FUNC_IN bool isFullK() const
@@ -84,18 +119,22 @@ public:
 
 	}
 
-	template<typename CLB> CUDA_DEVICE CUDA_HOST void iterateBeams(const Ray& r, float rayEnd, const CLB& clb) const
+	template<typename CLB> CUDA_FUNC_IN void iterateBeams(const Ray& r, float rayEnd, const CLB& clb) const
 	{
+#ifdef ISCUDA
+		BVHNodeData* host = 0;
+#else
+		const BVHNodeData* host = &m_sHostNodes[0];
+#endif
 		float rayT = rayEnd;
-		TracerayTemplate(r, rayT, [&](int beamIdx)
+		TracerayTemplate(r, rayT, [&](int ref_idx)
 		{
 			do
 			{
-				clb(m_pDeviceBVHBeams[beamIdx]);
-				beamIdx++;
-			} while (!m_pDeviceBVHBeams[beamIdx].lastEntry);
+				clb(ref_idx);
+			} while (!m_pDeviceRefs[ref_idx++].isLast());
 			return false;
-		}, m_pHostNodes, m_pDeviceNodes);
+		}, host, m_pDeviceNodes);
 	}
 
 	template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum L_Volume(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr) const;

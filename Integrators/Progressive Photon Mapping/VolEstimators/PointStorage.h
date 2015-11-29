@@ -95,7 +95,8 @@ struct PointStorage : public IVolumeEstimator
 	template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum L_Volume(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr)
 	{
 		Spectrum Tau = Spectrum(0.0f);
-		float Vs = 1.0f / ((4.0f / 3.0f) * PI * a_r * a_r * a_r * m_uNumEmitted), r2 = a_r * a_r;
+		//float Vs = 1.0f / ((4.0f / 3.0f) * PI * a_r * a_r * a_r * m_uNumEmitted), r3 = m_fCurrentRadiusVol * m_fCurrentRadiusVol * m_fCurrentRadiusVol;
+		float r3 = m_fCurrentRadiusVol * m_fCurrentRadiusVol * m_fCurrentRadiusVol, Vs = 1.0f / (m_uNumEmitted * r3 * 4.0f / 3.0f * PI);
 		Spectrum L_n = Spectrum(0.0f);
 		float a, b;
 		if (!m_sStorage.hashMap.getAABB().Intersect(r, &a, &b))
@@ -109,12 +110,14 @@ struct PointStorage : public IVolumeEstimator
 			Vec3f x = r(t);
 			m_sStorage.ForAll(x - Vec3f(a_r), x + Vec3f(a_r), [&](unsigned int p_idx, const volPhoton& ph)
 			{
-				if (distanceSquared(ph.p, x) < r2)
+				if (distanceSquared(ph.p, x) < r3)
 				{
 					float p = vol.p(x, r.direction, ph.wi, rng);
-					float l1 = dot(ph.p - r.origin, r.direction) / dot(r.direction, r.direction);
-					Spectrum tauToPhoton = (-Tau - vol.tau(r, a, l1)).exp();
-					L_n += p * ph.phi * Vs * tauToPhoton * d;
+					//float l1 = dot(ph.p - r.origin, r.direction) / dot(r.direction, r.direction);
+					//Spectrum tauToPhoton = (-Tau - vol.tau(r, a, l1)).exp();
+					//L_n += p * ph.phi * Vs * tauToPhoton * d;
+					Spectrum camera_sc = vol.sigma_s(x, r.direction);
+					L_n += p * ph.phi * Vs * camera_sc;
 				}
 			});
 			Spectrum tauDelta = vol.tau(r, a, a + d);

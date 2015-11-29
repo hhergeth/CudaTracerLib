@@ -69,7 +69,7 @@ struct BeamBeamGrid : public IVolumeEstimator
 
 	}
 
-	template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum L_Volume(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr);
+	template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum L_Volume(float radius, CudaRNG& rng, const Ray& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr);
 };
 
 }

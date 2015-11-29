@@ -4,6 +4,8 @@
 #include <Base/Timer.h>
 #include <Math/Compression.h>
 #include <Math/half.h>
+#include <bitset>
+#include <set>
 
 namespace CudaTracerLib {
 
@@ -17,13 +19,17 @@ void BeamBeamGrid::StartNewPass(const IRadiusProvider* radProvider, DynamicScene
 	float r = radProvider->getCurrentRadius(1);
 	Vec3f dim = m_sStorage.hashMap.m_vCellSize;
 	float d = dim.min();
-	std::cout << "r = " << r << ", d = " << d << "\n";
+	if (r > d)
+	{
+		std::cout << "WARNING beam beam traversal can be bugged!";
+		std::cout << "r = " << r << ", d = " << d << "\n";
+	}
 }
 
 void BeamBeamGrid::PrepareForRendering()
 {
-	std::cout << "m_uNumEmitted = " << m_uNumEmitted << "\n";
-	/*SpatialLinkedMap<int>::linkedEntry* entries = new SpatialLinkedMap<int>::linkedEntry[m_sStorage.numData];
+	/*std::cout << "m_uNumEmitted = " << m_uNumEmitted << "\n";
+	SpatialLinkedMap<int>::linkedEntry* entries = new SpatialLinkedMap<int>::linkedEntry[m_sStorage.numData];
 	ThrowCudaErrors(cudaMemcpy(entries, m_sStorage.deviceData, m_sStorage.numData * sizeof(SpatialLinkedMap<int>::linkedEntry), cudaMemcpyDeviceToHost));
 	unsigned int I = m_sStorage.gridSize * m_sStorage.gridSize * m_sStorage.gridSize;
 	unsigned int* grid = new unsigned int[I];
@@ -37,13 +43,13 @@ void BeamBeamGrid::PrepareForRendering()
 	T.StartTimer();
 	m_sStorage.ForAllCells([&](const Vec3u& cell_idx)
 	{
-	unsigned int i = m_sStorage.hashMap.Hash(cell_idx), j = grid[i], start = d_idx, n = 0;
-	m_sStorage.ForAll(cell_idx, [&](unsigned int abc, int p_idx)
-	{
-	denseGrid[d_idx++] = p_idx;
-	n++;
-	});
-	denseGrid[i] = start != d_idx ? ((n << 24) | start) : UINT_MAX;
+		unsigned int i = m_sStorage.hashMap.Hash(cell_idx), j = grid[i], start = d_idx, n = 0;
+		m_sStorage.ForAll(cell_idx, [&](unsigned int abc, int p_idx)
+		{
+			denseGrid[d_idx++] = p_idx;
+			n++;
+		});
+		denseGrid[i] = start != d_idx ? ((n << 24) | start) : UINT_MAX;
 	});
 	std::cout << "dense grid creation took : " << T.EndTimer() << "[Sec]\n";*/
 
@@ -77,6 +83,53 @@ void BeamBeamGrid::PrepareForRendering()
 	n = entries[n].nextIdx;
 	}
 	}*/
+	
+	if (!m_sStorage.deviceDataIdx) return;
+
+	std::vector<SpatialLinkedMap<int>::linkedEntry> hostIndices;
+	std::vector<unsigned int> hostMap;
+	hostIndices.resize(m_sStorage.deviceDataIdx);
+	CUDA_MEMCPY_TO_HOST(&hostIndices[0], m_sStorage.deviceData, hostIndices.size() * sizeof(SpatialLinkedMap<int>::linkedEntry));
+	hostMap.resize(m_sStorage.gridSize * m_sStorage.gridSize * m_sStorage.gridSize);
+	CUDA_MEMCPY_TO_HOST(&hostMap[0], m_sStorage.deviceMap, hostMap.size() * sizeof(unsigned int));
+	auto bitset = new std::bitset<1024 * 1024 * 10>();
+	m_sStorage.ForAllCells([&](const Vec3u& pos)
+	{
+		bitset->reset();
+		unsigned int idx = hostMap[m_sStorage.hashMap.Hash(pos)], lastIdx = UINT_MAX;
+		while (idx != UINT_MAX)
+		{
+			int beam_idx = hostIndices[idx].value;
+			if (bitset->at(beam_idx))
+			{
+				if (lastIdx == UINT_MAX)
+					throw 1;
+				hostIndices[lastIdx].nextIdx = hostIndices[idx].nextIdx;
+			}
+			else
+			{
+				bitset->set(beam_idx, true);
+				lastIdx = idx;
+			}
+			idx = hostIndices[idx].nextIdx;
+		}
+	});
+	/*auto A = m_sStorage.deviceData; m_sStorage.deviceData = &hostIndices[0];
+	auto B = m_sStorage.deviceMap; m_sStorage.deviceMap = &hostMap[0];
+	std::set<unsigned int> set;
+	m_sStorage.ForAllCells(Vec3u(0), Vec3u(m_sStorage.gridSize - 1), [&](const Vec3u& pos)
+	{
+		set.clear();
+		m_sStorage.ForAll(pos, [&](unsigned int, int val)
+		{
+			if (set.count(val) != 0)
+				throw 2;
+			set.insert(val);
+		});
+	});
+	m_sStorage.deviceData = A;
+	m_sStorage.deviceMap = B;*/
+	CUDA_MEMCPY_TO_DEVICE(m_sStorage.deviceData, &hostIndices[0], hostIndices.size() * sizeof(SpatialLinkedMap<int>::linkedEntry));
 }
 
 }

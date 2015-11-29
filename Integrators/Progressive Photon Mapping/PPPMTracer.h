@@ -11,11 +11,25 @@ namespace CudaTracerLib {
 
 struct k_AdaptiveEntry
 {
-	float r, rd;
-	float psi, psi2;
-	float I, I2;
+	float E_psi, E_psi2;
+	float DI, E_DI, E_DI2;
 	float pl;
-	int n1, n2;
+	float r_std;
+
+	CUDA_FUNC_IN float compute_rd(int iteration)
+	{
+		float VAR_Lapl = E_DI2 - E_DI * E_DI;
+		return 1.9635f * math::sqrt(VAR_Lapl) * math::pow(iteration, -1.0f / 8.0f);
+	}
+
+	CUDA_FUNC_IN float compute_r(int iteration, int J, int totalPhotons)
+	{
+		float VAR_Psi = E_psi2 - E_psi * E_psi;
+		float k_2 = 10.0f * PI / 168.0f, k_22 = k_2 * k_2;
+		float E_pl = pl / totalPhotons;
+		float ta = (2.0f * math::sqrt(VAR_Psi)) / (PI * E_pl * k_22 * E_DI * E_DI) / J;
+		return math::pow(ta, 1.0f / 6.0f) * math::pow(iteration, -1.0f / 6.0f);
+	}
 };
 
 struct k_AdaptiveStruct
@@ -70,9 +84,11 @@ private:
 
 	unsigned int k_Intial;
 	float m_fIntitalRadMin, m_fIntitalRadMax;
+	bool m_useDirectLighting;
 public:
-	bool m_bFinalGather;
-	bool m_bDirect;
+
+	PARAMETER_KEY(bool, Direct)
+	PARAMETER_KEY(bool, PerPixelRadius)
 
 	PPPMTracer();
 	virtual ~PPPMTracer()

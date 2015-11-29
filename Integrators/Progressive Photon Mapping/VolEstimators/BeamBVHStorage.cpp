@@ -6,14 +6,11 @@
 
 namespace CudaTracerLib {
 
-BeamBVHStorage::BeamBVHStorage(unsigned int nBeams, DynamicScene* S)
-	: m_uNumNodes(0), m_uBeamIdx(-1), m_uNumDeviceBVHBeams(0), m_pScene(S)
+BeamBVHStorage::BeamBVHStorage(unsigned int nBeams)
+	: m_uNumBeams(nBeams), m_uBeamIdx(0), m_uDeviceNumNodes(0), m_uNumDeviceRefs(0)
 {
-	m_uNumBeams = nBeams;
 	CUDA_MALLOC(&m_pDeviceBeams, m_uNumBeams * sizeof(Beam));
 	m_pHostBeams = new Beam[m_uNumBeams];
-	m_sHostBVHBeams = new std::vector<Beam>();
-
 }
 
 void BeamBVHStorage::Free()
@@ -22,111 +19,103 @@ void BeamBVHStorage::Free()
 	delete[] m_pHostBeams;
 	if (m_pDeviceNodes)
 		CUDA_FREE(m_pDeviceNodes);
-	if (m_pHostNodes)
-		delete[] m_pHostNodes;
-	if (m_pDeviceBVHBeams)
-		CUDA_FREE(m_pDeviceBVHBeams);
-	if (m_sHostBVHBeams)
-		delete m_sHostBVHBeams;
+	if (m_pDeviceRefs)
+		delete[] m_pDeviceRefs;
 }
+
+class BeamBVHStorage::BuilderCLB : public IBVHBuilderCallback
+{
+	BeamBVHStorage* storage;
+public:
+	BuilderCLB(BeamBVHStorage* s)
+		: storage(s)
+	{
+		s->m_sHostNodes.clear();
+		s->m_sHostNodes.reserve(s->m_sHostRefs.size() * 4);
+		s->m_sHostReorderedRefs.clear();
+		s->m_sHostReorderedRefs.reserve(s->m_sHostRefs.size() * 4);
+	}
+	virtual void getBox(unsigned int index, AABB* out) const
+	{
+		auto& r = storage->m_sHostRefs[index];
+		auto& b = r.beam;//storage->m_pHostBeams[r.getIdx()]
+		*out = b.getSegmentAABB(r.t_min, r.t_max, storage->m_fCurrentRadiusVol);
+	}
+	virtual void iterateObjects(std::function<void(unsigned int)> f)
+	{
+		for (unsigned int i = 0; i < storage->m_sHostRefs.size(); i++)
+			f(i);
+	}
+	virtual unsigned int handleLeafObjects(unsigned int pNode)
+	{
+		storage->m_sHostReorderedRefs.push_back(storage->m_sHostRefs[pNode]);
+		return (unsigned int)storage->m_sHostReorderedRefs.size() - 1;
+	}
+	virtual void handleLastLeafObject(int parent)
+	{
+		storage->m_sHostReorderedRefs.back().setLast();
+	}
+	virtual BVHNodeData* HandleNodeAllocation(int* index)
+	{
+		storage->m_sHostNodes.push_back(BVHNodeData());
+		*index = (unsigned int)(storage->m_sHostNodes.size() - 1) * 4;
+		return &storage->m_sHostNodes.back();
+	}
+	virtual void HandleStartNode(int startNode)
+	{
+
+	}
+	virtual void setSibling(int idx, int sibling)
+	{
+
+	}
+};
 
 void BeamBVHStorage::PrepareForRendering()
 {
-	class BuilderCLB : public IBVHBuilderCallback
-	{
-		Beam* m_pHostBeams;
-		unsigned int N;
-	public:
-		std::vector<Beam> m_sReorderedBeams;
-		std::vector<BVHNodeData> m_sBVHNodes;
-		float r;
-		BuilderCLB(Beam* B, unsigned int nBeams, float r)
-			: m_pHostBeams(B), N(nBeams), r(r)
-		{
-			m_sReorderedBeams.reserve(nBeams);
-			m_sBVHNodes.reserve(nBeams * 2);
-		}
-		virtual void getBox(unsigned int index, AABB* out) const
-		{
-			Vec3f a = m_pHostBeams[index].pos, b = a + m_pHostBeams[index].dir * m_pHostBeams[index].t;
-			out->minV = out->maxV = a - Vec3f(r);
-			*out = out->Extend(b + Vec3f(r));
-		}
-		virtual void iterateObjects(std::function<void(unsigned int)> f)
-		{
-			for (unsigned int i = 0; i < N; i++)
-				f(i);
-		}
-		virtual unsigned int handleLeafObjects(unsigned int pNode)
-		{
-			m_sReorderedBeams.push_back(m_pHostBeams[pNode]);
-			return (unsigned int)m_sReorderedBeams.size() - 1;
-		}
-		virtual void handleLastLeafObject(int parent)
-		{
-			m_sReorderedBeams.back().lastEntry = 1;
-		}
-		virtual BVHNodeData* HandleNodeAllocation(int* index)
-		{
-			m_sBVHNodes.push_back(BVHNodeData());
-			*index = (unsigned int)(m_sBVHNodes.size() - 1) * 4;
-			return &m_sBVHNodes.back();
-		}
-		virtual void HandleStartNode(int startNode)
-		{
-
-		}
-		virtual void setSibling(int idx, int sibling)
-		{
-
-		}
-	};
-
 	m_uBeamIdx = min(m_uBeamIdx, m_uNumBeams);
 	CUDA_MEMCPY_TO_HOST(m_pHostBeams, m_pDeviceBeams, m_uBeamIdx * sizeof(Beam));
 
 	//shorten beams to create better bvh
-	m_sHostBVHBeams->clear();
-	m_sHostBVHBeams->reserve(size_t(m_uBeamIdx * m_pHostBeams->t / (2.0f * m_fCurrentRadiusVol)));
 	auto data = m_pScene->getKernelSceneData(false);
+	const int gridSize = 10;
+	Vec3f invTargetSize = Vec3f(1.0f) / (volBox.Size() / gridSize);
+	m_sHostRefs.clear();
 	for (size_t i = 0; i < m_uBeamIdx; i++)
 	{
-		float t = 0;
 		auto& b = m_pHostBeams[i];
-		Spectrum tau(1.0f);
-		while (t < b.t)
+		const AABB objaabb = b.getAABB(m_fCurrentRadiusVol);
+		const int maxAxis = b.dir.abs().arg_max();
+		const int chopCount = (int)(objaabb.Size()[maxAxis] * invTargetSize[maxAxis]) + 1;
+		const float invChopCount = 1.0f / (float)chopCount;
+		for (int chop = 0; chop < chopCount; ++chop)
 		{
-			tau += data.m_sVolume.tau(Ray(b.pos, b.dir), t, t + 2 * m_fCurrentRadiusVol);
-			m_sHostBVHBeams->push_back(Beam(b.pos + b.dir * t, b.dir, min(2 * m_fCurrentRadiusVol, b.t - t), b.Phi * (-tau).exp()));
-			t += 2 * m_fCurrentRadiusVol;
+			float t_min = (chop)* invChopCount * b.t, t_max = (chop + 1) * invChopCount * b.t;
+			m_sHostRefs.push_back(BeamRef(b, t_min, t_max));
 		}
 	}
 
-	BuilderCLB clb(&m_sHostBVHBeams->operator[](0), (unsigned int)m_sHostBVHBeams->size(), m_fCurrentRadiusVol);
+	BuilderCLB clb(this);
 	auto plat = SplitBVHBuilder::Platform();
+	plat.m_spatialSplits = false;
 	SplitBVHBuilder builder(&clb, plat, SplitBVHBuilder::BuildParams());
 	builder.run();
-	if (clb.m_sReorderedBeams.size() > m_uNumDeviceBVHBeams)
+	if (m_sHostReorderedRefs.size() > m_uNumDeviceRefs)
 	{
-		if (m_uNumDeviceBVHBeams)
-			CUDA_FREE(m_pDeviceBVHBeams);
-		m_uNumDeviceBVHBeams = (unsigned int)clb.m_sReorderedBeams.size();
-		CUDA_MALLOC(&m_pDeviceBVHBeams, m_uNumDeviceBVHBeams * sizeof(Beam));
+		if (m_uNumDeviceRefs)
+			CUDA_FREE(m_pDeviceRefs);
+		m_uNumDeviceRefs = (unsigned int)m_sHostReorderedRefs.size();
+		CUDA_MALLOC(&m_pDeviceRefs, m_uNumDeviceRefs * sizeof(BeamRef));
 	}
-	CUDA_MEMCPY_TO_DEVICE(m_pDeviceBVHBeams, &clb.m_sReorderedBeams[0], (unsigned int)clb.m_sReorderedBeams.size() * sizeof(Beam));
-	if (m_uNumNodes < clb.m_sBVHNodes.size())
+	CUDA_MEMCPY_TO_DEVICE(m_pDeviceRefs, &m_sHostReorderedRefs[0], (unsigned int)m_sHostReorderedRefs.size() * sizeof(BeamRef));
+	if (m_uDeviceNumNodes < m_sHostNodes.size())
 	{
-		if (m_uNumNodes)
-		{
+		if (m_uDeviceNumNodes)
 			CUDA_FREE(m_pDeviceNodes);
-			delete[] m_pHostNodes;
-		}
-		m_uNumNodes = (unsigned int)clb.m_sBVHNodes.size();
-		CUDA_MALLOC(&m_pDeviceNodes, m_uNumNodes * sizeof(BVHNodeData));
-		m_pHostNodes = new BVHNodeData[m_uNumNodes];
+		m_uDeviceNumNodes = (unsigned int)m_sHostNodes.size();
+		CUDA_MALLOC(&m_pDeviceNodes, m_uDeviceNumNodes * sizeof(BVHNodeData));
 	}
-	memcpy(m_pHostNodes, &clb.m_sBVHNodes[0], m_uNumNodes);
-	CUDA_MEMCPY_TO_DEVICE(m_pDeviceNodes, &clb.m_sBVHNodes[0], (unsigned int)clb.m_sBVHNodes.size() * sizeof(BVHNodeData));
+	CUDA_MEMCPY_TO_DEVICE(m_pDeviceNodes, &m_sHostNodes[0], (unsigned int)m_sHostNodes.size() * sizeof(BVHNodeData));
 }
 
 }
