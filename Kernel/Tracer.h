@@ -12,10 +12,42 @@ class BlockSampler;
 
 typedef void(*SliderCreateCallback)(float, float, bool, float*, std::string);
 
-CUDA_FUNC_IN float CalcZBufferDepth(float n, float f, float z)
+struct DeviceDepthImage
 {
-	return (f / (f - n) * z - f * n / (f - n)) / z;
-}
+	float* m_pData;
+	int w, h;
+	CUDA_FUNC_IN void Store(int x, int y, float d)
+	{
+		m_pData[w * y + x] = NormalizeDepthD3D(d);
+	}
+	CUDA_FUNC_IN static float NormalizeDepthD3D(float d)
+	{
+		Vec2f nf = g_SceneData.m_Camera.As()->m_fNearFarDepths;
+		float z = math::clamp(d, nf.x, nf.y);
+		return (nf.y / (nf.y - nf.x) * z - nf.y * nf.x / (nf.y - nf.x)) / z;
+	}
+};
+
+class IDepthTracer
+{
+	template<bool A, bool B> friend class Tracer;
+	bool hasImage;
+	DeviceDepthImage img;
+protected:
+	IDepthTracer()
+		: hasImage(false)
+	{
+
+	}
+public:
+	virtual void setDepthBuffer(const DeviceDepthImage& img)
+	{
+		hasImage = true;
+		this->img = img;
+	}
+	bool hasDepthBuffer() const { return hasImage; }
+	const DeviceDepthImage& getDeviceDepthBuffer() const { return img; }
+};
 
 class TracerBase
 {
@@ -25,7 +57,7 @@ public:
 	static float GetLightVisibility(DynamicScene* s, int recursion_depth);
 	static TraceResult TraceSingleRay(Ray r, DynamicScene* s);
 	static void InitRngs(unsigned int N = 1 << 16);
-	static void RenderDepth(Image* img, DynamicScene* s);
+	static void RenderDepth(DeviceDepthImage dImg, DynamicScene* s);
 
 	CUDA_DEVICE static Vec2i getPixelPos(unsigned int xoff, unsigned int yoff)
 	{

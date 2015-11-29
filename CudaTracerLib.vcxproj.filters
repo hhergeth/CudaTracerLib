@@ -31,6 +31,9 @@
     <Filter Include="Integrators\Progressive Photon Mapping\VolEstimators">
       <UniqueIdentifier>{141cc77f-7452-4ddf-b2dc-97edd74dcf74}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Integrators\Pseudo Realtime">
+      <UniqueIdentifier>{63bb13c4-3aad-4147-8c76-e9c15f2cc4e6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Defines.h" />
@@ -149,16 +152,10 @@
     <ClInclude Include="Kernel\TraceResult.h">
       <Filter>Kernel</Filter>
     </ClInclude>
-    <ClInclude Include="Integrators\FastTracer.h">
-      <Filter>Integrators</Filter>
-    </ClInclude>
     <ClInclude Include="Integrators\GradientDescent.h">
       <Filter>Integrators</Filter>
     </ClInclude>
     <ClInclude Include="Integrators\PathTracer.h">
-      <Filter>Integrators</Filter>
-    </ClInclude>
-    <ClInclude Include="Integrators\PhotonMapHelper.h">
       <Filter>Integrators</Filter>
     </ClInclude>
     <ClInclude Include="Integrators\PhotonTracer.h">
@@ -320,6 +317,18 @@
     <ClInclude Include="Kernel\TracerSettings.h">
       <Filter>Kernel</Filter>
     </ClInclude>
+    <ClInclude Include="Integrators\Pseudo Realtime\FastTracer.h">
+      <Filter>Integrators\Pseudo Realtime</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\Pseudo Realtime\GameTracer.h">
+      <Filter>Integrators\Pseudo Realtime</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\Pseudo Realtime\WavefrontPathTracer.h">
+      <Filter>Integrators\Pseudo Realtime</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\PhotonMapHelper.h">
+      <Filter>Integrators</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Base\FileStream.cpp">
@@ -453,9 +462,6 @@
     <CudaCompile Include="Kernel\TraceResult.cu">
       <Filter>Kernel</Filter>
     </CudaCompile>
-    <CudaCompile Include="Integrators\FastTracer.cu">
-      <Filter>Integrators</Filter>
-    </CudaCompile>
     <CudaCompile Include="Integrators\PathTracer.cu">
       <Filter>Integrators</Filter>
     </CudaCompile>
@@ -539,6 +545,15 @@
     </CudaCompile>
     <CudaCompile Include="Engine\MIPMap.cu">
       <Filter>Engine</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Integrators\Pseudo Realtime\FastTracer.cu">
+      <Filter>Integrators\Pseudo Realtime</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Integrators\Pseudo Realtime\GameTracer.cu">
+      <Filter>Integrators\Pseudo Realtime</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Integrators\Pseudo Realtime\WavefrontPathTracer.cu">
+      <Filter>Integrators\Pseudo Realtime</Filter>
     </CudaCompile>
   </ItemGroup>
 </Project>

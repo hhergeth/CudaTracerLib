@@ -29,6 +29,7 @@ class WavefrontVCM : public Tracer<true, true>
 {
 public:
 	WavefrontVCM(unsigned int a_NumLightRays = 1024 * 100);
+	~WavefrontVCM();
 protected:
 	virtual void DoRender(Image* I);
 	virtual void StartNewTrace(Image* I);

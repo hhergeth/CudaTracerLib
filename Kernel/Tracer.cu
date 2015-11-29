@@ -133,24 +133,21 @@ float TracerBase::GetLightVisibility(DynamicScene* s, int recursion_depth)
 	return float(S) / float(N);
 }
 
-__global__ void depthKernel(Image I)
+__global__ void depthKernel(DeviceDepthImage dImg)
 {
 	unsigned int x = threadIdx.x + blockDim.x * blockIdx.x, y = threadIdx.y + blockDim.y * blockIdx.y;
-	if (x < I.getWidth() && y < I.getHeight())
+	if (x < dImg.w && y < dImg.h)
 	{
 		Ray r = g_SceneData.GenerateSensorRay(x, y);
 		TraceResult r2 = Traceray(r);
-		float d = 1.0f;
-		if (r2.hasHit())
-			d = CalcZBufferDepth(g_SceneData.m_Camera.As()->m_fNearFarDepths.x, g_SceneData.m_Camera.As()->m_fNearFarDepths.y, r2.m_fDist);
-		I.SetSample(x, y, *(RGBCOL*)&d);
+		dImg.Store(x, y, r2.m_fDist);
 	}
 }
 
-void TracerBase::RenderDepth(Image* img, DynamicScene* s)
+void TracerBase::RenderDepth(DeviceDepthImage dImg, DynamicScene* s)
 {
 	k_INITIALIZE(s, g_sRngs);
-	depthKernel << <dim3(img->getWidth() / 16 + 1, img->getHeight() / 16 + 1), dim3(16, 16) >> >(*img);
+	depthKernel << <dim3(dImg.w / 16 + 1, dImg.h / 16 + 1), dim3(16, 16) >> >(dImg);
 	ThrowCudaErrors(cudaDeviceSynchronize());
 }
 

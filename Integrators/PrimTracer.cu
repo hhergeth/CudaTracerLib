@@ -12,188 +12,95 @@ enum
 	MaxBlockHeight = 6,
 };
 
-CUDA_DEVICE Image g_DepthImage2;
+CUDA_DEVICE DeviceDepthImage g_DepthImage2;
 CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_NextRayCounter2;
 
-CUDA_FUNC_IN Spectrum trace(Ray& r, const Ray& rX, const Ray& rY, CudaRNG& rng, float& depth)
+CUDA_FUNC_IN void computePixel(int x, int y, CudaRNG& rng, Image g_Image, bool depthImage, PrimTracer::DrawMode mode, int maxPathLength)
 {
-	TraceResult r2 = Traceray(r);
-	if (r2.hasHit())
+	Ray r, rX, rY;
+	Spectrum imp = g_SceneData.m_Camera.sampleRayDifferential(r, rX, rY, Vec2f(x, y), rng.randomFloat2());
+	TraceResult prim_res = Traceray(r);
+	Spectrum L(0.0f), through(1.0f);
+	if (prim_res.hasHit())
 	{
-		depth = CalcZBufferDepth(g_SceneData.m_Camera.As()->m_fNearFarDepths.x, g_SceneData.m_Camera.As()->m_fNearFarDepths.y, r2.m_fDist);
-		DifferentialGeometry dg;
-		BSDFSamplingRecord bRec(dg);
-		r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
-		dg.computePartials(r, rX, rY);
-		//return Spectrum(absdot(dg.sys.n, -r.direction));
-		//return Spectrum(dg.dvdx, dg.dvdy, 0);
-		//Vec3f n = (bRec.dg.sys.n + Vec3f(1)) / 2;
-		//return Spectrum(n.x, n.y, n.z);
-		Spectrum through = Transmittance(r, 0, r2.m_fDist);
-		Spectrum L = 0.0f;// r2.Le(r(r2.m_fDist), bRec.dg.sys, -r.direction);
-		//return L + r2.getMat().bsdf.getDiffuseReflectance(bRec);
-		Spectrum f = L + r2.getMat().bsdf.sample(bRec, rng.randomFloat2()) * through; return f;
-		int depth = 0;
-		while (r2.getMat().bsdf.hasComponent(EDelta) && depth < 5)
+		if (mode == PrimTracer::DrawMode::linear_depth)
 		{
-			depth++;
-			r = Ray(r(r2.m_fDist), bRec.getOutgoing());
-			r2 = Traceray(r);
-			through *= Transmittance(r, 0, r2.m_fDist);
-			if (r2.hasHit())
+			Vec2f nf = g_SceneData.m_Camera.As()->m_fNearFarDepths;
+			L = Spectrum((prim_res.m_fDist - nf.x) / (nf.y - nf.x));
+		}
+		else if (mode == PrimTracer::DrawMode::D3D_depth)
+			L = Spectrum(DeviceDepthImage::NormalizeDepthD3D(prim_res.m_fDist));
+		else
+		{
+			DifferentialGeometry dg;
+			BSDFSamplingRecord bRec(dg);
+			prim_res.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
+			dg.computePartials(r, rX, rY);
+
+			if (mode == PrimTracer::DrawMode::v_absdot_n_geo)
+				L = Spectrum(absdot(-r.direction, dg.n));
+			else if (mode == mode == PrimTracer::DrawMode::v_dot_n_geo)
+				L = Spectrum(dot(-r.direction, dg.n));
+			else if (mode == PrimTracer::DrawMode::v_dot_n_shade)
+				L = Spectrum(dot(-r.direction, dg.sys.n));
+			else if (mode == PrimTracer::DrawMode::n_geo_colored || mode == PrimTracer::DrawMode::n_shade_colored)
 			{
-				r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
-				//f *= r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
-				through *= r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
+				Vec3f n = ((mode == PrimTracer::DrawMode::n_geo_colored ? bRec.dg.n : bRec.dg.sys.n) + Vec3f(1)) / 2;
+				L = Spectrum(n.x, n.y, n.z);
 			}
-			else break;
-		}
-		return through * (r2.hasHit() ? UniformSampleOneLight(bRec, r2.getMat(), rng) : Spectrum(1.0f));
-	}
-	else return g_SceneData.EvalEnvironment(r, rX, rY);
-}
-
-CUDA_FUNC_IN Spectrum traceR(Ray& r, CudaRNG& rng)
-{
-	//return 0.5f + (rng.randomFloat() * 0.5f - 0.25f);
-
-	const bool DIRECT = 1;
-	TraceResult r2;
-	r2.Init();
-	Spectrum c = Spectrum(1.0f), L = Spectrum(0.0f);
-	unsigned int depth = 0;
-	bool specBounce = false;
-	DifferentialGeometry dg;
-	BSDFSamplingRecord bRec(dg);
-	while (Traceray(r.direction, r.origin, &r2) && depth++ < 5)
-	{
-		c *= Transmittance(r, 0, r2.m_fDist);
-		r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
-		/*
-		DirectSamplingRecord dRecLight(r(r2.m_fDist), bRec.ng, bRec.map.uv);
-		Spectrum le = g_SceneData.sampleEmitterDirect(dRecLight, rng.randomFloat2());
-		DirectSamplingRecord dRecSensor(r(r2.m_fDist), bRec.ng, bRec.map.uv);
-		Spectrum im = g_SceneData.sampleSensorDirect(dRecSensor, rng.randomFloat2());
-		if(!g_SceneData.Occluded(Ray(r(r2.m_fDist), dRecLight.d), 0, dRecLight.dist))
-		{
-		return im * 1000000.0f;
-
-		float3 wi = normalize(dRecLight.p - r(r2.m_fDist));
-		float3 wo = normalize(dRecSensor.p - r(r2.m_fDist));
-		bRec.wi = bRec.map.sys.toLocal(wo);
-		bRec.wo = bRec.map.sys.toLocal(wi);
-		Spectrum f = r2.getMat().bsdf.f(bRec);
-		float pdf = r2.getMat().bsdf.pdf(bRec);
-		//return absdot(wi, bRec.map.sys.n) * absdot(wo, bRec.map.sys.n) * f / pdf * le;
-		float pdf2 = 1.0f / (absdot(wo, bRec.map.sys.n) * absdot(wo, bRec.map.sys.n) * absdot(wo, bRec.map.sys.n)) * 1.0f / (dRecLight.dist * dRecLight.dist);
-		return le * f / (pdf / pdf2);
-		}
-		else return 0.0f;*/
-		//return Spectrum(dot(bRec.ng, -r.direction));
-		if (depth == 1 || specBounce || !DIRECT)
-			L += r2.Le(r(r2.m_fDist), bRec.dg.sys, -r.direction);
-		if (DIRECT)
-			L += c * UniformSampleAllLights(bRec, r2.getMat(), 1, rng);
-		float pdf;
-		Spectrum f = r2.getMat().bsdf.sample(bRec, pdf, rng.randomFloat2());
-
-		float p = f.max();
-		if (rng.randomFloat() < p)
-			f = f / p;
-		else break;
-
-		c = c * f;
-		if ((bRec.sampledType & EDiffuse) == EDiffuse)
-		{
-			L += c;
-			break;
-		}
-		specBounce = (bRec.sampledType & EDelta) != 0;
-		r.origin = r(r2.m_fDist);
-		r.direction = bRec.getOutgoing();
-		r2.Init();
-	}
-	if (!r2.hasHit())
-		L += c * g_SceneData.EvalEnvironment(r);
-	return L;
-}
-
-CUDA_FUNC_IN Spectrum traceS(Ray& r, CudaRNG& rng)
-{
-	TraceResult r2 = Traceray(r);
-	if (!r2.hasHit())
-		return Spectrum(0.0f);
-	DifferentialGeometry dg;
-	BSDFSamplingRecord bRec(dg);
-	r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
-	//Spectrum f = r2.getMat().bsdf.sample(bRec, make_float2(0.0f));
-	DirectSamplingRecord dRec(bRec.dg.P, bRec.dg.sys.n);
-	g_SceneData.sampleEmitterDirect(dRec, rng.randomFloat2());
-	bRec.wo = bRec.dg.toLocal(dRec.d);
-	Spectrum f = r2.getMat().bsdf.f(bRec);
-	if (r2.getMat().bsdf.hasComponent(ETypeCombinations::EDiffuse))
-		return f * V(bRec.dg.P, dRec.p) / r2.getMat().bsdf.pdf(bRec) * Frame::cosTheta(bRec.wo);
-	else if (r2.getMat().bsdf.hasComponent(ETypeCombinations::EDelta))
-		return V(bRec.dg.P, dRec.p);
-	else return r2.getMat().bsdf.sample(bRec, Vec2f(0.0f)) * Frame::cosTheta(bRec.wo) * V(bRec.dg.P, dRec.p);
-}
-
-CUDA_FUNC_IN Spectrum traceGame(Ray& r, const Ray& rX, const Ray& rY, CudaRNG& rng, float& zDepth)
-{
-	TraceResult r2 = Traceray(r);
-	if (r2.hasHit())
-	{
-		zDepth = r2.m_fDist;
-		DifferentialGeometry dg;
-		BSDFSamplingRecord bRec(dg);
-		r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
-		dg.computePartials(r, rX, rY);
-
-		Spectrum through = Transmittance(r, 0, r2.m_fDist);
-		Spectrum Le_primary_hit = r2.Le(dg.P, bRec.dg.sys, -r.direction);
-
-		int depth = 0;
-		while (r2.getMat().bsdf.hasComponent(EDelta) && depth++ < 5)
-		{
-			zDepth = FLT_MAX;
-			Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
-			r = Ray(dg.P, bRec.getOutgoing());
-			r2 = Traceray(r);
-			if (!r2.hasHit())
-				return through * f * g_SceneData.EvalEnvironment(r);
+			else if (mode == PrimTracer::DrawMode::uv)
+				L = Spectrum(dg.uv[0].x, dg.uv[0].y, 0);
+			else if (mode == PrimTracer::DrawMode::bary_coords)
+				L = Spectrum(dg.bary.x, dg.bary.y, 0);
 			else
 			{
-				r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
-				through *= f * Transmittance(r, 0, r2.m_fDist);
+				Spectrum Le = prim_res.Le(dg.P, bRec.dg.sys, -r.direction);
+				Spectrum f = prim_res.getMat().bsdf.sample(bRec, rng.randomFloat2());
+				through = Transmittance(r, 0, prim_res.m_fDist);
+				bool isDelta = prim_res.getMat().bsdf.hasComponent(EDelta);
+				if (mode == PrimTracer::DrawMode::first_Le || (!isDelta && mode == PrimTracer::DrawMode::first_non_delta_Le))
+					L = Le;
+				else if (mode == PrimTracer::DrawMode::first_f || (!isDelta && mode == PrimTracer::DrawMode::first_non_delta_f))
+					L = f;
+				else if (mode == PrimTracer::DrawMode::first_f_direct || (!isDelta && mode == PrimTracer::DrawMode::first_non_delta_f_direct))
+					L = Le + through * (UniformSampleOneLight(bRec, prim_res.getMat(), rng) + f * 0.5f);
+				else
+				{
+					through *= f;
+					int depth = 0;
+					do
+					{
+						r = Ray(dg.P, bRec.getOutgoing());
+						prim_res = Traceray(r);
+						through *= Transmittance(r, 0, prim_res.m_fDist);
+						if (prim_res.hasHit())
+						{
+							prim_res.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
+							f = prim_res.getMat().bsdf.sample(bRec, rng.randomFloat2());
+							if (!prim_res.getMat().bsdf.hasComponent(ESmooth))
+								through *= f;
+						}
+					} while (depth++ < maxPathLength && prim_res.hasHit() && !prim_res.getMat().bsdf.hasComponent(ESmooth));
+
+					if (prim_res.hasHit() && prim_res.getMat().bsdf.hasComponent(ESmooth))
+					{
+						Le = prim_res.Le(dg.P, bRec.dg.sys, -r.direction);
+						if (mode == PrimTracer::DrawMode::first_non_delta_Le)
+							L = Le;
+						else if (mode == PrimTracer::DrawMode::first_non_delta_f)
+							L = f;
+						else if (mode == PrimTracer::DrawMode::first_non_delta_f_direct)
+							L = Le + through * (UniformSampleOneLight(bRec, prim_res.getMat(), rng) + f * 0.5f);
+					}
+					else;
+				}
 			}
 		}
-
-		Spectrum accu(0.0f);
-		int N = 2;
-		for (int i = 0; i < N; i++)
-		{
-			Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
-			Ray r_indicrect = Ray(dg.P, bRec.getOutgoing());
-			TraceResult r2_indicrect = Traceray(r_indicrect);
-			Spectrum through_indicrect = Transmittance(r_indicrect, 0, r2_indicrect.m_fDist);
-			Spectrum L_indirect(0.0f);
-			if (r2_indicrect.hasHit())
-			{
-				DifferentialGeometry dg_indicrect;
-				BSDFSamplingRecord bRec_indicrect(dg_indicrect);
-				r2_indicrect.getBsdfSample(r_indicrect, bRec_indicrect, ETransportMode::ERadiance, &rng);
-				L_indirect = UniformSampleOneLight(bRec_indicrect, r2_indicrect.getMat(), rng);
-			}
-			else
-			{
-				L_indirect = g_SceneData.EvalEnvironment(r_indicrect);
-			}
-			accu += f * through_indicrect * L_indirect;
-		}
-
-		return through * (Le_primary_hit + accu / float(N));
 	}
-	else return g_SceneData.EvalEnvironment(r, rX, rY);
+	else;
+	g_Image.AddSample(x, y, L);
+	if (depthImage)
+		g_DepthImage2.Store(x, y, prim_res.m_fDist);
 }
 
 texture<float2, 2, cudaReadModeElementType> t_ConeMap;
@@ -269,7 +176,7 @@ CUDA_FUNC_IN Spectrum traceTerrain(Ray& r, CudaRNG& rng)
 	return -dot(sample_normal(pos), r.direction);//length(pos - r.origin);
 }
 
-__global__ void primaryKernel(int width, int height, Image g_Image, bool depthImage)
+__global__ void primaryKernel(int width, int height, Image g_Image, bool depthImage, PrimTracer::DrawMode mode, int maxPathLength)
 {
 	CudaRNG rng = g_RNGData();
 	int rayidx;
@@ -295,140 +202,9 @@ __global__ void primaryKernel(int width, int height, Image g_Image, bool depthIm
 				break;
 		}
 		int x = rayidx % width, y = rayidx / width;
-
-		Ray r, rX, rY;
-		Spectrum imp = g_SceneData.m_Camera.sampleRayDifferential(r, rX, rY, Vec2f(x, y), rng.randomFloat2());
-		float d;
-		Spectrum L = imp * trace(r, rX, rY, rng, d);
-
-		g_Image.AddSample(x, y, L);
-		if (depthImage)
-			g_DepthImage2.SetSample(x, y, *(RGBCOL*)&d);
+		computePixel(x, y, rng, g_Image, depthImage, mode, maxPathLength);
 	} while (true);
 	g_RNGData(rng);
-}
-
-#define BLOCK_SIZE 16
-__global__ void primaryKernelBlocked(int width, int height, Image g_Image, bool depthImage, Spectrum* lastImage1, Spectrum* lastImage2, Sensor lastSensor, int nIteration)
-{
-	CudaRNG rng = g_RNGData();
-	int x = 2 * (blockIdx.x * blockDim.x + threadIdx.x), y = 2 * (blockIdx.y * blockDim.y + threadIdx.y);
-	if (x < width && y < height)
-	{
-		DifferentialGeometry dg;
-		BSDFSamplingRecord bRec(dg);
-
-		Ray primaryRay;
-		TraceResult primaryRes;
-		Spectrum Le(0.0f);
-		Spectrum primaryThrough[4];
-		for (int i = 0; i < 4; i++)
-		{
-			int x2 = x + i % 2, y2 = y + i / 2;
-			primaryThrough[i] = g_SceneData.m_Camera.sampleRay(primaryRay, Vec2f(x2, y2), rng.randomFloat2());
-			primaryRes = Traceray(primaryRay);
-			if (primaryRes.hasHit())
-			{
-				primaryRes.getBsdfSample(primaryRay, bRec, ETransportMode::ERadiance, &rng);
-				Le = primaryRes.Le(dg.P, bRec.dg.sys, -primaryRay.direction);
-				primaryThrough[i] *= primaryRes.getMat().bsdf.sample(bRec, rng.randomFloat2());
-				float d = CalcZBufferDepth(g_SceneData.m_Camera.As()->m_fNearFarDepths.x, g_SceneData.m_Camera.As()->m_fNearFarDepths.y, primaryRes.m_fDist);
-				if (depthImage && x2 < width && y2 < height)
-					g_DepthImage2.SetSample(x2, y2, *(RGBCOL*)&d);
-			}
-			else primaryThrough[i] = g_SceneData.EvalEnvironment(primaryRay);
-		}
-
-		Spectrum through_indicrect(1.0f);
-		Spectrum L_indirect(0.0f);
-		if (primaryRes.hasHit())
-		{
-			int N_INDIRECT = 4;
-			for (int i = 0; i < N_INDIRECT; i++)
-			{
-				Ray r_indicrect = Ray(dg.P, bRec.getOutgoing());
-				TraceResult r2_indicrect = Traceray(r_indicrect);
-				through_indicrect = Transmittance(r_indicrect, 0, r2_indicrect.m_fDist);
-				if (r2_indicrect.hasHit())
-				{
-					DifferentialGeometry dg_indicrect;
-					BSDFSamplingRecord bRec_indicrect(dg_indicrect);
-					r2_indicrect.getBsdfSample(r_indicrect, bRec_indicrect, ETransportMode::ERadiance, &rng);
-					L_indirect += UniformSampleOneLight(bRec_indicrect, r2_indicrect.getMat(), rng);
-				}
-				else
-				{
-					L_indirect += g_SceneData.EvalEnvironment(r_indicrect);
-				}
-			}
-			L_indirect /= N_INDIRECT;
-
-			/*if (nIteration > 2)
-			{
-			DirectSamplingRecord dRec(primaryRay(primaryRes.m_fDist), Vec3f(0.0f));
-			lastSensor.sampleDirect(dRec, Vec2f(0, 0));
-			if (dRec.pdf)
-			{
-			int oy = int(dRec.uv.y) / 2, ox = int(dRec.uv.x) / 2, w2 = width / 2;
-			Spectrum lu = lastImage1[oy * w2 + ox], ru = lastImage1[oy * w2 + min(w2 - 1, ox + 1)],
-			ld = lastImage1[min(height/2 - 1, oy + 1) * w2 + ox], rd = lastImage1[min(height/2 - 1, oy + 1) * w2 + min(w2 - 1, ox + 1)];
-			Spectrum lL = math::bilerp(dRec.uv - dRec.uv.floor(), lu, ru, ld, rd);
-			//Spectrum lL = lastImage1[oy * w2 + ox];
-			//Spectrum lL = (lu + ru + ld + rd) / 4.0f;
-			const float p = 0.5f;
-			L_indirect = p * lL + (1 - p) * L_indirect;
-			}
-			}
-			lastImage2[y / 2 * width / 2 + x / 2] = L_indirect;*/
-		}
-		else lastImage2[y / 2 * width / 2 + x / 2] = primaryThrough[0];
-
-		/*CUDA_SHARED Spectrum accuData;
-		accuData = Spectrum(0.0f);
-		__syncthreads();
-		for (int i = 0; i < SPECTRUM_SAMPLES; i++)
-		atomicAdd(&accuData[i], L_indirect[i]);
-		__syncthreads();
-		L_indirect = accuData / (blockDim.x * blockDim.y);*/
-
-		/*CUDA_SHARED RGBCOL indirectData[BLOCK_SIZE*BLOCK_SIZE];
-		indirectData[threadIdx.y * blockDim.x + threadIdx.x] = L_indirect.toRGBCOL();
-		__syncthreads();
-		int filterW = 2;
-		GaussianFilter filt(filterW*2, filterW*2, 0.5f);
-		int xstart = math::clamp((int)threadIdx.x - filterW / 2, filterW / 2+1, BLOCK_SIZE - filterW / 2-1),
-		ystart = math::clamp((int)threadIdx.y - filterW / 2, filterW / 2+1, BLOCK_SIZE - filterW / 2-1);
-		Spectrum filterVal(0.0f);
-		float filterWeight = 0.0f;
-		for (int i = -filterW/2; i <= filterW/2; i++)
-		for (int j = -filterW / 2; j <= filterW / 2; j++)
-		{
-		float f = filt.Evaluate(i,j);
-		Spectrum v;
-		v.fromRGBCOL(indirectData[(ystart + j) * blockDim.x + xstart + i]);
-		filterVal += v * f;
-		filterWeight += f;
-		}
-		L_indirect = filterVal / filterWeight;*/
-
-		for (int i = 0; i < 4; i++)
-		{
-			Spectrum L = primaryRes.hasHit() ? Transmittance(primaryRay, 0, primaryRes.m_fDist) * (Le + primaryThrough[i] * through_indicrect * L_indirect) : primaryThrough[i];
-			int x2 = x + i % 2, y2 = y + i / 2;
-			if (x2 < width && y2 < height)
-				g_Image.AddSample(x2, y2, L);
-		}
-	}
-	g_RNGData(rng);
-}
-
-__global__ void debugPixe2l(unsigned int width, unsigned int height, Vec2i p)
-{
-	Ray r = g_SceneData.GenerateSensorRay(p.x, p.y);
-	CudaRNG rng = g_RNGData();
-	float d;
-	Spectrum q = trace(r, r, r, rng, d);
-	q = traceTerrain(r, rng);
 }
 
 //static KernelMIPMap mimMap;
@@ -436,11 +212,8 @@ __global__ void debugPixe2l(unsigned int width, unsigned int height, Vec2i p)
 //static int iterations = 0;
 void PrimTracer::DoRender(Image* I)
 {
-	if (depthImage)
-	{
-		cudaMemcpyToSymbol(g_DepthImage2, depthImage, sizeof(Image));
-		depthImage->StartRendering();
-	}
+	if (hasDepthBuffer())
+		CopyToSymbol(g_DepthImage2, getDeviceDepthBuffer());
 
 	/*t_ConeMap.normalized = true;
 	t_ConeMap.addressMode[0] = t_ConeMap.addressMode[1] = cudaAddressModeClamp;
@@ -454,23 +227,15 @@ void PrimTracer::DoRender(Image* I)
 
 	unsigned int zero = 0;
 	cudaMemcpyToSymbol(g_NextRayCounter2, &zero, sizeof(unsigned int));
-	primaryKernel << < 180, dim3(32, MaxBlockHeight, 1) >> >(w, h, *I, depthImage ? 1 : 0);
-	swapk(&m_pDeviceLastImage1, &m_pDeviceLastImage2);
-	//primaryKernelBlocked << <dim3(w / (2 * BLOCK_SIZE) + 1, h / (2 * BLOCK_SIZE) + 1, 1), dim3(BLOCK_SIZE, BLOCK_SIZE, 1) >> >(w, h, *I, depthImage ? 1 : 0, m_pDeviceLastImage1, m_pDeviceLastImage2, lastSensor, iterations++);
-	if (depthImage)
-		depthImage->EndRendering();
-	lastSensor = g_SceneData.m_Camera;
+	primaryKernel << < 180, dim3(32, MaxBlockHeight, 1) >> >(w, h, *I, hasDepthBuffer(), m_sParameters.getValue(KEY_DrawingMode()), m_sParameters.getValue(KEY_MaxPathLength()));
 }
 
 void PrimTracer::Debug(Image* I, const Vec2i& pixel)
 {
 	k_INITIALIZE(m_pScene, g_sRngs);
-	//debugPixe2l<<<1,1>>>(w,h,pixel);
 	CudaRNG rng = g_RNGData();
 	Ray r, rX, rY;
 	g_SceneData.sampleSensorRay(r, rX, rY, Vec2f(pixel.x, pixel.y), rng.randomFloat2());
-	float d;
-	traceGame(r, rX, rY, rng, d);
 	//traceTerrain(r, rng);
 }
 
@@ -480,9 +245,9 @@ void PrimTracer::CreateSliders(SliderCreateCallback a_Callback) const
 }
 
 PrimTracer::PrimTracer()
-	: depthImage(0), m_pDeviceLastImage1(0), m_pDeviceLastImage2(0)
 {
-	m_sParameters << KEY_Direct() << CreateSetBool(true);
+	m_sParameters << KEY_DrawingMode() << CreateInterval<DrawMode>(DrawMode::first_non_delta_f_direct, DrawMode::linear_depth, DrawMode::first_non_delta_f_direct)
+				  << KEY_MaxPathLength() << CreateInterval<int>(7, 1, INT_MAX);
 	//const char* QQ = "../Data/tmp.dat";
 	//OutputStream out(QQ);
 	//MIPMap::CreateRelaxedConeMap("../Data/1.bmp", out);
@@ -501,19 +266,6 @@ PrimTracer::PrimTracer()
 	ThrowCudaErrors(r);*/
 }
 
-void PrimTracer::Resize(unsigned int _w, unsigned int _h)
-{
-	if (m_pDeviceLastImage1)
-		CUDA_FREE(m_pDeviceLastImage1);
-	if (m_pDeviceLastImage2)
-		CUDA_FREE(m_pDeviceLastImage2);
-	CUDA_MALLOC(&m_pDeviceLastImage1, _w * _h * sizeof(Spectrum));
-	CUDA_MALLOC(&m_pDeviceLastImage2, _w * _h * sizeof(Spectrum));
-	cudaMemset(m_pDeviceLastImage1, 0, _w * _h * sizeof(Spectrum));
-	cudaMemset(m_pDeviceLastImage2, 0, _w * _h * sizeof(Spectrum));
-	Platform::SetMemory(&lastSensor, sizeof(lastSensor));
-	//iterations = 0;
-	Tracer<false, false>::Resize(_w, _h);
-}
+
 
 }

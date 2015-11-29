@@ -12,6 +12,14 @@ WavefrontVCM::WavefrontVCM(unsigned int a_NumLightRays)
 	m_sPhotonMapsNext = k_PhotonMapCollection<false, k_MISPhoton>(numPhotons, gridLength*gridLength*gridLength, UINT_MAX);
 }
 
+WavefrontVCM::~WavefrontVCM()
+{
+	m_sLightBufA.Free();
+	m_sLightBufB.Free();
+	m_sCamBufA.Free();
+	m_sCamBufB.Free();
+}
+
 CUDA_CONST float mMisVcWeightFactor;
 CUDA_CONST float mMisVmWeightFactor;
 CUDA_CONST float mLightSubPathCount;
@@ -104,14 +112,13 @@ void WavefrontVCM::DoRender(Image* I)
 	float MisVmWeightFactor = 1;
 	float MisVcWeightFactor = 1.0f / etaVCM;
 	float one = 1;
-	unsigned int zero = 0;
 	ThrowCudaErrors(cudaMemset(m_pDeviceLightVertices, 0, sizeof(BPTVertex) * MAX_LIGHT_SUB_PATH_LENGTH * m_uNumLightRays));
 	ThrowCudaErrors(cudaMemcpyToSymbol(mMisVcWeightFactor, &MisVcWeightFactor, sizeof(MisVcWeightFactor)));
 	ThrowCudaErrors(cudaMemcpyToSymbol(mMisVmWeightFactor, &MisVmWeightFactor, sizeof(MisVmWeightFactor)));
 	ThrowCudaErrors(cudaMemcpyToSymbol(mLightSubPathCount, &one, sizeof(one)));
 
-	ThrowCudaErrors(cudaMemcpyToSymbol(g_sLightBufA, &m_sLightBufA, sizeof(m_sLightBufA)));
 	m_sLightBufA.Clear();
+	CopyToSymbol(g_sLightBufA, m_sLightBufA);
 	createLightRays << <m_uNumLightRays / (32 * 6) + 1, dim3(32, 6) >> >(m_uNumLightRays);
 	ThrowCudaErrors(cudaThreadSynchronize());
 	m_sLightBufA.setNumRays(m_uNumLightRays, 0);
@@ -275,7 +282,6 @@ CUDA_GLOBAL void extendCameraRays(unsigned int N, Image I, int iteration, bool l
 
 void WavefrontVCM::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 {
-	unsigned int zero = 0;
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_sCamBufA, &m_sCamBufA, sizeof(m_sCamBufA)));
 	m_sCamBufA.Clear();
 	createCameraRays << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(x, y, blockW, blockH, w, h);

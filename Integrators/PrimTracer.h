@@ -4,17 +4,37 @@
 
 namespace CudaTracerLib {
 
-class PrimTracer : public Tracer<false, false>
+class PrimTracer : public Tracer<false, false>, public IDepthTracer
 {
-	Spectrum* m_pDeviceLastImage1, *m_pDeviceLastImage2;
-	Sensor lastSensor;
 public:
-	PARAMETER_KEY(bool, Direct)
-	Image* depthImage;
+	enum DrawMode
+	{
+		linear_depth,
+		D3D_depth,
+
+		v_absdot_n_geo,
+		v_dot_n_geo,
+		v_dot_n_shade,
+		n_geo_colored,
+		n_shade_colored,
+		uv,
+		bary_coords,
+
+		first_Le,
+		first_f,
+		first_f_direct,
+
+		first_non_delta_Le,
+		first_non_delta_f,
+		first_non_delta_f_direct,
+	};
+
+	PARAMETER_KEY(DrawMode, DrawingMode)
+	PARAMETER_KEY(int, MaxPathLength)
+
 	PrimTracer();
 	virtual void Debug(Image* I, const Vec2i& pixel);
 	virtual void CreateSliders(SliderCreateCallback a_Callback) const;
-	virtual void Resize(unsigned int _w, unsigned int _h);
 protected:
 	virtual void DoRender(Image* I);
 };

@@ -252,7 +252,6 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="Integrators\Bidirectional\VCM.h" />
     <ClInclude Include="Integrators\Bidirectional\VCMHelper.h" />
     <ClInclude Include="Integrators\Bidirectional\WavefrontVCM.h" />
-    <ClInclude Include="Integrators\FastTracer.h" />
     <ClInclude Include="Integrators\GradientDescent.h" />
     <ClInclude Include="Integrators\Parametric Mixture Models\PmmHelper.h" />
     <ClInclude Include="Integrators\Parametric Mixture Models\PmmTracer.h" />
@@ -266,6 +265,9 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="Integrators\Progressive Photon Mapping\VolEstimators\BeamBVHStorage.h" />
     <ClInclude Include="Integrators\Progressive Photon Mapping\VolEstimators\BeamGrid.h" />
     <ClInclude Include="Integrators\Progressive Photon Mapping\VolEstimators\PointStorage.h" />
+    <ClInclude Include="Integrators\Pseudo Realtime\FastTracer.h" />
+    <ClInclude Include="Integrators\Pseudo Realtime\GameTracer.h" />
+    <ClInclude Include="Integrators\Pseudo Realtime\WavefrontPathTracer.h" />
     <ClInclude Include="Kernel\BVHTracer.h" />
     <ClInclude Include="Kernel\RayBuffer.h" />
     <ClInclude Include="Kernel\TracerSettings.h" />
@@ -333,7 +335,6 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <CudaCompile Include="Integrators\Bidirectional\BDPT.cu" />
     <CudaCompile Include="Integrators\Bidirectional\VCM.cu" />
     <CudaCompile Include="Integrators\Bidirectional\WavefrontVCM.cu" />
-    <CudaCompile Include="Integrators\FastTracer.cu" />
     <CudaCompile Include="Integrators\Parametric Mixture Models\PmmTracer.cu" />
     <CudaCompile Include="Integrators\PathTracer.cu">
       <AdditionalCompilerOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -345,6 +346,9 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <CudaCompile Include="Integrators\Progressive Photon Mapping\PPPMTracer_EyePass.cu" />
     <CudaCompile Include="Integrators\Progressive Photon Mapping\PPPMTracer_PhotonPass.cu" />
     <CudaCompile Include="Integrators\Progressive Photon Mapping\VolEstimators\BeamGrid.cu" />
+    <CudaCompile Include="Integrators\Pseudo Realtime\FastTracer.cu" />
+    <CudaCompile Include="Integrators\Pseudo Realtime\GameTracer.cu" />
+    <CudaCompile Include="Integrators\Pseudo Realtime\WavefrontPathTracer.cu" />
     <CudaCompile Include="Kernel\BlockSampler.cu" />
     <CudaCompile Include="Kernel\BSDFVisualizer.cu" />
     <CudaCompile Include="Kernel\TraceAlgorithms.cu" />
