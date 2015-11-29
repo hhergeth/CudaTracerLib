@@ -67,8 +67,6 @@ __global__ void g_ComputeTriangles(e_TmpVertex* a_Tmp, uint3* a_TriData, Triangl
 	}
 }
 
-CUDA_DEVICE AABB g_BOX;
-
 class AnimProvider : public ISpatialInfoProvider
 {
 	TriIntersectorData* intData;

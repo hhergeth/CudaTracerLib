@@ -87,7 +87,7 @@ private:
 	int getChildIdxInLocal(BVHIndex nodeIdx, BVHIndex childIdx);
 	void setChild(BVHIndex nodeIdx, BVHIndex childIdx, int localIdxToSetTo, BVHIndex oldParent, bool prop = true);
 	void sahModified(BVHIndex nodeIdx, const AABB& box, float& leftSAH, float& rightSAH);
-	int validateTree(BVHIndex idx, BVHIndex parent);
+	int validateTree(BVHIndex idx, BVHIndex parent, bool checkAABB = true);
 	void propagateBBChange(BVHIndex idx, const AABB& box, int localChildIdx);
 	AABB getBox(BVHIndex idx);
 	void propagateFlag(BVHIndex idx);

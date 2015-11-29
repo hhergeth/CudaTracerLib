@@ -473,6 +473,7 @@ BVHRebuilder::BVHRebuilder(Mesh* mesh, ISpatialInfoProvider* data)
 	startNode = 0;
 	BuilderCLB b(this);
 	BuildInfoTree(BVHIndex::FromNative(startNode), BVHIndex::INVALID());
+	validateTree(BVHIndex::FromNative(startNode), BVHIndex::INVALID(), false);//at that point the aabb's are not yet calculated so just skip checking them
 	AABB box;
 	recomputeAll = true;
 	recomputeNode(BVHIndex::FromNative(startNode), box);
@@ -561,7 +562,7 @@ void BVHRebuilder::sahModified(BVHIndex nodeIdx, const AABB& box, float& leftSAH
 	rightSAH = lA * lN + rAd * (rN + 1);
 }
 
-int BVHRebuilder::validateTree(BVHIndex idx, BVHIndex parent)
+int BVHRebuilder::validateTree(BVHIndex idx, BVHIndex parent, bool checkAABB)
 {
 	if (idx.isLeaf())
 	{
@@ -582,12 +583,15 @@ int BVHRebuilder::validateTree(BVHIndex idx, BVHIndex parent)
 		if (stored_parent != parent)
 			throw std::runtime_error(__FUNCTION__);
 		BVHIndexTuple c = children(idx);
-		int s = validateTree(c[0], idx) + validateTree(c[1], idx);
+		int s = validateTree(c[0], idx, checkAABB) + validateTree(c[1], idx, checkAABB);
 		if (s != info.numLeafs)
 			throw std::runtime_error(__FUNCTION__);
-		AABB leftBox = getBox(c[0]), rightBox = getBox(c[1]), box = getBox(idx), box2 = leftBox.Extend(rightBox);
-		if (!box.Contains(box2.minV) || !box.Contains(box2.maxV))
-			throw std::runtime_error(__FUNCTION__);
+		if (checkAABB)
+		{
+			AABB leftBox = getBox(c[0]), rightBox = getBox(c[1]), box = getBox(idx), box2 = leftBox.Extend(rightBox);
+			if (!box.Contains(box2.minV) || !box.Contains(box2.maxV))
+				throw std::runtime_error(__FUNCTION__);
+		}
 		return s;
 	}
 }
