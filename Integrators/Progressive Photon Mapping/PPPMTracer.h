@@ -99,7 +99,6 @@ public:
 	virtual void Resize(unsigned int _w, unsigned int _h);
 	virtual void Debug(Image* I, const Vec2i& pixel);
 	virtual void PrintStatus(std::vector<std::string>& a_Buf) const;
-	virtual void CreateSliders(SliderCreateCallback a_Callback) const;
 	virtual float getCurrentRadius(float exp) const
 	{
 		return CudaTracerLib::getCurrentRadius(m_fInitialRadius, m_uPassesDone, exp);

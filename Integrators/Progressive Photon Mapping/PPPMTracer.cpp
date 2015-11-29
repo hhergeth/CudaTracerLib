@@ -43,12 +43,6 @@ void PPPMTracer::PrintStatus(std::vector<std::string>& a_Buf) const
 	m_pVolumeEstimator->PrintStatus(a_Buf);
 }
 
-void PPPMTracer::CreateSliders(SliderCreateCallback a_Callback) const
-{
-	//a_Callback(0.1f, 10.0f, true, &m_fInitialRadiusScale, "Initial radius = %g units");
-	//a_Callback(0.1f, 100.0f, true, &m_uNewPhotonsPerRun, "Number of photons per pass = %g [M]");
-}
-
 void PPPMTracer::Resize(unsigned int _w, unsigned int _h)
 {
 	Tracer<true, true>::Resize(_w, _h);

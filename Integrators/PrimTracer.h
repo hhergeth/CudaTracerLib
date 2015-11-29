@@ -34,7 +34,6 @@ public:
 
 	PrimTracer();
 	virtual void Debug(Image* I, const Vec2i& pixel);
-	virtual void CreateSliders(SliderCreateCallback a_Callback) const;
 protected:
 	virtual void DoRender(Image* I);
 };

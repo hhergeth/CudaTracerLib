@@ -39,7 +39,7 @@ CUDA_FUNC_IN void computePixel(int x, int y, CudaRNG& rng, Image g_Image, bool d
 
 			if (mode == PrimTracer::DrawMode::v_absdot_n_geo)
 				L = Spectrum(absdot(-r.direction, dg.n));
-			else if (mode == mode == PrimTracer::DrawMode::v_dot_n_geo)
+			else if (mode == PrimTracer::DrawMode::v_dot_n_geo)
 				L = Spectrum(dot(-r.direction, dg.n));
 			else if (mode == PrimTracer::DrawMode::v_dot_n_shade)
 				L = Spectrum(dot(-r.direction, dg.sys.n));
@@ -237,11 +237,6 @@ void PrimTracer::Debug(Image* I, const Vec2i& pixel)
 	Ray r, rX, rY;
 	g_SceneData.sampleSensorRay(r, rX, rY, Vec2f(pixel.x, pixel.y), rng.randomFloat2());
 	//traceTerrain(r, rng);
-}
-
-void PrimTracer::CreateSliders(SliderCreateCallback a_Callback) const
-{
-	//a_Callback(0,1,false,(float*)&m_bDirect,"%f Direct");
 }
 
 PrimTracer::PrimTracer()

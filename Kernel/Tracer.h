@@ -10,8 +10,6 @@ namespace CudaTracerLib {
 class DynamicScene;
 class BlockSampler;
 
-typedef void(*SliderCreateCallback)(float, float, bool, float*, std::string);
-
 struct DeviceDepthImage
 {
 	float* m_pData;
@@ -83,10 +81,6 @@ public:
 
 	}
 	virtual void PrintStatus(std::vector<std::string>& a_Buf) const
-	{
-
-	}
-	virtual void CreateSliders(SliderCreateCallback a_Callback) const
 	{
 
 	}
