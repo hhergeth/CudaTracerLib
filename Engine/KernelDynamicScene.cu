@@ -9,6 +9,11 @@ const KernelLight* KernelDynamicScene::sampleEmitter(float& emPdf, Vec2f& sample
 	if (m_sLightData.UsedCount == 0)
 		return 0;
 	unsigned int idx = unsigned int(m_sLightData.UsedCount * sample.x);
+	if (idx >= m_sLightData.UsedCount)
+	{
+		printf("sampled incorrect light! N = %d, sample.x = %f, idx = %d\n", m_sLightData.UsedCount, sample.x, idx);
+		idx = m_sLightData.UsedCount - 1;
+	}
 	sample.x = sample.x - idx / float(m_sLightData.UsedCount);
 	emPdf = 1.0f / float(m_sLightData.UsedCount);
 	return m_sLightData.Data + idx;

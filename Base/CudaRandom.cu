@@ -6,11 +6,13 @@ namespace CudaTracerLib {
 
 float CudaRNG::randomFloat()
 {
+	float f;
 #ifdef ISCUDA
-	return curand_uniform(&state);
+	f = curand_uniform(&state);
 #else
-	return curand_uniform2(curand2(&state));
+	f = curand_uniform2(curand2(&state));
 #endif
+	return f * (1 - 1e-5f);//curand_uniform := (0, 1] -> [0, 1)
 }
 
 unsigned long CudaRNG::randomUint()
