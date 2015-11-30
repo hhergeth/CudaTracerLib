@@ -82,7 +82,7 @@ void MIPMap::CompileToBinary(const std::string& a_InputFile, FileOutputStream& a
 		m_sOffsets[i] = off;
 		off += j * k;
 		a_Out.Write(buffer[1]->d(), j * k * sizeof(RGBCOL));
-		swapk(&buffer[0], &buffer[1]);
+		swap(buffer[0], buffer[1]);
 	}
 	a_Out.Write(m_sOffsets, sizeof(m_sOffsets));
 	for (int i = 0; i < MTS_MIPMAP_LUT_SIZE; ++i)

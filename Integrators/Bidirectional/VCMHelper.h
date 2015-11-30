@@ -38,9 +38,9 @@ CUDA_FUNC_IN float revPdf(const Material& mat, BSDFSamplingRecord& bRec)
 	bRec.typeMask = EAll;
 	if (mat.bsdf.hasComponent(EDelta))
 		return mat.bsdf.pdf(bRec, EDiscrete);
-	swapk(bRec.wo, bRec.wi);
+	swap(bRec.wo, bRec.wi);
 	float pdf = mat.bsdf.pdf(bRec) / math::abs(Frame::cosTheta(bRec.wo));
-	swapk(bRec.wo, bRec.wi);
+	swap(bRec.wo, bRec.wi);
 	return pdf;
 }
 

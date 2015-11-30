@@ -54,7 +54,7 @@ public:
 			return 0;
 		}
 		else if (b < a) {
-			swapk(a, b);
+			swap(a, b);
 			factor = -1;
 		}
 		const float absTolerance = calculateAbsTolerance(f, a, b, evals);

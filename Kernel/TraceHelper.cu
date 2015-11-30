@@ -384,7 +384,7 @@ template<bool ANY_HIT> __global__ void intersectKernel_SKIPOUTER(int numRays, tr
 					if (traverseChild0 && traverseChild1)
 					{
 						if (swp)
-							swapk(nodeAddr, cnodes.y);
+							swap(nodeAddr, cnodes.y);
 						stackPtr += 4;
 						*(int*)stackPtr = cnodes.y;
 					}
@@ -663,7 +663,7 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 					if (traverseChild0 && traverseChild1)
 					{
 						if (swp)
-							swapk(nodeAddr, cnodes.y);
+							swap(nodeAddr, cnodes.y);
 						stackPtr += 4;
 						*(int*)stackPtr = cnodes.y;
 					}
@@ -776,7 +776,7 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 							if (traverseChild0 && traverseChild1)
 							{
 								if (swp)
-									swapk(lnodeAddr, cnodes.y);
+									swap(lnodeAddr, cnodes.y);
 								lstackPtr += 4;
 								*(int*)lstackPtr = cnodes.y;
 							}

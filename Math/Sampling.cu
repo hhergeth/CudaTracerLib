@@ -83,7 +83,7 @@ void MonteCarlo::latinHypercube(CudaRNG& random, float *dest, unsigned int nSamp
 	for (size_t i = 0; i < nDim; ++i) {
 		for (size_t j = 0; j < nSamples; ++j) {
 			unsigned int other = math::Floor2Int(float(nSamples) * random.randomFloat());
-			swapk(dest + nDim * j + i, dest + nDim * other + i);
+			swap(dest[nDim * j + i], dest[nDim * other + i]);
 		}
 	}
 }

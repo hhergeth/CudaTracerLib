@@ -56,6 +56,7 @@ __global__ void primaryKernelBlocked(int width, int height, Image g_Image, bool 
 		}
 		primary_Le /= primary_rays_hit;
 
+		//do N_d next event estimation samples using the same input geometry
 		const int N_d = 8;
 		Spectrum Est_Ld(0.0f);
 		int direct_sampling_succes = 0;
@@ -78,6 +79,7 @@ __global__ void primaryKernelBlocked(int width, int height, Image g_Image, bool 
 		Est_Ld /= direct_sampling_succes;
 		direct_sampling_point /= direct_sampling_succes;
 
+		//do N_i samples of indirect lighting = sample random point in the scene, compute primary f for each pixel and compute do next event estimation
 		const int N_i = 4;
 		Spectrum Est_Li[4];
 		for (int i = 0; i < 4; i++)
@@ -112,6 +114,7 @@ __global__ void primaryKernelBlocked(int width, int height, Image g_Image, bool 
 			}
 		}
 
+		//for noise reduction average the result with the last frames results
 		Spectrum avg_Est_Li(0.0f);
 		for (int i = 0; i < 4; i++)
 			avg_Est_Li += Est_Li[i] / 4.0f;
@@ -172,8 +175,8 @@ void GameTracer::DoRender(Image* I)
 	primaryKernelBlocked << <dim3(w / (2 * BLOCK_SIZE) + 1, h / (2 * BLOCK_SIZE) + 1, 1), dim3(BLOCK_SIZE, BLOCK_SIZE, 1) >> >(w, h, *I, hasDepthBuffer(), 
 		m_pDeviceLastDirectImage1, m_pDeviceLastDirectImage2, m_pDeviceLastIndirectImage1, m_pDeviceLastIndirectImage2, lastSensor, iterations++);
 	lastSensor = g_SceneData.m_Camera;
-	swapk(&m_pDeviceLastDirectImage1, &m_pDeviceLastDirectImage2);
-	swapk(&m_pDeviceLastIndirectImage1, &m_pDeviceLastIndirectImage2);
+	swap(m_pDeviceLastDirectImage1, m_pDeviceLastDirectImage2);
+	swap(m_pDeviceLastIndirectImage1, m_pDeviceLastIndirectImage2);
 }
 
 void GameTracer::Debug(Image* I, const Vec2i& pixel)

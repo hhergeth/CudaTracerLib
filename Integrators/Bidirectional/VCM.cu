@@ -153,7 +153,7 @@ void VCM::DoRender(Image* I)
 	cudaMemcpyFromSymbol(&m_sPhotonMapsCurrent, g_CurrentMap, sizeof(m_sPhotonMapsCurrent));
 	cudaMemcpyFromSymbol(&m_sPhotonMapsNext, g_NextMap, sizeof(m_sPhotonMapsNext));
 
-	swapk(m_sPhotonMapsNext, m_sPhotonMapsCurrent);
+	swap(m_sPhotonMapsNext, m_sPhotonMapsCurrent);
 	m_uPhotonsEmitted += m_sPhotonMapsCurrent.m_uPhotonNumEmitted;
 
 	m_sPhotonMapsNext.StartNewPass();

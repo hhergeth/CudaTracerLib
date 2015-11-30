@@ -26,7 +26,7 @@ public:
 		*t0 = q / A;
 		*t1 = C / q;
 		if (*t0 > *t1)
-			swapk(t0, t1);
+			swap(*t0, *t1);
 		return true;
 	}
 	CUDA_DEVICE CUDA_HOST static void RejectionSampleDisk(float *x, float *y, CudaRNG &rng);
@@ -137,15 +137,6 @@ public:
 	}
 	CUDA_DEVICE CUDA_HOST static void StratifiedSample1D(float *samples, int nSamples, CudaRNG &rng, bool jitter = true);
 	CUDA_DEVICE CUDA_HOST static void StratifiedSample2D(float *samples, int nx, int ny, CudaRNG &rng, bool jitter = true);
-	/*template <typename T> CUDA_FUNC_IN static void Shuffle(T *samp, unsigned int count, unsigned int dims, CudaRNG &rng)
-	{
-	for (unsigned int i = 0; i < count; ++i)
-	{
-	unsigned int other = i + (rng.randomUint() % (count - i));
-	for (unsigned int j = 0; j < dims; ++j)
-	swapk(samp[dims*i + j], samp[dims*other + j]);
-	}
-	}*/
 
 	CUDA_FUNC_IN static float SphericalTheta(const Vec3f &v)
 	{
