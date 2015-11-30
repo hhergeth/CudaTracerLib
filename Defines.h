@@ -71,7 +71,7 @@ void fail(const char* format, ...);
 void __ThrowCudaErrors__(const char* file, int line, ...);
 #define ThrowCudaErrors(...) __ThrowCudaErrors__(__FILE__, __LINE__, __VA_ARGS__, -1)
 
-template<typename T> CUDA_FUNC_IN void swap(T& a, T& b)
+template<typename T> CUDA_FUNC_IN void swapk(T& a, T& b)
 {
 	T q = a;
 	a = b;

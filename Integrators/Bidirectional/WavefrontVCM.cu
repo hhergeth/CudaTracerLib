@@ -139,7 +139,7 @@ void WavefrontVCM::DoRender(Image* I)
 		ThrowCudaErrors(cudaThreadSynchronize());
 		ThrowCudaErrors(cudaMemcpyFromSymbol(srcBuf, g_sLightBufA, sizeof(*srcBuf)));
 		ThrowCudaErrors(cudaMemcpyFromSymbol(destBuf, g_sLightBufB, sizeof(*destBuf)));
-		swap(srcBuf, destBuf);
+		swapk(srcBuf, destBuf);
 
 	} while (srcBuf->getNumRays(0));
 
@@ -301,7 +301,7 @@ void WavefrontVCM::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 		ThrowCudaErrors(cudaThreadSynchronize());
 		ThrowCudaErrors(cudaMemcpyFromSymbol(srcBuf, g_sCamBufA, sizeof(*srcBuf)));
 		ThrowCudaErrors(cudaMemcpyFromSymbol(destBuf, g_sCamBufB, sizeof(*destBuf)));
-		swap(srcBuf, destBuf);
+		swapk(srcBuf, destBuf);
 
 	} while (srcBuf->getNumRays(0) && i < 6);
 	m_uLightOff += blockW * blockH;

@@ -227,7 +227,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClCompile Include="Engine\SceneBVH.cpp" />
     <ClCompile Include="Engine\ShapeSet.cpp" />
     <ClCompile Include="Integrators\Bidirectional\WavefrontVCM.cpp" />
-    <ClCompile Include="Integrators\GradientDescent.cpp" />
+    <ClCompile Include="Integrators\Gradient\GradientDescent.cpp" />
     <ClCompile Include="Integrators\Parametric Mixture Models\PmmTracer.cpp" />
     <ClCompile Include="Integrators\Progressive Photon Mapping\PPPMTracer.cpp" />
     <ClCompile Include="Integrators\Progressive Photon Mapping\VolEstimators\BeamBeamGrid.cpp" />
@@ -252,7 +252,8 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="Integrators\Bidirectional\VCM.h" />
     <ClInclude Include="Integrators\Bidirectional\VCMHelper.h" />
     <ClInclude Include="Integrators\Bidirectional\WavefrontVCM.h" />
-    <ClInclude Include="Integrators\GradientDescent.h" />
+    <ClInclude Include="Integrators\Gradient\GradientDescent.h" />
+    <ClInclude Include="Integrators\Gradient\PathDifferientials.h" />
     <ClInclude Include="Integrators\Parametric Mixture Models\PmmHelper.h" />
     <ClInclude Include="Integrators\Parametric Mixture Models\PmmTracer.h" />
     <ClInclude Include="Integrators\PathTracer.h" />
@@ -271,6 +272,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="Kernel\BVHTracer.h" />
     <ClInclude Include="Kernel\RayBuffer.h" />
     <ClInclude Include="Kernel\TracerSettings.h" />
+    <ClInclude Include="Math\qMatrixWrapper.h" />
     <ClInclude Include="VirtualFuncType.h" />
   </ItemGroup>
   <ItemGroup>
@@ -300,8 +302,6 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="Math\Int24.h" />
     <ClInclude Include="Math\Integrator.h" />
     <ClInclude Include="Math\MathFunc.h" />
-    <ClInclude Include="Math\PathDifferientials.h" />
-    <ClInclude Include="Math\qMatrixWrapper.h" />
     <ClInclude Include="Math\Quaternion.h" />
     <ClInclude Include="Math\Ray.h" />
     <ClInclude Include="Math\Sampling.h" />

@@ -1,6 +1,6 @@
 #include <StdAfx.h>
 #include "GradientDescent.h"
-#include <Math/PathDifferientials.h>
+#include "PathDifferientials.h"
 #include <assert.h>
 
 namespace CudaTracerLib {

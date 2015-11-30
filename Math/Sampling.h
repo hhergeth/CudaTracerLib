@@ -26,7 +26,7 @@ public:
 		*t0 = q / A;
 		*t1 = C / q;
 		if (*t0 > *t1)
-			swap(*t0, *t1);
+			swapk(*t0, *t1);
 		return true;
 	}
 	CUDA_DEVICE CUDA_HOST static void RejectionSampleDisk(float *x, float *y, CudaRNG &rng);

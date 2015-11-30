@@ -175,8 +175,8 @@ void GameTracer::DoRender(Image* I)
 	primaryKernelBlocked << <dim3(w / (2 * BLOCK_SIZE) + 1, h / (2 * BLOCK_SIZE) + 1, 1), dim3(BLOCK_SIZE, BLOCK_SIZE, 1) >> >(w, h, *I, hasDepthBuffer(), 
 		m_pDeviceLastDirectImage1, m_pDeviceLastDirectImage2, m_pDeviceLastIndirectImage1, m_pDeviceLastIndirectImage2, lastSensor, iterations++);
 	lastSensor = g_SceneData.m_Camera;
-	swap(m_pDeviceLastDirectImage1, m_pDeviceLastDirectImage2);
-	swap(m_pDeviceLastIndirectImage1, m_pDeviceLastIndirectImage2);
+	swapk(m_pDeviceLastDirectImage1, m_pDeviceLastDirectImage2);
+	swapk(m_pDeviceLastIndirectImage1, m_pDeviceLastIndirectImage2);
 }
 
 void GameTracer::Debug(Image* I, const Vec2i& pixel)

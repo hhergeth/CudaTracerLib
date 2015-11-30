@@ -1,6 +1,6 @@
 #pragma once
-#include "qMatrixWrapper.h"
-#include "Frame.h"
+#include <Math/qMatrixWrapper.h>
+#include <Math/Frame.h>
 
 namespace CudaTracerLib {
 

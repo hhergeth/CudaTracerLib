@@ -177,7 +177,7 @@ void WavefrontPathTracer::DoRender(Image* I)
 			pathIterateKernel<true> << < dim3(180, 1, 1), dim3(32, 6, 1) >> >(srcBuf->getNumRays(0), *I, pass, m_uPassesDone, maxPathLength, hasDepthBuffer());
 		else pathIterateKernel<false> << < dim3(180, 1, 1), dim3(32, 6, 1) >> >(srcBuf->getNumRays(0), *I, pass, m_uPassesDone, maxPathLength, hasDepthBuffer());
 		CopyFromSymbol(*srcBuf, g_IntersectorWPT); CopyFromSymbol(*destBuf, g_Intersector2WPT);
-		swap(srcBuf, destBuf);
+		swapk(srcBuf, destBuf);
 	} while (srcBuf->getNumRays(0) && ++pass < maxPathLength);
 }
 

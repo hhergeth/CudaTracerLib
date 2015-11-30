@@ -78,7 +78,7 @@ template<typename CLB> CUDA_FUNC_IN bool TracerayTemplate(const Ray& r, float& r
 				if (traverseChild0 && traverseChild1)
 				{
 					if (swp)
-						swap(nodeAddr, cnodes.y);
+						swapk(nodeAddr, cnodes.y);
 					stackPtr += 4;
 					*(int*)stackPtr = cnodes.y;
 				}
@@ -190,7 +190,7 @@ template<typename CLB> CUDA_FUNC_IN bool TracerayTemplate(const Ray& r, float& r
 				if (traverseChild0 && traverseChild1)
 				{
 					if (swp)
-						swap(nodeAddr, cnodes.y);
+						swapk(nodeAddr, cnodes.y);
 					stackPtr += 4;
 					*(int*)stackPtr = cnodes.y;
 				}

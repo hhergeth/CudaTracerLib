@@ -47,7 +47,7 @@ int median3(int low, int high, void* data, SortCompareFunc compareFunc)
 	int c = (low + high) >> 1;
 	int h = high - 2;
 
-	if (compareFunc(data, h, l)) swap(l, h);
+	if (compareFunc(data, h, l)) swapk(l, h);
 	if (compareFunc(data, c, l)) c = l;
 	return (compareFunc(data, h, c)) ? h : c;
 }
@@ -289,7 +289,7 @@ bool SplitBVHBuilder::sortCompare(void* data, int idxA, int idxB)
 void SplitBVHBuilder::sortSwap(void* data, int idxA, int idxB)
 {
 	SplitBVHBuilder* ptr = (SplitBVHBuilder*)data;
-	swap(ptr->m_refStack[idxA], ptr->m_refStack[idxB]);
+	swapk(ptr->m_refStack[idxA], ptr->m_refStack[idxB]);
 }
 
 //------------------------------------------------------------------------
@@ -552,7 +552,7 @@ void SplitBVHBuilder::performSpatialSplit(NodeSpec& left, NodeSpec& right, const
 		if (refs[i].bounds.maxV[split.dim] <= split.pos)
 		{
 			left.bounds = left.bounds.Extend(refs[i].bounds);
-			swap(refs[i], refs[leftEnd++]);
+			swapk(refs[i], refs[leftEnd++]);
 		}
 
 		// Entirely on the right-hand side?
@@ -560,7 +560,7 @@ void SplitBVHBuilder::performSpatialSplit(NodeSpec& left, NodeSpec& right, const
 		else if (refs[i].bounds.minV[split.dim] >= split.pos)
 		{
 			right.bounds = right.bounds.Extend(refs[i].bounds);
-			swap(refs[i--], refs[--rightStart]);
+			swapk(refs[i--], refs[--rightStart]);
 		}
 	}
 
@@ -607,7 +607,7 @@ void SplitBVHBuilder::performSpatialSplit(NodeSpec& left, NodeSpec& right, const
 		else if (minSAH == unsplitRightSAH)
 		{
 			right.bounds = rub;
-			swap(refs[leftEnd], refs[--rightStart]);
+			swapk(refs[leftEnd], refs[--rightStart]);
 		}
 
 		// Duplicate?

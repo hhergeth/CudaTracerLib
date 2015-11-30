@@ -34,6 +34,9 @@
     <Filter Include="Integrators\Pseudo Realtime">
       <UniqueIdentifier>{63bb13c4-3aad-4147-8c76-e9c15f2cc4e6}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Integrators\Gradient">
+      <UniqueIdentifier>{c56b0945-3d56-41d6-a4bc-3021e3cef8bd}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Defines.h" />
@@ -111,12 +114,6 @@
     <ClInclude Include="Base\FixedString.h">
       <Filter>Base</Filter>
     </ClInclude>
-    <ClInclude Include="Math\PathDifferientials.h">
-      <Filter>Math</Filter>
-    </ClInclude>
-    <ClInclude Include="Math\qMatrixWrapper.h">
-      <Filter>Math</Filter>
-    </ClInclude>
     <ClInclude Include="Engine\SceneBuilder\TangentSpaceHelper.h">
       <Filter>Engine\SceneBuilder</Filter>
     </ClInclude>
@@ -151,9 +148,6 @@
     </ClInclude>
     <ClInclude Include="Kernel\TraceResult.h">
       <Filter>Kernel</Filter>
-    </ClInclude>
-    <ClInclude Include="Integrators\GradientDescent.h">
-      <Filter>Integrators</Filter>
     </ClInclude>
     <ClInclude Include="Integrators\PathTracer.h">
       <Filter>Integrators</Filter>
@@ -329,6 +323,15 @@
     <ClInclude Include="Integrators\PhotonMapHelper.h">
       <Filter>Integrators</Filter>
     </ClInclude>
+    <ClInclude Include="Math\qMatrixWrapper.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\Gradient\GradientDescent.h">
+      <Filter>Integrators\Gradient</Filter>
+    </ClInclude>
+    <ClInclude Include="Integrators\Gradient\PathDifferientials.h">
+      <Filter>Integrators\Gradient</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Base\FileStream.cpp">
@@ -360,9 +363,6 @@
     <ClCompile Include="CudaMemoryManager.cpp" />
     <ClCompile Include="Kernel\Tracer.cpp">
       <Filter>Kernel</Filter>
-    </ClCompile>
-    <ClCompile Include="Integrators\GradientDescent.cpp">
-      <Filter>Integrators</Filter>
     </ClCompile>
     <ClCompile Include="Integrators\Bidirectional\WavefrontVCM.cpp">
       <Filter>Integrators\Bidirectional</Filter>
@@ -420,6 +420,9 @@
     </ClCompile>
     <ClCompile Include="Kernel\TracerSettings.cpp">
       <Filter>Kernel</Filter>
+    </ClCompile>
+    <ClCompile Include="Integrators\Gradient\GradientDescent.cpp">
+      <Filter>Integrators\Gradient</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

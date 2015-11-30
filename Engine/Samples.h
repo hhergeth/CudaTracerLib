@@ -162,7 +162,7 @@ struct PhaseFunctionSamplingRecord
 
 	CUDA_FUNC_IN void reverse()
 	{
-		swap(wo, wi);
+		swapk(wo, wi);
 		mode = (ETransportMode)(1 - mode);
 	}
 };
