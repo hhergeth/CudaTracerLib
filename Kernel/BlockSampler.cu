@@ -160,7 +160,7 @@ struct order
 };
 
 BlockSampler::BlockSampler(Image* img)
-	: img(img), m_bIsActive(false)
+	: img(img)
 {
 	unsigned int nBlocks = totalNumBlocks();
 	CUDA_MALLOC(&m_pLumData, img->getWidth() * img->getHeight() * sizeof(SamplerpixelData));
@@ -208,7 +208,7 @@ void BlockSampler::AddPass()
 
 	const int N = 5;
 	m_uPassesDone++;
-	if (m_bIsActive && (m_uPassesDone % N) == 0)
+	if ((m_uPassesDone % N) == 0)
 	{
 		ThrowCudaErrors(cudaMemcpy(m_pDeviceWeight, m_pHostWeight, sizeof(float) * totalNumBlocks(), cudaMemcpyHostToDevice));
 		ThrowCudaErrors(cudaMemset(m_pDeviceContribPixels, 0, sizeof(unsigned int) * totalNumBlocks()));

@@ -57,6 +57,8 @@ public:
 	static void InitRngs(unsigned int N = 1 << 16);
 	static void RenderDepth(DeviceDepthImage dImg, DynamicScene* s);
 
+	PARAMETER_KEY(bool, SamplerActive)
+
 	CUDA_DEVICE static Vec2i getPixelPos(unsigned int xoff, unsigned int yoff)
 	{
 #ifdef ISCUDA
@@ -211,7 +213,7 @@ protected:
 		BBBB
 
 		*/
-		if (USE_BLOCKSAMPLER)
+		if (USE_BLOCKSAMPLER && m_sParameters.getValue(KEY_SamplerActive()))
 		{
 			unsigned int nBlocks = m_pBlockSampler->NumBlocks();
 			for (unsigned int idx = 0; idx < nBlocks; idx++)

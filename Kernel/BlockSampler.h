@@ -33,7 +33,6 @@ class BlockSampler : public IBlockSampler
 	float* m_pHostWeight;
 	float* m_pDeviceWeight;
 public:
-	bool m_bIsActive;
 
 	BlockSampler(Image* img);
 	virtual ~BlockSampler()

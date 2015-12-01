@@ -23,6 +23,7 @@ TracerBase::TracerBase()
 	InitRngs(1024 * 768);
 	ThrowCudaErrors(cudaEventCreate(&start));
 	ThrowCudaErrors(cudaEventCreate(&stop));
+	m_sParameters << KEY_SamplerActive() << CreateSetBool(false);
 }
 
 TracerBase::~TracerBase()
