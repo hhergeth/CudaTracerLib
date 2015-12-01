@@ -10,7 +10,7 @@ class Node;
 struct TriangleData;
 struct Material;
 struct BSDFSamplingRecord;
-enum ETransportMode;
+enum class ETransportMode;
 struct CudaRNG;
 
 struct TraceResult

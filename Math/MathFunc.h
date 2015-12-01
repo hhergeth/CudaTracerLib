@@ -73,18 +73,10 @@ CUDA_FUNC_IN void sincos(float f, float* a, float* b)
 #define FW_SPECIALIZE_MINMAX(TEMPLATE, T, K, MIN, MAX) \
 	TEMPLATE CUDA_FUNC_IN T min(K T& a, K T& b) { return MIN; } \
 	TEMPLATE CUDA_FUNC_IN T max(K T& a, K T& b) { return MAX; } \
-	TEMPLATE CUDA_FUNC_IN T min(K T& a, K T& b, K T& c) { return min(min(a, b), c); } \
-	TEMPLATE CUDA_FUNC_IN T max(K T& a, K T& b, K T& c) { return max(max(a, b), c); } \
-	TEMPLATE CUDA_FUNC_IN T min(K T& a, K T& b, K T& c, K T& d) { return min(min(min(a, b), c), d); } \
-	TEMPLATE CUDA_FUNC_IN T max(K T& a, K T& b, K T& c, K T& d) { return max(max(max(a, b), c), d); } \
-	TEMPLATE CUDA_FUNC_IN T min(K T& a, K T& b, K T& c, K T& d, K T& e) { return min(min(min(min(a, b), c), d), e); } \
-	TEMPLATE CUDA_FUNC_IN T max(K T& a, K T& b, K T& c, K T& d, K T& e) { return max(max(max(max(a, b), c), d), e); } \
-	TEMPLATE CUDA_FUNC_IN T min(K T& a, K T& b, K T& c, K T& d, K T& e, K T& f) { return min(min(min(min(min(a, b), c), d), e), f); } \
-	TEMPLATE CUDA_FUNC_IN T max(K T& a, K T& b, K T& c, K T& d, K T& e, K T& f) { return max(max(max(max(max(a, b), c), d), e), f); } \
-	TEMPLATE CUDA_FUNC_IN T min(K T& a, K T& b, K T& c, K T& d, K T& e, K T& f, K T& g) { return min(min(min(min(min(min(a, b), c), d), e), f), g); } \
-	TEMPLATE CUDA_FUNC_IN T max(K T& a, K T& b, K T& c, K T& d, K T& e, K T& f, K T& g) { return max(max(max(max(max(max(a, b), c), d), e), f), g); } \
-	TEMPLATE CUDA_FUNC_IN T min(K T& a, K T& b, K T& c, K T& d, K T& e, K T& f, K T& g, K T& h) { return min(min(min(min(min(min(min(a, b), c), d), e), f), g), h); } \
-	TEMPLATE CUDA_FUNC_IN T max(K T& a, K T& b, K T& c, K T& d, K T& e, K T& f, K T& g, K T& h) { return max(max(max(max(max(max(max(a, b), c), d), e), f), g), h); } \
+	TEMPLATE CUDA_FUNC_IN T min(K T& a, K T& b, K T& c) { T d = min(a, b); return min(d, c); } \
+	TEMPLATE CUDA_FUNC_IN T max(K T& a, K T& b, K T& c) { T d = min(a, b); return min(d, c); } \
+	TEMPLATE CUDA_FUNC_IN T min(K T& a, K T& b, K T& c, K T& d) { T e = min(a,b,c); return min(e, d); } \
+	TEMPLATE CUDA_FUNC_IN T max(K T& a, K T& b, K T& c, K T& d) { T e = min(a,b,c); return min(e, d); } \
 
 FW_SPECIALIZE_MINMAX(template <class T>, T, , (a < b) ? a : b, (a > b) ? a : b)
 FW_SPECIALIZE_MINMAX(template <class T>, T, const, (a < b) ? a : b, (a > b) ? a : b)

@@ -38,10 +38,10 @@ struct MicrofacetDistribution
 		if (alphaU == alphaV)
 			phi = PI * u1 * 0.5f;
 		else
-			phi = std::atan(
+			phi = math::atan(
 			math::sqrt((alphaU + 1.0f) / (alphaV + 1.0f)) *
-			std::tan(PI * u1 * 0.5f));
-		const float cosPhi = std::cos(phi), sinPhi = std::sin(phi);
+			math::tan(PI * u1 * 0.5f));
+		const float cosPhi = math::cos(phi), sinPhi = math::sin(phi);
 		cosTheta = math::pow(u2, 1.0f /
 			(alphaU * cosPhi * cosPhi + alphaV * sinPhi * sinPhi + 1.0f));
 	}

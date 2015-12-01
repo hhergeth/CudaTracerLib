@@ -69,7 +69,7 @@ namespace CudaTracerLib {
 void fail(const char* format, ...);
 
 void __ThrowCudaErrors__(const char* file, int line, ...);
-#define ThrowCudaErrors(...) __ThrowCudaErrors__(__FILE__, __LINE__, __VA_ARGS__, -1)
+#define ThrowCudaErrors(...) __ThrowCudaErrors__(__FILE__, __LINE__, ##__VA_ARGS__, -1)
 
 template<typename T> CUDA_FUNC_IN void swapk(T& a, T& b)
 {
@@ -169,9 +169,9 @@ public:
 		return host;
 #endif
 	}
-	template<typename T> CUDA_FUNC_IN e_Variable<T> As() const
+	template<typename U> CUDA_FUNC_IN e_Variable<U> As() const
 	{
-		return e_Variable<T>((T*)host, (T*)device);
+		return e_Variable<U>((U*)host, (U*)device);
 	}
 };
 

@@ -6,6 +6,7 @@
 #include <functional>
 #include <boost/mpl/string.hpp>
 #include <memory>
+#include <algorithm>
 
 namespace CudaTracerLib {
 
@@ -167,12 +168,7 @@ class TracerParameterCollection
 	}
 	std::string lastName;
 public:
-	template<typename... Ts> TracerParameterCollection(Ts&&... rest)
-		: lastName("")
-	{
-		add(rest...);
-	}
-	template<> TracerParameterCollection()
+	TracerParameterCollection()
 		: lastName("")
 	{
 

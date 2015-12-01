@@ -22,7 +22,7 @@ void ShapeSet::triData::Recalculate(const float4x4& mat)
 	area = 0.5f * length(n);
 }
 
-ShapeSet::ShapeSet(StreamReference<TriIntersectorData>* indices, unsigned int indexCount, float4x4& mat, Stream<char>* buffer)
+ShapeSet::ShapeSet(StreamReference<TriIntersectorData>* indices, unsigned int indexCount, const float4x4& mat, Stream<char>* buffer)
 {
 	count = indexCount;
 	StreamReference<char> buffer1 = buffer->malloc((count + 1) * sizeof(float));

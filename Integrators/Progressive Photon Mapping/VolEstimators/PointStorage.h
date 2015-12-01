@@ -80,7 +80,7 @@ struct PointStorage : public IVolumeEstimator
 	{
 
 	}
-
+#ifdef __CUDACC__
 	CUDA_ONLY_FUNC void StoreBeam(const Beam& b, bool firstStore)
 	{
 
@@ -128,6 +128,7 @@ struct PointStorage : public IVolumeEstimator
 		Tr = (-Tau).exp();
 		return L_n;
 	}
+#endif
 };
 
 }

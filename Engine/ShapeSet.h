@@ -9,11 +9,11 @@ struct PositionSamplingRecord;
 template<typename H, typename D> class BufferReference;
 template<typename T> class Stream;
 
-struct CUDA_ALIGN(16) ShapeSet
+struct ShapeSet
 {
-	CUDA_ALIGN(16) struct triData
+	struct CUDA_ALIGN(16) triData
 	{
-		CUDA_ALIGN(16) Vec3f p[3];
+		Vec3f p[3];
 		float area;
 		e_Variable<TriIntersectorData> iDat;
 
@@ -22,7 +22,7 @@ struct CUDA_ALIGN(16) ShapeSet
 	};
 public:
 	ShapeSet(){}
-	ShapeSet(BufferReference<TriIntersectorData, TriIntersectorData>* indices, unsigned int indexCount, float4x4& mat, Stream<char>* buffer);
+	ShapeSet(BufferReference<TriIntersectorData, TriIntersectorData>* indices, unsigned int indexCount, const float4x4& mat, Stream<char>* buffer);
 	CUDA_FUNC_IN float Area() const { return sumArea; }
 	CUDA_DEVICE CUDA_HOST void SamplePosition(PositionSamplingRecord& pRec, const Vec2f& spatialSample) const;
 	CUDA_FUNC_IN float Pdf() const

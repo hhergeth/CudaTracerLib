@@ -55,7 +55,7 @@ void MIPMap::CompileToBinary(const std::string& a_InputFile, FileOutputStream& a
 
 	a_Out << data.w();
 	a_Out << data.h();
-	a_Out << unsigned int(4);
+	a_Out << (unsigned int)4;
 	a_Out << (int)data.t();
 	a_Out << (int)TEXTURE_REPEAT;
 	a_Out << (int)TEXTURE_Anisotropic;

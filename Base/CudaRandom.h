@@ -40,7 +40,7 @@ public:
 	{
 		const unsigned int a = 16807;
 		const unsigned int m = UINT_MAX;
-		X_i = (unsigned int(X_i * a)) % m;
+		X_i = (X_i * a) % m;
 		return X_i;
 	}
 

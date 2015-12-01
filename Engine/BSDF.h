@@ -24,7 +24,7 @@ private:
 	{
 		if (COUNT >= NUM_TEX_PER_BSDF)
 			throw std::runtime_error("To many textures in one BSDF!");
-		m_uTextureOffsets[COUNT] = unsigned int((unsigned long long)&tex - (unsigned long long)this);
+		m_uTextureOffsets[COUNT] = (unsigned int)((unsigned long long)&tex - (unsigned long long)this);
 		initTextureOffsets_intern<COUNT + 1>(tail...);
 	}
 public:
@@ -43,7 +43,7 @@ public:
 		if (n + nestedTexs.size() > NUM_TEX_PER_BSDF)
 			throw std::runtime_error("Too many textures in bsdf!");
 		for (size_t i = 0; i < nestedTexs.size(); i++)
-			m_uTextureOffsets[n++] = unsigned int((unsigned long long)nestedTexs[i] - (unsigned long long)this);
+			m_uTextureOffsets[n++] = (unsigned int)((unsigned long long)nestedTexs[i] - (unsigned long long)this);
 	}
 	CUDA_FUNC_IN unsigned int getType()
 	{

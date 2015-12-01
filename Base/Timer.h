@@ -5,6 +5,7 @@
 #include <map>
 #include <sstream>
 #include "Platform.h"
+#include <cmath>
 
 namespace CudaTracerLib {
 

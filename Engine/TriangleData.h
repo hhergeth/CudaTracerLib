@@ -40,7 +40,7 @@ public:
 	CUDA_FUNC_IN unsigned int getMatIndex(const unsigned int off) const
 	{
 		unsigned int v = (m_sDeviceData.NorMatExtra.y >> 16) & 0xff;
-		return unsigned int(v) + off;
+		return v + off;
 	}
 	CUDA_DEVICE CUDA_HOST void setData(const Vec3f& v0, const Vec3f& v1, const Vec3f& v2,
 		const Vec3f& n0, const Vec3f& n1, const Vec3f& n3);

@@ -22,7 +22,7 @@ enum EMeasure {
 	EDiscrete = 4
 };
 
-enum ETransportMode
+enum class ETransportMode
 {
 	ERadiance = 0,
 	EImportance = 1,
@@ -147,13 +147,13 @@ struct PhaseFunctionSamplingRecord
 	Vec3f wo;
 	ETransportMode mode;
 
-	CUDA_FUNC_IN PhaseFunctionSamplingRecord(const Vec3f& _wo, ETransportMode m = ERadiance)
+	CUDA_FUNC_IN PhaseFunctionSamplingRecord(const Vec3f& _wo, ETransportMode m = ETransportMode::ERadiance)
 	{
 		wo = _wo;
 		mode = m;
 	}
 
-	CUDA_FUNC_IN PhaseFunctionSamplingRecord(const Vec3f& _wo, const Vec3f& _wi, ETransportMode m = ERadiance)
+	CUDA_FUNC_IN PhaseFunctionSamplingRecord(const Vec3f& _wo, const Vec3f& _wi, ETransportMode m = ETransportMode::ERadiance)
 	{
 		wo = _wo;
 		wi = _wi;
@@ -163,7 +163,7 @@ struct PhaseFunctionSamplingRecord
 	CUDA_FUNC_IN void reverse()
 	{
 		swapk(wo, wi);
-		mode = (ETransportMode)(1 - mode);
+		mode = (ETransportMode)(1 - (int)mode);
 	}
 };
 

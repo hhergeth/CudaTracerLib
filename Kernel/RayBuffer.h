@@ -99,6 +99,7 @@ public:
 	{
 		return m_pPayloadBuffer[i];
 	}
+#ifdef __CUDACC__
 	//inserts for all active lanes a ray into the buffer
 	CUDA_DEVICE unsigned int insertRayCUDA_LANES(unsigned int bufIdx)
 	{
@@ -114,6 +115,7 @@ public:
 			insertBase = atomicAdd(pCounter, (unsigned int)numTerminated);
 		return insertBase + idxTerminated;
 	}
+#endif
 };
 
 }

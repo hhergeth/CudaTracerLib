@@ -6,7 +6,6 @@
 #define FREEIMAGE_LIB
 #include <FreeImage.h>
 #include "MIPMap.h"
-#include <crtdbg.h>
 #include <Kernel/Tracer.h>
 #include <ctime>
 

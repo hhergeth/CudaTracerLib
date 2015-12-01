@@ -54,7 +54,7 @@ public:
 		Nor = NormalizedFloat3ToUchar2(n);
 		L = (l).toRGBE();
 		Wi = NormalizedFloat3ToUchar2(wi);
-		typeNextField = (unsigned char(type) << 24) | 0xffffff;
+		typeNextField = ((unsigned char)type << 24) | 0xffffff;
 	}
 	CUDA_FUNC_IN bool hasNext() const
 	{

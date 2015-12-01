@@ -4,6 +4,7 @@
 
 #pragma once
 #include <stdio.h>
+#include <cstring>
 #include <map>
 #include <vector>
 #include <algorithm>
@@ -206,7 +207,7 @@ public:
 	void UpdateInvalidated()
 	{
 		struct f{
-			void operator()(BufferReference<H, D> r)
+			void operator()(BufferReference<H, D> r) const
 			{
 			}
 		};
@@ -214,13 +215,13 @@ public:
 		UpdateInvalidated(_f);
 	}
 
-	template<typename CLB> void UpdateInvalidated(CLB& f)
+	template<typename CLB> void UpdateInvalidated(const CLB& f)
 	{
 		for (range_set_t::iterator it = m_uInvalidated->begin(); it != m_uInvalidated->end(); it++)
 		{
 			for (size_t i = it->lower(); i < it->upper(); i++)
 			{
-				f(operator()(i, 1));
+				f(BufferRange<H, D>::operator()(i, 1));
 				if (m_bUpdateElement)
 					updateElement(i);
 			}
@@ -286,7 +287,7 @@ public:
 	template<typename T> BufferReference<H, D> translate(e_Variable<T> var)
 	{
 		size_t idx = (D*)var.device - device;
-		return BufferReference<H, D>(this, idx, unsigned int(sizeof(T) / sizeof(D)));
+		return BufferReference<H, D>(this, idx, (unsigned int)(sizeof(T) / sizeof(D)));
 	}
 };
 
@@ -360,7 +361,7 @@ template<typename H, typename D> class Buffer : public BufferBase<H, D>
 protected:
 	virtual void updateElement(size_t i)
 	{
-		deviceMapped[i] = operator()(i)->getKernelData();
+		deviceMapped[i] = BufferBase<H, D>::operator()(i)->getKernelData();
 	}
 	virtual void copyRange(size_t i, size_t l)
 	{
@@ -369,8 +370,8 @@ protected:
 	virtual void reallocAfterResize()
 	{
 		free(deviceMapped);
-		deviceMapped = (D*)::malloc(m_uLength * sizeof(D));
-		memset(deviceMapped, 0, sizeof(D) * m_uLength);
+		deviceMapped = (D*)::malloc(BufferBase<H, D>::m_uLength * sizeof(D));
+		memset(deviceMapped, 0, sizeof(D) * BufferBase<H, D>::m_uLength);
 	}
 	virtual D* getDeviceMappedData()
 	{
@@ -390,9 +391,9 @@ public:
 	virtual KernelBuffer<D> getKernelData(bool devicePointer = true) const
 	{
 		KernelBuffer<D> r;
-		r.Data = devicePointer ? device : deviceMapped;
-		r.Length = (unsigned int)m_uLength;
-		r.UsedCount = (unsigned int)m_uPos;
+		r.Data = devicePointer ? BufferBase<H, D>::device : deviceMapped;
+		r.Length = (unsigned int)BufferBase<H, D>::m_uLength;
+		r.UsedCount = (unsigned int)BufferBase<H, D>::m_uPos;
 		return r;
 	}
 };
@@ -421,9 +422,9 @@ public:
 	virtual KernelBuffer<T> getKernelData(bool devicePointer = true) const
 	{
 		KernelBuffer<T> r;
-		r.Data = devicePointer ? device : host;
-		r.Length = (unsigned int)m_uLength;
-		r.UsedCount = (unsigned int)m_uPos;
+		r.Data = devicePointer ? BufferBase<T, T>::device : BufferBase<T, T>::host;
+		r.Length = (unsigned int)BufferBase<T, T>::m_uLength;
+		r.UsedCount = (unsigned int)BufferBase<T, T>::m_uPos;
 		return r;
 	}
 };
@@ -460,7 +461,7 @@ public:
 		load = true;
 		entry e;
 		e.count = 1;
-		e.ref = malloc(1);
+		e.ref = Buffer<H, D>::malloc(1);
 		m_sEntries[file] = e;
 		return e.ref;
 	}

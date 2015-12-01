@@ -234,7 +234,7 @@ public:
 	/// math::clamp negative values
 	CUDA_FUNC_IN void clampNegative() {
 		for (int i = 0; i < N; i++)
-			s[i] = ::max((Scalar) 0.0f, s[i]);
+			s[i] = CudaTracerLib::max((Scalar) 0.0f, s[i]);
 	}
 
 	/// Return the highest-valued spectral sample
@@ -249,7 +249,7 @@ public:
 	CUDA_FUNC_IN Scalar min() const {
 		Scalar result = s[0];
 		for (int i = 1; i < N; i++)
-			result = ::min(result, s[i]);
+			result = CudaTracerLib::min(result, s[i]);
 		return result;
 	}
 
@@ -343,7 +343,7 @@ public:
 	}
 
 	/// Create a new spectral power distribution with all samples set to the given value
-	explicit CUDA_FUNC_IN Spectrum(float v) {
+	CUDA_FUNC_IN Spectrum(float v) {
 		for (int i = 0; i < SPECTRUM_SAMPLES; i++)
 			s[i] = v;
 	}

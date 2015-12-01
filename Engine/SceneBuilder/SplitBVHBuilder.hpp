@@ -47,7 +47,7 @@ class BVHNode
 	unsigned int left, right;
 public:
 	AABB box;
-	BVHNode(const AABB& bounds, unsigned int l, unsigned int r, bool leaf) : box(bounds), left((l << 1) | unsigned int(leaf)), right(r) {}
+	BVHNode(const AABB& bounds, unsigned int l, unsigned int r, bool leaf) : box(bounds), left((l << 1) | (unsigned int)leaf), right(r) {}
 	bool isLeaf() { return left & 1; }
 	unsigned int getLeft(){ return left >> 1; }
 	unsigned int getRight(){ return right; }
@@ -150,7 +150,7 @@ public:
 	struct Stats
 	{
 		Stats()             { clear(); }
-		void clear()        { memset(this, 0, sizeof(Stats)); }
+		void clear()        { CudaTracerLib::Platform::SetMemory(this, sizeof(Stats)); }
 		void print() const  { printf("Tree stats: [bfactor=%d] %d nodes (%d+%d), %.2f SAHCost, %.1f children/inner, %.1f tris/leaf\n", branchingFactor, numLeafNodes + numInnerNodes, numLeafNodes, numInnerNodes, SAHCost, 1.f*numChildNodes / max(numInnerNodes, 1), 1.f*numTris / max(numLeafNodes, 1)); }
 
 		float   SAHCost;

@@ -50,12 +50,6 @@ public:
 		return deviceDataIdx >= numData;
 	}
 
-	CUDA_ONLY_FUNC unsigned int allocStorage(unsigned int n)
-	{
-		unsigned int idx = atomicAdd(&deviceDataIdx, n);
-		return idx;
-	}
-
 	CUDA_ONLY_FUNC void store(const Vec3u& p, const T& v, unsigned int data_idx)
 	{
 		unsigned int map_idx = hashMap.Hash(p);
@@ -69,6 +63,7 @@ public:
 		deviceData[data_idx].nextIdx = old_idx;
 	}
 
+#ifdef __CUDACC__
 	CUDA_ONLY_FUNC bool store(const Vec3u& p, const T& v)
 	{
 		//build linked list and spatial map
@@ -91,6 +86,13 @@ public:
 	{
 		return store(hashMap.Transform(p), v);
 	}
+
+	CUDA_ONLY_FUNC unsigned int allocStorage(unsigned int n)
+	{
+		unsigned int idx = atomicAdd(&deviceDataIdx, n);
+		return idx;
+	}
+#endif
 
 	template<unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX, typename CLB> CUDA_FUNC_IN void ForAll(const Vec3u& p, const CLB& clb)
 	{

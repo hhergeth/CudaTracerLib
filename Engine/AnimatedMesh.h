@@ -86,7 +86,7 @@ public:
 		if (a_lerp)
 			*a_lerp = math::frac(a);
 		if (a_FrameIndex)
-			*a_FrameIndex = unsigned int(a) % m_pAnimations[a_Anim].m_pFrames.size();
+			*a_FrameIndex = ((unsigned int)a) % m_pAnimations[a_Anim].m_pFrames.size();
 	}
 	unsigned int numAntimations()
 	{

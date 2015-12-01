@@ -17,7 +17,7 @@ CUDA_FUNC_IN unsigned short NormalizedFloat3ToUchar2(const Vec3f& v)
 	float theta = (acos(v.z)*(255.0f / PI));
 	float phi = (atan2(v.y, v.x)*(255.0f / (2.0f*PI)));
 	phi = phi < 0 ? (phi + 255) : phi;
-	return (unsigned short(theta) << 8) | unsigned short(phi);
+	return ((unsigned short)theta << 8) | (unsigned short)phi;
 }
 
 CUDA_FUNC_IN Vec3f Uchar2ToNormalizedFloat3(unsigned short v)

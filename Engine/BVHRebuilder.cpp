@@ -427,7 +427,7 @@ bool BVHRebuilder::Build(ISpatialInfoProvider* data, bool invalidateAll)
 			if (!recomputeAll)
 				m_pData->iterateObjects([&](unsigned int i)
 			{
-				if (nodesToRecompute.at(i))
+				if (nodesToRecompute[i])
 					propagateFlag(BVHIndex::FromSceneNode((unsigned int)i));
 			});
 			AABB box;

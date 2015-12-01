@@ -35,7 +35,7 @@ template<bool REGULAR> struct HashGrid
 		key = key * 21; // key = (key + (key << 2)) + (key << 4);
 		key = key ^ (key >> 11);
 		key = key + (key << 6);
-		return unsigned int(key) ^ unsigned int(key >> 2);
+		return (unsigned int)(key ^ (key >> 2));
 	}
 
 	CUDA_FUNC_IN unsigned int Hash(const Vec3u& p) const
@@ -89,7 +89,7 @@ template<bool REGULAR> struct HashGrid
 	CUDA_FUNC_IN  Vec3u Transform(const Vec3f& p) const
 	{
 		Vec3f q = (p - m_vMin) * m_vInvSize;
-		return clamp(Vec3u(unsigned int(q.x), unsigned int(q.y), unsigned int(q.z)), Vec3u(0), Vec3u(m_fGridSize - 1));
+		return clamp(Vec3u((unsigned int)q.x, (unsigned int)q.y, (unsigned int)q.z), Vec3u(0), Vec3u(m_fGridSize - 1));
 	}
 
 	CUDA_FUNC_IN Vec3f InverseTransform(const Vec3u& i) const
@@ -106,7 +106,7 @@ template<bool REGULAR> struct HashGrid
 	{
 		Vec3f low = Vec3f(i.x, i.y, i.z) / m_vInvSize + m_vMin;
 		Vec3f m = clamp01((p - low) / m_vCellSize) * 255.0f;
-		return (unsigned int(m.x) << 16) | (unsigned int(m.y) << 8) | (unsigned int(m.z));
+		return (int(m.x) << 16) | (int(m.y) << 8) | int(m.z);
 	}
 
 	CUDA_FUNC_IN Vec3f DecodePos(unsigned int p, const Vec3u& i) const
@@ -149,7 +149,7 @@ template<typename F> CUDA_FUNC_IN void TraverseGrid(const Ray& r, float tmin, fl
 	float minT = rayT = math::clamp(rayT, tmin, tmax);
 	maxT = math::clamp(maxT, tmin, tmax);
 	Vec3f q = (r(rayT) - box.minV) / box.Size() * (gridSize - Vec3f(1));
-	Vec3u Pos = clamp(Vec3u(unsigned int(q.x), unsigned int(q.y), unsigned int(q.z)), Vec3u(0), Vec3u(gridSize.x - 1, gridSize.y - 1, gridSize.z - 1));
+	Vec3u Pos = clamp(Vec3u((unsigned int)q.x, (unsigned int)q.y, (unsigned int)q.z), Vec3u(0), Vec3u(gridSize.x - 1, gridSize.y - 1, gridSize.z - 1));
 	Vec3i Step(sign<int>(r.direction.x), sign<int>(r.direction.y), sign<int>(r.direction.z));
 	Vec3f inv_d = r.direction;
 	const float ooeps = math::exp2(-20.0f);//80 is too small, will create underflow on GPU

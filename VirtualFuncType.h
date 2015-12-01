@@ -1,6 +1,8 @@
 #pragma once
 #include <type_traits>
 #include <memory>
+#include <string.h>
+#include <Base/Platform.h>
 
 namespace CudaTracerLib {
 
@@ -89,7 +91,7 @@ namespace CTVirtualHelper
 			return this->As<T>()->FUNC_NAME(args...); \
 		return FUNC_NAME##__INTERNAL__CALLER<R, T2, REST...>(CTVirtualHelper::Typer<Args...>(), CTVirtualHelper::forward<Args>(args)...); \
 		} \
-	template<typename R, template <class, class...> class A, class BaseType, class... Types, typename... Args> CUDA_FUNC_IN R FUNC_NAME##_Caller(const A<BaseType, Types...>& obj, Args&&... args) const \
+	template<typename R, class BaseType, class... Types, typename... Args> CUDA_FUNC_IN R FUNC_NAME##_Caller(const CudaVirtualAggregate<BaseType, Types...>& obj, Args&&... args) const \
 		{ \
 		return FUNC_NAME##__INTERNAL__CALLER<R, Types...>(CTVirtualHelper::Typer<Args...>(), CTVirtualHelper::forward<Args>(args)...); \
 		} \
@@ -121,12 +123,12 @@ protected:
 		SetVtable<CLASS2, REST...>();
 	}
 public:
-#ifndef __CUDACC__
 	CUDA_FUNC_IN CudaVirtualAggregate()
 	{
-		memset(this, 0, sizeof(*this));
-	}
+#ifndef ISCUDA
+		Platform::SetMemory(this, sizeof(*this));
 #endif
+	}
 
 	template<typename SpecializedType> CUDA_FUNC_IN SpecializedType* As() const
 	{

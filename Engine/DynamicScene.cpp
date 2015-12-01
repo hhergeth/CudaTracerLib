@@ -29,7 +29,7 @@ struct textureLoader
 	{
 		S = A;
 	}
-	e_Variable<KernelMIPMap> operator()(const std::string& file, e_Variable<KernelMIPMap>& lastVal)
+	e_Variable<KernelMIPMap> operator()(const std::string& file, e_Variable<KernelMIPMap>& lastVal) const
 	{
 		if (lastVal.host)
 		{
@@ -53,12 +53,12 @@ class DynamicScene::MatStream : public Stream<Material>
 
 	struct matUpdater
 	{
-		textureLoader L;
+		const textureLoader& L;
 		matUpdater(const textureLoader& l)
 			: L(l)
 		{
 		}
-		void operator()(StreamReference<Material> m)
+		void operator()(StreamReference<Material> m) const
 		{
 			m->LoadTextures(L);
 			m->bsdf.As()->Update();
@@ -79,7 +79,7 @@ public:
 		std::fill(refCounter.begin(), refCounter.end(), 1);
 	}
 
-	void UpdateMaterials(textureLoader& loader)
+	void UpdateMaterials(const textureLoader& loader)
 	{
 		matUpdater upd(loader);
 		UpdateInvalidated(upd);

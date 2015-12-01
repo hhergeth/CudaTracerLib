@@ -48,7 +48,7 @@ struct SceneInitData
 		return r;
 	}
 
-	SceneInitData SceneInitData::operator*=(unsigned int s)
+	SceneInitData operator*=(unsigned int s) const
 	{
 		SceneInitData r = *this;
 		r.m_uNumMeshes *= s;

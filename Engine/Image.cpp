@@ -6,9 +6,9 @@
 
 #ifdef ISWINDOWS
 #include <windows.h>
-#include <cuda_gl_interop.h>
 #include <cuda_d3d11_interop.h>
 #endif
+#include <cuda_gl_interop.h>
 
 #define FREEIMAGE_LIB
 #include <FreeImage.h>

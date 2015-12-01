@@ -3,6 +3,7 @@
 #include <Math/AABB.h>
 #include "PhaseFunction.h"
 #include <VirtualFuncType.h>
+#include <CudaMemoryManager.h>
 
 //Implementation and interface copied from Mitsuba as well as PBRT.
 
@@ -127,8 +128,8 @@ public:
 	}
 	void Clear()
 	{
-		memset(data.host, 0, sizeof(T)* dim.x * dim.y * dim.z);
-		cudaMemset(data.device, 0, sizeof(T)* dim.x * dim.y * dim.z);
+		Platform::SetMemory(DenseVolGridBaseType::data.host, sizeof(T)* dim.x * dim.y * dim.z);
+		cudaMemset(DenseVolGridBaseType::data.device, 0, sizeof(T) * dim.x * dim.y * dim.z);
 	}
 	void Set(const T& val)
 	{
@@ -156,7 +157,7 @@ public:
 	CUDA_FUNC_IN T sampleTrilinear(const Vec3f& vsP) const
 	{
 		const Vec3f p = vsP - Vec3f(0.5f);
-		const Vec3u corner = Vec3u(unsigned int(p.x), unsigned int(p.y), unsigned int(p.z));
+		const Vec3u corner = Vec3u((unsigned int)p.x, (unsigned int)p.y, (unsigned int)p.z);
 		float weight[3];
 		T val = T(0);
 		Vec3u cl_l = Vec3u(0), cl_h = dim - Vec3u(1);

@@ -10,7 +10,6 @@
 #include <string>
 #include <vector>
 #include <cctype>
-#include <intrin.h>
 #include "TangentSpaceHelper.h"
 #include "Importer.h"
 #include <Base/FileStream.h>
@@ -23,6 +22,27 @@ enum format {
 	binary_big_endian_format = 1,
 	ascii_format = 2
 };
+
+//http://stackoverflow.com/questions/105252/how-do-i-convert-between-big-endian-and-little-endian-values-in-c
+//credits to Alexandre C.
+template <typename T>
+T swap_endian(T u)
+{
+    static_assert (CHAR_BIT == 8, "CHAR_BIT != 8");
+
+    union
+    {
+        T u;
+        unsigned char u8[sizeof(T)];
+    } source, dest;
+
+    source.u = u;
+
+    for (size_t k = 0; k < sizeof(T); k++)
+        dest.u8[k] = source.u8[sizeof(T) - k - 1];
+
+    return dest.u;
+}
 
 struct varReader
 {
@@ -86,16 +106,16 @@ struct varReader
 			*ures = *(unsigned char*)buf;
 			break;
 		case varReader::u16:
-			*ures = _byteswap_ushort(*(unsigned short*)buf);
+			*ures = swap_endian(*(unsigned short*)buf);
 			break;
 		case varReader::u32:
-			*ures = _byteswap_ulong(*(unsigned int*)buf);
+			*ures = swap_endian(*(unsigned int*)buf);
 			break;
 		case varReader::f32:
-			*fres = int_as_float_((_byteswap_ulong(*(unsigned int*)buf)));
+			*fres = int_as_float_((swap_endian(*(unsigned int*)buf)));
 			break;
 		case varReader::f64:
-			*fres = float_as_int_(_byteswap_uint64((unsigned int)*(double*)buf));
+			*fres = float_as_int_(swap_endian((unsigned int)*(double*)buf));
 			break;
 		default:
 			throw std::runtime_error("Invalid ply type!");

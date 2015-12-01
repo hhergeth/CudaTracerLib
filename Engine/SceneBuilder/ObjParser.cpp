@@ -703,7 +703,8 @@ void parse(ImportState& s, IInStream& in)
 		{
 			if (dirName.size())
 			{
-				boost::algorithm::trim(std::string(ptr));
+				std::string str = std::string(ptr);
+				boost::algorithm::trim(str);
 				std::string fileName = dirName + "/" + ptr;
 				MemInputStream mtlIn(fileName.c_str());
 				loadMtl(s, mtlIn, dirName);

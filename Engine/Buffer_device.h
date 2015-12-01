@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Defines.h>
+#include <limits>
 
 namespace CudaTracerLib {
 

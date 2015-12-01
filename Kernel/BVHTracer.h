@@ -152,7 +152,7 @@ template<typename CLB> CUDA_FUNC_IN bool TracerayTemplate(const Ray& r, float& r
 	nodeAddr = startNode;   // Start from the root.
 	while (nodeAddr != EntrypointSentinel)
 	{
-		while (unsigned int(nodeAddr) < unsigned int(EntrypointSentinel))
+		while ((unsigned int)nodeAddr < (unsigned int)EntrypointSentinel)
 		{
 			const float4 n0xy = data[bvhNodesOffset + nodeAddr + 0];
 			const float4 n1xy = data[bvhNodesOffset + nodeAddr + 1];

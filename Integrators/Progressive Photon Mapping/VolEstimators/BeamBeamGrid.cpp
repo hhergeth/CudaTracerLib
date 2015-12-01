@@ -100,7 +100,7 @@ void BeamBeamGrid::PrepareForRendering()
 		while (idx != UINT_MAX)
 		{
 			int beam_idx = hostIndices[idx].value;
-			if (bitset->at(beam_idx))
+			if ((*bitset)[beam_idx])
 			{
 				if (lastIdx == UINT_MAX)
 					throw 1;

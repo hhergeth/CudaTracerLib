@@ -377,7 +377,7 @@ private:
 	CUDA_DEVICE CUDA_HOST float internalPdfDirection(const Vec3f &d) const;
 };
 
-CUDA_ALIGN(16) struct KernelLight : public CudaVirtualAggregate<LightBase, PointLight, DiffuseLight, DistantLight, SpotLight, InfiniteLight>
+struct CUDA_ALIGN(16) KernelLight : public CudaVirtualAggregate<LightBase, PointLight, DiffuseLight, DistantLight, SpotLight, InfiniteLight>
 {
 public:
 	CALLER(sampleRay)

@@ -1,5 +1,5 @@
 #pragma once
-#include "Traceresult.h"
+#include "TraceResult.h"
 #include <Base/CudaRandom.h>
 #include <Engine/KernelDynamicScene.h>
 
