@@ -41,7 +41,7 @@ Material::Material(const std::string& name)
 	initbssrdf(bssrdf);
 }
 
-CUDA_FUNC_IN Vec2f parallaxOcclusion(const Vec2f& texCoord, KernelMIPMap* tex, const Vec3f& vViewTS, float HeightScale, int MinSamples, int MaxSamples)
+CUDA_FUNC_IN void parallaxOcclusion(Vec2f& texCoord, KernelMIPMap* tex, const Vec3f& vViewTS, float HeightScale, int MinSamples, int MaxSamples)
 {
 	const Vec2f vParallaxDirection = normalize(vViewTS.getXY());
 	float fLength = length(vViewTS);
@@ -89,7 +89,7 @@ CUDA_FUNC_IN Vec2f parallaxOcclusion(const Vec2f& texCoord, KernelMIPMap* tex, c
 	float Denominator = Delta2 - Delta1;
 	ParallaxAmount = Denominator != 0 ? (pt1.x * Delta2 - pt2.x * Delta1) / Denominator : 0;
 	Vec2f ParallaxOffset = vParallaxOffsetTS * (1 - ParallaxAmount);
-	return texCoord - ParallaxOffset;
+	texCoord -= ParallaxOffset;
 }
 
 bool Material::SampleNormalMap(DifferentialGeometry& dg, const Vec3f& wi) const
@@ -110,7 +110,7 @@ bool Material::SampleNormalMap(DifferentialGeometry& dg, const Vec3f& wi) const
 		Vec2f uv = map.Map(dg);
 		if (enableParallaxOcclusion)
 		{
-			uv = parallaxOcclusion(uv, HeightMap.tex.As<ImageTexture>()->tex.operator->(), dg.toLocal(-wi), HeightScale, parallaxMinSamples, parallaxMaxSamples);
+			parallaxOcclusion(uv, HeightMap.tex.As<ImageTexture>()->tex.operator->(), dg.toLocal(-wi), HeightScale, parallaxMinSamples, parallaxMaxSamples);
 			dg.uv[map.setId] = map.TransformPointInverse(uv);
 		}
 

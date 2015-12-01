@@ -232,16 +232,6 @@ void k_setNumRaysTraced(unsigned int i)
 #define DYNAMIC_FETCH_THRESHOLD 20
 #define STACK_SIZE 32
 __device__ int g_warpCounter;
-__device__ __inline__ int   min_min2   (int a, int b, int c) { int v; asm("vmin.s32.s32.s32.min %0, %1, %2, %3;" : "=r"(v) : "r"(a), "r"(b), "r"(c)); return v; }
-__device__ __inline__ int   min_max2   (int a, int b, int c) { int v; asm("vmin.s32.s32.s32.max %0, %1, %2, %3;" : "=r"(v) : "r"(a), "r"(b), "r"(c)); return v; }
-__device__ __inline__ int   max_min2   (int a, int b, int c) { int v; asm("vmax.s32.s32.s32.min %0, %1, %2, %3;" : "=r"(v) : "r"(a), "r"(b), "r"(c)); return v; }
-__device__ __inline__ int   max_max2   (int a, int b, int c) { int v; asm("vmax.s32.s32.s32.max %0, %1, %2, %3;" : "=r"(v) : "r"(a), "r"(b), "r"(c)); return v; }
-__device__ __inline__ float fmin_fmin2 (float a, float b, float c) { return __int_as_float(min_min2(__float_as_int(a), __float_as_int(b), __float_as_int(c))); }
-__device__ __inline__ float fmin_fmax2 (float a, float b, float c) { return __int_as_float(min_max2(__float_as_int(a), __float_as_int(b), __float_as_int(c))); }
-__device__ __inline__ float fmax_fmin2 (float a, float b, float c) { return __int_as_float(max_min2(__float_as_int(a), __float_as_int(b), __float_as_int(c))); }
-__device__ __inline__ float fmax_fmax2 (float a, float b, float c) { return __int_as_float(max_max2(__float_as_int(a), __float_as_int(b), __float_as_int(c))); }
-__device__ __inline__ float spanBeginKepler2(float a0, float a1, float b0, float b1, float c0, float c1, float d){	return fmax_fmax2( min(a0,a1), min(b0,b1), fmin_fmax2(c0, c1, d)); }
-__device__ __inline__ float spanEndKepler2(float a0, float a1, float b0, float b1, float c0, float c1, float d)	{	return fmin_fmin2( max(a0,a1), max(b0,b1), fmax_fmin2(c0, c1, d)); }
 
 template<bool ANY_HIT> __global__ void intersectKernel_SKIPOUTER(int numRays, traversalRay* a_RayBuffer, traversalResult* a_ResBuffer)
 {
@@ -351,14 +341,14 @@ template<bool ANY_HIT> __global__ void intersectKernel_SKIPOUTER(int numRays, tr
 				const float c0hiz = nz.y   * idirz - oodz;
 				const float c1loz = nz.z   * idirz - oodz;
 				const float c1hiz = nz.w   * idirz - oodz;
-				const float c0min = spanBeginKepler2(c0lox, c0hix, c0loy, c0hiy, c0loz, c0hiz, tmin);
-				const float c0max = spanEndKepler2  (c0lox, c0hix, c0loy, c0hiy, c0loz, c0hiz, hitT);
+				const float c0min = kepler_math::spanBeginKepler(c0lox, c0hix, c0loy, c0hiy, c0loz, c0hiz, tmin);
+				const float c0max = kepler_math::spanEndKepler(c0lox, c0hix, c0loy, c0hiy, c0loz, c0hiz, hitT);
 				const float c1lox = n1xy.x * idirx - oodx;
 				const float c1hix = n1xy.y * idirx - oodx;
 				const float c1loy = n1xy.z * idiry - oody;
 				const float c1hiy = n1xy.w * idiry - oody;
-				const float c1min = spanBeginKepler2(c1lox, c1hix, c1loy, c1hiy, c1loz, c1hiz, tmin);
-				const float c1max = spanEndKepler2  (c1lox, c1hix, c1loy, c1hiy, c1loz, c1hiz, hitT);
+				const float c1min = kepler_math::spanBeginKepler(c1lox, c1hix, c1loy, c1hiy, c1loz, c1hiz, tmin);
+				const float c1max = kepler_math::spanEndKepler(c1lox, c1hix, c1loy, c1hiy, c1loz, c1hiz, hitT);
 
 				bool swp = (c1min < c0min);
 
@@ -594,7 +584,7 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 		}
 
 		// Traversal loop.
-		TraceResult r2 = Traceray(Ray(a_RayBuffer[rayidx].a.getXYZ(), a_RayBuffer[rayidx].b.getXYZ()));
+		/*TraceResult r2 = Traceray(Ray(a_RayBuffer[rayidx].a.getXYZ(), a_RayBuffer[rayidx].b.getXYZ()));
 		int4 res = make_int4(0, 0, 0, 0);
 		if (r2.hasHit())
 		{
@@ -605,9 +595,9 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 			res.w = *(int*)&h;
 		}
 		((int4*)a_ResBuffer)[rayidx] = res;
-		nodeAddr = EntrypointSentinel;
+		nodeAddr = EntrypointSentinel;*/
 
-		/*if (g_SceneData.m_sNodeData.UsedCount == 0)
+		if (g_SceneData.m_sNodeData.UsedCount == 0)
 			nodeAddr = EntrypointSentinel;
 
 		while (nodeAddr != EntrypointSentinel)
@@ -633,14 +623,14 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 				const float c0hiz = nz.y   * idirz - oodz;
 				const float c1loz = nz.z   * idirz - oodz;
 				const float c1hiz = nz.w   * idirz - oodz;
-				const float c0min = spanBeginKepler2(c0lox, c0hix, c0loy, c0hiy, c0loz, c0hiz, tmin);
-				const float c0max = spanEndKepler2  (c0lox, c0hix, c0loy, c0hiy, c0loz, c0hiz, hitT);
+				const float c0min = kepler_math::spanBeginKepler(c0lox, c0hix, c0loy, c0hiy, c0loz, c0hiz, tmin);
+				const float c0max = kepler_math::spanEndKepler  (c0lox, c0hix, c0loy, c0hiy, c0loz, c0hiz, hitT);
 				const float c1lox = n1xy.x * idirx - oodx;
 				const float c1hix = n1xy.y * idirx - oodx;
 				const float c1loy = n1xy.z * idiry - oody;
 				const float c1hiy = n1xy.w * idiry - oody;
-				const float c1min = spanBeginKepler2(c1lox, c1hix, c1loy, c1hiy, c1loz, c1hiz, tmin);
-				const float c1max = spanEndKepler2  (c1lox, c1hix, c1loy, c1hiy, c1loz, c1hiz, hitT);
+				const float c1min = kepler_math::spanBeginKepler(c1lox, c1hix, c1loy, c1hiy, c1loz, c1hiz, tmin);
+				const float c1max = kepler_math::spanEndKepler  (c1lox, c1hix, c1loy, c1hiy, c1loz, c1hiz, hitT);
 
 				bool swp = (c1min < c0min);
 
@@ -663,7 +653,7 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 					if (traverseChild0 && traverseChild1)
 					{
 						if (swp)
-							swap(nodeAddr, cnodes.y);
+							swapk(nodeAddr, cnodes.y);
 						stackPtr += 4;
 						*(int*)stackPtr = cnodes.y;
 					}
@@ -746,14 +736,14 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 						const float c0hiz = nz.y   * lidirz - loodz;
 						const float c1loz = nz.z   * lidirz - loodz;
 						const float c1hiz = nz.w   * lidirz - loodz;
-						const float c0min = spanBeginKepler2(c0lox, c0hix, c0loy, c0hiy, c0loz, c0hiz, ltmin);
-						const float c0max = spanEndKepler2(c0lox, c0hix, c0loy, c0hiy, c0loz, c0hiz, lhitT);
+						const float c0min = kepler_math::spanBeginKepler(c0lox, c0hix, c0loy, c0hiy, c0loz, c0hiz, ltmin);
+						const float c0max = kepler_math::spanEndKepler(c0lox, c0hix, c0loy, c0hiy, c0loz, c0hiz, lhitT);
 						const float c1lox = n1xy.x * lidirx - loodx;
 						const float c1hix = n1xy.y * lidirx - loodx;
 						const float c1loy = n1xy.z * lidiry - loody;
 						const float c1hiy = n1xy.w * lidiry - loody;
-						const float c1min = spanBeginKepler2(c1lox, c1hix, c1loy, c1hiy, c1loz, c1hiz, ltmin);
-						const float c1max = spanEndKepler2(c1lox, c1hix, c1loy, c1hiy, c1loz, c1hiz, lhitT);
+						const float c1min = kepler_math::spanBeginKepler(c1lox, c1hix, c1loy, c1hiy, c1loz, c1hiz, ltmin);
+						const float c1max = kepler_math::spanEndKepler(c1lox, c1hix, c1loy, c1hiy, c1loz, c1hiz, lhitT);
 
 						bool swp = (c1min < c0min);
 
@@ -776,7 +766,7 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 							if (traverseChild0 && traverseChild1)
 							{
 								if (swp)
-									swap(lnodeAddr, cnodes.y);
+									swapk(lnodeAddr, cnodes.y);
 								lstackPtr += 4;
 								*(int*)lstackPtr = cnodes.y;
 							}
@@ -895,7 +885,7 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 			half2 h(bCorrds);
 			res.w = *(int*)&h;
 		}
-		((int4*)a_ResBuffer)[rayidx] = res;*/
+		((int4*)a_ResBuffer)[rayidx] = res;
 //outerlabel: ;
 	} while(true);
 }

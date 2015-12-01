@@ -126,8 +126,8 @@ struct AABB
 		float ty2 = maxV.y * I.y - OI.y;
 		float tz1 = minV.z * I.z - OI.z;
 		float tz2 = maxV.z * I.z - OI.z;
-		float mi = math::spanBeginKepler(tx1, tx2, ty1, ty2, tz1, tz2, 0);
-		float ma = math::spanEndKepler(tx1, tx2, ty1, ty2, tz1, tz2, FLT_MAX);
+		float mi = kepler_math::spanBeginKepler(tx1, tx2, ty1, ty2, tz1, tz2, 0);
+		float ma = kepler_math::spanEndKepler(tx1, tx2, ty1, ty2, tz1, tz2, FLT_MAX);
 		bool b = ma > mi && ma > 0;
 		if (min && b)
 			*min = mi;
@@ -144,8 +144,8 @@ struct AABB
 		float ty2 = (maxV.y - m_Ori.y) / m_Dir.y;
 		float tz1 = (minV.z - m_Ori.z) / m_Dir.z;
 		float tz2 = (maxV.z - m_Ori.z) / m_Dir.z;
-		float mi = math::spanBeginKepler(tx1, tx2, ty1, ty2, tz1, tz2, 0);
-		float ma = math::spanEndKepler(tx1, tx2, ty1, ty2, tz1, tz2, FLT_MAX);
+		float mi = kepler_math::spanBeginKepler(tx1, tx2, ty1, ty2, tz1, tz2, 0);
+		float ma = kepler_math::spanEndKepler(tx1, tx2, ty1, ty2, tz1, tz2, FLT_MAX);
 		bool b = ma > mi && ma > 0;
 		if (min && b)
 			*min = mi;

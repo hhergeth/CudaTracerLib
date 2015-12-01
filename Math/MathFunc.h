@@ -121,47 +121,6 @@ public:
 		return (r < 0) ? r + b : r;
 	}
 
-	CUDA_FUNC_IN static int min_min(int a, int b, int c)
-	{
-#ifdef ISCUDA
-		int v; asm("vmin.s32.s32.s32.min %0, %1, %2, %3;" : "=r"(v) : "r"(a), "r"(b), "r"(c)); return v;
-#else
-		return min(a, b, c);
-#endif
-	}
-	CUDA_FUNC_IN static int min_max(int a, int b, int c)
-	{
-#ifdef ISCUDA
-		int v; asm("vmin.s32.s32.s32.max %0, %1, %2, %3;" : "=r"(v) : "r"(a), "r"(b), "r"(c)); return v;
-#else
-		return max(min(a, b), c);
-#endif
-	}
-	CUDA_FUNC_IN static int max_min(int a, int b, int c)
-	{
-#ifdef ISCUDA
-		int v; asm("vmax.s32.s32.s32.min %0, %1, %2, %3;" : "=r"(v) : "r"(a), "r"(b), "r"(c)); return v;
-#else
-		return min(max(a, b), c);
-#endif
-	}
-	CUDA_FUNC_IN static int max_max(int a, int b, int c)
-	{
-#ifdef ISCUDA
-		int v; asm("vmax.s32.s32.s32.max %0, %1, %2, %3;" : "=r"(v) : "r"(a), "r"(b), "r"(c)); return v;
-#else
-		return max(a, b, c);
-#endif
-	}
-
-	CUDA_FUNC_IN static float fmin_fmin(float a, float b, float c) { return int_as_float_(min_min(float_as_int_(a), float_as_int_(b), float_as_int_(c))); }
-	CUDA_FUNC_IN static float fmin_fmax(float a, float b, float c) { return int_as_float_(min_max(float_as_int_(a), float_as_int_(b), float_as_int_(c))); }
-	CUDA_FUNC_IN static float fmax_fmin(float a, float b, float c) { return int_as_float_(max_min(float_as_int_(a), float_as_int_(b), float_as_int_(c))); }
-	CUDA_FUNC_IN static float fmax_fmax(float a, float b, float c) { return int_as_float_(max_max(float_as_int_(a), float_as_int_(b), float_as_int_(c))); }
-
-	CUDA_FUNC_IN static float spanBeginKepler(float a0, float a1, float b0, float b1, float c0, float c1, float d) { return fmax_fmax(min(a0, a1), min(b0, b1), fmin_fmax(c0, c1, d)); }
-	CUDA_FUNC_IN static float spanEndKepler(float a0, float a1, float b0, float b1, float c0, float c1, float d) { return fmin_fmin(max(a0, a1), max(b0, b1), fmax_fmin(c0, c1, d)); }
-
 	template<typename T> CUDA_FUNC_IN static T sign(T f)
 	{
 		return f > T(0) ? T(1) : (f < T(0) ? T(-1) : T(0));
@@ -232,11 +191,6 @@ public:
 		v |= v >> 4;    v |= v >> 8;
 		v |= v >> 16;
 		return v + 1;
-	}
-
-	CUDA_FUNC_IN static float variance(float x, float x2, float n)
-	{
-		return x2 / n - x / n * x / n;
 	}
 
 	CUDA_FUNC_IN static float    sqrt(float a)         { return ::sqrt(a); }
@@ -377,6 +331,51 @@ public:
 	template <class T> CUDA_FUNC_IN static T sqr(const T& a) { return a * a; }
 	template <class T> CUDA_FUNC_IN static T rcp(const T& a) { return (a) ? (T)1 / a : (T)0; }
 	template <class A, class B> CUDA_FUNC_IN static A lerp(const A& a, const A& b, const B& t) { return (A)(a * ((B)1 - t) + b * t); }
+};
+
+class kepler_math
+{
+public:
+	CUDA_FUNC_IN static int min_min(int a, int b, int c)
+	{
+#ifdef ISCUDA
+		int v; asm("vmin.s32.s32.s32.min %0, %1, %2, %3;" : "=r"(v) : "r"(a), "r"(b), "r"(c)); return v;
+#else
+		return min(a, b, c);
+#endif
+	}
+	CUDA_FUNC_IN static int min_max(int a, int b, int c)
+	{
+#ifdef ISCUDA
+		int v; asm("vmin.s32.s32.s32.max %0, %1, %2, %3;" : "=r"(v) : "r"(a), "r"(b), "r"(c)); return v;
+#else
+		return max(min(a, b), c);
+#endif
+	}
+	CUDA_FUNC_IN static int max_min(int a, int b, int c)
+	{
+#ifdef ISCUDA
+		int v; asm("vmax.s32.s32.s32.min %0, %1, %2, %3;" : "=r"(v) : "r"(a), "r"(b), "r"(c)); return v;
+#else
+		return min(max(a, b), c);
+#endif
+	}
+	CUDA_FUNC_IN static int max_max(int a, int b, int c)
+	{
+#ifdef ISCUDA
+		int v; asm("vmax.s32.s32.s32.max %0, %1, %2, %3;" : "=r"(v) : "r"(a), "r"(b), "r"(c)); return v;
+#else
+		return max(a, b, c);
+#endif
+	}
+
+	CUDA_FUNC_IN static float fmin_fmin(float a, float b, float c) { return int_as_float_(min_min(float_as_int_(a), float_as_int_(b), float_as_int_(c))); }
+	CUDA_FUNC_IN static float fmin_fmax(float a, float b, float c) { return int_as_float_(min_max(float_as_int_(a), float_as_int_(b), float_as_int_(c))); }
+	CUDA_FUNC_IN static float fmax_fmin(float a, float b, float c) { return int_as_float_(max_min(float_as_int_(a), float_as_int_(b), float_as_int_(c))); }
+	CUDA_FUNC_IN static float fmax_fmax(float a, float b, float c) { return int_as_float_(max_max(float_as_int_(a), float_as_int_(b), float_as_int_(c))); }
+
+	CUDA_FUNC_IN static float spanBeginKepler(float a0, float a1, float b0, float b1, float c0, float c1, float d) { return fmax_fmax(min(a0, a1), min(b0, b1), fmin_fmax(c0, c1, d)); }
+	CUDA_FUNC_IN static float spanEndKepler(float a0, float a1, float b0, float b1, float c0, float c1, float d) { return fmin_fmin(max(a0, a1), max(b0, b1), fmax_fmin(c0, c1, d)); }
 };
 
 }
