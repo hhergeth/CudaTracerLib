@@ -74,9 +74,9 @@ CUDA_FUNC_IN void sincos(float f, float* a, float* b)
 	TEMPLATE CUDA_FUNC_IN T min(K T& a, K T& b) { return MIN; } \
 	TEMPLATE CUDA_FUNC_IN T max(K T& a, K T& b) { return MAX; } \
 	TEMPLATE CUDA_FUNC_IN T min(K T& a, K T& b, K T& c) { T d = min(a, b); return min(d, c); } \
-	TEMPLATE CUDA_FUNC_IN T max(K T& a, K T& b, K T& c) { T d = min(a, b); return min(d, c); } \
+	TEMPLATE CUDA_FUNC_IN T max(K T& a, K T& b, K T& c) { T d = max(a, b); return max(d, c); } \
 	TEMPLATE CUDA_FUNC_IN T min(K T& a, K T& b, K T& c, K T& d) { T e = min(a,b,c); return min(e, d); } \
-	TEMPLATE CUDA_FUNC_IN T max(K T& a, K T& b, K T& c, K T& d) { T e = min(a,b,c); return min(e, d); } \
+	TEMPLATE CUDA_FUNC_IN T max(K T& a, K T& b, K T& c, K T& d) { T e = max(a,b,c); return max(e, d); } \
 
 FW_SPECIALIZE_MINMAX(template <class T>, T, , (a < b) ? a : b, (a > b) ? a : b)
 FW_SPECIALIZE_MINMAX(template <class T>, T, const, (a < b) ? a : b, (a > b) ? a : b)

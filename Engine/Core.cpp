@@ -8,6 +8,7 @@
 #include "MIPMap.h"
 #include <Kernel/Tracer.h>
 #include <ctime>
+#include <cuda_runtime.h>
 
 namespace CudaTracerLib {
 
