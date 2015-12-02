@@ -166,7 +166,7 @@ public:
 		m_uPassesDone++;
 		DoRender(I);
 		I->DoUpdateDisplay(getSplatScale());
-		if (USE_BLOCKSAMPLER)
+		if (USE_BLOCKSAMPLER && m_sParameters.getValue(KEY_SamplerActive()))
 			m_pBlockSampler->AddPass();
 		ThrowCudaErrors(cudaEventRecord(stop, 0));
 		ThrowCudaErrors(cudaEventSynchronize(stop));

@@ -22,7 +22,7 @@ enum EMeasure {
 	EDiscrete = 4
 };
 
-enum class ETransportMode
+enum ETransportMode : int
 {
 	ERadiance = 0,
 	EImportance = 1,

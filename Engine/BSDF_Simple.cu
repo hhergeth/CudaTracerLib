@@ -120,7 +120,7 @@ Spectrum dielectric::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &s
 			bRec.eta = cosThetaT < 0 ? m_eta : m_invEta;
 			pdf = 1 - F;
 
-			float factor = (bRec.mode == ERadiance)
+			float factor = (bRec.mode == ETransportMode::ERadiance)
 				? (cosThetaT < 0 ? m_invEta : m_eta) : 1.0f;
 
 			return m_specularTransmittance.Evaluate(bRec.dg) * (factor * factor);// / (1 - f) * (1 - F);
@@ -140,7 +140,7 @@ Spectrum dielectric::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &s
 		bRec.eta = cosThetaT < 0 ? m_eta : m_invEta;
 		pdf = 1.0f;
 
-		float factor = (bRec.mode == ERadiance)
+		float factor = (bRec.mode == ETransportMode::ERadiance)
 			? (cosThetaT < 0 ? m_invEta : m_eta) : 1.0f;
 
 		return m_specularTransmittance.Evaluate(bRec.dg) * (factor * factor * (1 - F));
@@ -168,7 +168,7 @@ Spectrum dielectric::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 
 		/* Radiance must be scaled to account for the solid angle compression
 			that occurs when crossing the interface. */
-		float factor = (bRec.mode == ERadiance)
+		float factor = (bRec.mode == ETransportMode::ERadiance)
 			? (cosThetaT < 0 ? m_invEta : m_eta) : 1.0f;
 
 		return m_specularTransmittance.Evaluate(bRec.dg)  * factor * factor * (1 - F);
@@ -424,7 +424,7 @@ Spectrum roughdielectric::f(const BSDFSamplingRecord &bRec, EMeasure measure) co
 		/* Missing term in the original paper: account for the solid angle
 			compression when tracing radiance -- this is necessary for
 			bidirectional methods */
-		float factor = (bRec.mode == ERadiance)
+		float factor = (bRec.mode == ETransportMode::ERadiance)
 			? (Frame::cosTheta(bRec.wi) > 0 ? m_invEta : m_eta) : 1.0f;
 
 		return m_specularTransmittance.Evaluate(bRec.dg)
@@ -529,7 +529,7 @@ Spectrum roughdielectric::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec
 
 		/* Radiance must be scaled to account for the solid angle compression
 		that occurs when crossing the interface. */
-		float factor = (bRec.mode == ERadiance)
+		float factor = (bRec.mode == ETransportMode::ERadiance)
 			? (cosThetaT < 0 ? m_invEta : m_eta) : (1.0f);
 
 		result = m_specularTransmittance.Evaluate(bRec.dg) * (factor * factor);

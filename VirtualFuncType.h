@@ -123,12 +123,14 @@ protected:
 		SetVtable<CLASS2, REST...>();
 	}
 public:
+
+	//cannot use ISCUDA due to nvcc believing a non default constructor exists
+#ifndef __CUDACC__
 	CUDA_FUNC_IN CudaVirtualAggregate()
 	{
-#ifndef ISCUDA
 		Platform::SetMemory(this, sizeof(*this));
-#endif
 	}
+#endif
 
 	template<typename SpecializedType> CUDA_FUNC_IN SpecializedType* As() const
 	{

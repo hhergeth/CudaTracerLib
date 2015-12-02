@@ -4,8 +4,6 @@
 
 #ifdef ISWINDOWS
 #include <Windows.h>
-#elif ISUNIX
-
 #endif
 
 namespace CudaTracerLib {
@@ -15,11 +13,9 @@ unsigned int Platform::Increment(unsigned int* add)
 #if defined(ISCUDA)
 	return atomicInc(add, UINT_MAX);
 #elif defined(ISWINDOWS)
-	return InterlockedIncrement(add);
-#elif defined(ISUNIX)
-	unsigned int v = *add;
-	*add++;
-	return v;
+	return InterlockedExchangeAdd(add, 1);
+#else
+	return __sync_fetch_and_add(add, 1);
 #endif
 }
 
@@ -28,11 +24,9 @@ unsigned int Platform::Add(unsigned int* add, unsigned int val)
 #if defined(ISCUDA)
 	return atomicAdd(add, val);
 #elif defined(ISWINDOWS)
-	return InterlockedAdd((long*)add, val);
-#elif defined(ISUNIX)
-	unsigned int v = *add;
-	*add += val;
-	return v;
+	return InterlockedExchangeAdd(add, val);
+#else
+	return __sync_fetch_and_add(add, val);
 #endif
 }
 
@@ -42,10 +36,8 @@ unsigned int Platform::Exchange(unsigned int* add, unsigned int val)
 	return atomicExch(add, val);
 #elif defined(ISWINDOWS)
 	return InterlockedExchange(add, val);
-#elif defined(ISUNIX)
-	unsigned int old = *add;
-	*add = val;
-	return old;
+#else
+	return __atomic_exchange_n(add, val);
 #endif
 }
 
@@ -69,7 +61,7 @@ void Platform::OutputDebug(const std::string& msg)
 {
 #if defined(ISWINDOWS)
 	OutputDebugString(msg.c_str());
-#elif defined(ISUNIX)
+#else
 
 #endif
 }

@@ -103,7 +103,7 @@ CUDA_FUNC_IN Spectrum sample(const Spectrum& s_, BSDFSamplingRecord& bRec, CudaR
 		bRec.wo = refract(bRec.wi, cosThetaT, eta);
 		bRec.eta = cosThetaT < 0 ? eta : (1.0f / eta);
 
-		float factor = (bRec.mode == ERadiance) ? (cosThetaT < 0 ? (1.0f / eta) : eta) : 1.0f;
+		float factor = (bRec.mode == ETransportMode::ERadiance) ? (cosThetaT < 0 ? (1.0f / eta) : eta) : 1.0f;
 
 		return s * (factor * factor);
 	}

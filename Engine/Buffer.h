@@ -221,7 +221,7 @@ public:
 		{
 			for (size_t i = it->lower(); i < it->upper(); i++)
 			{
-				f(BufferRange<H, D>::operator()(i, 1));
+				f(BufferBase<H, D>::operator()(i, 1));
 				if (m_bUpdateElement)
 					updateElement(i);
 			}

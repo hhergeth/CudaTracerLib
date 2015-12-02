@@ -11,8 +11,6 @@ namespace CudaTracerLib {
 
 #ifdef _MSC_VER
 #define ISWINDOWS
-#else
-#define ISUNIX
 #endif
 
 //__forceinline__
@@ -44,6 +42,10 @@ namespace CudaTracerLib {
 
 #ifdef __CUDA_ARCH__  
 #define ISCUDA
+#endif
+
+#ifndef __func__
+#define __func__ __FUNCTION__
 #endif
 
 #if _DEBUG

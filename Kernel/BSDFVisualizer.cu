@@ -27,7 +27,7 @@ CUDA_FUNC_IN Spectrum func(BSDFALL& bsdf, Vec3f wo, int w, int h, int x, int y, 
 	dg.sys = Frame(dg.n);
 	BSDFSamplingRecord bRec(dg);
 	bRec.eta = 1;
-	bRec.mode = ERadiance;
+	bRec.mode = ETransportMode::ERadiance;
 	bRec.typeMask = EAll;
 	bRec.wi = wo;
 	Vec2f xy = Vec2f(x, y) / Vec2f(w, h);
@@ -49,7 +49,7 @@ CUDA_FUNC_IN Spectrum func2(BSDFALL& bsdf, InfiniteLight& light, CudaRNG& rng, f
 	dg.sys = Frame(dg.n);
 	BSDFSamplingRecord bRec(dg);
 	bRec.eta = 1;
-	bRec.mode = ERadiance;
+	bRec.mode = ETransportMode::ERadiance;
 	bRec.typeMask = EAll;
 	Vec2f xy = Vec2f(x, y) / Vec2f(w, h);
 	//if (length(2.0f * xy - Vec2f(1)) > 1)

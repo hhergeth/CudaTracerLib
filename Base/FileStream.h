@@ -79,15 +79,16 @@ public:
 		Read(rhs); \
 		return *this; \
 	}
-	DCL_IN(char)
-	DCL_IN(short)
+	DCL_IN(signed char)
+	DCL_IN(short int)
 	DCL_IN(int)
+	DCL_IN(long int)
 	DCL_IN(long long)
 	DCL_IN(unsigned char)
 	DCL_IN(unsigned short)
 	DCL_IN(unsigned int)
+	DCL_IN(unsigned long int)
 	DCL_IN(unsigned long long)
-	DCL_IN(size_t)
 	DCL_IN(float)
 	DCL_IN(double)
 	DCL_IN(Vec2i)
@@ -216,15 +217,16 @@ public:
 		Write(rhs); \
 		return *this; \
 		}
-	DCL_OUT(char)
-	DCL_OUT(short)
+	DCL_OUT(signed char)
+	DCL_OUT(short int)
 	DCL_OUT(int)
+	DCL_OUT(long int)
 	DCL_OUT(long long)
 	DCL_OUT(unsigned char)
 	DCL_OUT(unsigned short)
 	DCL_OUT(unsigned int)
+	DCL_OUT(unsigned long int)
 	DCL_OUT(unsigned long long)
-	DCL_OUT(size_t)
 	DCL_OUT(float)
 	DCL_OUT(double)
 	DCL_OUT(Vec2i)
