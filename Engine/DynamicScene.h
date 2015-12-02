@@ -81,7 +81,7 @@ public:
 	//Creates and returns an environment map, using \ref power as scaling factor and \ref file as texture
 	BufferReference<KernelLight, KernelLight> setEnvironementMap(const Spectrum& power, const std::string& file);
 
-	BufferReference<VolumeRegion, VolumeRegion> AddVolume(VolumeRegion& r);
+	BufferReference<VolumeRegion, VolumeRegion> AddVolume(const VolumeRegion& r);
 	//Creates a volume with a grid size of \ref {w, h, d} and a transformation \ref worldToVol
 	BufferReference<VolumeRegion, VolumeRegion> AddVolume(int w, int h, int d, const float4x4& worldToVol, const PhaseFunction& p);
 	//Creates a volume with seperate grid sizes for absorption, scattering and emission and a transformation \ref worldToVol

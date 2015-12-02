@@ -631,7 +631,7 @@ void DynamicScene::removeAllLights(StreamReference<Node> Node)
 		removeLight(Node, j);
 }
 
-StreamReference<VolumeRegion> DynamicScene::AddVolume(VolumeRegion& r)
+StreamReference<VolumeRegion> DynamicScene::AddVolume(const VolumeRegion& r)
 {
 	StreamReference<VolumeRegion> r2 = m_pVolumes->malloc(1);
 	*r2.operator->() = r;

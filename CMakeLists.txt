@@ -7,11 +7,12 @@ FIND_PACKAGE( Boost COMPONENTS system filesystem iostreams REQUIRED )
 INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIR} )
 
 # Specify include directories
-include_directories(../qMatrixLib/)
+set(QMATRIX_INCLUDE_DIR "" CACHE FILEPATH "Path to qMatrixLib")
+include_directories(${QMATRIX_INCLUDE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-find_path(SIFTGPU_INCLUDE_DIR FreeImage.h)
-include_directories(${SIFTGPU_INCLUDE_DIR})
+find_path(FREEIMAGE_INCLUDE_DIR FreeImage.h)
+include_directories(${FREEIMAGE_INCLUDE_DIR})
 
 find_package(CUDA REQUIRED)
 # Pass options to NVCC
@@ -52,6 +53,6 @@ file(GLOB_RECURSE CTL_CU
 
 set(LIB_NAME "CudaTracerLib")
 
-cuda_add_executable(${LIB_NAME} ${CTL_SRC} ${CTL_CU} ${CTL_SRC_ROOT} ${CTL_CU_ROOT})
+cuda_add_library(${LIB_NAME} ${CTL_SRC} ${CTL_CU} ${CTL_SRC_ROOT} ${CTL_CU_ROOT})
 target_link_libraries(${LIB_NAME} freeimage.so)
 target_link_libraries(${LIB_NAME} ${Boost_LIBRARIES})
