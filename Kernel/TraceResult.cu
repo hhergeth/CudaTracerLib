@@ -1,4 +1,4 @@
-#include "Traceresult.h"
+#include "TraceResult.h"
 #include <Engine/TriangleData.h>
 #include <Engine/Node.h>
 #include "TraceHelper.h"

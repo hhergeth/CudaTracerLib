@@ -458,8 +458,7 @@ template<int SEARCH_STEPS> __global__ void generateRelaxedConeMap(imgData img, f
 }
 
 void MIPMap::CreateRelaxedConeMap(const std::string& a_InputFile, FileOutputStream& a_Out)
-{
-	imgData data;
+{	imgData data;
 	if (!parseImage(a_InputFile, data))
 		throw std::runtime_error("Impossible to load texture file!");
 	RGBCOL* hostData = (RGBCOL*)data.d(), *deviceData;
@@ -469,7 +468,7 @@ void MIPMap::CreateRelaxedConeMap(const std::string& a_InputFile, FileOutputStre
 	float* deviceDepthData;
 	CUDA_MALLOC(&deviceDepthData, data.w() * data.h() * 4);
 	generateRelaxedConeMap<32, 64> << < dim3(data.w() / 16 + 1, data.h() / 16 + 1), dim3(16, 16) >> >(data, deviceDepthData);
-	ThrowCudaErrors();
+	ThrowCudaErrors2();
 
 	CUDA_FREE(deviceData);
 	data.d(hostData);
@@ -505,11 +504,11 @@ void MIPMap::CreateRelaxedConeMap(const std::string& a_InputFile, FileOutputStre
 
 	a_Out << data.w();
 	a_Out << data.h();
-	a_Out << unsigned int(4);
+	a_Out << (unsigned int)4;
 	a_Out << (int)data.t();
 	a_Out << (int)TEXTURE_REPEAT;
 	a_Out << (int)TEXTURE_Anisotropic;
-	a_Out << unsigned int(1);
+	a_Out << (unsigned int)1;
 	a_Out << data.w() * data.h() * 8;
 
 	float2* imgData = new float2[data.w() * data.h()];

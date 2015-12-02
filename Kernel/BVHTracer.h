@@ -33,7 +33,7 @@ template<typename CLB> CUDA_FUNC_IN bool TracerayTemplate(const Ray& r, float& r
 	nodeAddr = startNode;   // Start from the root.
 	while (nodeAddr != EntrypointSentinel)
 	{
-		while (unsigned int(nodeAddr) < unsigned int(EntrypointSentinel))
+		while (((unsigned int)nodeAddr) < ((unsigned int)EntrypointSentinel))
 		{
 #ifdef ISCUDA
 			const float4 n0xy = tex1Dfetch(bvhNodes_texture, bvhNodesOffset + nodeAddr + 0); // (c0.lo.x, c0.hi.x, c0.lo.y, c0.hi.y)

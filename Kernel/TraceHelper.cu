@@ -355,7 +355,7 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 		while (nodeAddr != EntrypointSentinel)
 		{
 			// Traverse internal nodes until all SIMD lanes have found a leaf.
-			while (unsigned int(nodeAddr) < unsigned int(EntrypointSentinel))   // functionally equivalent, but faster
+			while (((unsigned int)nodeAddr) < ((unsigned int)EntrypointSentinel))   // functionally equivalent, but faster
 			{
 				// Fetch AABBs of the two child nodes.
 
@@ -470,7 +470,7 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 
 				while (lnodeAddr != EntrypointSentinel)
 				{
-					while (unsigned int(lnodeAddr) < unsigned int(EntrypointSentinel))
+					while (((unsigned int)lnodeAddr) < ((unsigned int)EntrypointSentinel))
 					{
 						const float4 n0xy = tex1Dfetch(t_nodesA, lnodeAddr + 0 + m_uBVHNodeOffset); // (c0.lo.x, c0.hi.x, c0.lo.y, c0.hi.y)
 						const float4 n1xy = tex1Dfetch(t_nodesA, lnodeAddr + 1 + m_uBVHNodeOffset); // (c1.lo.x, c1.hi.x, c1.lo.y, c1.hi.y)

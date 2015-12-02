@@ -1,4 +1,5 @@
 #pragma once
+#include <stdexcept>
 #include <Defines.h>
 #include <string>
 #include <cstdarg>

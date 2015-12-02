@@ -37,7 +37,7 @@ unsigned int Platform::Exchange(unsigned int* add, unsigned int val)
 #elif defined(ISWINDOWS)
 	return InterlockedExchange(add, val);
 #else
-	return __atomic_exchange_n(add, val);
+	return __atomic_exchange_n(add, val, __ATOMIC_SEQ_CST);
 #endif
 }
 

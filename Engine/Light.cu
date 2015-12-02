@@ -97,7 +97,7 @@ Spectrum DiffuseLight::sampleDirect(DirectSamplingRecord &dRec, const Vec2f &_sa
 	{
 		//sample random triangle using uniform pdf
 		float xN = shapeSet.numTriangles() * sample.x;
-		unsigned int t_idx = unsigned int(xN);
+		unsigned int t_idx = (unsigned int)xN;
 		//resample sample
 		sample.x = xN - t_idx;
 		const ShapeSet::triData& tri = shapeSet.getTriangle(t_idx);
@@ -455,7 +455,7 @@ void InfiniteLight::internalSampleDirection(Vec2f sample, Vec3f &d, Spectrum &va
 {
 	float qpdf;
 	unsigned int	row = MonteCarlo::sampleReuse(m_cdfRows.operator->(), m_size.y, sample.y, qpdf),
-		col = MonteCarlo::sampleReuse(m_cdfCols.operator->() + row * unsigned int(m_size.x + 1), m_size.x, sample.x, qpdf);
+		col = MonteCarlo::sampleReuse(m_cdfCols.operator->() + row * (unsigned int)(m_size.x + 1), m_size.x, sample.x, qpdf);
 
 	/* Using the remaining bits of precision to shift the sample by an offset
 		drawn from a tent function. This effectively creates a sampling strategy
@@ -465,7 +465,7 @@ void InfiniteLight::internalSampleDirection(Vec2f sample, Vec3f &d, Spectrum &va
 	//Vec2f pos = sample * m_size;
 
 	/* Bilinearly interpolate colors from the adjacent four neighbors */
-	int xPos = math::clamp(math::Floor2Int(pos.x), 0, int(m_size.x - 1)), yPos = math::clamp(math::Floor2Int(pos.y), 0, int(m_size.y - 1));
+	int xPos = math::clamp(math::Floor2Int(pos.x), 0, (int)(m_size.x - 1)), yPos = math::clamp(math::Floor2Int(pos.y), 0, (int)(m_size.y - 1));
 	float dx1 = pos.x - xPos, dx2 = 1.0f - dx1,
 		dy1 = pos.y - yPos, dy2 = 1.0f - dy1;
 
@@ -476,8 +476,8 @@ void InfiniteLight::internalSampleDirection(Vec2f sample, Vec3f &d, Spectrum &va
 
 	/* Compute the final color and probability density of the sample */
 	value = (value1 + value2) * m_scale;
-	pdf = (value1.getLuminance() * m_rowWeights[(int)math::clamp(float(yPos), 0.0f, m_size.y - 1.0f)] +
-		value2.getLuminance() * m_rowWeights[(int)math::clamp(float(yPos + 1), 0.0f, m_size.y - 1.0f)]) * m_normalization;
+	pdf = (value1.getLuminance() * m_rowWeights[(int)math::clamp((float)yPos, 0.0f, m_size.y - 1.0f)] +
+		value2.getLuminance() * m_rowWeights[(int)math::clamp((float)(yPos + 1), 0.0f, m_size.y - 1.0f)]) * m_normalization;
 
 	/* Turn into a proper direction on the sphere */
 	float sinPhi, cosPhi, sinTheta, cosTheta;

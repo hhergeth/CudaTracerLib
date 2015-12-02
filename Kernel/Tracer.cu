@@ -26,7 +26,7 @@ template<bool RECURSIVE> __global__ void k_GuessPass(int w, int h, float scx, fl
 			r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
 			r = Ray(dg.P, bRec.getOutgoing());
 			Vec3f per = math::clamp01((dg.P - g_SceneData.m_sBox.minV) / (g_SceneData.m_sBox.maxV - g_SceneData.m_sBox.minV)) * float(UINT_MAX);
-			Vec3u q = Vec3u(unsigned int(per.x), unsigned int(per.y), unsigned int(per.z));
+			Vec3u q = Vec3u((unsigned int)per.x, (unsigned int)per.y, (unsigned int)per.z);
 			atomicMin(&g_EyeHitBoxMin.x, q.x);
 			atomicMin(&g_EyeHitBoxMin.y, q.y);
 			atomicMin(&g_EyeHitBoxMin.z, q.z);
@@ -43,7 +43,7 @@ template<bool RECURSIVE> __global__ void k_GuessPass(int w, int h, float scx, fl
 
 AABB TracerBase::GetEyeHitPointBox(DynamicScene* m_pScene, bool recursive)
 {
-	ThrowCudaErrors();
+	ThrowCudaErrors2();
 	Vec3u ma = Vec3u(0), mi = Vec3u(UINT_MAX);
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_EyeHitBoxMin, &mi, 12));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_EyeHitBoxMax, &ma, 12));

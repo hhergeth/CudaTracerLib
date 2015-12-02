@@ -58,14 +58,14 @@ CUDA_FUNC_IN unsigned int FloatToUInt(float f)
 {
 	//int mask = -int(*(unsigned int*)&f >> 31) | 0x80000000;
 	//return (*(unsigned int*)&f) ^ mask;
-	return unsigned int(math::clamp(f, 0.0f, 100.0f) * 1000000);
+	return (unsigned int)(math::clamp(f, 0.0f, 100.0f) * 1000000);
 }
 
 CUDA_FUNC_IN float UIntToFloat(unsigned int f)
 {
 	//unsigned int mask = ((f >> 31) - 1) | 0x80000000, q = f ^ mask;
 	//return *(float*)&q;
-	return float(f) / 1000000.0f;
+	return f / 1000000.0f;
 }
 
 ///Reinhard Tone Mapping Operator

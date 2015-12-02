@@ -296,7 +296,7 @@ RGBCOL Spectrum::toRGBCOL() const
 	float r,g,b;
 	toLinearRGB(r,g,b);
 //#define toInt(x) (unsigned char((float)math::pow(math::clamp01(x),1.0f/1.2f)*255.0f+0.5f))
-#define toInt(x) unsigned char(math::clamp01(x) * 255.0f)
+#define toInt(x) (unsigned char)(math::clamp01(x) * 255.0f)
 	return make_uchar4(toInt(r), toInt(g), toInt(b), 255);
 #undef toInt
 }
@@ -712,7 +712,7 @@ void Spectrum::fromContinuousSpectrum(const float* wls, const float* vals, unsig
 	X *= normalization; Y *= normalization; Z *= normalization;
 
 	fromXYZ(X, Y, Z);
-#else*/
+#else
 	/* Spectral rendering mode -- average over each bin */
 	float * m_wavelengths = SpectrumHelper::getData()->m_wavelengths;
 	for (int i=0; i<SPECTRUM_SAMPLES; i++)
@@ -774,8 +774,7 @@ void SpectrumHelper::staticData::init()
 void SpectrumHelper::StaticInitialize()
 {
 	host.init();
-	cudaError r= cudaMemcpyToSymbol(device, &host, sizeof(staticData));
-	if(r)throw std::runtime_error(__FUNCTION__);
+	ThrowCudaErrors(cudaMemcpyToSymbol(device, &host, sizeof(staticData)));
 }
 
 void SpectrumHelper::StaticDeinitialize()

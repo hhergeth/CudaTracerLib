@@ -3,11 +3,11 @@
 #include <CudaMemoryManager.h>
 #include <MathTypes.h>
 #include "RoughTransmittance.h"
-#define FREEIMAGE_LIB
-#include <FreeImage.h>
 #include "MIPMap.h"
 #include <Kernel/Tracer.h>
 #include <ctime>
+#define FREEIMAGE_LIB
+#include <FreeImage.h>
 
 namespace CudaTracerLib {
 

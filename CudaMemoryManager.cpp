@@ -10,7 +10,7 @@ std::vector<CudaMemoryEntry> CudaMemoryManager::freed_entries;
 cudaError_t CudaMemoryManager::Cuda_malloc_managed(void** v, size_t i, const std::string& callig_func)
 {
 	cudaError_t r = cudaMalloc(v, i);
-	if (r == CUDA_SUCCESS)
+	if (r == cudaError_t::cudaSuccess)
 	{
 		CudaMemoryEntry e;
 		e.address = *v;

@@ -88,6 +88,7 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const Vec3f& wi, float
 	});
 	return Lp / g_NumPhotonEmitted2;
 #endif
+	return 1.0f;
 }
 
 CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED, const Material* mat, k_AdaptiveStruct& A, int x, int y,
@@ -260,21 +261,6 @@ __global__ void k_EyePass2(Vec2i off, int w, int h, float a_PassIndex, float a_r
 	img.Add(pixel.x, pixel.y, Spectrum(rq > 0 ? rq : 0, rq < 0 ? -rq : 0, 0));
 	//float ab = getCurrentRadius(A(pixel.x, pixel.y).r, a_PassIndex, 2) < a_rSurface;
 	//img.Add(pixel.x, pixel.y, Spectrum(ab));
-}
-
-__global__ void debugEye(int x, int y)
-{
-	Ray r = g_SceneData.GenerateSensorRay(x, y);
-	BeamBeamGrid* grid = (BeamBeamGrid*)g_VolEstimator2;
-#ifdef ISCUDA
-	TraverseGrid(r, grid->m_sStorage.hashMap, 0, FLT_MAX, [&](float minT, float rayT, float maxT, float cellEndT, Vec3u& cell_pos, bool& cancelTraversal)
-	{
-		grid->m_sStorage.ForAll(cell_pos, [&](unsigned int ABC, int beam_idx)
-		{
-			printf("(%u, %d), ", ABC, beam_idx);
-		});
-	});
-#endif
 }
 
 void PPPMTracer::Debug(Image* I, const Vec2i& pixel)

@@ -3,7 +3,8 @@
 #include "AnimatedMesh.h"
 #include <algorithm>
 #include <string>
-#define BOOST_FILESYSTEM_DEPRECATED
+#include <iostream>
+#define BOOST_FILESYSTEM_NO_DEPRECATED
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
 using namespace boost::filesystem;
@@ -49,14 +50,11 @@ void e_Md5Compiler::Compile(IInStream& in, FileOutputStream& a_Out)
 	boost::filesystem::path p_file(in.getFilePath());
 	for (directory_iterator it(p_file.parent_path()); it != directory_iterator(); ++it)
 	{
-		if (!is_directory(*it))
+		std::string ext = it->path().extension().string();
+		boost::algorithm::to_lower(ext);
+		if (ext == ".md5anim")
 		{
-			std::string ext = it->path().extension().string();
-			boost::algorithm::to_lower(ext);
-			if (ext == ".md5anim")
-			{
-				animFiles.push_back(new FileInputStream(it->path().string()));
-			}
+			animFiles.push_back(new FileInputStream(it->path().string()));
 		}
 	}
 	compilemd5(in, animFiles, a_Out);

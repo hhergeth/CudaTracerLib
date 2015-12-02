@@ -136,7 +136,7 @@ template<typename V, typename T> CUDA_FUNC_IN V sign(T f)
 {
 	return f > T(0) ? V(1) : (f < T(0) ? V(-1) : V(0));
 }
-template<typename F> CUDA_FUNC_IN void TraverseGrid(const Ray& r, float tmin, float tmax, F& clb,
+template<typename F> CUDA_FUNC_IN void TraverseGrid(const Ray& r, float tmin, float tmax, const F& clb,
 	const AABB& box, const Vec3f& gridSize)
 {
 	/*
@@ -173,7 +173,7 @@ template<typename F> CUDA_FUNC_IN void TraverseGrid(const Ray& r, float tmin, fl
 	}
 }
 
-template<typename F> CUDA_FUNC_IN void TraverseGrid(const Ray& r, const HashGrid_Reg& grid, float tmin, float tmax, F& clb)
+template<typename F> CUDA_FUNC_IN void TraverseGrid(const Ray& r, const HashGrid_Reg& grid, float tmin, float tmax, const F& clb)
 {
 	return TraverseGrid(r, tmin, tmax, clb, grid.m_sBox, Vec3f(grid.m_fGridSize));
 }
