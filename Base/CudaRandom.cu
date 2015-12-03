@@ -27,9 +27,9 @@ unsigned long CudaRNG::randomUint()
 void CudaRNG::Initialize(unsigned int a_Index, unsigned int a_Spacing, unsigned int a_Offset)
 {
 #ifdef ISCUDA
-	curand_init(a_Index * a_Spacing, a_Index * a_Offset, 0, &state);
+	curand_init(1234, a_Index, 0, &state);
 #else
-	curand_init2(a_Index * a_Spacing, a_Index * a_Offset, 0, &state);
+	curand_init2(1234, a_Index, 0, &state);
 #endif
 }
 
@@ -72,15 +72,14 @@ CudaRNG CudaRNGBuffer::operator()()
 {
 	unsigned int idx = getGlobalIdx_2D_2D();
 	unsigned int i = idx % m_uNumGenerators;
-	CudaRNG rng;
 #ifdef ISCUDA
-	rng = m_pDeviceGenerators[i];
+	CudaRNG rng = m_pDeviceGenerators[i];
 	if (idx >= m_uNumGenerators)
 	{
-		//skipahead_sequence(idx / m_uNumGenerators, &rng.state);
+		//skipahead_sequence(idx - m_uNumGenerators, &rng.state);
 	}
 #else
-	rng = m_pHostGenerators[i];
+	CudaRNG rng = m_pHostGenerators[i];
 #endif
 	return rng;
 }
