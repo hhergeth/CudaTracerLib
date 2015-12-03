@@ -468,7 +468,6 @@ void MIPMap::CreateRelaxedConeMap(const std::string& a_InputFile, FileOutputStre
 	float* deviceDepthData;
 	CUDA_MALLOC(&deviceDepthData, data.w() * data.h() * 4);
 	generateRelaxedConeMap<32, 64> << < dim3(data.w() / 16 + 1, data.h() / 16 + 1), dim3(16, 16) >> >(data, deviceDepthData);
-	ThrowCudaErrors2();
 
 	CUDA_FREE(deviceData);
 	data.d(hostData);

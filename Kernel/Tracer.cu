@@ -43,7 +43,6 @@ template<bool RECURSIVE> __global__ void k_GuessPass(int w, int h, float scx, fl
 
 AABB TracerBase::GetEyeHitPointBox(DynamicScene* m_pScene, bool recursive)
 {
-	ThrowCudaErrors2();
 	Vec3u ma = Vec3u(0), mi = Vec3u(UINT_MAX);
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_EyeHitBoxMin, &mi, 12));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_EyeHitBoxMax, &ma, 12));
