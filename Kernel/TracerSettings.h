@@ -214,11 +214,6 @@ public:
 		std::string lastName;
 		TracerParameterCollection& settings;
 		int state;// 1 -> set name waiting for property, 2 -> all done ready to be thrown away
-		void add(ITracerParameter* para)
-		{
-			state = 2;
-			settings.parameter[lastName] = std::unique_ptr<ITracerParameter>(para);
-		}
 	public:
 		InitHelper(TracerParameterCollection& set, const std::string& name)
 			: lastName(name), settings(set), state(1)
@@ -232,10 +227,18 @@ public:
 				throw std::runtime_error("Invalid initialization of collection, forgot to pass a parameter?");
 		}
 
-		friend TracerParameterCollection& operator<<(InitHelper& lhs, ITracerParameter* para);
+		TracerParameterCollection& operator<<(ITracerParameter* para)
+		{
+			state = 2;
+			settings.parameter[lastName] = std::unique_ptr<ITracerParameter>(para);
+			return settings;
+		}
 	};
 
-	friend InitHelper operator<<(TracerParameterCollection& lhs, const std::string& name);
+	InitHelper operator<<(const std::string& name)
+	{
+		return InitHelper(*this, name);
+	} 
 };
 
 class TracerArguments
