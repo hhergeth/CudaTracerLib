@@ -8,47 +8,44 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <Base/FileStream.h>
-#include <map>
-#include <set>
-#include <unordered_map>
+#include <boost/unordered_map.hpp>
 
 namespace CudaTracerLib {
 
+bool operator==(const Vec3i &v0, const Vec3i &v1)
+{
+	return (
+		v0.x == v1.x &&
+		v0.y == v1.y &&
+		v0.z == v1.z
+		);
+}
+
+std::size_t hash_value(const Vec3i &e)
+{
+	std::size_t seed = 0;
+	boost::hash_combine(seed, e.x);
+	boost::hash_combine(seed, e.y);
+	boost::hash_combine(seed, e.z);
+	return seed;
+}
+
 class VertexHash
 {
-	struct key_hash : public std::unary_function<Vec3i, std::size_t>
-	{
-		std::size_t operator()(const Vec3i& k) const
-		{
-			return k.x ^ k.y ^ k.z;
-		}
-	};
-
-	struct key_equal : public std::binary_function<Vec3i, Vec3i, bool>
-	{
-		bool operator()(const Vec3i& v0, const Vec3i& v1) const
-		{
-			return (
-				v0.x == v1.x &&
-				v0.y == v1.y &&
-				v0.z == v1.z
-				);
-		}
-	};
-
-	std::unordered_map<Vec3i, int, key_hash, key_equal> entries;
+	boost::unordered_map<Vec3i, int> entries;
 public:
 	bool search(const Vec3i& key, int& val)
 	{
-		if (entries.count(key))
+		auto a = entries.find(key);
+		if (a == entries.end())
+			return false;
+		else
 		{
-			auto a = entries.find(key);
 			if (a->first != key)
 				throw std::runtime_error("Error hashing obj vertex index tuples!");//safeguard against older hashing strategies
 			val = a->second;
 			return true;
 		}
-		else return false;
 	}
 	int add(const Vec3i& key, int value)
 	{
