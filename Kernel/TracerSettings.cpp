@@ -3,21 +3,15 @@
 
 namespace CudaTracerLib {
 
-TracerParameterCollection& operator<<(TracerParameterCollection& lhs, const std::string& name)
+TracerParameterCollection::InitHelper operator<<(TracerParameterCollection& lhs, const std::string& name)
 {
-	if (lhs.lastName.size() != 0)
-		throw std::runtime_error("Invalid state of TracerParameterCollection. Shift Parameter after name!");
-	lhs.lastName = name;
-	return lhs;
+	return TracerParameterCollection::InitHelper(lhs, name);
 }
 
-TracerParameterCollection& operator<<(TracerParameterCollection& lhs, ITracerParameter* para)
+TracerParameterCollection& operator<<(TracerParameterCollection::InitHelper& lhs, ITracerParameter* para)
 {
-	if (lhs.lastName.size() == 0)
-		throw std::runtime_error("Invalid state of TracerParameterCollection. Shift Parameter after name!");
-	lhs.parameter[lhs.lastName] = std::unique_ptr<ITracerParameter>(para);
-	lhs.lastName = "";
-	return lhs;
+	lhs.add(para);
+	return lhs.settings;
 }
 
 }

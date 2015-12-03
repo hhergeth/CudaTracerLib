@@ -166,10 +166,8 @@ class TracerParameterCollection
 	{
 		parameter[name] = std::unique_ptr<ITracerParameter>(a);
 	}
-	std::string lastName;
 public:
 	TracerParameterCollection()
-		: lastName("")
 	{
 
 	}
@@ -209,8 +207,35 @@ public:
 			p->setValue(val);
 		else throw std::runtime_error("Invalid access to parameter value!");
 	}
-	friend TracerParameterCollection& operator<<(TracerParameterCollection& lhs, const std::string& name);
-	friend TracerParameterCollection& operator<<(TracerParameterCollection& lhs, ITracerParameter* para);
+
+	friend class InitHelper;
+	class InitHelper
+	{
+		std::string lastName;
+		TracerParameterCollection& settings;
+		int state;// 1 -> set name waiting for property, 2 -> all done ready to be thrown away
+		void add(ITracerParameter* para)
+		{
+			state = 2;
+			settings.parameter[lastName] = std::unique_ptr<ITracerParameter>(para);
+		}
+	public:
+		InitHelper(TracerParameterCollection& set, const std::string& name)
+			: lastName(name), settings(set), state(1)
+		{
+
+		}
+
+		~InitHelper()
+		{
+			if (state == 1)
+				throw std::runtime_error("Invalid initialization of collection, forgot to pass a parameter?");
+		}
+
+		friend TracerParameterCollection& operator<<(InitHelper& lhs, ITracerParameter* para);
+	};
+
+	friend InitHelper operator<<(TracerParameterCollection& lhs, const std::string& name);
 };
 
 class TracerArguments
