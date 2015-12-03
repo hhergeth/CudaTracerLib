@@ -433,6 +433,10 @@ CUDA_FUNC_IN void spectral_color(float &r, float &g, float &b, float l) // RGB <
 	if ((l >= 400.0) && (l<475.0)) { t = (l - 400.0) / (475.0 - 400.0); b = +(2.20*t) - (1.50*t*t); }
 	else if ((l >= 475.0) && (l<560.0)) { t = (l - 475.0) / (560.0 - 475.0); b = 0.7 - (t)+(0.30*t*t); }
 }
+
+#pragma warning(disable: 4305)
+
+
 Spectrum Spectrum::SampleSpectrum(float& w, float sample) const
 {
 	const int N = 89;

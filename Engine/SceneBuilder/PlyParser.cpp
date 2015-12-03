@@ -356,7 +356,7 @@ void compileply(IInStream& istream, FileOutputStream& a_Out)
 			}
 			else throw std::runtime_error(__FUNCTION__);
 			for (unsigned int i = indexCount - FILE_BUF[file_pos]; i < indexCount; i++)
-				Indices[i] = Indices[i] > vertexCount ? 0 : Indices[i];
+				Indices[i] = Indices[i] > (unsigned int)vertexCount ? 0 : Indices[i];
 			file_pos += 4 * FILE_BUF[file_pos] + 1;
 		}
 		free(FILE_BUF);

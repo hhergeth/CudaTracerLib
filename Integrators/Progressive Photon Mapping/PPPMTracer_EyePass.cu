@@ -87,8 +87,9 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const Vec3f& wi, float
 		}
 	});
 	return Lp / g_NumPhotonEmitted2;
-#endif
+#else
 	return 1.0f;
+#endif
 }
 
 CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED, const Material* mat, k_AdaptiveStruct& A, int x, int y,
@@ -155,6 +156,8 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED
 
 	A(x, y) = ent;
 	return Lp;
+#else
+	return 0.0f;
 #endif
 }
 

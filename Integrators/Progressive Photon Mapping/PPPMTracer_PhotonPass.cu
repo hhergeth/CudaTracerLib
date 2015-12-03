@@ -16,8 +16,8 @@ CUDA_ONLY_FUNC void BeamBeamGrid::StoreBeam(const Beam& b, bool firstStore)
 	if (beam_idx < m_uBeamLength)
 	{
 		m_pDeviceBeams[beam_idx] = b;
-		bool storedAll = true;
 #ifdef ISCUDA
+		bool storedAll = true;
 		/*TraverseGrid(Ray(b.pos, b.dir), m_sStorage.hashMap, 0.0f, b.t, [&](float minT, float rayT, float maxT, float cellEndT, Vec3u& cell_pos, bool& cancelTraversal)
 		{
 		if (!m_sStorage.store(cell_pos, beam_idx))
