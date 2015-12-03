@@ -57,7 +57,6 @@ Currently there are no Metropolis MCMC algorithms implemented. The reasons are t
 
 ### Issuses
 - `size_t` vs `unsigned int` In some places `size_t` is used while in others not. This mistake was made when this project started but is actually harder to fix than one might assume because of performance considerations for the GPU.
-- The GPU optimized ray traversal algorithms are not working correctly, this issue appears due to the complicated nested BVH layout. Therefore the standard ray traversal is used which takes no advantage of the CUDA architecture with lanes and warp voting.
 
 
 ### License
