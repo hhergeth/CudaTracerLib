@@ -418,9 +418,6 @@
     <ClCompile Include="Base\Timer.cpp">
       <Filter>Base</Filter>
     </ClCompile>
-    <ClCompile Include="Kernel\TracerSettings.cpp">
-      <Filter>Kernel</Filter>
-    </ClCompile>
     <ClCompile Include="Integrators\Gradient\GradientDescent.cpp">
       <Filter>Integrators\Gradient</Filter>
     </ClCompile>

@@ -233,7 +233,6 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClCompile Include="Integrators\Progressive Photon Mapping\VolEstimators\BeamBeamGrid.cpp" />
     <ClCompile Include="Integrators\Progressive Photon Mapping\VolEstimators\BeamBVHStorage.cpp" />
     <ClCompile Include="Kernel\Tracer.cpp" />
-    <ClCompile Include="Kernel\TracerSettings.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='CPU_Debug|x64'">Create</PrecompiledHeader>
