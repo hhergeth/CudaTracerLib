@@ -58,6 +58,8 @@ namespace CudaTracerLib {
 #   define CT_ASSERT(X) ((void)0)
 #endif
 
+//http://stackoverflow.com/questions/12778949/cuda-memory-alignment
+//credit to harrsim!
 #if defined(__CUDACC__) // NVCC
 #define CUDA_ALIGN(n) __align__(n)
 #elif defined(__GNUC__) // GCC

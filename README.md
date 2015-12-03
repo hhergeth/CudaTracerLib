@@ -3,13 +3,15 @@
 ### Introduction
 This library, for simplicity called CudaTracerLib, is a CUDA based ray tracer library implementing standard rendering algorithms like
 
-- Path Tracing
-- Photon/Light Tracing
+- Path Tracing (volumetric)
+- Photon/Light Tracing (volumetric)
 - Photon Mapping (Final Gathering)
 - Volumetric(Beam x Beam) Adaptive Progressive Photon Mapping
 - Path Space Regularization - Path Tracing
 - Bidirectional Path Tracing
 - Vertex Connection and Merging
+
+Motivation ? Tired of wateing but don't want to low level optimize!
 
 This library provides the possibility of using these algorithms for offline rendering but also for "realtime" rendering to an Open GL/D3D buffer.
 
@@ -19,7 +21,7 @@ Please keep in mind that this is mostly reseach code with the ultimate goal of d
 ### Installation
 There are some dependecies
 
-- Boost, used for all platform independent code
+- Boost, used for all platform dependent code
 - FreeImage, used for loading and saving images
 - qMatrixLib, a very small and lightweight, header only library for matrix algebra. You can get it here https://github.com/galrath434/qMatrixLib
 
@@ -50,12 +52,11 @@ Timo Aila and Samuli Laine are to be thanked for their research on BVH ray trave
 
 
 ### Limitations
-Currently there are no Metropolis MCMC algorithms implemented. The reasons are two fold, it is necessary to have some sort of Path/Path-Vertex classes present which makes memory managment mandatory on the GPU. It is also difficult to design a well performing sampler for MCMC which spreads the work on the GPU.
+Currently there are no Metropolis MCMC algorithms implemented. The reasons are two fold, it is necessary to have some sort of Path/Vertex classes present which makes memory managment mandatory on the GPU. It is also difficult to design a well performing sampler for MCMC which spreads the work on the GPU.
 
 
 ### Issuses
 - `size_t` vs `unsigned int` In some places `size_t` is used while in others not. This mistake was made when this project started but is actually harder to fix than one might assume because of performance considerations for the GPU.
-- Another design error made very early in the development, was to not use namespaces. While this is fine for smaller projects this is certainly incorrect here.
 - The GPU optimized ray traversal algorithms are not working correctly, this issue appears due to the complicated nested BVH layout. Therefore the standard ray traversal is used which takes no advantage of the CUDA architecture with lanes and warp voting.
 
 

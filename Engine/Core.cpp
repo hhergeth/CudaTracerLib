@@ -6,6 +6,7 @@
 #include "MIPMap.h"
 #include <Kernel/Tracer.h>
 #include <ctime>
+#include <cuda_runtime.h>
 #define FREEIMAGE_LIB
 #include <FreeImage.h>
 
