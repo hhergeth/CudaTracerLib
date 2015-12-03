@@ -92,28 +92,14 @@ struct BVHNodeData
 	{
 		*(Vec2i*)&d = c;
 	}
-	CUDA_FUNC_IN void setParent(int parent)
+	CUDA_FUNC_IN void setParent(unsigned int parent)
 	{
-		*(int*)&d.z = parent;
+		*(unsigned int*)&d.z = parent;
 	}
-	CUDA_FUNC_IN void setSibling(int sibling)
+
+	CUDA_FUNC_IN unsigned int getParent() const
 	{
-		*(int*)&d.w = sibling;
-	}
-	CUDA_FUNC_IN int getParent() const
-	{
-		return *(int*)&d.z;
-	}
-	CUDA_FUNC_IN int getSibling() const
-	{
-		return *(int*)&d.w;
-	}
-	CUDA_FUNC_IN void setDummy()
-	{
-		AABB std(Vec3f(0), Vec3f(0));
-		setLeft(std);
-		setRight(std);
-		setChildren(Vec2i(0, 0));
+		return *(unsigned int*)&d.z;
 	}
 
 	CUDA_FUNC_IN AABB getBox()

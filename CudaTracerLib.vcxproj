@@ -185,7 +185,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClCompile Include="Engine\MeshCompiler.cpp" />
     <ClCompile Include="Engine\MIPMap.cpp" />
     <ClCompile Include="Engine\Node.cpp" />
-    <ClCompile Include="Engine\SceneBuilder\Importer.cpp" />
+    <ClCompile Include="Engine\SceneBuilder\BVHBuilderHelper.cpp" />
     <ClCompile Include="Engine\SceneBuilder\md5Compiler.cpp" />
     <ClCompile Include="Engine\SceneBuilder\MD5Parser.cpp" />
     <ClCompile Include="Engine\SceneBuilder\ObjParser.cpp" />
@@ -282,7 +282,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="Base\STL.h" />
     <ClInclude Include="Base\Timer.h" />
     <ClInclude Include="Defines.h" />
-    <ClInclude Include="Engine\SceneBuilder\Importer.h" />
+    <ClInclude Include="Engine\SceneBuilder\BVHBuilderHelper.h" />
     <ClInclude Include="Engine\SceneBuilder\MD5Parser.h" />
     <ClInclude Include="Engine\SceneBuilder\SplitBVHBuilder.hpp" />
     <ClInclude Include="Kernel\BlockSampler.h" />

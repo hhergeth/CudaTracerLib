@@ -3,7 +3,7 @@
 #include "SceneBuilder/TangentSpaceHelper.h"
 #include "Volumes.h"
 #include "Light.h"
-#include "SceneBuilder/Importer.h"
+#include "SceneBuilder/BVHBuilderHelper.h"
 #include "Buffer.h"
 #include <Base/FileStream.h>
 #include "SceneInitData.h"

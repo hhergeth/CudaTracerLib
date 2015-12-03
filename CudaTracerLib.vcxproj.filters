@@ -95,9 +95,6 @@
     <ClInclude Include="Math\Warp.h">
       <Filter>Math</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\SceneBuilder\Importer.h">
-      <Filter>Engine\SceneBuilder</Filter>
-    </ClInclude>
     <ClInclude Include="Engine\SceneBuilder\MD5Parser.h">
       <Filter>Engine\SceneBuilder</Filter>
     </ClInclude>
@@ -332,13 +329,13 @@
     <ClInclude Include="Integrators\Gradient\PathDifferientials.h">
       <Filter>Integrators\Gradient</Filter>
     </ClInclude>
+    <ClInclude Include="Engine\SceneBuilder\BVHBuilderHelper.h">
+      <Filter>Engine\SceneBuilder</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Base\FileStream.cpp">
       <Filter>Base</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\SceneBuilder\Importer.cpp">
-      <Filter>Engine\SceneBuilder</Filter>
     </ClCompile>
     <ClCompile Include="Engine\SceneBuilder\MD5Parser.cpp">
       <Filter>Engine\SceneBuilder</Filter>
@@ -420,6 +417,9 @@
     </ClCompile>
     <ClCompile Include="Integrators\Gradient\GradientDescent.cpp">
       <Filter>Integrators\Gradient</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\SceneBuilder\BVHBuilderHelper.cpp">
+      <Filter>Engine\SceneBuilder</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

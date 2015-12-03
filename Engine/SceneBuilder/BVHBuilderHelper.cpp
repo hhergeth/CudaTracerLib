@@ -1,6 +1,6 @@
 #include <StdAfx.h>
 #include <Base/FileStream.h>
-#include "Importer.h"
+#include "BVHBuilderHelper.h"
 #include "SplitBVHBuilder.hpp"
 
 namespace CudaTracerLib {
@@ -11,7 +11,7 @@ class clb : public IBVHBuilderCallback
 {
 	const Vec3f* V;
 	const unsigned int* Iab;
-	unsigned int v, i;
+	unsigned int v_count, i_count;
 	unsigned int _index(unsigned int i, unsigned int o) const
 	{
 		return Iab ? Iab[i * 3 + o] : (i * 3 + o);
@@ -26,71 +26,55 @@ public:
 	unsigned int l0, l1;
 public:
 	clb(unsigned int _v, unsigned int _i, const Vec3f* _V, const unsigned int* _I, std::vector<BVHNodeData>& A, std::vector<TriIntersectorData>& B, std::vector<TriIntersectorData2>& C)
-		: V(_V), Iab(_I), v(_v), i(_i), nodes(A), tris(B), indices(C), l0(0), l1(0)
+		: V(_V), Iab(_I), v_count(_v), i_count(_i), nodes(A), tris(B), indices(C), l0(0), l1(0)
 	{
 	}
-	virtual void setNumInner_Leaf(unsigned int nInnerNodes, unsigned int nLeafNodes)
+
+	virtual void startConstruction(unsigned int nInnerNodes, unsigned int nLeafNodes)
 	{
 		nodes.resize(nInnerNodes + 2);
 		tris.resize(nLeafNodes + 2);
 		indices.resize(nLeafNodes + 2);
 	}
-	virtual void iterateObjects(std::function<void(unsigned int)> f)
+
+	virtual void iterateObjects(std::function<void(unsigned int, const AABB&)> f)
 	{
-		for (unsigned int j = 0; j < i / 3; j++)
-			f(j);
-	}
-	virtual void getBox(unsigned int index, AABB* out) const
-	{
-		*out = AABB::Identity();
-		for (int i = 0; i < 3; i++)
-			*out = out->Extend(V[_index(index, i)]);
-		//if(min(out->Size()) < 0.01f)
-		//	out->maxV += make_float3(0.01f);
-	}
-	virtual void HandleBoundingBox(const AABB& box)
-	{
-		this->box = box;
-	}
-	virtual BVHNodeData* HandleNodeAllocation(int* index)
-	{
-		size_t n = l0++;
-		if (n >= nodes.size())
-			throw std::runtime_error(__FUNCTION__);
-		*index = (int)n * 4;
-		return &nodes[n];
-	}
-	void setSibling(int idx, int sibling)
-	{
-		if (idx >= 0)
-			nodes[idx / 4].setSibling(sibling);
-		else
+		for (unsigned int j = 0; j < i_count / 3; j++)
 		{
-			int o = ~idx;
-			while (!indices[o].getFlag())
-				o++;
-			o += 2;
-			//*(int*)(indices + o) = sibling;
+			AABB out = AABB::Identity();
+			for (int i = 0; i < 3; i++)
+				out = out.Extend(V[_index(j, i)]);
+			f(j, out);
 		}
 	}
-	virtual unsigned int handleLeafObjects(unsigned int pNode)
+
+	virtual unsigned int createLeafNode(unsigned int parentBVHNodeIdx, const std::vector<unsigned int>& objIndices)
 	{
-		size_t c = l1++;
-		if (c >= indices.size())
-			throw std::runtime_error(__FUNCTION__);
-		tris[c].setData(V[_index(pNode, 0)], V[_index(pNode, 1)], V[_index(pNode, 2)]);
-		indices[c].setFlag(false);
-		indices[c].setIndex(pNode);
-		return (unsigned int)c;
+		unsigned int firstIdx = l1;
+		l1 += (unsigned int)objIndices.size();
+		for (size_t i = 0; i < objIndices.size(); i++)
+		{
+			indices[firstIdx + i].setFlag(i == objIndices.size() - 1);
+			indices[firstIdx + i].setIndex(objIndices[i]);
+			tris[firstIdx + i].setData(V[_index(objIndices[i], 0)], V[_index(objIndices[i], 1)], V[_index(objIndices[i], 2)]);
+		}
+		return firstIdx;
 	}
-	virtual void handleLastLeafObject(int parent)
+
+	virtual void finishConstruction(unsigned int startNode, const AABB& sceneBox)
 	{
-		indices[l1 - 1].setFlag(true);
-	}
-	virtual void HandleStartNode(int startNode)
-	{
+		this->box = box;
 		this->startNode = startNode;
 	}
+
+	virtual unsigned int createInnerNode(BVHNodeData*& innerNode)
+	{
+		if (l0 >= nodes.size())
+			throw std::runtime_error(__FUNCTION__);
+		innerNode = &nodes[l0];
+		return l0++;
+	}
+
 	virtual bool SplitNode(unsigned int index, int dim, float pos, AABB& lBox, AABB& rBox, const AABB& refBox) const
 	{
 		lBox = rBox = AABB::Identity();

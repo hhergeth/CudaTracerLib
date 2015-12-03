@@ -4,7 +4,7 @@
 #include <Engine/Material.h>
 #include <Engine/TriIntersectorData.h>
 #include "TangentSpaceHelper.h"
-#include "Importer.h"
+#include "BVHBuilderHelper.h"
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <Base/FileStream.h>

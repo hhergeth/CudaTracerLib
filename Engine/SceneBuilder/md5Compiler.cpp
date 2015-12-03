@@ -1,9 +1,8 @@
 #include <StdAfx.h>
 #include <Engine/AnimatedMesh.h>
 #include "TangentSpaceHelper.h"
-#include <Engine/SceneBuilder/Importer.h>
 #include "MD5Parser.h"
-#include "Importer.h"
+#include "BVHBuilderHelper.h"
 #include <Base/FileStream.h>
 #include <Engine/TriangleData.h>
 #include <Engine/Material.h>
@@ -149,8 +148,6 @@ void compilemd5(IInStream& in, std::vector<IInStream*>& animFiles, FileOutputStr
 	}
 	a_Out.Write(&v_Data[0], (unsigned int)v_Pos.size() * sizeof(AnimatedVertex));
 	a_Out.Write(&triData2[0], (unsigned int)triData2.size() * sizeof(uint3));
-	///delete[] v_Data;
-	//delete[] v_Pos;
 }
 
 }

@@ -139,53 +139,55 @@ public:
 		t->m_uBvhNodeCount = 0;
 		t->m_UBVHIndicesCount = 0;
 	}
-	virtual void iterateObjects(std::function<void(unsigned int)> f)
-	{
-		t->m_pData->iterateObjects(f);
-	}
-	virtual void getBox(unsigned int index, AABB* out) const
-	{
-		*out = t->m_pData->getBox(index);
-	}
-	virtual void HandleBoundingBox(const AABB& box)
+
+	virtual void startConstruction(unsigned int nInnerNodes, unsigned int nLeafNodes)
 	{
 
 	}
-	virtual BVHNodeData* HandleNodeAllocation(int* index)
+
+	virtual void iterateObjects(std::function<void(unsigned int, const AABB&)> f)
 	{
-		if (t->m_uBvhNodeCount >= t->m_uBVHDataLength)
-			throw std::runtime_error(__FUNCTION__);
-		*index = t->m_uBvhNodeCount * 4;
-		return t->m_pBVHData + t->m_uBvhNodeCount++;
+		t->m_pData->iterateObjects([&](unsigned int i)
+		{
+			f(i, t->m_pData->getBox(i));
+		});
 	}
-	virtual void setSibling(int idx, int sibling)
-	{
-		if (idx >= 0)
-			t->m_pBVHData[idx / 4].setSibling(sibling);
-	}
-	virtual unsigned int handleLeafObjects(unsigned int pNode)
+
+	virtual unsigned int createLeafNode(unsigned int parentBVHNodeIdx, const std::vector<unsigned int>& objIndices)
 	{
 		if (t->m_pBVHIndices)
 		{
-			unsigned int c = t->m_UBVHIndicesCount++;
-			t->m_pBVHIndices[c].setFlag(false);
-			t->m_pBVHIndices[c].setIndex(pNode);
-			t->m_pData->setObject(c, pNode);
-			return c;
+			unsigned int firstIdx = t->m_UBVHIndicesCount;
+			t->m_UBVHIndicesCount += (unsigned int)objIndices.size();
+			for (size_t i = 0; i < objIndices.size(); i++)
+			{
+				t->m_pBVHIndices[firstIdx + i].setFlag(i == objIndices.size() - 1);
+				t->m_pBVHIndices[firstIdx + i].setIndex(objIndices[i]);
+				t->m_pData->setObject(firstIdx + i, objIndices[i]);
+			}
+			return firstIdx;
 		}
-		else return pNode;
+		else
+		{
+			if (objIndices.size() != 1)
+				throw std::runtime_error("Too many objects per inner node!");
+			return objIndices[0];
+		}
+	}
 
-		return pNode;
-	}
-	virtual void handleLastLeafObject(int parent)
-	{
-		if (t->m_pBVHIndices)
-			t->m_pBVHIndices[t->m_UBVHIndicesCount - 1].setFlag(true);
-	}
-	virtual void HandleStartNode(int startNode)
+	virtual void finishConstruction(unsigned int startNode, const AABB& sceneBox)
 	{
 		t->startNode = startNode;
 	}
+
+	virtual unsigned int createInnerNode(BVHNodeData*& innerNode)
+	{
+		if (t->m_uBvhNodeCount >= t->m_uBVHDataLength)
+			throw std::runtime_error(__FUNCTION__);
+		innerNode = t->m_pBVHData + t->m_uBvhNodeCount;
+		return t->m_uBvhNodeCount++;
+	}
+
 	virtual bool SplitNode(unsigned int a_ObjIdx, int dim, float pos, AABB& lBox, AABB& rBox, const AABB& refBox) const
 	{
 		return t->m_pData->SplitNode(a_ObjIdx, dim, pos, lBox, rBox, refBox);
@@ -216,7 +218,6 @@ void BVHRebuilder::removeNodeAndCollapse(BVHIndex nodeIdx, BVHIndex childIdx)
 			{
 				startNode = otherChild.ToNative();
 				m_pBVHData[otherChild.innerIdx()].setParent(-1);
-				m_pBVHData[otherChild.innerIdx()].setSibling(-1);
 			}
 		}
 		else
@@ -671,7 +672,6 @@ void BVHRebuilder::setChild(BVHIndex nodeIdx, BVHIndex childIdx, int localIdxToS
 	else
 	{
 		m_pBVHData[childIdx.innerIdx()].setParent(nodeIdx.ToNative());
-		m_pBVHData[childIdx.innerIdx()].setSibling(children(nodeIdx)[1 - localIdxToSetTo].ToNative());
 	}
 	propagateBBChange(nodeIdx, getBox(childIdx), localIdxToSetTo);
 }

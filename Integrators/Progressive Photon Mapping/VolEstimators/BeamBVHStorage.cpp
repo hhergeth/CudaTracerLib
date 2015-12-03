@@ -30,44 +30,53 @@ public:
 	BuilderCLB(BeamBVHStorage* s)
 		: storage(s)
 	{
-		s->m_sHostNodes.clear();
-		s->m_sHostNodes.reserve(s->m_sHostRefs.size() * 4);
-		s->m_sHostReorderedRefs.clear();
-		s->m_sHostReorderedRefs.reserve(s->m_sHostRefs.size() * 4);
+
 	}
-	virtual void getBox(unsigned int index, AABB* out) const
+
+	virtual void startConstruction(unsigned int nInnerNodes, unsigned int nLeafNodes)
 	{
-		auto& r = storage->m_sHostRefs[index];
-		auto& b = r.beam;//storage->m_pHostBeams[r.getIdx()]
-		*out = b.getSegmentAABB(r.t_min, r.t_max, storage->m_fCurrentRadiusVol);
+		storage->m_sHostNodes.clear();
+		storage->m_sHostNodes.reserve(nInnerNodes);
+		storage->m_sHostReorderedRefs.clear();
+		storage->m_sHostReorderedRefs.reserve(nLeafNodes);
 	}
-	virtual void iterateObjects(std::function<void(unsigned int)> f)
+
+	virtual void iterateObjects(std::function<void(unsigned int, const AABB&)> f)
 	{
 		for (unsigned int i = 0; i < storage->m_sHostRefs.size(); i++)
-			f(i);
+		{
+			auto& r = storage->m_sHostRefs[i];
+			auto& b = r.beam;//storage->m_pHostBeams[r.getIdx()]
+			AABB box = b.getSegmentAABB(r.t_min, r.t_max, storage->m_fCurrentRadiusVol);
+			f(i, box);
+		}
 	}
-	virtual unsigned int handleLeafObjects(unsigned int pNode)
+
+	virtual unsigned int createLeafNode(unsigned int parentBVHNodeIdx, const std::vector<unsigned int>& objIndices)
 	{
-		storage->m_sHostReorderedRefs.push_back(storage->m_sHostRefs[pNode]);
-		return (unsigned int)storage->m_sHostReorderedRefs.size() - 1;
-	}
-	virtual void handleLastLeafObject(int parent)
-	{
+		if (storage->m_sHostReorderedRefs.size() + objIndices.size() > storage->m_sHostReorderedRefs.capacity())
+			throw std::runtime_error("Trying to add too many object indices!");
+		unsigned int firstIdx = (unsigned int)storage->m_sHostReorderedRefs.size();
+		for (size_t i = 0; i < objIndices.size(); i++)
+		{
+			storage->m_sHostReorderedRefs.push_back(storage->m_sHostRefs[objIndices[i]]);
+		}
 		storage->m_sHostReorderedRefs.back().setLast();
+		return firstIdx;
 	}
-	virtual BVHNodeData* HandleNodeAllocation(int* index)
+
+	virtual void finishConstruction(unsigned int startNode, const AABB& sceneBox)
 	{
+
+	}
+
+	virtual unsigned int createInnerNode(BVHNodeData*& innerNode)
+	{
+		if (storage->m_sHostNodes.size() == storage->m_sHostNodes.capacity())
+			throw std::runtime_error("Trying to add to many inner nodes!");
 		storage->m_sHostNodes.push_back(BVHNodeData());
-		*index = (unsigned int)(storage->m_sHostNodes.size() - 1) * 4;
-		return &storage->m_sHostNodes.back();
-	}
-	virtual void HandleStartNode(int startNode)
-	{
-
-	}
-	virtual void setSibling(int idx, int sibling)
-	{
-
+		innerNode = &storage->m_sHostNodes.back();
+		return (unsigned int)(storage->m_sHostNodes.size() - 1);
 	}
 };
 

@@ -10,28 +10,26 @@ namespace CudaTracerLib {
 class IBVHBuilderCallback
 {
 public:
-	virtual void getBox(unsigned int index, AABB* out) const = 0;
-	virtual void iterateObjects(std::function<void(unsigned int)> f) = 0;
-	virtual unsigned int handleLeafObjects(unsigned int pNode)
-	{
-		return pNode;
-	}
-	virtual void handleLastLeafObject(int parent)
-	{
-	}
-	virtual void HandleBoundingBox(const AABB& box)
-	{
-	}
-	virtual BVHNodeData* HandleNodeAllocation(int* index) = 0;
-	virtual void HandleStartNode(int startNode) = 0;
-	virtual bool SplitNode(unsigned int index, int dim, float pos, AABB& lBox, AABB& rBox, const AABB& refBox) const
+
+	///reports the number of inner/leaf nodes to the clb to allocate enough storage
+	virtual void startConstruction(unsigned int nInnerNodes, unsigned int nLeafNodes) = 0;
+
+	///iterate over all objects and call f with the idx and appropriate aabb
+	virtual void iterateObjects(std::function<void(unsigned int, const AABB&)> f) = 0;
+
+	///create a leaf node unter the specified inner node \ref parentBVHNodeIdx using the object indices \ref objIndices, returning the first index in the object index buffer
+	virtual unsigned int createLeafNode(unsigned int parentBVHNodeIdx, const std::vector<unsigned int>& objIndices) = 0;
+
+	///reports the end of bvh construction and provides the idx of root node as well as the aabb containing all objects
+	virtual void finishConstruction(unsigned int startNode, const AABB& sceneBox) = 0;
+
+	///creates an inner node and returns its idx as well as a ref to it
+	virtual unsigned int createInnerNode(BVHNodeData*& innerNode) = 0;
+
+	///splits the obj with \ref objIdx if possible in the specified dimension \ref dim at \pos and returns the left and right aabb in \ref lBox respectively \rBox
+	virtual bool SplitNode(unsigned int objIdx, int dim, float pos, AABB& lBox, AABB& rBox, const AABB& refBox) const
 	{
 		return false;
-	}
-	virtual void setSibling(int idx, int sibling) = 0;
-	virtual void setNumInner_Leaf(unsigned int nInnerNodes, unsigned int nLeafNodes)
-	{
-
 	}
 };
 
