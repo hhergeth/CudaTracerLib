@@ -15,16 +15,16 @@ template<bool USE_GLOBAL> CUDA_ONLY_FUNC Spectrum beam_beam_L(const VolHelper<US
 	Spectrum camera_tau = vol.tau(r, tmin, queryIsectDist);
 	Spectrum camera_sc = vol.sigma_s(r(queryIsectDist), r.direction);
 	float p = vol.p(r(queryIsectDist), r.direction, B.dir, rng);
-	//return B.Phi / float(m_uNumEmitted) * camera_sc * (-photon_tau).exp() * (-camera_tau).exp() * p * (1 - beamBeamDistance * beamBeamDistance / (radius * radius)) * 3 / (4 * radius*sinTheta);
-	float t = beamBeamDistance / radius, k = math::clamp01(1.0f + t * t * t * (-6.0f * t * t + 15.0f * t - 10.0f)) * 2.0f;
-	return camera_sc / radius * p * B.Phi / m_uNumEmitted * (-photon_tau).exp() * (-camera_tau).exp() / sinTheta * k;
+	return B.Phi / float(m_uNumEmitted) * camera_sc * (-photon_tau).exp() * (-camera_tau).exp() * p * (1 - beamBeamDistance * beamBeamDistance / (radius * radius)) * 3 / (4 * radius*sinTheta);
+	//float t = math::clamp01(beamBeamDistance / radius), k = 1.0f + t * t * t * (-6.0f * t * t + 15.0f * t - 10.0f);
+	//return camera_sc / radius * p * B.Phi / m_uNumEmitted * (-photon_tau).exp() * (-camera_tau).exp() / sinTheta * k;
 }
 
 template<bool USE_GLOBAL> CUDA_ONLY_FUNC Spectrum BeamBeamGrid::L_Volume(float, CudaRNG& rng, const Ray& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr)
 {
 	float radius = m_fCurrentRadiusVol;
 	Spectrum L_n = Spectrum(0.0f), Tau = Spectrum(0.0f);
-	TraverseGrid(r, m_sStorage.hashMap, tmin, tmax, [&](float minT, float rayT, float maxT, float cellEndT, const Vec3u& cell_pos, bool& cancelTraversal)
+	/*TraverseGrid(r, m_sStorage.hashMap, tmin, tmax, [&](float minT, float rayT, float maxT, float cellEndT, const Vec3u& cell_pos, bool& cancelTraversal)
 	{
 		m_sStorage.ForAll(cell_pos, [&](unsigned int, int beam_idx)
 		{
@@ -39,15 +39,15 @@ template<bool USE_GLOBAL> CUDA_ONLY_FUNC Spectrum BeamBeamGrid::L_Volume(float, 
 		Tau += tauD;
 		L_n += vol.Lve(r(rayT + localDist / 2), -1.0f * r.direction) * localDist;
 	});
-	Tr = (-Tau).exp();
-	/*for (unsigned int i = 0; i < min(m_uBeamIdx, m_uBeamLength); i++)
+	Tr = (-Tau).exp();*/
+	for (unsigned int i = 0; i < min(m_uBeamIdx, m_uBeamLength); i++)
 	{
 		const Beam& B = m_pDeviceBeams[i];
 		float beamBeamDistance, sinTheta, queryIsectDist, beamIsectDist;
 		if (Beam::testIntersectionBeamBeam(r.origin, r.direction, tmin, tmax, B.pos, B.dir, 0, B.t, radius * radius, beamBeamDistance, sinTheta, queryIsectDist, beamIsectDist))
 			L_n += beam_beam_L(vol, rng, B, r, radius, beamIsectDist, queryIsectDist, beamBeamDistance, m_uNumEmitted, sinTheta, tmin);
 	}
-	Tr = (-vol.tau(r, tmin, tmax)).exp();*/
+	Tr = (-vol.tau(r, tmin, tmax)).exp();
 	return L_n;
 }
 
@@ -83,7 +83,7 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const Vec3f& wi, float
 			float cor_fac = math::abs(Frame::cosTheta(bRec.wi) / (wiDotGeoN * Frame::cosTheta(bRec.wo)));
 			Spectrum bsdfFactor = mat->bsdf.f(bRec);
 			float ke = k_tr(r, math::sqrt(dist2));
-			Lp += ke * ph.getL() * bsdfFactor;// / Frame::cosTheta(bRec.wo) 
+			Lp += ke * ph.getL() * bsdfFactor * cor_fac;// / Frame::cosTheta(bRec.wo) 
 		}
 	});
 	return Lp / g_NumPhotonEmitted2;
@@ -176,7 +176,7 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 		r2.Init();
 		int depth = -1;
 		Spectrum L(0.0f);
-		while (Traceray(r.direction, r.origin, &r2) && depth++ < 5)
+		while (traceRay(r.direction, r.origin, &r2) && depth++ < 5)
 		{
 			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
 			if (depth == 0)
@@ -200,7 +200,7 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 				Spectrum t_f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
 				bRec.wo.z *= -1.0f;
 				Ray rTrans = Ray(bRec.dg.P, bRec.getOutgoing());
-				TraceResult r3 = Traceray(rTrans);
+				TraceResult r3 = traceRay(rTrans);
 				Spectrum Tr;
 				L += throughput * ((VolEstimator*)g_VolEstimator2)->L_Volume(a_rVolume, rng, rTrans, 0, r3.m_fDist, VolHelper<false>(bssrdf), Tr);
 				//throughput = throughput * Tr;//break;
@@ -324,7 +324,7 @@ __global__ void k_PerPixelRadiusEst(int w, int h, float r_max, float r_1, k_Adap
 		DifferentialGeometry dg;
 		BSDFSamplingRecord bRec(dg);
 		Ray r = g_SceneData.GenerateSensorRay(x, y);
-		TraceResult r2 = Traceray(r);
+		TraceResult r2 = traceRay(r);
 		if (r2.hasHit())
 		{
 			const float search_rad = r_1;

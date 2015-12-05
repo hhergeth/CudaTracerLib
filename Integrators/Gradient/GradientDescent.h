@@ -240,7 +240,7 @@ public:
 			if (((x_i_changed >> i) & 3) == 0)
 				continue;
 			Ray r(vertices[i]->getPos(), normalize(pos[i + 1] - vertices[i]->getPos()));
-			TraceResult r2 = Traceray(r);
+			TraceResult r2 = traceRay(r);
 			float rho = length(r(r2.m_fDist) - pos[i + 1]);//diff to proposed
 			if (rho > r2.m_fDist / 2 || !vertices[i + 1]->sameSurface(r2))
 			{

@@ -73,7 +73,7 @@ CUDA_FUNC_IN void loadInvModl(int i, float4x4* o)
 #endif
 }
 
-bool Traceray(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result)
+bool traceRay(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result)
 {
 	Platform::Increment(&g_RayTracedCounter);
 	if(!g_SceneData.m_sNodeData.UsedCount)
@@ -336,7 +336,7 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 		}
 
 		// Traversal loop.
-		/*TraceResult r2 = Traceray(Ray(a_RayBuffer[rayidx].a.getXYZ(), a_RayBuffer[rayidx].b.getXYZ()));
+		/*TraceResult r2 = traceRay(Ray(a_RayBuffer[rayidx].a.getXYZ(), a_RayBuffer[rayidx].b.getXYZ()));
 		int4 res = make_int4(0, 0, 0, 0);
 		if (r2.hasHit())
 		{

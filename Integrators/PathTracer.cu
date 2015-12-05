@@ -20,7 +20,7 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(Ray& r, const Ray& rX, con
 	TraceResult r2;
 	while (depth++ < 10)
 	{
-		r2 = Traceray(r);
+		r2 = traceRay(r);
 		float minT, maxT;
 		bool isInMedium = V.IntersectP(r, 0, r2.m_fDist, &minT, &maxT);
 		if (V.HasVolumes() && isInMedium && V.sampleDistance(r, 0, r2.m_fDist, rnd, mRec))
@@ -85,7 +85,7 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTraceRegularization(Ray& r, cons
 	DifferentialGeometry dg;
 	BSDFSamplingRecord bRec(dg);
 	//bool hadDelta = false;
-	while (Traceray(r.direction, r.origin, &r2) && depth++ < 7)
+	while (traceRay(r.direction, r.origin, &r2) && depth++ < 7)
 	{
 		r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rnd);// return (Spectrum(bRec.map.sys.n) + Spectrum(1)) / 2.0f; //return bRec.map.sys.n;
 		if (depth == 1)

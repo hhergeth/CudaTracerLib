@@ -7,7 +7,7 @@ namespace CudaTracerLib {
 
 void TracePath(Ray r, std::vector<PathVertex*>& p, int N2, ETransportMode mode, CudaRNG& rng)
 {
-	TraceResult r2 = Traceray(r);
+	TraceResult r2 = traceRay(r);
 	if (!r2.hasHit())
 		return;
 	int i = 1;
@@ -20,7 +20,7 @@ void TracePath(Ray r, std::vector<PathVertex*>& p, int N2, ETransportMode mode, 
 		v.hasSampledDelta = (bRec.sampledType & ETypeCombinations::EDelta) != 0;
 		p.push_back(new SurfacePathVertex(v));
 		r = Ray(v.dg.P, bRec.getOutgoing());
-		r2 = Traceray(r);
+		r2 = traceRay(r);
 	}
 }
 

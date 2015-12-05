@@ -14,7 +14,7 @@ __global__ void tracePhotons()
 	Ray r;
 	g_SceneData.sampleEmitterRay(r, rng.randomFloat2(), rng.randomFloat2());
 	int depth = 0;
-	while ((r2 = Traceray(r)).hasHit() && depth++ < 7)
+	while ((r2 = traceRay(r)).hasHit() && depth++ < 7)
 	{
 		DifferentialGeometry dg;
 		BSDFSamplingRecord bRec(dg);
@@ -52,7 +52,7 @@ __global__ void visualize(Image I, int w, int h, float scale)
 	if (x < w && y < h)
 	{
 		Ray r = g_SceneData.GenerateSensorRay(x, y);
-		TraceResult r2 = Traceray(r);
+		TraceResult r2 = traceRay(r);
 		float num = 0;
 		if (r2.hasHit())
 		{
@@ -146,7 +146,7 @@ void PmmTracer::Debug(Image* I, const Vec2i& p)
 
 	k_INITIALIZE(m_pScene, g_sRngs);
 	Ray r = g_SceneData.GenerateSensorRay(p.x, p.y);
-	TraceResult r2 = Traceray(r);
+	TraceResult r2 = traceRay(r);
 	Vec3f pa = r(r2.m_fDist);
 	unsigned int idx = dMap.hashMap.Hash(pa);
 	modelToShow = new unsigned int(idx);

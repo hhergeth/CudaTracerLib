@@ -27,7 +27,7 @@ float KernelDynamicScene::pdfEmitterDiscrete(const KernelLight *emitter) const
 bool KernelDynamicScene::Occluded(const Ray& r, float tmin, float tmax, TraceResult* res) const
 {
 	const float eps = 0.01f;//remember this is an occluded test, so we shrink the interval!
-	TraceResult r2 = Traceray(r);
+	TraceResult r2 = traceRay(r);
 	if (r2.hasHit() && res)
 		*res = r2;
 	bool end = r2.m_fDist < tmax * (1.0f - eps);

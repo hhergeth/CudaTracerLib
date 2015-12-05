@@ -23,13 +23,13 @@ extern CUDA_ALIGN(16) CudaRNGBuffer g_RNGDataHost;
 #define g_RNGData g_RNGDataHost
 #endif
 
-__device__ __host__ bool Traceray(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result);
+__device__ __host__ bool traceRay(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result);
 
-CUDA_FUNC_IN TraceResult Traceray(const Ray& r)
+CUDA_FUNC_IN TraceResult traceRay(const Ray& r)
 {
 	TraceResult r2;
 	r2.Init();
-	Traceray(r.direction, r.origin, &r2);
+	traceRay(r.direction, r.origin, &r2);
 	return r2;
 }
 

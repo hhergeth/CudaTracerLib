@@ -15,20 +15,20 @@ enum
 CUDA_DEVICE DeviceDepthImage g_DepthImage2;
 CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_NextRayCounter2;
 
-CUDA_FUNC_IN void computePixel(int x, int y, CudaRNG& rng, Image g_Image, bool depthImage, PrimTracer::DrawMode mode, int maxPathLength)
+CUDA_FUNC_IN void computePixel(int x, int y, CudaRNG& rng, Image g_Image, bool depthImage, PathTrace_DrawMode mode, int maxPathLength)
 {
 	Ray r, rX, rY;
 	Spectrum imp = g_SceneData.m_Camera.sampleRayDifferential(r, rX, rY, Vec2f(x, y), rng.randomFloat2());
-	TraceResult prim_res = Traceray(r);
+	TraceResult prim_res = traceRay(r);
 	Spectrum L(0.0f), through(1.0f);
 	if (prim_res.hasHit())
 	{
-		if (mode == PrimTracer::DrawMode::linear_depth)
+		if (mode == PathTrace_DrawMode::linear_depth)
 		{
 			Vec2f nf = g_SceneData.m_Camera.As()->m_fNearFarDepths;
 			L = Spectrum((prim_res.m_fDist - nf.x) / (nf.y - nf.x));
 		}
-		else if (mode == PrimTracer::DrawMode::D3D_depth)
+		else if (mode == PathTrace_DrawMode::D3D_depth)
 			L = Spectrum(DeviceDepthImage::NormalizeDepthD3D(prim_res.m_fDist));
 		else
 		{
@@ -37,20 +37,20 @@ CUDA_FUNC_IN void computePixel(int x, int y, CudaRNG& rng, Image g_Image, bool d
 			prim_res.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
 			dg.computePartials(r, rX, rY);
 
-			if (mode == PrimTracer::DrawMode::v_absdot_n_geo)
+			if (mode == PathTrace_DrawMode::v_absdot_n_geo)
 				L = Spectrum(absdot(-r.direction, dg.n));
-			else if (mode == PrimTracer::DrawMode::v_dot_n_geo)
+			else if (mode == PathTrace_DrawMode::v_dot_n_geo)
 				L = Spectrum(dot(-r.direction, dg.n));
-			else if (mode == PrimTracer::DrawMode::v_dot_n_shade)
+			else if (mode == PathTrace_DrawMode::v_dot_n_shade)
 				L = Spectrum(dot(-r.direction, dg.sys.n));
-			else if (mode == PrimTracer::DrawMode::n_geo_colored || mode == PrimTracer::DrawMode::n_shade_colored)
+			else if (mode == PathTrace_DrawMode::n_geo_colored || mode == PathTrace_DrawMode::n_shade_colored)
 			{
-				Vec3f n = ((mode == PrimTracer::DrawMode::n_geo_colored ? bRec.dg.n : bRec.dg.sys.n) + Vec3f(1)) / 2;
+				Vec3f n = ((mode == PathTrace_DrawMode::n_geo_colored ? bRec.dg.n : bRec.dg.sys.n) + Vec3f(1)) / 2;
 				L = Spectrum(n.x, n.y, n.z);
 			}
-			else if (mode == PrimTracer::DrawMode::uv)
+			else if (mode == PathTrace_DrawMode::uv)
 				L = Spectrum(dg.uv[0].x, dg.uv[0].y, 0);
-			else if (mode == PrimTracer::DrawMode::bary_coords)
+			else if (mode == PathTrace_DrawMode::bary_coords)
 				L = Spectrum(dg.bary.x, dg.bary.y, 0);
 			else
 			{
@@ -58,11 +58,11 @@ CUDA_FUNC_IN void computePixel(int x, int y, CudaRNG& rng, Image g_Image, bool d
 				Spectrum f = prim_res.getMat().bsdf.sample(bRec, rng.randomFloat2());
 				through = Transmittance(r, 0, prim_res.m_fDist);
 				bool isDelta = prim_res.getMat().bsdf.hasComponent(EDelta);
-				if (mode == PrimTracer::DrawMode::first_Le || (!isDelta && mode == PrimTracer::DrawMode::first_non_delta_Le))
+				if (mode == PathTrace_DrawMode::first_Le || (!isDelta && mode == PathTrace_DrawMode::first_non_delta_Le))
 					L = Le;
-				else if (mode == PrimTracer::DrawMode::first_f || (!isDelta && mode == PrimTracer::DrawMode::first_non_delta_f))
+				else if (mode == PathTrace_DrawMode::first_f || (!isDelta && mode == PathTrace_DrawMode::first_non_delta_f))
 					L = f;
-				else if (mode == PrimTracer::DrawMode::first_f_direct || (!isDelta && mode == PrimTracer::DrawMode::first_non_delta_f_direct))
+				else if (mode == PathTrace_DrawMode::first_f_direct || (!isDelta && mode == PathTrace_DrawMode::first_non_delta_f_direct))
 					L = Le + through * (UniformSampleOneLight(bRec, prim_res.getMat(), rng) + f * 0.5f);
 				else
 				{
@@ -71,7 +71,7 @@ CUDA_FUNC_IN void computePixel(int x, int y, CudaRNG& rng, Image g_Image, bool d
 					do
 					{
 						r = Ray(dg.P, bRec.getOutgoing());
-						prim_res = Traceray(r);
+						prim_res = traceRay(r);
 						through *= Transmittance(r, 0, prim_res.m_fDist);
 						if (prim_res.hasHit())
 						{
@@ -85,11 +85,11 @@ CUDA_FUNC_IN void computePixel(int x, int y, CudaRNG& rng, Image g_Image, bool d
 					if (prim_res.hasHit() && prim_res.getMat().bsdf.hasComponent(ESmooth))
 					{
 						Le = prim_res.Le(dg.P, bRec.dg.sys, -r.direction);
-						if (mode == PrimTracer::DrawMode::first_non_delta_Le)
+						if (mode == PathTrace_DrawMode::first_non_delta_Le)
 							L = Le;
-						else if (mode == PrimTracer::DrawMode::first_non_delta_f)
+						else if (mode == PathTrace_DrawMode::first_non_delta_f)
 							L = f;
-						else if (mode == PrimTracer::DrawMode::first_non_delta_f_direct)
+						else if (mode == PathTrace_DrawMode::first_non_delta_f_direct)
 							L = Le + through * (UniformSampleOneLight(bRec, prim_res.getMat(), rng) + f * 0.5f);
 					}
 					else;
@@ -176,7 +176,7 @@ CUDA_FUNC_IN Spectrum traceTerrain(Ray& r, CudaRNG& rng)
 	return -dot(sample_normal(pos), r.direction);//length(pos - r.origin);
 }
 
-__global__ void primaryKernel(int width, int height, Image g_Image, bool depthImage, PrimTracer::DrawMode mode, int maxPathLength)
+__global__ void primaryKernel(int width, int height, Image g_Image, bool depthImage, PathTrace_DrawMode mode, int maxPathLength)
 {
 	CudaRNG rng = g_RNGData();
 	int rayidx;
@@ -241,7 +241,7 @@ void PrimTracer::Debug(Image* I, const Vec2i& pixel)
 
 PrimTracer::PrimTracer()
 {
-	m_sParameters << KEY_DrawingMode() << CreateInterval<DrawMode>(DrawMode::first_non_delta_f_direct, DrawMode::linear_depth, DrawMode::first_non_delta_f_direct)
+	m_sParameters << KEY_DrawingMode() << PathTrace_DrawMode::first_non_delta_f_direct
 				  << KEY_MaxPathLength() << CreateInterval<int>(7, 1, INT_MAX);
 	//const char* QQ = "../Data/tmp.dat";
 	//OutputStream out(QQ);

@@ -181,7 +181,7 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 
 		while (++depth < PPM_MaxRecursion && !Le.isZero())// && !g_SurfaceMap.isFull() && !((VolEstimator*)g_VolEstimator)->isFullK()
 		{
-			TraceResult r2 = Traceray(r);
+			TraceResult r2 = traceRay(r);
 			float minT, maxT;
 			bool inMedium = (!bssrdf && V.HasVolumes() && V.IntersectP(r, 0, r2.m_fDist, &minT, &maxT)) || bssrdf;
 			if (inMedium)

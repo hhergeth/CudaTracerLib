@@ -4,32 +4,15 @@
 
 namespace CudaTracerLib {
 
+#define PTDM(X) X(linear_depth) X(D3D_depth) X(v_absdot_n_geo) X(v_dot_n_geo) X(v_dot_n_shade) X(n_geo_colored) X(n_shade_colored) X(uv) X(bary_coords) X(first_Le) X(first_f) X(first_f_direct) X(first_non_delta_Le) X(first_non_delta_f) X(first_non_delta_f_direct)
+ENUMIZE(PathTrace_DrawMode, PTDM)
+#undef PTDM
+
 class PrimTracer : public Tracer<false, false>, public IDepthTracer
 {
 public:
-	enum DrawMode
-	{
-		linear_depth,
-		D3D_depth,
 
-		v_absdot_n_geo,
-		v_dot_n_geo,
-		v_dot_n_shade,
-		n_geo_colored,
-		n_shade_colored,
-		uv,
-		bary_coords,
-
-		first_Le,
-		first_f,
-		first_f_direct,
-
-		first_non_delta_Le,
-		first_non_delta_f,
-		first_non_delta_f_direct,
-	};
-
-	PARAMETER_KEY(DrawMode, DrawingMode)
+	PARAMETER_KEY(PathTrace_DrawMode, DrawingMode)
 	PARAMETER_KEY(int, MaxPathLength)
 
 	PrimTracer();

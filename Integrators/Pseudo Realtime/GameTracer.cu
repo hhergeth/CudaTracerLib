@@ -33,7 +33,7 @@ __global__ void primaryKernelBlocked(int width, int height, Image g_Image, bool 
 			int x2 = x + i % 2, y2 = y + i / 2;
 			Ray r_i;
 			primary_f[i] = g_SceneData.m_Camera.sampleRay(r_i, Vec2f(x2, y2), rng.randomFloat2());
-			auto r2_i = Traceray(r_i);
+			auto r2_i = traceRay(r_i);
 			primary_f[i] *= Transmittance(r_i, 0, r2_i.m_fDist);
 			if (r2_i.hasHit())
 			{
@@ -88,7 +88,7 @@ __global__ void primaryKernelBlocked(int width, int height, Image g_Image, bool 
 		{
 			primaryRes.getMat().bsdf.sample(bRec, rng.randomFloat2());
 			Ray indirect_ray = Ray(dg.P, bRec.getOutgoing());
-			auto indirect_res = Traceray(indirect_ray);
+			auto indirect_res = traceRay(indirect_ray);
 			if (indirect_res.hasHit())
 			{
 				DifferentialGeometry indirect_dg;

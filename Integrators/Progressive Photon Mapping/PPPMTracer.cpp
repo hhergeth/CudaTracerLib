@@ -20,11 +20,11 @@ PPPMTracer::PPPMTracer()
 #endif
 	m_uTotalPhotonsEmitted = -1;
 	unsigned int numPhotons = (m_uBlocksPerLaunch + 2) * PPM_slots_per_block;
-	m_sSurfaceMap = SpatialLinkedMap<PPPMPhoton>(250, numPhotons * PPM_MaxRecursion / 10);
+	m_sSurfaceMap = SpatialLinkedMap<PPPMPhoton>(250, numPhotons * PPM_MaxRecursion / 2);
 	//m_pVolumeEstimator = new PointStorage(100, numPhotons * PPM_MaxRecursion / 10);
 	//m_pVolumeEstimator = new BeamGrid(100, numPhotons * PPM_MaxRecursion / 10, 20, 10);
-	//m_pVolumeEstimator = new BeamBVHStorage(100000);
-	m_pVolumeEstimator = new BeamBeamGrid(10, 30000, 3000);
+	//m_pVolumeEstimator = new BeamBVHStorage(10000);
+	m_pVolumeEstimator = new BeamBeamGrid(10, 10000, 3000);
 }
 
 void PPPMTracer::PrintStatus(std::vector<std::string>& a_Buf) const

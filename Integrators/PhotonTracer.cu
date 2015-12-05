@@ -136,7 +136,7 @@ template<bool CORRECT_DIFFERENTIALS> CUDA_FUNC_IN void doWork(Image& g_Image, Cu
 
 	while (++depth < 12 && !throughput.isZero())
 	{
-		TraceResult r2 = Traceray(r);
+		TraceResult r2 = traceRay(r);
 		float minT, maxT;
 		if ((!bssrdf && V.HasVolumes() && V.IntersectP(r, 0, r2.m_fDist, &minT, &maxT) && V.sampleDistance(r, 0, r2.m_fDist, rng, mRec)) || (bssrdf && bssrdf->sampleDistance(r, 0, r2.m_fDist, rng.randomFloat(), mRec)))
 		{

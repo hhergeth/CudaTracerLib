@@ -27,7 +27,7 @@ CUDA_FUNC_IN void BPT(const Vec2f& pixelPosition, BlockSampleImage& img, CudaRNG
 	int emitterPathLength = 1, emitterVerticesStored = 0;
 	for (; emitterVerticesStored < NUM_V_PER_PATH && emitterPathLength < MAX_SUB_PATH_LENGTH; emitterPathLength++)
 	{
-		TraceResult r2 = Traceray(lightPathState.r);
+		TraceResult r2 = traceRay(lightPathState.r);
 		if (!r2.hasHit())
 			break;
 
@@ -63,7 +63,7 @@ CUDA_FUNC_IN void BPT(const Vec2f& pixelPosition, BlockSampleImage& img, CudaRNG
 	Spectrum acc(0.0f);
 	for (int camPathLength = 1; camPathLength <= NUM_V_PER_PATH; camPathLength++)
 	{
-		TraceResult r2 = Traceray(cameraState.r);
+		TraceResult r2 = traceRay(cameraState.r);
 		if (!r2.hasHit())
 		{
 			//sample environment map
