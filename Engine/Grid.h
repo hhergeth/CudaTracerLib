@@ -16,16 +16,12 @@ template<bool REGULAR> struct HashGrid
 	CUDA_FUNC_IN HashGrid(){}
 
 	CUDA_FUNC_IN HashGrid(const AABB& box, float a_InitialRadius, unsigned int a_NumEntries)
-		: N(a_NumEntries - 1)
+		: m_sBox(box), N(a_NumEntries - 1)
 	{
-		Vec3f q = (box.maxV - box.minV) / 2.0f, m = (box.maxV + box.minV) / 2.0f;
-		float e = 0.015f, e2 = 1.0f + e;
-		m_sBox.maxV = m + q * e2;
-		m_sBox.minV = m - q * e2;
 		m_fGridSize = (int)math::floor(math::pow(a_NumEntries, 1.0f / 3.0f));
 		m_vMin = m_sBox.minV;
-		m_vInvSize = Vec3f(1.0f) / m_sBox.Size() * (m_fGridSize - 1);
-		m_vCellSize = m_sBox.Size() / (m_fGridSize - 1);
+		m_vCellSize = m_sBox.Size() / m_fGridSize;
+		m_vInvSize = Vec3f(1.0f) / m_vCellSize;
 	}
 
 	CUDA_FUNC_IN unsigned int hash6432shift(unsigned long long key) const
@@ -104,15 +100,15 @@ template<bool REGULAR> struct HashGrid
 
 	CUDA_FUNC_IN unsigned int EncodePos(const Vec3f& p, const Vec3u& i) const
 	{
-		Vec3f low = Vec3f(i.x, i.y, i.z) / m_vInvSize + m_vMin;
-		Vec3f m = clamp01((p - low) / m_vCellSize) * 255.0f;
+		Vec3f low = Vec3f(i.x, i.y, i.z) * m_vCellSize + m_vMin;
+		Vec3f m = clamp01((p - low) * m_vInvSize) * 255.0f;
 		return (int(m.x) << 16) | (int(m.y) << 8) | int(m.z);
 	}
 
 	CUDA_FUNC_IN Vec3f DecodePos(unsigned int p, const Vec3u& i) const
 	{
 		unsigned int q = 0x00ff0000, q2 = 0x0000ff00, q3 = 0x000000ff;
-		Vec3f low = Vec3f(i.x, i.y, i.z) / m_vInvSize + m_vMin;
+		Vec3f low = Vec3f(i.x, i.y, i.z) * m_vCellSize + m_vMin;
 		Vec3f m = (Vec3f((p & q) >> 16, (p & q2) >> 8, (p & q3)) / 255.0f) * m_vCellSize + low;
 		return m;
 	}
