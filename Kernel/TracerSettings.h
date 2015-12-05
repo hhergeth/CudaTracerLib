@@ -7,6 +7,7 @@
 #include <boost/mpl/string.hpp>
 #include <memory>
 #include <algorithm>
+#include <functional>
 
 namespace CudaTracerLib {
 
@@ -54,6 +55,11 @@ public:
 	{
 
 	}
+	SetParameterConstraint(const std::vector<T>& elements)
+		: elements(elements)
+	{
+
+	}
 	const std::vector<T>& getElements() const { return elements; }
 	virtual std::string Serialize() const
 	{
@@ -89,6 +95,7 @@ public:
 
 template<typename T> class TracerParameter : public ITracerParameter
 {
+protected:
 	T value;
 	T defaultValue;
 public:
@@ -105,6 +112,74 @@ public:
 		else;
 	}
 	const T& getDefaultValue() const { return defaultValue; }
+};
+
+#define MACROSTR(k) std::string(#k),
+#define MACROID(k) k,
+
+template<typename E> struct EnumConverter
+{
+
+};
+
+#define ENUMIZE(NAME, A) \
+enum NAME { \
+	A(MACROID) \
+}; \
+template<> struct EnumConverter<NAME> \
+{ \
+  static std::string ToString(NAME val) \
+  { \
+	static std::string ARR[] = { A(MACROSTR) }; \
+	return ARR[(int)val];\
+  } \
+  static NAME FromString(const std::string& val2) \
+  { \
+	static std::string ARR[] = { A(MACROSTR) }; \
+	for(int i = 0; i < sizeof(ARR)/sizeof(ARR[0]); i++) if(ARR[i] == val2) return (NAME)i; \
+	throw 1; \
+  }  \
+  static void enumerateEntries(const std::function<void(NAME, const std::string&)>& f) \
+  { \
+	static std::string ARR[] = { A(MACROSTR) }; \
+	for(int i = 0; i < sizeof(ARR)/sizeof(ARR[0]); i++) \
+		f((NAME)i, ARR[i]); \
+  } \
+};
+
+template<typename T> class EnumTracerParameter : public TracerParameter<T>
+{
+	IParameterConstraint<T>* createConstraint() const
+	{
+		std::vector<T> e;
+		EnumConverter<T>::enumerateEntries([&](T val, const std::string& strVal){ e.push_back(val); });
+		auto c = new SetParameterConstraint<T>(e);
+		return c;
+	}
+public:
+	EnumTracerParameter(const T& val)
+		: TracerParameter<T>(val, createConstraint())
+	{
+
+	}
+
+	const std::string& getStringValue() const
+	{
+		return EnumConverter<T>::ToString(getValue());
+	}
+
+	void setStringValue(const std::string& strVal)
+	{
+		T val = EnumConverter<T>::FromString(strVal);
+		setValue(val);
+	}
+
+	std::vector<std::string> getStringValues() const
+	{
+		std::vector<std::string> e;
+		EnumConverter<T>::enumerateEntries([&](T val, const std::string& strVal){ e.push_back(strVal); });
+		return e;
+	}
 };
 
 template<typename T> TracerParameter<T>* CreateParameter(const T& val)
@@ -209,7 +284,7 @@ public:
 	}
 
 	friend class InitHelper;
-	class InitHelper
+	template<typename T> class InitHelper
 	{
 		std::string lastName;
 		TracerParameterCollection& settings;
@@ -233,12 +308,25 @@ public:
 			settings.parameter[lastName] = std::unique_ptr<ITracerParameter>(para);
 			return settings;
 		}
+
+		TracerParameterCollection& operator<<(T val)
+		{
+			state = 2;
+			settings.parameter[lastName] = std::unique_ptr<ITracerParameter>(new EnumTracerParameter<T>(val));
+			return settings;
+		}
 	};
 
-	InitHelper operator<<(const std::string& name)
+	template<typename T> InitHelper<T> operator<<(const TracerParameterKey<T>& key)
 	{
-		return InitHelper(*this, name);
-	} 
+		return InitHelper<T>(*this, key);
+	}
+
+	/*template<typename T> TracerParameterCollection& add(const TracerParameterKey<T>& key, T val)
+	{
+		add(new EnumTracerParameter<T>(), key);
+		return *this;
+	}*/
 };
 
 class TracerArguments
