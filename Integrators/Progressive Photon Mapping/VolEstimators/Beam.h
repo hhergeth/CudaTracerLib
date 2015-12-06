@@ -124,7 +124,7 @@ public:
 
 	virtual void StartNewPass(const IRadiusProvider* radProvider, DynamicScene* scene) = 0;
 
-	virtual void StartNewRendering(const AABB& box, float a_InitRadius) = 0;
+	virtual void StartNewRendering(const AABB& box) = 0;
 
 	virtual bool isFull() const = 0;
 

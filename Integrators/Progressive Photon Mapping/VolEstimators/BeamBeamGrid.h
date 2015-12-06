@@ -29,9 +29,9 @@ struct BeamBeamGrid : public IVolumeEstimator
 
 	virtual void StartNewPass(const IRadiusProvider* radProvider, DynamicScene* scene);
 
-	virtual void StartNewRendering(const AABB& box, float a_InitRadius)
+	virtual void StartNewRendering(const AABB& box)
 	{
-		m_sStorage.SetSceneDimensions(box, a_InitRadius);
+		m_sStorage.SetSceneDimensions(box);
 	}
 
 	CUDA_FUNC_IN bool isFullK() const
@@ -51,7 +51,7 @@ struct BeamBeamGrid : public IVolumeEstimator
 
 	virtual void PrintStatus(std::vector<std::string>& a_Buf) const
 	{
-		a_Buf.push_back(format("%.2f%% Beam grid indices", (float)m_sStorage.deviceDataIdx / m_sStorage.numData * 100));
+		a_Buf.push_back(format("%.2f%% Beam grid indices", (float)m_sStorage.getNumStoredEntries() / m_sStorage.getNumEntries() * 100));
 		a_Buf.push_back(format("%.2f%% Beams", (float)m_uBeamIdx / m_uBeamLength * 100));
 	}
 

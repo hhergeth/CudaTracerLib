@@ -17,7 +17,7 @@ void BeamBeamGrid::StartNewPass(const IRadiusProvider* radProvider, DynamicScene
 	m_sStorage.ResetBuffer();
 
 	float r = radProvider->getCurrentRadius(1);
-	Vec3f dim = m_sStorage.hashMap.m_vCellSize;
+	Vec3f dim = Vec3f(m_sStorage.getHashGrid().m_gridSize);
 	float d = dim.min();
 	if (r > d)
 	{
@@ -84,19 +84,19 @@ void BeamBeamGrid::PrepareForRendering()
 	}
 	}*/
 	
-	if (!m_sStorage.deviceDataIdx) return;
+	if (!m_sStorage.getNumStoredEntries()) return;
 
 	std::vector<SpatialLinkedMap<int>::linkedEntry> hostIndices;
 	std::vector<unsigned int> hostMap;
-	hostIndices.resize(m_sStorage.deviceDataIdx);
-	CUDA_MEMCPY_TO_HOST(&hostIndices[0], m_sStorage.deviceData, hostIndices.size() * sizeof(SpatialLinkedMap<int>::linkedEntry));
-	hostMap.resize(m_sStorage.gridSize * m_sStorage.gridSize * m_sStorage.gridSize);
-	CUDA_MEMCPY_TO_HOST(&hostMap[0], m_sStorage.deviceMap, hostMap.size() * sizeof(unsigned int));
+	hostIndices.resize(m_sStorage.getNumStoredEntries());
+	CUDA_MEMCPY_TO_HOST(&hostIndices[0], m_sStorage.getDeviceData(), hostIndices.size() * sizeof(SpatialLinkedMap<int>::linkedEntry));
+	hostMap.resize(m_sStorage.getHashGrid().m_gridSize * m_sStorage.getHashGrid().m_gridSize * m_sStorage.getHashGrid().m_gridSize);
+	CUDA_MEMCPY_TO_HOST(&hostMap[0], m_sStorage.getDeviceGrid(), hostMap.size() * sizeof(unsigned int));
 	auto bitset = new std::bitset<1024 * 1024 * 10>();
 	m_sStorage.ForAllCells([&](const Vec3u& pos)
 	{
 		bitset->reset();
-		unsigned int idx = hostMap[m_sStorage.hashMap.Hash(pos)], lastIdx = UINT_MAX;
+		unsigned int idx = hostMap[m_sStorage.getHashGrid().Hash(pos)], lastIdx = UINT_MAX;
 		while (idx != UINT_MAX)
 		{
 			int beam_idx = hostIndices[idx].value;
@@ -129,7 +129,7 @@ void BeamBeamGrid::PrepareForRendering()
 	});
 	m_sStorage.deviceData = A;
 	m_sStorage.deviceMap = B;*/
-	CUDA_MEMCPY_TO_DEVICE(m_sStorage.deviceData, &hostIndices[0], hostIndices.size() * sizeof(SpatialLinkedMap<int>::linkedEntry));
+	CUDA_MEMCPY_TO_DEVICE(m_sStorage.getDeviceData(), &hostIndices[0], hostIndices.size() * sizeof(SpatialLinkedMap<int>::linkedEntry));
 }
 
 }

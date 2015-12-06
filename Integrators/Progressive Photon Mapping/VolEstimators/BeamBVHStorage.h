@@ -71,7 +71,7 @@ public:
 		m_fCurrentRadiusVol = radProvider->getCurrentRadius(1);
 	}
 
-	virtual void StartNewRendering(const AABB& box, float a_InitRadius)
+	virtual void StartNewRendering(const AABB& box)
 	{
 		volBox = box;
 	}

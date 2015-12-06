@@ -5,7 +5,7 @@
 
 namespace CudaTracerLib {
 
-CUDA_CONST SpatialLinkedMap<PPPMPhoton> g_SurfMap;
+CUDA_CONST SurfaceMapT g_SurfMap;
 CUDA_CONST unsigned int g_NumPhotonEmitted2;
 CUDA_CONST CUDA_ALIGN(16) unsigned char g_VolEstimator2[Dmax4(sizeof(PointStorage), sizeof(BeamGrid), sizeof(BeamBeamGrid), sizeof(BeamBVHStorage))];
 
@@ -72,7 +72,7 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const Vec3f& wi, float
 	Spectrum Lp = Spectrum(0.0f);
 	Vec3f a = r*(-bRec.dg.sys.t - bRec.dg.sys.s) + bRec.dg.P, b = r*(bRec.dg.sys.t - bRec.dg.sys.s) + bRec.dg.P, c = r*(-bRec.dg.sys.t + bRec.dg.sys.s) + bRec.dg.P, d = r*(bRec.dg.sys.t + bRec.dg.sys.s) + bRec.dg.P;
 #ifdef ISCUDA
-	g_SurfMap.ForAll(min(a, b, c, d), max(a, b, c, d), [&](unsigned int p_idx, PPPMPhoton& ph)
+	g_SurfMap.ForAll<100>(min(a, b, c, d), max(a, b, c, d), [&](unsigned int p_idx, PPPMPhoton& ph)
 	{
 		float dist2 = distanceSquared(ph.Pos, bRec.dg.P);
 		Vec3f photonNormal = ph.getNormal();
@@ -355,6 +355,14 @@ __global__ void k_PerPixelRadiusEst(int w, int h, float r_max, float r_1, k_Adap
 
 void PPPMTracer::doPerPixelRadiusEstimation()
 {
+
+	auto ray = g_SceneData.GenerateSensorRay(w / 2, h / 2);
+	auto res = traceRay(ray);
+	if (res.hasHit())
+	{
+		m_sSurfaceMap.getHashGrid().Hash(ray(res.m_fDist));
+	}
+
 	int a = floatToOrderedInt(FLT_MAX), b = floatToOrderedInt(0);
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_MaxRad, &b, sizeof(b)));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_MinRad, &a, sizeof(a)));

@@ -5,20 +5,73 @@
 
 namespace CudaTracerLib {
 
-//a mapping from R^3 -> T^n, ie. associating variable number of values with each point in the grid
-template<typename T> struct SpatialLinkedMap
+template<typename T, typename HASHER> class SpatialGrid
 {
+protected:
+	HashGrid_Reg hashMap;
+public:
+	CUDA_FUNC_IN SpatialGrid()
+	{
+	}
+
+	CUDA_FUNC_IN const HashGrid_Reg& getHashGrid() const
+	{
+		return hashMap;
+	}
+
+	template<unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX, typename CLB> CUDA_FUNC_IN void ForAll(const Vec3u& min, const Vec3u& max, const CLB& clb)
+	{
+		ForAllCells(min, max, [&](const Vec3u& cell_idx)
+		{
+			((HASHER*)this)->ForAllCellEntries<MAX_ENTRIES_PER_CELL>(cell_idx, clb);
+		});
+	}
+
+	template<unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX, typename CLB> CUDA_FUNC_IN void ForAll(const Vec3f& p, const CLB& clb)
+	{
+		((HASHER*)this)->ForAllCellEntries<MAX_ENTRIES_PER_CELL>(hashMap.Transform(p), clb);
+	}
+
+	template<unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX, typename CLB> CUDA_FUNC_IN void ForAll(const Vec3f& min, const Vec3f& max, const CLB& clb)
+	{
+		ForAll<MAX_ENTRIES_PER_CELL>(hashMap.Transform(min), hashMap.Transform(max), clb);
+	}
+
+	template<typename CLB> CUDA_FUNC_IN void ForAllCells(const Vec3u& min_cell, const Vec3u& max_cell, const CLB& clb)
+	{
+		for (unsigned int ax = min_cell.x; ax <= max_cell.x; ax++)
+			for (unsigned int ay = min_cell.y; ay <= max_cell.y; ay++)
+				for (unsigned int az = min_cell.z; az <= max_cell.z; az++)
+				{
+					clb(Vec3u(ax, ay, az));
+				}
+	}
+
+	template<typename CLB> CUDA_FUNC_IN void ForAllCells(const Vec3f& min, const Vec3f& max, const CLB& clb)
+	{
+		ForAllCells(hashMap.Transform(min), hashMap.Transform(max), clb);
+	}
+
+	template<typename CLB> CUDA_FUNC_IN void ForAllCells(const CLB& clb)
+	{
+		ForAllCells(Vec3u(0), Vec3u(hashMap.m_gridSize - 1), clb);
+	}
+};
+
+//a mapping from R^3 -> T^n, ie. associating variable number of values with each point in the grid
+template<typename T> class SpatialLinkedMap : public SpatialGrid<T, SpatialLinkedMap<T>>
+{
+public:
 	struct linkedEntry
 	{
 		unsigned int nextIdx;
 		T value;
 	};
-
+private:
 	unsigned int numData, gridSize;
 	linkedEntry* deviceData;
 	unsigned int* deviceMap;
 	unsigned int deviceDataIdx;
-	HashGrid_Reg hashMap;
 public:
 
 	CUDA_FUNC_IN SpatialLinkedMap(){}
@@ -28,15 +81,16 @@ public:
 		CUDA_MALLOC(&deviceData, sizeof(linkedEntry) * numData);
 		CUDA_MALLOC(&deviceMap, sizeof(unsigned int) * gridSize * gridSize * gridSize);
 	}
+	
 	void Free()
 	{
 		CUDA_FREE(deviceData);
 		CUDA_FREE(deviceMap);
 	}
 
-	void SetSceneDimensions(const AABB& box, float initialRadius)
+	void SetSceneDimensions(const AABB& box)
 	{
-		hashMap = HashGrid_Reg(box, initialRadius, gridSize * gridSize * gridSize);
+		hashMap = HashGrid_Reg(box, gridSize);
 	}
 
 	void ResetBuffer()
@@ -44,6 +98,18 @@ public:
 		deviceDataIdx = 0;
 		ThrowCudaErrors(cudaMemset(deviceMap, -1, sizeof(unsigned int) * gridSize * gridSize * gridSize));
 	}
+
+	unsigned int getNumEntries() const
+	{
+		return numData;
+	}
+
+	unsigned int getNumStoredEntries() const
+	{
+		return deviceDataIdx;
+	}
+
+	void PrepareForUse() {}
 
 	CUDA_FUNC_IN bool isFull() const
 	{
@@ -94,7 +160,7 @@ public:
 	}
 #endif
 
-	template<unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX, typename CLB> CUDA_FUNC_IN void ForAll(const Vec3u& p, const CLB& clb)
+	template<unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX, typename CLB> CUDA_FUNC_IN void ForAllCellEntries(const Vec3u& p, const CLB& clb)
 	{
 		unsigned int i0 = hashMap.Hash(p), i = deviceMap[i0], N = 0;
 		while (i != UINT_MAX && i != 0xffffff && N++ < MAX_ENTRIES_PER_CELL)
@@ -102,44 +168,6 @@ public:
 			clb(i, deviceData[i].value);
 			i = deviceData[i].nextIdx;
 		}
-	}
-
-	template<unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX, typename CLB> CUDA_FUNC_IN void ForAll(const Vec3u& min, const Vec3u& max, const CLB& clb)
-	{
-		ForAllCells(min, max, [&](const Vec3u& cell_idx)
-		{
-			ForAll<MAX_ENTRIES_PER_CELL>(cell_idx, clb);
-		});
-	}
-
-	template<unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX, typename CLB> CUDA_FUNC_IN void ForAll(const Vec3f& p, const CLB& clb)
-	{
-		ForAll<MAX_ENTRIES_PER_CELL>(hashMap.Transform(p), clb);
-	}
-
-	template<unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX, typename CLB> CUDA_FUNC_IN void ForAll(const Vec3f& min, const Vec3f& max, const CLB& clb)
-	{
-		ForAll<MAX_ENTRIES_PER_CELL>(hashMap.Transform(min), hashMap.Transform(max), clb);
-	}
-
-	template<typename CLB> CUDA_FUNC_IN void ForAllCells(const Vec3u& min_cell, const Vec3u& max_cell, const CLB& clb)
-	{
-		for (unsigned int ax = min_cell.x; ax <= max_cell.x; ax++)
-			for (unsigned int ay = min_cell.y; ay <= max_cell.y; ay++)
-				for (unsigned int az = min_cell.z; az <= max_cell.z; az++)
-				{
-					clb(Vec3u(ax, ay, az));
-				}
-	}
-
-	template<typename CLB> CUDA_FUNC_IN void ForAllCells(const Vec3f& min, const Vec3f& max, const CLB& clb)
-	{
-		ForAllCells(hashMap.Transform(min), hashMap.Transform(max), clb);
-	}
-
-	template<typename CLB> CUDA_FUNC_IN void ForAllCells(const CLB& clb)
-	{
-		ForAllCells(Vec3u(0), Vec3u(hashMap.m_fGridSize - 1), clb);
 	}
 
 	CUDA_FUNC_IN const T& operator()(unsigned int idx) const
@@ -151,6 +179,9 @@ public:
 	{
 		return deviceData[idx].value;
 	}
+
+	linkedEntry* getDeviceData() { return deviceData; }
+	unsigned int* getDeviceGrid() { return deviceMap; }
 };
 
 //a mapping from R^3 -> T, ie. associating one element with each point in the grid
@@ -172,9 +203,9 @@ public:
 		CUDA_FREE(deviceData);
 	}
 
-	void SetSceneDimensions(const AABB& box, float initialRadius)
+	void SetSceneDimensions(const AABB& box)
 	{
-		hashMap = HashGrid_Reg(box, initialRadius, gridSize * gridSize * gridSize);
+		hashMap = HashGrid_Reg(box, gridSize);
 	}
 
 	void ResetBuffer()

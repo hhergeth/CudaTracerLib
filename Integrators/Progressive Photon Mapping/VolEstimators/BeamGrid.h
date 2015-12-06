@@ -32,10 +32,10 @@ struct BeamGrid : public PointStorage
 		m_sBeamGridStorage.ResetBuffer();
 	}
 
-	virtual void StartNewRendering(const AABB& box, float a_InitRadius)
+	virtual void StartNewRendering(const AABB& box)
 	{
-		PointStorage::StartNewRendering(box, a_InitRadius);
-		m_sBeamGridStorage.SetSceneDimensions(box, a_InitRadius);
+		PointStorage::StartNewRendering(box);
+		m_sBeamGridStorage.SetSceneDimensions(box);
 	}
 
 	virtual size_t getSize() const
@@ -48,16 +48,16 @@ struct BeamGrid : public PointStorage
 	virtual void PrintStatus(std::vector<std::string>& a_Buf) const
 	{
 		PointStorage::PrintStatus(a_Buf);
-		a_Buf.push_back(format("%.2f%% Beam indices", (float)m_sBeamGridStorage.deviceDataIdx / m_sBeamGridStorage.numData * 100));
+		a_Buf.push_back(format("%.2f%% Beam indices", (float)m_sBeamGridStorage.getNumStoredEntries() / m_sBeamGridStorage.getNumEntries() * 100));
 	}
 
 	template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum L_Volume(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr)
 	{
 		Spectrum Tau = Spectrum(0.0f);
 		Spectrum L_n = Spectrum(0.0f);
-		TraverseGrid(r, m_sStorage.hashMap, tmin, tmax, [&](float minT, float rayT, float maxT, float cellEndT, Vec3u& cell_pos, bool& cancelTraversal)
+		TraverseGrid(r, m_sStorage.getHashGrid(), tmin, tmax, [&](float minT, float rayT, float maxT, float cellEndT, Vec3u& cell_pos, bool& cancelTraversal)
 		{
-			m_sBeamGridStorage.ForAll(cell_pos, [&](unsigned int, unsigned int beam_idx)
+			m_sBeamGridStorage.ForAllCellEntries(cell_pos, [&](unsigned int, unsigned int beam_idx)
 			{
 				const volPhoton& ph = m_sStorage(beam_idx);
 				float l1 = dot(ph.p - r.origin, r.direction) / dot(r.direction, r.direction);

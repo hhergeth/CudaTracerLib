@@ -6,21 +6,19 @@ namespace CudaTracerLib {
 
 template<bool REGULAR> struct HashGrid
 {
-	unsigned int m_fGridSize;
+	unsigned int m_gridSize, m_nElements;
 	Vec3f m_vMin;
 	Vec3f m_vInvSize;
 	Vec3f m_vCellSize;
 	AABB m_sBox;
-	unsigned int N;
 
 	CUDA_FUNC_IN HashGrid(){}
 
-	CUDA_FUNC_IN HashGrid(const AABB& box, float a_InitialRadius, unsigned int a_NumEntries)
-		: m_sBox(box), N(a_NumEntries - 1)
+	CUDA_FUNC_IN HashGrid(const AABB& box, unsigned int gridSize)
+		: m_sBox(box), m_nElements(gridSize * gridSize * gridSize), m_gridSize(gridSize)
 	{
-		m_fGridSize = (int)math::floor(math::pow(a_NumEntries, 1.0f / 3.0f));
 		m_vMin = m_sBox.minV;
-		m_vCellSize = m_sBox.Size() / m_fGridSize;
+		m_vCellSize = m_sBox.Size() / m_gridSize;
 		m_vInvSize = Vec3f(1.0f) / m_vCellSize;
 	}
 
@@ -38,8 +36,8 @@ template<bool REGULAR> struct HashGrid
 	{
 		if (REGULAR)
 		{
-			unsigned int h = p.z * m_fGridSize * m_fGridSize + p.y * m_fGridSize + p.x;
-			if (h > N)
+			unsigned int h = p.z * m_gridSize * m_gridSize + p.y * m_gridSize + p.x;
+			if (h >= m_nElements)
 				printf("h = %d, p = {%d, %d, %d}\n", h, p.x, p.y, p.z);
 			return h;
 		}
@@ -58,7 +56,7 @@ template<bool REGULAR> struct HashGrid
 			beta = (sign(p) + Vec4f(1.0)) * Vec4f(0.5) * m;
 			n = (p + beta);
 
-			return (unsigned int)math::floor(math::frac(dot(n / m, Vec4f(1.0, -1.0, 1.0, -1.0))) * N);
+			return (unsigned int)math::floor(math::frac(dot(n / m, Vec4f(1.0, -1.0, 1.0, -1.0))) * (m_nElements - 1));
 		}
 	}
 
@@ -66,9 +64,9 @@ template<bool REGULAR> struct HashGrid
 	{
 		if (REGULAR)
 		{
-			unsigned int k = idx / (m_fGridSize * m_fGridSize);
-			unsigned int j = (idx - k * m_fGridSize * m_fGridSize) / m_fGridSize;
-			return Vec3u(idx - k * m_fGridSize * m_fGridSize - j * m_fGridSize, j, k);
+			unsigned int k = idx / (m_gridSize * m_gridSize);
+			unsigned int j = (idx - k * m_gridSize * m_gridSize) / m_gridSize;
+			return Vec3u(idx - k * m_gridSize * m_gridSize - j * m_gridSize, j, k);
 		}
 		else
 		{
@@ -85,7 +83,7 @@ template<bool REGULAR> struct HashGrid
 	CUDA_FUNC_IN  Vec3u Transform(const Vec3f& p) const
 	{
 		Vec3f q = (p - m_vMin) * m_vInvSize;
-		return clamp(Vec3u((unsigned int)q.x, (unsigned int)q.y, (unsigned int)q.z), Vec3u(0), Vec3u(m_fGridSize - 1));
+		return clamp(Vec3u((unsigned int)q.x, (unsigned int)q.y, (unsigned int)q.z), Vec3u(0), Vec3u(m_gridSize - 1));
 	}
 
 	CUDA_FUNC_IN Vec3f InverseTransform(const Vec3u& i) const
@@ -171,7 +169,7 @@ template<typename F> CUDA_FUNC_IN void TraverseGrid(const Ray& r, float tmin, fl
 
 template<typename F> CUDA_FUNC_IN void TraverseGrid(const Ray& r, const HashGrid_Reg& grid, float tmin, float tmax, const F& clb)
 {
-	return TraverseGrid(r, tmin, tmax, clb, grid.m_sBox, Vec3f(grid.m_fGridSize));
+	return TraverseGrid(r, tmin, tmax, clb, grid.m_sBox, Vec3f(grid.m_gridSize));
 }
 
 }

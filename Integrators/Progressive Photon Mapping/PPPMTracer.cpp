@@ -12,7 +12,7 @@ PPPMTracer::PPPMTracer()
 	: m_pEntries(0), m_fLightVisibility(1), k_Intial(25)
 {
 	m_sParameters << KEY_Direct() << CreateSetBool(true)
-				  << KEY_PerPixelRadius() << CreateSetBool(false);
+		<< KEY_PerPixelRadius() << CreateSetBool(false);
 #ifdef NDEBUG
 	m_uBlocksPerLaunch = 180;
 #else
@@ -20,7 +20,7 @@ PPPMTracer::PPPMTracer()
 #endif
 	m_uTotalPhotonsEmitted = -1;
 	unsigned int numPhotons = (m_uBlocksPerLaunch + 2) * PPM_slots_per_block;
-	m_sSurfaceMap = SpatialLinkedMap<PPPMPhoton>(250, numPhotons * PPM_MaxRecursion / 2);
+	m_sSurfaceMap = SurfaceMapT(250, numPhotons * PPM_MaxRecursion / 2);
 	//m_pVolumeEstimator = new PointStorage(100, numPhotons * PPM_MaxRecursion / 10);
 	//m_pVolumeEstimator = new BeamGrid(100, numPhotons * PPM_MaxRecursion / 10, 20, 10);
 	//m_pVolumeEstimator = new BeamBVHStorage(10000);
@@ -37,8 +37,8 @@ void PPPMTracer::PrintStatus(std::vector<std::string>& a_Buf) const
 	a_Buf.push_back(format("Photons/Sec avg : %f", (float)pCs));
 	a_Buf.push_back(format("Photons/Sec lst : %f", (float)pCsLast));
 	a_Buf.push_back(format("Light Visibility : %f", m_fLightVisibility));
-	a_Buf.push_back(format("Photons per pass : %d*100,000", m_sSurfaceMap.numData / 100000));
-	a_Buf.push_back(format("%.2f%% Surf Photons", float(m_sSurfaceMap.deviceDataIdx) / m_sSurfaceMap.numData * 100));
+	a_Buf.push_back(format("Photons per pass : %d*100,000", m_sSurfaceMap.getNumEntries() / 100000));
+	a_Buf.push_back(format("%.2f%% Surf Photons", float(m_sSurfaceMap.getNumStoredEntries()) / m_sSurfaceMap.getNumEntries() * 100));
 	a_Buf.push_back("Volumeric Estimator : ");
 	m_pVolumeEstimator->PrintStatus(a_Buf);
 }
@@ -69,7 +69,7 @@ void PPPMTracer::getRadiusAt(int x, int y, float& r, float& rd) const
 {
 	k_AdaptiveEntry e;
 	ThrowCudaErrors(cudaMemcpy(&e, m_pEntries + w * y + x, sizeof(e), cudaMemcpyDeviceToHost));
-	r = e.compute_r(m_uPassesDone, m_sSurfaceMap.numData, m_uTotalPhotonsEmitted);
+	r = e.compute_r(m_uPassesDone, m_sSurfaceMap.getNumEntries(), m_uTotalPhotonsEmitted);
 	rd = e.compute_rd(m_uPassesDone);
 }
 
@@ -107,8 +107,8 @@ void PPPMTracer::StartNewTrace(Image* I)
 			}
 		}
 	}
-	m_sSurfaceMap.SetSceneDimensions(m_sEyeBox, r);
-	m_pVolumeEstimator->StartNewRendering(volBox, r);
+	m_sSurfaceMap.SetSceneDimensions(m_sEyeBox);
+	m_pVolumeEstimator->StartNewRendering(volBox);
 
 	float r_scene = m_sEyeBox.Size().length() / 2;
 	r_min = 1e-6f * r_scene;

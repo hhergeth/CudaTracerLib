@@ -2,6 +2,10 @@
 #include <Kernel/TraceHelper.h>
 #include <Kernel/TraceAlgorithms.h>
 #include <Math/half.h>
+#include <Base/Timer.h>
+#include <thrust/device_ptr.h>
+#include <thrust/sort.h>
+#include <thrust/device_vector.h>
 
 namespace CudaTracerLib {
 
@@ -113,7 +117,7 @@ CUDA_ONLY_FUNC void BeamBeamGrid::StoreBeam(const Beam& b, bool firstStore)
 #ifdef ISCUDA
 		const AABB objaabb = b.getAABB(m_fCurrentRadiusVol);
 		const int maxAxis = b.dir.abs().arg_max();
-		const int chopCount = (int)(objaabb.Size()[maxAxis] * m_sStorage.hashMap.m_vInvSize[maxAxis]) + 1;
+		const int chopCount = (int)(objaabb.Size()[maxAxis] * m_sStorage.getHashGrid().m_vInvSize[maxAxis]) + 1;
 		const float invChopCount = 1.0f / (float)chopCount;
 
 		for (int chop = 0; chop < chopCount; ++chop)
@@ -125,12 +129,12 @@ CUDA_ONLY_FUNC void BeamBeamGrid::StoreBeam(const Beam& b, bool firstStore)
 				/*bool found_duplicate = false;
 				m_sStorage.ForAll(pos, [&](unsigned int loc_idx, unsigned int b_idx)
 				{
-					if (found_duplicate) return;
-					if (beam_idx == b_idx)
-						found_duplicate = true;
+				if (found_duplicate) return;
+				if (beam_idx == b_idx)
+				found_duplicate = true;
 				});
 				if (!found_duplicate)*/
-					storedAll &= m_sStorage.store(pos, beam_idx);
+				storedAll &= m_sStorage.store(pos, beam_idx);
 			});
 		}
 
@@ -148,7 +152,7 @@ CUDA_ONLY_FUNC void BeamBeamGrid::StoreBeam(const Beam& b, bool firstStore)
 
 CUDA_CONST unsigned int g_PassIdx;
 CUDA_DEVICE unsigned int g_NumPhotonEmitted;
-CUDA_DEVICE SpatialLinkedMap<PPPMPhoton> g_SurfaceMap;
+CUDA_DEVICE SurfaceMapT g_SurfaceMap;
 CUDA_DEVICE CUDA_ALIGN(16) unsigned char g_VolEstimator[Dmax4(sizeof(PointStorage), sizeof(BeamGrid), sizeof(BeamBeamGrid), sizeof(BeamBVHStorage))];
 
 template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thread, bool DIRECT)
@@ -271,8 +275,96 @@ void PPPMTracer::doPhotonPass()
 	ThrowCudaErrors(cudaMemcpyFromSymbol(&m_uPhotonEmittedPass, g_NumPhotonEmitted, sizeof(m_uPhotonEmittedPass)));
 	m_pVolumeEstimator->PrepareForRendering();
 	m_uPhotonEmittedPass = max(m_uPhotonEmittedPass, m_pVolumeEstimator->getNumEmitted());
+	m_sSurfaceMap.PrepareForUse();
 	if (m_uTotalPhotonsEmitted == 0)
 		doPerPixelRadiusEstimation();
+}
+
+struct order
+{
+	CUDA_FUNC_IN bool operator()(const Vec2u& a, const Vec2u& b) const
+	{
+		return a.y < b.y;
+	}
+};
+
+CUDA_DEVICE unsigned int g_DestCounter;
+template<typename T, int N_PER_THREAD, int N_MAX_PER_CELL> __global__ void buildGrid(T* deviceDataSource, T* deviceDataDest, unsigned int N, Vec2u* deviceList, unsigned int* deviceGrid)
+{
+	static_assert(N_MAX_PER_CELL >= N_PER_THREAD, "A thread must be able to copy more elements than in his cell can be!");
+	unsigned int startIdx = N_PER_THREAD * (blockIdx.x * blockDim.y * blockDim.x + threadIdx.y * blockDim.x + threadIdx.x), idx = startIdx;
+	//skip indices from the prev cell
+	if (idx > 0 && idx < N)
+	{
+		unsigned int prev_idx = deviceList[idx - 1].y;
+		while (idx < N && deviceList[idx].y == prev_idx && idx - startIdx < N_PER_THREAD)
+			idx++;
+	}
+	//copy, possibly leaving this thread's segment
+	while (idx < N && idx - startIdx < N_PER_THREAD)
+	{
+		//count the number of elements in this cell
+		unsigned int idxPast = idx + 1, cell_idx = deviceList[idx].y;
+		while (idxPast < N && deviceList[idxPast].y == cell_idx && idxPast - idx <= N_MAX_PER_CELL)
+			idxPast++;
+		unsigned int tarBufferLoc = atomicAdd(&g_DestCounter, idxPast - idx);
+		deviceGrid[cell_idx] = tarBufferLoc;
+		//copy the elements to the newly aquired location
+		for (; idx < idxPast; idx++)
+			deviceDataDest[tarBufferLoc++] = deviceDataSource[deviceList[idx].x];
+		deviceDataDest[tarBufferLoc - 1].setFlag(true);
+	}
+}
+
+template<typename T> void SpatialFlatMap<T>::PrepareForUse()
+{
+	auto& Tt = PerformanceTimer::getInstance(typeid(PPPMTracer).name());
+
+	idxData = min(idxData, numData);
+	ThrowCudaErrors(cudaMemcpy(hostData1, deviceData, sizeof(T) * idxData, cudaMemcpyDeviceToHost));
+	{
+		auto bl = Tt.StartBlock("sort");
+		thrust::sort(thrust::device_ptr<Vec2u>(deviceList), thrust::device_ptr<Vec2u>(deviceList + idxData), order());
+	}
+	ThrowCudaErrors(cudaMemcpy(hostList, deviceList, sizeof(Vec2u) * idxData, cudaMemcpyDeviceToHost));
+	{
+		auto bl = Tt.StartBlock("reset");
+		for (unsigned int idx = 0; idx < gridSize * gridSize * gridSize; idx++)
+			hostGrid[idx] = UINT_MAX;
+	}
+	{
+		auto bl = Tt.StartBlock("build");
+		unsigned int i = 0;
+		while (i < idxData)
+		{
+			unsigned int cellHash = hostList[i].y;
+			hostGrid[cellHash] = i;
+			while (i < idxData && hostList[i].y == cellHash)
+			{
+				hostData2[i] = hostData1[hostList[i].x];
+				i++;
+			}
+			hostData2[i - 1].setFlag(true);
+		}
+	}
+	ThrowCudaErrors(cudaMemcpy(deviceGrid, hostGrid, sizeof(unsigned int) * gridSize * gridSize * gridSize, cudaMemcpyHostToDevice));
+	ThrowCudaErrors(cudaMemcpy(deviceData, hostData2, sizeof(T) * idxData, cudaMemcpyHostToDevice));
+	/*{
+		auto bl = Tt.StartBlock("sort");
+		thrust::sort(thrust::device_ptr<Vec2u>(deviceList), thrust::device_ptr<Vec2u>(deviceList + idxData), order());
+		}
+		{
+		auto bl = Tt.StartBlock("init");
+		ThrowCudaErrors(cudaMemset(deviceGrid, UINT_MAX, gridSize * gridSize * gridSize));
+		}
+		{
+		auto bl = Tt.StartBlock("build");
+		const unsigned int N_THREAD = 10;
+		ZeroSymbol(g_DestCounter);
+		buildGrid<T, N_THREAD, 100> << <idxData / (32 * 6 * N_THREAD) + 1, dim3(32, 6) >> >(deviceData, deviceData2, idxData, deviceList, deviceGrid);
+		ThrowCudaErrors(cudaDeviceSynchronize());
+		swapk(deviceData, deviceData2);
+	}*/
 }
 
 }

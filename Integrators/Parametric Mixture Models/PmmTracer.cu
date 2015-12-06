@@ -88,7 +88,7 @@ void PmmTracer::DoRender(Image* I)
 
 	sMap.ResetBuffer();
 	cudaMemcpyToSymbol(g_sMap, &sMap, sizeof(sMap));
-	while (sMap.deviceDataIdx < sMap.numData)
+	while (!sMap.isFull())
 	{
 		tracePhotons << < 20, 256 >> >();
 		cudaMemcpyFromSymbol(&sMap, g_sMap, sizeof(sMap));
@@ -116,9 +116,9 @@ void PmmTracer::StartNewTrace(Image* I)
 	passIteration = 1;
 	AABB box = this->GetEyeHitPointBox(m_pScene, true);
 	//AABB box = m_pScene->getBox(m_pScene->getNodes());
-	sMap.SetSceneDimensions(box, length(box.Size()) / 100.0f);
+	sMap.SetSceneDimensions(box);
 	dMap.ResetBuffer();
-	dMap.SetSceneDimensions(box, length(box.Size()) / 100.0f);
+	dMap.SetSceneDimensions(box);
 	CudaRNG rng = g_RNGData();
 	DirectionModel* models = new DirectionModel[dMap.NumEntries()];
 	for (unsigned int i = 0; i < dMap.NumEntries(); i++)

@@ -46,9 +46,9 @@ struct PointStorage : public IVolumeEstimator
 		m_sStorage.ResetBuffer();
 	}
 
-	virtual void StartNewRendering(const AABB& box, float a_InitRadius)
+	virtual void StartNewRendering(const AABB& box)
 	{
-		m_sStorage.SetSceneDimensions(box, a_InitRadius);
+		m_sStorage.SetSceneDimensions(box);
 	}
 
 	CUDA_FUNC_IN bool isFullK() const
@@ -73,7 +73,7 @@ struct PointStorage : public IVolumeEstimator
 
 	virtual void PrintStatus(std::vector<std::string>& a_Buf) const
 	{
-		a_Buf.push_back(format("%.2f%% Vol Photons", (float)m_sStorage.deviceDataIdx / m_sStorage.numData * 100));
+		a_Buf.push_back(format("%.2f%% Vol Photons", (float)m_sStorage.getNumEntries() / m_sStorage.getNumStoredEntries() * 100));
 	}
 
 	virtual void PrepareForRendering()
@@ -99,7 +99,7 @@ struct PointStorage : public IVolumeEstimator
 		float r3 = m_fCurrentRadiusVol * m_fCurrentRadiusVol * m_fCurrentRadiusVol, Vs = 1.0f / (m_uNumEmitted * r3 * 4.0f / 3.0f * PI);
 		Spectrum L_n = Spectrum(0.0f);
 		float a, b;
-		if (!m_sStorage.hashMap.getAABB().Intersect(r, &a, &b))
+		if (!m_sStorage.getHashGrid().getAABB().Intersect(r, &a, &b))
 			return L_n;//that would be dumb
 		float minT = a = math::clamp(a, tmin, tmax);
 		b = math::clamp(b, tmin, tmax);

@@ -20,7 +20,7 @@ void TracerBase::InitRngs(unsigned int N)
 TracerBase::TracerBase()
 	: m_pScene(0), m_pBlockSampler(0)
 {
-	InitRngs(250000);
+	InitRngs(15000);
 	ThrowCudaErrors(cudaEventCreate(&start));
 	ThrowCudaErrors(cudaEventCreate(&stop));
 	m_sParameters << KEY_SamplerActive() << CreateSetBool(false);

@@ -100,6 +100,14 @@ public:
 	{
 		return Nor;
 	}
+	CUDA_FUNC_IN bool getFlag() const
+	{
+		return (bool)(typeNextField >> 31);
+	}
+	CUDA_FUNC_IN void setFlag(bool b)
+	{
+		typeNextField |= (unsigned int)b << 31;
+	}
 	/*
 	 CUDA_FUNC_IN PPPMPhoton(const uint4& v)
 	 {
@@ -185,7 +193,7 @@ template<typename HASH> struct k_PhotonMap
 
 	void StartNewRendering(const AABB& box, float a_InitRadius)
 	{
-		m_sHash = HASH(box, a_InitRadius, m_uGridLength);
+		m_sHash = HASH(box, (unsigned int)math::pow(m_uGridLength, 1.0f / 3.0f));
 		ThrowCudaErrors(cudaMemset(m_pDeviceHashGrid, -1, sizeof(unsigned int)* m_uGridLength));
 		//ThrowCudaErrors(cudaMemset(m_pDeviceLinkedList, -1, sizeof(uint2)* m_uLinkedListLength));
 		//m_uLinkedListUsed = 0;
