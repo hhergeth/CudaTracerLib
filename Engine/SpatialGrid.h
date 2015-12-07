@@ -7,7 +7,7 @@
 #include <thrust/device_ptr.h>
 #include <thrust/sort.h>
 #include <thrust/device_vector.h>
-#pragma warning (enable : 4267)
+#pragma warning (default : 4267)
 #endif
 
 namespace CudaTracerLib {
@@ -229,7 +229,7 @@ template<typename T, int N_PER_THREAD, int N_MAX_PER_CELL> __global__ void build
 		//copy the elements to the newly aquired location
 		for (; idx < idxPast; idx++)
 			deviceDataDest[tarBufferLoc++] = deviceDataSource[deviceList[idx].x];
-		deviceDataDest[tarBufferLoc - 1].setFlag(true);
+		deviceDataDest[tarBufferLoc - 1].setFlag();
 	}
 }
 
@@ -322,7 +322,7 @@ public:
 					hostData2[i] = hostData1[hostList[i].x];
 					i++;
 				}
-				hostData2[i - 1].setFlag(true);
+				hostData2[i - 1].setFlag();
 			}
 		}
 		ThrowCudaErrors(cudaMemcpy(deviceGrid, hostGrid, sizeof(unsigned int) * gridSize * gridSize * gridSize, cudaMemcpyHostToDevice));

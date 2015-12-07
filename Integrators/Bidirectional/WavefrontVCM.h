@@ -37,7 +37,7 @@ protected:
 private:
 
 	//current will be used for lookup, next will be stored in
-	k_PhotonMapCollection<false, k_MISPhoton> m_sPhotonMapsNext;
+	VCMSurfMap m_sPhotonMapsNext;
 	float m_fInitialRadius;
 	unsigned long long m_uPhotonsEmitted;
 	float getCurrentRadius(int exp)

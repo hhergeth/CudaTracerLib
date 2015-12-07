@@ -4,8 +4,19 @@
 #include <Kernel/TraceAlgorithms.h>
 #include <Engine/Light.h>
 #include "../PhotonMapHelper.h"
+#include <Engine/SpatialGrid.h>
 
 namespace CudaTracerLib {
+
+struct k_MISPhoton : public PPPMPhoton
+{
+	float dVC, dVCM, dVM;
+	CUDA_FUNC_IN k_MISPhoton(){}
+	CUDA_FUNC_IN k_MISPhoton(const Spectrum& l, const Vec3f& wi, const Vec3f& n, PhotonType type, float dvc, float dvcm, float dvm)
+		: PPPMPhoton(l, wi, n, type), dVC(dvc), dVCM(dvcm), dVM(dvm)
+	{
+	}
+};
 
 #define NUM_V_PER_PATH 5
 #define MAX_SUB_PATH_LENGTH 10
@@ -315,9 +326,44 @@ template<bool TEST_VISIBILITY = true> CUDA_FUNC_IN Spectrum connectVertices(BPTV
 	return Spectrum(0.0f);
 }
 
-template<bool MULTIPLE> inline CUDA_DEVICE Spectrum L_Surface2(k_PhotonMapCollection<MULTIPLE, k_MISPhoton>& map, BPTSubPathState& aCameraState, BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED, const Material* mat, float mMisVcWeightFactor, bool use_mis)
+typedef SpatialLinkedMap<k_MISPhoton> VCMSurfMap;
+
+template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_Surface2(VCMSurfMap& g_CurrentMap, BPTSubPathState& aCameraState, BSDFSamplingRecord& bRec, float r, const Material* mat, float mMisVcWeightFactor, float nPhotons, bool use_mis)
 {
 	Spectrum Lp = Spectrum(0.0f);
+	Vec3f a = r*(-bRec.dg.sys.t - bRec.dg.sys.s) + bRec.dg.P, b = r*(bRec.dg.sys.t - bRec.dg.sys.s) + bRec.dg.P, c = r*(-bRec.dg.sys.t + bRec.dg.sys.s) + bRec.dg.P, d = r*(bRec.dg.sys.t + bRec.dg.sys.s) + bRec.dg.P;
+#ifdef ISCUDA
+	g_CurrentMap.ForAll<200>(min(a, b, c, d), max(a, b, c, d), [&](const Vec3u& cell_idx, unsigned int p_idx, const k_MISPhoton& ph)
+	{
+		float dist2 = distanceSquared(ph.getPos(g_CurrentMap.getHashGrid(), cell_idx), bRec.dg.P);
+		Vec3f photonNormal = ph.getNormal();
+		float wiDotGeoN = absdot(photonNormal, -aCameraState.r.direction);
+		if (dist2 < r * r && dot(photonNormal, bRec.dg.sys.n) > 0.1f && wiDotGeoN > 1e-2f)
+		{
+			bRec.wo = bRec.dg.toLocal(ph.getWi());
+			float cor_fac = math::abs(Frame::cosTheta(bRec.wi) / (wiDotGeoN * Frame::cosTheta(bRec.wo)));
+			float ke = k_tr(r, math::sqrt(dist2));
+			Spectrum l = ph.getL();
+			if (F_IS_GLOSSY)
+				l *= mat->bsdf.f(bRec);
+
+			const float cameraBsdfDirPdfW = pdf(*mat, bRec);
+			const float cameraBsdfRevPdfW = revPdf(*mat, bRec);
+			const float wLight = ph.dVCM * mMisVcWeightFactor + ph.dVM * cameraBsdfDirPdfW;
+			const float wCamera = aCameraState.dVCM * mMisVcWeightFactor + aCameraState.dVM * cameraBsdfRevPdfW;
+			const float misWeight = 1.f / (wLight + 1.f + wCamera);
+
+			Lp += (use_mis ? misWeight : 1.0f) * ke * l * cor_fac;
+		}
+	});
+	if (!F_IS_GLOSSY)
+		Lp *= mat->bsdf.f(bRec);
+	return Lp / nPhotons;
+#else
+	return 1.0f;
+#endif
+
+	/*Spectrum Lp = Spectrum(0.0f);
 	const float r2 = a_rSurfaceUNUSED * a_rSurfaceUNUSED;
 	Frame sys = bRec.dg.sys;
 	sys.t *= a_rSurfaceUNUSED;
@@ -327,33 +373,33 @@ template<bool MULTIPLE> inline CUDA_DEVICE Spectrum L_Surface2(k_PhotonMapCollec
 	Vec3f low = min(min(a, b), min(c, d)) + bRec.dg.P, high = max(max(a, b), max(c, d)) + bRec.dg.P;
 	uint3 lo = map.m_sSurfaceMap.m_sHash.Transform(low), hi = map.m_sSurfaceMap.m_sHash.Transform(high);
 	for (unsigned int a = lo.x; a <= hi.x; a++)
-		for (unsigned int b = lo.y; b <= hi.y; b++)
-			for (unsigned int c = lo.z; c <= hi.z; c++)
-			{
-				unsigned int i0 = map.m_sSurfaceMap.m_sHash.Hash(Vec3u(a, b, c)), i = map.m_sSurfaceMap.m_pDeviceHashGrid[i0], count = 0;
-				while (i != UINT_MAX && i != 0xffffff && count++ < 100)
-				{
-					k_MISPhoton e = map.m_pPhotons[i];
-					Vec3f n = e.getNormal(), wi = e.getWi(), P = e.getPos(map.m_sSurfaceMap.m_sHash, Vec3u(a, b, c));
-					Spectrum l = e.getL();
-					float dist2 = distanceSquared(P, bRec.dg.P);
-					if (dist2 < r2 && dot(n, bRec.dg.sys.n) > 0.8f)
-					{
-						bRec.wo = bRec.dg.toLocal(wi);
-						const float cameraBsdfDirPdfW = pdf(*mat, bRec);
-						Spectrum bsdfFactor = mat->bsdf.f(bRec);
-						const float cameraBsdfRevPdfW = revPdf(*mat, bRec);
-						const float wLight = e.dVCM * mMisVcWeightFactor + e.dVM * cameraBsdfDirPdfW;
-						const float wCamera = aCameraState.dVCM * mMisVcWeightFactor + aCameraState.dVM * cameraBsdfRevPdfW;
-						const float misWeight = 1.f / (wLight + 1.f + wCamera);
+	for (unsigned int b = lo.y; b <= hi.y; b++)
+	for (unsigned int c = lo.z; c <= hi.z; c++)
+	{
+	unsigned int i0 = map.m_sSurfaceMap.m_sHash.Hash(Vec3u(a, b, c)), i = map.m_sSurfaceMap.m_pDeviceHashGrid[i0], count = 0;
+	while (i != UINT_MAX && i != 0xffffff && count++ < 100)
+	{
+	k_MISPhoton e = map.m_pPhotons[i];
+	Vec3f n = e.getNormal(), wi = e.getWi(), P = e.getPos(map.m_sSurfaceMap.m_sHash, Vec3u(a, b, c));
+	Spectrum l = e.getL();
+	float dist2 = distanceSquared(P, bRec.dg.P);
+	if (dist2 < r2 && dot(n, bRec.dg.sys.n) > 0.8f)
+	{
+	bRec.wo = bRec.dg.toLocal(wi);
+	const float cameraBsdfDirPdfW = pdf(*mat, bRec);
+	Spectrum bsdfFactor = mat->bsdf.f(bRec);
+	const float cameraBsdfRevPdfW = revPdf(*mat, bRec);
+	const float wLight = e.dVCM * mMisVcWeightFactor + e.dVM * cameraBsdfDirPdfW;
+	const float wCamera = aCameraState.dVCM * mMisVcWeightFactor + aCameraState.dVM * cameraBsdfRevPdfW;
+	const float misWeight = 1.f / (wLight + 1.f + wCamera);
 
-						float ke = k_tr(a_rSurfaceUNUSED, math::sqrt(dist2));
-						Lp += (use_mis ? misWeight : 1.0f) * ke * l * bsdfFactor / Frame::cosTheta(bRec.wo);
-					}
-					i = e.getNext();
-				}
-			}
-	return Lp / float(map.m_uPhotonNumEmitted);
+	float ke = k_tr(a_rSurfaceUNUSED, math::sqrt(dist2));
+	Lp += (use_mis ? misWeight : 1.0f) * ke * l * bsdfFactor / Frame::cosTheta(bRec.wo);
+	}
+	i = e.getNext();
+	}
+	}
+	return Lp / float(map.m_uPhotonNumEmitted);*/
 }
 
 }

@@ -2,6 +2,7 @@
 
 #include <Kernel/Tracer.h>
 #include "VCMHelper.h"
+#include <Engine/SpatialGrid.h>
 
 namespace CudaTracerLib {
 
@@ -15,7 +16,7 @@ protected:
 	virtual void RenderBlock(Image* I, int x, int y, int blockW, int blockH);
 private:
 	//current will be used for lookup, next will be stored in
-	k_PhotonMapCollection<false, k_MISPhoton> m_sPhotonMapsCurrent, m_sPhotonMapsNext;
+	VCMSurfMap m_sPhotonMapsCurrent, m_sPhotonMapsNext;
 	float m_fInitialRadius;
 	unsigned long long m_uPhotonsEmitted;
 	float getCurrentRadius(int exp)

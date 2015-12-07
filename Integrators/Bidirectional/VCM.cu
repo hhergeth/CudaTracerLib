@@ -2,9 +2,9 @@
 
 namespace CudaTracerLib {
 
-CUDA_DEVICE k_PhotonMapCollection<false, k_MISPhoton> g_CurrentMap, g_NextMap;
+CUDA_DEVICE VCMSurfMap g_CurrentMap, g_NextMap;
 
-CUDA_FUNC_IN void _VCM(const Vec2f& pixelPosition, BlockSampleImage& img, CudaRNG& rng, int w, int h, float a_Radius, int a_NumIteration)
+CUDA_FUNC_IN void _VCM(const Vec2f& pixelPosition, BlockSampleImage& img, CudaRNG& rng, int w, int h, float a_Radius, int a_NumIteration, float nPhotons)
 {
 	float mLightSubPathCount = 1;
 	const float etaVCM = (PI * a_Radius * a_Radius) * w * h;
@@ -42,13 +42,11 @@ CUDA_FUNC_IN void _VCM(const Vec2f& pixelPosition, BlockSampleImage& img, CudaRN
 			emitterVerticesStored++;
 
 #ifdef ISCUDA
-			k_MISPhoton* photon;
-			if (emitterPathLength > 1 && storePhoton(v.bRec.dg.P, v.throughput, -lightPathState.r.direction, v.bRec.dg.sys.n, PhotonType::pt_Diffuse, g_NextMap, &photon))
-			{
-				photon->dVC = v.dVC;
-				photon->dVCM = v.dVCM;
-				photon->dVM = v.dVM;
-			}
+			auto ph = k_MISPhoton(v.throughput, -lightPathState.r.direction, v.bRec.dg.sys.n, PhotonType::pt_Diffuse, v.dVC, v.dVCM, v.dVM);
+			Vec3u cell_idx = g_NextMap.getHashGrid().Transform(v.bRec.dg.P);
+			ph.setPos(g_NextMap.getHashGrid(), cell_idx, v.bRec.dg.P);
+			if (!g_NextMap.store(cell_idx, ph))
+				printf("VCM : not enough photon storage allocated!\n");
 #endif
 		}
 
@@ -84,23 +82,30 @@ CUDA_FUNC_IN void _VCM(const Vec2f& pixelPosition, BlockSampleImage& img, CudaRN
 
 		if (r2.LightIndex() != UINT_MAX)
 		{
-			acc += cameraState.throughput * gatherLight(cameraState, bRec, r2, rng, camPathLength, true);
+			//acc += cameraState.throughput * gatherLight(cameraState, bRec, r2, rng, camPathLength, true);
 			break;
 		}
 
 		if (r2.getMat().bsdf.hasComponent(ESmooth))
 		{
-			acc += cameraState.throughput * connectToLight(cameraState, bRec, r2.getMat(), rng, mMisVmWeightFactor, true);
+			//acc += cameraState.throughput * connectToLight(cameraState, bRec, r2.getMat(), rng, mMisVmWeightFactor, true);
 
 			for (int emitterVertexIdx = 0; emitterVertexIdx < emitterVerticesStored; emitterVertexIdx++)
 			{
 				BPTVertex lv = lightPath[emitterVertexIdx];
-				acc += cameraState.throughput * lv.throughput * connectVertices(lv, cameraState, bRec, r2.getMat(), mMisVcWeightFactor, mMisVmWeightFactor, true);
+				//acc += cameraState.throughput * lv.throughput * connectVertices(lv, cameraState, bRec, r2.getMat(), mMisVcWeightFactor, mMisVmWeightFactor, true);
 			}
-
+			
 			//scale by 2 to account for no merging in the first iteration
 #ifdef ISCUDA
-			acc += cameraState.throughput * (a_NumIteration == 2 ? 2 : 1) * L_Surface2(g_CurrentMap, cameraState, bRec, a_Radius, &r2.getMat(), mMisVcWeightFactor, true);
+			if(a_NumIteration > 1)
+			{
+				Spectrum phL;
+				if (!r2.getMat().bsdf.hasComponent(EGlossy))
+					phL = L_Surface2<false>(g_CurrentMap, cameraState, bRec, a_Radius, &r2.getMat(), mMisVcWeightFactor, nPhotons, true);
+				else phL = L_Surface2<true>(g_CurrentMap, cameraState, bRec, a_Radius, &r2.getMat(), mMisVcWeightFactor, nPhotons, true);
+				acc += cameraState.throughput * (a_NumIteration == 2 ? 2 : 1) * phL;
+			}
 #endif
 		}
 
@@ -111,52 +116,33 @@ CUDA_FUNC_IN void _VCM(const Vec2f& pixelPosition, BlockSampleImage& img, CudaRN
 	img.Add(pixelPosition.x, pixelPosition.y, acc);
 }
 
-__global__ void pathKernel(unsigned int w, unsigned int h, int xoff, int yoff, BlockSampleImage img, float a_Radius, int a_NumIteration)
+__global__ void pathKernel(unsigned int w, unsigned int h, int xoff, int yoff, BlockSampleImage img, float a_Radius, int a_NumIteration, float nPhotons)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x + xoff, y = blockIdx.y * blockDim.y + threadIdx.y + yoff;
 	CudaRNG rng = g_RNGData();
 	if (x < w && y < h)
-		_VCM(Vec2f(x, y), img, rng, w, h, a_Radius, a_NumIteration);
+		_VCM(Vec2f(x, y), img, rng, w, h, a_Radius, a_NumIteration, nPhotons);
 	g_RNGData(rng);
 }
-
-/*__global__ void buildHashGrid2()
-{
-unsigned int idx = threadIdx.y * blockDim.x + threadIdx.x + blockDim.x * blockDim.y * blockIdx.x;
-if (idx < g_NextMap.m_uPhotonNumEmitted)
-{
-PPPMPhoton& e = g_NextMap.m_pPhotons[idx];
-Vec3f pos = g_NextMap.m_pPhotonPositions[idx];
-const k_PhotonMap<HashGrid_Reg>& map = (&g_NextMap.m_sSurfaceMap)[e.getType()];
-e.setPos(map.m_sHash, map.m_sHash.Transform(pos), pos);
-unsigned int i = map.m_sHash.Hash(pos);
-unsigned int k = atomicExch(map.m_pDeviceHashGrid + i, idx);
-e.setNext(k);
-}
-}*/
 
 void VCM::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 {
 	float radius = getCurrentRadius(2);
-	pathKernel << < BLOCK_SAMPLER_LAUNCH_CONFIG >> >(w, h, x, y, m_pBlockSampler->getBlockImage(), radius, m_uPassesDone);
+	pathKernel << < BLOCK_SAMPLER_LAUNCH_CONFIG >> >(w, h, x, y, m_pBlockSampler->getBlockImage(), radius, m_uPassesDone, w * h);
 }
 
 void VCM::DoRender(Image* I)
 {
-	m_sPhotonMapsNext.m_uPhotonNumEmitted = w * h;
-	cudaMemcpyToSymbol(g_CurrentMap, &m_sPhotonMapsCurrent, sizeof(m_sPhotonMapsCurrent));
-	cudaMemcpyToSymbol(g_NextMap, &m_sPhotonMapsNext, sizeof(m_sPhotonMapsNext));
+	m_sPhotonMapsNext.ResetBuffer();
+	ThrowCudaErrors(cudaMemcpyToSymbol(g_CurrentMap, &m_sPhotonMapsCurrent, sizeof(m_sPhotonMapsCurrent)));
+	ThrowCudaErrors(cudaMemcpyToSymbol(g_NextMap, &m_sPhotonMapsNext, sizeof(m_sPhotonMapsNext)));
 
 	Tracer<true, true>::DoRender(I);
-	cudaMemcpyFromSymbol(&m_sPhotonMapsNext, g_NextMap, sizeof(m_sPhotonMapsNext));
-	//buildHashGrid2 << <m_sPhotonMapsNext.m_uPhotonBufferLength / (32 * 6) + 1, dim3(32, 6, 1) >> >();
-	cudaMemcpyFromSymbol(&m_sPhotonMapsCurrent, g_CurrentMap, sizeof(m_sPhotonMapsCurrent));
-	cudaMemcpyFromSymbol(&m_sPhotonMapsNext, g_NextMap, sizeof(m_sPhotonMapsNext));
+	ThrowCudaErrors(cudaMemcpyFromSymbol(&m_sPhotonMapsNext, g_NextMap, sizeof(m_sPhotonMapsNext)));
+	ThrowCudaErrors(cudaMemcpyFromSymbol(&m_sPhotonMapsCurrent, g_CurrentMap, sizeof(m_sPhotonMapsCurrent)));
 
 	swapk(m_sPhotonMapsNext, m_sPhotonMapsCurrent);
-	m_uPhotonsEmitted += m_sPhotonMapsCurrent.m_uPhotonNumEmitted;
-
-	m_sPhotonMapsNext.StartNewPass();
+	m_uPhotonsEmitted += w * h;
 }
 
 void VCM::StartNewTrace(Image* I)
@@ -169,18 +155,16 @@ void VCM::StartNewTrace(Image* I)
 	m_sEyeBox.minV -= Vec3f(r);
 	m_sEyeBox.maxV += Vec3f(r);
 	m_fInitialRadius = r;
-	m_sPhotonMapsCurrent.StartNewRendering(m_sEyeBox, m_sEyeBox, r);
-	m_sPhotonMapsCurrent.StartNewPass();
-	m_sPhotonMapsNext.StartNewRendering(m_sEyeBox, m_sEyeBox, r);
-	m_sPhotonMapsNext.StartNewPass();
+	m_sPhotonMapsCurrent.SetSceneDimensions(m_sEyeBox);
+	m_sPhotonMapsNext.SetSceneDimensions(m_sEyeBox);
 }
 
 VCM::VCM()
 {
-	int gridLength = 100;
-	int numPhotons = 1024 * 1024 * 5;
-	m_sPhotonMapsCurrent = k_PhotonMapCollection<false, k_MISPhoton>(numPhotons, gridLength*gridLength*gridLength, UINT_MAX);
-	m_sPhotonMapsNext = k_PhotonMapCollection<false, k_MISPhoton>(numPhotons, gridLength*gridLength*gridLength, UINT_MAX);
+	int gridLength = 250;
+	int numPhotons = 1024 * 1024 * MAX_SUB_PATH_LENGTH;
+	m_sPhotonMapsCurrent = VCMSurfMap(gridLength, numPhotons);
+	m_sPhotonMapsNext = VCMSurfMap(gridLength, numPhotons);
 }
 
 }
