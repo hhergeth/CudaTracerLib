@@ -21,6 +21,8 @@ struct Material;
 struct KernelMIPMap;
 struct TraceResult;
 
+#define MAX_NUM_LIGHTS 16
+
 struct KernelDynamicScene
 {
 	KernelBuffer<TriangleData> m_sTriData;
@@ -31,13 +33,22 @@ struct KernelDynamicScene
 	KernelBuffer<KernelMIPMap> m_sTexData;
 	KernelBuffer<KernelMesh> m_sMeshData;
 	KernelBuffer<Node> m_sNodeData;
-	KernelBuffer<KernelLight> m_sLightData;
 	KernelBuffer<char> m_sAnimData;
 	KernelSceneBVH m_sSceneBVH;
 	KernelAggregateVolume m_sVolume;
 	unsigned int m_uEnvMapIndex;
 	AABB m_sBox;
 	Sensor m_Camera;
+
+	//these are all lights, with inactive/deleted ones
+	KernelBuffer<KernelLight> m_sLightBuf;
+	unsigned int m_numLights;
+	//indexes into m_sLightBuf
+	unsigned int m_pLightIndices[MAX_NUM_LIGHTS];
+	//cdf of length m_numLights belonging to m_pLightIndices
+	float m_pLightCDF[MAX_NUM_LIGHTS];
+	//pdf of length m_sLightBuf.Length(!), for each light with its correct index
+	float* m_pLightPDF;
 
 	CUDA_DEVICE CUDA_HOST bool Occluded(const Ray& r, float tmin, float tmax, TraceResult* res = 0) const;
 	CUDA_DEVICE CUDA_HOST Spectrum EvalEnvironment(const Ray& r) const;
@@ -84,6 +95,9 @@ struct KernelDynamicScene
 		return r;
 	}
 
+	CUDA_DEVICE CUDA_HOST const KernelLight* getLight(const TraceResult& tr) const;
+	CUDA_DEVICE CUDA_HOST const KernelLight* getLight(unsigned int idx) const;
+	CUDA_DEVICE CUDA_HOST const KernelLight* getEnvironmentMap() const;
 };
 
 }

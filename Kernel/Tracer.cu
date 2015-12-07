@@ -99,10 +99,10 @@ __global__ void estimateLightVisibility(int w, int h, float scx, float scy, int 
 			BSDFSamplingRecord bRec(dg);
 			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
 
-			for (int i = 0; i < g_SceneData.m_sLightData.Length; i++)
+			for (int i = 0; i < g_SceneData.m_numLights; i++)
 			{
 				PositionSamplingRecord pRec;
-				g_SceneData.m_sLightData[i].samplePosition(pRec, rng.randomFloat2());
+				g_SceneData.getLight(i)->samplePosition(pRec, rng.randomFloat2());
 				bool v = V(pRec.p, dg.P);
 				N++;
 				S += v;

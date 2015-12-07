@@ -32,7 +32,7 @@ Spectrum TraceResult::Le(const Vec3f& p, const Frame& sys, const Vec3f& w) const
 	unsigned int i = LightIndex();
 	if (i == UINT_MAX)
 		return Spectrum(0.0f);
-	else return g_SceneData.m_sLightData[i].eval(p, sys, w);
+	else return g_SceneData.getLight(*this)->eval(p, sys, w);
 }
 
 unsigned int TraceResult::LightIndex() const

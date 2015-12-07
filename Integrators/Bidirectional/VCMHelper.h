@@ -186,7 +186,7 @@ CUDA_FUNC_IN bool sampleScattering(BPTSubPathState& v, BSDFSamplingRecord& bRec,
 
 CUDA_FUNC_IN Spectrum gatherLight(const BPTSubPathState& cameraState, BSDFSamplingRecord& bRec, const TraceResult& r2, CudaRNG& rng, int subPathLength, bool use_mis)
 {
-	KernelLight* l = &g_SceneData.m_sLightData[r2.LightIndex()];
+	const KernelLight* l = g_SceneData.getLight(r2);
 	float pdfLight = g_SceneData.pdfEmitterDiscrete(l);
 	PositionSamplingRecord pRec(bRec.dg.P, bRec.dg.sys.n, 0);
 	float directPdfA = l->pdfPosition(pRec);

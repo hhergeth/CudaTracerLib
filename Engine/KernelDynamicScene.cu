@@ -1,27 +1,66 @@
 #include "KernelDynamicScene.h"
 #include <Kernel/TraceHelper.h>
 #include "Light.h"
+#include <Base/STL.h>
 
 namespace CudaTracerLib {
 
+const KernelLight* KernelDynamicScene::getLight(unsigned int idx) const
+{
+	return m_sLightBuf.Data + m_pLightIndices[idx];
+}
+
+const KernelLight* KernelDynamicScene::getLight(const TraceResult& tr) const
+{
+	return m_sLightBuf.Data + tr.LightIndex();
+}
+
+const KernelLight* KernelDynamicScene::getEnvironmentMap() const
+{
+	if (m_uEnvMapIndex == UINT_MAX)
+		return 0;
+	else return m_sLightBuf.Data + m_uEnvMapIndex;
+}
+
 const KernelLight* KernelDynamicScene::sampleEmitter(float& emPdf, Vec2f& sample) const
 {
-	if (m_sLightData.UsedCount == 0)
+	if (m_numLights == 0)
 		return 0;
-	unsigned int idx = (unsigned int)(m_sLightData.UsedCount * sample.x);
-	if (idx >= m_sLightData.UsedCount)
+	unsigned int idx = STL_upper_bound(m_pLightCDF, m_pLightCDF + m_numLights, sample.x) - m_pLightCDF;
+	//unsigned int idx = (unsigned int)(m_sLightData.UsedCount * sample.x);
+	if (idx >= m_numLights)
 	{
-		printf("sampled incorrect light! N = %d, sample.x = %f, idx = %d\n", m_sLightData.UsedCount, sample.x, idx);
-		idx = m_sLightData.UsedCount - 1;
+		printf("sampled incorrect light! N = %d, sample.x = %f, idx = %d\n", m_numLights, sample.x, idx);
+		idx = m_numLights - 1;
 	}
-	sample.x = sample.x - idx / float(m_sLightData.UsedCount);
-	emPdf = 1.0f / float(m_sLightData.UsedCount);
-	return m_sLightData.Data + idx;
+	//sample.x = sample.x - idx / float(m_sLightData.UsedCount);
+	float fU = m_pLightCDF[idx], fL = idx > 0 ? m_pLightCDF[idx - 1] : 0.0f;
+	sample.x = (sample.x - fL) / (fU - fL);
+	//emPdf = 1.0f / float(m_sLightData.UsedCount);
+	emPdf = fU - fL;
+	return getLight(idx);
 }
 
 float KernelDynamicScene::pdfEmitterDiscrete(const KernelLight *emitter) const
 {
-	return 1.0f / float(m_sLightData.UsedCount);
+	unsigned int idx = emitter - m_sLightBuf.Data;
+	return m_pLightPDF[idx];
+}
+
+Spectrum KernelDynamicScene::EvalEnvironment(const Ray& r) const
+{
+	const KernelLight* l = getEnvironmentMap();
+	if (l)
+		return l->As<InfiniteLight>()->evalEnvironment(r);
+	else return 0.0f;
+}
+
+Spectrum KernelDynamicScene::EvalEnvironment(const Ray& r, const Ray& rX, const Ray& rY) const
+{
+	const KernelLight* l = getEnvironmentMap();
+	if (l)
+		return l->As<InfiniteLight>()->evalEnvironment(r, rX, rY);
+	else return 0.0f;
 }
 
 bool KernelDynamicScene::Occluded(const Ray& r, float tmin, float tmax, TraceResult* res) const
@@ -43,20 +82,6 @@ Spectrum KernelDynamicScene::evalTransmittance(const Vec3f& p1, const Vec3f& p2)
 	float l = d.length();
 	d /= l;
 	return (-m_sVolume.tau(Ray(p1, d), 0, l)).exp();
-}
-
-Spectrum KernelDynamicScene::EvalEnvironment(const Ray& r) const
-{
-	if (m_uEnvMapIndex != UINT_MAX)
-		return m_sLightData[m_uEnvMapIndex].As<InfiniteLight>()->evalEnvironment(r);
-	else return Spectrum(0.0f);
-}
-
-Spectrum KernelDynamicScene::EvalEnvironment(const Ray& r, const Ray& rX, const Ray& rY) const
-{
-	if (m_uEnvMapIndex != UINT_MAX)
-		return m_sLightData[m_uEnvMapIndex].As<InfiniteLight>()->evalEnvironment(r, rX, rY);
-	else return Spectrum(0.0f);
 }
 
 Spectrum KernelDynamicScene::sampleEmitterDirect(DirectSamplingRecord &dRec, const Vec2f &_sample) const

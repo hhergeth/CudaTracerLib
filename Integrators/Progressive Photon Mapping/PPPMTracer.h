@@ -65,7 +65,7 @@ enum
 	PPM_slots_per_block = PPM_photons_per_block * PPM_MaxRecursion,
 };
 
-typedef SpatialFlatMap<PPPMPhoton> SurfaceMapT;
+typedef SpatialLinkedMap<PPPMPhoton> SurfaceMapT;
 
 class PPPMTracer : public Tracer<true, true>, public IRadiusProvider
 {

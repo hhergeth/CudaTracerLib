@@ -119,6 +119,65 @@ public:
 	}
 };
 
+class DynamicScene::LightStream : public Stream<KernelLight>
+{
+	std::vector<float> m_lightWeights;
+	//normalized pdfs for correct indices
+	float* m_pDeviceLightWeights, *m_pHostLeightWeights;
+protected:
+	virtual void reallocAfterResize()
+	{
+		Stream<KernelLight>::reallocAfterResize();
+		size_t L = this->getBufferLength();
+		m_lightWeights.resize(L, 1.0f);
+		delete[] m_pDeviceLightWeights;
+		m_pDeviceLightWeights = new float[L];
+		CUDA_FREE(m_pDeviceLightWeights);
+		CUDA_MALLOC(&m_pDeviceLightWeights, sizeof(float) * L);
+	}
+public:
+	LightStream(int L)
+		: Stream<KernelLight>(L)
+	{
+		m_lightWeights = std::vector<float>(L, 1.0f);
+		CUDA_MALLOC(&m_pDeviceLightWeights, sizeof(float) * L);
+		m_pHostLeightWeights = new float[L];
+	}
+
+	float getWeight(StreamReference<KernelLight> ref) const
+	{
+		return m_lightWeights[ref.getIndex()];
+	}
+
+	void setWeight(StreamReference<KernelLight> ref, float f)
+	{
+		m_lightWeights[ref.getIndex()] = f;
+	}
+
+	void fillDeviceData(bool device, KernelDynamicScene& r)
+	{
+		float accum = 0;
+		for (auto& a : *this)
+			accum += m_lightWeights[a.getIndex()];
+
+		//not really necessary
+		Platform::SetMemory(m_pHostLeightWeights, sizeof(float) * m_lightWeights.size());
+
+		r.m_numLights = min((unsigned int)MAX_NUM_LIGHTS, (unsigned int)numElements());
+		unsigned int i = 0;
+		for (auto& a : *this)
+		{
+			r.m_pLightIndices[i] = a.getIndex();
+			float pdf = m_lightWeights[a.getIndex()] / accum;//normalized pdf
+			m_pHostLeightWeights[a.getIndex()] = pdf;
+			r.m_pLightCDF[i] = (i > 0 ? r.m_pLightCDF[i - 1] : 0.0f) + pdf;
+			i++;
+		}
+		CUDA_MEMCPY_TO_DEVICE(m_pDeviceLightWeights, m_pHostLeightWeights, sizeof(float) * r.m_numLights);
+		r.m_pLightPDF = device ? m_pDeviceLightWeights : m_pHostLeightWeights;
+	}
+};
+
 DynamicScene::DynamicScene(Sensor* C, SceneInitData a_Data, IFileManager* fManager)
 	: m_uEnvMapIndex(UINT_MAX), m_pCamera(C), m_pHostTmpFloats(0), m_pFileManager(fManager)
 {
@@ -132,7 +191,7 @@ DynamicScene::DynamicScene(Sensor* C, SceneInitData a_Data, IFileManager* fManag
 	m_pMeshBuffer = new CachedBuffer<Mesh, KernelMesh>(a_Data.m_uNumMeshes, sizeof(AnimatedMesh));
 	m_pNodeStream = new Stream<Node>(a_Data.m_uNumNodes);
 	m_pTextureBuffer = new CachedBuffer<MIPMap, KernelMIPMap>(a_Data.m_uNumTextures);
-	m_pLightStream = new Stream<KernelLight>(a_Data.m_uNumLights);
+	m_pLightStream = new LightStream(a_Data.m_uNumLights);
 	m_pVolumes = new Stream<VolumeRegion>(128);
 	m_pBVH = new SceneBVH(a_Data.m_uNumNodes);
 	const int L = 1024 * 16;
@@ -431,7 +490,7 @@ KernelDynamicScene DynamicScene::getKernelSceneData(bool devicePointer)
 	r.m_sBVHIndexData = m_pBVHIndicesStream->getKernelData(devicePointer);
 	r.m_sBVHIntData = m_pTriIntStream->getKernelData(devicePointer);
 	r.m_sBVHNodeData = m_pBVHStream->getKernelData(devicePointer);
-	r.m_sLightData = m_pLightStream->getKernelData(devicePointer);
+	r.m_sLightBuf = m_pLightStream->getKernelData(devicePointer);
 	r.m_sMatData = m_pMaterialBuffer->getKernelData(devicePointer);
 	r.m_sMeshData = m_pMeshBuffer->getKernelData(devicePointer);
 	r.m_sNodeData = m_pNodeStream->getKernelData(devicePointer);
@@ -442,6 +501,7 @@ KernelDynamicScene DynamicScene::getKernelSceneData(bool devicePointer)
 	r.m_uEnvMapIndex = m_uEnvMapIndex;
 	r.m_sBox = getSceneBox();
 	r.m_Camera = *m_pCamera;
+	m_pLightStream->fillDeviceData(devicePointer, r);
 	return r;
 }
 
@@ -757,6 +817,16 @@ unsigned int DynamicScene::getLightCount()
 BufferReference<KernelLight, KernelLight> DynamicScene::createLight()
 {
 	return m_pLightStream->malloc(1);
+}
+
+float DynamicScene::getLeightWeight(StreamReference<KernelLight> ref) const
+{
+	return m_pLightStream->getWeight(ref);
+}
+
+void DynamicScene::setLeightWeight(StreamReference<KernelLight> ref, float f) const
+{
+	m_pLightStream->setWeight(ref, f);
 }
 
 }

@@ -59,9 +59,9 @@ Spectrum UniformSampleAllLights(const BSDFSamplingRecord& bRec, const Material& 
 {
 	//only sample the relevant lights and assume the others emit the same
 	Spectrum L = Spectrum(0.0f);
-	for (unsigned int i = 0; i < g_SceneData.m_sLightData.UsedCount; i++)
+	for (unsigned int i = 0; i < g_SceneData.m_numLights; i++)
 	{
-		KernelLight* light = g_SceneData.m_sLightData.Data + i;
+		const KernelLight* light = g_SceneData.getLight(i);
 		Spectrum Ld = Spectrum(0.0f);
 		for (int j = 0; j < nSamples; j++)
 		{
@@ -74,7 +74,7 @@ Spectrum UniformSampleAllLights(const BSDFSamplingRecord& bRec, const Material& 
 
 Spectrum UniformSampleOneLight(const BSDFSamplingRecord& bRec, const Material& mat, CudaRNG& rng, bool attenuated)
 {
-	if (!g_SceneData.m_sLightData.UsedCount)
+	if (!g_SceneData.m_numLights)
 		return Spectrum(0.0f);
 	Vec2f sample = rng.randomFloat2();
 	float pdf;

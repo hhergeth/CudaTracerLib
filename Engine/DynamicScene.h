@@ -34,6 +34,7 @@ public:
 class DynamicScene
 {
 	class MatStream;
+	class LightStream;
 private:
 	std::vector<BufferReference<Node, Node>> m_sRemovedNodes;
 	e_TmpVertex* m_pDeviceTmpFloats;
@@ -51,7 +52,7 @@ private:
 	Stream<Node>* m_pNodeStream;
 	Stream<VolumeRegion>* m_pVolumes;
 	Stream<char>* m_pAnimStream;
-	Stream<KernelLight>* m_pLightStream;
+	LightStream* m_pLightStream;
 	MeshCompilerManager m_sCmpManager;
 	Sensor* m_pCamera;
 	std::function<bool(StreamReference<TriangleData>, StreamReference<TriIntersectorData>)> m_sShapeCreationClb;
@@ -158,6 +159,8 @@ public:
 		});
 		return i;
 	}
+	float getLeightWeight(StreamReference<KernelLight> ref) const;
+	void setLeightWeight(StreamReference<KernelLight> ref, float f) const;
 };
 
 }
