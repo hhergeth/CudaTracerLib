@@ -3,9 +3,11 @@
 #include "Grid.h"
 #include <CudaMemoryManager.h>
 #ifdef __CUDACC__
+#pragma warning (disable : 4267) 
 #include <thrust/device_ptr.h>
 #include <thrust/sort.h>
 #include <thrust/device_vector.h>
+#pragma warning (enable : 4267)
 #endif
 
 namespace CudaTracerLib {

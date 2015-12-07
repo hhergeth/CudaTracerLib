@@ -100,7 +100,7 @@ public:
 	}
 	CUDA_FUNC_IN bool getFlag() const
 	{
-		return (bool)(typeNextField >> 31);
+		return (typeNextField >> 31) != 0;
 	}
 	CUDA_FUNC_IN void setFlag(bool b)
 	{

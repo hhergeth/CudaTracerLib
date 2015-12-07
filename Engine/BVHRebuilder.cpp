@@ -163,7 +163,7 @@ public:
 			{
 				t->m_pBVHIndices[firstIdx + i].setFlag(i == objIndices.size() - 1);
 				t->m_pBVHIndices[firstIdx + i].setIndex(objIndices[i]);
-				t->m_pData->setObject(firstIdx + i, objIndices[i]);
+				t->m_pData->setObject(firstIdx + (unsigned int)i, objIndices[i]);
 			}
 			return firstIdx;
 		}
