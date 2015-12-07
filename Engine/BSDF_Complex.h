@@ -2,6 +2,8 @@
 
 #include "BSDF_Simple.h"
 
+namespace CudaTracerLib
+{
 struct BSDFALL;
 
 struct coating : public BSDF//, public e_DerivedTypeHelper<13>
@@ -194,3 +196,5 @@ public:
 		initTextureOffsets2(join(bsdfs[0], bsdfs[1]), weight);
 	}
 };
+
+}

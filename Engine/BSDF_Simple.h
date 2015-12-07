@@ -1,5 +1,8 @@
 #pragma once
 
+namespace CudaTracerLib
+{
+
 struct diffuse : public BSDF//, public e_DerivedTypeHelper<1>
 {
 	TYPE_FUNC(1)
@@ -502,3 +505,5 @@ struct hk : public BSDF//, public e_DerivedTypeHelper<12>
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 };
+
+}

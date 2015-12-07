@@ -10,8 +10,8 @@
 #include <Math/Sampling.h>
 #include <VirtualFuncType.h>
 
-namespace CudaTracerLib {
-
+namespace CudaTracerLib
+{
 #define NUM_TEX_PER_BSDF 10
 
 struct BSDF : public BaseType//, public BaseTypeHelper<4608834>
@@ -84,8 +84,12 @@ public:
 		return texs;
 	}
 };
+}
 
 #include "BSDF_Simple.h"
+
+namespace CudaTracerLib
+{
 
 struct BSDFFirst : public CudaVirtualAggregate<BSDF, diffuse, roughdiffuse, dielectric, thindielectric, roughdielectric, conductor, roughconductor, plastic, roughplastic, phong, ward, hk>
 {
@@ -119,7 +123,13 @@ public:
 	}
 };
 
+}
+
 #include "BSDF_Complex.h"
+
+namespace CudaTracerLib
+{
+
 struct BSDFALL : public CudaVirtualAggregate<BSDF, diffuse, roughdiffuse, dielectric, thindielectric, roughdielectric, conductor, roughconductor, plastic, roughplastic, phong, ward, hk, coating, roughcoating, blend>
 {
 public:
