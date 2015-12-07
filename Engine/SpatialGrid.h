@@ -23,7 +23,10 @@ public:
 	{
 		ForAllCells(min, max, [&](const Vec3u& cell_idx)
 		{
-			((HASHER*)this)->ForAllCellEntries<MAX_ENTRIES_PER_CELL>(cell_idx, clb);
+			((HASHER*)this)->ForAllCellEntries<MAX_ENTRIES_PER_CELL>(cell_idx, [&](unsigned int e_idx, T& val)
+			{
+				clb(cell_idx, e_idx, val);
+			});
 		});
 	}
 
@@ -182,6 +185,116 @@ public:
 
 	linkedEntry* getDeviceData() { return deviceData; }
 	unsigned int* getDeviceGrid() { return deviceMap; }
+};
+
+template<typename T> class SpatialFlatMap : public SpatialGrid<T, SpatialFlatMap<T>>
+{
+public:
+	unsigned int numData, idxData;
+	T* deviceData, *deviceData2;
+	unsigned int gridSize;
+	unsigned int* deviceGrid;
+	Vec2u* deviceList;
+
+	T* hostData1, *hostData2;
+	Vec2u* hostList;
+	unsigned int* hostGrid;
+	CUDA_FUNC_IN SpatialFlatMap()
+	{
+
+	}
+
+	SpatialFlatMap(unsigned int gridSize, unsigned int numData)
+		: numData(numData), gridSize(gridSize), idxData(0)
+	{
+		CUDA_MALLOC(&deviceData, sizeof(T) * numData);
+		CUDA_MALLOC(&deviceData2, sizeof(T) * numData);
+		CUDA_MALLOC(&deviceGrid, sizeof(unsigned int) * gridSize * gridSize * gridSize);
+		CUDA_MALLOC(&deviceList, sizeof(Vec2u) * numData);
+
+		hostData1 = new T[numData];
+		hostData2 = new T[numData];
+		hostList = new Vec2u[numData];
+		hostGrid = new unsigned int[gridSize * gridSize * gridSize];
+	}
+
+	void Free()
+	{
+		CUDA_FREE(deviceData);
+		CUDA_FREE(deviceData2);
+		CUDA_FREE(deviceGrid);
+		CUDA_FREE(deviceList);
+		delete[] hostData1;
+		delete[] hostData2;
+		delete[] hostList;
+		delete[] hostGrid;
+	}
+
+	void SetSceneDimensions(const AABB& box)
+	{
+		hashMap = HashGrid_Reg(box, gridSize);
+	}
+
+	void ResetBuffer()
+	{
+		idxData = 0;
+	}
+
+	void PrepareForUse();
+
+	unsigned int getNumEntries() const
+	{
+		return numData;
+	}
+
+	unsigned int getNumStoredEntries() const
+	{
+		return idxData;
+	}
+
+	CUDA_FUNC_IN bool isFull() const
+	{
+		return idxData >= numData;
+	}
+
+#ifdef __CUDACC__
+	CUDA_ONLY_FUNC bool store(const Vec3u& p, const T& v)
+	{
+		unsigned int data_idx = atomicInc(&idxData, (unsigned int)-1);
+		if (data_idx >= numData)
+			return false;
+		unsigned int map_idx = hashMap.Hash(p);
+		deviceData[data_idx] = v;
+		deviceList[data_idx] = Vec2u(data_idx, map_idx);
+		return true;
+	}
+#endif
+
+	CUDA_ONLY_FUNC bool store(const Vec3f& p, const T& v)
+	{
+		return store(hashMap.Transform(p), v);
+	}
+
+	template<unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX, typename CLB> CUDA_FUNC_IN void ForAllCellEntries(const Vec3u& p, const CLB& clb)
+	{
+		unsigned int map_idx = deviceGrid[hashMap.Hash(p)], i = 0;
+		while (map_idx < idxData && i++ < MAX_ENTRIES_PER_CELL)
+		{
+			T& val = operator()(map_idx);
+			clb(map_idx, val);
+			map_idx = val.getFlag() ? UINT_MAX : map_idx + 1;
+		}
+	}
+
+	CUDA_FUNC_IN const T& operator()(unsigned int idx) const
+	{
+		return deviceData[idx];
+	}
+
+	CUDA_FUNC_IN T& operator()(unsigned int idx)
+	{
+		return deviceData[idx];
+	}
 };
 
 //a mapping from R^3 -> T, ie. associating one element with each point in the grid

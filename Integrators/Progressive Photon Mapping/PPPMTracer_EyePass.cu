@@ -67,25 +67,29 @@ template<bool USE_GLOBAL> Spectrum BeamBVHStorage::L_Volume(float radius, CudaRN
 	return L_n;
 }
 
-CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const Vec3f& wi, float r, const Material* mat)
+template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const Vec3f& wi, float r, const Material* mat)
 {
 	Spectrum Lp = Spectrum(0.0f);
 	Vec3f a = r*(-bRec.dg.sys.t - bRec.dg.sys.s) + bRec.dg.P, b = r*(bRec.dg.sys.t - bRec.dg.sys.s) + bRec.dg.P, c = r*(-bRec.dg.sys.t + bRec.dg.sys.s) + bRec.dg.P, d = r*(bRec.dg.sys.t + bRec.dg.sys.s) + bRec.dg.P;
 #ifdef ISCUDA
-	g_SurfMap.ForAll<100>(min(a, b, c, d), max(a, b, c, d), [&](unsigned int p_idx, PPPMPhoton& ph)
+	g_SurfMap.ForAll<200>(min(a, b, c, d), max(a, b, c, d), [&](const Vec3u& cell_idx, unsigned int p_idx, const PPPMPhoton& ph)
 	{
-		float dist2 = distanceSquared(ph.Pos, bRec.dg.P);
+		float dist2 = distanceSquared(ph.getPos(g_SurfMap.getHashGrid(), cell_idx), bRec.dg.P);
 		Vec3f photonNormal = ph.getNormal();
 		float wiDotGeoN = absdot(photonNormal, wi);
 		if (dist2 < r * r && dot(photonNormal, bRec.dg.sys.n) > 0.1f && wiDotGeoN > 1e-2f)
 		{
 			bRec.wo = bRec.dg.toLocal(ph.getWi());
 			float cor_fac = math::abs(Frame::cosTheta(bRec.wi) / (wiDotGeoN * Frame::cosTheta(bRec.wo)));
-			Spectrum bsdfFactor = mat->bsdf.f(bRec);
 			float ke = k_tr(r, math::sqrt(dist2));
-			Lp += ke * ph.getL() * bsdfFactor * cor_fac;// / Frame::cosTheta(bRec.wo) 
+			Spectrum l = ph.getL();
+			if(F_IS_GLOSSY)
+				l *= mat->bsdf.f(bRec);
+			Lp += ke * l * cor_fac;
 		}
 	});
+	if(!F_IS_GLOSSY)
+		Lp *= mat->bsdf.f(bRec);
 	return Lp / g_NumPhotonEmitted2;
 #else
 	return 1.0f;
@@ -115,15 +119,16 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED
 		  c = r_max*(-bRec.dg.sys.t + bRec.dg.sys.s) + bRec.dg.P, d = r_max*(bRec.dg.sys.t + bRec.dg.sys.s) + bRec.dg.P;
 	Spectrum Lp = 0.0f;
 
-	g_SurfMap.ForAll<200>(min(a, b, c, d), max(a, b, c, d), [&](unsigned int p_idx, PPPMPhoton& ph)
+	g_SurfMap.ForAll<200>(min(a, b, c, d), max(a, b, c, d), [&](const Vec3u& cell_idx, unsigned int p_idx, const PPPMPhoton& ph)
 	{
-		float dist2 = distanceSquared(ph.Pos, bRec.dg.P);
+		Vec3f ph_pos = ph.getPos(g_SurfMap.getHashGrid(), cell_idx);
+		float dist2 = distanceSquared(ph_pos, bRec.dg.P);
 		//if (dot(ph.getNormal(), bRec.dg.sys.n) > 0.9f)
 		{
 			bRec.wo = bRec.dg.toLocal(ph.getWi());
 			Spectrum bsdfFactor = mat->bsdf.f(bRec);
 			float psi = Spectrum(importance * bsdfFactor * ph.getL() / float(g_NumPhotonEmitted2)).getLuminance();//this 1/J has nothing to do with E[X], it is scaling for radiance distribution
-			const Vec3f e_l = bRec.dg.P - ph.Pos;
+			const Vec3f e_l = bRec.dg.P - ph_pos;
 			float k_rd = k_tr(rd, e_l);
 			float laplu = k_tr(rd, e_l + ur) + k_tr(rd, e_l - ur) - 2 * k_rd,
 				  laplv = k_tr(rd, e_l + vr) + k_tr(rd, e_l - vr) - 2 * k_rd,
@@ -211,7 +216,12 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 			if (hasSmooth)
 			{
 				float rad = math::clamp(getCurrentRadius(a_AdpEntries(pixel.x, pixel.y).r_std, a_PassIndex, 2), a_AdpEntries.r_min, a_AdpEntries.r_max);
-				L += throughput * (hasGlossy ? 0.5f : 1) * L_Surface(bRec, -r.direction, USE_PerPixelRadius ? rad : a_rSurface, &r2.getMat());
+				float r_i = USE_PerPixelRadius ? rad : a_rSurface;
+				Spectrum l;
+				if (hasGlossy)
+					l = L_Surface<true>(bRec, -r.direction, r_i, &r2.getMat());
+				else l = L_Surface<false>(bRec, -r.direction, r_i, &r2.getMat());
+				L += throughput * (hasGlossy ? 0.5f : 1) * l;
 				//L += throughput * L_Surface(bRec, a_rSurface, &r2.getMat(), a_AdpEntries, pixel.x, pixel.y, throughput, a_PassIndex, img);
 				if (!hasSpecGlossy)
 					break;
@@ -336,9 +346,9 @@ __global__ void k_PerPixelRadiusEst(int w, int h, float r_max, float r_1, k_Adap
 			Vec3f low = min(min(a, b), min(c, d)) + bRec.dg.P, high = max(max(a, b), max(c, d)) + bRec.dg.P;
 			int k_found = 0;
 #ifdef ISCUDA
-			g_SurfMap.ForAll(low, high, [&](unsigned int p_idx, const PPPMPhoton& ph)
+			g_SurfMap.ForAll(low, high, [&](const Vec3u& cell_idx, unsigned int p_idx, const PPPMPhoton& ph)
 			{
-				float dist2 = distanceSquared(ph.Pos, bRec.dg.P);
+				float dist2 = distanceSquared(ph.getPos(g_SurfMap.getHashGrid(), cell_idx), bRec.dg.P);
 				if (dist2 < search_rad * search_rad && dot(ph.getNormal(), bRec.dg.sys.n) > 0.9f)
 					k_found++;
 			});
@@ -355,14 +365,6 @@ __global__ void k_PerPixelRadiusEst(int w, int h, float r_max, float r_1, k_Adap
 
 void PPPMTracer::doPerPixelRadiusEstimation()
 {
-
-	auto ray = g_SceneData.GenerateSensorRay(w / 2, h / 2);
-	auto res = traceRay(ray);
-	if (res.hasHit())
-	{
-		m_sSurfaceMap.getHashGrid().Hash(ray(res.m_fDist));
-	}
-
 	int a = floatToOrderedInt(FLT_MAX), b = floatToOrderedInt(0);
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_MaxRad, &b, sizeof(b)));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_MinRad, &a, sizeof(a)));

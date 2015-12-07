@@ -316,7 +316,7 @@ struct DirectionModel
 	{
 		qMatrix<float, 2, 1> samples[MAX_SAMPLES];
 		int N = 0;
-		sMap.ForAll(mi, ma, [&](unsigned int idx, SpatialEntry& ent)
+		sMap.ForAll(mi, ma, [&](const Vec3u& cell_idx, unsigned int idx, SpatialEntry& ent)
 		{
 			if (N < MAX_SAMPLES)
 				samples[N++] = HemishphereToSquare(ent.wi);

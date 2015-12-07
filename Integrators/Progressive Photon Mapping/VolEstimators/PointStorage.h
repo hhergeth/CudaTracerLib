@@ -108,7 +108,7 @@ struct PointStorage : public IVolumeEstimator
 		{
 			float t = a + d / 2.0f;
 			Vec3f x = r(t);
-			m_sStorage.ForAll(x - Vec3f(a_r), x + Vec3f(a_r), [&](unsigned int p_idx, const volPhoton& ph)
+			m_sStorage.ForAll(x - Vec3f(a_r), x + Vec3f(a_r), [&](const Vec3u& cell_idx, unsigned int p_idx, const volPhoton& ph)
 			{
 				if (distanceSquared(ph.p, x) < r3)
 				{

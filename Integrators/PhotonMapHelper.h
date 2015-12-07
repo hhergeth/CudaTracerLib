@@ -46,8 +46,8 @@ private:
 	unsigned short Wi;
 	unsigned short Nor;
 	unsigned int typeNextField;
+	unsigned int pos;
 public:
-	Vec3f Pos;
 	CUDA_FUNC_IN PPPMPhoton(){}
 	CUDA_FUNC_IN PPPMPhoton(const Spectrum& l, const Vec3f& wi, const Vec3f& n, PhotonType type)
 	{
@@ -88,13 +88,11 @@ public:
 	}
 	template<typename HASH> CUDA_FUNC_IN void setPos(const HASH& hash, const Vec3u& i, const Vec3f& p)
 	{
-		//pos = hash.EncodePos(p, i);
-		Pos = p;
+		pos = hash.EncodePos(p, i);
 	}
 	template<typename HASH> CUDA_FUNC_IN Vec3f getPos(const HASH& hash, const Vec3u& i) const
 	{
-		//return hash.DecodePos(pos, i);
-		return Pos;
+		return hash.DecodePos(pos, i);
 	}
 	CUDA_FUNC_IN unsigned short& accessNormalStorage()
 	{
@@ -108,15 +106,6 @@ public:
 	{
 		typeNextField |= (unsigned int)b << 31;
 	}
-	/*
-	 CUDA_FUNC_IN PPPMPhoton(const uint4& v)
-	 {
-	 Pos = v.x;
-	 L = *(RGBE*)&v.y;
-	 Wi = make_uchar2(v.z & 0xff, (v.z >> 8) & 0xff);
-	 Nor = make_uchar2((v.z >> 16) & 0xff, v.z >> 24);
-	 next = v.w;
-	 }*/
 };
 
 struct k_MISPhoton : public PPPMPhoton
