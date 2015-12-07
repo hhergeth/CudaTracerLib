@@ -240,11 +240,12 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 			else break;
 		}
 
-		float tmin, tmax;
-		if (!r2.hasHit() && g_SceneData.m_sVolume.HasVolumes() && g_SceneData.m_sVolume.IntersectP(r, 0, r2.m_fDist, &tmin, &tmax))
+		if (!r2.hasHit())
 		{
 			Spectrum Tr(1);
-			L += throughput * ((VolEstimator*)g_VolEstimator2)->L_Volume(a_rVolume, rng, r, tmin, tmax, VolHelper<true>(), Tr);
+			float tmin, tmax;
+			if (g_SceneData.m_sVolume.HasVolumes() && g_SceneData.m_sVolume.IntersectP(r, 0, r2.m_fDist, &tmin, &tmax))
+				L += throughput * ((VolEstimator*)g_VolEstimator2)->L_Volume(a_rVolume, rng, r, tmin, tmax, VolHelper<true>(), Tr);
 			L += Tr * throughput * g_SceneData.EvalEnvironment(r);
 		}
 		img.Add(screenPos.x, screenPos.y, L);

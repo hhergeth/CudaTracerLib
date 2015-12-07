@@ -97,7 +97,7 @@ CUDA_FUNC_IN void computePixel(int x, int y, CudaRNG& rng, Image g_Image, bool d
 			}
 		}
 	}
-	else;
+	else L = g_SceneData.EvalEnvironment(r, rX, rY);
 	g_Image.AddSample(x, y, L);
 	if (depthImage)
 		g_DepthImage2.Store(x, y, prim_res.m_fDist);
@@ -234,6 +234,7 @@ void PrimTracer::Debug(Image* I, const Vec2i& pixel)
 {
 	k_INITIALIZE(m_pScene, g_sRngs);
 	CudaRNG rng = g_RNGData();
+	computePixel(pixel.x, pixel.y, rng, *I, false, m_sParameters.getValue(KEY_DrawingMode()), m_sParameters.getValue(KEY_MaxPathLength()));
 	Ray r, rX, rY;
 	g_SceneData.sampleSensorRay(r, rX, rY, Vec2f(pixel.x, pixel.y), rng.randomFloat2());
 	//traceTerrain(r, rng);
