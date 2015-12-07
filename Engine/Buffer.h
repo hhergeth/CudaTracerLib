@@ -245,12 +245,12 @@ public:
 
 	virtual BufferIterator<H, D> begin()
 	{
-		return BufferIterator<H, D>(*this, 0);
+		return BufferIterator<H, D>(*this, 0, false);
 	}
 
 	virtual BufferIterator<H, D> end()
 	{
-		return BufferIterator<H, D>(*this, m_uPos);
+		return BufferIterator<H, D>(*this, m_uPos, true);
 	}
 
 	virtual size_t numElements()
@@ -297,10 +297,18 @@ template<typename H, typename D> class BufferIterator
 	size_t idx;
 	typename BufferBase<H, D>::range_set_t::iterator next_interval;
 public:
-	BufferIterator(BufferBase<H, D>& b, size_t i)
+	BufferIterator(BufferBase<H, D>& b, size_t i, bool isEnd)
 		: buf(b), idx(i)
 	{
-		next_interval = buf.m_uDeallocated->lower_bound(typename BufferBase<H, D>::ival(idx, idx + 1));
+		if (!isEnd)
+		{
+			next_interval = buf.m_uDeallocated->find(idx);
+			if (next_interval != buf.m_uDeallocated->end())
+			{
+				idx = next_interval->upper();
+				next_interval = buf.m_uDeallocated->lower_bound(typename BufferBase<H, D>::ival(idx, idx + 1));
+			}
+		}
 	}
 
 	BufferReference<H, D> operator*() const
