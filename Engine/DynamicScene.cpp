@@ -280,7 +280,7 @@ StreamReference<Node> DynamicScene::CreateNode(const std::string& a_Token, IInSt
 		m_pMaterialBuffer->IncrementRef(m2);
 
 	for (unsigned int i = 0; i < M->m_sAreaLights.size(); i++)
-		createLight(N, M->m_sAreaLights[i].MatName, M->m_sAreaLights[i].L);
+		CreateLight(N, M->m_sAreaLights[i].MatName, M->m_sAreaLights[i].L);
 	N.Invalidate();
 	ReloadTextures();
 	m_pBVH->addNode(N);
@@ -600,7 +600,7 @@ AABB DynamicScene::getSceneBox()
 	return res;
 }
 
-StreamReference<KernelLight> DynamicScene::createLight(StreamReference<Node> Node, const std::string& materialName, Spectrum& L)
+StreamReference<KernelLight> DynamicScene::CreateLight(StreamReference<Node> Node, const std::string& materialName, Spectrum& L)
 {
 	unsigned int mi;
 	ShapeSet s = CreateShape(Node, materialName, &mi);
@@ -691,14 +691,14 @@ void DynamicScene::removeAllLights(StreamReference<Node> Node)
 		removeLight(Node, j);
 }
 
-StreamReference<VolumeRegion> DynamicScene::AddVolume(const VolumeRegion& r)
+StreamReference<VolumeRegion> DynamicScene::CreateVolume(const VolumeRegion& r)
 {
 	StreamReference<VolumeRegion> r2 = m_pVolumes->malloc(1);
 	*r2.operator->() = r;
 	return r2;
 }
 
-StreamReference<VolumeRegion> DynamicScene::AddVolume(int w, int h, int d, const float4x4& worldToVol, const PhaseFunction& p)
+StreamReference<VolumeRegion> DynamicScene::CreateVolume(int w, int h, int d, const float4x4& worldToVol, const PhaseFunction& p)
 {
 	StreamReference<VolumeRegion> r2 = m_pVolumes->malloc(1);
 	VolumeRegion r;
@@ -707,7 +707,7 @@ StreamReference<VolumeRegion> DynamicScene::AddVolume(int w, int h, int d, const
 	return r2;
 }
 
-StreamReference<VolumeRegion> DynamicScene::AddVolume(int wA, int hA, int dA,
+StreamReference<VolumeRegion> DynamicScene::CreateVolume(int wA, int hA, int dA,
 	int wS, int hS, int dS,
 	int wL, int hL, int dL, const float4x4& worldToVol, const PhaseFunction& p)
 {
@@ -759,8 +759,7 @@ StreamReference<KernelLight> DynamicScene::setEnvironementMap(const Spectrum& po
 	BufferReference<MIPMap, KernelMIPMap> m = LoadTexture(file, true);
 	m_psSceneBoxEnvLight = getSceneBox();
 	InfiniteLight l = InfiniteLight(m_pAnimStream, m, power, &m_psSceneBoxEnvLight);
-	StreamReference<KernelLight> r = createLight();
-	r->SetData(l);
+	StreamReference<KernelLight> r = CreateLight(l);
 	m_uEnvMapIndex = r.getIndex();
 	return r;
 }
@@ -814,9 +813,11 @@ unsigned int DynamicScene::getLightCount()
 	return (unsigned int)m_pLightStream->numElements();
 }
 
-BufferReference<KernelLight, KernelLight> DynamicScene::createLight()
+BufferReference<KernelLight, KernelLight> DynamicScene::CreateLight(const KernelLight& l)
 {
-	return m_pLightStream->malloc(1);
+	StreamReference<KernelLight> r2 = m_pLightStream->malloc(1);
+	*r2.operator->() = l;
+	return r2;
 }
 
 float DynamicScene::getLeightWeight(StreamReference<KernelLight> ref) const

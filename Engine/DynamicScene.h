@@ -73,22 +73,35 @@ public:
 	ShapeSet CreateShape(BufferReference<Node, Node> Node, const std::string& materialIdx, unsigned int* a_Mi = 0);
 
 	//Creates and returns an empty light
-	BufferReference<KernelLight, KernelLight> createLight();
+	BufferReference<KernelLight, KernelLight> CreateLight(const KernelLight& l);
+	template<typename LIGHT> BufferReference<KernelLight, KernelLight> CreateLight(const LIGHT& l)
+	{
+		KernelLight L;
+		L.SetData(l);
+		return CreateLight(L);
+	}
 	//Creates and returns an area light in the submesh with the material nem \ref materialName
-	BufferReference<KernelLight, KernelLight> createLight(BufferReference<Node, Node> Node, const std::string& materialName, Spectrum& radiance);
+	BufferReference<KernelLight, KernelLight> CreateLight(BufferReference<Node, Node> Node, const std::string& materialName, Spectrum& radiance);
 	//If applicable removes the light corresponding to the material with index \ref materialIdx
 	void removeLight(BufferReference<Node, Node> Node, unsigned int materialIdx);
 	void removeAllLights(BufferReference<Node, Node> Node);
 	//Creates and returns an environment map, using \ref power as scaling factor and \ref file as texture
 	BufferReference<KernelLight, KernelLight> setEnvironementMap(const Spectrum& power, const std::string& file);
 
-	BufferReference<VolumeRegion, VolumeRegion> AddVolume(const VolumeRegion& r);
+	BufferReference<VolumeRegion, VolumeRegion> CreateVolume(const VolumeRegion& r);
+	template<typename VOLUME> BufferReference<VolumeRegion, VolumeRegion> CreateVolume(const VOLUME& v)
+	{
+		VolumeRegion V;
+		V.SetData(v);
+		return CreateLight(V);
+	}
 	//Creates a volume with a grid size of \ref {w, h, d} and a transformation \ref worldToVol
-	BufferReference<VolumeRegion, VolumeRegion> AddVolume(int w, int h, int d, const float4x4& worldToVol, const PhaseFunction& p);
+	BufferReference<VolumeRegion, VolumeRegion> CreateVolume(int w, int h, int d, const float4x4& worldToVol, const PhaseFunction& p);
 	//Creates a volume with seperate grid sizes for absorption, scattering and emission and a transformation \ref worldToVol
-	BufferReference<VolumeRegion, VolumeRegion> AddVolume(int wA, int hA, int dA,
-		int wS, int hS, int dS,
-		int wL, int hL, int dL, const float4x4& worldToVol, const PhaseFunction& p);
+	BufferReference<VolumeRegion, VolumeRegion> CreateVolume(int wA, int hA, int dA,
+															 int wS, int hS, int dS,
+															 int wL, int hL, int dL, 
+															 const float4x4& worldToVol, const PhaseFunction& p);
 
 	void ReloadTextures();
 	float4x4 GetNodeTransform(BufferReference<Node, Node> n);
