@@ -12,7 +12,6 @@ namespace CudaTracerLib {
 	#define Integrate_Steps 10000
 #endif
 
-static const int   CIE_samples = 471;
 extern const float CIE_wavelengths[CIE_samples];
 extern const float CIE_X_entries[CIE_samples];
 extern const float CIE_Y_entries[CIE_samples];
@@ -390,172 +389,75 @@ void Spectrum::toHSL(float& h, float& s, float& l) const
 	}
 }
 
-CUDA_FUNC_IN Spectrum WavelengthToSpectrum(float w/*in nanometers*/)
+float Spectrum::SampleWavelength(Spectrum& res, float sample) const
 {
-	Spectrum s;
-	if (w >= 380 && w < 440)
-		s = Spectrum(-(w - 440.0f) / (440.0f - 350.0f), 0, 1);
-	else if (w < 490)
-		s = Spectrum(0, (w - 440.0f) / (490.0f - 440.0f), 1);
-	else if (w < 510)
-		s = Spectrum(0, 1, -(w - 510.0f) / (510.0f - 490.0f));
-	else if (w < 580)
-		s = Spectrum((w - 510.0f) / (580.0f - 510.0f), 1, 0);
-	else if (w < 645)
-		s = Spectrum(1, -(w - 645.0f) / (645.0f - 580.0f), 0);
-	else if (w < 830)
-		s = Spectrum(1, 0, 0);	
-	/*Vec2f A(0.150000125f, 0.0599998832f);
-	Vec2f B(0.639999807f, 0.329999775f);
-	Vec2f C(0.300000072f, 0.600000143f);
-	Vec2f xy;
-	if (w < 460)
-	xy = math::lerp((A + B) / 2.0f, A, (w - 380) / (460 - 380));
-	else if (w < 510)
-	xy = math::lerp(A, C, (w - 460) / (510 - 460));
-	else if (w < 610)
-	xy = math::lerp(C, B, (w - 510) / (610 - 510));
-	else xy = math::lerp(B, (A + B) / 2.0f, (w - 610) / (700 - 610));
-	s.fromYxy(1.0f, xy.x, xy.y);*/
-	return s ;
-}
-CUDA_FUNC_IN void spectral_color(float &r, float &g, float &b, float l) // RGB <0,1> <- lambda l <400,700> [nm]
-{
-	float t;  r = 0.0; g = 0.0; b = 0.0;
-	if ((l >= 400.0) && (l<410.0)) { t = (l - 400.0) / (410.0 - 400.0); r = +(0.33*t) - (0.20*t*t); }
-	else if ((l >= 410.0) && (l<475.0)) { t = (l - 410.0) / (475.0 - 410.0); r = 0.14 - (0.13*t*t); }
-	else if ((l >= 545.0) && (l<595.0)) { t = (l - 545.0) / (595.0 - 545.0); r = +(1.98*t) - (t*t); }
-	else if ((l >= 595.0) && (l<650.0)) { t = (l - 595.0) / (650.0 - 595.0); r = 0.98 + (0.06*t) - (0.40*t*t); }
-	else if ((l >= 650.0) && (l<700.0)) { t = (l - 650.0) / (700.0 - 650.0); r = 0.65 - (0.84*t) + (0.20*t*t); }
-	if ((l >= 415.0) && (l<475.0)) { t = (l - 415.0) / (475.0 - 415.0); g = +(0.80*t*t); }
-	else if ((l >= 475.0) && (l<590.0)) { t = (l - 475.0) / (590.0 - 475.0); g = 0.8 + (0.76*t) - (0.80*t*t); }
-	else if ((l >= 585.0) && (l<639.0)) { t = (l - 585.0) / (639.0 - 585.0); g = 0.84 - (0.84*t); }
-	if ((l >= 400.0) && (l<475.0)) { t = (l - 400.0) / (475.0 - 400.0); b = +(2.20*t) - (1.50*t*t); }
-	else if ((l >= 475.0) && (l<560.0)) { t = (l - 475.0) / (560.0 - 475.0); b = 0.7 - (t)+(0.30*t*t); }
-}
+	/*
+		It is supposed to do : E[this->SampleWavelength().res] = *this
+		<=> It is supposed to sample a multi chromatic spectral power distribution for a wavelength of this spectrum.
 
-#pragma warning(disable: 4305)
+		Sadly there is no real information out there on how to do that, so a ton of guesswork was needed.
+		Keavin Beason uses a similar technique in Pane alhough only for mono chromatic spds.
+		Luxrender possibly does something similar too I just couldn't figure out how they do it.
+
+		Okay so here is the gist of it :
+			1. Use CIE XYZ to construct a discrete proability mass function assigning the proability of having such wavelength in the spectrum.
+			2. Use the cdf to sample a wavelength
+			3. A photon with such wavelength will simply have the "color" of the appropriate CIE XYZ entries.
+
+		Here is what is actually done to get any usable results.
+			1. Don't actually tabulate the cdf, just compute the normalization factor cdfA. Compute the pmf values again, sum them up and stop when the sample is found.
+			   This should be faster than allocating tons of local storage and doing a cache unfriendly binary search on the GPU.
+			2. Finding the "color" of a photon with a given wavelength is not that easy because sRGB's gamut is tiny.
+			   Here http://www.fourmilab.ch/documents/specrend/specrend.c a method for clamping is given which basically moves the value towards the white point.
+			3. Multiplying by the CIE_normalization is strangely not enough -> some strange magic constant is necessary. This was just trying values out until the expected value somewhat matches.
+
+	*/
 
 
-Spectrum Spectrum::SampleSpectrum(float& w, float sample) const
-{
-	const int N = 89;
-	const float l_min = 360, l_max = 830, l_step = (l_max - l_min) / (N - 1);
-	float x, y, z;
-	toXYZ(x, y, z);
-	float data[] =
+	if (!isValid())
 	{
-		0.00295242, 0.0004076779, 0.01318752,
-		0.007641137, 0.001078166, 0.03424588,
-		0.01879338, 0.002589775, 0.08508254,
-		0.04204986, 0.005474207, 0.1927065,
-		0.08277331, 0.01041303, 0.3832822,
-		0.1395127, 0.01712968, 0.6568187,
-		0.2077647, 0.02576133, 0.9933444,
-		0.2688989, 0.03529554, 1.308674,
-		0.3281798, 0.04698226, 1.62494,
-		0.3693084, 0.06047429, 1.867751,
-		0.4026189, 0.07468287999999999, 2.075946,
-		0.4042529, 0.08820537000000001, 2.132574,
-		0.3932139, 0.103903, 2.128264,
-		0.3482214, 0.1195389, 1.946651,
-		0.3013112, 0.1414586, 1.76844,
-		0.2534221, 0.1701373, 1.582342,
-		0.1914176, 0.1999859, 1.310576,
-		0.1283167, 0.2312426, 1.010952,
-		0.0759312, 0.2682271, 0.7516389,
-		0.0383677, 0.3109438, 0.5549619,
-		0.01400745, 0.3554018, 0.3978114,
-		0.00344681, 0.4148227, 0.2905816,
-		0.005652072, 0.4780482, 0.2078158,
-		0.01561956, 0.5491344, 0.1394643,
-		0.03778185, 0.6248296, 0.08852388999999999,
-		0.07538941, 0.7012292, 0.05824484,
-		0.1201511, 0.7788199, 0.03784916,
-		0.1756832, 0.8376358, 0.02431375,
-		0.2380254, 0.8829552000000001, 0.01539505,
-		0.3046991, 0.9233858, 0.009753,
-		0.3841856, 0.9665325, 0.006083223,
-		0.4633109, 0.9886887, 0.003769336,
-		0.537417, 0.99075, 0.002323578,
-		0.6230892, 0.9997775, 0.001426627,
-		0.7123849, 0.9944304, 0.0008779264,
-		0.8016277000000001, 0.9848127, 0.0005408385,
-		0.8933408, 0.9640545, 0.0003342429,
-		0.9721304, 0.9286495, 0.0002076129,
-		1.034327, 0.877536, 0.000129823,
-		1.106886, 0.8370838, 8.183954e-005,
-		1.147304, 0.786995, 5.207245e-005,
-		1.160477, 0.7272309, 3.347499e-005,
-		1.148163, 0.6629035, 2.175998e-005,
-		1.113846, 0.5970375, 1.431231e-005,
-		1.048485, 0.5282296, 9.530129999999999e-006,
-		0.9617111, 0.4601308, 6.426776e-006,
-		0.8629581, 0.3950755, 0,
-		0.7603498, 0.3351794, 0,
-		0.6413984, 0.2751807, 0,
-		0.5290979, 0.2219564, 0,
-		0.4323126, 0.1776882, 0,
-		0.3496358, 0.1410203, 0,
-		0.27149, 0.1083996, 0,
-		0.2056507, 0.08137687, 0,
-		0.1538163, 0.06033976, 0,
-		0.1136072, 0.04425383, 0,
-		0.0828101, 0.03211852, 0,
-		0.05954815, 0.02302574, 0,
-		0.04221473, 0.01628841, 0,
-		0.02948752, 0.01136106, 0,
-		0.0202559, 0.007797457, 0,
-		0.0141023, 0.005425391, 0,
-		0.009816228, 0.00377614, 0,
-		0.006809147, 0.002619372, 0,
-		0.004666298, 0.001795595, 0,
-		0.003194041, 0.00122998, 0,
-		0.002205568, 0.0008499903, 0,
-		0.001524672, 0.0005881375, 0,
-		0.001061495, 0.0004098928, 0,
-		0.000740012, 0.0002860718, 0,
-		0.0005153113, 0.0001994949, 0,
-		0.0003631969, 0.0001408466, 0,
-		0.0002556624, 9.931439000000001e-005, 0,
-		0.0001809649, 7.041878e-005, 0,
-		0.0001287394, 5.018934e-005, 0,
-		9.172477e-005, 3.582218e-005, 0,
-		6.577531999999999e-005, 2.573083e-005, 0,
-		4.708916e-005, 1.845353e-005, 0,
-		3.407653e-005, 1.337946e-005, 0,
-		2.46963e-005, 9.715798000000001e-006, 0,
-		1.794555e-005, 7.074424e-006, 0,
-		1.306345e-005, 5.160948e-006, 0,
-		9.565993e-006, 3.788729e-006, 0,
-		7.037621e-006, 2.794625e-006, 0,
-		5.166853e-006, 2.057152e-006, 0,
-		3.815429e-006, 1.523114e-006, 0,
-		2.83798e-006, 1.135758e-006, 0,
-		2.113325e-006, 8.476168e-007, 0,
-		1.579199e-006, 6.34538e-007, 0
-
-	};
-	float cdf[N];
-	for (int i = 0; i < N; i++)
-	{
-		cdf[i] = data[i * 3 + 0] * x + data[i * 3 + 1] * y + data[i * 3 + 2] * z;
-		if (i > 0)
-			cdf[i] += cdf[i - 1];
+		res = *this;
+		return 500;
 	}
-	sample *= cdf[N - 1];
-	for (int i = 0; i < N; i++)
+
+	auto* cie_dat = SpectrumHelper::getData();
+
+	float x, y, z;
+	toXYZ(x, y, z);	
+
+	float cdfA = 0;
+	Spectrum acc(0.0f);
+	for (int i = 0; i < CIE_samples; i++)
 	{
-		if (cdf[i] >= sample)
+		cdfA += cie_dat->m_CIE_X_entries[i] * x + cie_dat->m_CIE_Y_entries[i] * y + cie_dat->m_CIE_Z_entries[i] * z;
+		acc += Spectrum(cie_dat->m_CIE_X_entries[i], cie_dat->m_CIE_Y_entries[i], cie_dat->m_CIE_Z_entries[i]);
+	}
+	acc.fromXYZ(acc[0], acc[1], acc[2]);
+	acc /= cie_dat->CIE_normalization;
+	acc *= Spectrum(1.1f, 1.2f, 1.2f);//magic constant
+	sample *= cdfA;
+	float cdfA2 = 0;
+	for (int i = 0; i < CIE_samples; i++)
+	{
+		float pdf_r = (cie_dat->m_CIE_X_entries[i] * x + cie_dat->m_CIE_Y_entries[i] * y + cie_dat->m_CIE_Z_entries[i] * z);//unnormalized pdf
+		cdfA2 += pdf_r;
+		if (cdfA2 >= sample)
 		{
-			w = l_min + (i + 0.5f) * l_step;
-			Spectrum res(0.0f);
-			//spectral_color(res[0], res[1], res[2], w);
-			res = WavelengthToSpectrum(w);
-			return res * getLuminance() / res.getLuminance();
+			float l_min = cie_dat->m_CIE_wavelengths[0], l_step = (cie_dat->m_CIE_wavelengths[CIE_samples - 1] - l_min) / (CIE_samples - 1);
+			float w = l_min + (i + 0.5f) * l_step;
+			Spectrum q;
+			q.fromXYZ(cie_dat->m_CIE_X_entries[i], cie_dat->m_CIE_Y_entries[i], cie_dat->m_CIE_Z_entries[i]);
+			float w2 = -CudaTracerLib::min(0.0f, q[0], q[1], q[2]);
+			if (w2 > 0)
+				q += Spectrum(w2);
+			float pdf = pdf_r / cdfA;
+			res = q / pdf / acc * *this;
+			return w;
 		}
 	}
-	return Spectrum(0.0f);
+	printf("Not able to sample spd! sample = %f, cdfA2 = %f\n", sample, cdfA2);
+	res = 0.0f;
+	return 0.0f;
 }
 
 struct InterpolatedSpectrum
@@ -772,7 +674,12 @@ void SpectrumHelper::staticData::init()
 	rgbIllum2SpecGreen.fromContinuousSpectrum(
 				RGB2Spec_wavelengths, RGBIllum2SpecGreen_entries, RGB2Spec_samples);
 	rgbIllum2SpecBlue.fromContinuousSpectrum(
-				RGB2Spec_wavelengths, RGBIllum2SpecBlue_entries, RGB2Spec_samples);
+		RGB2Spec_wavelengths, RGBIllum2SpecBlue_entries, RGB2Spec_samples);
+
+	memcpy(m_CIE_wavelengths, CIE_wavelengths, sizeof(m_CIE_wavelengths));
+	memcpy(m_CIE_X_entries, CIE_X_entries, sizeof(m_CIE_X_entries));
+	memcpy(m_CIE_Y_entries, CIE_Y_entries, sizeof(m_CIE_Y_entries));
+	memcpy(m_CIE_Z_entries, CIE_Z_entries, sizeof(m_CIE_Z_entries));
 }
 
 void SpectrumHelper::StaticInitialize()

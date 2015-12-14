@@ -421,10 +421,11 @@ public:
 
 	void fromContinuousSpectrum(const float* wls, const float* vals, unsigned int N);
 
-	//samples a wavelength and appropriate Spectrum from this one using the sample provided
-	//E[SampleSpectrum(this)) = this
-	CUDA_HOST CUDA_DEVICE Spectrum SampleSpectrum(float& w, float sample) const;
+	//samples a wavelength from the spectral power distribution of this spectrum
+	CUDA_HOST CUDA_DEVICE float SampleWavelength(Spectrum& res, float sample) const;
 };
+
+static const int   CIE_samples = 471;
 
 class SpectrumHelper
 {
@@ -450,6 +451,12 @@ public:
 		Spectrum rgbIllum2SpecGreen;
 		Spectrum rgbIllum2SpecBlue;
 		float m_wavelengths[SPECTRUM_SAMPLES + 1];
+
+		float m_CIE_wavelengths[CIE_samples];
+		float m_CIE_X_entries[CIE_samples];
+		float m_CIE_Y_entries[CIE_samples];
+		float m_CIE_Z_entries[CIE_samples];
+
 		void init();
 	};
 	static void StaticInitialize();
