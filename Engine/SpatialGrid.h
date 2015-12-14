@@ -106,7 +106,7 @@ public:
 	void ResetBuffer()
 	{
 		deviceDataIdx = 0;
-		ThrowCudaErrors(cudaMemset(deviceMap, -1, sizeof(unsigned int) * gridSize * gridSize * gridSize));
+		ThrowCudaErrors(cudaMemset(deviceMap, UINT_MAX, sizeof(unsigned int) * gridSize * gridSize * gridSize));
 	}
 
 	unsigned int getNumEntries() const
@@ -173,7 +173,7 @@ public:
 	template<unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX, typename CLB> CUDA_FUNC_IN void ForAllCellEntries(const Vec3u& p, const CLB& clb)
 	{
 		unsigned int i0 = hashMap.Hash(p), i = deviceMap[i0], N = 0;
-		while (i != UINT_MAX && i != 0xffffff && N++ < MAX_ENTRIES_PER_CELL)
+		while (i < deviceDataIdx && N++ < MAX_ENTRIES_PER_CELL)
 		{
 			clb(i, deviceData[i].value);
 			i = deviceData[i].nextIdx;

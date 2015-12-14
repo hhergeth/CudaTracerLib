@@ -6,6 +6,7 @@
 #include "SceneInitData.h"
 #include "ShapeSet.h"
 #include <functional>
+#include "Light.h"
 
 namespace CudaTracerLib {
 
@@ -93,7 +94,7 @@ public:
 	{
 		VolumeRegion V;
 		V.SetData(v);
-		return CreateLight(V);
+		return CreateVolume(V);
 	}
 	//Creates a volume with a grid size of \ref {w, h, d} and a transformation \ref worldToVol
 	BufferReference<VolumeRegion, VolumeRegion> CreateVolume(int w, int h, int d, const float4x4& worldToVol, const PhaseFunction& p);

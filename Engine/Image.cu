@@ -12,8 +12,6 @@ namespace CudaTracerLib {
 
 void Image::AddSample(float sx, float sy, const Spectrum &_L)
 {
-	if (_L.isNaN() || !_L.isValid())
-		return;
 	Spectrum L = _L;
 	L.clampNegative();
 	int x = math::Floor2Int(sx), y = math::Floor2Int(sy);

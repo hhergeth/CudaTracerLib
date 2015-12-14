@@ -248,7 +248,7 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 				L += throughput * ((VolEstimator*)g_VolEstimator2)->L_Volume(a_rVolume, rng, r, tmin, tmax, VolHelper<true>(), Tr);
 			L += Tr * throughput * g_SceneData.EvalEnvironment(r);
 		}
-		img.Add(screenPos.x, screenPos.y, L);
+		img.Add((int)screenPos.x, (int)screenPos.y, L);
 	}
 	g_RNGData(rng);
 }

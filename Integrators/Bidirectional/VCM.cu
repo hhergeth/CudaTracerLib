@@ -82,7 +82,7 @@ CUDA_FUNC_IN void _VCM(const Vec2f& pixelPosition, BlockSampleImage& img, CudaRN
 
 		if (r2.LightIndex() != UINT_MAX)
 		{
-			//acc += cameraState.throughput * gatherLight(cameraState, bRec, r2, rng, camPathLength, true);
+			acc += cameraState.throughput * gatherLight(cameraState, bRec, r2, rng, camPathLength, true);
 			break;
 		}
 
@@ -93,7 +93,7 @@ CUDA_FUNC_IN void _VCM(const Vec2f& pixelPosition, BlockSampleImage& img, CudaRN
 			for (int emitterVertexIdx = 0; emitterVertexIdx < emitterVerticesStored; emitterVertexIdx++)
 			{
 				BPTVertex lv = lightPath[emitterVertexIdx];
-				//acc += cameraState.throughput * lv.throughput * connectVertices(lv, cameraState, bRec, r2.getMat(), mMisVcWeightFactor, mMisVmWeightFactor, true);
+				acc += cameraState.throughput * lv.throughput * connectVertices(lv, cameraState, bRec, r2.getMat(), mMisVcWeightFactor, mMisVmWeightFactor, true);
 			}
 			
 			//scale by 2 to account for no merging in the first iteration
