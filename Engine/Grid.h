@@ -155,9 +155,8 @@ template<typename F> CUDA_FUNC_IN void TraverseGrid(const Ray& r, float tmin, fl
 	bool cancelTraversal = false;
 	for (; !cancelTraversal;)
 	{
-		int bits = ((NextCrossingT[0] < NextCrossingT[1]) << 2) + ((NextCrossingT[0] < NextCrossingT[2]) << 1) + ((NextCrossingT[1] < NextCrossingT[2]));
-		const int cmpToAxis[8] = { 2, 1, 2, 1, 2, 2, 0, 0 };
-		int stepAxis = cmpToAxis[bits];
+		int bits = ((NextCrossingT[0] < NextCrossingT[1]) << 2) + ((NextCrossingT[0] < NextCrossingT[2]) << 1) + ((NextCrossingT[1] < NextCrossingT[2]));	
+		int stepAxis = (0x00000a66 >> bits * 2) & 3;//cmpToAxis[bits]; //const int cmpToAxis[8] = { 2, 1, 2, 1, 2, 2, 0, 0 };
 		clb(minT, rayT, maxT, min(NextCrossingT[stepAxis], maxT), Pos, cancelTraversal);
 		Pos[stepAxis] += Step[stepAxis];
 		if (Pos[stepAxis] >= gridSize[stepAxis] || maxT < NextCrossingT[stepAxis])
