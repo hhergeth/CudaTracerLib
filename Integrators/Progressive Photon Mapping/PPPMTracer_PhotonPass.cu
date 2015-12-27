@@ -257,16 +257,17 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 
 void PPPMTracer::doPhotonPass()
 {
+	bool finalGathering = m_sParameters.getValue(KEY_FinalGathering());
+
 	m_sSurfaceMap.ResetBuffer();
-	m_sSurfaceMapCaustic.ResetBuffer();
+	if (finalGathering)
+		m_sSurfaceMapCaustic.ResetBuffer();
 	m_pVolumeEstimator->StartNewPass(this, m_pScene);
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_SurfaceMap, &m_sSurfaceMap, sizeof(m_sSurfaceMap)));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_SurfaceMapCaustic, &m_sSurfaceMapCaustic, sizeof(m_sSurfaceMapCaustic)));
 	ZeroSymbol(g_NumPhotonEmitted);
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_VolEstimator, m_pVolumeEstimator, m_pVolumeEstimator->getSize()));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_PassIdx, &m_uPassesDone, sizeof(m_uPassesDone)));
-
-	bool finalGathering = m_sParameters.getValue(KEY_FinalGathering());
 
 	while (!m_sSurfaceMap.isFull() && !m_pVolumeEstimator->isFull())
 	{
@@ -286,7 +287,8 @@ void PPPMTracer::doPhotonPass()
 	m_pVolumeEstimator->PrepareForRendering();
 	m_uPhotonEmittedPass = max(m_uPhotonEmittedPass, m_pVolumeEstimator->getNumEmitted());
 	m_sSurfaceMap.PrepareForUse();
-	m_sSurfaceMapCaustic.PrepareForUse();
+	if (finalGathering)
+		m_sSurfaceMapCaustic.PrepareForUse();
 	if (m_uTotalPhotonsEmitted == 0)
 		doPerPixelRadiusEstimation();
 }
