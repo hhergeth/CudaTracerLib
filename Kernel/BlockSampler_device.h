@@ -27,16 +27,15 @@ struct BlockSampleImage
 {
 	Image img;
 	SamplerpixelData* m_pLumData;
-	unsigned int w;
+	unsigned int w, h;
 
 	BlockSampleImage(Image* img, SamplerpixelData* lumData)
 		: img(*img), m_pLumData(lumData)
 	{
-		unsigned int y;
-		img->getExtent(w, y);
+		img->getExtent(w, h);
 	}
 
-	CUDA_DEVICE CUDA_HOST void Add(int x, int y, const Spectrum& c);
+	CUDA_DEVICE CUDA_HOST void Add(float x, float y, const Spectrum& c);
 };
 
 class IBlockSampler

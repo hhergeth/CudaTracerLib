@@ -105,10 +105,11 @@ CUDA_FUNC_IN float weight(SamplerpixelData& f, bool update)
 	return w_i;
 }
 
-void BlockSampleImage::Add(int x, int y, const Spectrum& c)
+void BlockSampleImage::Add(float x, float y, const Spectrum& c)
 {
 	img.AddSample(x, y, c);
 #ifdef ISCUDA
+	x = math::clamp(x, 0.0f, (float)(w - 1)); y = math::clamp(y, 0.0f, (float)(h - 1));
 	float l = math::clamp(c.average(), 0.0f, 1000.0f);
 	unsigned int i = y * w + x;
 	SamplerpixelData& pix = m_pLumData[i];
