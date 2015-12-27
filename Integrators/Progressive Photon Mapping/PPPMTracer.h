@@ -71,6 +71,7 @@ class PPPMTracer : public Tracer<true, true>, public IRadiusProvider
 {
 private:
 	SurfaceMapT m_sSurfaceMap;
+	SurfaceMapT m_sSurfaceMapCaustic;
 	IVolumeEstimator* m_pVolumeEstimator;
 
 	float m_fLightVisibility;
@@ -91,6 +92,7 @@ public:
 
 	PARAMETER_KEY(bool, Direct)
 	PARAMETER_KEY(bool, PerPixelRadius)
+	PARAMETER_KEY(bool, FinalGathering)
 
 	PPPMTracer();
 	virtual ~PPPMTracer()

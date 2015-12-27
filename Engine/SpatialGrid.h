@@ -91,6 +91,7 @@ public:
 	{
 		CUDA_MALLOC(&deviceData, sizeof(linkedEntry) * numData);
 		CUDA_MALLOC(&deviceMap, sizeof(unsigned int) * gridSize * gridSize * gridSize);
+		ThrowCudaErrors(cudaMemset(deviceData, UINT_MAX, sizeof(linkedEntry) * numData));
 	}
 
 	void Free()
@@ -173,8 +174,8 @@ public:
 
 	template<unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX, typename CLB> CUDA_FUNC_IN void ForAllCellEntries(const Vec3u& p, const CLB& clb)
 	{
-		unsigned int i0 = hashMap.Hash(p), i = deviceMap[i0], N = 0;
-		while (i < deviceDataIdx && N++ < MAX_ENTRIES_PER_CELL)
+		unsigned int i0 = hashMap.Hash(p), i = deviceMap[i0], N = 0, lo = min(deviceDataIdx, numData);
+		while (i < lo && N++ < MAX_ENTRIES_PER_CELL)
 		{
 			clb(i, deviceData[i].value);
 			i = deviceData[i].nextIdx;

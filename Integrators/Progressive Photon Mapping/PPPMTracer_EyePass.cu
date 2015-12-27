@@ -67,15 +67,20 @@ template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum BeamGrid::L_Volume(float a_r, Cu
 			if (isectRadSqr < ph.getRad() && l1 >= 0)
 			{
 				float p = vol.p(ph_pos, r.direction, ph.getWi(), rng);
-				//Spectrum tauToPhoton = (-Tau - vol.tau(r, rayT, l1)).exp();
-				Spectrum tauToPhoton = (-vol.tau(r, tmin, l1)).exp();
+				Spectrum tauToPhoton = (-Tau - (l1 >= rayT ? vol.tau(r, rayT, l1) : -vol.tau(r, max(minT, l1), rayT))).exp();//corner case : the photon lies in the cell but the projected distance is before the cell
+
+				//Spectrum tauToPhotonC = (-vol.tau(r, tmin, l1)).exp();
+				//if ((tauToPhotonC - tauToPhoton).abs().max() > 1e-3f)
+				//	printf("{%f, %f, %f}, {%f, %f, %f}\n", tauToPhotonC[0], tauToPhotonC[1], tauToPhotonC[2], tauToPhoton[0], tauToPhoton[1], tauToPhoton[2]);
+
 				L_n += p * ph.getL() / m_uNumEmitted * tauToPhoton * 
 					(1 - isectRadSqr / ph.getRad()) / (ph.getRad() * PI * 0.5f);
 			}
 			/*float t1, t2;
 			if (sphere_line_intersection(ph_pos, m_fCurrentRadiusVol, r, t1, t2))
 			{
-				Spectrum tauToPhoton = (-vol.tau(r, tmin, t1)).exp();//transmittance from camera vertex along ray to query point
+				//transmittance from camera vertex along ray to query point
+				Spectrum tauToPhoton = (-Tau - (l1 >= rayT ? vol.tau(r, rayT, t1) : -vol.tau(r, max(minT, t1), rayT))).exp();//corner case : the photon lies in the cell but the projected distance is before the cell
 				float p = vol.p(r((t1 + t2) / 2), r.direction, ph.getWi(), rng);
 				float Vs = 1.0f / (4.0f / 3.0f * PI * m_fCurrentRadiusVol * m_fCurrentRadiusVol * m_fCurrentRadiusVol * m_uNumEmitted);
 				L_n += p * ph.getL() * Vs * (-vol.tau(r, t1, t2)).exp();
@@ -85,12 +90,12 @@ template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum BeamGrid::L_Volume(float a_r, Cu
 		float localDist = cellEndT - rayT;
 		L_n += vol.Lve(r(rayT + localDist / 2), -1.0f * r.direction) * localDist;
 	});
-	//Tr = (-Tau).exp();
-	Tr = (-vol.tau(r, tmin, tmax)).exp();
+	Tr = (-Tau).exp();
 	return L_n;
 }
 
 CUDA_CONST SurfaceMapT g_SurfMap;
+CUDA_CONST SurfaceMapT g_SurfMapCaustic;
 CUDA_CONST unsigned int g_NumPhotonEmitted2;
 CUDA_CONST CUDA_ALIGN(16) unsigned char g_VolEstimator2[Dmax4(sizeof(PointStorage), sizeof(BeamGrid), sizeof(BeamBeamGrid), sizeof(BeamBVHStorage))];
 
@@ -152,14 +157,15 @@ template<bool USE_GLOBAL> Spectrum BeamBVHStorage::L_Volume(float radius, CudaRN
 	return L_n;
 }
 
-template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const Vec3f& wi, float r, const Material* mat)
+template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const Vec3f& wi, float r, const Material& mat, SurfaceMapT* map = 0)
 {
+	if (!map) map = &g_SurfMap;
 	Spectrum Lp = Spectrum(0.0f);
 	Vec3f a = r*(-bRec.dg.sys.t - bRec.dg.sys.s) + bRec.dg.P, b = r*(bRec.dg.sys.t - bRec.dg.sys.s) + bRec.dg.P, c = r*(-bRec.dg.sys.t + bRec.dg.sys.s) + bRec.dg.P, d = r*(bRec.dg.sys.t + bRec.dg.sys.s) + bRec.dg.P;
 #ifdef ISCUDA
-	g_SurfMap.ForAll<200>(min(a, b, c, d), max(a, b, c, d), [&](const Vec3u& cell_idx, unsigned int p_idx, const PPPMPhoton& ph)
+	map->ForAll<200>(min(a, b, c, d), max(a, b, c, d), [&](const Vec3u& cell_idx, unsigned int p_idx, const PPPMPhoton& ph)
 	{
-		float dist2 = distanceSquared(ph.getPos(g_SurfMap.getHashGrid(), cell_idx), bRec.dg.P);
+		float dist2 = distanceSquared(ph.getPos(map->getHashGrid(), cell_idx), bRec.dg.P);
 		Vec3f photonNormal = ph.getNormal();
 		float wiDotGeoN = absdot(photonNormal, wi);
 		if (dist2 < r * r && dot(photonNormal, bRec.dg.sys.n) > 0.1f && wiDotGeoN > 1e-2f)
@@ -169,16 +175,43 @@ template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& b
 			float ke = k_tr(r, math::sqrt(dist2));
 			Spectrum l = ph.getL();
 			if(F_IS_GLOSSY)
-				l *= mat->bsdf.f(bRec);
+				l *= mat.bsdf.f(bRec);
 			Lp += ke * l * cor_fac;
 		}
 	});
 	if(!F_IS_GLOSSY)
-		Lp *= mat->bsdf.f(bRec);
+		Lp *= mat.bsdf.f(bRec);
 	return Lp / g_NumPhotonEmitted2;
 #else
 	return 1.0f;
 #endif
+}
+
+template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_SurfaceFinalGathering(BSDFSamplingRecord& bRec, const Vec3f& wi, float rad, TraceResult& r2, CudaRNG& rng, bool DIRECT)
+{
+	Spectrum LCaustic = L_Surface<F_IS_GLOSSY>(bRec, wi, rad, r2.getMat(), &g_SurfMapCaustic);
+	Spectrum L(0.0f);
+	const int N = 3;
+	DifferentialGeometry dg;
+	BSDFSamplingRecord bRec2(dg);//constantly reloading into bRec and using less registers has about the same performance
+	for (int i = 0; i < N; i++)
+	{
+		bRec.typeMask = EGlossy | EDiffuse;
+		Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
+		Ray r(bRec.dg.P, bRec.getOutgoing());
+		TraceResult r3 = traceRay(r);
+		if (r3.hasHit())
+		{
+			r3.getBsdfSample(r, bRec2, ETransportMode::ERadiance, &rng);
+			bool hasGlossy = r3.getMat().bsdf.hasComponent(EGlossy);
+			L += f * (hasGlossy ? L_Surface<true>(bRec2, -r.direction, rad, r3.getMat()) : L_Surface<false>(bRec2, -r.direction, rad, r3.getMat()));
+			if (DIRECT)
+				L += f * UniformSampleOneLight(bRec2, r3.getMat(), rng);
+			else L += f * r3.Le(bRec2.dg.P, bRec2.dg.sys, -r.direction);
+		}
+	}
+	bRec.typeMask = ETypeCombinations::EAll;
+	return L / N + LCaustic;
 }
 
 CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED, const Material* mat, k_AdaptiveStruct& A, int x, int y,
@@ -251,7 +284,7 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED
 #endif
 }
 
-template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int h, float a_PassIndex, float a_rSurface, float a_rVolume, k_AdaptiveStruct a_AdpEntries, BlockSampleImage img, bool DIRECT, bool USE_PerPixelRadius)
+template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int h, float a_PassIndex, float a_rSurface, float a_rVolume, k_AdaptiveStruct a_AdpEntries, BlockSampleImage img, bool DIRECT, bool USE_PerPixelRadius, bool finalGathering)
 {
 	CudaRNG rng = g_RNGData();
 	DifferentialGeometry dg;
@@ -304,8 +337,8 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 				float r_i = USE_PerPixelRadius ? rad : a_rSurface;
 				Spectrum l;
 				if (hasGlossy)
-					l = L_Surface<true>(bRec, -r.direction, r_i, &r2.getMat());
-				else l = L_Surface<false>(bRec, -r.direction, r_i, &r2.getMat());
+					l = finalGathering ? L_SurfaceFinalGathering<true>(bRec, -r.direction, r_i, r2, rng, DIRECT) : L_Surface<true>(bRec, -r.direction, r_i, r2.getMat());
+				else l = finalGathering ? L_SurfaceFinalGathering<false>(bRec, -r.direction, r_i, r2, rng, DIRECT) : L_Surface<false>(bRec, -r.direction, r_i, r2.getMat());
 				L += throughput * (hasGlossy ? 0.5f : 1) * l;
 				//L += throughput * L_Surface(bRec, a_rSurface, &r2.getMat(), a_AdpEntries, pixel.x, pixel.y, throughput, a_PassIndex, img);
 				if (!hasSpecGlossy)
@@ -373,21 +406,25 @@ void PPPMTracer::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 	float radius3 = getCurrentRadius(3);
 
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_SurfMap, &m_sSurfaceMap, sizeof(m_sSurfaceMap)));
+	ThrowCudaErrors(cudaMemcpyToSymbol(g_SurfMapCaustic, &m_sSurfaceMapCaustic, sizeof(m_sSurfaceMapCaustic)));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_NumPhotonEmitted2, &m_uPhotonEmittedPass, sizeof(m_uPhotonEmittedPass)));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_VolEstimator2, m_pVolumeEstimator, m_pVolumeEstimator->getSize()));
 
 	bool perPixelRad = m_sParameters.getValue(KEY_PerPixelRadius());
+	bool finalGathering = m_sParameters.getValue(KEY_FinalGathering());
+
 	k_AdaptiveStruct A(r_min, r_max, m_pEntries, w, m_uPassesDone);
 	Vec2i off = Vec2i(x, y);
 	BlockSampleImage img = m_pBlockSampler->getBlockImage();
+
 	if (dynamic_cast<BeamGrid*>(m_pVolumeEstimator))
-		k_EyePass<BeamGrid> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, m_uPassesDone, radius2, radius3, A, img, m_useDirectLighting, perPixelRad);
+		k_EyePass<BeamGrid> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, m_uPassesDone, radius2, radius3, A, img, m_useDirectLighting, perPixelRad, finalGathering);
 	else if(dynamic_cast<PointStorage*>(m_pVolumeEstimator))
-		k_EyePass<PointStorage> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, m_uPassesDone, radius2, radius3, A, img, m_useDirectLighting, perPixelRad);
+		k_EyePass<PointStorage> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, m_uPassesDone, radius2, radius3, A, img, m_useDirectLighting, perPixelRad, finalGathering);
 	else if (dynamic_cast<BeamBeamGrid*>(m_pVolumeEstimator))
-		k_EyePass<BeamBeamGrid> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, m_uPassesDone, radius2, radius3, A, img, m_useDirectLighting, perPixelRad);
+		k_EyePass<BeamBeamGrid> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, m_uPassesDone, radius2, radius3, A, img, m_useDirectLighting, perPixelRad, finalGathering);
 	else if (dynamic_cast<BeamBVHStorage*>(m_pVolumeEstimator))
-		k_EyePass<BeamBVHStorage> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, m_uPassesDone, radius2, radius3, A, img, m_useDirectLighting, perPixelRad);
+		k_EyePass<BeamBVHStorage> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, m_uPassesDone, radius2, radius3, A, img, m_useDirectLighting, perPixelRad, finalGathering);
 	//k_EyePass2 << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, m_uPassesDone, radius2, radius3, A, img, m_fIntitalRadMin, m_fIntitalRadMax);
 
 	ThrowCudaErrors(cudaThreadSynchronize());

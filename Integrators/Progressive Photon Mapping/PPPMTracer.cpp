@@ -12,7 +12,8 @@ PPPMTracer::PPPMTracer()
 	: m_pEntries(0), m_fLightVisibility(1), k_Intial(10)
 {
 	m_sParameters << KEY_Direct() << CreateSetBool(true)
-		<< KEY_PerPixelRadius() << CreateSetBool(true);
+		<< KEY_PerPixelRadius() << CreateSetBool(false)
+		<< KEY_FinalGathering() << CreateSetBool(true);
 #ifdef NDEBUG
 	m_uBlocksPerLaunch = 180;
 #else
@@ -21,9 +22,11 @@ PPPMTracer::PPPMTracer()
 	m_uTotalPhotonsEmitted = -1;
 	unsigned int numPhotons = (m_uBlocksPerLaunch + 2) * PPM_slots_per_block;
 	m_sSurfaceMap = SurfaceMapT(250, numPhotons * PPM_MaxRecursion / 10);
+	if (m_sParameters.getValue(KEY_FinalGathering()))
+		m_sSurfaceMapCaustic = SurfaceMapT(250, numPhotons * PPM_MaxRecursion / 10);
 	//m_pVolumeEstimator = new PointStorage(100, numPhotons * PPM_MaxRecursion / 10);
-	//m_pVolumeEstimator = new BeamGrid(100, numPhotons * PPM_MaxRecursion / 10, 30, 2);
-	m_pVolumeEstimator = new BeamBVHStorage(100);
+	m_pVolumeEstimator = new BeamGrid(100, numPhotons * PPM_MaxRecursion / 10, 30, 2);
+	//m_pVolumeEstimator = new BeamBVHStorage(100);
 	//m_pVolumeEstimator = new BeamBeamGrid(10, 10000, 3000);
 }
 
@@ -39,6 +42,8 @@ void PPPMTracer::PrintStatus(std::vector<std::string>& a_Buf) const
 	a_Buf.push_back(format("Light Visibility : %f", m_fLightVisibility));
 	a_Buf.push_back(format("Photons per pass : %d*100,000", m_sSurfaceMap.getNumEntries() / 100000));
 	a_Buf.push_back(format("%.2f%% Surf Photons", float(m_sSurfaceMap.getNumStoredEntries()) / m_sSurfaceMap.getNumEntries() * 100));
+	if (m_sParameters.getValue(KEY_FinalGathering()))
+		a_Buf.push_back(format("Caustic surf map : %.2f%%", float(m_sSurfaceMapCaustic.getNumStoredEntries()) / m_sSurfaceMapCaustic.getNumEntries() * 100));
 	a_Buf.push_back("Volumeric Estimator : ");
 	m_pVolumeEstimator->PrintStatus(a_Buf);
 }
@@ -108,6 +113,8 @@ void PPPMTracer::StartNewTrace(Image* I)
 		}
 	}
 	m_sSurfaceMap.SetSceneDimensions(m_sEyeBox);
+	if (m_sParameters.getValue(KEY_FinalGathering()))
+		m_sSurfaceMapCaustic.SetSceneDimensions(m_sEyeBox);
 	m_pVolumeEstimator->StartNewRendering(volBox);
 
 	float r_scene = m_sEyeBox.Size().length() / 2;

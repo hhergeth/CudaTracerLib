@@ -150,9 +150,10 @@ CUDA_ONLY_FUNC void BeamBeamGrid::StoreBeam(const Beam& b, bool firstStore)
 CUDA_CONST unsigned int g_PassIdx;
 CUDA_DEVICE unsigned int g_NumPhotonEmitted;
 CUDA_DEVICE SurfaceMapT g_SurfaceMap;
+CUDA_DEVICE SurfaceMapT g_SurfaceMapCaustic;
 CUDA_DEVICE CUDA_ALIGN(16) unsigned char g_VolEstimator[Dmax4(sizeof(PointStorage), sizeof(BeamGrid), sizeof(BeamBeamGrid), sizeof(BeamBVHStorage))];
 
-template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thread, bool DIRECT)
+template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thread, bool DIRECT, bool finalGathering)
 {
 	CudaRNG rng = g_RNGData();
 	CUDA_SHARED unsigned int local_Counter;
@@ -185,12 +186,8 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 			TraceResult r2 = traceRay(r);
 			float minT, maxT;
 			bool inMedium = (!bssrdf && V.HasVolumes() && V.IntersectP(r, 0, r2.m_fDist, &minT, &maxT)) || bssrdf;
-			bool stored = false;
-			if (inMedium && rng.randomFloat() < 0.00662435558f)
-			{
-				((VolEstimator*)g_VolEstimator)->StoreBeam(Beam(r.origin, r.direction, r2.m_fDist, throughput * Le), !wasStoredVolume);//store the beam even if sampled distance is to far ahead!
-				wasStoredVolume = true;
-			}
+			((VolEstimator*)g_VolEstimator)->StoreBeam(Beam(r.origin, r.direction, r2.m_fDist, throughput * Le), !wasStoredVolume);//store the beam even if sampled distance is to far ahead!
+			wasStoredVolume = true;
 			if ((!bssrdf && inMedium && V.sampleDistance(r, 0, r2.m_fDist, rng, mRec))
 				|| (bssrdf && bssrdf->sampleDistance(r, 0, r2.m_fDist, rng.randomFloat(), mRec)))
 			{//mRec.t
@@ -218,17 +215,22 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 				Vec3f wo = bssrdf ? r.direction : -r.direction;
 				Spectrum f_i = throughput * Le;
 				r2.getBsdfSample(-wo, r(r2.m_fDist), bRec, ETransportMode::EImportance, &rng, &f_i);
-				if ((DIRECT && depth > 0) || !DIRECT)
-					if (r2.getMat().bsdf.hasComponent(ESmooth) && dot(bRec.dg.sys.n, wo) > 0.0f)
+				if (r2.getMat().bsdf.hasComponent(ESmooth) && dot(bRec.dg.sys.n, wo) > 0.0f)
+				{
+					auto ph = PPPMPhoton(throughput * Le, wo, bRec.dg.n, delta ? PhotonType::pt_Caustic : PhotonType::pt_Diffuse);
+					Vec3u cell_idx = g_SurfaceMap.getHashGrid().Transform(dg.P);
+					ph.setPos(g_SurfaceMap.getHashGrid(), cell_idx, dg.P);
+					bool b = false;
+					if ((DIRECT && depth > 0) || !DIRECT)
+						b |= g_SurfaceMap.store(cell_idx, ph);
+					if (finalGathering && delta)
+						b |= g_SurfaceMapCaustic.store(cell_idx, ph);
+					if (b && !wasStoredSurface)
 					{
-						auto ph = PPPMPhoton(throughput * Le, wo, bRec.dg.n, delta ? PhotonType::pt_Caustic : PhotonType::pt_Diffuse);
-						Vec3u cell_idx = g_SurfaceMap.getHashGrid().Transform(dg.P);
-						ph.setPos(g_SurfaceMap.getHashGrid(), cell_idx, dg.P);
-						bool b = g_SurfaceMap.store(cell_idx, ph);
-						if (b && !wasStoredSurface)
-							atomicInc(&numStoredSurface, (unsigned int)-1);
+						atomicInc(&numStoredSurface, (unsigned int)-1);
 						wasStoredSurface = true;
 					}
+				}
 				Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
 				delta = bRec.sampledType & ETypeCombinations::EDelta;
 				if (!bssrdf && r2.getMat().GetBSSRDF(bRec.dg, &bssrdf))
@@ -256,29 +258,35 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 void PPPMTracer::doPhotonPass()
 {
 	m_sSurfaceMap.ResetBuffer();
+	m_sSurfaceMapCaustic.ResetBuffer();
 	m_pVolumeEstimator->StartNewPass(this, m_pScene);
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_SurfaceMap, &m_sSurfaceMap, sizeof(m_sSurfaceMap)));
+	ThrowCudaErrors(cudaMemcpyToSymbol(g_SurfaceMapCaustic, &m_sSurfaceMapCaustic, sizeof(m_sSurfaceMapCaustic)));
 	ZeroSymbol(g_NumPhotonEmitted);
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_VolEstimator, m_pVolumeEstimator, m_pVolumeEstimator->getSize()));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_PassIdx, &m_uPassesDone, sizeof(m_uPassesDone)));
 
+	bool finalGathering = m_sParameters.getValue(KEY_FinalGathering());
+
 	while (!m_sSurfaceMap.isFull() && !m_pVolumeEstimator->isFull())
 	{
 		if (dynamic_cast<BeamGrid*>(m_pVolumeEstimator))
-			k_PhotonPass<BeamGrid> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >(PPM_Photons_Per_Thread, m_useDirectLighting);
+			k_PhotonPass<BeamGrid> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >(PPM_Photons_Per_Thread, m_useDirectLighting, finalGathering);
 		else if(dynamic_cast<PointStorage*>(m_pVolumeEstimator))
-			k_PhotonPass<PointStorage> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >(PPM_Photons_Per_Thread, m_useDirectLighting);
+			k_PhotonPass<PointStorage> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >(PPM_Photons_Per_Thread, m_useDirectLighting, finalGathering);
 		else if (dynamic_cast<BeamBeamGrid*>(m_pVolumeEstimator))
-			k_PhotonPass<BeamBeamGrid> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >(PPM_Photons_Per_Thread, m_useDirectLighting);
+			k_PhotonPass<BeamBeamGrid> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >(PPM_Photons_Per_Thread, m_useDirectLighting, finalGathering);
 		else if (dynamic_cast<BeamBVHStorage*>(m_pVolumeEstimator))
-			k_PhotonPass<BeamBVHStorage> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >(PPM_Photons_Per_Thread, m_useDirectLighting);
+			k_PhotonPass<BeamBVHStorage> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >(PPM_Photons_Per_Thread, m_useDirectLighting, finalGathering);
 		ThrowCudaErrors(cudaMemcpyFromSymbol(&m_sSurfaceMap, g_SurfaceMap, sizeof(m_sSurfaceMap)));
+		ThrowCudaErrors(cudaMemcpyFromSymbol(&m_sSurfaceMapCaustic, g_SurfaceMapCaustic, sizeof(m_sSurfaceMapCaustic)));
 		ThrowCudaErrors(cudaMemcpyFromSymbol(m_pVolumeEstimator, g_VolEstimator, m_pVolumeEstimator->getSize()));
 	}
 	ThrowCudaErrors(cudaMemcpyFromSymbol(&m_uPhotonEmittedPass, g_NumPhotonEmitted, sizeof(m_uPhotonEmittedPass)));
 	m_pVolumeEstimator->PrepareForRendering();
 	m_uPhotonEmittedPass = max(m_uPhotonEmittedPass, m_pVolumeEstimator->getNumEmitted());
 	m_sSurfaceMap.PrepareForUse();
+	m_sSurfaceMapCaustic.PrepareForUse();
 	if (m_uTotalPhotonsEmitted == 0)
 		doPerPixelRadiusEstimation();
 }
