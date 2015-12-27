@@ -4,26 +4,44 @@
 #include <Kernel/TraceHelper.h>
 #include <vector>
 #include <Base/Platform.h>
+#include <Engine/Grid.h>
+#include <Math/Compression.h>
 
 namespace CudaTracerLib {
 
 struct Beam
 {
-	Vec3f pos;
-	Vec3f dir;
+	unsigned short dir;
+	RGBE phi;
 	float t;
-	Spectrum Phi;
+	Vec3f pos;
+
 	CUDA_FUNC_IN Beam(){}
 	CUDA_FUNC_IN Beam(const Vec3f& p, const Vec3f& d, float t, const Spectrum& ph)
-		: pos(p), dir(d), t(t), Phi(ph)
+		: pos(p), dir(NormalizedFloat3ToUchar2(d)), t(t), phi(ph.toRGBE())
 	{
 
 	}
 
+	CUDA_FUNC_IN Vec3f getPos() const
+	{
+		return pos;
+	}
+	CUDA_FUNC_IN Vec3f getDir() const
+	{
+		return Uchar2ToNormalizedFloat3(dir);
+	}
+	CUDA_FUNC_IN Spectrum getL() const
+	{
+		Spectrum s;
+		s.fromRGBE(phi);
+		return s;
+	}
+
 	CUDA_FUNC_IN AABB getAABB(float r) const
 	{
-		const Vec3f beamStart = pos;
-		const Vec3f beamEnd = pos + dir * t;
+		const Vec3f beamStart = getPos();
+		const Vec3f beamEnd = beamStart + dir * t;
 		const Vec3f startMargins(r);
 		const Vec3f endMargins(r);
 		const Vec3f minPt = min(beamStart - startMargins, beamEnd - endMargins);
@@ -35,8 +53,9 @@ struct Beam
 	{
 		splitMin *= t;
 		splitMax *= t;
-		const Vec3f beamStart = pos + dir * splitMin;
-		const Vec3f beamEnd = pos + dir * splitMax;
+		const Vec3f P = getPos();
+		const Vec3f beamStart = P + dir * splitMin;
+		const Vec3f beamEnd = P + dir * splitMax;
 		const Vec3f startMargins(r);
 		const Vec3f endMargins(r);
 		const Vec3f minPt = min(beamStart - startMargins, beamEnd - endMargins);

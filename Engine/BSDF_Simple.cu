@@ -4,6 +4,81 @@
 
 namespace CudaTracerLib {
 
+Spectrum diffuse::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &_sample) const
+{
+	if (!(bRec.typeMask & m_combinedType) || (m_combinedType == EDiffuseReflection && Frame::cosTheta(bRec.wi) <= 0))
+		return 0.0f;
+
+	Vec2f sample = _sample;
+	bRec.sampledType = m_combinedType;
+	float sc = 1;
+	if (m_combinedType == (EDiffuseReflection | EDiffuseTransmission))
+	{
+		bRec.sampledType = sample.x < 0.5f ? EDiffuseReflection : EDiffuseTransmission;
+		sample.x = sample.x < 0.5f ? sample.x * 2 : (sample.x - 0.5f) * 2;
+		sc = 0.5f;
+	}
+	bRec.wo = Warp::squareToCosineHemisphere(sample);
+	if ((m_combinedType == EDiffuseTransmission || (m_combinedType == (EDiffuseReflection | EDiffuseTransmission) && bRec.sampledType == EDiffuseTransmission)) && Frame::cosTheta(bRec.wi) > 0)
+		bRec.wo.z *= -1;
+	bRec.eta = 1.0f;
+	pdf = math::abs(Warp::squareToCosineHemispherePdf(bRec.wo)) * sc;
+	return m_reflectance.Evaluate(bRec.dg) * sc;
+	/*if (!(bRec.typeMask & EDiffuseReflection) || Frame::cosTheta(bRec.wi) <= 0)
+		return 0.0f;
+
+	bRec.wo = Warp::squareToCosineHemisphere(_sample);
+	bRec.eta = 1.0f;
+	bRec.sampledType = EDiffuseReflection;
+	pdf = Warp::squareToCosineHemispherePdf(bRec.wo);
+	return m_reflectance.Evaluate(bRec.dg);*/
+}
+
+Spectrum diffuse::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
+{
+	if (!(bRec.typeMask & m_combinedType) || measure != ESolidAngle)
+		return 0.0f;
+	bool validRefl = m_combinedType == EDiffuseReflection && Frame::cosTheta(bRec.wi) > 0 && Frame::cosTheta(bRec.wo) > 0;
+	bool validTrans = m_combinedType == EDiffuseTransmission && Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) < 0;
+	Spectrum s = m_reflectance.Evaluate(bRec.dg)	* (INV_PI * math::abs(Frame::cosTheta(bRec.wo)));
+	if (validRefl || validTrans)
+		return s;
+	else if (m_combinedType == (EDiffuseReflection | EDiffuseTransmission))
+		return s * 0.5f;
+	else return 0.0f;
+		/*if (!(bRec.typeMask & EDiffuseReflection) || measure != ESolidAngle
+		|| Frame::cosTheta(bRec.wi) <= 0
+		|| Frame::cosTheta(bRec.wo) <= 0)
+		return 0.0f;
+
+	return m_reflectance.Evaluate(bRec.dg)	* (INV_PI * Frame::cosTheta(bRec.wo));*/
+}
+
+float diffuse::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
+{
+	if (!(bRec.typeMask & m_combinedType) || measure != ESolidAngle)
+		return 0.0f;
+	bool validRefl = m_combinedType == EDiffuseReflection && Frame::cosTheta(bRec.wi) > 0 && Frame::cosTheta(bRec.wo) > 0;
+	bool validTrans = m_combinedType == EDiffuseTransmission && Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) < 0;
+	float f = math::abs(Warp::squareToCosineHemispherePdf(bRec.wo));
+	if (validRefl || validTrans)
+		return f;
+	else if (m_combinedType == (EDiffuseReflection | EDiffuseTransmission))
+		return f * 0.5f;
+	else return 0.0f;
+	/*if (!(bRec.typeMask & EDiffuseReflection) || measure != ESolidAngle
+		|| Frame::cosTheta(bRec.wi) <= 0
+		|| Frame::cosTheta(bRec.wo) <= 0)
+		return 0.0f;
+
+	return Warp::squareToCosineHemispherePdf(bRec.wo);*/
+}
+
+void diffuse::setModus(unsigned int i)
+{
+	m_combinedType = i;
+}
+
 Spectrum roughdiffuse::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 {
 	if (!(bRec.typeMask & EGlossyReflection) || measure != ESolidAngle
@@ -101,8 +176,9 @@ Spectrum dielectric::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &s
 	bool sampleReflection = (bRec.typeMask & EDeltaReflection) != 0;
 	bool sampleTransmission = (bRec.typeMask & EDeltaTransmission) != 0;
 
-	float cosThetaT;
-	float F = MonteCarlo::fresnelDielectricExt(Frame::cosTheta(bRec.wi), cosThetaT, m_eta);
+	Spectrum f_o;
+	float cosThetaT, eta_pdf, eta = eta_f.sample_eta(bRec, sample.y, f_o, eta_pdf), invEta = 1.0f / eta;//the second component was unused before
+	float F = MonteCarlo::fresnelDielectricExt(Frame::cosTheta(bRec.wi), cosThetaT, eta);
 
 	if (sampleTransmission && sampleReflection) {
 		//float f0 = m_specularReflectance.Evaluate(bRec.map).average(), f1 = m_specularTransmittance.Evaluate(bRec.map).average(), f = F*f0/(f0+f1);
@@ -116,14 +192,14 @@ Spectrum dielectric::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &s
 		}
 		else {
 			bRec.sampledType = EDeltaTransmission;
-			bRec.wo = refract(bRec.wi, cosThetaT);
-			bRec.eta = cosThetaT < 0 ? m_eta : m_invEta;
-			pdf = 1 - F;
+			bRec.wo = refract(bRec.wi, cosThetaT, eta, invEta);
+			bRec.eta = cosThetaT < 0 ? eta : invEta;
+			pdf = (1 - F) * eta_pdf;
 
 			float factor = (bRec.mode == ETransportMode::ERadiance)
-				? (cosThetaT < 0 ? m_invEta : m_eta) : 1.0f;
+				? (cosThetaT < 0 ? invEta : eta) : 1.0f;
 
-			return m_specularTransmittance.Evaluate(bRec.dg) * (factor * factor);// / (1 - f) * (1 - F);
+			return f_o * m_specularTransmittance.Evaluate(bRec.dg) * (factor * factor);// / (1 - f) * (1 - F);
 		}
 	}
 	else if (sampleReflection) {
@@ -136,14 +212,13 @@ Spectrum dielectric::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &s
 	}
 	else if (sampleTransmission) {
 		bRec.sampledType = EDeltaTransmission;
-		bRec.wo = refract(bRec.wi, cosThetaT);
-		bRec.eta = cosThetaT < 0 ? m_eta : m_invEta;
-		pdf = 1.0f;
+		bRec.wo = refract(bRec.wi, cosThetaT, eta, invEta);
+		bRec.eta = cosThetaT < 0 ? eta : invEta;
+		pdf = 1.0f * eta_pdf;
 
-		float factor = (bRec.mode == ETransportMode::ERadiance)
-			? (cosThetaT < 0 ? m_invEta : m_eta) : 1.0f;
+		float factor = (bRec.mode == ETransportMode::ERadiance)	? (cosThetaT < 0 ? invEta : eta) : 1.0f;
 
-		return m_specularTransmittance.Evaluate(bRec.dg) * (factor * factor * (1 - F));
+		return f_o * m_specularTransmittance.Evaluate(bRec.dg) * (factor * factor * (1 - F));
 	}
 
 	return Spectrum(0.0f);
@@ -154,8 +229,11 @@ Spectrum dielectric::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 	bool sampleReflection   = (bRec.typeMask & EDeltaReflection) && measure == EDiscrete;
 	bool sampleTransmission = (bRec.typeMask & EDeltaTransmission) && measure == EDiscrete;
 
+	Spectrum f_o;
+	float eta = eta_f.f_eta(bRec, f_o), invEta = 1.0f / eta;
+
 	float cosThetaT;
-	float F = MonteCarlo::fresnelDielectricExt(Frame::cosTheta(bRec.wi), cosThetaT, m_eta);
+	float F = MonteCarlo::fresnelDielectricExt(Frame::cosTheta(bRec.wi), cosThetaT, eta);
 
 	if (Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) >= 0) {
 		if (!sampleReflection || math::abs(dot(reflect(bRec.wi), bRec.wo)-1) > DeltaEpsilon)
@@ -163,15 +241,14 @@ Spectrum dielectric::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 
 		return m_specularReflectance.Evaluate(bRec.dg) * F;
 	} else {
-		if (!sampleTransmission || math::abs(dot(refract(bRec.wi, cosThetaT), bRec.wo)-1) > DeltaEpsilon)
+		if (!sampleTransmission || math::abs(dot(refract(bRec.wi, cosThetaT, eta, invEta), bRec.wo) - 1) > DeltaEpsilon)
 			return Spectrum(0.0f);
 
 		/* Radiance must be scaled to account for the solid angle compression
 			that occurs when crossing the interface. */
-		float factor = (bRec.mode == ETransportMode::ERadiance)
-			? (cosThetaT < 0 ? m_invEta : m_eta) : 1.0f;
+		float factor = (bRec.mode == ETransportMode::ERadiance) ? (cosThetaT < 0 ? invEta : eta) : 1.0f;
 
-		return m_specularTransmittance.Evaluate(bRec.dg)  * factor * factor * (1 - F);
+		return f_o * m_specularTransmittance.Evaluate(bRec.dg)  * factor * factor * (1 - F);
 	}
 }
 
@@ -180,19 +257,22 @@ float dielectric::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 	bool sampleReflection   = (bRec.typeMask & EDeltaReflection) && measure == EDiscrete;
 	bool sampleTransmission = (bRec.typeMask & EDeltaTransmission) && measure == EDiscrete;
 
+	float eta_pdf;
+	float eta = eta_f.pdf_eta(bRec, eta_pdf), invEta = 1.0f / eta;
+
 	float cosThetaT;
-	float F = MonteCarlo::fresnelDielectricExt(Frame::cosTheta(bRec.wi), cosThetaT, m_eta);
+	float F = MonteCarlo::fresnelDielectricExt(Frame::cosTheta(bRec.wi), cosThetaT, eta);
 
 	if (Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) >= 0) {
 		if (!sampleReflection || math::abs(dot(reflect(bRec.wi), bRec.wo)-1) > DeltaEpsilon)
 			return 0.0f;
 
-		return sampleTransmission ? F : 1.0f;
+		return sampleTransmission ? eta_pdf * F : 1.0f;
 	} else {
-		if (!sampleTransmission || math::abs(dot(refract(bRec.wi, cosThetaT), bRec.wo)-1) > DeltaEpsilon)
+		if (!sampleTransmission || math::abs(dot(refract(bRec.wi, cosThetaT, eta, invEta), bRec.wo)-1) > DeltaEpsilon)
 			return 0.0f;
 
-		return sampleReflection ? 1-F : 1.0f;
+		return sampleReflection ? 1 - F : eta_pdf * 1.0f;
 	}
 }
 

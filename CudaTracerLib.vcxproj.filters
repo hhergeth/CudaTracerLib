@@ -332,6 +332,9 @@
     <ClInclude Include="Engine\SceneBuilder\BVHBuilderHelper.h">
       <Filter>Engine\SceneBuilder</Filter>
     </ClInclude>
+    <ClInclude Include="Engine\Dispersion.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Base\FileStream.cpp">

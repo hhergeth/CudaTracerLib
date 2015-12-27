@@ -74,9 +74,9 @@ bool HomogeneousVolumeDensity::sampleDistance(const Ray& ray, float minT, float 
 	return success;
 }
 
-DenseVolGridBaseType::DenseVolGridBaseType(Stream<char>* a_Buffer, Vec3u dim, size_t sizePerElement)
+DenseVolGridBaseType::DenseVolGridBaseType(Stream<char>* a_Buffer, Vec3u dim, size_t sizePerElement, size_t alignment)
 {
-	StreamReference<char> streamRef = a_Buffer->malloc(dim.x * dim.y * dim.z * (int)sizePerElement);
+	StreamReference<char> streamRef = a_Buffer->malloc_aligned(dim.x * dim.y * dim.z * (unsigned int)sizePerElement, (unsigned int)alignment);
 	data = streamRef.AsVar<char>();
 }
 

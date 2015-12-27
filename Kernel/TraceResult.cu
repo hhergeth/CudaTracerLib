@@ -7,13 +7,21 @@
 
 namespace CudaTracerLib {
 
-void TraceResult::getBsdfSample(const Ray& r, BSDFSamplingRecord& bRec, ETransportMode mode, CudaRNG* rng, const Vec3f* wo) const
+void TraceResult::getBsdfSample(const Ray& r, BSDFSamplingRecord& bRec, ETransportMode mode, CudaRNG* rng, const Spectrum* f_i, const Vec3f* wo) const
 {
-	getBsdfSample(r.direction, r(m_fDist), bRec, mode, rng, wo);
+	getBsdfSample(r.direction, r(m_fDist), bRec, mode, rng, f_i, wo);
 }
 
-void TraceResult::getBsdfSample(const Vec3f& wi, const Vec3f& p, BSDFSamplingRecord& bRec, ETransportMode mode, CudaRNG* rng, const Vec3f* wo) const
+void TraceResult::getBsdfSample(const Vec3f& wi, const Vec3f& p, BSDFSamplingRecord& bRec, ETransportMode mode, CudaRNG* rng, const Spectrum* f_i, const Vec3f* wo) const
 {
+	if (f_i)
+		bRec.f_i = *f_i;
+	else
+	{
+		bRec.f_i = Spectrum(0.0f);
+		if (mode == ETransportMode::EImportance)
+			printf("Please set the incoming radiance f_i when doing photon tracing!\n");
+	}
 	bRec.rng = rng;
 	bRec.eta = 1.0f;
 	bRec.mode = mode;

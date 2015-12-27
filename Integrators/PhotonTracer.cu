@@ -39,7 +39,7 @@ template<bool CORRECT_DIFFERENTIALS> CUDA_FUNC_IN void handleSurfaceInteraction(
 			Ray r, rX, rY;
 			g_SceneData.sampleSensorRay(r, rX, rY, dRec.uv, Vec2f(0));
 			Vec3f oldWi = bRec.wi;
-			r2.getBsdfSample(r, bRec, ETransportMode::EImportance, &rng, &dRec.d);
+			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng, 0, &dRec.d);
 			bRec.dg.computePartials(r, rX, rY);
 			bRec.wi = oldWi;
 		}
@@ -63,54 +63,7 @@ CUDA_FUNC_IN void handleMediumInteraction(const Spectrum& weight, MediumSampling
 		if (!value.isZero())
 			g_Image.Splat(dRec.uv.x, dRec.uv.y, value);
 	}
-}
-
-CUDA_FUNC_IN Vec3f refract(const Vec3f &wi, float cosThetaT, float eta)
-{
-	float scale = -(cosThetaT < 0 ? (1.0f / eta) : eta);
-	return Vec3f(scale*wi.x, scale*wi.y, cosThetaT);
-}
-CUDA_FUNC_IN Vec3f reflect(const Vec3f &wi)
-{
-	return Vec3f(-wi.x, -wi.y, wi.z);
-}
-CUDA_FUNC_IN Spectrum sample(const Spectrum& s_, BSDFSamplingRecord& bRec, CudaRNG& rng)
-{
-	float w;
-	Spectrum s = s_.SampleSpectrum(w, rng.randomFloat());
-	for (int i = 0; i < 3; i++)
-		if (s_[i] != 0)
-			s[i] /= s_[i];
-
-	Vec3f B(1.03961212f, 0.231792344f, 1.01046945f), C(6.00069867e-3f, 2.00179144e-2f, 1.03560653e2f);
-	float w_mu = w / 1e3;
-	float eta = math::safe_sqrt(1 + ((B * w_mu * w_mu) / (Vec3f(w_mu * w_mu) - C)).sum());
-	//float eta = math::lerp(1.4f, 1.8f, (w - 300) / (600));
-	//float eta = 1.5f;
-
-	float cosThetaT;
-	float F = MonteCarlo::fresnelDielectricExt(Frame::cosTheta(bRec.wi), cosThetaT, eta);
-	Vec2f sample = rng.randomFloat2();
-	if (sample.x <= F) {
-		bRec.sampledType = EDeltaReflection;
-		bRec.wo = reflect(bRec.wi);
-		bRec.eta = 1.0f;
-
-		return Spectrum(1.0f);
-	}
-	else {
-		bRec.sampledType = EDeltaTransmission;
-		bRec.wo = refract(bRec.wi, cosThetaT, eta);
-		bRec.eta = cosThetaT < 0 ? eta : (1.0f / eta);
-
-		float factor = (bRec.mode == ETransportMode::ERadiance) ? (cosThetaT < 0 ? (1.0f / eta) : eta) : 1.0f;
-
-		return s * (factor * factor);
-	}
-}
-
-//if (r2.getMat().bsdf.getTypeToken() != UINT_MAX)
-//r2.getMat().bsdf.getTypeToken() == UINT_MAX ? sample(power * throughput, bRec, rng) : 
+} 
 
 template<bool CORRECT_DIFFERENTIALS> CUDA_FUNC_IN void doWork(Image& g_Image, CudaRNG& rng)
 {
@@ -159,9 +112,12 @@ template<bool CORRECT_DIFFERENTIALS> CUDA_FUNC_IN void doWork(Image& g_Image, Cu
 			if (medium)
 				throughput *= mRec.transmittance / mRec.pdfFailure;
 			Vec3f wo = bssrdf ? -r.direction : r.direction;
-			r2.getBsdfSample(wo, r(r2.m_fDist), bRec, ETransportMode::EImportance, &rng);
-			handleSurfaceInteraction<CORRECT_DIFFERENTIALS>(power * throughput, r2, bRec, r2, g_Image, rng);
+			Spectrum f_i = power * throughput;
+			r2.getBsdfSample(wo, r(r2.m_fDist), bRec, ETransportMode::EImportance, &rng, &f_i);
+			handleSurfaceInteraction<false>(power * throughput, r2, bRec, r2, g_Image, rng);//CORRECT_DIFFERENTIALS
 			Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
+			if (f.isZero())
+				break;
 			if (!bssrdf && r2.getMat().GetBSSRDF(bRec.dg, &bssrdf))
 				bRec.wo.z *= -1.0f;
 			else

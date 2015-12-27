@@ -122,8 +122,8 @@ private:
 	static std::map<std::string, PerformanceTimer> gStaticInstances;
 };
 
-#define GET_PER_BLOCKS() PerformanceTimer::getInstance(typeid(*this).name())
+#define GET_PERF_BLOCKS() PerformanceTimer::getInstance(typeid(*this).name())
 
-#define START_PERF_BLOCK(ID) GET_PER_BLOCKS().StartBlock(ID)
+#define START_PERF_BLOCK(ID) GET_PERF_BLOCKS().StartBlock(ID)
 
 }

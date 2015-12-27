@@ -396,6 +396,15 @@ void DynamicScene::InvalidateMeshesInBVH(BufferReference<Mesh, KernelMesh> m)
 void DynamicScene::ReloadTextures()
 {
 	m_pMaterialBuffer->UpdateMaterials(textureLoader(this));
+
+	textureLoader t(this);
+	m_pLightStream->UpdateInvalidated([&](StreamReference<KernelLight> l)
+	{
+		if (l->Is<DiffuseLight>() && l->As<DiffuseLight>()->m_rad_texture.Is<ImageTexture>())
+			l->As<DiffuseLight>()->m_rad_texture.As<ImageTexture>()->LoadTextures(t);
+		l->As()->Update();
+	});
+
 	m_pTextureBuffer->UpdateInvalidated();
 }
 
@@ -466,7 +475,6 @@ bool DynamicScene::UpdateScene()
 	m_pBVHIndicesStream->UpdateInvalidated();
 	m_pMeshBuffer->UpdateInvalidated();
 	m_pAnimStream->UpdateInvalidated();
-	m_pLightStream->UpdateInvalidated([](StreamReference<KernelLight> l){l->As()->Update(); });
 	m_pVolumes->UpdateInvalidated([](StreamReference<VolumeRegion> l){l->As()->Update(); });
 	ReloadTextures();
 	return m_pBVH->Build(m_pNodeStream, m_pMeshBuffer);
@@ -646,13 +654,14 @@ ShapeSet DynamicScene::CreateShape(StreamReference<Node> Node, const std::string
 
 	std::vector<StreamReference<TriIntersectorData>> n;
 	std::vector<StreamReference<TriIntersectorData2>> n2;
+	std::vector<StreamReference<TriangleData>> n3;
 	int i = 0, e = m->m_sIntInfo.getLength();
 	while (i < e)
 	{
 		StreamReference<TriIntersectorData> sec = m->m_sIntInfo.operator()(i);
 		StreamReference<TriIntersectorData2> sec2 = m->m_sIndicesInfo.operator()(i);
 		unsigned int i2 = sec2->getIndex();
-		TriangleData* d = m->m_sTriInfo(i2);
+		StreamReference<TriangleData> d = m->m_sTriInfo(i2);
 		bool clb = m_sShapeCreationClb ? m_sShapeCreationClb(m->m_sTriInfo(i2), sec) : true;
 		if (d->getMatIndex(0) == matIdx && clb)//do not use Node->m_uMaterialOffset, cause mi is local...
 		{
@@ -664,12 +673,13 @@ ShapeSet DynamicScene::CreateShape(StreamReference<Node> Node, const std::string
 			{
 				n.push_back(sec);
 				n2.push_back(sec2);
+				n3.push_back(d);
 			}
 		}
 		i++;
 	}
 
-	ShapeSet r = ShapeSet(&n[0], (unsigned int)n.size(), GetNodeTransform(Node), m_pAnimStream);
+	ShapeSet r = ShapeSet(&n[0], &n3[0], (unsigned int)n.size(), GetNodeTransform(Node), m_pAnimStream);
 	return r;
 }
 

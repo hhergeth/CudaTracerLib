@@ -422,7 +422,11 @@ public:
 	void fromContinuousSpectrum(const float* wls, const float* vals, unsigned int N);
 
 	//samples a wavelength from the spectral power distribution of this spectrum
-	CUDA_HOST CUDA_DEVICE float SampleWavelength(Spectrum& res, float sample) const;
+	CUDA_HOST CUDA_DEVICE float SampleWavelength(Spectrum& res, float& pdf, float sample) const;
+
+	CUDA_HOST CUDA_DEVICE float PdfWavelength(float lambda) const;
+
+	CUDA_HOST CUDA_DEVICE Spectrum FWavelength(float lambda) const;
 };
 
 static const int   CIE_samples = 471;

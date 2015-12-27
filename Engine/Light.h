@@ -6,6 +6,7 @@
 #include "AbstractEmitter.h"
 #include "Samples.h"
 #include <VirtualFuncType.h>
+#include "Texture.h"
 
 //Implementation and interface copied from Mitsuba.
 
@@ -92,8 +93,8 @@ struct PointLight : public LightBase//, public e_DerivedTypeHelper<1>
 struct DiffuseLight : public LightBase//, public e_DerivedTypeHelper<2>
 {
 	TYPE_FUNC(2)
-		Spectrum m_radiance, m_power;
-	ShapeSet shapeSet;
+	CUDA_ALIGN(16) ShapeSet shapeSet;
+	CUDA_ALIGN(16) Texture m_rad_texture;
 	bool m_bOrthogonal;
 	unsigned int m_uNodeIdx;
 
@@ -103,25 +104,12 @@ struct DiffuseLight : public LightBase//, public e_DerivedTypeHelper<2>
 	DiffuseLight(const Spectrum& L, ShapeSet& s, unsigned int nodeIdx)
 		: LightBase(EOnSurface), shapeSet(s), m_bOrthogonal(false), m_uNodeIdx(nodeIdx)
 	{
-		setEmit(L);
-	}
-
-	virtual void Update()
-	{
-		setEmit(m_radiance);
-	}
-
-	void setEmit(const Spectrum& L);
-
-	void scaleEmit(const Spectrum& L)
-	{
-		setEmit(m_radiance * L);
+		m_rad_texture.SetData(ConstantTexture(L));
 	}
 
 	void Recalculate(const float4x4& mat, Stream<char>* buffer)
 	{
 		shapeSet.Recalculate(mat, buffer);
-		Update();
 	}
 
 	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
@@ -132,11 +120,7 @@ struct DiffuseLight : public LightBase//, public e_DerivedTypeHelper<2>
 
 	CUDA_DEVICE CUDA_HOST float pdfDirect(const DirectSamplingRecord &dRec) const;
 
-	CUDA_FUNC_IN Spectrum samplePosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const
-	{
-		shapeSet.SamplePosition(pRec, sample);
-		return m_power;
-	}
+	CUDA_DEVICE CUDA_HOST Spectrum samplePosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const;
 
 	CUDA_DEVICE CUDA_HOST Spectrum evalPosition(const PositionSamplingRecord &pRec) const;
 

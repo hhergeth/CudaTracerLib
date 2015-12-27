@@ -9,6 +9,7 @@
 #include "MicrofacetDistribution.h"
 #include <Math/Sampling.h>
 #include <VirtualFuncType.h>
+#include "Dispersion.h"
 
 namespace CudaTracerLib
 {
@@ -45,7 +46,7 @@ public:
 		for (size_t i = 0; i < nestedTexs.size(); i++)
 			m_uTextureOffsets[n++] = (unsigned int)((unsigned long long)nestedTexs[i] - (unsigned long long)this);
 	}
-	CUDA_FUNC_IN unsigned int getType()
+	CUDA_FUNC_IN unsigned int getType() const
 	{
 		return m_combinedType;
 	}
@@ -84,6 +85,7 @@ public:
 		return texs;
 	}
 };
+
 }
 
 #include "BSDF_Simple.h"
@@ -95,7 +97,7 @@ struct BSDFFirst : public CudaVirtualAggregate<BSDF, diffuse, roughdiffuse, diel
 {
 public:
 	CALLER(sample)
-		CUDA_FUNC_IN Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &_sample) const
+	CUDA_FUNC_IN Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &_sample) const
 	{
 		return sample_Caller<Spectrum>(*this, bRec, pdf, _sample);
 	}

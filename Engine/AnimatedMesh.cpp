@@ -10,29 +10,6 @@
 
 namespace CudaTracerLib {
 
-BufferReference<char, char> malloc_aligned(Stream<char>* stream, unsigned int a_Count, unsigned int a_Alignment)
-{
-	BufferReference<char, char> ref = stream->malloc(a_Count + a_Alignment * 2);
-	uintptr_t ptr = (uintptr_t)ref.getDevice();
-	unsigned int diff = ptr % a_Alignment, off = a_Alignment - diff;
-	if (diff)
-	{
-		unsigned int end = ref.getIndex() + off + a_Count;
-		BufferReference<char, char> refFreeFront = BufferReference<char, char>(stream, ref.getIndex(), off),
-			refFreeTail = BufferReference<char, char>(stream, end, ref.getLength() - off - a_Count);
-		stream->dealloc(refFreeFront);
-		if (refFreeTail.getLength() != 0)
-			stream->dealloc(refFreeTail);
-		return BufferReference<char, char>(stream, ref.getIndex() + off, a_Count);
-	}
-	else
-	{
-		BufferReference<char, char> refFreeTail = BufferReference<char, char>(stream, ref.getIndex() + a_Count, a_Alignment * 2);
-		stream->dealloc(refFreeTail);
-		return BufferReference<char, char>(stream, ref.getIndex() + off, a_Count);
-	}
-}
-
 void AnimationFrame::serialize(FileOutputStream& a_Out)
 {
 	a_Out << (size_t)m_sHostConstructionData.size();
@@ -44,7 +21,7 @@ void AnimationFrame::deSerialize(IInStream& a_In, Stream<char>* Buf)
 	size_t A;
 	a_In >> A;
 	//m_sMatrices = Buf->malloc(sizeof(float4x4) * (unsigned int)A);
-	m_sMatrices = malloc_aligned(Buf, sizeof(float4x4) * (unsigned int)A, 16);
+	m_sMatrices = Buf->malloc_aligned(sizeof(float4x4) * (unsigned int)A, 16);
 	a_In >> m_sMatrices;
 }
 
@@ -81,9 +58,9 @@ AnimatedMesh::AnimatedMesh(const std::string& path, IInStream& a_In, Stream<TriI
 		A.deSerialize(a_In, a_Stream5);
 		m_pAnimations.push_back(A);
 	}
-	m_sVertices = a_Stream5->malloc(sizeof(AnimatedVertex) * k_Data.m_uVertexCount);//malloc_aligned(a_Stream5, sizeof(AnimatedVertex) * k_Data.m_uVertexCount, 16);//
+	m_sVertices = a_Stream5->malloc_aligned<AnimatedVertex>(sizeof(AnimatedVertex) * k_Data.m_uVertexCount);//malloc_aligned(a_Stream5, sizeof(AnimatedVertex) * k_Data.m_uVertexCount, 16);//
 	a_In >> m_sVertices;
-	m_sTriangles = a_Stream5->malloc(sizeof(uint3) * m_sTriInfo.getLength());//malloc_aligned(a_Stream5, sizeof(uint3) * m_sTriInfo.getLength(), 16);//
+	m_sTriangles = a_Stream5->malloc_aligned<uint3>(sizeof(uint3) * m_sTriInfo.getLength());//malloc_aligned(a_Stream5, sizeof(uint3) * m_sTriInfo.getLength(), 16);//
 	a_In >> m_sTriangles;
 	uint3* idx = (uint3*)m_sTriangles.operator char *() + (m_sTriInfo.getLength() - 2);
 	a_Stream5->UpdateInvalidated();

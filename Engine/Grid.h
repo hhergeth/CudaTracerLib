@@ -136,20 +136,20 @@ template<typename F> CUDA_FUNC_IN void TraverseGrid(const Ray& r, float tmin, fl
 	/*
 	pbrt grid accellerator copy! (slightly streamlined for SIMD)
 	*/
-	Vec3f m_vCellSize = box.Size() / (gridSize - 1);
+	Vec3f m_vCellSize = box.Size() / gridSize;
 	float rayT, maxT;
 	if (!box.Intersect(r, &rayT, &maxT))
 		return;
 	float minT = rayT = math::clamp(rayT, tmin, tmax);
 	maxT = math::clamp(maxT, tmin, tmax);
-	Vec3f q = (r(rayT) - box.minV) / box.Size() * (gridSize - Vec3f(1));
+	Vec3f q = (r(rayT) - box.minV) / m_vCellSize;
 	Vec3u Pos = clamp(Vec3u((unsigned int)q.x, (unsigned int)q.y, (unsigned int)q.z), Vec3u(0), Vec3u(gridSize.x - 1, gridSize.y - 1, gridSize.z - 1));
 	Vec3i Step(sign<int>(r.direction.x), sign<int>(r.direction.y), sign<int>(r.direction.z));
 	Vec3f inv_d = r.direction;
-	const float ooeps = math::exp2(-20.0f);//80 is too small, will create underflow on GPU
-	inv_d.x = 1.0f / (math::abs(inv_d.x) > ooeps ? inv_d.x : copysignf(ooeps, inv_d.x));
-	inv_d.y = 1.0f / (math::abs(inv_d.y) > ooeps ? inv_d.y : copysignf(ooeps, inv_d.y));
-	inv_d.z = 1.0f / (math::abs(inv_d.z) > ooeps ? inv_d.z : copysignf(ooeps, inv_d.z));
+	const float ooeps = math::exp2(-40.0f);
+	inv_d.x = 1.0f / (math::abs(r.direction.x) > ooeps ? r.direction.x : copysignf(ooeps, r.direction.x));
+	inv_d.y = 1.0f / (math::abs(r.direction.y) > ooeps ? r.direction.y : copysignf(ooeps, r.direction.y));
+	inv_d.z = 1.0f / (math::abs(r.direction.z) > ooeps ? r.direction.z : copysignf(ooeps, r.direction.z));
 	Vec3f NextCrossingT = Vec3f(rayT) + (box.minV + (Vec3f(Pos.x, Pos.y, Pos.z) + max(Vec3f(0.0f), sign(r.direction))) * m_vCellSize - r(rayT)) * inv_d,
 		DeltaT = abs(m_vCellSize * inv_d);
 	bool cancelTraversal = false;

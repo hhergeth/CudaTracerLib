@@ -82,6 +82,7 @@ public:
 
 void BeamBVHStorage::PrepareForRendering()
 {
+	if (!m_uBeamIdx) return;
 	m_uBeamIdx = min(m_uBeamIdx, m_uNumBeams);
 	CUDA_MEMCPY_TO_HOST(m_pHostBeams, m_pDeviceBeams, m_uBeamIdx * sizeof(Beam));
 
@@ -94,7 +95,7 @@ void BeamBVHStorage::PrepareForRendering()
 	{
 		auto& b = m_pHostBeams[i];
 		const AABB objaabb = b.getAABB(m_fCurrentRadiusVol);
-		const int maxAxis = b.dir.abs().arg_max();
+		const int maxAxis = b.getDir().abs().arg_max();
 		const int chopCount = (int)(objaabb.Size()[maxAxis] * invTargetSize[maxAxis]) + 1;
 		const float invChopCount = 1.0f / (float)chopCount;
 		for (int chop = 0; chop < chopCount; ++chop)

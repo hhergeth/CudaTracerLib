@@ -32,6 +32,7 @@ extern const float RGBIllum2SpecYellow_entries[RGB2Spec_samples];
 extern const float RGBIllum2SpecRed_entries[RGB2Spec_samples];
 extern const float RGBIllum2SpecGreen_entries[RGB2Spec_samples];
 extern const float RGBIllum2SpecBlue_entries[RGB2Spec_samples];
+static const int CIE_Small_Samples = 64;
 
 #if SPECTRUM_SAMPLES != 3
 float Spectrum::getLuminance() const
@@ -389,7 +390,7 @@ void Spectrum::toHSL(float& h, float& s, float& l) const
 	}
 }
 
-float Spectrum::SampleWavelength(Spectrum& res, float sample) const
+float Spectrum::SampleWavelength(Spectrum& res, float& res_pdf, float sample) const
 {
 	/*
 		It is supposed to do : E[this->SampleWavelength().res] = *this
@@ -427,7 +428,7 @@ float Spectrum::SampleWavelength(Spectrum& res, float sample) const
 
 	float cdfA = 0;
 	Spectrum acc(0.0f);
-	for (int i = 0; i < CIE_samples; i++)
+	for (int i = 0; i < CIE_Small_Samples; i++)
 	{
 		cdfA += cie_dat->m_CIE_X_entries[i] * x + cie_dat->m_CIE_Y_entries[i] * y + cie_dat->m_CIE_Z_entries[i] * z;
 		acc += Spectrum(cie_dat->m_CIE_X_entries[i], cie_dat->m_CIE_Y_entries[i], cie_dat->m_CIE_Z_entries[i]);
@@ -437,13 +438,13 @@ float Spectrum::SampleWavelength(Spectrum& res, float sample) const
 	acc *= Spectrum(1.1f, 1.2f, 1.2f);//magic constant
 	sample *= cdfA;
 	float cdfA2 = 0;
-	for (int i = 0; i < CIE_samples; i++)
+	for (int i = 0; i < CIE_Small_Samples; i++)
 	{
 		float pdf_r = (cie_dat->m_CIE_X_entries[i] * x + cie_dat->m_CIE_Y_entries[i] * y + cie_dat->m_CIE_Z_entries[i] * z);//unnormalized pdf
 		cdfA2 += pdf_r;
 		if (cdfA2 >= sample)
 		{
-			float l_min = cie_dat->m_CIE_wavelengths[0], l_step = (cie_dat->m_CIE_wavelengths[CIE_samples - 1] - l_min) / (CIE_samples - 1);
+			float l_min = cie_dat->m_CIE_wavelengths[0], l_step = (cie_dat->m_CIE_wavelengths[CIE_Small_Samples - 1] - l_min) / (CIE_Small_Samples - 1);
 			float w = l_min + (i + 0.5f) * l_step;
 			Spectrum q;
 			q.fromXYZ(cie_dat->m_CIE_X_entries[i], cie_dat->m_CIE_Y_entries[i], cie_dat->m_CIE_Z_entries[i]);
@@ -451,6 +452,7 @@ float Spectrum::SampleWavelength(Spectrum& res, float sample) const
 			if (w2 > 0)
 				q += Spectrum(w2);
 			float pdf = pdf_r / cdfA;
+			res_pdf = pdf;
 			res = q / pdf / acc * *this;
 			return w;
 		}
@@ -458,6 +460,50 @@ float Spectrum::SampleWavelength(Spectrum& res, float sample) const
 	printf("Not able to sample spd! sample = %f, cdfA2 = %f\n", sample, cdfA2);
 	res = 0.0f;
 	return 0.0f;
+}
+
+float Spectrum::PdfWavelength(float lambda) const
+{
+	auto* cie_dat = SpectrumHelper::getData();
+	float x, y, z;
+	toXYZ(x, y, z);
+	float cdfA = 0;
+	for (int i = 0; i < CIE_Small_Samples; i++)
+		cdfA += cie_dat->m_CIE_X_entries[i] * x + cie_dat->m_CIE_Y_entries[i] * y + cie_dat->m_CIE_Z_entries[i] * z;
+
+	float l_min = cie_dat->m_CIE_wavelengths[0], l_step = (cie_dat->m_CIE_wavelengths[CIE_Small_Samples - 1] - l_min) / (CIE_Small_Samples - 1);
+	int i = (int)((lambda - l_min) / (l_step) - 0.5f);
+	i = math::clamp(i, 0, CIE_Small_Samples - 1);
+
+	float pdf_r = (cie_dat->m_CIE_X_entries[i] * x + cie_dat->m_CIE_Y_entries[i] * y + cie_dat->m_CIE_Z_entries[i] * z);//unnormalized pdf
+
+	return pdf_r / cdfA;
+}
+
+Spectrum Spectrum::FWavelength(float lambda) const
+{
+	auto* cie_dat = SpectrumHelper::getData();
+	float x, y, z;
+	toXYZ(x, y, z);
+
+	Spectrum acc(0.0f);
+	for (int i = 0; i < CIE_Small_Samples; i++)
+		acc += Spectrum(cie_dat->m_CIE_X_entries[i], cie_dat->m_CIE_Y_entries[i], cie_dat->m_CIE_Z_entries[i]);
+	acc.fromXYZ(acc[0], acc[1], acc[2]);
+	acc /= cie_dat->CIE_normalization;
+	acc *= Spectrum(1.1f, 1.2f, 1.2f);//magic constant
+
+	float l_min = cie_dat->m_CIE_wavelengths[0], l_step = (cie_dat->m_CIE_wavelengths[CIE_Small_Samples - 1] - l_min) / (CIE_Small_Samples - 1);
+	int i = (int)((lambda - l_min) / (l_step)-0.5f);
+	i = math::clamp(i, 0, CIE_Small_Samples - 1);
+
+	Spectrum q;
+	q.fromXYZ(cie_dat->m_CIE_X_entries[i], cie_dat->m_CIE_Y_entries[i], cie_dat->m_CIE_Z_entries[i]);
+	float w2 = -CudaTracerLib::min(0.0f, q[0], q[1], q[2]);
+	if (w2 > 0)
+		q += Spectrum(w2);
+
+	return q / acc * *this;
 }
 
 struct InterpolatedSpectrum
@@ -676,10 +722,29 @@ void SpectrumHelper::staticData::init()
 	rgbIllum2SpecBlue.fromContinuousSpectrum(
 		RGB2Spec_wavelengths, RGBIllum2SpecBlue_entries, RGB2Spec_samples);
 
-	memcpy(m_CIE_wavelengths, CIE_wavelengths, sizeof(m_CIE_wavelengths));
-	memcpy(m_CIE_X_entries, CIE_X_entries, sizeof(m_CIE_X_entries));
-	memcpy(m_CIE_Y_entries, CIE_Y_entries, sizeof(m_CIE_Y_entries));
-	memcpy(m_CIE_Z_entries, CIE_Z_entries, sizeof(m_CIE_Z_entries));
+	//memcpy(m_CIE_wavelengths, CIE_wavelengths, sizeof(m_CIE_wavelengths));
+	//memcpy(m_CIE_X_entries, CIE_X_entries, sizeof(m_CIE_X_entries));
+	//memcpy(m_CIE_Y_entries, CIE_Y_entries, sizeof(m_CIE_Y_entries));
+	//memcpy(m_CIE_Z_entries, CIE_Z_entries, sizeof(m_CIE_Z_entries));
+	static_assert(CIE_Small_Samples <= CIE_samples, "");
+	float nN = CIE_samples / (float)CIE_Small_Samples;
+	for (int i = 0; i < CIE_Small_Samples; i++)
+	{
+		float a = i * nN, b = min((i + 1) * nN, (float)CIE_samples - 1);
+		float W = 0, V[3] = { 0, 0, 0 };
+		for (int j = (int)a; j <= (int)b; j++)
+		{
+			float w = j == (int)a ? math::frac(a) : (j == (int)b ? math::frac(b) : 1.0f);
+			W += w;
+			V[0] += CIE_X_entries[j] * w;
+			V[1] += CIE_Y_entries[j] * w;
+			V[2] += CIE_Z_entries[j] * w;
+		}
+		m_CIE_wavelengths[i] = (2 * CIE_wavelengths[0] + (CIE_wavelengths[CIE_samples - 1] - CIE_wavelengths[0]) * ((2*i+1) / (float)CIE_Small_Samples)) / 2.0f;
+		m_CIE_X_entries[i] = V[0] / W;
+		m_CIE_Y_entries[i] = V[1] / W;
+		m_CIE_Z_entries[i] = V[2] / W;
+	}
 }
 
 void SpectrumHelper::StaticInitialize()

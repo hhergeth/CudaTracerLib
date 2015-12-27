@@ -5,7 +5,33 @@ namespace CudaTracerLib {
 
 struct BeamGrid : public PointStorage
 {
-	SpatialLinkedMap<int> m_sBeamGridStorage;
+	struct entry
+	{
+		int i;
+
+		entry()
+		{
+
+		}
+
+		CUDA_FUNC_IN entry(int i)
+			: i(i)
+		{
+
+		}
+
+		CUDA_FUNC_IN bool getFlag() const
+		{
+			return (i >> 31) == 1;
+		}
+
+		CUDA_FUNC_IN void setFlag()
+		{
+			i |= 1 << 31;
+		}
+	};
+
+	SpatialLinkedMap<entry> m_sBeamGridStorage;
 
 	int photonDensNum;
 
@@ -51,32 +77,7 @@ struct BeamGrid : public PointStorage
 		a_Buf.push_back(format("%.2f%% Beam indices", (float)m_sBeamGridStorage.getNumStoredEntries() / m_sBeamGridStorage.getNumEntries() * 100));
 	}
 
-	template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum L_Volume(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr)
-	{
-		Spectrum Tau = Spectrum(0.0f);
-		Spectrum L_n = Spectrum(0.0f);
-		TraverseGrid(r, m_sStorage.getHashGrid(), tmin, tmax, [&](float minT, float rayT, float maxT, float cellEndT, Vec3u& cell_pos, bool& cancelTraversal)
-		{
-			m_sBeamGridStorage.ForAllCellEntries(cell_pos, [&](unsigned int, unsigned int beam_idx)
-			{
-				const volPhoton& ph = m_sStorage(beam_idx);
-				float l1 = dot(ph.p - r.origin, r.direction) / dot(r.direction, r.direction);
-				if (distanceSquared(ph.p, r(l1)) < ph.rad && rayT <= l1 && l1 <= cellEndT)
-				{
-					float p = vol.p(ph.p, r.direction, ph.wi, rng);
-					//Spectrum tauToPhoton = (-Tau - vol.tau(r, rayT, l1)).exp();
-					Spectrum tauToPhoton = (-vol.tau(r, minT, dot(ph.p - r.origin, r.direction))).exp();
-					L_n += p * ph.phi / (PI * m_uNumEmitted * ph.rad) * tauToPhoton;
-				}
-			});
-			float localDist = cellEndT - rayT;
-			Spectrum tauD = vol.tau(r, rayT, cellEndT);
-			Tau += tauD;
-			L_n += vol.Lve(r(rayT + localDist / 2), -1.0f * r.direction) * localDist;
-		});
-		Tr = (-Tau).exp();
-		return L_n;
-	}
+	template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum L_Volume(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr);
 };
 
 }

@@ -150,8 +150,8 @@ struct ImageTexture : public TextureBase//, public e_DerivedTypeHelper<4>
 {
 	TYPE_FUNC(4)
 		ImageTexture() :tex(0, 0){}
-	ImageTexture(const TextureMapping2D& m, const std::string& _file)
-		: mapping(m), file(_file), tex(0, 0)
+	ImageTexture(const TextureMapping2D& m, const std::string& _file, const Spectrum& scale)
+		: mapping(m), file(_file), tex(0, 0), m_scale(scale)
 	{
 	}
 	CUDA_FUNC_IN Spectrum Evaluate(const DifferentialGeometry& its) const
@@ -162,15 +162,15 @@ struct ImageTexture : public TextureBase//, public e_DerivedTypeHelper<4>
 			float dsdx, dsdy,
 				  dtdx, dtdy;
 			mapping.differentiate(its, dsdx, dsdy, dtdx, dtdy);
-			return tex->eval(uv, Vec2f(dsdx, dtdx), Vec2f(dsdy, dtdy));
+			return tex->eval(uv, Vec2f(dsdx, dtdx), Vec2f(dsdy, dtdy)) * m_scale;
 		}
-		//	return tex->eval(uv, mapping.TransformDirection(Vec2f(1, 0)) * Vec2f(its.dudx, its.dvdx), mapping.TransformDirection(Vec2f(0, 1)) * Vec2f(its.dudy, its.dvdy));
-		else return tex->Sample(uv);
+		//	return tex->eval(uv, mapping.TransformDirection(Vec2f(1, 0)) * Vec2f(its.dudx, its.dvdx), mapping.TransformDirection(Vec2f(0, 1)) * Vec2f(its.dudy, its.dvdy)) * m_scale;
+		else return tex->Sample(uv) * m_scale;
 	}
 	CUDA_FUNC_IN Spectrum Average()
 	{
 		if (tex.operator*())
-			return tex->Sample(Vec2f(0), 1);
+			return tex->Sample(Vec2f(0), 1) * m_scale;
 		else return Spectrum(0.0f);
 	}
 	template<typename L> void LoadTextures(L& callback)
@@ -183,6 +183,7 @@ struct ImageTexture : public TextureBase//, public e_DerivedTypeHelper<4>
 	}
 	e_Variable<KernelMIPMap> tex;
 	TextureMapping2D mapping;
+	Spectrum m_scale;
 	FixedString<128> file;
 };
 
@@ -266,7 +267,7 @@ static Texture CreateTexture(const Spectrum& col)
 
 static Texture CreateTexture(const std::string& p)
 {
-	ImageTexture f(TextureMapping2D(), p);
+	ImageTexture f(TextureMapping2D(), p, Spectrum(1.0f));
 	Texture r;
 	r.SetData(f);
 	return r;

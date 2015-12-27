@@ -21,6 +21,11 @@
 
 namespace CudaTracerLib {
 
+namespace __buffer_internal__
+{
+	
+}
+
 template<typename H, typename D> class BufferIterator;
 template<typename H, typename D> class BufferRange
 {
@@ -73,6 +78,45 @@ protected:
 	template<typename H2, typename D2> friend class BufferIterator;
 	template<typename H2, typename D2> friend class BufferReference;
 
+protected:
+
+	BufferReference<H, D> malloc_internal(size_t a_Length)
+	{
+		BufferReference<H, D> res;
+		for (range_set_t::iterator it = m_uDeallocated->begin(); it != m_uDeallocated->end(); it++)
+			if (it->upper() - it->lower() >= a_Length)
+			{
+				ival i(it->lower(), it->lower() + a_Length);
+				res = BufferReference<H, D>(this, it->lower(), a_Length);
+				m_uDeallocated->erase(i);
+				break;
+			}
+		if (a_Length <= m_uLength - m_uPos)
+		{
+			m_uPos += a_Length;
+			res = BufferReference<H, D>(this, m_uPos - a_Length, a_Length);
+		}
+		else
+		{
+			//BAD_EXCEPTION("Cuda data stream malloc failure, %d elements requested, %d available.", a_Count, m_uLength - m_uPos)
+			size_t newLength = m_uPos + a_Length;
+			CUDA_FREE(device);
+			H* newHost = (H*)::malloc(m_uBlockSize * newLength);
+			::memcpy(newHost, host, m_uPos * m_uBlockSize);
+			free(host);
+			host = newHost;
+			m_uLength = newLength;
+			CUDA_MALLOC(&device, sizeof(D) * newLength);
+			cudaMemset(device, 0, sizeof(D) * newLength);
+			reallocAfterResize();
+			Invalidate(0, m_uPos);
+			return malloc_internal(a_Length);
+
+		}
+		Invalidate(res);
+		return res;
+	}
+
 public:
 
 	typedef BufferIterator<H, D> iterator;
@@ -110,39 +154,39 @@ public:
 
 	BufferReference<H, D> malloc(size_t a_Length)
 	{
-		BufferReference<H, D> res;
-		for (range_set_t::iterator it = m_uDeallocated->begin(); it != m_uDeallocated->end(); it++)
-			if (it->upper() - it->lower() >= a_Length)
-			{
-				ival i(it->lower(), it->lower() + a_Length);
-				res = BufferReference<H, D>(this, it->lower(), a_Length);
-				m_uDeallocated->erase(i);
-				break;
-			}
-		if (a_Length <= m_uLength - m_uPos)
+		static_assert(!std::is_same<H, char>::value, "Please use malloc_aligned instead of malloc on a char buffer to guarantee alignment!");
+		return malloc_internal(a_Length);
+	}
+
+	BufferReference<char, char> malloc_aligned(unsigned int a_Count, unsigned int a_Alignment)
+	{
+		static_assert(std::is_same<H, char>::value, "Do not use malloc_aligned on non char buffers! Alignement is guaranteed automatically");
+		BufferReference<char, char> ref = malloc_internal(a_Count + a_Alignment * 2);
+		uintptr_t ptr = (uintptr_t)ref.getDevice();
+		unsigned int diff = ptr % a_Alignment, off = a_Alignment - diff;
+		if (diff)
 		{
-			m_uPos += a_Length;
-			res = BufferReference<H, D>(this, m_uPos - a_Length, a_Length);
+			unsigned int end = ref.getIndex() + off + a_Count;
+			BufferReference<char, char> refFreeFront = BufferReference<char, char>(this, ref.getIndex(), off),
+										refFreeTail = BufferReference<char, char>(this, end, ref.getLength() - off - a_Count);
+			dealloc(refFreeFront);
+			if (refFreeTail.getLength() != 0)
+				dealloc(refFreeTail);
+			return BufferReference<char, char>(this, ref.getIndex() + off, a_Count);
 		}
 		else
 		{
-			//BAD_EXCEPTION("Cuda data stream malloc failure, %d elements requested, %d available.", a_Count, m_uLength - m_uPos)
-			size_t newLength = m_uPos + a_Length;
-			CUDA_FREE(device);
-			H* newHost = (H*)::malloc(m_uBlockSize * newLength);
-			::memcpy(newHost, host, m_uPos * m_uBlockSize);
-			free(host);
-			host = newHost;
-			m_uLength = newLength;
-			CUDA_MALLOC(&device, sizeof(D) * newLength);
-			cudaMemset(device, 0, sizeof(D) * newLength);
-			reallocAfterResize();
-			Invalidate(0, m_uPos);
-			return malloc(a_Length);
-
+			BufferReference<char, char> refFreeTail = BufferReference<char, char>(this, ref.getIndex() + a_Count, a_Alignment * 2);
+			dealloc(refFreeTail);
+			return BufferReference<char, char>(this, ref.getIndex(), a_Count);
 		}
-		Invalidate(res);
-		return res;
+	}
+
+	//count is in bytes!
+	template<typename T> StreamReference<char> malloc_aligned(unsigned int a_Count)
+	{
+		CT_ASSERT((a_Count % sizeof(T)) == 0);
+		return malloc_aligned(a_Count, std::alignment_of<T>::value);
 	}
 
 	BufferReference<H, D> malloc(BufferReference<H, D> r, bool copyToNew = true)
@@ -167,6 +211,7 @@ public:
 
 	void dealloc(size_t p, size_t l)
 	{
+		m_uInvalidated->erase(ival(p, p + l));
 		for (size_t i = p; i < p + l; ++i)
 			host[i].~H();
 		if (p + l == m_uPos)

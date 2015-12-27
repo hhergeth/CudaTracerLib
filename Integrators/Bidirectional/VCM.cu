@@ -22,7 +22,7 @@ CUDA_FUNC_IN void _VCM(const Vec2f& pixelPosition, BlockSampleImage& img, CudaRN
 			break;
 
 		BPTVertex& v = lightPath[emitterVerticesStored];
-		r2.getBsdfSample(lightPathState.r, v.bRec, ETransportMode::EImportance, &rng);
+		r2.getBsdfSample(lightPathState.r, v.bRec, ETransportMode::EImportance, &rng, &lightPathState.throughput);
 
 		if (emitterPathLength > 1 || true)
 			lightPathState.dVCM *= r2.m_fDist * r2.m_fDist;

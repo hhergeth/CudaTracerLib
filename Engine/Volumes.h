@@ -107,7 +107,7 @@ struct DenseVolGridBaseType
 	DenseVolGridBaseType()
 	{
 	}
-	DenseVolGridBaseType(Stream<char>* a_Buffer, Vec3u dim, size_t sizePerElement);
+	DenseVolGridBaseType(Stream<char>* a_Buffer, Vec3u dim, size_t sizePerElement, size_t alignment);
 	void InvalidateDeviceData(Stream<char>* a_Buffer);
 	template<typename T> CUDA_FUNC_IN e_Variable<T> getVar() const
 	{
@@ -122,7 +122,7 @@ public:
 	Vec3f dimF;
 	DenseVolGrid(){}
 	DenseVolGrid(Stream<char>* a_Buffer, Vec3u dim)
-		: DenseVolGridBaseType(a_Buffer, dim, sizeof(T)), dim(dim)
+		: DenseVolGridBaseType(a_Buffer, dim, sizeof(T), std::alignment_of<T>::value), dim(dim)
 	{
 		dimF = Vec3f(dim.x, dim.y, dim.z);
 	}

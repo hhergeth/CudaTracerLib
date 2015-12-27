@@ -6,7 +6,7 @@ namespace CudaTracerLib
 struct diffuse : public BSDF//, public e_DerivedTypeHelper<1>
 {
 	TYPE_FUNC(1)
-	Texture m_reflectance;
+		Texture m_reflectance;
 	diffuse()
 		: BSDF(EDiffuseReflection)
 	{
@@ -17,35 +17,10 @@ struct diffuse : public BSDF//, public e_DerivedTypeHelper<1>
 	{
 		initTextureOffsets(m_reflectance);
 	}
-	CUDA_FUNC_IN Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const
-	{
-		if (!(bRec.typeMask & EDiffuseReflection) || Frame::cosTheta(bRec.wi) <= 0)
-			return 0.0f;
-
-		bRec.wo = Warp::squareToCosineHemisphere(sample);
-		bRec.eta = 1.0f;
-		bRec.sampledType = EDiffuseReflection;
-		pdf = Warp::squareToCosineHemispherePdf(bRec.wo);
-		return m_reflectance.Evaluate(bRec.dg);
-	}
-	CUDA_FUNC_IN Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const
-	{
-		if (!(bRec.typeMask & EDiffuseReflection) || measure != ESolidAngle
-			|| Frame::cosTheta(bRec.wi) <= 0
-			|| Frame::cosTheta(bRec.wo) <= 0)
-			return 0.0f;
-
-		return m_reflectance.Evaluate(bRec.dg)	* (INV_PI * Frame::cosTheta(bRec.wo));
-	}
-	CUDA_FUNC_IN float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
-	{
-		if (!(bRec.typeMask & EDiffuseReflection) || measure != ESolidAngle
-			|| Frame::cosTheta(bRec.wi) <= 0
-			|| Frame::cosTheta(bRec.wo) <= 0)
-			return 0.0f;
-
-		return Warp::squareToCosineHemispherePdf(bRec.wo);
-	}
+	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &_sample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
+	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
+	void setModus(unsigned int i);
 };
 
 struct roughdiffuse : public BSDF//, public e_DerivedTypeHelper<2>
@@ -87,7 +62,7 @@ struct roughdiffuse : public BSDF//, public e_DerivedTypeHelper<2>
 struct dielectric : public BSDF//, public e_DerivedTypeHelper<3>
 {
 	TYPE_FUNC(3)
-	float m_eta, m_invEta;
+	Dispersion eta_f;
 	Texture m_specularTransmittance;
 	Texture m_specularReflectance;
 	dielectric()
@@ -99,34 +74,27 @@ struct dielectric : public BSDF//, public e_DerivedTypeHelper<3>
 		: BSDF(EBSDFType(EDeltaReflection | EDeltaTransmission)), m_specularTransmittance(CreateTexture(Spectrum(1.0f))), m_specularReflectance(CreateTexture(Spectrum(1.0f)))
 	{
 		initTextureOffsets(m_specularTransmittance, m_specularReflectance);
-		m_eta = e;
-		m_invEta = 1.0f / e;
+		eta_f.SetData(DispersionCauchy(e));
 	}
 	dielectric(float e, const Spectrum& r, const Spectrum& t)
 		: BSDF(EBSDFType(EDeltaReflection | EDeltaTransmission)), m_specularTransmittance(CreateTexture(t)), m_specularReflectance(CreateTexture(r))
 	{
 		initTextureOffsets(m_specularTransmittance, m_specularReflectance);
-		m_eta = e;
-		m_invEta = 1.0f / e;
+		eta_f.SetData(DispersionCauchy(e));
 	}
 	dielectric(float e, const Texture& r, const Texture& t)
 		: BSDF(EBSDFType(EDeltaReflection | EDeltaTransmission)), m_specularTransmittance(t), m_specularReflectance(r)
 	{
 		initTextureOffsets(m_specularTransmittance, m_specularReflectance);
-		m_eta = e;
-		m_invEta = 1.0f / e;
-	}
-	virtual void Update()
-	{
-		m_invEta = 1.0f / m_eta;
+		eta_f.SetData(DispersionCauchy(e));
 	}
 	/// Reflection in local coordinates
 	CUDA_FUNC_IN Vec3f reflect(const Vec3f &wi) const {
 		return Vec3f(-wi.x, -wi.y, wi.z);
 	}
 	/// Refraction in local coordinates
-	CUDA_FUNC_IN Vec3f refract(const Vec3f &wi, float cosThetaT) const {
-		float scale = -(cosThetaT < 0 ? m_invEta : m_eta);
+	CUDA_FUNC_IN Vec3f refract(const Vec3f &wi, float cosThetaT, float eta, float invEta) const {
+		float scale = -(cosThetaT < 0 ? invEta : eta);
 		return Vec3f(scale*wi.x, scale*wi.y, cosThetaT);
 	}
 	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const;

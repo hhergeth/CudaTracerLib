@@ -2,6 +2,7 @@
 
 #include "Grid.h"
 #include <CudaMemoryManager.h>
+#include <Base/Timer.h>
 #ifdef __CUDACC__
 #pragma warning (disable : 4267) 
 #include <thrust/device_ptr.h>
@@ -294,12 +295,13 @@ public:
 
 	void PrepareForUse()
 	{
-		auto& Tt = PerformanceTimer::getInstance(typeid(PPPMTracer).name());
+		auto& Tt = GET_PERF_BLOCKS();
 
 		idxData = min(idxData, numData);
 
 #ifndef __CUDACC__
-		ThrowCudaErrors(cudaMemcpy(hostData1, deviceData, sizeof(T) * idxData, cudaMemcpyDeviceToHost));
+		throw std::runtime_error("Use this from a cuda file please!");
+		/*ThrowCudaErrors(cudaMemcpy(hostData1, deviceData, sizeof(T) * idxData, cudaMemcpyDeviceToHost));
 		{
 			auto bl = Tt.StartBlock("sort");
 			thrust::sort(thrust::device_ptr<Vec2u>(deviceList), thrust::device_ptr<Vec2u>(deviceList + idxData), __interal_spatialMap__::order());
@@ -326,14 +328,14 @@ public:
 			}
 		}
 		ThrowCudaErrors(cudaMemcpy(deviceGrid, hostGrid, sizeof(unsigned int) * gridSize * gridSize * gridSize, cudaMemcpyHostToDevice));
-		ThrowCudaErrors(cudaMemcpy(deviceData, hostData2, sizeof(T) * idxData, cudaMemcpyHostToDevice));
+		ThrowCudaErrors(cudaMemcpy(deviceData, hostData2, sizeof(T) * idxData, cudaMemcpyHostToDevice));*/
 #else
 		{
 			auto bl = Tt.StartBlock("sort");
 			thrust::sort(thrust::device_ptr<Vec2u>(deviceList), thrust::device_ptr<Vec2u>(deviceList + idxData), __interal_spatialMap__::order());
 		}
 		{
-			auto bl = Tt.StartBlock("init");
+			auto bl = Tt.StartBlock("reset");
 			ThrowCudaErrors(cudaMemset(deviceGrid, UINT_MAX, gridSize * gridSize * gridSize));
 		}
 		{

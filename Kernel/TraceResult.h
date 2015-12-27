@@ -38,9 +38,9 @@ struct TraceResult
 
 	CUDA_DEVICE CUDA_HOST void fillDG(DifferentialGeometry& dg) const;
 	//wi towards p, wo away
-	CUDA_DEVICE CUDA_HOST void getBsdfSample(const Ray& r, BSDFSamplingRecord& bRec, ETransportMode mode, CudaRNG* rng, const Vec3f* wo = 0) const;
+	CUDA_DEVICE CUDA_HOST void getBsdfSample(const Ray& r, BSDFSamplingRecord& bRec, ETransportMode mode, CudaRNG* rng, const Spectrum* f_i = 0, const Vec3f* wo = 0) const;
 	//wi towards p, wo away
-	CUDA_DEVICE CUDA_HOST void getBsdfSample(const Vec3f& wi, const Vec3f& p, BSDFSamplingRecord& bRec, ETransportMode mode, CudaRNG* rng, const Vec3f* wo = 0) const;
+	CUDA_DEVICE CUDA_HOST void getBsdfSample(const Vec3f& wi, const Vec3f& p, BSDFSamplingRecord& bRec, ETransportMode mode, CudaRNG* rng, const Spectrum* f_i = 0, const Vec3f* wo = 0) const;
 };
 
 }

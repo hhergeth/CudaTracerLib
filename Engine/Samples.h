@@ -98,7 +98,7 @@ public:
 	float pdf;
 	EMeasure measure;
 	Vec2f uv;
-	///This is so unbelievably ugly it hurts my brain....
+	///This is so unbelievably ugly
 	CUDA_ALIGN(16) const void* object;
 public:
 	CUDA_FUNC_IN PositionSamplingRecord() { }
@@ -180,7 +180,9 @@ struct BSDFSamplingRecord
 	ETransportMode mode;
 	unsigned int typeMask;
 	unsigned int sampledType;
-	CUDA_FUNC_IN BSDFSamplingRecord(DifferentialGeometry& dg) : dg(dg) {}
+	Spectrum f_i;
+
+	CUDA_FUNC_IN BSDFSamplingRecord(DifferentialGeometry& dg) : dg(dg), f_i(0.0f) {}
 	CUDA_DEVICE CUDA_HOST Vec3f getOutgoing();
 	CUDA_DEVICE CUDA_HOST BSDFSamplingRecord& operator=(const BSDFSamplingRecord& other);
 };

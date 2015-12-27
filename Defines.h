@@ -134,7 +134,8 @@ template<typename T> inline void ZeroMemoryCuda(T* cudaVar)
 template<typename T> class e_Variable
 {
 public:
-	T* host, *device;
+	CUDA_ALIGN(16) T* host;
+	CUDA_ALIGN(16) T* device;
 	CUDA_FUNC_IN e_Variable()
 	{
 	}

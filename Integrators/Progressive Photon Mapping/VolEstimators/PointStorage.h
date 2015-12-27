@@ -1,6 +1,8 @@
 #pragma once
 #include "Beam.h"
 #include <Engine/SpatialGrid.h>
+#include <Math/half.h>
+#include <Math/Compression.h>
 
 namespace CudaTracerLib {
 
@@ -8,15 +10,47 @@ struct PointStorage : public IVolumeEstimator
 {
 	struct volPhoton
 	{
-		Vec3f p;
-		Vec3f wi;
-		Spectrum phi;
-		float rad;
+		unsigned int flag_type_pos;
+		RGBE phi;
+		unsigned short wi;
+		half r;
 		CUDA_FUNC_IN volPhoton(){}
-		CUDA_FUNC_IN volPhoton(const Vec3f& pos, const Vec3f& wi, const Spectrum& phi)
-			: p(pos), wi(wi), phi(phi)
+		CUDA_FUNC_IN volPhoton(const Vec3f& p, const Vec3f& w, const Spectrum& ph, const HashGrid_Reg& grid, const Vec3u& cell_idx)
 		{
-
+			r = half(0.0f);
+			flag_type_pos = grid.EncodePos(p, cell_idx);
+			phi = ph.toRGBE();
+			wi = NormalizedFloat3ToUchar2(w);
+		}
+		CUDA_FUNC_IN Vec3f getPos(const HashGrid_Reg& grid, const Vec3u& cell_idx) const
+		{
+			return grid.DecodePos(flag_type_pos & 0x3fffffff, cell_idx);
+		}
+		CUDA_FUNC_IN Vec3f getWi() const
+		{
+			return Uchar2ToNormalizedFloat3(wi);
+		}
+		CUDA_FUNC_IN Spectrum getL() const
+		{
+			Spectrum s;
+			s.fromRGBE(phi);
+			return s;
+		}
+		CUDA_FUNC_IN float getRad() const
+		{
+			return r.ToFloat();
+		}
+		CUDA_FUNC_IN void setRad(float f)
+		{
+			r = half(f);
+		}
+		CUDA_FUNC_IN bool getFlag() const
+		{
+			return (flag_type_pos >> 31) != 0;
+		}
+		CUDA_FUNC_IN void setFlag()
+		{
+			flag_type_pos |= 0x80000000;
 		}
 	};
 	SpatialLinkedMap<volPhoton> m_sStorage;
@@ -73,12 +107,12 @@ struct PointStorage : public IVolumeEstimator
 
 	virtual void PrintStatus(std::vector<std::string>& a_Buf) const
 	{
-		a_Buf.push_back(format("%.2f%% Vol Photons", (float)m_sStorage.getNumEntries() / m_sStorage.getNumStoredEntries() * 100));
+		a_Buf.push_back(format("%.2f%% Vol Photons", m_sStorage.getNumStoredEntries() / (float)m_sStorage.getNumEntries() * 100));
 	}
 
 	virtual void PrepareForRendering()
 	{
-
+		m_sStorage.PrepareForUse();
 	}
 #ifdef __CUDACC__
 	CUDA_ONLY_FUNC void StoreBeam(const Beam& b, bool firstStore)
@@ -88,46 +122,14 @@ struct PointStorage : public IVolumeEstimator
 
 	CUDA_ONLY_FUNC void StorePhoton(const Vec3f& pos, const Vec3f& wi, const Spectrum& phi, bool firstStore)
 	{
-		if (m_sStorage.store(pos, volPhoton(pos, wi, phi)) && firstStore)
+		if(!m_sStorage.getHashGrid().getAABB().Contains(pos))
+			return;
+		Vec3u cell_idx = m_sStorage.getHashGrid().Transform(pos);
+		if (m_sStorage.store(cell_idx, volPhoton(pos, wi, phi, m_sStorage.getHashGrid(), cell_idx)) && firstStore)
 			Platform::Increment(&m_uNumEmitted);
 	}
 
-	template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum L_Volume(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr)
-	{
-		Spectrum Tau = Spectrum(0.0f);
-		//float Vs = 1.0f / ((4.0f / 3.0f) * PI * a_r * a_r * a_r * m_uNumEmitted), r3 = m_fCurrentRadiusVol * m_fCurrentRadiusVol * m_fCurrentRadiusVol;
-		float r3 = m_fCurrentRadiusVol * m_fCurrentRadiusVol * m_fCurrentRadiusVol, Vs = 1.0f / (m_uNumEmitted * r3 * 4.0f / 3.0f * PI);
-		Spectrum L_n = Spectrum(0.0f);
-		float a, b;
-		if (!m_sStorage.getHashGrid().getAABB().Intersect(r, &a, &b))
-			return L_n;//that would be dumb
-		float minT = a = math::clamp(a, tmin, tmax);
-		b = math::clamp(b, tmin, tmax);
-		float d = 2.0f * a_r;
-		while (a < b)
-		{
-			float t = a + d / 2.0f;
-			Vec3f x = r(t);
-			m_sStorage.ForAll(x - Vec3f(a_r), x + Vec3f(a_r), [&](const Vec3u& cell_idx, unsigned int p_idx, const volPhoton& ph)
-			{
-				if (distanceSquared(ph.p, x) < r3)
-				{
-					float p = vol.p(x, r.direction, ph.wi, rng);
-					//float l1 = dot(ph.p - r.origin, r.direction) / dot(r.direction, r.direction);
-					//Spectrum tauToPhoton = (-Tau - vol.tau(r, a, l1)).exp();
-					//L_n += p * ph.phi * Vs * tauToPhoton * d;
-					Spectrum camera_sc = vol.sigma_s(x, r.direction);
-					L_n += p * ph.phi * Vs * camera_sc;
-				}
-			});
-			Spectrum tauDelta = vol.tau(r, a, a + d);
-			Tau += tauDelta;
-			L_n += vol.Lve(x, -1.0f * r.direction) * d;
-			a += d;
-		}
-		Tr = (-Tau).exp();
-		return L_n;
-	}
+	template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum L_Volume(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr);
 #endif
 };
 

@@ -781,21 +781,11 @@ void compileobj(IInStream& in, FileOutputStream& a_Out)
 		}
 		else if (M.IlluminationModel == 7)
 		{
-			dielectric d;
-			d.m_eta = M.IndexOfRefraction;
-			d.m_invEta = 1.0f / M.IndexOfRefraction;
-			d.m_specularReflectance = CreateTexture(0, Spectrum(M.specular.x, M.specular.y, M.specular.z));
-			d.m_specularTransmittance = CreateTexture(0, Spectrum(M.Tf.x, M.Tf.y, M.Tf.z));
-			mat.bsdf.SetData(d);
+			mat.bsdf.SetData(dielectric(M.IndexOfRefraction, CreateTexture(0, Spectrum(M.specular.x, M.specular.y, M.specular.z)), CreateTexture(0, Spectrum(M.Tf.x, M.Tf.y, M.Tf.z))));
 		}
 		else if (M.IlluminationModel == 9)
 		{
-			dielectric d;
-			d.m_eta = M.IndexOfRefraction;
-			d.m_invEta = 1.0f / M.IndexOfRefraction;
-			d.m_specularReflectance = CreateTexture(0, Spectrum(0.0f));
-			d.m_specularTransmittance = CreateTexture(0, Spectrum(M.Tf.x, M.Tf.y, M.Tf.z));
-			mat.bsdf.SetData(d);
+			mat.bsdf.SetData(dielectric(M.IndexOfRefraction, CreateTexture(0, Spectrum(0.0f)), CreateTexture(0, Spectrum(M.Tf.x, M.Tf.y, M.Tf.z))));
 		}
 		if (M.textures[TextureType_Displacement].size())
 		{

@@ -1,8 +1,10 @@
+#include <stdafx.h>
 #include "Buffer.h"
 #include "Light.h"
 #include "Mesh.h"
 #include "MIPMap.h"
 #include <Math/Sampling.h>
+#include "TriangleData.h"
 
 namespace CudaTracerLib {
 
@@ -46,53 +48,43 @@ Spectrum PointLight::sampleDirection(DirectionSamplingRecord &dRec, PositionSamp
 	return Spectrum(1.0f);
 }
 
-void DiffuseLight::setEmit(const Spectrum& L)
+CUDA_FUNC_IN bool needsUVSample(const Texture& tex)
 {
-	m_radiance = L;
-	m_power = L * PI * shapeSet.Area();
+	return !tex.Is<ConstantTexture>();
 }
 
 Spectrum DiffuseLight::sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const
 {
 	PositionSamplingRecord pRec;
-	shapeSet.SamplePosition(pRec, spatialSample);
+	DifferentialGeometry dg;
+	shapeSet.SamplePosition(pRec, spatialSample, &dg.uv[0]);
+	dg.P = pRec.p;
+	dg.bary = pRec.uv;
 	Vec3f local = m_bOrthogonal ? Vec3f(0, 0, 1) : Warp::squareToCosineHemisphere(directionalSample);
 	ray = Ray(pRec.p, Frame(pRec.n).toWorld(local));
-	return m_power;
+	return m_rad_texture.Evaluate(dg) * PI * shapeSet.Area();
 }
 
 Spectrum DiffuseLight::eval(const Vec3f& p, const Frame& sys, const Vec3f &d) const
 {
-	if (dot(sys.n, d) <= 0)
-		return Spectrum(0.0f);
+	if (dot(sys.n, d) <= 0 || (m_bOrthogonal && dot(d, sys.n) < 1 - DeltaEpsilon))
+		return 0.0f;
 	else
 	{
-		if (m_bOrthogonal && dot(d, sys.n) < 1 - DeltaEpsilon)
-			return 0.0f;
-		else return m_radiance;
+		DifferentialGeometry dg;
+		dg.P = p;
+		dg.n = sys.n;
+		dg.sys = sys;
+		if (needsUVSample(m_rad_texture))
+			if (!shapeSet.getPosition(p, &dg.bary, dg.uv))
+				printf("Could not sample position in shape set!\n");
+		return m_rad_texture.Evaluate(dg);
 	}
-}
-
-//http://gamedev.stackexchange.com/questions/23743/whats-the-most-efficient-way-to-find-barycentric-coordinates
-// point p with respect to triangle (a, b, c)
-CUDA_FUNC_IN bool Barycentric(const Vec3f& p, const Vec3f& a, const Vec3f& b, const Vec3f& c, float u, float v)
-{
-	Vec3f v0 = b - a, v1 = c - a, v2 = p - a;
-	float d00 = dot(v0, v0);
-	float d01 = dot(v0, v1);
-	float d11 = dot(v1, v1);
-	float d20 = dot(v2, v0);
-	float d21 = dot(v2, v1);
-	float denom = d00 * d11 - d01 * d01;
-	v = (d11 * d20 - d01 * d21) / denom;
-	float w = (d00 * d21 - d01 * d20) / denom;
-	u = 1.0f - v - w;
-	return 0 <= v && v <= 1 && 0 <= u && u <= 1 && 0 <= w && w <= 1;
 }
 
 Spectrum DiffuseLight::sampleDirect(DirectSamplingRecord &dRec, const Vec2f &_sample) const
 {
-	Vec2f sample = _sample;
+	Vec2f sample = _sample, uv;
 	if (m_bOrthogonal)
 	{
 		//sample random triangle using uniform pdf
@@ -104,7 +96,7 @@ Spectrum DiffuseLight::sampleDirect(DirectSamplingRecord &dRec, const Vec2f &_sa
 		const Vec3f n = -normalize(cross(tri.p[2] - tri.p[0], tri.p[1] - tri.p[0]));
 		float lambda = dot(tri.p[0], n) - dot(dRec.ref, n);// := (p_0 * n - p * n) / (n * n)
 		dRec.p = dRec.ref + lambda * n;
-		bool inTriangle = Barycentric(dRec.p, tri.p[0], tri.p[1], tri.p[2], dRec.uv.x, dRec.uv.y);
+		bool inTriangle = MonteCarlo::Barycentric(dRec.p, tri.p[0], tri.p[1], tri.p[2], dRec.uv.x, dRec.uv.y);
 		if (!inTriangle)
 		{
 			dRec.pdf = 0.0f;
@@ -113,8 +105,11 @@ Spectrum DiffuseLight::sampleDirect(DirectSamplingRecord &dRec, const Vec2f &_sa
 		dRec.n = n;
 		dRec.pdf = 1.0f / float(shapeSet.numTriangles());
 		dRec.measure = EArea;
+		Vec2f uv1, uv2, uv3;
+		tri.tDat->getUVSetData(0, uv1, uv2, uv3);
+		uv = dRec.uv.x * uv1 + dRec.uv.y * uv2 + (1 - dRec.uv.x - dRec.uv.y) * uv3;
 	}
-	else shapeSet.SamplePosition(dRec, sample);
+	else shapeSet.SamplePosition(dRec, sample, &uv);
 	dRec.d = dRec.p - dRec.ref;
 	float distSquared = dot(dRec.d, dRec.d);
 	dRec.dist = math::sqrt(distSquared);
@@ -127,10 +122,16 @@ Spectrum DiffuseLight::sampleDirect(DirectSamplingRecord &dRec, const Vec2f &_sa
 	}
 	else dRec.measure = EDiscrete;
 
-	if (dot(dRec.d, dRec.refN) >= 0 && dot(dRec.d, dRec.n) < 0 && dRec.pdf != 0) {
-		return m_radiance / dRec.pdf;
+	if (dot(dRec.d, dRec.refN) >= 0 && dot(dRec.d, dRec.n) < 0 && dRec.pdf != 0)
+	{
+		DifferentialGeometry dg;
+		dg.P = dRec.p;
+		dg.uv[0] = uv;
+		dg.bary = dRec.uv;
+		return m_rad_texture.Evaluate(dg) / dRec.pdf;
 	}
-	else {
+	else
+	{
 		dRec.pdf = 0.0f;
 		return Spectrum(0.0f);
 	}
@@ -192,7 +193,21 @@ Spectrum DiffuseLight::evalDirection(const DirectionSamplingRecord &dRec, const 
 
 Spectrum DiffuseLight::evalPosition(const PositionSamplingRecord &pRec) const
 {
-	return m_radiance * PI;
+	DifferentialGeometry dg;
+	dg.P = pRec.p;
+	if (needsUVSample(m_rad_texture))
+		if (shapeSet.getPosition(dg.P, &dg.bary, &dg.uv[0]))
+			printf("Could not sample position in shape set!\n");
+	return m_rad_texture.Evaluate(dg) * PI;
+}
+
+Spectrum DiffuseLight::samplePosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const
+{
+	DifferentialGeometry dg;
+	shapeSet.SamplePosition(pRec, sample, &dg.uv[0]);
+	dg.P = pRec.p;
+	dg.bary = pRec.uv;
+	return m_rad_texture.Evaluate(dg) * PI * shapeSet.Area();
 }
 
 void DistantLight::setEmit(const Spectrum& L)
@@ -325,7 +340,9 @@ InfiniteLight::InfiniteLight(Stream<char>* a_Buffer, BufferReference<MIPMap, Ker
 {
 	m_size = Vec2f(radianceMap.m_uWidth, radianceMap.m_uHeight);
 	unsigned int nEntries = (unsigned int)(m_size.x + 1) * (unsigned int)m_size.y;
-	StreamReference<char> m1 = a_Buffer->malloc(nEntries * sizeof(float)), m2 = a_Buffer->malloc((m_size.y + 1) * sizeof(float)), m3 = a_Buffer->malloc(m_size.y * sizeof(float));
+	StreamReference<char> m1 = a_Buffer->malloc_aligned<float>(nEntries * sizeof(float)), 
+						  m2 = a_Buffer->malloc_aligned<float>((m_size.y + 1) * sizeof(float)), 
+						  m3 = a_Buffer->malloc_aligned<float>(m_size.y * sizeof(float));
 	m_cdfCols = m1.AsVar<float>();
 	m_cdfRows = m2.AsVar<float>();
 	m_rowWeights = m3.AsVar<float>();

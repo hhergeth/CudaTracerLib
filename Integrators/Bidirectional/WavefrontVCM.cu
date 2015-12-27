@@ -62,7 +62,7 @@ CUDA_GLOBAL void extendLighRays(unsigned int N, BPTVertex* g_pLightVertices, Ima
 			res.toResult(&r2, g_SceneData);
 			BPTVertex v;
 			v.mat = 0;
-			r2.getBsdfSample(ent.state.r, v.bRec, ETransportMode::EImportance, &rng);
+			r2.getBsdfSample(ent.state.r, v.bRec, ETransportMode::EImportance, &rng, &ent.state.throughput);
 
 			if (vOff > 1 || true)
 				ent.state.dVCM *= r2.m_fDist * r2.m_fDist;

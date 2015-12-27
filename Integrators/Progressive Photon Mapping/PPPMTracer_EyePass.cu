@@ -5,19 +5,104 @@
 
 namespace CudaTracerLib {
 
+CUDA_FUNC_IN bool sphere_line_intersection(const Vec3f& p, float rad, const Ray& r, float& t_min, float& t_max)
+{
+	Vec3f d = r.direction.normalized();
+	Vec3f oc = r.origin - p;
+	float f = dot(d, oc);
+	float w = f * f - oc.lenSqr() + rad * rad;
+	if (w < 0)
+		return false;
+	t_min = -f - math::sqrt(w);
+	t_max = -f + math::sqrt(w);
+	return true;
+}
+
+template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum PointStorage::L_Volume(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr)
+{
+	Spectrum Tau = Spectrum(0.0f);
+	float Vs = 1.0f / (4.0f / 3.0f * PI * m_fCurrentRadiusVol * m_fCurrentRadiusVol * m_fCurrentRadiusVol * m_uNumEmitted);
+	Spectrum L_n = Spectrum(0.0f);
+	float a, b;
+	if (!m_sStorage.getHashGrid().getAABB().Intersect(r, &a, &b))
+		return L_n;//that would be dumb
+	float minT = a = math::clamp(a, tmin, tmax);
+	b = math::clamp(b, tmin, tmax);
+	float d = 2.0f * m_fCurrentRadiusVol;
+	while (a < b)
+	{
+		float t = a + d / 2.0f;
+		Vec3f x = r(t);
+		Spectrum L_i(0.0f);
+		m_sStorage.ForAll(x - Vec3f(m_fCurrentRadiusVol), x + Vec3f(m_fCurrentRadiusVol), [&](const Vec3u& cell_idx, unsigned int p_idx, const volPhoton& ph)
+		{
+			Vec3f ph_pos = ph.getPos(m_sStorage.getHashGrid(), cell_idx);
+			if (distanceSquared(ph_pos, x) < m_fCurrentRadiusVol * m_fCurrentRadiusVol)
+			{
+				float p = vol.p(x, -r.direction, ph.getWi(), rng);
+				L_i += p * ph.getL() * Vs;
+			}
+		});
+		L_n += (-Tau - vol.tau(r, a, t)).exp() * L_i * d;
+		Tau += vol.tau(r, a, a + d);
+		L_n += vol.Lve(x, -1.0f * r.direction) * d;
+		a += d;
+	}
+	Tr = (-Tau).exp();
+	return L_n;
+}
+
+template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum BeamGrid::L_Volume(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr)
+{
+	Spectrum Tau = Spectrum(0.0f);
+	Spectrum L_n = Spectrum(0.0f);
+	TraverseGrid(r, m_sStorage.getHashGrid(), tmin, tmax, [&](float minT, float rayT, float maxT, float cellEndT, const Vec3u& cell_pos, bool& cancelTraversal)
+	{
+		m_sBeamGridStorage.ForAllCellEntries(cell_pos, [&](unsigned int, entry beam_idx)
+		{
+			const volPhoton& ph = m_sStorage(beam_idx.i & ~(1 << 31));
+			Vec3f ph_pos = ph.getPos(m_sStorage.getHashGrid(), cell_pos);
+			float l1 = dot(ph_pos - r.origin, r.direction);
+			float isectRadSqr = distanceSquared(ph_pos, r(l1));
+			if (isectRadSqr < ph.getRad() && l1 >= 0)
+			{
+				float p = vol.p(ph_pos, r.direction, ph.getWi(), rng);
+				//Spectrum tauToPhoton = (-Tau - vol.tau(r, rayT, l1)).exp();
+				Spectrum tauToPhoton = (-vol.tau(r, tmin, l1)).exp();
+				L_n += p * ph.getL() / m_uNumEmitted * tauToPhoton * 
+					(1 - isectRadSqr / ph.getRad()) / (ph.getRad() * PI * 0.5f);
+			}
+			/*float t1, t2;
+			if (sphere_line_intersection(ph_pos, m_fCurrentRadiusVol, r, t1, t2))
+			{
+				Spectrum tauToPhoton = (-vol.tau(r, tmin, t1)).exp();//transmittance from camera vertex along ray to query point
+				float p = vol.p(r((t1 + t2) / 2), r.direction, ph.getWi(), rng);
+				float Vs = 1.0f / (4.0f / 3.0f * PI * m_fCurrentRadiusVol * m_fCurrentRadiusVol * m_fCurrentRadiusVol * m_uNumEmitted);
+				L_n += p * ph.getL() * Vs * (-vol.tau(r, t1, t2)).exp();
+			}*/
+		});
+		Tau += vol.tau(r, rayT, cellEndT);
+		float localDist = cellEndT - rayT;
+		L_n += vol.Lve(r(rayT + localDist / 2), -1.0f * r.direction) * localDist;
+	});
+	//Tr = (-Tau).exp();
+	Tr = (-vol.tau(r, tmin, tmax)).exp();
+	return L_n;
+}
+
 CUDA_CONST SurfaceMapT g_SurfMap;
 CUDA_CONST unsigned int g_NumPhotonEmitted2;
 CUDA_CONST CUDA_ALIGN(16) unsigned char g_VolEstimator2[Dmax4(sizeof(PointStorage), sizeof(BeamGrid), sizeof(BeamBeamGrid), sizeof(BeamBVHStorage))];
 
 template<bool USE_GLOBAL> CUDA_ONLY_FUNC Spectrum beam_beam_L(const VolHelper<USE_GLOBAL>& vol, CudaRNG& rng, const Beam& B, const Ray& r, float radius, float beamIsectDist, float queryIsectDist, float beamBeamDistance, int m_uNumEmitted, float sinTheta, float tmin)
 {
-	Spectrum photon_tau = vol.tau(Ray(B.pos, B.dir), 0, beamIsectDist);
+	Spectrum photon_tau = vol.tau(Ray(B.getPos(), B.getDir()), 0, beamIsectDist);
 	Spectrum camera_tau = vol.tau(r, tmin, queryIsectDist);
 	Spectrum camera_sc = vol.sigma_s(r(queryIsectDist), r.direction);
-	float p = vol.p(r(queryIsectDist), r.direction, B.dir, rng);
-	return B.Phi / float(m_uNumEmitted) * camera_sc * (-photon_tau).exp() * (-camera_tau).exp() * p * (1 - beamBeamDistance * beamBeamDistance / (radius * radius)) * 3 / (4 * radius*sinTheta);
-	//float t = math::clamp01(beamBeamDistance / radius), k = 1.0f + t * t * t * (-6.0f * t * t + 15.0f * t - 10.0f);
-	//return camera_sc / radius * p * B.Phi / m_uNumEmitted * (-photon_tau).exp() * (-camera_tau).exp() / sinTheta * k;
+	float p = vol.p(r(queryIsectDist), r.direction, B.getDir(), rng);
+	//return B.Phi / float(m_uNumEmitted) * camera_sc * (-photon_tau).exp() * (-camera_tau).exp() * p * (1 - beamBeamDistance * beamBeamDistance / (radius * radius)) * 3 / (4 * radius*sinTheta);
+	float t = math::clamp01(beamBeamDistance / radius), k = 1.0f + t * t * t * (-6.0f * t * t + 15.0f * t - 10.0f);
+	return camera_sc / radius * p * B.getL() / m_uNumEmitted * (-photon_tau).exp() * (-camera_tau).exp() / sinTheta * k;
 }
 
 template<bool USE_GLOBAL> CUDA_ONLY_FUNC Spectrum BeamBeamGrid::L_Volume(float, CudaRNG& rng, const Ray& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr)
@@ -44,7 +129,7 @@ template<bool USE_GLOBAL> CUDA_ONLY_FUNC Spectrum BeamBeamGrid::L_Volume(float, 
 	{
 		const Beam& B = m_pDeviceBeams[i];
 		float beamBeamDistance, sinTheta, queryIsectDist, beamIsectDist;
-		if (Beam::testIntersectionBeamBeam(r.origin, r.direction, tmin, tmax, B.pos, B.dir, 0, B.t, radius * radius, beamBeamDistance, sinTheta, queryIsectDist, beamIsectDist))
+		if (Beam::testIntersectionBeamBeam(r.origin, r.direction, tmin, tmax, B.getPos(), B.getDir(), 0, B.t, radius * radius, beamBeamDistance, sinTheta, queryIsectDist, beamIsectDist))
 			L_n += beam_beam_L(vol, rng, B, r, radius, beamIsectDist, queryIsectDist, beamBeamDistance, m_uNumEmitted, sinTheta, tmin);
 	}
 	Tr = (-vol.tau(r, tmin, tmax)).exp();
@@ -60,7 +145,7 @@ template<bool USE_GLOBAL> Spectrum BeamBVHStorage::L_Volume(float radius, CudaRN
 		//unsigned int beam_idx = R.getIdx();
 		const Beam& B = R.beam;// this->m_pDeviceBeams[beam_idx];
 		float beamBeamDistance, sinTheta, queryIsectDist, beamIsectDist;
-		if (Beam::testIntersectionBeamBeam(r.origin, r.direction, tmin, tmax, B.pos, B.dir, R.t_min, R.t_max, radius * radius, beamBeamDistance, sinTheta, queryIsectDist, beamIsectDist))
+		if (Beam::testIntersectionBeamBeam(r.origin, r.direction, tmin, tmax, B.getPos(), B.getDir(), R.t_min, R.t_max, radius * radius, beamBeamDistance, sinTheta, queryIsectDist, beamIsectDist))
 			L_n += beam_beam_L(vol, rng, B, r, radius, beamIsectDist, queryIsectDist, beamBeamDistance, m_uNumEmitted, sinTheta, tmin);
 	});
 	Tr = (-vol.tau(r, tmin, tmax)).exp();
@@ -279,12 +364,7 @@ __global__ void k_EyePass2(Vec2i off, int w, int h, float a_PassIndex, float a_r
 
 void PPPMTracer::Debug(Image* I, const Vec2i& pixel)
 {
-	/*Beam b;
-	BeamBeamGrid& grid = *((BeamBeamGrid*)m_pVolumeEstimator);
-	cudaMemcpy(&b, grid.m_pDeviceBeams + 1, sizeof(Beam), cudaMemcpyDeviceToHost);
-	std::cout << Ray(b.pos, b.dir) << "\n";
-	ThrowCudaErrors(cudaMemcpyToSymbol(g_VolEstimator2, m_pVolumeEstimator, m_pVolumeEstimator->getSize()));
-	debugEye << <1, 1 >> >(pixel.x, pixel.y);*/
+	
 }
 
 void PPPMTracer::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
@@ -300,10 +380,10 @@ void PPPMTracer::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 	k_AdaptiveStruct A(r_min, r_max, m_pEntries, w, m_uPassesDone);
 	Vec2i off = Vec2i(x, y);
 	BlockSampleImage img = m_pBlockSampler->getBlockImage();
-	if (dynamic_cast<PointStorage*>(m_pVolumeEstimator))
-		k_EyePass<PointStorage> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, m_uPassesDone, radius2, radius3, A, img, m_useDirectLighting, perPixelRad);
-	else if (dynamic_cast<BeamGrid*>(m_pVolumeEstimator))
+	if (dynamic_cast<BeamGrid*>(m_pVolumeEstimator))
 		k_EyePass<BeamGrid> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, m_uPassesDone, radius2, radius3, A, img, m_useDirectLighting, perPixelRad);
+	else if(dynamic_cast<PointStorage*>(m_pVolumeEstimator))
+		k_EyePass<PointStorage> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, m_uPassesDone, radius2, radius3, A, img, m_useDirectLighting, perPixelRad);
 	else if (dynamic_cast<BeamBeamGrid*>(m_pVolumeEstimator))
 		k_EyePass<BeamBeamGrid> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, m_uPassesDone, radius2, radius3, A, img, m_useDirectLighting, perPixelRad);
 	else if (dynamic_cast<BeamBVHStorage*>(m_pVolumeEstimator))

@@ -2,6 +2,7 @@
 #include "ShapeSet.h"
 #include "Buffer.h"
 #include "TriIntersectorData.h"
+#include "TriangleData.h"
 
 namespace CudaTracerLib {
 
@@ -22,15 +23,18 @@ void ShapeSet::triData::Recalculate(const float4x4& mat)
 	area = 0.5f * length(n);
 }
 
-ShapeSet::ShapeSet(StreamReference<TriIntersectorData>* indices, unsigned int indexCount, const float4x4& mat, Stream<char>* buffer)
+ShapeSet::ShapeSet(StreamReference<TriIntersectorData>* indices, BufferReference<TriangleData, TriangleData>* tri, unsigned int indexCount, const float4x4& mat, Stream<char>* buffer)
 {
 	count = indexCount;
-	StreamReference<char> buffer1 = buffer->malloc((count + 1) * sizeof(float));
-	StreamReference<char> buffer2 = buffer->malloc(count * sizeof(triData));
+	StreamReference<char> buffer2 = buffer->malloc_aligned<triData>(count * sizeof(triData));//buffer->malloc(count * sizeof(triData));
+	StreamReference<char> buffer1 = buffer->malloc_aligned<float>((count + 1) * sizeof(float));//buffer->malloc((count + 1) * sizeof(float));
 	areaDistribution = buffer1.AsVar<float>();
 	triangles = buffer2.AsVar<triData>();
 	for (unsigned int i = 0; i < count; i++)
+	{
 		triangles[i].iDat = indices[i].AsVar();
+		triangles[i].tDat = tri[i].AsVar();
+	}
 	Recalculate(mat, buffer);
 }
 

@@ -100,6 +100,10 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <CodeGeneration>compute_30,sm_30</CodeGeneration>
       <CudaRuntime>Static</CudaRuntime>
     </CudaCompile>
+    <PreBuildEvent>
+      <Command>
+      </Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='CPU_Debug|x64'">
     <ClCompile>
@@ -131,6 +135,10 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <CudaLink>
       <Optimization>O3</Optimization>
     </CudaLink>
+    <PreBuildEvent>
+      <Command>
+      </Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -169,6 +177,10 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <Bscmake>
       <PreserveSbr>true</PreserveSbr>
     </Bscmake>
+    <PreBuildEvent>
+      <Command>
+      </Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Base\FileStream.cpp" />
@@ -203,6 +215,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="Engine\BVHRebuilder.h" />
     <ClInclude Include="Engine\Core.h" />
     <ClInclude Include="Engine\DifferentialGeometry.h" />
+    <ClInclude Include="Engine\Dispersion.h" />
     <ClInclude Include="Engine\DynamicScene.h" />
     <ClInclude Include="Engine\Filter.h" />
     <ClInclude Include="Engine\Grid.h" />
@@ -319,7 +332,9 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <CudaCompile Include="Engine\DifferentialGeometry.cu" />
     <CudaCompile Include="Engine\Image.cu" />
     <CudaCompile Include="Engine\KernelDynamicScene.cu" />
-    <CudaCompile Include="Engine\Light.cu" />
+    <CudaCompile Include="Engine\Light.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
     <CudaCompile Include="Engine\Material.cu" />
     <CudaCompile Include="Engine\MicrofacetDistribution.cu" />
     <CudaCompile Include="Engine\MIPMap.cu" />
@@ -327,7 +342,10 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <CudaCompile Include="Engine\RoughTransmittance.cu" />
     <CudaCompile Include="Engine\Samples.cu" />
     <CudaCompile Include="Engine\Sensor.cu" />
-    <CudaCompile Include="Engine\ShapeSet.cu" />
+    <CudaCompile Include="Engine\ShapeSet.cu">
+      <GPUDebugInfo Condition="'$(Configuration)|$(Platform)'=='CPU_Debug|x64'">false</GPUDebugInfo>
+      <HostDebugInfo Condition="'$(Configuration)|$(Platform)'=='CPU_Debug|x64'">false</HostDebugInfo>
+    </CudaCompile>
     <CudaCompile Include="Engine\TriangleData.cu" />
     <CudaCompile Include="Engine\TriIntersectorData.cu" />
     <CudaCompile Include="Engine\Volumes.cu" />
@@ -342,7 +360,11 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     </CudaCompile>
     <CudaCompile Include="Integrators\PhotonTracer.cu" />
     <CudaCompile Include="Integrators\PrimTracer.cu" />
-    <CudaCompile Include="Integrators\Progressive Photon Mapping\PPPMTracer_EyePass.cu" />
+    <CudaCompile Include="Integrators\Progressive Photon Mapping\PPPMTracer_EyePass.cu">
+      <FastMath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</FastMath>
+      <GPUDebugInfo Condition="'$(Configuration)|$(Platform)'=='CPU_Debug|x64'">false</GPUDebugInfo>
+      <HostDebugInfo Condition="'$(Configuration)|$(Platform)'=='CPU_Debug|x64'">false</HostDebugInfo>
+    </CudaCompile>
     <CudaCompile Include="Integrators\Progressive Photon Mapping\PPPMTracer_PhotonPass.cu" />
     <CudaCompile Include="Integrators\Progressive Photon Mapping\VolEstimators\BeamGrid.cu" />
     <CudaCompile Include="Integrators\Pseudo Realtime\FastTracer.cu" />

@@ -5,6 +5,7 @@
 namespace CudaTracerLib {
 
 struct TriIntersectorData;
+struct TriangleData;
 struct PositionSamplingRecord;
 template<typename H, typename D> class BufferReference;
 template<typename T> class Stream;
@@ -16,15 +17,17 @@ struct ShapeSet
 		Vec3f p[3];
 		float area;
 		e_Variable<TriIntersectorData> iDat;
+		e_Variable<TriangleData> tDat;
 
 		AABB box() const;
 		void Recalculate(const float4x4& mat);
 	};
 public:
 	ShapeSet(){}
-	ShapeSet(BufferReference<TriIntersectorData, TriIntersectorData>* indices, unsigned int indexCount, const float4x4& mat, Stream<char>* buffer);
+	ShapeSet(BufferReference<TriIntersectorData, TriIntersectorData>* indices, BufferReference<TriangleData, TriangleData>* triangles, unsigned int indexCount, const float4x4& mat, Stream<char>* buffer);
 	CUDA_FUNC_IN float Area() const { return sumArea; }
-	CUDA_DEVICE CUDA_HOST void SamplePosition(PositionSamplingRecord& pRec, const Vec2f& spatialSample) const;
+	CUDA_DEVICE CUDA_HOST void SamplePosition(PositionSamplingRecord& pRec, const Vec2f& spatialSample, Vec2f* uv) const;
+	CUDA_DEVICE CUDA_HOST bool getPosition(const Vec3f& pos, Vec2f* bary = 0, Vec2f* uv = 0) const;
 	CUDA_FUNC_IN float Pdf() const
 	{
 		return 1.0f / sumArea;

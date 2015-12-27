@@ -113,7 +113,7 @@ CUDA_ONLY_FUNC void BeamBeamGrid::StoreBeam(const Beam& b, bool firstStore)
 
 #ifdef ISCUDA
 		const AABB objaabb = b.getAABB(m_fCurrentRadiusVol);
-		const int maxAxis = b.dir.abs().arg_max();
+		const int maxAxis = b.getDir().abs().arg_max();
 		const int chopCount = (int)(objaabb.Size()[maxAxis] * m_sStorage.getHashGrid().m_vInvSize[maxAxis]) + 1;
 		const float invChopCount = 1.0f / (float)chopCount;
 
@@ -185,20 +185,24 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 			TraceResult r2 = traceRay(r);
 			float minT, maxT;
 			bool inMedium = (!bssrdf && V.HasVolumes() && V.IntersectP(r, 0, r2.m_fDist, &minT, &maxT)) || bssrdf;
-			if (inMedium)
+			bool stored = false;
+			if (inMedium && rng.randomFloat() < 0.00662435558f)
+			{
 				((VolEstimator*)g_VolEstimator)->StoreBeam(Beam(r.origin, r.direction, r2.m_fDist, throughput * Le), !wasStoredVolume);//store the beam even if sampled distance is to far ahead!
+				wasStoredVolume = true;
+			}
 			if ((!bssrdf && inMedium && V.sampleDistance(r, 0, r2.m_fDist, rng, mRec))
 				|| (bssrdf && bssrdf->sampleDistance(r, 0, r2.m_fDist, rng.randomFloat(), mRec)))
 			{//mRec.t
 				throughput *= mRec.transmittance / mRec.pdfSuccess;
-				((VolEstimator*)g_VolEstimator)->StorePhoton(mRec.p, -r.direction, throughput * Le, !wasStoredVolume);
 				throughput *= mRec.sigmaS;
+				((VolEstimator*)g_VolEstimator)->StorePhoton(mRec.p, -r.direction, throughput * Le, !wasStoredVolume);
 				wasStoredVolume = true;
 				if (bssrdf)
 				{
-					PhaseFunctionSamplingRecord mRec(-r.direction);
-					throughput *= bssrdf->As()->Func.Sample(mRec, rng);
-					r.direction = mRec.wi;
+					PhaseFunctionSamplingRecord pRec(-r.direction);
+					throughput *= bssrdf->As()->Func.Sample(pRec, rng);
+					r.direction = pRec.wi;
 				}
 				else throughput *= V.Sample(mRec.p, -r.direction, rng, &r.direction);
 				r.origin = mRec.p;
@@ -212,7 +216,8 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 				if (medium)
 					throughput *= mRec.transmittance / mRec.pdfFailure;
 				Vec3f wo = bssrdf ? r.direction : -r.direction;
-				r2.getBsdfSample(-wo, r(r2.m_fDist), bRec, ETransportMode::EImportance, &rng);
+				Spectrum f_i = throughput * Le;
+				r2.getBsdfSample(-wo, r(r2.m_fDist), bRec, ETransportMode::EImportance, &rng, &f_i);
 				if ((DIRECT && depth > 0) || !DIRECT)
 					if (r2.getMat().bsdf.hasComponent(ESmooth) && dot(bRec.dg.sys.n, wo) > 0.0f)
 					{
@@ -259,10 +264,10 @@ void PPPMTracer::doPhotonPass()
 
 	while (!m_sSurfaceMap.isFull() && !m_pVolumeEstimator->isFull())
 	{
-		if (dynamic_cast<PointStorage*>(m_pVolumeEstimator))
-			k_PhotonPass<PointStorage> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >(PPM_Photons_Per_Thread, m_useDirectLighting);
-		else if (dynamic_cast<BeamGrid*>(m_pVolumeEstimator))
+		if (dynamic_cast<BeamGrid*>(m_pVolumeEstimator))
 			k_PhotonPass<BeamGrid> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >(PPM_Photons_Per_Thread, m_useDirectLighting);
+		else if(dynamic_cast<PointStorage*>(m_pVolumeEstimator))
+			k_PhotonPass<PointStorage> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >(PPM_Photons_Per_Thread, m_useDirectLighting);
 		else if (dynamic_cast<BeamBeamGrid*>(m_pVolumeEstimator))
 			k_PhotonPass<BeamBeamGrid> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >(PPM_Photons_Per_Thread, m_useDirectLighting);
 		else if (dynamic_cast<BeamBVHStorage*>(m_pVolumeEstimator))
