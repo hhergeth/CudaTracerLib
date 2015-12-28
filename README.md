@@ -1,62 +1,62 @@
+<p align="center">
+<a href='linkToHomePage' style='font-size:2.2em'>Examples</span></a> <br>
+<a href="linkToHomePage">
+<img src="http://hhergeth.markab.uberspace.de/Git-Wiki-Files/thumbnails/loadBox_20150716_080109_PPPM.jpg" style="width:880px;">
+</a>
+</p>
+
 # CudaTracerLib
 
 ### Introduction
-This library, for simplicity called CudaTracerLib, is a CUDA based ray tracer library implementing standard rendering algorithms like
+This library, for simplicity called CudaTracerLib, is a CUDA based ray tracer library implementing standard rendering algorithms like Path Tracing, Progressive Photon Mapping, Bidirectional Path Tracing and many more. It can be used in an offline render mode where only one frame is computed. The other option is to compute the frames directly into an Open GL/D3D buffer enabling "realtime" ray traced images.
 
-- Path Tracing (volumetric)
-- Photon/Light Tracing (volumetric)
-- Photon Mapping (Final Gathering)
-- Volumetric(Beam x Beam) Adaptive Progressive Photon Mapping
-- Path Space Regularization - Path Tracing
-- Bidirectional Path Tracing
-- Vertex Connection and Merging
-
-Motivation ? Tired of wateing but don't want to low level optimize!
-
-This library provides the possibility of using these algorithms for offline rendering but also for "realtime" rendering to an Open GL/D3D buffer.
-
-Please keep in mind that this is mostly reseach code with the ultimate goal of developing new or improving old rendering algorithms. Therefore there is a lot of code in branches which are currently not used. While this might clutter the code, it is neccessary when trying new ideas.
+The main motivation for this project was the time spent waiting for CPU renderers while all the power a GPU has to offer is not being used. Thus the goal is to use this power modern GPUs make available without spending much time on low level optimizations. Please see section 4. for a more detailed comparison to other projects such as Mitsuba.
 
 
 ### Installation
-There are some dependecies
+There are only four dependencies:
+- Cuda 7.5
+- Boost, used for filesystem(compiled library!) and string functions
+- FreeImage, used for loading and saving images. There are CMake versions available.
+- qMatrixLib, a tiny header only matrix library, available here https://github.com/hhergeth/qMatrixLib
 
-- Boost, used for all platform dependent code
-- FreeImage, used for loading and saving images
-- qMatrixLib, a very small and lightweight, header only library for matrix algebra. You can get it here https://github.com/galrath434/qMatrixLib
+For Windows users there is a Visual Studio 2013 project file available where only the include and library paths to Boost, FreeImage and qMatrixLib have to be specified.
+The CMake file can be used for all other platforms. Assuming Boost is installed on the machine, only the FreeImage and qMatrixLib path have to be specified.
 
-After downloading the code, specify the appropriate C++ Include directories in the Visual Studio project file. The dependency .lib files are only needed when linking against the output .lib.
-
-
-### Implementation
-Throughout the library the design goal was to be able to use as much code as possible on the GPU as well as on the CPU. This was made possible by reimplementing some code which might seem counterintuitive at first.
-
-The general layout of the source code is based on the following directories
-
-- ROOT : CUDA memory manager, base classes for pseudo virtual classes in CUDA
-- Math : Linear algebra math classes as well as sampling functions and function integrators
-- Base : General purpose classes like timing, fixed size strings, high performance file streams and random number generators
-- Engine : BSDFs, Emitters, Sensors, Image filters, Textures and all foundation a rendering algorithm needs.
-- Kernel : Ray tracing operations, buffer management on CPU and GPU
-- Integrators : Rendering algorithms listed above, some ported to "Wavefront Path Tracing" for efficiency on the GPU
-
-The library supports many different material models as well as a multitude of light and camera types. For efficiency a two level BVH hierarchy is used. The first level BVH is used for objects in the scene and the second for triangles in each object.
-
-While this is currently a Windows/Visual Studio only library, there are no real dependecies on Windows (there are probably some in the code but not many and by using Boost these should be easy to fix). The main challange with a linux port is the project file. The problem here is CUDA and specifying the appropriate flags for linking (with device relocatable code).
-
+The microfracet and spectral probability distribution files from Mitsuba/PBRT are also neccessary. They can be obtained from the Mitsuba build or [here from the repository](https://www.mitsuba-renderer.org/repos/mitsuba/files/c7aac473729a3342dba801717419d8f630fe7560/data). Only the _ior_ and _microfacet_ folder are required.
 
 ### Acknowledgements
-I would like to thank Wenzel Jakob for allowing me to use a lot of his work from Mitsuba - http://www.mitsuba-renderer.org. This includes the general interfaces and implementation of the `BSDF`, `Emitter`, `Sensor` classes. Furthermore I used his `MicrofacetDistribution` and `RoughTransmittance` classes as well as the design of the `SamplingRecord` classes.
+I would like to thank Wenzel Jakob for allowing me to use a lot of his work from Mitsuba - http://www.mitsuba-renderer.org. This includes the general interfaces and implementation of the `BSDF`, `Emitter`, `Sensor` classes. Furthermore I have used his `MicrofacetDistribution` and `RoughTransmittance` classes as well as the design of the `SamplingRecord` classes.
 
-Timo Aila and Samuli Laine are to be thanked for their research on BVH ray traversal on CUDA GPUs in "Understanding the Efficiency of Ray Traversal on GPUs". I used slight modifications of their code for the BVH computation as well as the traversal.
-
-
-### Limitations
-Currently there are no Metropolis MCMC algorithms implemented. The reasons are two fold, it is necessary to have some sort of Path/Vertex classes present which makes memory managment mandatory on the GPU. It is also difficult to design a well performing sampler for MCMC which spreads the work on the GPU.
+Thanks to Timo Aila and Samuli Laine for their research on BVH ray traversal on CUDA GPUs in *Understanding the Efficiency of Ray Traversal on GPUs*. I have used slight modifications of their code for the BVH computation as well as the traversal.
 
 
-### Issuses
-- `size_t` vs `unsigned int` In some places `size_t` is used while in others not. This mistake was made when this project started but is actually harder to fix than one might assume because of performance considerations for the GPU.
+### Comparison to Mitsuba and Brigade
+Mitsuba (as PBRT before) is probably the most commonly known realistic renderer geared towards research application.  It can be easily extended with nearly any custom integrator, and especially the Path classes are of great convenience for Metropolis Light Transport algorithms. This library has no intention of competing with Mitsuba in this research area. It is much harder to do memory management on the device and therefore no Metropolis Light Transport algorithm is implemented here. Mitsuba is also easier to debug and simply has the larger and better documented codebase.
+
+On the other end of the spectrum is Brigade, the hope of true realtime raytracing. Without having any insight into the code, I assume their focus lies more on the optimization aspect, not on a general approach to realistic image synthesis. For further discussion of the realtime aspects of this library please see the appropriate wiki page.
+
+This library tries to place itself somewhere between Mitsuba and Brigade, and it uses the best of both worlds. Please note that using the GPU implies some limitations not expected:
+
+- No `recursive` bsdfs. There are however some bsdf types like `coating` and `blend` which can use only SOME of the other bsdfs, specifically all those defined in BSDF_SIMPLE.h.
+- No `recursive` textures. It is not possible to combine textures in mathematical functions to create complex appearances.
+- No support for samplers. Only standard random number generators are used leading to unfavourable noise reduction.
+
+All of these features are definitely possible in CUDA, although performance has to be monitored. There was no request for these complex materials up to now, so this was not actively worked on.
+
+There are however some small features which are of less importance in Mitsuba:
+
+- Adaptive Progressive Photon Mapping
+- The main 3 volumetric estimators from *A Comprehensive Theory of Volumetric Radiance Estimation using Photon Points and Beams*
+- Skeletal animation
+- Completely dynamic deformable meshes and a dynamic scene with thousands of dynamic objects
+- Parallax Occlusion Mapping and an (unrealistic but cool looking) orthogonal area light
+- Dispersion (with Cauchy or Sellmeier model for index of refraction)
+
+### Note
+
+Personal note from the author: I started this project with very limited knowledge of C++ in general and particularly no knwoledge of the stl. Because of this, there are definitely parts of the code which should not have been written this way. I am constantly trying to get rid of these legacy issues! The same applies to the git history; the first two years I was misusing the system (sparse commits with tons of changes).
+Please see the wiki for further issues and comments on the code.
 
 
 ### License
