@@ -108,7 +108,7 @@ __global__ void pathKernel(unsigned int w, unsigned int h, int xoff, int yoff, B
 	Vec2i pixel = TracerBase::getPixelPos(xoff, yoff);
 	CudaRNG rng = g_RNGData();
 	if (pixel.x < w && pixel.y < h)
-		BPT(Vec2f(pixel.x, pixel.y), img, rng, w, h, use_mis, force_s, force_t, LScale);
+		BPT(Vec2f(pixel.x + rng.randomFloat(), pixel.y + rng.randomFloat()), img, rng, w, h, use_mis, force_s, force_t, LScale);
 	g_RNGData(rng);
 }
 

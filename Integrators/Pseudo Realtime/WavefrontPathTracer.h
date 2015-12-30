@@ -3,13 +3,14 @@
 #include <Kernel/Tracer.h>
 #include <CudaMemoryManager.h>
 #include <Kernel/RayBuffer.h>
+#include <Math/half.h>
 
 namespace CudaTracerLib {
 
 struct WavefrontPTRayData
 {
 	Spectrum throughput;
-	short x, y;
+	half x, y;
 	Spectrum L;
 	Spectrum directF;
 	float dDist;

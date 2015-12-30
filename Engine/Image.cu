@@ -21,11 +21,11 @@ void Image::AddSample(float sx, float sy, const Spectrum &_L)
 	L.toLinearRGB(rgb[0], rgb[1], rgb[2]);
 	Pixel* pixel = getPixel(y * xResolution + x);
 #ifdef ISCUDA
-	for(int i = 0; i < 3; i++)
+	for (int i = 0; i < 3; i++)
 		atomicAdd(pixel->rgb + i, rgb[i]);
 	atomicAdd(&pixel->weightSum, 1.0f);
 #else
-	for(int i = 0; i < 3; i++)
+	for (int i = 0; i < 3; i++)
 		pixel->rgb[i] += rgb[i];
 	pixel->weightSum += 1.0f;
 #endif
@@ -310,8 +310,8 @@ void Image::InternalUpdateDisplay()
 				rtm_Copy << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(cudaPixels, T2, xResolution, yResolution, lastSplatVal, filter, m_fOutScale);
 			else rtm_Copy << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(cudaPixels, T1, xResolution, yResolution, lastSplatVal, filter, m_fOutScale);
 		}
-		ThrowCudaErrors(cudaThreadSynchronize());
 	}
+	ThrowCudaErrors(cudaThreadSynchronize());
 }
 
 template<typename TARGET> CUDA_GLOBAL void rtm_Copy(Image::Pixel* A, Image::Pixel* B, TARGET T, unsigned int w, unsigned int h, float splatScaleA, float splatScaleB, Filter filterA, Filter filterB, float scale)

@@ -242,7 +242,7 @@ void PrimTracer::Debug(Image* I, const Vec2i& pixel)
 
 PrimTracer::PrimTracer()
 {
-	m_sParameters << KEY_DrawingMode() << PathTrace_DrawMode::first_non_delta_f_direct
+	m_sParameters << KEY_DrawingMode() << PathTrace_DrawMode::first_f
 				  << KEY_MaxPathLength() << CreateInterval<int>(7, 1, INT_MAX);
 	//const char* QQ = "../Data/tmp.dat";
 	//OutputStream out(QQ);

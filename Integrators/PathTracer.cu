@@ -149,9 +149,10 @@ template<bool DIRECT, bool REGU> __global__ void pathKernel2(unsigned int w, uns
 	if (pixel.x < w && pixel.y < h)
 	{
 		Ray r, rX, rY;
-		Spectrum imp = g_SceneData.sampleSensorRay(r, rX, rY, Vec2f(pixel.x, pixel.y) + +rng.randomFloat2(), rng.randomFloat2());
+		Vec2f pX = Vec2f(pixel.x, pixel.y) + rng.randomFloat2();
+		Spectrum imp = g_SceneData.sampleSensorRay(r, rX, rY, pX, rng.randomFloat2());
 		Spectrum col = imp * (REGU ? PathTraceRegularization<DIRECT>(r, rX, rY, rng, m) : PathTrace<DIRECT>(r, rX, rY, rng));
-		img.Add(pixel.x, pixel.y, col);
+		img.Add(pX.x, pX.y, col);
 	}
 	g_RNGData(rng);
 }

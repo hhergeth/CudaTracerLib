@@ -11,9 +11,9 @@ namespace CudaTracerLib {
 PPPMTracer::PPPMTracer()
 	: m_pEntries(0), m_fLightVisibility(1), k_Intial(10)
 {
-	m_sParameters << KEY_Direct() << CreateSetBool(true)
+	m_sParameters << KEY_Direct() << CreateSetBool(false)
 		<< KEY_PerPixelRadius() << CreateSetBool(false)
-		<< KEY_FinalGathering() << CreateSetBool(true);
+		<< KEY_FinalGathering() << CreateSetBool(false);
 #ifdef NDEBUG
 	m_uBlocksPerLaunch = 180;
 #else

@@ -98,7 +98,7 @@ template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(unsigned int N, 
 		traversalRay& ray = g_IntersectorWPT(rayidx, 0);
 
 		if (pathDepth == 0 && depthImage)
-			g_DepthImageWPT.Store(dat.x, dat.y, res.dist);
+			g_DepthImageWPT.Store((int)dat.x.ToFloat(), (int)dat.y.ToFloat(), res.dist);
 
 		if (res.dist)
 		{
@@ -149,7 +149,7 @@ template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(unsigned int N, 
 		if (!res.dist || pathDepth + 1 == maxPathDepth)
 		{
 		labelAdd:
-			I.AddSample(dat.x, dat.y, dat.L);
+			I.AddSample(dat.x.ToFloat(), dat.y.ToFloat(), dat.L);
 		}
 	} while (true);
 	g_RNGData(rng);

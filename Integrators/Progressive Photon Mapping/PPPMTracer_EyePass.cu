@@ -272,7 +272,7 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED
 	//float t = (ent.r - A.r_min) / (A.r_max - A.r_min);
 	//float t = math::abs(E_I) * 1e-3f / (g_SceneData.m_sBox.Size().length() / 2);
 	//float t = ent.DI * 100000000;
-	float t = ent.compute_r(iteration, g_NumPhotonEmitted2, g_NumPhotonEmitted2 * iteration) / (A.r_max * 10 - A.r_min) / 0.05f;
+	float t = ent.compute_r(iteration, g_NumPhotonEmitted2, g_NumPhotonEmitted2 * iteration) / (A.r_max * 1 - A.r_min);
 	//float t = ent.compute_rd(iteration) / (A.r_max - A.r_min) * 1000;
 	qs.fromHSL(2.0f / 3.0f * (1 - math::clamp01(t)), 1, 0.5f);//0 -> 1 : Dark Blue -> Light Blue -> Green -> Yellow -> Red
 	img.Add(x, y, qs);
@@ -366,7 +366,7 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 				L += throughput * ((VolEstimator*)g_VolEstimator2)->L_Volume(a_rVolume, rng, r, tmin, tmax, VolHelper<true>(), Tr);
 			L += Tr * throughput * g_SceneData.EvalEnvironment(r);
 		}
-		img.Add((int)screenPos.x, (int)screenPos.y, L);
+		img.Add(screenPos.x, screenPos.y, L);
 	}
 	g_RNGData(rng);
 }
