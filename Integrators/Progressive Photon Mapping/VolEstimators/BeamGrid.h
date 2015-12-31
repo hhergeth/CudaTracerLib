@@ -33,7 +33,7 @@ struct BeamGrid : public PointStorage
 
 	SpatialLinkedMap<entry> m_sBeamGridStorage;
 
-	int photonDensNum;
+	float photonDensNum;
 
 	CUDA_FUNC_IN BeamGrid()
 	{

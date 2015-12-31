@@ -99,13 +99,11 @@ __global__ void estimateLightVisibility(int w, int h, float scx, float scy, int 
 			BSDFSamplingRecord bRec(dg);
 			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
 
-			for (int i = 0; i < g_SceneData.m_numLights; i++)
+			for (int i = 0; i < g_SceneData.m_numLights; i++, N++)
 			{
 				PositionSamplingRecord pRec;
 				g_SceneData.getLight(i)->samplePosition(pRec, rng.randomFloat2());
-				bool v = V(pRec.p, dg.P);
-				N++;
-				S += v;
+				S += V(pRec.p, dg.P);
 			}
 
 			r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
@@ -122,6 +120,7 @@ float TracerBase::GetLightVisibility(DynamicScene* s, int recursion_depth)
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_ShotRays, &zero, sizeof(unsigned int)));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_SuccRays, &zero, sizeof(unsigned int)));
 	k_INITIALIZE(s, g_sRngs);
+
 	int qw = 128, qh = 128, p0 = 16;
 	float a = (float)s->getCamera()->As()->m_resolution.x / qw, b = (float)s->getCamera()->As()->m_resolution.y / qh;
 	estimateLightVisibility << <dim3(qw / p0, qh / p0, 1), dim3(p0, p0, 1) >> >(qw, qh, a, b, recursion_depth);

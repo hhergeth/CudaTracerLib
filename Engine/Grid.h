@@ -18,7 +18,7 @@ template<bool REGULAR> struct HashGrid
 		: m_sBox(box), m_nElements(gridSize * gridSize * gridSize), m_gridSize(gridSize)
 	{
 		m_vMin = m_sBox.minV;
-		m_vCellSize = m_sBox.Size() / m_gridSize;
+		m_vCellSize = m_sBox.Size() / (float)m_gridSize;
 		m_vInvSize = Vec3f(1.0f) / m_vCellSize;
 	}
 
@@ -44,7 +44,7 @@ template<bool REGULAR> struct HashGrid
 		else
 		{
 			// use the same procedure as GPURnd
-			Vec4f n = Vec4f(p.x, p.y, p.z, p.x + p.y - p.z) *  4294967295.0f;
+			Vec4f n = Vec4f((float)p.x, (float)p.y, (float)p.z, (float)(p.x + p.y - p.z)) *  4294967295.0f;
 
 			const Vec4f q = Vec4f(1225.0, 1585.0, 2457.0, 2098.0);
 			const Vec4f r = Vec4f(1112.0, 367.0, 92.0, 265.0);
@@ -98,7 +98,7 @@ template<bool REGULAR> struct HashGrid
 
 	CUDA_FUNC_IN unsigned int EncodePos(const Vec3f& p, const Vec3u& i) const
 	{
-		Vec3f low = Vec3f(i.x, i.y, i.z) * m_vCellSize + m_vMin;
+		Vec3f low = Vec3f((float)i.x, (float)i.y, (float)i.z) * m_vCellSize + m_vMin;
 		Vec3f m = clamp01((p - low) * m_vInvSize) * 255.0f;
 		return (int(m.x) << 16) | (int(m.y) << 8) | int(m.z);
 	}
@@ -106,8 +106,8 @@ template<bool REGULAR> struct HashGrid
 	CUDA_FUNC_IN Vec3f DecodePos(unsigned int p, const Vec3u& i) const
 	{
 		unsigned int q = 0x00ff0000, q2 = 0x0000ff00, q3 = 0x000000ff;
-		Vec3f low = Vec3f(i.x, i.y, i.z) * m_vCellSize + m_vMin;
-		Vec3f m = (Vec3f((p & q) >> 16, (p & q2) >> 8, (p & q3)) / 255.0f) * m_vCellSize + low;
+		Vec3f low = Vec3f((float)i.x, (float)i.y, (float)i.z) * m_vCellSize + m_vMin;
+		Vec3f m = (Vec3f((float)((p & q) >> 16), (float)((p & q2) >> 8), (float)(p & q3)) / 255.0f) * m_vCellSize + low;
 		return m;
 	}
 
@@ -143,14 +143,14 @@ template<typename F> CUDA_FUNC_IN void TraverseGrid(const Ray& r, float tmin, fl
 	float minT = rayT = math::clamp(rayT, tmin, tmax);
 	maxT = math::clamp(maxT, tmin, tmax);
 	Vec3f q = (r(rayT) - box.minV) / m_vCellSize;
-	Vec3u Pos = clamp(Vec3u((unsigned int)q.x, (unsigned int)q.y, (unsigned int)q.z), Vec3u(0), Vec3u(gridSize.x - 1, gridSize.y - 1, gridSize.z - 1));
+	Vec3u Pos = clamp(Vec3u((unsigned int)q.x, (unsigned int)q.y, (unsigned int)q.z), Vec3u(0u), Vec3u((unsigned int)gridSize.x - 1, (unsigned int)gridSize.y - 1, (unsigned int)gridSize.z - 1));
 	Vec3i Step(sign<int>(r.direction.x), sign<int>(r.direction.y), sign<int>(r.direction.z));
 	Vec3f inv_d = r.direction;
 	const float ooeps = math::exp2(-40.0f);
 	inv_d.x = 1.0f / (math::abs(r.direction.x) > ooeps ? r.direction.x : copysignf(ooeps, r.direction.x));
 	inv_d.y = 1.0f / (math::abs(r.direction.y) > ooeps ? r.direction.y : copysignf(ooeps, r.direction.y));
 	inv_d.z = 1.0f / (math::abs(r.direction.z) > ooeps ? r.direction.z : copysignf(ooeps, r.direction.z));
-	Vec3f NextCrossingT = Vec3f(rayT) + (box.minV + (Vec3f(Pos.x, Pos.y, Pos.z) + max(Vec3f(0.0f), sign(r.direction))) * m_vCellSize - r(rayT)) * inv_d,
+	Vec3f NextCrossingT = Vec3f(rayT) + (box.minV + (Vec3f((float)Pos.x, (float)Pos.y, (float)Pos.z) + max(Vec3f(0.0f), sign(r.direction))) * m_vCellSize - r(rayT)) * inv_d,
 		DeltaT = abs(m_vCellSize * inv_d);
 	bool cancelTraversal = false;
 	for (; !cancelTraversal;)

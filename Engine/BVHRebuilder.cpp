@@ -244,7 +244,7 @@ void BVHRebuilder::insertNode(BVHIndex bvhNodeIdx, BVHIndex parent, unsigned int
 		{
 			BVHNodeData* node = m_pBVHData + m_uBvhNodeCount++;
 			int localIdx = getChildIdxInLocal(parent, bvhNodeIdx);
-			BVHIndex idx = BVHIndex::FromBVHNode(node - m_pBVHData);
+			BVHIndex idx = BVHIndex::FromBVHNode((unsigned int)(node - m_pBVHData));
 			setChild(parent, idx, localIdx, BVHIndex::INVALID(), false);
 			setChild(idx, BVHIndex::FromSceneNode(nodeIdx), 0, BVHIndex::INVALID(), false);
 			setChild(idx, bvhNodeIdx, 1, parent, true);
@@ -317,7 +317,7 @@ void BVHRebuilder::recomputeNode(BVHIndex bvhNodeIdx, AABB& newBox)
 				sah_rots[2] = sah(bvhNodeIdx, 0, 1);
 				sah_rots[3] = sah(bvhNodeIdx, 0, 0);
 			}
-			int best_rot = std::min_element(sah_rots, sah_rots + 4) - sah_rots;
+			int64_t best_rot = std::min_element(sah_rots, sah_rots + 4) - sah_rots;
 			AABB lBox = getBox(c[0]), rBox = getBox(c[1]);
 			float sah = lBox.Area() * numLeafs(c[0]) + rBox.Area() * numLeafs(c[1]);
 			if (sah_rots[best_rot] < sah)

@@ -105,7 +105,7 @@ KernelMIPMap MIPMap::getKernelData()
 	r.m_uFilterMode = m_uFilterMode;
 	r.m_uWidth = m_uWidth;
 	r.m_uHeight = m_uHeight;
-	r.m_fDim = Vec2f(m_uWidth - 1, m_uHeight - 1);
+	r.m_fDim = Vec2f((float)m_uWidth - 1, (float)m_uHeight - 1);
 	r.m_uLevels = m_uLevels;
 	memcpy(r.m_sOffsets, m_sOffsets, sizeof(m_sOffsets));
 	memcpy(r.m_weightLut, m_weightLut, sizeof(m_weightLut));

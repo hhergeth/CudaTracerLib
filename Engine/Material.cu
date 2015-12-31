@@ -50,13 +50,13 @@ CUDA_FUNC_IN void parallaxOcclusion(Vec2f& texCoord, KernelMIPMap* tex, const Ve
 
 	int nNumSteps = (int)math::lerp(MaxSamples, MinSamples, Frame::cosTheta(normalize(vViewTS)));
 	float CurrHeight = 0.0f;
-	float StepSize = 1.0 / (float)nNumSteps;
-	float PrevHeight = 1.0;
+	float StepSize = 1.0f / (float)nNumSteps;
+	float PrevHeight = 1.0f;
 	int    StepIndex = 0;
 	Vec2f TexOffsetPerStep = StepSize * vParallaxOffsetTS;
 	Vec2f TexCurrentOffset = texCoord;
-	float  CurrentBound = 1.0;
-	float  ParallaxAmount = 0.0;
+	float  CurrentBound = 1.0f;
+	float  ParallaxAmount = 0.0f;
 
 	Vec2f pt1 = Vec2f(0);
 	Vec2f pt2 = Vec2f(0);
@@ -139,7 +139,7 @@ bool Material::SampleNormalMap(DifferentialGeometry& dg, const Vec3f& wi) const
 float Material::SampleAlphaMap(const DifferentialGeometry& uv) const
 {
 	if (AlphaMap.used)
-	{//return 1;
+	{
 		if (AlphaMap.tex.Is<ImageTexture>())
 		{
 			Vec2f uv2 = AlphaMap.tex.As<ImageTexture>()->mapping.Map(uv);

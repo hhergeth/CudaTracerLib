@@ -16,6 +16,7 @@ template<typename H, typename D> class BufferReference;
 template<typename T> class Stream;
 struct KernelMIPMap;
 class MIPMap;
+struct TriIntersectorData;
 
 struct LightBase : public AbstractEmitter//, public BaseTypeHelper<5523276>
 {
@@ -107,11 +108,6 @@ struct DiffuseLight : public LightBase//, public e_DerivedTypeHelper<2>
 		m_rad_texture.SetData(ConstantTexture(L));
 	}
 
-	void Recalculate(const float4x4& mat, Stream<char>* buffer)
-	{
-		shapeSet.Recalculate(mat, buffer);
-	}
-
 	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
 
 	CUDA_DEVICE CUDA_HOST Spectrum eval(const Vec3f& p, const Frame& sys, const Vec3f &d) const;
@@ -126,7 +122,7 @@ struct DiffuseLight : public LightBase//, public e_DerivedTypeHelper<2>
 
 	CUDA_FUNC_IN float pdfPosition(const PositionSamplingRecord &pRec) const
 	{
-		return shapeSet.Pdf();
+		return shapeSet.PdfPosition();
 	}
 
 	CUDA_DEVICE CUDA_HOST Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const;

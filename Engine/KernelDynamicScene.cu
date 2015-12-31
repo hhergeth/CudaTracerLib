@@ -26,7 +26,7 @@ const KernelLight* KernelDynamicScene::sampleEmitter(float& emPdf, Vec2f& sample
 {
 	if (m_numLights == 0)
 		return 0;
-	unsigned int idx = STL_upper_bound(m_pLightCDF, m_pLightCDF + m_numLights, sample.x) - m_pLightCDF;
+	unsigned int idx = (unsigned int)(STL_upper_bound(m_pLightCDF, m_pLightCDF + m_numLights, sample.x) - m_pLightCDF);
 	//unsigned int idx = (unsigned int)(m_sLightData.UsedCount * sample.x);
 	if (idx >= m_numLights)
 	{
@@ -43,7 +43,7 @@ const KernelLight* KernelDynamicScene::sampleEmitter(float& emPdf, Vec2f& sample
 
 float KernelDynamicScene::pdfEmitterDiscrete(const KernelLight *emitter) const
 {
-	unsigned int idx = emitter - m_sLightBuf.Data;
+	unsigned int idx = (unsigned int)(emitter - m_sLightBuf.Data);
 	return m_pLightPDF[idx];
 }
 

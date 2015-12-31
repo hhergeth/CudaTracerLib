@@ -350,9 +350,9 @@ void Spectrum::fromHSL(float h, float s, float l)
 	}*/
 	//fromLinearRGB(r,g,b);
 	Vec3f color;
-	float c = (1.0 - math::abs(2 * l - 1.0f)) * s;
+	float c = (1.0f - math::abs(2 * l - 1.0f)) * s;
 	float Hd = h * 6;
-	float x = c * (1.0 - math::abs(fmodf(Hd, 2) - 1.0f));
+	float x = c * (1.0f - math::abs(fmodf(Hd, 2) - 1.0f));
 	if(0 <= Hd && Hd < 1)
 		color = Vec3f(c, x, 0);
 	else if(1 <= Hd && Hd < 2)

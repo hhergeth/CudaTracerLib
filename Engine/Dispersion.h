@@ -25,7 +25,7 @@ struct DispersionCauchy : public DispersionBase
 
 	CUDA_FUNC_IN float calc_eta(float lambda) const
 	{
-		return B + C / (lambda / 1e3);
+		return B + C / (lambda / 1e3f);
 	}
 
 	CUDA_FUNC_IN float calc_lambda(float eta) const
@@ -53,7 +53,7 @@ struct DispersionSellmeier : public DispersionBase
 
 	CUDA_FUNC_IN float calc_eta(float lambda) const
 	{
-		float l = lambda / 1000.0f, l2 = l * l;
+		float l = lambda / 1e3f, l2 = l * l;
 		float eta2 = A + (B.x * l2) / (l2 - C.x) + (B.y * l2) / (l2 - C.y) + (B.z * l2) / (l2 - C.z);
 		return math::sqrt(eta2);
 	}
@@ -91,7 +91,7 @@ struct DispersionLinear : public DispersionBase
 
 	CUDA_FUNC_IN float calc_lambda(float eta) const
 	{
-		return math::lerp(300, 900, (eta - minEta) / (maxEta - minEta));
+		return math::lerp(300.0f, 900.0f, (eta - minEta) / (maxEta - minEta));
 	}
 
 	CUDA_FUNC_IN bool hasDispersion() const

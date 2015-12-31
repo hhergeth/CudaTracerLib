@@ -18,7 +18,7 @@ CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_NextRayCounter2;
 CUDA_FUNC_IN void computePixel(int x, int y, CudaRNG& rng, Image g_Image, bool depthImage, PathTrace_DrawMode mode, int maxPathLength)
 {
 	Ray r, rX, rY;
-	Spectrum imp = g_SceneData.m_Camera.sampleRayDifferential(r, rX, rY, Vec2f(x, y), rng.randomFloat2());
+	Spectrum imp = g_SceneData.m_Camera.sampleRayDifferential(r, rX, rY, Vec2f((float)x, (float)y), rng.randomFloat2());
 	TraceResult prim_res = traceRay(r);
 	Spectrum L(0.0f), through(1.0f);
 	if (prim_res.hasHit())
@@ -98,7 +98,7 @@ CUDA_FUNC_IN void computePixel(int x, int y, CudaRNG& rng, Image g_Image, bool d
 		}
 	}
 	else L = g_SceneData.EvalEnvironment(r, rX, rY);
-	g_Image.AddSample(x, y, L);
+	g_Image.AddSample((float)x, (float)y, L);
 	if (depthImage)
 		g_DepthImage2.Store(x, y, prim_res.m_fDist);
 }
@@ -236,7 +236,7 @@ void PrimTracer::Debug(Image* I, const Vec2i& pixel)
 	CudaRNG rng = g_RNGData();
 	computePixel(pixel.x, pixel.y, rng, *I, false, m_sParameters.getValue(KEY_DrawingMode()), m_sParameters.getValue(KEY_MaxPathLength()));
 	Ray r, rX, rY;
-	g_SceneData.sampleSensorRay(r, rX, rY, Vec2f(pixel.x, pixel.y), rng.randomFloat2());
+	g_SceneData.sampleSensorRay(r, rX, rY, Vec2f((float)pixel.x, (float)pixel.y), rng.randomFloat2());
 	//traceTerrain(r, rng);
 }
 

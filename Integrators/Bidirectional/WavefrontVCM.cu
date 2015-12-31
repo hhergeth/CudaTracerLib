@@ -296,7 +296,7 @@ void WavefrontVCM::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 		srcBuf->IntersectBuffers<false>(false);
 		ThrowCudaErrors(cudaMemcpyToSymbol(g_sCamBufA, srcBuf, sizeof(*srcBuf)));
 		ThrowCudaErrors(cudaMemcpyToSymbol(g_sCamBufB, destBuf, sizeof(*destBuf)));
-		performPPMEstimate << <srcBuf->getNumRays(0) / (32 * 6) + 1, dim3(32, 6) >> >(srcBuf->getNumRays(0), getCurrentRadius(2), m_uNumLightRays);
+		performPPMEstimate << <srcBuf->getNumRays(0) / (32 * 6) + 1, dim3(32, 6) >> >(srcBuf->getNumRays(0), getCurrentRadius(2), (float)m_uNumLightRays);
 		extendCameraRays << <srcBuf->getNumRays(0) / (32 * 6) + 1, dim3(32, 6) >> >(srcBuf->getNumRays(0), *I, i++, i == 4, getCurrentRadius(2), m_uLightOff, m_uNumLightRays, m_pDeviceLightVertices);
 		ThrowCudaErrors(cudaThreadSynchronize());
 		ThrowCudaErrors(cudaMemcpyFromSymbol(srcBuf, g_sCamBufA, sizeof(*srcBuf)));

@@ -35,8 +35,8 @@ Path ConnectPaths(const std::vector<PathVertex*>& cameraPath, const std::vector<
 			bool b1 = s == -1 || it1 - cameraPath.begin() == s, b2 = t == -1 || it2 - emitterPath.begin() == t;
 			if (V((*it1)->getPos(), (*it2)->getPos()) && p.vertices.size() > 1 && b1 && b2)
 			{
-				int i = it2 - emitterPath.begin();
-				for (int j = i; j >= 0; j--)
+				int64_t i = it2 - emitterPath.begin();
+				for (int64_t j = i; j >= 0; j--)
 					p.vertices.push_back(emitterPath[j]);
 				return p;
 			}

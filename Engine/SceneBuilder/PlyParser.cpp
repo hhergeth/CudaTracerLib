@@ -100,6 +100,7 @@ struct varReader
 	}
 	void read(void* buf, format_type format, unsigned int* ures, float* fres)
 	{
+		auto a = swap_endian(*(unsigned long long*)buf);
 		switch (t)
 		{
 		case varReader::u8:
@@ -115,7 +116,7 @@ struct varReader
 			*fres = int_as_float_((swap_endian(*(unsigned int*)buf)));
 			break;
 		case varReader::f64:
-			*fres = float_as_int_(swap_endian((unsigned int)*(double*)buf));
+			*fres = (float)*(double*)&a;
 			break;
 		default:
 			throw std::runtime_error("Invalid ply type!");

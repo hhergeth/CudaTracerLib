@@ -184,7 +184,7 @@ void GameTracer::Debug(Image* I, const Vec2i& pixel)
 	k_INITIALIZE(m_pScene, g_sRngs);
 	CudaRNG rng = g_RNGData();
 	Ray r, rX, rY;
-	g_SceneData.sampleSensorRay(r, rX, rY, Vec2f(pixel.x, pixel.y), rng.randomFloat2());
+	g_SceneData.sampleSensorRay(r, rX, rY, Vec2f((float)pixel.x, (float)pixel.y), rng.randomFloat2());
 }
 
 void GameTracer::Resize(unsigned int w, unsigned int h)

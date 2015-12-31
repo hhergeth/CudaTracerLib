@@ -78,7 +78,7 @@ public:
 	}
 	virtual void SetFilmData(int w, int h)
 	{
-		m_resolution = Vec2f(w, h);
+		m_resolution = Vec2f((float)w, (float)h);
 		m_invResolution = Vec2f(1) / m_resolution;
 		aspect = m_resolution.x / m_resolution.y;
 		Update();
@@ -540,7 +540,7 @@ public:
 	CUDA_FUNC_IN Ray GenRay(int x, int y)
 	{
 		Ray r;
-		sampleRay(r, Vec2f(x, y), Vec2f(0, 0));
+		sampleRay(r, Vec2f((float)x, (float)y), Vec2f(0, 0));
 		return r;
 	}
 

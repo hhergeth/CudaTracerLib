@@ -17,7 +17,7 @@ void BeamBeamGrid::StartNewPass(const IRadiusProvider* radProvider, DynamicScene
 	m_sStorage.ResetBuffer();
 
 	float r = radProvider->getCurrentRadius(1);
-	Vec3f dim = Vec3f(m_sStorage.getHashGrid().m_gridSize);
+	Vec3f dim = Vec3f((float)m_sStorage.getHashGrid().m_gridSize);
 	float d = dim.min();
 	if (r > d)
 	{

@@ -124,7 +124,7 @@ public:
 	DenseVolGrid(Stream<char>* a_Buffer, Vec3u dim)
 		: DenseVolGridBaseType(a_Buffer, dim, sizeof(T), std::alignment_of<T>::value), dim(dim)
 	{
-		dimF = Vec3f(dim.x, dim.y, dim.z);
+		dimF = Vec3f((float)dim.x, (float)dim.y, (float)dim.z);
 	}
 	void Clear()
 	{

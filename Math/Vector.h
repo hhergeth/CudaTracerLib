@@ -39,13 +39,13 @@ public:
 	CUDA_FUNC_IN    void            normalize(T len = (T)1)              { set(normalized(len)); }
 	CUDA_FUNC_IN    T               min(void) const                { const T* tp = getPtr(); T r = tp[0]; for (int i = 1; i < L; i++) r = CudaTracerLib::min(r, tp[i]); return r; }
 	CUDA_FUNC_IN    T               max(void) const                { const T* tp = getPtr(); T r = tp[0]; for (int i = 1; i < L; i++) r = CudaTracerLib::max(r, tp[i]); return r; }
-	CUDA_FUNC_IN    T               arg_min(void) const                { const T* tp = getPtr(); int j = 0; for (int i = 1; i < L; i++) if(tp[i] < tp[j]) j = i; return j; }
-	CUDA_FUNC_IN    T               arg_max(void) const                { const T* tp = getPtr(); int j = 0; for (int i = 1; i < L; i++) if (tp[i] > tp[j]) j = i; return j; }
+	CUDA_FUNC_IN    int             arg_min(void) const                { const T* tp = getPtr(); int j = 0; for (int i = 1; i < L; i++) if(tp[i] < tp[j]) j = i; return j; }
+	CUDA_FUNC_IN    int             arg_max(void) const                { const T* tp = getPtr(); int j = 0; for (int i = 1; i < L; i++) if (tp[i] > tp[j]) j = i; return j; }
 	CUDA_FUNC_IN    T               sum(void) const                { const T* tp = getPtr(); T r = tp[0]; for (int i = 1; i < L; i++) r += tp[i]; return r; }
-	CUDA_FUNC_IN    S               abs(void) const                { const T* tp = getPtr(); S r; T* rp = r.getPtr(); for (int i = 0; i < L; i++) rp[i] = math::abs(tp[i]); return r; }
-	CUDA_FUNC_IN	S				sign() const					{ const T* tp = getPtr(); S r; T* rp = r.getPtr(); for (int i = 0; i < L; i++) rp[i] = math::sign(tp[i]); return r; }
-	CUDA_FUNC_IN	S				floor() const					{ const T* tp = getPtr(); S r; T* rp = r.getPtr(); for (int i = 0; i < L; i++) rp[i] = math::floor(tp[i]); return r; }
-	CUDA_FUNC_IN	S				ceil() const					{ const T* tp = getPtr(); S r; T* rp = r.getPtr(); for (int i = 0; i < L; i++) rp[i] = math::ceil(tp[i]); return r; }
+	CUDA_FUNC_IN    S               abs(void) const                { const T* tp = getPtr(); S r; T* rp = r.getPtr(); for (int i = 0; i < L; i++) rp[i]  = (T)math::abs  ((float)tp[i]); return r; }
+	CUDA_FUNC_IN	S				sign() const					{ const T* tp = getPtr(); S r; T* rp = r.getPtr(); for (int i = 0; i < L; i++) rp[i] = (T)math::sign ((float)tp[i]); return r; }
+	CUDA_FUNC_IN	S				floor() const					{ const T* tp = getPtr(); S r; T* rp = r.getPtr(); for (int i = 0; i < L; i++) rp[i] = (T)math::floor((float)tp[i]); return r; }
+	CUDA_FUNC_IN	S				ceil() const					{ const T* tp = getPtr(); S r; T* rp = r.getPtr(); for (int i = 0; i < L; i++) rp[i] = (T)math::ceil ((float)tp[i]); return r; }
 
 	CUDA_FUNC_IN    Vector<T, L + 1> toHomogeneous(void) const              { const T* tp = getPtr(); Vector<T, L + 1> r; T* rp = r.getPtr(); for (int i = 0; i < L; i++) rp[i] = tp[i]; rp[L] = (T)1; return r; }
 	CUDA_FUNC_IN    Vector<T, L - 1> toCartesian(void) const                { const T* tp = getPtr(); Vector<T, L - 1> r; T* rp = r.getPtr(); T c = rcp(tp[L - 1]); for (int i = 0; i < L - 1; i++) rp[i] = tp[i] * c; return r; }

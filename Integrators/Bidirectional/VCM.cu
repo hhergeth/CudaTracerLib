@@ -128,7 +128,7 @@ __global__ void pathKernel(unsigned int w, unsigned int h, int xoff, int yoff, B
 void VCM::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 {
 	float radius = getCurrentRadius(2);
-	pathKernel << < BLOCK_SAMPLER_LAUNCH_CONFIG >> >(w, h, x, y, m_pBlockSampler->getBlockImage(), radius, m_uPassesDone, w * h);
+	pathKernel << < BLOCK_SAMPLER_LAUNCH_CONFIG >> >(w, h, x, y, m_pBlockSampler->getBlockImage(), radius, m_uPassesDone, (float)(w * h));
 }
 
 void VCM::DoRender(Image* I)

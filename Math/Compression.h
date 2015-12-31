@@ -52,7 +52,7 @@ CUDA_FUNC_IN Vec3f Uchar2ToNormalizedFloat3_Scaling(unsigned short v)
 
 CUDA_FUNC_IN uchar3 NormalizedFloat3ToUchar3(Vec3f& v)
 {
-#define CNV(x) x * 127.0f + 127.0f
+#define CNV(x) (unsigned char)(x * 127.0f + 127.0f)
 	return make_uchar3(CNV(v.x), CNV(v.y), CNV(v.z));
 #undef CNV
 }

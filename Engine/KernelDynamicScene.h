@@ -91,7 +91,7 @@ struct KernelDynamicScene
 	CUDA_FUNC_IN Ray GenerateSensorRay(int x, int y)
 	{
 		Ray r;
-		sampleSensorRay(r, Vec2f(x, y), Vec2f(0));
+		sampleSensorRay(r, Vec2f((float)x, (float)y), Vec2f(0));
 		return r;
 	}
 

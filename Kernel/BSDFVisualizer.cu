@@ -30,7 +30,7 @@ CUDA_FUNC_IN Spectrum func(BSDFALL& bsdf, Vec3f wo, int w, int h, int x, int y, 
 	bRec.mode = ETransportMode::ERadiance;
 	bRec.typeMask = EAll;
 	bRec.wi = wo;
-	Vec2f xy = Vec2f(x, y) / Vec2f(w, h);
+	Vec2f xy = Vec2f((float)x, (float)y) / Vec2f((float)w, (float)h);
 	if (length(2.0f * xy - Vec2f(1)) > 1)
 		return Spectrum(100, 149, 237) / 255.0f;
 	bRec.wo = hemishphere(xy);//bsdf.As()->hasComponent(EDelta) ? EDiscrete : ESolidAngle
@@ -51,7 +51,7 @@ CUDA_FUNC_IN Spectrum func2(BSDFALL& bsdf, InfiniteLight& light, CudaRNG& rng, f
 	bRec.eta = 1;
 	bRec.mode = ETransportMode::ERadiance;
 	bRec.typeMask = EAll;
-	Vec2f xy = Vec2f(x, y) / Vec2f(w, h);
+	Vec2f xy = Vec2f((float)x, (float)y) / Vec2f((float)w, (float)h);
 	//if (length(2.0f * xy - Vec2f(1)) > 1)
 	//	return Spectrum(100, 149, 237) / 255.0f;
 	//bRec.wi = hemishphere(xy);

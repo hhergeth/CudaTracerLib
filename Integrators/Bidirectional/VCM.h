@@ -21,7 +21,7 @@ private:
 	unsigned long long m_uPhotonsEmitted;
 	float getCurrentRadius(int exp)
 	{
-		return CudaTracerLib::getCurrentRadius(m_fInitialRadius, m_uPassesDone, exp);
+		return CudaTracerLib::getCurrentRadius(m_fInitialRadius, m_uPassesDone, (float)exp);
 	}
 };
 

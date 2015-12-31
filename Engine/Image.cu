@@ -372,8 +372,8 @@ void Image::DrawSamplePlacement(int numPasses)
 	T1.viewTarget = viewTarget;
 	T2.viewCudaSurfaceObject = viewCudaSurfaceObject;
 	if (outState == 1)
-		rtm_NumSamples << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(cudaPixels, T2, xResolution, yResolution, numPasses);
-	else rtm_NumSamples << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(cudaPixels, T1, xResolution, yResolution, numPasses);
+		rtm_NumSamples << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(cudaPixels, T2, xResolution, yResolution, (float)numPasses);
+	else rtm_NumSamples << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(cudaPixels, T1, xResolution, yResolution, (float)numPasses);
 	disableUpdate();
 }
 

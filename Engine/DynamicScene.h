@@ -144,6 +144,7 @@ public:
 	{
 		m_sShapeCreationClb = clb;
 	}
+	void RecomputeShape(ShapeSet& shape, const float4x4& mat);
 
 	BufferRange<Node, Node>& getNodes();
 	BufferRange<VolumeRegion, VolumeRegion>& getVolumes();

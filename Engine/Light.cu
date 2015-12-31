@@ -85,18 +85,18 @@ Spectrum DiffuseLight::eval(const Vec3f& p, const Frame& sys, const Vec3f &d) co
 Spectrum DiffuseLight::sampleDirect(DirectSamplingRecord &dRec, const Vec2f &_sample) const
 {
 	Vec2f sample = _sample, uv;
+	float sc = 1;
 	if (m_bOrthogonal)
 	{
-		//sample random triangle using uniform pdf
-		float xN = shapeSet.numTriangles() * sample.x;
-		unsigned int t_idx = (unsigned int)xN;
-		//resample sample
-		sample.x = xN - t_idx;
-		const ShapeSet::triData& tri = shapeSet.getTriangle(t_idx);
-		const Vec3f n = -normalize(cross(tri.p[2] - tri.p[0], tri.p[1] - tri.p[0]));
-		float lambda = dot(tri.p[0], n) - dot(dRec.ref, n);// := (p_0 * n - p * n) / (n * n)
+		sc = PI;
+		//sample random triangle
+		Vec3f p0, p1, p2;
+		Vec2f uv0, uv1, uv2;
+		shapeSet.sampleTriangle(p0, p1, p2, uv0, uv1, uv2, dRec.pdf, sample.x);
+		const Vec3f n = -normalize(cross(p2 - p0, p1 - p0));
+		float lambda = dot(p0, n) - dot(dRec.ref, n);// := (p_0 * n - p * n) / (n * n)
 		dRec.p = dRec.ref + lambda * n;
-		bool inTriangle = MonteCarlo::Barycentric(dRec.p, tri.p[0], tri.p[1], tri.p[2], dRec.uv.x, dRec.uv.y);
+		bool inTriangle = MonteCarlo::Barycentric(dRec.p, p0, p1, p2, dRec.uv.x, dRec.uv.y);
 		if (!inTriangle)
 		{
 			dRec.pdf = 0.0f;
@@ -105,9 +105,7 @@ Spectrum DiffuseLight::sampleDirect(DirectSamplingRecord &dRec, const Vec2f &_sa
 		dRec.n = n;
 		dRec.pdf = 1.0f / float(shapeSet.numTriangles());
 		dRec.measure = EArea;
-		Vec2f uv1, uv2, uv3;
-		tri.tDat->getUVSetData(0, uv1, uv2, uv3);
-		uv = dRec.uv.x * uv1 + dRec.uv.y * uv2 + (1 - dRec.uv.x - dRec.uv.y) * uv3;
+		uv = dRec.uv.x * uv0 + dRec.uv.y * uv1 + (1 - dRec.uv.x - dRec.uv.y) * uv2;
 	}
 	else shapeSet.SamplePosition(dRec, sample, &uv);
 	dRec.d = dRec.p - dRec.ref;
@@ -128,7 +126,7 @@ Spectrum DiffuseLight::sampleDirect(DirectSamplingRecord &dRec, const Vec2f &_sa
 		dg.P = dRec.p;
 		dg.uv[0] = uv;
 		dg.bary = dRec.uv;
-		return m_rad_texture.Evaluate(dg) / dRec.pdf;
+		return m_rad_texture.Evaluate(dg) / dRec.pdf * sc;
 	}
 	else
 	{
@@ -142,9 +140,9 @@ float DiffuseLight::pdfDirect(const DirectSamplingRecord &dRec) const
 	if (dot(dRec.d, dRec.refN) >= 0 && dot(dRec.d, dRec.n) < 0)
 	{
 		if (m_bOrthogonal)
-			return dRec.measure == EDiscrete ? 1.0f / float(shapeSet.numTriangles()) : 0.0f;
+			return dRec.measure == EDiscrete ? shapeSet.PdfTriangle(dRec.p) : 0.0f;
 
-		float pdfPos = shapeSet.Pdf();
+		float pdfPos = shapeSet.PdfPosition();
 
 		if (dRec.measure == ESolidAngle)
 			return pdfPos * (dRec.dist * dRec.dist) / absdot(dRec.d, dRec.n);
@@ -338,11 +336,11 @@ Spectrum SpotLight::falloffCurve(const Vec3f &d) const
 InfiniteLight::InfiniteLight(Stream<char>* a_Buffer, BufferReference<MIPMap, KernelMIPMap>& mip, const Spectrum& scale, const AABB* scenBox)
 	: LightBase(false), radianceMap(mip->getKernelData()), m_scale(scale), m_pSceneBox(scenBox)
 {
-	m_size = Vec2f(radianceMap.m_uWidth, radianceMap.m_uHeight);
+	m_size = Vec2f((float)radianceMap.m_uWidth, (float)radianceMap.m_uHeight);
 	unsigned int nEntries = (unsigned int)(m_size.x + 1) * (unsigned int)m_size.y;
 	StreamReference<char> m1 = a_Buffer->malloc_aligned<float>(nEntries * sizeof(float)), 
-						  m2 = a_Buffer->malloc_aligned<float>((m_size.y + 1) * sizeof(float)), 
-						  m3 = a_Buffer->malloc_aligned<float>(m_size.y * sizeof(float));
+						  m2 = a_Buffer->malloc_aligned<float>((radianceMap.m_uHeight + 1) * sizeof(float)),
+						  m3 = a_Buffer->malloc_aligned<float>(radianceMap.m_uHeight * sizeof(float));
 	m_cdfCols = m1.AsVar<float>();
 	m_cdfRows = m2.AsVar<float>();
 	m_rowWeights = m3.AsVar<float>();
@@ -381,7 +379,7 @@ InfiniteLight::InfiniteLight(Stream<char>* a_Buffer, BufferReference<MIPMap, Ker
 	m1.Invalidate(); m2.Invalidate(); m3.Invalidate();
 
 	float lvl = 0.65f, qpdf;
-	unsigned int INDEX = MonteCarlo::sampleReuse(m_cdfRows.operator->(), m_size.y, lvl, qpdf);
+	unsigned int INDEX = MonteCarlo::sampleReuse(m_cdfRows.operator->(), radianceMap.m_uHeight, lvl, qpdf);
 
 	m_worldTransform = m_worldTransformInverse = float4x4::Identity();
 }
@@ -471,14 +469,14 @@ Spectrum InfiniteLight::evalDirection(const DirectionSamplingRecord &dRec, const
 void InfiniteLight::internalSampleDirection(Vec2f sample, Vec3f &d, Spectrum &value, float &pdf) const
 {
 	float qpdf;
-	unsigned int	row = MonteCarlo::sampleReuse(m_cdfRows.operator->(), m_size.y, sample.y, qpdf),
-		col = MonteCarlo::sampleReuse(m_cdfCols.operator->() + row * (unsigned int)(m_size.x + 1), m_size.x, sample.x, qpdf);
+	unsigned int	row = MonteCarlo::sampleReuse(m_cdfRows.operator->(), (unsigned int)m_size.y, sample.y, qpdf),
+		col = MonteCarlo::sampleReuse(m_cdfCols.operator->() + row * (unsigned int)(m_size.x + 1), (unsigned int)m_size.x, sample.x, qpdf);
 
 	/* Using the remaining bits of precision to shift the sample by an offset
 		drawn from a tent function. This effectively creates a sampling strategy
 		for a linearly interpolated environment map */
 
-	Vec2f pos = Vec2f(col, row) + Warp::squareToTent(sample);
+	Vec2f pos = Vec2f((float)col, (float)row) + Warp::squareToTent(sample);
 	//Vec2f pos = sample * m_size;
 
 	/* Bilinearly interpolate colors from the adjacent four neighbors */

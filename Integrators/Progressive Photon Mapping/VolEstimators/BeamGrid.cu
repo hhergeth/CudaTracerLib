@@ -11,9 +11,9 @@ __global__ void buildBeams(float r, int dimN, float nnSearch)
 	Vec3u cell_idx(blockDim.x * blockIdx.x + threadIdx.x, blockDim.y * blockIdx.y + threadIdx.y, blockDim.z * blockIdx.z + threadIdx.z);
 	if (cell_idx.x < dimN && cell_idx.y < dimN && cell_idx.z < dimN)
 	{
+#ifdef ISCUDA
 		Vec3f cellCenter = g_PhotonStorage.getHashGrid().getCell(cell_idx).Center();
 		float r_search = r;// + g_PhotonStorage.getHashGrid().m_vCellSize.length() / 2;
-#ifdef ISCUDA
 		int N = 0;
 		g_PhotonStorage.ForAll(cellCenter - Vec3f(r_search), cellCenter + Vec3f(r_search), [&](const Vec3u& cell_idx, unsigned int pIdx, const PointStorage::volPhoton& ph)
 		{

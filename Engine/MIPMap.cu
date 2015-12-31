@@ -21,7 +21,7 @@ CUDA_FUNC_IN float hypot2(float a, float b)
 Spectrum KernelMIPMap::Texel(unsigned int level, const Vec2f& a_UV) const
 {
 	Vec2f l;
-	if (!WrapCoordinates(a_UV, Vec2f(m_uWidth >> level, m_uHeight >> level), m_uWrapMode, &l))
+	if (!WrapCoordinates(a_UV, Vec2f((float)(m_uWidth >> level), (float)(m_uHeight >> level)), m_uWrapMode, &l))
 		return Spectrum(0.0f);
 	else
 	{
@@ -44,7 +44,7 @@ Spectrum KernelMIPMap::Texel(unsigned int level, const Vec2f& a_UV) const
 Spectrum KernelMIPMap::triangle(unsigned int level, const Vec2f& a_UV) const
 {
 	level = math::clamp(level, 0u, m_uLevels - 1);
-	Vec2f s = Vec2f(m_uWidth >> level, m_uHeight >> level), is = Vec2f(1) / s;
+	Vec2f s = Vec2f((float)(m_uWidth >> level), (float)(m_uHeight >> level)), is = Vec2f(1.0f) / s;
 	Vec2f l = a_UV * s;// - make_float2(0.5f)
 	float ds = math::frac(l.x), dt = math::frac(l.y);
 	return (1.f - ds) * (1.f - dt) * Texel(level, a_UV) +
@@ -58,7 +58,7 @@ Spectrum KernelMIPMap::evalEWA(unsigned int level, const Vec2f &uv, float A, flo
 	if (level >= m_uLevels)
 		return Texel(m_uLevels - 1, Vec2f(0));
 
-	Vec2f size = Vec2f(m_uWidth >> level, m_uHeight >> level);
+	Vec2f size = Vec2f((float)(m_uWidth >> level), (float)(m_uHeight >> level));
 	float u = uv.x * size.x - 0.5f;
 	float v = uv.y * size.y - 0.5f;
 
@@ -98,7 +98,7 @@ Spectrum KernelMIPMap::evalEWA(unsigned int level, const Vec2f &uv, float A, flo
 				if (qi < MTS_MIPMAP_LUT_SIZE)
 				{
 					const float weight = m_weightLut[(int)q];
-					result += Texel(level, Vec2f(ut, vt) / size) * weight;
+					result += Texel(level, Vec2f((float)ut, (float)vt) / size) * weight;
 					denominator += weight;
 					++nSamples;
 				}
@@ -123,7 +123,7 @@ Spectrum KernelMIPMap::Sample(const Vec2f& uv) const
 float KernelMIPMap::SampleAlpha(const Vec2f& uv) const
 {
 	Vec2f l;
-	if (!WrapCoordinates(uv, Vec2f(m_uWidth, m_uHeight), m_uWrapMode, &l))
+	if (!WrapCoordinates(uv, Vec2f((float)m_uWidth, (float)m_uHeight), m_uWrapMode, &l))
 		return 0.0f;
 	unsigned int x = (unsigned int)l.x, y = (unsigned int)l.y, level = 0;
 	void* data;
@@ -178,10 +178,10 @@ void KernelMIPMap::evalGradient(const Vec2f& uv, Spectrum* gradient) const
 	int xPos = math::Float2Int(u), yPos = math::Float2Int(v);
 	float dx = u - xPos, dy = v - yPos;
 
-	const Spectrum p00 = Texel(level, Vec2f(xPos, yPos) / m_fDim);
-	const Spectrum p10 = Texel(level, Vec2f(xPos + 1, yPos) / m_fDim);
-	const Spectrum p01 = Texel(level, Vec2f(xPos, yPos + 1) / m_fDim);
-	const Spectrum p11 = Texel(level, Vec2f(xPos + 1, yPos + 1) / m_fDim);
+	const Spectrum p00 = Texel(level, Vec2f((float)xPos, (float)yPos) / m_fDim);
+	const Spectrum p10 = Texel(level, Vec2f((float)xPos + 1, (float)yPos) / m_fDim);
+	const Spectrum p01 = Texel(level, Vec2f((float)xPos, (float)yPos + 1) / m_fDim);
+	const Spectrum p11 = Texel(level, Vec2f((float)xPos + 1, (float)yPos + 1) / m_fDim);
 	Spectrum tmp = p01 + p10 - p11;
 
 	gradient[0] = (p10 + p00*(dy - 1) - tmp*dy) * m_fDim.x;
@@ -204,7 +204,7 @@ Spectrum KernelMIPMap::eval(const Vec2f& uv, const Vec2f& d0, const Vec2f& d1) c
 		float levela = math::log2(m_fDim.x / math::abs(du)),
 			  levelb = math::log2(m_fDim.y / math::abs(dv)),
 			  level = m_uLevels - math::clamp((levela + levelb) / 2.0f, 1.0f, (float)m_uLevels);
-		int iLevel = math::floor(level), iLevel2 = math::clamp(iLevel + 1, 0, (int)m_uLevels - 1);
+		int iLevel = math::Floor2Int(level), iLevel2 = math::clamp(iLevel + 1, 0, (int)m_uLevels - 1);
 		float p = level - iLevel;
 		Spectrum texelA = triangle(iLevel, uv), texelB = triangle(iLevel2, uv);
 		return p * texelA + (1 - p) * texelB;
@@ -290,7 +290,7 @@ struct MapPoint
 
 		int2 uvIdxs[3] = { make_int2(2, 1), make_int2(0, 2), make_int2(0, 1) };
 		float sc = val[uvIdxs[f].x], tc = val[uvIdxs[f].y], w = math::abs(val[f]);
-		float sign1 = (face == 0 || face == 5) ? -1 : 1, sign2 = face == 2 ? 1 : -1;
+		float sign1 = (face == 0 || face == 5) ? -1.0f : 1.0f, sign2 = face == 2 ? 1.0f : -1.0f;
 		return (Vec2f(sc * sign1, tc * sign2) / w + Vec2f(1)) / 2.0f;
 	}
 
@@ -364,7 +364,7 @@ void MIPMap::CreateSphericalSkydomeTexture(const std::string& front, const std::
 			for (unsigned int y = 0; y < h; y++)
 			{
 				unsigned int xp = x;
-				Vec3f c = M(w, h, xp, y, maps);
+				Vec3f c = M((float)w, (float)h, xp, y, maps);
 				B[y * w + xp] = c;
 			}
 	}
@@ -378,7 +378,7 @@ void MIPMap::CreateSphericalSkydomeTexture(const std::string& front, const std::
 
 CUDA_FUNC_IN float sample(imgData& img, const Vec3f& p)
 {
-	Vec2f q = clamp01(p.getXY()) * Vec2f(img.w(), img.h());
+	Vec2f q = clamp01(p.getXY()) * Vec2f((float)img.w(), (float)img.h());
 	return img.Load((int)q.x, (int)q.y).average();
 }
 template<int SEARCH_STEPS> CUDA_FUNC_IN bool text_cords_next_intersection(imgData& img, const Vec3f& pos, const Vec3f& dir, float& height, Vec2f& kw)
@@ -475,7 +475,6 @@ void MIPMap::CreateRelaxedConeMap(const std::string& a_InputFile, FileOutputStre
 	float* hostConeData = new float[data.w() * data.h()];
 	ThrowCudaErrors(cudaMemcpy(hostConeData, deviceDepthData, data.w() * data.h() * 4, cudaMemcpyDeviceToHost));
 
-	float oldw = data.w(), oldh = data.h();
 	data.d(hostConeData); //do NOT free the actual image data, this will be done later
 	data.RescaleToPowerOf2();
 	hostConeData = (float*)data.d();
@@ -510,6 +509,7 @@ void MIPMap::CreateRelaxedConeMap(const std::string& a_InputFile, FileOutputStre
 	a_Out << (unsigned int)1;
 	a_Out << data.w() * data.h() * 8;
 
+	float oldw = (float)data.w(), oldh = (float)data.h();
 	float2* imgData = new float2[data.w() * data.h()];
 	for ( int i = 0; i < data.w(); i++)
 		for (int j = 0; j < data.h(); j++)

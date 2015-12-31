@@ -376,7 +376,7 @@ void DynamicScene::SetNodeTransform(const float4x4& mat, StreamReference<Node> n
 	n.Invalidate();
 	enumerateLights(n, [&](StreamReference<KernelLight> l)
 	{
-		l->As<DiffuseLight>()->Recalculate(mat, m_pAnimStream);
+		RecomputeShape(l->As<DiffuseLight>()->shapeSet, mat);
 		l.Invalidate();
 	});
 }
@@ -562,8 +562,8 @@ std::string DynamicScene::printInfo()
 	const int L = 40;
 #define PRINT(BUF) \
 		{ \
-		float s = BUF->getDeviceSizeInBytes(), per = s / n * 100; \
-		size_t mb = s / (1024 * 1024);\
+		float s = (float)BUF->getDeviceSizeInBytes(), per = s / n * 100; \
+		size_t mb = (size_t)(s / (1024 * 1024));\
 		str << #BUF << std::setw(L - std::string(#BUF).size()) << std::setfill(' ') << std::right << per << "%, " << mb << "[MB]\n"; \
 		}
 	size_t n = getCudaBufferSize();
@@ -584,7 +584,7 @@ std::string DynamicScene::printInfo()
 	size_t l = 0;
 	for (Buffer<MIPMap, KernelMIPMap>::iterator it = m_pTextureBuffer->begin(); it != m_pTextureBuffer->end(); ++it)
 		l += it->getBufferSize();
-	float s = l, per = s / n * 100;
+	float s = (float)l, per = s / (float)n * 100;
 	std::string texName = "Textures";
 	str << texName << std::setw(L - texName.size()) << std::setfill(' ') << std::right << per << "%, " << (s / (1024 * 1024)) << "[MB]\n";
 	return str.str();
@@ -630,6 +630,11 @@ StreamReference<KernelLight> DynamicScene::CreateLight(StreamReference<Node> Nod
 		c->SetData(DiffuseLight(L, s, Node.getIndex()));
 		return c;
 	}
+}
+
+void DynamicScene::RecomputeShape(ShapeSet& shape, const float4x4& mat)
+{
+	shape.Recalculate(mat, m_pAnimStream, m_pTriIntStream);
 }
 
 ShapeSet DynamicScene::CreateShape(StreamReference<Node> Node, const std::string& name, unsigned int* a_Mi)
@@ -679,7 +684,7 @@ ShapeSet DynamicScene::CreateShape(StreamReference<Node> Node, const std::string
 		i++;
 	}
 
-	ShapeSet r = ShapeSet(&n[0], &n3[0], (unsigned int)n.size(), GetNodeTransform(Node), m_pAnimStream);
+	ShapeSet r = ShapeSet(&n[0], &n3[0], (unsigned int)n.size(), GetNodeTransform(Node), m_pAnimStream, m_pTriIntStream);
 	return r;
 }
 

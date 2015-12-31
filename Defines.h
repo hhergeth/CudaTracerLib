@@ -129,8 +129,6 @@ template<typename T> inline void ZeroMemoryCuda(T* cudaVar)
 		cudaMemcpy(&value, tar, sizeof(value), cudaMemcpyDeviceToHost); \
 	}
 
-#pragma warning(disable: 4244)
-
 template<typename T> class e_Variable
 {
 public:

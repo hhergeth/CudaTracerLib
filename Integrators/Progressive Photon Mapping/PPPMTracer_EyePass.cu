@@ -20,6 +20,7 @@ CUDA_FUNC_IN bool sphere_line_intersection(const Vec3f& p, float rad, const Ray&
 
 template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum PointStorage::L_Volume(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr)
 {
+	Tr = 1;
 	Spectrum Tau = Spectrum(0.0f);
 	float Vs = 1.0f / (4.0f / 3.0f * PI * m_fCurrentRadiusVol * m_fCurrentRadiusVol * m_fCurrentRadiusVol * m_uNumEmitted);
 	Spectrum L_n = Spectrum(0.0f);
@@ -418,13 +419,13 @@ void PPPMTracer::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 	BlockSampleImage img = m_pBlockSampler->getBlockImage();
 
 	if (dynamic_cast<BeamGrid*>(m_pVolumeEstimator))
-		k_EyePass<BeamGrid> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, m_uPassesDone, radius2, radius3, A, img, m_useDirectLighting, perPixelRad, finalGathering);
+		k_EyePass<BeamGrid> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, (float)m_uPassesDone, radius2, radius3, A, img, m_useDirectLighting, perPixelRad, finalGathering);
 	else if(dynamic_cast<PointStorage*>(m_pVolumeEstimator))
-		k_EyePass<PointStorage> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, m_uPassesDone, radius2, radius3, A, img, m_useDirectLighting, perPixelRad, finalGathering);
+		k_EyePass<PointStorage> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, (float)m_uPassesDone, radius2, radius3, A, img, m_useDirectLighting, perPixelRad, finalGathering);
 	else if (dynamic_cast<BeamBeamGrid*>(m_pVolumeEstimator))
-		k_EyePass<BeamBeamGrid> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, m_uPassesDone, radius2, radius3, A, img, m_useDirectLighting, perPixelRad, finalGathering);
+		k_EyePass<BeamBeamGrid> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, (float)m_uPassesDone, radius2, radius3, A, img, m_useDirectLighting, perPixelRad, finalGathering);
 	else if (dynamic_cast<BeamBVHStorage*>(m_pVolumeEstimator))
-		k_EyePass<BeamBVHStorage> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, m_uPassesDone, radius2, radius3, A, img, m_useDirectLighting, perPixelRad, finalGathering);
+		k_EyePass<BeamBVHStorage> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, (float)m_uPassesDone, radius2, radius3, A, img, m_useDirectLighting, perPixelRad, finalGathering);
 	//k_EyePass2 << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, m_uPassesDone, radius2, radius3, A, img, m_fIntitalRadMin, m_fIntitalRadMax);
 
 	ThrowCudaErrors(cudaThreadSynchronize());

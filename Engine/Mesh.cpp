@@ -119,7 +119,7 @@ SceneInitData Mesh::ParseBinary(const std::string& a_InputFile)
 	unsigned int numLights;
 	a_In >> numLights;
 	a_In.Move(sizeof(MeshPartLight) * numLights);
-#define PRINT(n, t) { a_In.Move(n * sizeof(t)); Platform::OutputDebug(format("Buf : %s, length : %llu, size : %llu[MB]\n", #t, size_t(n), size_t((n) * sizeof(t) / (1024 * 1024))));}
+#define PRINT(n, t) { a_In.Move((int)(n * sizeof(t))); Platform::OutputDebug(format("Buf : %s, length : %llu, size : %llu[MB]\n", #t, size_t(n), size_t((n) * sizeof(t) / (1024 * 1024))));}
 	unsigned int m_uTriangleCount;
 	a_In >> m_uTriangleCount;
 	PRINT(m_uTriangleCount, TriangleData)
@@ -139,7 +139,7 @@ SceneInitData Mesh::ParseBinary(const std::string& a_InputFile)
 #undef PRINT2
 		a_In.Close();
 	Platform::OutputDebug(format("return CreateForSpecificMesh(%d, %d, %d, %d, 255, a_Lights);\n", m_uTriangleCount, m_uIntSize, m_uNodeSize, m_uIndicesSize));
-	return SceneInitData::CreateForSpecificMesh(m_uTriangleCount, m_uIntSize, m_uNodeSize, m_uIndicesSize, 255, 16, 16, 8);
+	return SceneInitData::CreateForSpecificMesh(m_uTriangleCount, (unsigned int)m_uIntSize, (unsigned int)m_uNodeSize, (unsigned int)m_uIndicesSize, 255, 16, 16, 8);
 }
 
 void Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2f* uvs, const unsigned int* indices, unsigned int nIndices, const Material& mat, const Spectrum& Le, FileOutputStream& a_Out)

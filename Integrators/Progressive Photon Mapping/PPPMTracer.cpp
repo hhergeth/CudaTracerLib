@@ -11,7 +11,7 @@ namespace CudaTracerLib {
 PPPMTracer::PPPMTracer()
 	: m_pEntries(0), m_fLightVisibility(1), k_Intial(10)
 {
-	m_sParameters << KEY_Direct() << CreateSetBool(false)
+	m_sParameters << KEY_Direct() << CreateSetBool(true)
 		<< KEY_PerPixelRadius() << CreateSetBool(false)
 		<< KEY_FinalGathering() << CreateSetBool(false);
 #ifdef NDEBUG
@@ -21,11 +21,11 @@ PPPMTracer::PPPMTracer()
 #endif
 	m_uTotalPhotonsEmitted = -1;
 	unsigned int numPhotons = (m_uBlocksPerLaunch + 2) * PPM_slots_per_block;
-	m_sSurfaceMap = SurfaceMapT(250, numPhotons * PPM_MaxRecursion / 10);
+	m_sSurfaceMap = SurfaceMapT(250, numPhotons);
 	if (m_sParameters.getValue(KEY_FinalGathering()))
-		m_sSurfaceMapCaustic = SurfaceMapT(250, numPhotons * PPM_MaxRecursion / 10);
-	//m_pVolumeEstimator = new PointStorage(100, numPhotons * PPM_MaxRecursion / 10);
-	m_pVolumeEstimator = new BeamGrid(100, numPhotons * PPM_MaxRecursion / 10, 30, 2);
+		m_sSurfaceMapCaustic = SurfaceMapT(250, numPhotons);
+	m_pVolumeEstimator = new PointStorage(100, numPhotons);
+	//m_pVolumeEstimator = new BeamGrid(100, numPhotons, 30, 2);
 	//m_pVolumeEstimator = new BeamBVHStorage(100);
 	//m_pVolumeEstimator = new BeamBeamGrid(10, 10000, 3000);
 }
@@ -33,7 +33,7 @@ PPPMTracer::PPPMTracer()
 void PPPMTracer::PrintStatus(std::vector<std::string>& a_Buf) const
 {
 	a_Buf.push_back(GET_PERF_BLOCKS().ToString());
-	double pC = math::floor((double)m_uTotalPhotonsEmitted / 1000000.0);
+	double pC = math::floor((float)((double)m_uTotalPhotonsEmitted / 1000000.0));
 	a_Buf.push_back(format("Photons emitted : %d[Mil]", (int)pC));
 	double pCs = m_uTotalPhotonsEmitted / m_fAccRuntime / 1000000.0f;
 	double pCsLast = m_uPhotonEmittedPass / m_fLastRuntime / 1000000.0f;
@@ -74,7 +74,7 @@ void PPPMTracer::getRadiusAt(int x, int y, float& r, float& rd) const
 {
 	k_AdaptiveEntry e;
 	ThrowCudaErrors(cudaMemcpy(&e, m_pEntries + w * y + x, sizeof(e), cudaMemcpyDeviceToHost));
-	r = e.compute_r(m_uPassesDone, m_sSurfaceMap.getNumEntries(), m_uTotalPhotonsEmitted);
+	r = e.compute_r((int)m_uPassesDone, (int)m_sSurfaceMap.getNumEntries(), (int)m_uTotalPhotonsEmitted);
 	rd = e.compute_rd(m_uPassesDone);
 }
 

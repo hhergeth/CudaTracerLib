@@ -79,7 +79,7 @@ float legendreP(int l, int m, float x) {
 Vec2f legendreQ(int l, float x)
 {
 	if (l == 1) {
-		return Vec2f(0.5 * (3 * x*x - 1) - 1, 3 * x);
+		return Vec2f(0.5f * (3.0f * x*x - 1.0f) - 1.0f, 3.0f * x);
 	}
 	else {
 		/* Evaluate the recurrence in double precision */

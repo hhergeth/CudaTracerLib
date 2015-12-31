@@ -53,7 +53,7 @@ unsigned int TraceResult::LightIndex() const
 
 unsigned int TraceResult::getNodeIndex() const
 {
-	return m_pNode - g_SceneData.m_sNodeData.Data;
+	return (int)(m_pNode - g_SceneData.m_sNodeData.Data);
 }
 
 const Material& TraceResult::getMat() const
@@ -63,7 +63,7 @@ const Material& TraceResult::getMat() const
 
 unsigned int TraceResult::getTriIndex() const
 {
-	return m_pTri - g_SceneData.m_sTriData.Data;
+	return (int)(m_pTri - g_SceneData.m_sTriData.Data);
 }
 
 void TraceResult::fillDG(DifferentialGeometry& dg) const

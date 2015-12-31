@@ -165,13 +165,13 @@ void k_INITIALIZE(DynamicScene* a_Scene, const CudaRNGBuffer& a_RngBuf)
 	void* symAdd = 0;
 	ThrowCudaErrors(cudaGetSymbolAddress(&symAdd, g_RayTracedCounterDevice));
 	if (symAdd)
-		ThrowCudaErrors(cudaMemcpy(symAdd, &b, sizeof(b), cudaMemcpyHostToDevice));
+		ThrowCudaErrors(cudaMemcpyToSymbol(g_RayTracedCounterDevice, &b, sizeof(b)));
 	ThrowCudaErrors(cudaGetSymbolAddress(&symAdd, g_SceneDataDevice));
 	if (symAdd)
 		ThrowCudaErrors(cudaMemcpyToSymbol(g_SceneDataDevice, &a_Data, sizeof(a_Data)));
 	ThrowCudaErrors(cudaGetSymbolAddress(&symAdd, g_RNGDataDevice));
 	if (symAdd)
-	ThrowCudaErrors(cudaMemcpyToSymbol(g_RNGDataDevice, &a_RngBuf, sizeof(a_RngBuf)));
+		ThrowCudaErrors(cudaMemcpyToSymbol(g_RNGDataDevice, &a_RngBuf, sizeof(a_RngBuf)));
 
 	g_SceneDataHost = a_Scene->getKernelSceneData(false);
 	g_RNGDataHost = a_RngBuf;
@@ -181,8 +181,8 @@ void k_INITIALIZE(DynamicScene* a_Scene, const CudaRNGBuffer& a_RngBuf)
 void fillDG(const Vec2f& bary, const TriangleData* tri, const Node* node, DifferentialGeometry& dg)
 {
 	float4x4 localToWorld, worldToLocal;
-	loadModl(node - g_SceneData.m_sNodeData.Data, &localToWorld);
-	loadInvModl(node - g_SceneData.m_sNodeData.Data, &worldToLocal);
+	loadModl((unsigned int)(node - g_SceneData.m_sNodeData.Data), &localToWorld);
+	loadInvModl((unsigned int)(node - g_SceneData.m_sNodeData.Data), &worldToLocal);
 	dg.bary = bary;
 	dg.hasUVPartials = false;
 #if defined(ISCUDA) && NUM_UV_SETS == 1 && defined(EXT_TRI)

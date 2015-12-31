@@ -12,7 +12,7 @@ namespace CudaTracerLib {
 
 CUDA_FUNC_IN float getCurrentRadius(float initial_r, unsigned int iteration, float exp)
 {
-	return initial_r * math::pow(iteration, (ALPHA - 1) / exp);
+	return initial_r * math::pow((float)iteration, (ALPHA - 1) / exp);
 }
 
 //smoothing kernel which integrates [-1, +1] to 1

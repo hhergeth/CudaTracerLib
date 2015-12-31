@@ -20,7 +20,7 @@ template<typename T> CUDA_FUNC_IN void STL_Sort(T* a_Array, unsigned int a_Lengt
 
 template<typename T> CUDA_FUNC_IN const T* STL_upper_bound(const T* _First, const T* _Last, const T& _Val)
 {
-	unsigned int _Count = _Last - _First;
+	unsigned int _Count = (unsigned int)(_Last - _First);
 	for (; 0 < _Count;)
 	{
 		unsigned int _Count2 = _Count / 2;
@@ -38,7 +38,7 @@ template<typename T> CUDA_FUNC_IN const T* STL_upper_bound(const T* _First, cons
 
 template<typename T> CUDA_FUNC_IN const T* STL_lower_bound(const T* _First, const T* _Last, const T& _Val)
 {
-	unsigned int _Count = _Last - _First;
+	unsigned int _Count = (unsigned int)(_Last - _First);
 
 	for (; 0 < _Count;)
 	{

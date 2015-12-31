@@ -99,7 +99,7 @@ void PmmTracer::DoRender(Image* I)
 
 	unsigned int p = 16, w, h;
 	I->getExtent(w, h);
-	visualize << <dim3(w / p + 1, h / p + 1, 1), dim3(p, p, 1) >> >(*I, w, h, 20 * passIteration);
+	visualize << <dim3(w / p + 1, h / p + 1, 1), dim3(p, p, 1) >> >(*I, w, h, 20.0f * (float)passIteration);
 	int rectWidth = 64;
 	if (modelToShow)
 	{
