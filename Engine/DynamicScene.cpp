@@ -157,7 +157,7 @@ public:
 	void fillDeviceData(bool device, KernelDynamicScene& r)
 	{
 		float accum = 0;
-		for (auto& a : *this)
+		for (auto a : *this)
 			accum += m_lightWeights[a.getIndex()];
 
 		//not really necessary
@@ -165,7 +165,7 @@ public:
 
 		r.m_numLights = min((unsigned int)MAX_NUM_LIGHTS, (unsigned int)numElements());
 		unsigned int i = 0;
-		for (auto& a : *this)
+		for (auto a : *this)
 		{
 			r.m_pLightIndices[i] = a.getIndex();
 			float pdf = m_lightWeights[a.getIndex()] / accum;//normalized pdf

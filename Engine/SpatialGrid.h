@@ -73,6 +73,7 @@ public:
 //a mapping from R^3 -> T^n, ie. associating variable number of values with each point in the grid
 template<typename T> class SpatialLinkedMap : public SpatialGrid<T, SpatialLinkedMap<T>>
 {
+typedef SpatialGrid<T, SpatialLinkedMap<T>> BaseType;
 public:
 	struct linkedEntry
 	{
@@ -92,7 +93,7 @@ public:
 	{
 		CUDA_MALLOC(&deviceData, sizeof(linkedEntry) * numData);
 		CUDA_MALLOC(&deviceMap, sizeof(unsigned int) * gridSize * gridSize * gridSize);
-		ThrowCudaErrors(cudaMemset(deviceData, UINT_MAX, sizeof(linkedEntry) * numData));
+		ThrowCudaErrors(cudaMemset(deviceData, 0xffffffff, sizeof(linkedEntry) * numData));
 	}
 
 	void Free()
@@ -103,13 +104,13 @@ public:
 
 	void SetSceneDimensions(const AABB& box)
 	{
-		hashMap = HashGrid_Reg(box, gridSize);
+		BaseType::hashMap = HashGrid_Reg(box, gridSize);
 	}
 
 	void ResetBuffer()
 	{
 		deviceDataIdx = 0;
-		ThrowCudaErrors(cudaMemset(deviceMap, UINT_MAX, sizeof(unsigned int) * gridSize * gridSize * gridSize));
+		ThrowCudaErrors(cudaMemset(deviceMap, 0xffffffff, sizeof(unsigned int) * gridSize * gridSize * gridSize));
 	}
 
 	unsigned int getNumEntries() const
@@ -131,7 +132,7 @@ public:
 
 	CUDA_ONLY_FUNC void store(const Vec3u& p, const T& v, unsigned int data_idx)
 	{
-		unsigned int map_idx = hashMap.Hash(p);
+		unsigned int map_idx = BaseType::hashMap.Hash(p);
 #ifdef ISCUDA
 		unsigned int old_idx = atomicExch(deviceMap + map_idx, data_idx);
 #else
@@ -149,7 +150,7 @@ public:
 		unsigned int data_idx = atomicInc(&deviceDataIdx, (unsigned int)-1);
 		if (data_idx >= numData)
 			return false;
-		unsigned int map_idx = hashMap.Hash(p);
+		unsigned int map_idx = BaseType::hashMap.Hash(p);
 #ifdef ISCUDA
 		unsigned int old_idx = atomicExch(deviceMap + map_idx, data_idx);
 #else
@@ -163,7 +164,7 @@ public:
 
 	CUDA_ONLY_FUNC bool store(const Vec3f& p, const T& v)
 	{
-		return store(hashMap.Transform(p), v);
+		return store(BaseType::hashMap.Transform(p), v);
 	}
 
 	CUDA_ONLY_FUNC unsigned int allocStorage(unsigned int n)
@@ -175,7 +176,7 @@ public:
 
 	template<unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX, typename CLB> CUDA_FUNC_IN void ForAllCellEntries(const Vec3u& p, const CLB& clb)
 	{
-		unsigned int i0 = hashMap.Hash(p), i = deviceMap[i0], N = 0, lo = min(deviceDataIdx, numData);
+		unsigned int i0 = BaseType::hashMap.Hash(p), i = deviceMap[i0], N = 0, lo = min(deviceDataIdx, numData);
 		while (i < lo && N++ < MAX_ENTRIES_PER_CELL)
 		{
 			clb(i, deviceData[i].value);
@@ -241,6 +242,7 @@ template<typename T, int N_PER_THREAD, int N_MAX_PER_CELL> __global__ void build
 
 template<typename T> class SpatialFlatMap : public SpatialGrid<T, SpatialFlatMap<T>>
 {
+typedef SpatialGrid<T, SpatialFlatMap<T>> BaseType;
 public:
 	unsigned int numData, idxData;
 	T* deviceData, *deviceData2;
@@ -287,7 +289,7 @@ public:
 
 	void SetSceneDimensions(const AABB& box)
 	{
-		hashMap = HashGrid_Reg(box, gridSize);
+		BaseType::hashMap = HashGrid_Reg(box, gridSize);
 	}
 
 	void ResetBuffer()
@@ -338,7 +340,7 @@ public:
 		}
 		{
 			auto bl = Tt.StartBlock("reset");
-			ThrowCudaErrors(cudaMemset(deviceGrid, UINT_MAX, gridSize * gridSize * gridSize));
+			ThrowCudaErrors(cudaMemset(deviceGrid, 0xffffffff, gridSize * gridSize * gridSize));
 		}
 		{
 			auto bl = Tt.StartBlock("build");
@@ -372,7 +374,7 @@ public:
 		unsigned int data_idx = atomicInc(&idxData, (unsigned int)-1);
 		if (data_idx >= numData)
 			return false;
-		unsigned int map_idx = hashMap.Hash(p);
+		unsigned int map_idx = BaseType::hashMap.Hash(p);
 		deviceData[data_idx] = v;
 		deviceList[data_idx] = Vec2u(data_idx, map_idx);
 		return true;
@@ -381,12 +383,12 @@ public:
 
 	CUDA_ONLY_FUNC bool store(const Vec3f& p, const T& v)
 	{
-		return store(hashMap.Transform(p), v);
+		return store(BaseType::hashMap.Transform(p), v);
 	}
 
 	template<unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX, typename CLB> CUDA_FUNC_IN void ForAllCellEntries(const Vec3u& p, const CLB& clb)
 	{
-		unsigned int map_idx = deviceGrid[hashMap.Hash(p)], i = 0;
+		unsigned int map_idx = deviceGrid[BaseType::hashMap.Hash(p)], i = 0;
 		while (map_idx < idxData && i++ < MAX_ENTRIES_PER_CELL)
 		{
 			T& val = operator()(map_idx);

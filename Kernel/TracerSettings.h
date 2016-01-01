@@ -165,13 +165,13 @@ public:
 
 	const std::string& getStringValue() const
 	{
-		return EnumConverter<T>::ToString(getValue());
+		return EnumConverter<T>::ToString(TracerParameter<T>::getValue());
 	}
 
 	void setStringValue(const std::string& strVal)
 	{
 		T val = EnumConverter<T>::FromString(strVal);
-		setValue(val);
+		TracerParameter<T>::setValue(val);
 	}
 
 	std::vector<std::string> getStringValues() const
