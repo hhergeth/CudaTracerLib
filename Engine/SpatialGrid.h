@@ -50,9 +50,10 @@ public:
 
 	template<typename CLB> CUDA_FUNC_IN void ForAllCells(const Vec3u& min_cell, const Vec3u& max_cell, const CLB& clb)
 	{
-		for (unsigned int ax = min_cell.x; ax <= max_cell.x; ax++)
-			for (unsigned int ay = min_cell.y; ay <= max_cell.y; ay++)
-				for (unsigned int az = min_cell.z; az <= max_cell.z; az++)
+		Vec3u a = min(min_cell, Vec3u(hashMap.m_gridSize - 1)), b = min(max_cell, Vec3u(hashMap.m_gridSize - 1));
+		for (unsigned int ax = a.x; ax <= b.x; ax++)
+			for (unsigned int ay = a.y; ay <= b.y; ay++)
+				for (unsigned int az = a.z; az <= b.z; az++)
 				{
 					clb(Vec3u(ax, ay, az));
 				}

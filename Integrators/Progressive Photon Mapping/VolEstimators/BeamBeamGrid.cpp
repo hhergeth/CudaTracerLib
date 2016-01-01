@@ -130,6 +130,7 @@ void BeamBeamGrid::PrepareForRendering()
 	m_sStorage.deviceData = A;
 	m_sStorage.deviceMap = B;*/
 	CUDA_MEMCPY_TO_DEVICE(m_sStorage.getDeviceData(), &hostIndices[0], hostIndices.size() * sizeof(SpatialLinkedMap<int>::linkedEntry));
+	m_sStorage.PrepareForUse();
 }
 
 }

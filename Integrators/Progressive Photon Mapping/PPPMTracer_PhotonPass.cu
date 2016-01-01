@@ -14,17 +14,17 @@ CUDA_ONLY_FUNC void BeamBeamGrid::StoreBeam(const Beam& b, bool firstStore)
 		m_pDeviceBeams[beam_idx] = b;
 #ifdef ISCUDA
 		bool storedAll = true;
-		const AABB objaabb = b.getAABB(m_fCurrentRadiusVol);
-		const int maxAxis = b.getDir().abs().arg_max();
-		const int chopCount = (int)(objaabb.Size()[maxAxis] * m_sStorage.getHashGrid().m_vInvSize[maxAxis]) + 1;
-		const float invChopCount = 1.0f / (float)chopCount;
+		//const AABB objaabb = b.getAABB(m_fCurrentRadiusVol);
+		//const int maxAxis = b.getDir().abs().arg_max();
+		//const int chopCount = (int)(objaabb.Size()[maxAxis] * m_sStorage.getHashGrid().m_vInvSize[maxAxis]) + 1;
+		//const float invChopCount = 1.0f / (float)chopCount;
 
-		for (int chop = 0; chop < chopCount; ++chop)
+		//for (int chop = 0; chop < chopCount; ++chop)
 		{
-			AABB aabb = b.getSegmentAABB((chop)* invChopCount, (chop + 1) * invChopCount, m_fCurrentRadiusVol);
+			//AABB aabb = b.getSegmentAABB((chop)* invChopCount, (chop + 1) * invChopCount, m_fCurrentRadiusVol);
 
-			m_sStorage.ForAllCells(aabb.minV, aabb.maxV, [&](const Vec3u& pos)
-			{
+			//m_sStorage.ForAllCells(aabb.minV, aabb.maxV, [&](const Vec3u& pos)
+			//{
 				/*bool found_duplicate = false;
 				m_sStorage.ForAll(pos, [&](unsigned int loc_idx, unsigned int b_idx)
 				{
@@ -33,8 +33,8 @@ CUDA_ONLY_FUNC void BeamBeamGrid::StoreBeam(const Beam& b, bool firstStore)
 				found_duplicate = true;
 				});
 				if (!found_duplicate)*/
-				storedAll &= m_sStorage.store(pos, beam_idx);
-			});
+				//storedAll &= m_sStorage.store(pos, beam_idx);
+			//});
 		}
 
 		//auto aabb = b.getAABB(m_fCurrentRadiusVol);
@@ -77,7 +77,7 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 		Spectrum Le = g_SceneData.sampleEmitterRay(r, light, sps, sds),
 			throughput(1.0f);
 		int depth = -1;
-		bool wasStoredSurface = false, wasStoredVolume = false;
+		bool wasStoredSurface = false, wasStoredVolumePoint = false, wasStoredVolumeBeam = false;
 		bool delta = false;
 		MediumSamplingRecord mRec;
 		bool medium = false;
@@ -88,15 +88,18 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 			TraceResult r2 = traceRay(r);
 			float minT, maxT;
 			bool inMedium = (!bssrdf && V.HasVolumes() && V.IntersectP(r, 0, r2.m_fDist, &minT, &maxT)) || bssrdf;
-			((VolEstimator*)g_VolEstimator)->StoreBeam(Beam(r.origin, r.direction, r2.m_fDist, throughput * Le), !wasStoredVolume);//store the beam even if sampled distance is to far ahead!
-			//wasStoredVolume = true;
+			if (inMedium)
+			{
+				((VolEstimator*)g_VolEstimator)->StoreBeam(Beam(r.origin, r.direction, r2.m_fDist, throughput * Le), !wasStoredVolumeBeam);//store the beam even if sampled distance is to far ahead!
+				wasStoredVolumeBeam = true;
+			}
 			if ((!bssrdf && inMedium && V.sampleDistance(r, 0, r2.m_fDist, rng, mRec))
 				|| (bssrdf && bssrdf->sampleDistance(r, 0, r2.m_fDist, rng.randomFloat(), mRec)))
 			{//mRec.t
 				throughput *= mRec.transmittance / mRec.pdfSuccess;
 				throughput *= mRec.sigmaS;
-				((VolEstimator*)g_VolEstimator)->StorePhoton(mRec.p, -r.direction, throughput * Le, !wasStoredVolume);
-				wasStoredVolume = true;
+				((VolEstimator*)g_VolEstimator)->StorePhoton(mRec.p, -r.direction, throughput * Le, !wasStoredVolumePoint);
+				wasStoredVolumePoint = true;
 				if (bssrdf)
 				{
 					PhaseFunctionSamplingRecord pRec(-r.direction);
