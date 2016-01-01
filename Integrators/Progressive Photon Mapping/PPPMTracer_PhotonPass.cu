@@ -72,7 +72,7 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 	while (atomicInc(&local_Counter, (unsigned int)-1) < local_Todo)// && !g_SurfaceMap.isFull() && !((VolEstimator*)g_VolEstimator)->isFullK()
 	{
 		Ray r;
-		const KernelLight* light;
+		const Light* light;
 		Vec2f sps = rng.randomFloat2(), sds = rng.randomFloat2();
 		Spectrum Le = g_SceneData.sampleEmitterRay(r, light, sps, sds),
 			throughput(1.0f);

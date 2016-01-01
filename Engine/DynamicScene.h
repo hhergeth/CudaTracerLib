@@ -74,20 +74,20 @@ public:
 	ShapeSet CreateShape(BufferReference<Node, Node> Node, const std::string& materialIdx, unsigned int* a_Mi = 0);
 
 	//Creates and returns an empty light
-	BufferReference<KernelLight, KernelLight> CreateLight(const KernelLight& l);
-	template<typename LIGHT> BufferReference<KernelLight, KernelLight> CreateLight(const LIGHT& l)
+	BufferReference<Light, Light> CreateLight(const Light& l);
+	template<typename LIGHT> BufferReference<Light, Light> CreateLight(const LIGHT& l)
 	{
-		KernelLight L;
+		Light L;
 		L.SetData(l);
 		return CreateLight(L);
 	}
 	//Creates and returns an area light in the submesh with the material nem \ref materialName
-	BufferReference<KernelLight, KernelLight> CreateLight(BufferReference<Node, Node> Node, const std::string& materialName, Spectrum& radiance);
+	BufferReference<Light, Light> CreateLight(BufferReference<Node, Node> Node, const std::string& materialName, Spectrum& radiance);
 	//If applicable removes the light corresponding to the material with index \ref materialIdx
 	void removeLight(BufferReference<Node, Node> Node, unsigned int materialIdx);
 	void removeAllLights(BufferReference<Node, Node> Node);
 	//Creates and returns an environment map, using \ref power as scaling factor and \ref file as texture
-	BufferReference<KernelLight, KernelLight> setEnvironementMap(const Spectrum& power, const std::string& file);
+	BufferReference<Light, Light> setEnvironementMap(const Spectrum& power, const std::string& file);
 
 	BufferReference<VolumeRegion, VolumeRegion> CreateVolume(const VolumeRegion& r);
 	template<typename VOLUME> BufferReference<VolumeRegion, VolumeRegion> CreateVolume(const VOLUME& v)
@@ -148,7 +148,7 @@ public:
 
 	BufferRange<Node, Node>& getNodes();
 	BufferRange<VolumeRegion, VolumeRegion>& getVolumes();
-	BufferRange<KernelLight, KernelLight>& getLights();
+	BufferRange<Light, Light>& getLights();
 	BufferRange<MIPMap, KernelMIPMap>& getTextures();
 	BufferRange<Mesh, KernelMesh>& getMeshes();
 	BufferRange<Material, Material>& getMaterials();
@@ -164,18 +164,18 @@ public:
 	AABB getSceneBox();
 	unsigned int getLightCount();
 	//Enumerates all lights in \ref node and calls \ref clb for each, returning the number of lights in \ref node
-	size_t enumerateLights(StreamReference<Node> node, std::function<void(StreamReference<KernelLight>)> clb);
+	size_t enumerateLights(StreamReference<Node> node, std::function<void(StreamReference<Light>)> clb);
 	size_t getLightCount(StreamReference<Node> node)
 	{
 		size_t i = 0;
-		enumerateLights(node, [&](StreamReference<KernelLight>)
+		enumerateLights(node, [&](StreamReference<Light>)
 		{
 			i++;
 		});
 		return i;
 	}
-	float getLeightWeight(StreamReference<KernelLight> ref) const;
-	void setLeightWeight(StreamReference<KernelLight> ref, float f) const;
+	float getLeightWeight(StreamReference<Light> ref) const;
+	void setLeightWeight(StreamReference<Light> ref, float f) const;
 };
 
 }

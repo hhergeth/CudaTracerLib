@@ -19,7 +19,7 @@ CUDA_FUNC_IN void handleEmission(const Spectrum& weight, const PositionSamplingR
 	Spectrum value = weight * g_SceneData.sampleAttenuatedSensorDirect(dRec, rng.randomFloat2());
 	if (!value.isZero() && V(dRec.p, dRec.ref))
 	{
-		const KernelLight* emitter = (const KernelLight*)pRec.object;
+		const Light* emitter = (const Light*)pRec.object;
 		value *= emitter->evalDirection(DirectionSamplingRecord(dRec.d), pRec);
 		g_Image.Splat(dRec.uv.x, dRec.uv.y, value);
 	}
@@ -73,7 +73,7 @@ template<bool CORRECT_DIFFERENTIALS> CUDA_FUNC_IN void doWork(Image& g_Image, Cu
 	handleEmission(power, pRec, g_Image, rng);
 
 	DirectionSamplingRecord dRec;
-	power *= ((const KernelLight*)pRec.object)->sampleDirection(dRec, pRec, rng.randomFloat2());
+	power *= ((const Light*)pRec.object)->sampleDirection(dRec, pRec, rng.randomFloat2());
 
 	Ray r(pRec.p, dRec.d);
 	TraceResult r2;

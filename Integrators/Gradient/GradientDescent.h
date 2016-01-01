@@ -93,7 +93,7 @@ public:
 class LightPathVertex : public PathVertex
 {
 public:
-	KernelLight light;
+	Light light;
 	Vec3f p, n;
 
 	LightPathVertex()

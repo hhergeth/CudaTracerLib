@@ -30,7 +30,7 @@ Spectrum Transmittance(const Ray& r, float tmin, float tmax)
 	return Spectrum(1.0f);
 }
 
-CUDA_FUNC_IN Spectrum EstimateDirect(BSDFSamplingRecord bRec, const Material& mat, const KernelLight* light, EBSDFType flags, CudaRNG& rng, bool attenuated)
+CUDA_FUNC_IN Spectrum EstimateDirect(BSDFSamplingRecord bRec, const Material& mat, const Light* light, EBSDFType flags, CudaRNG& rng, bool attenuated)
 {
 	DirectSamplingRecord dRec(bRec.dg.P, bRec.dg.sys.n);
 	Spectrum value = light->sampleDirect(dRec, rng.randomFloat2());
@@ -61,7 +61,7 @@ Spectrum UniformSampleAllLights(const BSDFSamplingRecord& bRec, const Material& 
 	Spectrum L = Spectrum(0.0f);
 	for (unsigned int i = 0; i < g_SceneData.m_numLights; i++)
 	{
-		const KernelLight* light = g_SceneData.getLight(i);
+		const Light* light = g_SceneData.getLight(i);
 		Spectrum Ld = Spectrum(0.0f);
 		for (int j = 0; j < nSamples; j++)
 		{
@@ -78,7 +78,7 @@ Spectrum UniformSampleOneLight(const BSDFSamplingRecord& bRec, const Material& m
 		return Spectrum(0.0f);
 	Vec2f sample = rng.randomFloat2();
 	float pdf;
-	const KernelLight* light = g_SceneData.sampleEmitter(pdf, sample);
+	const Light* light = g_SceneData.sampleEmitter(pdf, sample);
 	if (light == 0) return Spectrum(0.0f);
 	return EstimateDirect((BSDFSamplingRecord&)bRec, mat, light, EBSDFType(EAll & ~EDelta), rng, attenuated) / pdf;
 }

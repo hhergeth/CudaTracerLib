@@ -5,24 +5,24 @@
 
 namespace CudaTracerLib {
 
-const KernelLight* KernelDynamicScene::getLight(unsigned int idx) const
+const Light* KernelDynamicScene::getLight(unsigned int idx) const
 {
 	return m_sLightBuf.Data + m_pLightIndices[idx];
 }
 
-const KernelLight* KernelDynamicScene::getLight(const TraceResult& tr) const
+const Light* KernelDynamicScene::getLight(const TraceResult& tr) const
 {
 	return m_sLightBuf.Data + tr.LightIndex();
 }
 
-const KernelLight* KernelDynamicScene::getEnvironmentMap() const
+const Light* KernelDynamicScene::getEnvironmentMap() const
 {
 	if (m_uEnvMapIndex == UINT_MAX)
 		return 0;
 	else return m_sLightBuf.Data + m_uEnvMapIndex;
 }
 
-const KernelLight* KernelDynamicScene::sampleEmitter(float& emPdf, Vec2f& sample) const
+const Light* KernelDynamicScene::sampleEmitter(float& emPdf, Vec2f& sample) const
 {
 	if (m_numLights == 0)
 		return 0;
@@ -41,7 +41,7 @@ const KernelLight* KernelDynamicScene::sampleEmitter(float& emPdf, Vec2f& sample
 	return getLight(idx);
 }
 
-float KernelDynamicScene::pdfEmitterDiscrete(const KernelLight *emitter) const
+float KernelDynamicScene::pdfEmitterDiscrete(const Light *emitter) const
 {
 	unsigned int idx = (unsigned int)(emitter - m_sLightBuf.Data);
 	return m_pLightPDF[idx];
@@ -49,7 +49,7 @@ float KernelDynamicScene::pdfEmitterDiscrete(const KernelLight *emitter) const
 
 Spectrum KernelDynamicScene::EvalEnvironment(const Ray& r) const
 {
-	const KernelLight* l = getEnvironmentMap();
+	const Light* l = getEnvironmentMap();
 	if (l)
 		return l->As<InfiniteLight>()->evalEnvironment(r);
 	else return 0.0f;
@@ -57,7 +57,7 @@ Spectrum KernelDynamicScene::EvalEnvironment(const Ray& r) const
 
 Spectrum KernelDynamicScene::EvalEnvironment(const Ray& r, const Ray& rX, const Ray& rY) const
 {
-	const KernelLight* l = getEnvironmentMap();
+	const Light* l = getEnvironmentMap();
 	if (l)
 		return l->As<InfiniteLight>()->evalEnvironment(r, rX, rY);
 	else return 0.0f;
@@ -88,7 +88,7 @@ Spectrum KernelDynamicScene::sampleEmitterDirect(DirectSamplingRecord &dRec, con
 {
 	Vec2f sample = _sample;
 	float emPdf;
-	const KernelLight *emitter = sampleEmitter(emPdf, sample);
+	const Light *emitter = sampleEmitter(emPdf, sample);
 	if (emitter == 0)
 	{
 		dRec.pdf = 0;
@@ -137,7 +137,7 @@ Spectrum KernelDynamicScene::sampleAttenuatedSensorDirect(DirectSamplingRecord &
 
 float KernelDynamicScene::pdfEmitterDirect(const DirectSamplingRecord &dRec) const
 {
-	const KernelLight *emitter = (KernelLight*)dRec.object;
+	const Light *emitter = (Light*)dRec.object;
 	return emitter->pdfDirect(dRec) * pdfEmitterDiscrete(emitter);
 }
 
@@ -150,7 +150,7 @@ Spectrum KernelDynamicScene::sampleEmitterPosition(PositionSamplingRecord &pRec,
 {
 	Vec2f sample = _sample;
 	float emPdf;
-	const KernelLight *emitter = sampleEmitter(emPdf, sample);
+	const Light *emitter = sampleEmitter(emPdf, sample);
 
 	Spectrum value = emitter->samplePosition(pRec, sample);
 
@@ -168,7 +168,7 @@ Spectrum KernelDynamicScene::sampleSensorPosition(PositionSamplingRecord &pRec, 
 
 float KernelDynamicScene::pdfEmitterPosition(const PositionSamplingRecord &pRec) const
 {
-	const KernelLight *emitter = (const KernelLight*)pRec.object;
+	const Light *emitter = (const Light*)pRec.object;
 	return emitter->pdfPosition(pRec) * pdfEmitterDiscrete(emitter);
 }
 
@@ -178,7 +178,7 @@ float KernelDynamicScene::pdfSensorPosition(const PositionSamplingRecord &pRec) 
 	return sensor->pdfPosition(pRec);
 }
 
-Spectrum KernelDynamicScene::sampleEmitterRay(Ray& ray, const KernelLight*& emitter, const Vec2f &spatialSample, const Vec2f &directionalSample) const
+Spectrum KernelDynamicScene::sampleEmitterRay(Ray& ray, const Light*& emitter, const Vec2f &spatialSample, const Vec2f &directionalSample) const
 {
 	Vec2f sample = spatialSample;
 	float emPdf;

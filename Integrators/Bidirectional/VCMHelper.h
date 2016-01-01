@@ -111,7 +111,7 @@ CUDA_FUNC_IN void sampleEmitter(BPTSubPathState& v, CudaRNG& rng, float mMisVcWe
 	PositionSamplingRecord pRec;
 	DirectionSamplingRecord dRec;
 	Spectrum Le = g_SceneData.sampleEmitterPosition(pRec, rng.randomFloat2());
-	const KernelLight* l = (const KernelLight*)pRec.object;
+	const Light* l = (const Light*)pRec.object;
 	Le *= l->sampleDirection(dRec, pRec, rng.randomFloat2());
 	float emitterPdf = g_SceneData.pdfEmitterDiscrete(l);
 
@@ -197,7 +197,7 @@ CUDA_FUNC_IN bool sampleScattering(BPTSubPathState& v, BSDFSamplingRecord& bRec,
 
 CUDA_FUNC_IN Spectrum gatherLight(const BPTSubPathState& cameraState, BSDFSamplingRecord& bRec, const TraceResult& r2, CudaRNG& rng, int subPathLength, bool use_mis)
 {
-	const KernelLight* l = g_SceneData.getLight(r2);
+	const Light* l = g_SceneData.getLight(r2);
 	float pdfLight = g_SceneData.pdfEmitterDiscrete(l);
 	PositionSamplingRecord pRec(bRec.dg.P, bRec.dg.sys.n, 0);
 	float directPdfA = l->pdfPosition(pRec);
@@ -252,7 +252,7 @@ template<bool TEST_VISIBILITY = true> CUDA_FUNC_IN Spectrum connectToLight(const
 {
 	DirectSamplingRecord dRec(bRec.dg.P, bRec.dg.sys.n);
 	const Spectrum directFactor = g_SceneData.sampleEmitterDirect(dRec, rng.randomFloat2());
-	const KernelLight* l = (const KernelLight*)dRec.object;
+	const Light* l = (const Light*)dRec.object;
 	if (!l)
 		return Spectrum(0.0f);
 	float pdfLight = g_SceneData.pdfEmitterDiscrete(l);

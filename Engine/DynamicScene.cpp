@@ -119,7 +119,7 @@ public:
 	}
 };
 
-class DynamicScene::LightStream : public Stream<KernelLight>
+class DynamicScene::LightStream : public Stream<Light>
 {
 	std::vector<float> m_lightWeights;
 	//normalized pdfs for correct indices
@@ -127,7 +127,7 @@ class DynamicScene::LightStream : public Stream<KernelLight>
 protected:
 	virtual void reallocAfterResize()
 	{
-		Stream<KernelLight>::reallocAfterResize();
+		Stream<Light>::reallocAfterResize();
 		size_t L = this->getBufferLength();
 		m_lightWeights.resize(L, 1.0f);
 		delete[] m_pDeviceLightWeights;
@@ -137,19 +137,19 @@ protected:
 	}
 public:
 	LightStream(int L)
-		: Stream<KernelLight>(L)
+		: Stream<Light>(L)
 	{
 		m_lightWeights = std::vector<float>(L, 1.0f);
 		CUDA_MALLOC(&m_pDeviceLightWeights, sizeof(float) * L);
 		m_pHostLeightWeights = new float[L];
 	}
 
-	float getWeight(StreamReference<KernelLight> ref) const
+	float getWeight(StreamReference<Light> ref) const
 	{
 		return m_lightWeights[ref.getIndex()];
 	}
 
-	void setWeight(StreamReference<KernelLight> ref, float f)
+	void setWeight(StreamReference<Light> ref, float f)
 	{
 		m_lightWeights[ref.getIndex()] = f;
 	}
@@ -359,11 +359,11 @@ BufferReference<MIPMap, KernelMIPMap> DynamicScene::LoadTexture(const std::strin
 	return T;
 }
 
-size_t DynamicScene::enumerateLights(StreamReference<Node> node, std::function<void(StreamReference<KernelLight>)> clb)
+size_t DynamicScene::enumerateLights(StreamReference<Node> node, std::function<void(StreamReference<Light>)> clb)
 {
 	for (size_t i = 0; i < node->m_uLights.size(); i++)
 	{
-		StreamReference<KernelLight> l = m_pLightStream->operator()(node->m_uLights(i));
+		StreamReference<Light> l = m_pLightStream->operator()(node->m_uLights(i));
 		clb(l);
 	}
 	return node->m_uLights.size();
@@ -374,7 +374,7 @@ void DynamicScene::SetNodeTransform(const float4x4& mat, StreamReference<Node> n
 	for (unsigned int i = 0; i < n.getLength(); i++)
 		m_pBVH->setTransform(n(i), mat);
 	n.Invalidate();
-	enumerateLights(n, [&](StreamReference<KernelLight> l)
+	enumerateLights(n, [&](StreamReference<Light> l)
 	{
 		RecomputeShape(l->As<DiffuseLight>()->shapeSet, mat);
 		l.Invalidate();
@@ -398,7 +398,7 @@ void DynamicScene::ReloadTextures()
 	m_pMaterialBuffer->UpdateMaterials(textureLoader(this));
 
 	textureLoader t(this);
-	m_pLightStream->UpdateInvalidated([&](StreamReference<KernelLight> l)
+	m_pLightStream->UpdateInvalidated([&](StreamReference<Light> l)
 	{
 		if (l->Is<DiffuseLight>() && l->As<DiffuseLight>()->m_rad_texture.Is<ImageTexture>())
 			l->As<DiffuseLight>()->m_rad_texture.As<ImageTexture>()->LoadTextures(t);
@@ -608,14 +608,14 @@ AABB DynamicScene::getSceneBox()
 	return res;
 }
 
-StreamReference<KernelLight> DynamicScene::CreateLight(StreamReference<Node> Node, const std::string& materialName, Spectrum& L)
+StreamReference<Light> DynamicScene::CreateLight(StreamReference<Node> Node, const std::string& materialName, Spectrum& L)
 {
 	unsigned int mi;
 	ShapeSet s = CreateShape(Node, materialName, &mi);
 	StreamReference<Material> matRef = getMaterials(Node)(mi);
 	if (matRef->NodeLightIndex != -1)
 	{
-		StreamReference<KernelLight> c = m_pLightStream->operator()(Node->m_uLights(matRef->NodeLightIndex));
+		StreamReference<Light> c = m_pLightStream->operator()(Node->m_uLights(matRef->NodeLightIndex));
 		c->SetData(DiffuseLight(L, s, Node.getIndex()));
 		c.Invalidate();
 		return c;
@@ -624,7 +624,7 @@ StreamReference<KernelLight> DynamicScene::CreateLight(StreamReference<Node> Nod
 	{
 		if (Node->m_uLights.isFull())
 			throw std::runtime_error("Node already has maximum number of area lights!");
-		StreamReference<KernelLight> c = m_pLightStream->malloc(1);
+		StreamReference<Light> c = m_pLightStream->malloc(1);
 		matRef->NodeLightIndex = (unsigned int)Node->m_uLights.size();
 		Node->m_uLights.push_back(c.getIndex());
 		c->SetData(DiffuseLight(L, s, Node.getIndex()));
@@ -765,7 +765,7 @@ StreamReference<Material> DynamicScene::getMaterial(StreamReference<Node> n, con
 	throw std::runtime_error("Could not find material name in mesh!");
 }
 
-StreamReference<KernelLight> DynamicScene::setEnvironementMap(const Spectrum& power, const std::string& file)
+StreamReference<Light> DynamicScene::setEnvironementMap(const Spectrum& power, const std::string& file)
 {
 	if (m_uEnvMapIndex != -1)
 	{
@@ -774,7 +774,7 @@ StreamReference<KernelLight> DynamicScene::setEnvironementMap(const Spectrum& po
 	BufferReference<MIPMap, KernelMIPMap> m = LoadTexture(file, true);
 	m_psSceneBoxEnvLight = getSceneBox();
 	InfiniteLight l = InfiniteLight(m_pAnimStream, m, power, &m_psSceneBoxEnvLight);
-	StreamReference<KernelLight> r = CreateLight(l);
+	StreamReference<Light> r = CreateLight(l);
 	m_uEnvMapIndex = r.getIndex();
 	return r;
 }
@@ -803,7 +803,7 @@ StreamRange<VolumeRegion>& DynamicScene::getVolumes()
 	return *m_pVolumes;
 }
 
-StreamRange<KernelLight>& DynamicScene::getLights()
+StreamRange<Light>& DynamicScene::getLights()
 {
 	return *m_pLightStream;
 }
@@ -828,19 +828,19 @@ unsigned int DynamicScene::getLightCount()
 	return (unsigned int)m_pLightStream->numElements();
 }
 
-BufferReference<KernelLight, KernelLight> DynamicScene::CreateLight(const KernelLight& l)
+BufferReference<Light, Light> DynamicScene::CreateLight(const Light& l)
 {
-	StreamReference<KernelLight> r2 = m_pLightStream->malloc(1);
+	StreamReference<Light> r2 = m_pLightStream->malloc(1);
 	*r2.operator->() = l;
 	return r2;
 }
 
-float DynamicScene::getLeightWeight(StreamReference<KernelLight> ref) const
+float DynamicScene::getLeightWeight(StreamReference<Light> ref) const
 {
 	return m_pLightStream->getWeight(ref);
 }
 
-void DynamicScene::setLeightWeight(StreamReference<KernelLight> ref, float f) const
+void DynamicScene::setLeightWeight(StreamReference<Light> ref, float f) const
 {
 	m_pLightStream->setWeight(ref, f);
 }

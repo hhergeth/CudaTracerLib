@@ -8,7 +8,7 @@
 
 namespace CudaTracerLib {
 
-struct KernelLight;
+struct Light;
 class Node;
 struct KernelMesh;
 struct TriangleData;
@@ -41,7 +41,7 @@ struct KernelDynamicScene
 	Sensor m_Camera;
 
 	//these are all lights, with inactive/deleted ones
-	KernelBuffer<KernelLight> m_sLightBuf;
+	KernelBuffer<Light> m_sLightBuf;
 	unsigned int m_numLights;
 	//indexes into m_sLightBuf
 	unsigned int m_pLightIndices[MAX_NUM_LIGHTS];
@@ -53,8 +53,8 @@ struct KernelDynamicScene
 	CUDA_DEVICE CUDA_HOST bool Occluded(const Ray& r, float tmin, float tmax, TraceResult* res = 0) const;
 	CUDA_DEVICE CUDA_HOST Spectrum EvalEnvironment(const Ray& r) const;
 	CUDA_DEVICE CUDA_HOST Spectrum EvalEnvironment(const Ray& r, const Ray& rX, const Ray& rY) const;
-	CUDA_DEVICE CUDA_HOST const KernelLight* sampleEmitter(float& emPdf, Vec2f& sample) const;
-	CUDA_DEVICE CUDA_HOST float pdfEmitterDiscrete(const KernelLight *emitter) const;
+	CUDA_DEVICE CUDA_HOST const Light* sampleEmitter(float& emPdf, Vec2f& sample) const;
+	CUDA_DEVICE CUDA_HOST float pdfEmitterDiscrete(const Light *emitter) const;
 
 	CUDA_DEVICE CUDA_HOST Spectrum sampleEmitterDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum sampleAttenuatedEmitterDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const;
@@ -68,14 +68,14 @@ struct KernelDynamicScene
 	CUDA_DEVICE CUDA_HOST float pdfEmitterPosition(const PositionSamplingRecord &pRec) const;
 	CUDA_DEVICE CUDA_HOST float pdfSensorPosition(const PositionSamplingRecord &pRec) const;
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleEmitterRay(Ray& ray, const KernelLight*& emitter, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleEmitterRay(Ray& ray, const Light*& emitter, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum sampleSensorRay(Ray& ray, const Sensor*& emitter, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
 
 	CUDA_DEVICE CUDA_HOST Spectrum evalTransmittance(const Vec3f& p1, const Vec3f& p2) const;
 
 	CUDA_FUNC_IN Spectrum sampleEmitterRay(Ray& ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const
 	{
-		const KernelLight* emitter;
+		const Light* emitter;
 		return sampleEmitterRay(ray, emitter, spatialSample, directionalSample);
 	}
 	CUDA_FUNC_IN Spectrum sampleSensorRay(Ray& ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const
@@ -95,9 +95,9 @@ struct KernelDynamicScene
 		return r;
 	}
 
-	CUDA_DEVICE CUDA_HOST const KernelLight* getLight(const TraceResult& tr) const;
-	CUDA_DEVICE CUDA_HOST const KernelLight* getLight(unsigned int idx) const;
-	CUDA_DEVICE CUDA_HOST const KernelLight* getEnvironmentMap() const;
+	CUDA_DEVICE CUDA_HOST const Light* getLight(const TraceResult& tr) const;
+	CUDA_DEVICE CUDA_HOST const Light* getLight(unsigned int idx) const;
+	CUDA_DEVICE CUDA_HOST const Light* getEnvironmentMap() const;
 };
 
 }

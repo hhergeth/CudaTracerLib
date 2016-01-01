@@ -100,7 +100,7 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTraceRegularization(Ray& r, cons
 				//hadDelta = true;
 				PositionSamplingRecord pRec;
 				Spectrum l_s = g_SceneData.sampleEmitterPosition(pRec, rnd.randomFloat2());
-				KernelLight* l = (KernelLight*)pRec.object;
+				Light* l = (Light*)pRec.object;
 				float lDist = distance(pRec.p, bRec.dg.P);
 				Vec3f lDir = (pRec.p - bRec.dg.P) / lDist;
 				if (!(l->Is<DiffuseLight>() || l->Is<InfiniteLight>()) && !g_SceneData.Occluded(Ray(bRec.dg.P, lDir), 0, lDist))

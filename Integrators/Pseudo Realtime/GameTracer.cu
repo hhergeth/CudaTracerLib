@@ -65,7 +65,7 @@ __global__ void primaryKernelBlocked(int width, int height, Image g_Image, bool 
 		{
 			float pdf;
 			Vec2f sample = rng.randomFloat2();
-			const KernelLight* light = g_SceneData.sampleEmitter(pdf, sample);
+			const Light* light = g_SceneData.sampleEmitter(pdf, sample);
 			if (!light) continue;
 			DirectSamplingRecord dRec(bRec.dg.P, bRec.dg.sys.n);
 			Spectrum value = light->sampleDirect(dRec, sample) / pdf;
@@ -96,7 +96,7 @@ __global__ void primaryKernelBlocked(int width, int height, Image g_Image, bool 
 				indirect_res.getBsdfSample(indirect_ray, indirect_bRec, ETransportMode::ERadiance, &rng);
 				float pdf;
 				Vec2f sample = rng.randomFloat2();
-				const KernelLight* light = g_SceneData.sampleEmitter(pdf, sample);
+				const Light* light = g_SceneData.sampleEmitter(pdf, sample);
 				if (!light) continue;
 				DirectSamplingRecord dRec(indirect_bRec.dg.P, indirect_bRec.dg.sys.n);
 				Spectrum value = light->sampleDirect(dRec, sample) / pdf;
