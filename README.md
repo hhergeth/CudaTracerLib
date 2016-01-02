@@ -10,7 +10,7 @@
 ### Introduction
 This library, for simplicity called CudaTracerLib, is a CUDA based ray tracer library implementing standard rendering algorithms like Path Tracing, Progressive Photon Mapping, Bidirectional Path Tracing and many more. It can be used in an offline render mode where only one frame is computed. The other option is to compute the frames directly into an Open GL/D3D buffer enabling "realtime" ray traced images.
 
-This project started first and foremost as a learning experience. Secondly it is a study of a GPU implementation of a research oriented ray tracing framework in which new algorithms could be developed. The focus on the GPU was chosen due to the fact that commonly a siginifcant amount of time is spent waiting for rendering results while all the powera GPU has to offer is left unused. Thus the goal is to make this power available without having to focus too much on low level optimizations.
+This project started first and foremost as a learning experience. Secondly it is a study of a GPU implementation of a research oriented ray tracing framework in which new algorithms could be developed. The focus on the GPU was chosen due to the fact that commonly a siginifcant amount of time is spent waiting for rendering results while all the power a GPU has to offer is left unused. Thus the goal is to make this power available without having to focus too much on low level optimizations.
 
 
 ### Installation
