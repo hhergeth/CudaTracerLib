@@ -30,8 +30,6 @@ _ReSharper*/
 Compiled/
 Scenes/
 Build/
-*.ppm
 *.dll
-*.esm
 *.bin
 *.lib
