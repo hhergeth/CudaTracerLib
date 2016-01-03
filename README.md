@@ -13,8 +13,9 @@ This library, for simplicity called CudaTracerLib, is a CUDA based ray tracer li
 This project started first and foremost as a learning experience. Secondly it is a study of a GPU implementation of a research oriented ray tracing framework in which new algorithms could be developed. The focus on the GPU was chosen due to the fact that commonly a significant amount of time is spent waiting for rendering results while all the power a GPU has to offer is left unused. Thus the goal is to make this power available without having to focus too much on low level optimizations.
 
 
-### Installation
+### Building from Source
 There are only four dependencies:
+
 - Cuda 7.5
 - Boost, used for filesystem(compiled library!) and string functions
 - FreeImage, used for loading and saving images. There are CMake versions available.
