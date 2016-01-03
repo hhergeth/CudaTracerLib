@@ -14,17 +14,31 @@ This project started first and foremost as a learning experience. Secondly it is
 
 
 ### Building from Source
-There are only four dependencies:
+There are four dependencies:
 
-- Cuda 7.5
+- CUDA 7.5
 - Boost, used for filesystem(compiled library!) and string functions
-- FreeImage, used for loading and saving images. There are CMake versions available.
+- FreeImage, used for loading and saving images.
 - qMatrixLib, a tiny header only matrix library, available here https://github.com/hhergeth/qMatrixLib
 
-For Windows users there is a Visual Studio 2013 project file available where only the include and library paths to Boost, FreeImage and qMatrixLib have to be specified.
-The CMake file can be used for all other platforms. Assuming Boost is installed on the machine, only the FreeImage and qMatrixLib path have to be specified.
+For Windows users there is a Visual Studio 2013 project file available:
 
-The microfacet and spectral probability distribution files from Mitsuba/PBRT are also necessary. They can be obtained from the Mitsuba build or [here from the repository](https://www.mitsuba-renderer.org/repos/mitsuba/files/c7aac473729a3342dba801717419d8f630fe7560/data). Only the _ior_ and _microfacet_ folder are required.
+- Install the CUDA 7.5 toolkit from the official Nvidia site.
+- Grab a copy of the precompiled boost libraries and extract them somewhere or compile them on your own.
+- Download the FreeImage source code from [here](http://freeimage.sourceforge.net/download.html "FreeImage source code"). Use the provided Visual Studio solution file to build the static lib, but pay attention to set the compiler version to the same used for compiling this library!
+- Download [qMatrixLib](https://github.com/hhergeth/qMatrixLib) and extract it somewhere handy.
+- Set the include path of FreeImage, qMatrixLib and Boost under VC++ Directories/Include Directories
+- Later when linking against CudaTracerLib add appropriate paths under VC++ Directories/Library Directories. Also go to Linker/Input/Additional Dependencies and add FreeImage.lib. Linking against the compiled Boost libraries requires no further action.
+
+All other platforms can use the accompanying CMake file:
+
+- Install the CUDA 7.5 toolkit from the official Nvidia site.
+- Do the same for boost.
+- There are multiple unofficial CMake versions of FreeImage available. Use one of these to compile the library or check if there are precompiled versions available as for example for Debian.
+- Download [qMatrixLib](https://github.com/hhergeth/qMatrixLib) and extract it somewhere handy.
+- Specify the paths of FreeImage, Boost (if necessary) and qMatrixLib (QMATRIX\_INCLUDE\_DIR) in CMake.
+
+The microfacet and spectral probability distribution files from Mitsuba/PBRT are also necessary. They can be obtained from the [Mitsuba build](http://www.mitsuba-renderer.org/download.html) or [here from the repository](https://www.mitsuba-renderer.org/repos/mitsuba). Only the _data/ior_ and _data/microfacet_ folders are required.
 
 ### Acknowledgements
 I would like to thank Wenzel Jakob for allowing me to use a lot of his work from Mitsuba - http://www.mitsuba-renderer.org. This includes the general interfaces and implementation of the `BSDF`, `Emitter`, `Sensor` classes. Furthermore I have used his `MicrofacetDistribution` and `RoughTransmittance` classes as well as the design of the `SamplingRecord` classes.
