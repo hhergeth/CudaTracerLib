@@ -30,7 +30,7 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(Ray& r, const Ray& rX, con
 			if (DIRECT)//direct sampling
 			{
 				DirectSamplingRecord dRec(mRec.p, Vec3f(0));
-				Spectrum value = g_SceneData.sampleEmitterDirect(dRec, rnd.randomFloat2());
+				Spectrum value = g_SceneData.sampleAttenuatedEmitterDirect(dRec, rnd.randomFloat2());
 				if (!value.isZero())
 				{
 					float p = V.p(mRec.p, -r.direction, dRec.d, rnd);
@@ -38,7 +38,7 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(Ray& r, const Ray& rX, con
 					{
 						const float bsdfPdf = p;//phase functions are normalized
 						const float weight = MonteCarlo::PowerHeuristic(1, dRec.pdf, 1, bsdfPdf);
-						cl += cf * value * p * weight * Transmittance(Ray(dRec.ref, dRec.d), 0, dRec.dist);
+						cl += cf * value * p * weight;
 					}
 				}
 			}
@@ -49,7 +49,7 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(Ray& r, const Ray& rX, con
 		else if (r2.hasHit())
 		{
 			if (isInMedium)
-				cf *= Transmittance(r, 0, r2.m_fDist);
+				cf *= mRec.transmittance / mRec.pdfFailure;
 			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rnd);
 			if (depth == 1)
 				dg.computePartials(r, rX, rY);
