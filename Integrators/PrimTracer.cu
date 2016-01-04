@@ -59,9 +59,9 @@ CUDA_FUNC_IN void computePixel(int x, int y, CudaRNG& rng, Image g_Image, bool d
 				through = Transmittance(r, 0, prim_res.m_fDist);
 				bool isDelta = prim_res.getMat().bsdf.hasComponent(EDelta);
 				if (mode == PathTrace_DrawMode::first_Le || (!isDelta && mode == PathTrace_DrawMode::first_non_delta_Le))
-					L = Le;
+					L = through * Le;
 				else if (mode == PathTrace_DrawMode::first_f || (!isDelta && mode == PathTrace_DrawMode::first_non_delta_f))
-					L = f;
+					L = through * f;
 				else if (mode == PathTrace_DrawMode::first_f_direct || (!isDelta && mode == PathTrace_DrawMode::first_non_delta_f_direct))
 					L = Le + through * (UniformSampleOneLight(bRec, prim_res.getMat(), rng) + f * 0.5f);
 				else
