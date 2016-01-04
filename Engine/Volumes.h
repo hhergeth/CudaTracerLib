@@ -211,11 +211,6 @@ public:
 		return sigAMin + (sigAMax - sigAMin) * a + sigSMin + (sigSMax - sigSMin) * s;
 	}
 
-	CUDA_DEVICE CUDA_HOST float integrateDensity(const Ray& ray, float minT, float maxT) const;
-
-	CUDA_DEVICE CUDA_HOST bool invertDensityIntegral(const Ray& ray, float minT, float maxT, float desiredDensity,
-		float &integratedDensity, float &t, float &densityAtMinT, float &densityAtT) const;
-
 	CUDA_DEVICE CUDA_HOST Spectrum tau(const Ray &ray, const float minT, const float maxT) const;
 
 	CUDA_DEVICE CUDA_HOST bool sampleDistance(const Ray& ray, float minT, float maxT, float sample, MediumSamplingRecord& mRec) const;
@@ -244,6 +239,11 @@ public:
 	bool singleGrid;
 	float m_stepSize;
 private:
+	CUDA_DEVICE CUDA_HOST Spectrum integrateDensity(const Ray& ray, float minT, float maxT) const;
+
+	CUDA_DEVICE CUDA_HOST bool invertDensityIntegral(const Ray& ray, float minT, float maxT, float desiredDensity,
+		float& integratedDensity, float &t, float &densityAtMinT, float &densityAtT) const;
+
 	CUDA_FUNC_IN Vec3f tr(const Vec3f& p, const Vec3f& dimF) const
 	{
 		Vec3f csP = WorldToVolume.TransformPoint(p);
