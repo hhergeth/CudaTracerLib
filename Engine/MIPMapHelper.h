@@ -5,7 +5,7 @@ namespace CudaTracerLib {
 
 //helper class for image loading
 //C++ destructors can not be used due to passing to cuda kernels
-struct imgData
+struct imgData//used in global CUDA variables
 {
 private:
 	void* data;

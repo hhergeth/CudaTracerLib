@@ -107,7 +107,7 @@ public:
 		return sample(bRec, p, _sample);
 	}
 	CALLER(f)
-		CUDA_FUNC_IN Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
+	CUDA_FUNC_IN Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
 	{
 		return f_Caller<Spectrum>(*this, bRec, measure);
 	}
@@ -118,10 +118,10 @@ public:
 	}
 	CUDA_FUNC_IN unsigned int getType() const
 	{
-		return ((BSDF*)Data)->getType();
+		return As()->getType();
 	}
 	CUDA_FUNC_IN bool hasComponent(unsigned int type) const {
-		return ((BSDF*)Data)->hasComponent(type);
+		return As()->hasComponent(type);
 	}
 };
 
@@ -140,7 +140,7 @@ public:
 
 	}
 	CALLER(sample)
-		CUDA_FUNC_IN Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &_sample) const
+	CUDA_FUNC_IN Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &_sample) const
 	{
 		return sample_Caller<Spectrum>(*this, bRec, pdf, _sample);
 	}
@@ -150,21 +150,21 @@ public:
 		return sample(bRec, pdf, _sample);
 	}
 	CALLER(f)
-		CUDA_FUNC_IN Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
+	CUDA_FUNC_IN Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
 	{
 		return f_Caller<Spectrum>(*this, bRec, measure);
 	}
 	CALLER(pdf)
-		CUDA_FUNC_IN float pdf(const BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
+	CUDA_FUNC_IN float pdf(const BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
 	{
 		return pdf_Caller<float>(*this, bRec, measure);
 	}
 	CUDA_FUNC_IN unsigned int getType() const
 	{
-		return ((BSDF*)Data)->getType();
+		return As()->getType();
 	}
 	CUDA_FUNC_IN bool hasComponent(unsigned int type) const {
-		return ((BSDF*)Data)->hasComponent(type);
+		return As()->hasComponent(type);
 	}
 };
 

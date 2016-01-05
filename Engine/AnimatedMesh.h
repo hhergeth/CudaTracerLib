@@ -15,9 +15,9 @@ struct CUDA_ALIGN(16) AnimatedVertex
 	unsigned long long m_cBoneIndices;
 	unsigned long long m_fBoneWeights;
 	AnimatedVertex()
+		: m_fVertexPos(0.0f), m_fNormal(0.0f), m_fTangent(0.0f), m_fBitangent(0.0f), 
+		  m_cBoneIndices(0), m_fBoneWeights(0)
 	{
-		m_fVertexPos = Vec3f(0);
-		m_cBoneIndices = m_fBoneWeights = 0;
 	}
 };
 
@@ -47,7 +47,11 @@ struct Animation
 	FixedString<128> m_sName;
 	std::vector<AnimationFrame> m_pFrames;//host pointer!
 
-	Animation(){}
+	Animation()
+		: m_uFrameRate(0)
+	{
+		
+	}
 
 	Animation(unsigned int fps, const char* name, std::vector<AnimationFrame>& frames)
 		: m_uFrameRate(fps), m_sName(name), m_pFrames(frames)

@@ -11,6 +11,11 @@ class IBVHBuilderCallback
 {
 public:
 
+	virtual ~IBVHBuilderCallback()
+	{
+		
+	}
+
 	///reports the number of inner/leaf nodes to the clb to allocate enough storage
 	virtual void startConstruction(unsigned int nInnerNodes, unsigned int nLeafNodes) = 0;
 
@@ -45,10 +50,10 @@ class BVHNode
 	unsigned int left, right;
 public:
 	AABB box;
-	BVHNode(const AABB& bounds, unsigned int l, unsigned int r, bool leaf) : box(bounds), left((l << 1) | (unsigned int)leaf), right(r) {}
-	bool isLeaf() { return left & 1; }
-	unsigned int getLeft(){ return left >> 1; }
-	unsigned int getRight(){ return right; }
+	BVHNode(const AABB& bounds, unsigned int l, unsigned int r, bool leaf) : left((l << 1) | (unsigned int)leaf), right(r), box(bounds) {}
+	bool isLeaf() const { return left & 1; }
+	unsigned int getLeft() const { return left >> 1; }
+	unsigned int getRight() const { return right; }
 };
 
 class SplitBVHBuilder
@@ -66,7 +71,7 @@ private:
 		int                 triIdx;
 		AABB                bounds;
 
-		Reference(void) : triIdx(-1) { bounds = AABB::Identity(); }
+		Reference(void) : triIdx(-1), bounds(AABB::Identity()) { }
 	};
 
 	struct NodeSpec
@@ -74,7 +79,7 @@ private:
 		int                 numRef;
 		AABB                bounds;
 
-		NodeSpec(void) : numRef(0) { bounds = AABB::Identity(); }
+		NodeSpec(void) : numRef(0), bounds(AABB::Identity()) { }
 	};
 
 	struct ObjectSplit
@@ -85,7 +90,7 @@ private:
 		AABB                leftBounds;
 		AABB                rightBounds;
 
-		ObjectSplit(void) : sah(FLT_MAX), sortDim(0), numLeft(0) { leftBounds = AABB::Identity(); rightBounds = AABB::Identity(); }
+		ObjectSplit(void) : sah(FLT_MAX), sortDim(0), numLeft(0), leftBounds(AABB::Identity()), rightBounds(AABB::Identity()) { }
 	};
 
 	struct SpatialSplit

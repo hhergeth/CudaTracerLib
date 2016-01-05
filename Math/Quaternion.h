@@ -13,8 +13,8 @@ public:
 	inline float operator[](int n) const { return *(((float*)&val) + n); }
 	CUDA_FUNC_IN Quaternion(){}
 	CUDA_FUNC_IN Quaternion(float x, float y, float z, float w)
+		: val(x, y, z, w)
 	{
-		val = Vec4f(x, y, z, w);
 	}
 	CUDA_FUNC_IN Quaternion(float x, float y, float z)
 	{

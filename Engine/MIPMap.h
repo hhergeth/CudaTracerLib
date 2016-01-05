@@ -23,7 +23,7 @@ class MIPMap
 public:
 	ImageFilter m_uFilterMode;
 	std::string m_pPath;
-	MIPMap() { m_pDeviceData = 0; m_uWidth = m_uHeight = m_uBpp = UINT_MAX; }
+	MIPMap() = default;
 	MIPMap(const std::string& a_InputFile, IInStream& a_In);
 	void Free();
 	static void CompileToBinary(const std::string& a_InputFile, FileOutputStream& a_Out, bool a_MipMap);
@@ -31,11 +31,11 @@ public:
 	static void CreateSphericalSkydomeTexture(const std::string& front, const std::string& back, const std::string& left, const std::string& right, const std::string& top, const std::string& bottom, const std::string& outFile);
 	static void CreateRelaxedConeMap(const std::string& a_InputFile, FileOutputStream& Out);
 	KernelMIPMap getKernelData();
-	unsigned int getNumMips()
+	unsigned int getNumMips() const
 	{
 		return m_uLevels;
 	}
-	unsigned int getBufferSize()
+	unsigned int getBufferSize() const
 	{
 		return m_uSize;
 	}

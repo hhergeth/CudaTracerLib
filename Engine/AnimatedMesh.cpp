@@ -62,7 +62,6 @@ AnimatedMesh::AnimatedMesh(const std::string& path, IInStream& a_In, Stream<TriI
 	a_In >> m_sVertices;
 	m_sTriangles = a_Stream5->malloc_aligned<uint3>(sizeof(uint3) * m_sTriInfo.getLength());//malloc_aligned(a_Stream5, sizeof(uint3) * m_sTriInfo.getLength(), 16);//
 	a_In >> m_sTriangles;
-	uint3* idx = (uint3*)m_sTriangles.operator char *() + (m_sTriInfo.getLength() - 2);
 	a_Stream5->UpdateInvalidated();
 	m_pBuilder = 0;
 }

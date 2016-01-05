@@ -83,7 +83,7 @@ protected:
 	BufferReference<H, D> malloc_internal(size_t a_Length)
 	{
 		BufferReference<H, D> res;
-		for (range_set_t::iterator it = m_uDeallocated->begin(); it != m_uDeallocated->end(); it++)
+		for (range_set_t::iterator it = m_uDeallocated->begin(); it != m_uDeallocated->end(); ++it)
 			if (it->upper() - it->lower() >= a_Length)
 			{
 				ival i(it->lower(), it->lower() + a_Length);
@@ -262,7 +262,7 @@ public:
 
 	template<typename CLB> void UpdateInvalidated(const CLB& f)
 	{
-		for (range_set_t::iterator it = m_uInvalidated->begin(); it != m_uInvalidated->end(); it++)
+		for (range_set_t::iterator it = m_uInvalidated->begin(); it != m_uInvalidated->end(); ++it)
 		{
 			for (size_t i = it->lower(); i < it->upper(); i++)
 			{
@@ -431,7 +431,7 @@ protected:
 		return deviceMapped;
 	}
 public:
-	Buffer(size_t a_NumElements, size_t a_ElementSize = MINUS_ONE)
+	explicit Buffer(size_t a_NumElements, size_t a_ElementSize = MINUS_ONE)
 		: BufferBase<H, D>(a_NumElements, a_ElementSize, true)
 	{
 		deviceMapped = (D*)::malloc(a_NumElements * sizeof(D));
@@ -467,7 +467,7 @@ protected:
 		return this->host;
 	}
 public:
-	Stream(size_t a_NumElements)
+	explicit Stream(size_t a_NumElements)
 		: BufferBase<T, T>(a_NumElements, sizeof(T), false)
 	{
 
@@ -497,7 +497,7 @@ private:
 	std::map<std::string, entry> m_sEntries;
 public:
 	std::vector<BufferReference<H, D>> m_UnusedEntries;
-	CachedBuffer(size_t a_Count, size_t a_ElementSize = MINUS_ONE)
+	explicit CachedBuffer(size_t a_Count, size_t a_ElementSize = MINUS_ONE)
 		: Buffer<H, D>(a_Count, a_ElementSize)
 	{
 

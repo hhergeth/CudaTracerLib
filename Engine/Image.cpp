@@ -34,7 +34,7 @@ Image::Image(int xRes, int yRes, unsigned int viewGLTexture)
 
 #ifdef ISWINDOWS
 Image::Image(int xRes, int yRes, ID3D11Resource *pD3DResource)
-	: xResolution(xRes), yResolution(yRes), lastSplatVal(0), m_fOutScale(1)
+	: xResolution(xRes), yResolution(yRes), m_fOutScale(1), lastSplatVal(0)
 {
 	ownsTarget = false;
 	drawStyle = ImageDrawType::Normal;
@@ -52,7 +52,7 @@ Image::Image(int xRes, int yRes, ID3D11Resource *pD3DResource)
 #endif
 
 Image::Image(int xRes, int yRes, RGBCOL* target)
-	: xResolution(xRes), yResolution(yRes), lastSplatVal(0), m_fOutScale(1)
+	: xResolution(xRes), yResolution(yRes), m_fOutScale(1), lastSplatVal(0)
 {
 	ThrowCudaErrors();
 	drawStyle = ImageDrawType::Normal;

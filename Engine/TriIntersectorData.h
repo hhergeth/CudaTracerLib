@@ -19,11 +19,11 @@ public:
 	{
 		index = (index & ~1) | !!b;
 	}
-	CUDA_FUNC_IN unsigned int getIndex()
+	CUDA_FUNC_IN unsigned int getIndex() const
 	{
 		return index >> 1;
 	}
-	CUDA_FUNC_IN bool getFlag()
+	CUDA_FUNC_IN bool getFlag() const
 	{
 		return index & 1;
 	}
@@ -102,7 +102,7 @@ struct BVHNodeData
 		return *(unsigned int*)&d.z;
 	}
 
-	CUDA_FUNC_IN AABB getBox()
+	CUDA_FUNC_IN AABB getBox() const
 	{
 		AABB left, right;
 		getBox(left, right);

@@ -137,7 +137,6 @@ bool parseHex(const char*& ptr, unsigned int& value)
 
 bool parseFloat(const char*& ptr, float& value)
 {
-#define bitsToFloat(x) (*(float*)&x)
 	const char* tmp = ptr;
 	bool neg = (!parseChar(tmp, '+') && parseChar(tmp, '-'));
 
@@ -191,7 +190,6 @@ bool parseFloat(const char*& ptr, float& value)
 	}
 	value = (neg) ? -v : v;
 	return true;
-#undef bitsToFloat
 }
 
 enum TextureType

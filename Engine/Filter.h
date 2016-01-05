@@ -33,7 +33,7 @@ struct FilterBase : public BaseType//, public BaseTypeHelper<5524550>
 struct BoxFilter : public FilterBase//, public e_DerivedTypeHelper<1>
 {
 	TYPE_FUNC(1)
-		BoxFilter(){}
+	BoxFilter(){}
 	BoxFilter(float xw, float yw)
 		: FilterBase(xw, yw)
 	{
@@ -49,7 +49,7 @@ struct BoxFilter : public FilterBase//, public e_DerivedTypeHelper<1>
 struct GaussianFilter : public FilterBase//, public e_DerivedTypeHelper<2>
 {
 	TYPE_FUNC(2)
-		float alpha;
+	float alpha;
 	float expX, expY;
 
 	GaussianFilter(){}
@@ -78,7 +78,7 @@ struct GaussianFilter : public FilterBase//, public e_DerivedTypeHelper<2>
 struct MitchellFilter : public FilterBase//, public e_DerivedTypeHelper<3>
 {
 	TYPE_FUNC(3)
-		float B, C;
+	float B, C;
 
 	MitchellFilter(){}
 	MitchellFilter(float b, float c, float xw, float yw)
@@ -107,7 +107,7 @@ struct MitchellFilter : public FilterBase//, public e_DerivedTypeHelper<3>
 struct LanczosSincFilter : public FilterBase//, public e_DerivedTypeHelper<4>
 {
 	TYPE_FUNC(4)
-		float tau;
+	float tau;
 
 	LanczosSincFilter(){}
 	LanczosSincFilter(float xw, float yw, float t)
@@ -135,7 +135,7 @@ struct LanczosSincFilter : public FilterBase//, public e_DerivedTypeHelper<4>
 struct TriangleFilter : public FilterBase//, public e_DerivedTypeHelper<5>
 {
 	TYPE_FUNC(5)
-		TriangleFilter(){}
+	TriangleFilter(){}
 	TriangleFilter(float xw, float yw)
 		: FilterBase(xw, yw)
 	{

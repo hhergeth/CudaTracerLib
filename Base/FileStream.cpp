@@ -62,8 +62,8 @@ void FileInputStream::Move(int off)
 }
 
 MemInputStream::MemInputStream(const unsigned char* _buf, size_t length, bool canKeep)
+	: numBytesRead(0), path("")
 {
-	path = "";
 	if (canKeep)
 		this->buf = _buf;
 	else
@@ -73,23 +73,21 @@ MemInputStream::MemInputStream(const unsigned char* _buf, size_t length, bool ca
 		memcpy(v, _buf, length);
 	}
 	m_uFileSize = length;
-	this->numBytesRead = 0;
 }
 
 MemInputStream::MemInputStream(FileInputStream& in)
+	: numBytesRead(0), path(in.getFilePath())
 {
 	m_uFileSize = in.getFileSize() - in.getPos();
 	buf = in.ReadToEnd();
-	path = in.getFilePath();
 }
 
 MemInputStream::MemInputStream(const std::string& a_Name)
+	: numBytesRead(0), path(a_Name)
 {
 	FileInputStream in(a_Name);
-	numBytesRead = 0;
 	m_uFileSize = in.getFileSize();
 	buf = in.ReadToEnd();
-	path = a_Name;
 }
 
 void MemInputStream::Read(void* a_Data, size_t a_Size)

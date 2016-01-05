@@ -12,6 +12,11 @@ class IInStream
 {
 protected:
 	unsigned long long m_uFileSize;
+	IInStream()
+		: m_uFileSize(0)
+	{
+		
+	}
 public:
 	virtual ~IInStream()
 	{
@@ -19,7 +24,7 @@ public:
 	}
 	virtual void Read(void* a_Out, size_t a_Size) = 0;
 	virtual size_t getPos() = 0;
-	size_t getFileSize()
+	size_t getFileSize() const
 	{
 		return m_uFileSize;
 	}
@@ -118,8 +123,8 @@ private:
 	void* H;
 	std::string path;
 public:
-	FileInputStream(const std::string& a_Name);
-	~FileInputStream()
+	explicit FileInputStream(const std::string& a_Name);
+	virtual ~FileInputStream()
 	{
 		Close();
 	}
@@ -144,8 +149,8 @@ private:
 	std::string path;
 public:
 	MemInputStream(const unsigned char* buf, size_t length, bool canKeep = false);
-	MemInputStream(FileInputStream& in);
-	MemInputStream(const std::string& a_Name);
+	explicit MemInputStream(FileInputStream& in);
+	explicit MemInputStream(const std::string& a_Name);
 	~MemInputStream()
 	{
 		Close();
@@ -183,13 +188,13 @@ private:
 	void* H;
 	void _Write(const void* data, size_t size);
 public:
-	FileOutputStream(const std::string& a_Name);
+	explicit FileOutputStream(const std::string& a_Name);
 	virtual ~FileOutputStream()
 	{
 		Close();
 	}
 	void Close();
-	size_t GetNumBytesWritten()
+	size_t GetNumBytesWritten() const
 	{
 		return numBytesWrote;
 	}

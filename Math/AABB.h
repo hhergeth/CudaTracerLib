@@ -13,9 +13,8 @@ struct AABB
 	{
 	}
 	CUDA_FUNC_IN AABB(const Vec3f& vMin, const Vec3f& vMax)
+		: minV(min(vMin, vMax)), maxV(max(vMin, vMax))
 	{
-		minV = min(vMin, vMax);
-		maxV = max(vMin, vMax);
 	}
 	CUDA_FUNC_IN float Area() const
 	{

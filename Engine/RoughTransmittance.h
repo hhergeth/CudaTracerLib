@@ -18,7 +18,7 @@ class RoughTransmittance
 	float *m_transDevice, *m_diffTransDevice;
 	float *m_transHost, *m_diffTransHost;
 public:
-	RoughTransmittance(){}
+	RoughTransmittance() = default;
 	RoughTransmittance(const std::string& name);
 	void Free();
 	CUDA_DEVICE CUDA_HOST float Evaluate(float cosTheta, float alpha = 0.0f, float eta = 0.0f) const;

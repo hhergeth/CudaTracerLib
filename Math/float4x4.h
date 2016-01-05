@@ -9,7 +9,7 @@ namespace CudaTracerLib {
 struct CUDA_ALIGN(16) float4x4
 {
 	float data[16];
-	CUDA_FUNC_IN int idx(int i, int j) const
+	CUDA_FUNC_IN static int idx(int i, int j)
 	{
 		return i * 4 + j;
 	}

@@ -272,30 +272,12 @@ public:
 #endif
 	}
 
-	CUDA_FUNC_IN static unsigned int floatToBits(float a)
-	{
-#ifdef ISCUDA
-		return ::__float_as_int(a);
-#else
-		return *(unsigned int*)&a;
-#endif
-	}
-
-	CUDA_FUNC_IN static float bitsToFloat(unsigned int a)
-	{
-#ifdef ISCUDA
-		return ::__int_as_float(a);
-#else
-		return *(float*)&a;
-#endif
-	}
-
 	CUDA_FUNC_IN static float exp2(unsigned int a)
 	{
 #ifdef ISCUDA
 		return ::exp2f((float)a); 
 #else
-		return bitsToFloat(clamp(a + 127, 1u, 254u) << 23);
+		return int_as_float_(clamp(a + 127, 1u, 254u) << 23);
 #endif
 	}
 

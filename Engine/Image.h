@@ -32,11 +32,11 @@ public:
 		xRes = xResolution;
 		yRes = yResolution;
 	}
-	CUDA_FUNC_IN unsigned int getWidth()
+	CUDA_FUNC_IN unsigned int getWidth() const
 	{
 		return xResolution;
 	}
-	CUDA_FUNC_IN unsigned int getHeight()
+	CUDA_FUNC_IN unsigned int getHeight() const
 	{
 		return yResolution;
 	}

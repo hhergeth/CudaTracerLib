@@ -181,7 +181,6 @@ public:
 DynamicScene::DynamicScene(Sensor* C, SceneInitData a_Data, IFileManager* fManager)
 	: m_uEnvMapIndex(UINT_MAX), m_pCamera(C), m_pHostTmpFloats(0), m_pFileManager(fManager)
 {
-	int nodeC = 1 << 16, tCount = 1 << 16;
 	m_pAnimStream = new Stream<char>(a_Data.m_uSizeAnimStream + (a_Data.m_bSupportEnvironmentMap ? (4096 * 4094 * 8) : 0));
 	m_pTriDataStream = new Stream<TriangleData>(a_Data.m_uNumTriangles);
 	m_pTriIntStream = new Stream<TriIntersectorData>(a_Data.m_uNumInt);

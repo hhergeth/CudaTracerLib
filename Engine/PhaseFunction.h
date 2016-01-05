@@ -39,7 +39,7 @@ struct BasePhaseFunction : public BaseType//, public BaseTypeHelper<4408912>
 struct HGPhaseFunction : public BasePhaseFunction//, public e_DerivedTypeHelper<1>
 {
 	TYPE_FUNC(1)
-		float m_g;
+	float m_g;
 
 	HGPhaseFunction(){}
 	HGPhaseFunction(float g)
@@ -57,7 +57,7 @@ struct HGPhaseFunction : public BasePhaseFunction//, public e_DerivedTypeHelper<
 struct IsotropicPhaseFunction : public BasePhaseFunction//, public e_DerivedTypeHelper<2>
 {
 	TYPE_FUNC(2)
-		CUDA_FUNC_IN IsotropicPhaseFunction()
+	CUDA_FUNC_IN IsotropicPhaseFunction()
 		: BasePhaseFunction((EPhaseFunctionType)(pEIsotropic | pEAngleDependence))
 	{
 	}
@@ -112,7 +112,7 @@ public:
 
 	CUDA_FUNC_IN EPhaseFunctionType getType() const
 	{
-		return ((BasePhaseFunction*)Data)->type;
+		return As()->type;
 	}
 
 	CALLER(Evaluate)

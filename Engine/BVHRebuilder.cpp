@@ -16,13 +16,15 @@ struct BVHRebuilder::BVHIndex
 {
 private:
 	int native;
-	BVHIndex(int i)
+	explicit BVHIndex(int i)
 		: native(i)
 	{
 
 	}
 public:
-	BVHIndex(){}
+	BVHIndex()
+		: native(NO_NODE)
+	{}
 	static BVHIndex FromNative(int i)
 	{
 		return BVHIndex(i);
@@ -114,7 +116,7 @@ struct BVHRebuilder::BVHNodeInfo
 
 	}
 
-	BVHNodeInfo(int l)
+	explicit BVHNodeInfo(int l)
 		: numLeafs(l)
 	{
 
@@ -133,7 +135,7 @@ class BVHRebuilder::BuilderCLB : public IBVHBuilderCallback
 {
 	BVHRebuilder* t;
 public:
-	BuilderCLB(BVHRebuilder* c)
+	explicit BuilderCLB(BVHRebuilder* c)
 		: t(c)
 	{
 		t->m_uBvhNodeCount = 0;
@@ -286,7 +288,6 @@ void BVHRebuilder::recomputeNode(BVHIndex bvhNodeIdx, AABB& newBox)
 	}
 	else
 	{
-		BVHNodeInfo& info = bvhNodeData[bvhNodeIdx.innerIdx()];
 		BVHNodeData* node = m_pBVHData + bvhNodeIdx.innerIdx();
 		BVHIndexTuple c = children(bvhNodeIdx);
 		bool modified = false;
@@ -449,8 +450,8 @@ bool BVHRebuilder::Build(ISpatialInfoProvider* data, bool invalidateAll)
 }
 
 BVHRebuilder::BVHRebuilder(BVHNodeData* data, unsigned int a_BVHNodeLength, unsigned int a_SceneNodeLength, TriIntersectorData2* indices, unsigned int a_IndicesLength)
-	: m_pBVHData(data), m_uBVHDataLength(a_BVHNodeLength), m_uBvhNodeCount(0), startNode(-1), m_pBVHIndices(indices), m_uBVHIndicesLength(a_IndicesLength), m_UBVHIndicesCount(0),
-	m_uModifiedCount(0), m_pData(0)
+	: m_pBVHData(data), m_uBVHDataLength(a_BVHNodeLength), m_uBvhNodeCount(0), m_pBVHIndices(indices), m_uBVHIndicesLength(a_IndicesLength), m_UBVHIndicesCount(0),
+	m_pData(0), startNode(-1), m_uModifiedCount(0), recomputeAll(false)
 {
 	if (a_SceneNodeLength > MAX_NODES)
 		throw std::runtime_error("BVHRebuilder too many objects!");
@@ -459,9 +460,9 @@ BVHRebuilder::BVHRebuilder(BVHNodeData* data, unsigned int a_BVHNodeLength, unsi
 }
 
 BVHRebuilder::BVHRebuilder(Mesh* mesh, ISpatialInfoProvider* data)
-	: m_pBVHData(mesh->m_sNodeInfo(0)), m_uBVHDataLength(mesh->m_sNodeInfo.getLength()), m_uBvhNodeCount(0), startNode(-1),
+	: m_pBVHData(mesh->m_sNodeInfo(0)), m_uBVHDataLength(mesh->m_sNodeInfo.getLength()), m_uBvhNodeCount(0),
 	m_pBVHIndices(mesh->m_sIndicesInfo(0)), m_uBVHIndicesLength(mesh->m_sIndicesInfo.getLength()), m_UBVHIndicesCount(0),
-	m_uModifiedCount(0), m_pData(data)
+	m_pData(data), startNode(-1), m_uModifiedCount(0), recomputeAll(false)
 {
 	unsigned int a_SceneNodeLength = mesh->m_sTriInfo.getLength();
 	if (a_SceneNodeLength > MAX_NODES)
@@ -530,12 +531,12 @@ void BVHRebuilder::removeNode(unsigned int n)
 	nodesToRecompute.reset(n);
 }
 
-bool BVHRebuilder::needsBuild()
+bool BVHRebuilder::needsBuild() const
 {
 	return m_uModifiedCount || nodesToInsert.size() != 0 || nodesToRemove.size() != 0;
 }
 
-AABB BVHRebuilder::getBox()
+AABB BVHRebuilder::getBox() const
 {
 	return m_pBVHData[startNode].getBox();
 }

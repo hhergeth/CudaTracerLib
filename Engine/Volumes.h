@@ -291,7 +291,7 @@ struct CUDA_ALIGN(16) VolumeRegion : public CudaVirtualAggregate<BaseVolumeRegio
 public:
 	CUDA_FUNC_IN AABB WorldBound() const
 	{
-		return AABB(Vec3f(0), Vec3f(1)).Transform(((BaseVolumeRegion*)Data)->VolumeToWorld);
+		return AABB(Vec3f(0), Vec3f(1)).Transform(As()->VolumeToWorld);
 	}
 
 	CUDA_FUNC_IN bool IntersectP(const Ray &ray, const float minT, const float maxT, float *t0, float *t1) const

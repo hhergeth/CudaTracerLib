@@ -67,18 +67,18 @@ public:
 
 	bool Build(ISpatialInfoProvider* data, bool invalidateAll = false);
 	void SetEmpty();
-	bool needsBuild();
+	bool needsBuild() const;
 	void printGraph(const std::string& path);
 
 	void addNode(unsigned int n);
 	void removeNode(unsigned int n);
 	void invalidateNode(unsigned int n);
 
-	const std::bitset<MAX_NODES>& getInvalidatedNodes(){ return nodesToRecompute; }
-	unsigned int getNumBVHIndicesUsed(){ return m_UBVHIndicesCount; }
-	int getStartNode(){ return startNode; }
-	unsigned int getNumBVHNodesUsed(){ return m_uBvhNodeCount; }
-	AABB getBox();
+	const std::bitset<MAX_NODES>& getInvalidatedNodes() const { return nodesToRecompute; }
+	unsigned int getNumBVHIndicesUsed() const { return m_UBVHIndicesCount; }
+	int getStartNode() const{ return startNode; }
+	unsigned int getNumBVHNodesUsed() const { return m_uBvhNodeCount; }
+	AABB getBox() const;
 private:
 	int BuildInfoTree(BVHIndex idx, BVHIndex parent);
 	void removeNodeAndCollapse(BVHIndex nodeIdx, BVHIndex childIdx);
