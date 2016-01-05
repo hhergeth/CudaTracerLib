@@ -245,7 +245,7 @@ template<int D, int K> struct GaussianMixtureModel
 
 		const float eps = 0.01f;
 		CudaRNG rng;
-		rng.Initialize(0, 1234, 0);
+		rng.Initialize(1);
 		GaussianMixtureModel<D, K> res = Random(rng);
 		std::vector<std::vector<float>> gamma;
 		for (int i = 0; i < N; i++)

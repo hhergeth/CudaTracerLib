@@ -9,7 +9,7 @@ class LinearCongruental_GENERATOR
 {
 	unsigned int X_i;
 public:
-	CUDA_FUNC_IN LinearCongruental_GENERATOR(unsigned int seed = 12345)
+	CUDA_FUNC_IN explicit LinearCongruental_GENERATOR(unsigned int seed = 12345)
 	{
 		X_i = seed;
 	}
@@ -31,7 +31,7 @@ class Lehmer_GENERATOR
 {
 	unsigned int X_i;
 public:
-	CUDA_FUNC_IN Lehmer_GENERATOR(unsigned int seed = 123456789L)
+	CUDA_FUNC_IN explicit Lehmer_GENERATOR(unsigned int seed = 123456789L)
 	{
 		X_i = seed;
 	}
@@ -52,23 +52,18 @@ public:
 
 class TAUSWORTHE_GENERATOR
 {
-	CUDA_FUNC_IN unsigned int TausStep(unsigned int &z, unsigned int S1, unsigned int S2, unsigned int S3, unsigned int M)
+	CUDA_FUNC_IN static unsigned int TausStep(unsigned int &z, unsigned int S1, unsigned int S2, unsigned int S3, unsigned int M)
 	{
 		unsigned int b = (((z << S1) ^ z) >> S2);
 		return z = (((z & M) << S3) ^ b);
 	}
-	CUDA_FUNC_IN unsigned int LCGStep(unsigned int &z, unsigned int A, unsigned int C)
+	CUDA_FUNC_IN static unsigned int LCGStep(unsigned int &z, unsigned int A, unsigned int C)
 	{
 		return z = (A*z + C);
 	}
 	unsigned int z1, z2, z3, z4;
 public:
-	CUDA_FUNC_IN TAUSWORTHE_GENERATOR()
-	{
-
-	}
-
-	CUDA_FUNC_IN TAUSWORTHE_GENERATOR(unsigned int seed)
+	CUDA_FUNC_IN explicit TAUSWORTHE_GENERATOR(unsigned int seed)
 	{
 		z1 = seed + 1 + 1;
 		z2 = seed + 7 + 1;
@@ -91,14 +86,7 @@ class Xorshift_GENERATOR
 {
 	unsigned int y;
 public:
-	CUDA_FUNC_IN Xorshift_GENERATOR()
-	{
-#ifndef ISCUDA
-		y = 123456789;
-#endif
-	}
-
-	CUDA_FUNC_IN Xorshift_GENERATOR(unsigned int seed)
+	CUDA_FUNC_IN explicit Xorshift_GENERATOR(unsigned int seed)
 	{
 		y = seed;
 	}
@@ -293,7 +281,12 @@ private:
 		_curand_init_scratch(seed, subsequence, offset, state, (unsigned int*)scratch);
 	}
 public:
-	CUDA_DEVICE CUDA_HOST void Initialize(unsigned int a_Index, unsigned int a_Spacing, unsigned int a_Offset);
+	CUDA_FUNC_IN explicit CudaRNG() = default;
+	CUDA_FUNC_IN explicit CudaRNG(unsigned int a_Index)
+	{
+		Initialize(a_Index);
+	}
+	CUDA_DEVICE CUDA_HOST void Initialize(unsigned int a_Index);
 	CUDA_DEVICE CUDA_HOST float randomFloat();
 	CUDA_DEVICE CUDA_HOST unsigned long randomUint();
 
@@ -319,14 +312,14 @@ private:
 	CudaRNG* m_pDeviceGenerators;
 public:
 	//curandSetGeneratorOffset(GENERATOR[i], i * a_Offset);
-	CudaRNGBuffer(unsigned int a_Length, unsigned int a_Spacing = 1234, unsigned int a_Offset = 0);
+	explicit CudaRNGBuffer(unsigned int a_Length);
 	CudaRNGBuffer(){}
 	void Free();
 	CUDA_DEVICE CUDA_HOST CudaRNG operator()();
 	CUDA_DEVICE CUDA_HOST void operator()(CudaRNG& val);
 	void NextPass();
 private:
-	void createGenerators(unsigned int a_Spacing, unsigned int a_Offset);
+	void createGenerators();
 };
 
 }

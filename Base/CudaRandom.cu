@@ -24,7 +24,7 @@ unsigned long CudaRNG::randomUint()
 #endif
 }
 
-void CudaRNG::Initialize(unsigned int a_Index, unsigned int a_Spacing, unsigned int a_Offset)
+void CudaRNG::Initialize(unsigned int a_Index)
 {
 #ifdef ISCUDA
 	curand_init(1234, a_Index, 0, &state);
@@ -33,25 +33,27 @@ void CudaRNG::Initialize(unsigned int a_Index, unsigned int a_Spacing, unsigned 
 #endif
 }
 
-CudaRNGBuffer::CudaRNGBuffer(unsigned int a_Length, unsigned int a_Spacing, unsigned int a_Offset)
+CudaRNGBuffer::CudaRNGBuffer(unsigned int a_Length)
+	: m_uNumGenerators(a_Length)
 {
-	m_uNumGenerators = a_Length;
 	CUDA_MALLOC(&m_pDeviceGenerators, a_Length * sizeof(CudaRNG));
 	m_pHostGenerators = new CudaRNG[a_Length];
-	createGenerators(a_Spacing, a_Offset);
+	createGenerators();
 }
 
 void CudaRNGBuffer::Free()
 {
 	CUDA_FREE(m_pDeviceGenerators);
+	m_pDeviceGenerators = 0;
 	delete[] m_pHostGenerators;
+	m_pHostGenerators = 0;
 }
 
-void CudaRNGBuffer::createGenerators(unsigned int a_Spacing, unsigned int a_Offset)
+void CudaRNGBuffer::createGenerators()
 {
 	for (unsigned int i = 0; i < m_uNumGenerators; i++)
 	{
-		(m_pHostGenerators + i)->Initialize(i, a_Spacing, a_Offset);
+		(m_pHostGenerators + i)->Initialize(i);
 	}
 	CUDA_MEMCPY_TO_DEVICE(m_pDeviceGenerators, m_pHostGenerators, sizeof(CudaRNG) * m_uNumGenerators);
 }
