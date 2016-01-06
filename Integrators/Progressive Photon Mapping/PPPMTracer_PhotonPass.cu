@@ -96,8 +96,7 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 			if ((!bssrdf && inMedium && V.sampleDistance(r, 0, r2.m_fDist, rng, mRec))
 				|| (bssrdf && bssrdf->sampleDistance(r, 0, r2.m_fDist, rng.randomFloat(), mRec)))
 			{//mRec.t
-				throughput *= mRec.transmittance / mRec.pdfSuccess;
-				throughput *= mRec.sigmaS;
+				throughput *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
 				((VolEstimator*)g_VolEstimator)->StorePhoton(mRec.p, -r.direction, throughput * Le, !wasStoredVolumePoint);
 				wasStoredVolumePoint = true;
 				if (bssrdf)
