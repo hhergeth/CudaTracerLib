@@ -6,14 +6,14 @@ namespace CudaTracerLib
 struct diffuse : public BSDF//, public e_DerivedTypeHelper<1>
 {
 	TYPE_FUNC(1)
-		Texture m_reflectance;
+	Texture m_reflectance;
 	diffuse()
 		: BSDF(EDiffuseReflection)
 	{
 		initTextureOffsets(m_reflectance);
 	}
 	diffuse(const Texture& d)
-		: m_reflectance(d), BSDF(EDiffuseReflection)
+		: BSDF(EDiffuseReflection), m_reflectance(d)
 	{
 		initTextureOffsets(m_reflectance);
 	}

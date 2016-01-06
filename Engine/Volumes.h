@@ -26,14 +26,13 @@ struct MediumSamplingRecord
 
 struct BaseVolumeRegion : public BaseType//, public BaseTypeHelper<5001046>
 {
-public:
-	unsigned int m_uNodeIndex;
 	PhaseFunction Func;
 	float4x4 WorldToVolume, VolumeToWorld;
 
-	CUDA_FUNC_IN BaseVolumeRegion()
+	BaseVolumeRegion(const PhaseFunction& pFunc, const float4x4& vToW)
+		: Func(pFunc), VolumeToWorld(vToW)
 	{
-		m_uNodeIndex = UINT_MAX;
+		
 	}
 
 	virtual void Update()
@@ -54,24 +53,21 @@ public:
 struct HomogeneousVolumeDensity : public BaseVolumeRegion//, public e_DerivedTypeHelper<1>
 {
 	TYPE_FUNC(1)
-public:
-	HomogeneousVolumeDensity(){}
-	HomogeneousVolumeDensity(const PhaseFunction& func, const float4x4& ToWorld, const float sa, const float ss, float emit)
+
+	HomogeneousVolumeDensity()
+		: BaseVolumeRegion(CreateAggregate<PhaseFunction>(IsotropicPhaseFunction()), float4x4::Identity()), sig_a(0.0f), sig_s(0.0f), le(0.0f)
 	{
-		BaseVolumeRegion::Func = func;
-		VolumeToWorld = ToWorld;
-		sig_a = Spectrum(sa);
-		sig_s = Spectrum(ss);
-		le = Spectrum(emit);
+		
 	}
 
-	CUDA_FUNC_IN HomogeneousVolumeDensity(const PhaseFunction& func, const float4x4& ToWorld, const Spectrum& sa, const Spectrum& ss, const Spectrum& emit)
+	HomogeneousVolumeDensity(const PhaseFunction& func, const float4x4& ToWorld, const float sa, const float ss, float e)
+		: BaseVolumeRegion(func, ToWorld), sig_a(sa), sig_s(ss), le(e)
 	{
-		BaseVolumeRegion::Func = func;
-		VolumeToWorld = ToWorld;
-		sig_a = sa;
-		sig_s = ss;
-		le = emit;
+	}
+
+	HomogeneousVolumeDensity(const PhaseFunction& func, const float4x4& ToWorld, const Spectrum& sa, const Spectrum& ss, const Spectrum& e)
+		: BaseVolumeRegion(func, ToWorld), sig_a(sa), sig_s(ss), le(e)
+	{
 	}
 
 	CUDA_FUNC_IN Spectrum sigma_a(const Vec3f& p, const Vec3f& w) const
@@ -105,7 +101,9 @@ struct DenseVolGridBaseType
 {
 	e_Variable<char> data;
 	DenseVolGridBaseType()
+		: data(0, 0)
 	{
+		
 	}
 	DenseVolGridBaseType(Stream<char>* a_Buffer, Vec3u dim, size_t sizePerElement, size_t alignment);
 	void InvalidateDeviceData(Stream<char>* a_Buffer);
@@ -120,7 +118,11 @@ template<typename T> struct DenseVolGrid : public DenseVolGridBaseType
 public:
 	Vec3u dim;
 	Vec3f dimF;
-	DenseVolGrid(){}
+	DenseVolGrid()
+		: dim(0), dimF(0)
+	{
+		
+	}
 	DenseVolGrid(Stream<char>* a_Buffer, Vec3u dim)
 		: DenseVolGridBaseType(a_Buffer, dim, sizeof(T), std::alignment_of<T>::value), dim(dim)
 	{
@@ -185,7 +187,7 @@ struct VolumeGrid : public BaseVolumeRegion//, public e_DerivedTypeHelper<2>
 {
 	TYPE_FUNC(2)
 public:
-	VolumeGrid(){}
+	VolumeGrid();
 	VolumeGrid(const PhaseFunction& func, const float4x4& ToWorld, Stream<char>* a_Buffer, Vec3u dim);
 	VolumeGrid(const PhaseFunction& func, const float4x4& ToWorld, Stream<char>* a_Buffer, Vec3u dimA, Vec3u dimS, Vec3u dimL);
 
@@ -286,7 +288,7 @@ private:
 	}
 };
 
-struct CUDA_ALIGN(16) VolumeRegion : public CudaVirtualAggregate<BaseVolumeRegion, HomogeneousVolumeDensity, VolumeGrid>
+struct VolumeRegion : public CudaVirtualAggregate<BaseVolumeRegion, HomogeneousVolumeDensity, VolumeGrid>
 {
 public:
 	CUDA_FUNC_IN AABB WorldBound() const
@@ -300,37 +302,37 @@ public:
 	}
 
 	CALLER(sigma_a)
-		CUDA_FUNC_IN Spectrum sigma_a(const Vec3f& p, const Vec3f& w) const
+	CUDA_FUNC_IN Spectrum sigma_a(const Vec3f& p, const Vec3f& w) const
 	{
 		return sigma_a_Caller<Spectrum>(*this, p, w);
 	}
 
 	CALLER(sigma_s)
-		CUDA_FUNC_IN Spectrum sigma_s(const Vec3f& p, const Vec3f& w) const
+	CUDA_FUNC_IN Spectrum sigma_s(const Vec3f& p, const Vec3f& w) const
 	{
 		return sigma_s_Caller<Spectrum>(*this, p, w);
 	}
 
 	CALLER(Lve)
-		CUDA_FUNC_IN Spectrum Lve(const Vec3f& p, const Vec3f& w) const
+	CUDA_FUNC_IN Spectrum Lve(const Vec3f& p, const Vec3f& w) const
 	{
 		return Lve_Caller<Spectrum>(*this, p, w);
 	}
 
 	CALLER(sigma_t)
-		CUDA_FUNC_IN Spectrum sigma_t(const Vec3f &p, const Vec3f &wo) const
+	CUDA_FUNC_IN Spectrum sigma_t(const Vec3f &p, const Vec3f &wo) const
 	{
 		return sigma_t_Caller<Spectrum>(*this, p, wo);
 	}
 
 	CALLER(tau)
-		CUDA_FUNC_IN Spectrum tau(const Ray &ray, float minT, float maxT) const
+	CUDA_FUNC_IN Spectrum tau(const Ray &ray, float minT, float maxT) const
 	{
 		return tau_Caller<Spectrum>(*this, ray, minT, maxT);
 	}
 
 	CALLER(sampleDistance)
-		CUDA_FUNC_IN bool sampleDistance(const Ray& ray, float minT, float maxT, float sample, MediumSamplingRecord& mRec) const
+	CUDA_FUNC_IN bool sampleDistance(const Ray& ray, float minT, float maxT, float sample, MediumSamplingRecord& mRec) const
 	{
 		return sampleDistance_Caller<bool>(*this, ray, minT, maxT, sample, mRec);
 	}
@@ -364,13 +366,13 @@ public:
 	///Calculates the volumes optical thickness along a ray in the volumes bounds
 	CUDA_DEVICE CUDA_HOST Spectrum tau(const Ray &ray, float minT, float maxT) const;
 
-	CUDA_DEVICE CUDA_HOST float Sample(const Vec3f& p, const Vec3f& wo, CudaRNG& rng, Vec3f* wi);
+	CUDA_DEVICE CUDA_HOST float Sample(const Vec3f& p, const Vec3f& wo, CudaRNG& rng, Vec3f* wi) const;
 
-	CUDA_DEVICE CUDA_HOST float p(const Vec3f& p, const Vec3f& wo, const Vec3f& wi, CudaRNG& rng);
+	CUDA_DEVICE CUDA_HOST float p(const Vec3f& p, const Vec3f& wo, const Vec3f& wi, CudaRNG& rng) const;
 
 	CUDA_DEVICE CUDA_HOST bool sampleDistance(const Ray& ray, float minT, float maxT, CudaRNG& rng, MediumSamplingRecord& mRec) const;
 
-	CUDA_FUNC_IN bool HasVolumes()
+	CUDA_FUNC_IN bool HasVolumes() const
 	{
 		return m_uVolumeCount > 0;
 	}

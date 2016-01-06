@@ -28,7 +28,6 @@ struct BasePhaseFunction : public BaseType//, public BaseTypeHelper<4408912>
 {
 	EPhaseFunctionType type;
 
-	CUDA_FUNC_IN BasePhaseFunction(){}
 	CUDA_FUNC_IN BasePhaseFunction(EPhaseFunctionType t)
 		: type(t)
 	{
@@ -41,10 +40,15 @@ struct HGPhaseFunction : public BasePhaseFunction//, public e_DerivedTypeHelper<
 	TYPE_FUNC(1)
 	float m_g;
 
-	HGPhaseFunction(){}
 	HGPhaseFunction(float g)
 		: BasePhaseFunction(EPhaseFunctionType::pEAngleDependence), m_g(g)
 	{
+	}
+
+	HGPhaseFunction()
+		: BasePhaseFunction(EPhaseFunctionType::pEAngleDependence), m_g(0)
+	{
+		
 	}
 
 	CUDA_DEVICE CUDA_HOST float Evaluate(const PhaseFunctionSamplingRecord &pRec) const;
@@ -57,6 +61,7 @@ struct HGPhaseFunction : public BasePhaseFunction//, public e_DerivedTypeHelper<
 struct IsotropicPhaseFunction : public BasePhaseFunction//, public e_DerivedTypeHelper<2>
 {
 	TYPE_FUNC(2)
+
 	CUDA_FUNC_IN IsotropicPhaseFunction()
 		: BasePhaseFunction((EPhaseFunctionType)(pEIsotropic | pEAngleDependence))
 	{
@@ -72,11 +77,11 @@ struct IsotropicPhaseFunction : public BasePhaseFunction//, public e_DerivedType
 struct KajiyaKayPhaseFunction : public BasePhaseFunction//, public e_DerivedTypeHelper<3>
 {
 	TYPE_FUNC(3)
-		float m_ks, m_kd, m_exponent, m_normalization;
-	Vec3f orientation;
+	float m_ks, m_kd, m_exponent, m_normalization;
 
-	KajiyaKayPhaseFunction(){}
-	KajiyaKayPhaseFunction(float ks, float kd, float e, Vec3f o);
+	KajiyaKayPhaseFunction();
+
+	KajiyaKayPhaseFunction(float ks, float kd, float e);
 
 	virtual void Update();
 
@@ -90,7 +95,8 @@ struct KajiyaKayPhaseFunction : public BasePhaseFunction//, public e_DerivedType
 struct RayleighPhaseFunction : public BasePhaseFunction//, public e_DerivedTypeHelper<4>
 {
 	TYPE_FUNC(4)
-		RayleighPhaseFunction()
+
+	RayleighPhaseFunction()
 		: BasePhaseFunction(EPhaseFunctionType::pEIsotropic)
 	{
 	}
@@ -102,27 +108,22 @@ struct RayleighPhaseFunction : public BasePhaseFunction//, public e_DerivedTypeH
 	CUDA_DEVICE CUDA_HOST float Sample(PhaseFunctionSamplingRecord &pRec, float &pdf, CudaRNG& sampler) const;
 };
 
-struct CUDA_ALIGN(16) PhaseFunction : public CudaVirtualAggregate<BasePhaseFunction, HGPhaseFunction, IsotropicPhaseFunction, KajiyaKayPhaseFunction, RayleighPhaseFunction>
+struct PhaseFunction : public CudaVirtualAggregate<BasePhaseFunction, HGPhaseFunction, IsotropicPhaseFunction, KajiyaKayPhaseFunction, RayleighPhaseFunction>
 {
 public:
-	CUDA_FUNC_IN PhaseFunction()
-	{
-		type = 0;
-	}
-
 	CUDA_FUNC_IN EPhaseFunctionType getType() const
 	{
 		return As()->type;
 	}
 
 	CALLER(Evaluate)
-		CUDA_FUNC_IN float Evaluate(const PhaseFunctionSamplingRecord &pRec) const
+	CUDA_FUNC_IN float Evaluate(const PhaseFunctionSamplingRecord &pRec) const
 	{
 		return Evaluate_Caller<float>(*this, pRec);
 	}
 
 	CALLER(Sample)
-		CUDA_FUNC_IN float Sample(PhaseFunctionSamplingRecord &pRec, CudaRNG& sampler) const
+	CUDA_FUNC_IN float Sample(PhaseFunctionSamplingRecord &pRec, CudaRNG& sampler) const
 	{
 		return Sample_Caller<float>(*this, pRec, sampler);
 	}
@@ -133,17 +134,10 @@ public:
 	}
 
 	CALLER(pdf)
-		CUDA_FUNC_IN float pdf(const PhaseFunctionSamplingRecord &pRec) const
+	CUDA_FUNC_IN float pdf(const PhaseFunctionSamplingRecord &pRec) const
 	{
 		return Evaluate(pRec);
 	}
 };
-
-template<typename T> PhaseFunction CreatePhaseFunction(const T& val)
-{
-	PhaseFunction r;
-	r.SetData(val);
-	return r;
-}
 
 }

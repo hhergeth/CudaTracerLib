@@ -64,22 +64,16 @@ float IsotropicPhaseFunction::Sample(PhaseFunctionSamplingRecord &pRec, float &p
 	return 1.0f;
 }
 
-KajiyaKayPhaseFunction::KajiyaKayPhaseFunction(float ks, float kd, float e, Vec3f o)
-	: BasePhaseFunction(EPhaseFunctionType::pEAnisotropic), m_ks(ks), m_kd(kd), m_exponent(e), orientation(o)
+KajiyaKayPhaseFunction::KajiyaKayPhaseFunction(float ks, float kd, float e)
+	: BasePhaseFunction(EPhaseFunctionType::pEAnisotropic), m_ks(ks), m_kd(kd), m_exponent(e)
 {
-	int nParts = 1000;
-	float stepSize = PI / nParts, m = 4, theta = stepSize;
+	Update();
+}
 
-	m_normalization = 0; /* 0 at the endpoints */
-	for (int i = 1; i < nParts; ++i) {
-		float value = math::pow(cosf(theta - PI / 2), m_exponent)
-			* sinf(theta);
-		m_normalization += value * m;
-		theta += stepSize;
-		m = 6 - m;
-	}
-
-	m_normalization = 1 / (m_normalization * stepSize / 3 * 2 * PI);
+KajiyaKayPhaseFunction::KajiyaKayPhaseFunction()
+	: BasePhaseFunction(EPhaseFunctionType::pEAnisotropic), m_ks(0.4f), m_kd(0.2f), m_exponent(4.0f)
+{
+	Update();
 }
 
 void KajiyaKayPhaseFunction::Update()
@@ -101,10 +95,10 @@ void KajiyaKayPhaseFunction::Update()
 
 float KajiyaKayPhaseFunction::Evaluate(const PhaseFunctionSamplingRecord &pRec) const
 {
-	if (length(orientation) == 0)
+	if (length(pRec.wi) == 0)
 		return m_kd / (4 * PI);
 
-	Frame frame(normalize(orientation));
+	Frame frame(normalize(pRec.wi));
 	Vec3f reflectedLocal = frame.toLocal(pRec.wo);
 
 	reflectedLocal.z = -dot(pRec.wi, frame.n);

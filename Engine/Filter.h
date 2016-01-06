@@ -12,7 +12,7 @@ struct FilterBase : public BaseType//, public BaseTypeHelper<5524550>
 	float xWidth, yWidth;
 	float invXWidth, invYWidth;
 
-	CUDA_FUNC_IN FilterBase(float xw, float yw)
+	FilterBase(float xw, float yw)
 		: xWidth(xw), yWidth(yw), invXWidth(1.f / xw), invYWidth(1.f / yw)
 	{
 
@@ -23,17 +23,18 @@ struct FilterBase : public BaseType//, public BaseTypeHelper<5524550>
 		invXWidth = 1.0f / xWidth;
 		invYWidth = 1.0f / yWidth;
 	}
-
-	CUDA_FUNC_IN FilterBase()
-		: xWidth(0), yWidth(0), invXWidth(0), invYWidth(0)
-	{
-	}
 };
 
 struct BoxFilter : public FilterBase//, public e_DerivedTypeHelper<1>
 {
 	TYPE_FUNC(1)
-	BoxFilter(){}
+
+	BoxFilter()
+		: FilterBase(1, 1)
+	{
+		
+	}
+
 	BoxFilter(float xw, float yw)
 		: FilterBase(xw, yw)
 	{
@@ -52,11 +53,16 @@ struct GaussianFilter : public FilterBase//, public e_DerivedTypeHelper<2>
 	float alpha;
 	float expX, expY;
 
-	GaussianFilter(){}
-	CUDA_FUNC_IN GaussianFilter(float xw, float yw, float a)
-		: FilterBase(xw, yw), alpha(a), expX(expf(-alpha * xWidth * xWidth)), expY(expf(-alpha * yWidth * yWidth))
+	GaussianFilter()
+		: FilterBase(2, 2), alpha(-2)
 	{
+		Update();
+	}
 
+	GaussianFilter(float xw, float yw, float a)
+		: FilterBase(xw, yw), alpha(a)
+	{
+		Update();
 	}
 
 	virtual void Update()
@@ -80,7 +86,12 @@ struct MitchellFilter : public FilterBase//, public e_DerivedTypeHelper<3>
 	TYPE_FUNC(3)
 	float B, C;
 
-	MitchellFilter(){}
+	MitchellFilter()
+		: FilterBase(2, 2), B(1.0f / 3.0f), C(1.0f / 3.0f)
+	{
+		
+	}
+
 	MitchellFilter(float b, float c, float xw, float yw)
 		: FilterBase(xw, yw), B(b), C(c)
 	{
@@ -109,7 +120,12 @@ struct LanczosSincFilter : public FilterBase//, public e_DerivedTypeHelper<4>
 	TYPE_FUNC(4)
 	float tau;
 
-	LanczosSincFilter(){}
+	LanczosSincFilter()
+		: FilterBase(6, 6), tau(3)
+	{
+		
+	}
+
 	LanczosSincFilter(float xw, float yw, float t)
 		: FilterBase(xw, yw), tau(t)
 	{
@@ -135,7 +151,13 @@ struct LanczosSincFilter : public FilterBase//, public e_DerivedTypeHelper<4>
 struct TriangleFilter : public FilterBase//, public e_DerivedTypeHelper<5>
 {
 	TYPE_FUNC(5)
-	TriangleFilter(){}
+
+	TriangleFilter()
+		: FilterBase(2, 2)
+	{
+		
+	}
+
 	TriangleFilter(float xw, float yw)
 		: FilterBase(xw, yw)
 	{
@@ -151,13 +173,8 @@ struct TriangleFilter : public FilterBase//, public e_DerivedTypeHelper<5>
 struct CUDA_ALIGN(16) Filter : public CudaVirtualAggregate<FilterBase, BoxFilter, GaussianFilter, MitchellFilter, LanczosSincFilter, TriangleFilter>
 {
 public:
-	CUDA_FUNC_IN Filter()
-	{
-		//type = 0;	
-	}
-
 	CALLER(Evaluate)
-		CUDA_FUNC_IN float Evaluate(float x, float y) const
+	CUDA_FUNC_IN float Evaluate(float x, float y) const
 	{
 		return Evaluate_Caller<float>(*this, x, y);
 	}

@@ -35,12 +35,15 @@ struct LightBase : public AbstractEmitter//, public BaseTypeHelper<5523276>
 struct PointLight : public LightBase//, public e_DerivedTypeHelper<1>
 {
 	TYPE_FUNC(1)
-		Vec3f lightPos;
+	Vec3f lightPos;
 	Spectrum m_intensity;
 
 	PointLight()
 		: LightBase(EDeltaPosition)
-	{}
+	{
+		
+	}
+
 	PointLight(Vec3f p, Spectrum L, float r = 0)
 		: LightBase(EDeltaPosition), lightPos(p), m_intensity(L)
 	{
@@ -101,7 +104,10 @@ struct DiffuseLight : public LightBase//, public e_DerivedTypeHelper<2>
 
 	DiffuseLight()
 		: LightBase(EOnSurface)
-	{}
+	{
+		
+	}
+
 	DiffuseLight(const Spectrum& L, ShapeSet& s, unsigned int nodeIdx)
 		: LightBase(EOnSurface), shapeSet(s), m_bOrthogonal(false), m_uNodeIdx(nodeIdx)
 	{
@@ -140,13 +146,16 @@ struct DiffuseLight : public LightBase//, public e_DerivedTypeHelper<2>
 struct DistantLight : public LightBase//, public e_DerivedTypeHelper<3>
 {
 	TYPE_FUNC(3)
-		Spectrum m_normalIrradiance, m_power;
+	Spectrum m_normalIrradiance, m_power;
 	Frame ToWorld;
 	float m_invSurfaceArea, radius;
 
 	DistantLight()
 		: LightBase(EDeltaDirection)
-	{}
+	{
+		
+	}
+
 	///r is the radius of the scene's bounding sphere
 	DistantLight(const Spectrum& L, Vec3f d, float r)
 		: LightBase(EDeltaDirection), ToWorld(d), radius(r * 1.1f)
@@ -218,7 +227,7 @@ struct DistantLight : public LightBase//, public e_DerivedTypeHelper<3>
 struct SpotLight : public LightBase//, public e_DerivedTypeHelper<4>
 {
 	TYPE_FUNC(4)
-		Spectrum m_intensity;
+	Spectrum m_intensity;
 	float m_beamWidth, m_cutoffAngle;
 	float m_cosBeamWidth, m_cosCutoffAngle, m_invTransitionWidth;
 	Frame ToWorld;
@@ -226,7 +235,10 @@ struct SpotLight : public LightBase//, public e_DerivedTypeHelper<4>
 
 	SpotLight()
 		: LightBase(EDeltaPosition)
-	{}
+	{
+		
+	}
+
 	SpotLight(Vec3f p, Vec3f t, Spectrum L, float width, float fall);
 
 	virtual void Update()
@@ -286,7 +298,7 @@ private:
 struct InfiniteLight : public LightBase//, public e_DerivedTypeHelper<5>
 {
 	TYPE_FUNC(5)
-		KernelMIPMap radianceMap;
+	KernelMIPMap radianceMap;
 	e_Variable<float> m_cdfRows, m_cdfCols, m_rowWeights;
 	Vec3f m_SceneCenter;
 	float m_SceneRadius;
@@ -357,71 +369,71 @@ private:
 	CUDA_DEVICE CUDA_HOST float internalPdfDirection(const Vec3f &d) const;
 };
 
-struct CUDA_ALIGN(16) Light : public CudaVirtualAggregate<LightBase, PointLight, DiffuseLight, DistantLight, SpotLight, InfiniteLight>
+struct Light : public CudaVirtualAggregate<LightBase, PointLight, DiffuseLight, DistantLight, SpotLight, InfiniteLight>
 {
 public:
 	CALLER(sampleRay)
-		CUDA_FUNC_IN Spectrum sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const
+	CUDA_FUNC_IN Spectrum sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const
 	{
 		return sampleRay_Caller<Spectrum>(*this, ray, spatialSample, directionalSample);
 	}
 
 	CALLER(eval)
-		CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const Vec3f &d) const
+	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const Vec3f &d) const
 	{
 		return eval_Caller<Spectrum>(*this, p, sys, d);
 	}
 
 	CALLER(sampleDirect)
-		CUDA_FUNC_IN Spectrum sampleDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const
+	CUDA_FUNC_IN Spectrum sampleDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const
 	{
 		return sampleDirect_Caller<Spectrum>(*this, dRec, sample);
 	}
 
 	CALLER(pdfDirect)
-		CUDA_FUNC_IN float pdfDirect(const DirectSamplingRecord &dRec) const
+	CUDA_FUNC_IN float pdfDirect(const DirectSamplingRecord &dRec) const
 	{
 		return pdfDirect_Caller<float>(*this, dRec);
 	}
 
 	CALLER(samplePosition)
-		CUDA_FUNC_IN Spectrum samplePosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra = 0) const
+	CUDA_FUNC_IN Spectrum samplePosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra = 0) const
 	{
 		return samplePosition_Caller<Spectrum>(*this, pRec, sample, extra);
 	}
 
 	CALLER(evalPosition)
-		CUDA_FUNC_IN Spectrum evalPosition(const PositionSamplingRecord &pRec) const
+	CUDA_FUNC_IN Spectrum evalPosition(const PositionSamplingRecord &pRec) const
 	{
 		return evalPosition_Caller<Spectrum>(*this, pRec);
 	}
 
 	CALLER(pdfPosition)
-		CUDA_FUNC_IN float pdfPosition(const PositionSamplingRecord &pRec) const
+	CUDA_FUNC_IN float pdfPosition(const PositionSamplingRecord &pRec) const
 	{
 		return pdfPosition_Caller<float>(*this, pRec);
 	}
 
 	CALLER(sampleDirection)
-		CUDA_FUNC_IN Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra = 0) const
+	CUDA_FUNC_IN Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra = 0) const
 	{
 		return sampleDirection_Caller<Spectrum>(*this, dRec, pRec, sample, extra);
 	}
 
 	CALLER(pdfDirection)
-		CUDA_FUNC_IN float pdfDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
+	CUDA_FUNC_IN float pdfDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
 	{
 		return pdfDirection_Caller<float>(*this, dRec, pRec);
 	}
 
 	CALLER(evalDirection)
-		CUDA_FUNC_IN Spectrum evalDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
+	CUDA_FUNC_IN Spectrum evalDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
 	{
 		return evalDirection_Caller<Spectrum>(*this, dRec, pRec);
 	}
 
 	CALLER(getBox)
-		CUDA_FUNC_IN AABB getBox(float eps) const
+	CUDA_FUNC_IN AABB getBox(float eps) const
 	{
 		return getBox_Caller<AABB>(*this, eps);
 	}

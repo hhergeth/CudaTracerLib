@@ -112,7 +112,7 @@ public:
 		return f_Caller<Spectrum>(*this, bRec, measure);
 	}
 	CALLER(pdf)
-		CUDA_FUNC_IN float pdf(const BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
+	CUDA_FUNC_IN float pdf(const BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
 	{
 		return pdf_Caller<float>(*this, bRec, measure);
 	}

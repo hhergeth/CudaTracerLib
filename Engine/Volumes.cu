@@ -85,23 +85,24 @@ void DenseVolGridBaseType::InvalidateDeviceData(Stream<char>* a_Buffer)
 	a_Buffer->translate(data).Invalidate();
 }
 
-VolumeGrid::VolumeGrid(const PhaseFunction& func, const float4x4& ToWorld, Stream<char>* a_Buffer, Vec3u dim)
-	: grid(a_Buffer, dim), singleGrid(true)
+VolumeGrid::VolumeGrid()
+	: BaseVolumeRegion(CreateAggregate<PhaseFunction>(IsotropicPhaseFunction()), float4x4::Identity()), sigAMin(0.0f), sigSMin(0.0f), leMin(0.0f), sigAMax(0.0f), sigSMax(0.0f), leMax(0.0f),
+	grid(), singleGrid(true)
 {
-	VolumeToWorld = ToWorld;
-	BaseVolumeRegion::Func = func;
-	sigAMin = sigSMin = leMin = Spectrum(0.0f);
-	sigAMax = sigSMax = leMax = Spectrum(1.0f);
+	VolumeGrid::Update();
+}
+
+VolumeGrid::VolumeGrid(const PhaseFunction& func, const float4x4& ToWorld, Stream<char>* a_Buffer, Vec3u dim)
+	: BaseVolumeRegion(func, ToWorld), sigAMin(0.0f), sigSMin(0.0f), leMin(0.0f), sigAMax(0.0f), sigSMax(0.0f), leMax(0.0f), 
+	  grid(a_Buffer, dim), singleGrid(true)
+{
 	VolumeGrid::Update();
 }
 
 VolumeGrid::VolumeGrid(const PhaseFunction& func, const float4x4& ToWorld, Stream<char>* a_Buffer, Vec3u dimA, Vec3u dimS, Vec3u dimL)
-	: gridA(a_Buffer, dimA), gridS(a_Buffer, dimS), gridL(a_Buffer, dimL), singleGrid(false)
+	: BaseVolumeRegion(func, ToWorld), sigAMin(0.0f), sigSMin(0.0f), leMin(0.0f), sigAMax(0.0f), sigSMax(0.0f), leMax(0.0f), 
+	  gridA(a_Buffer, dimA), gridS(a_Buffer, dimS), gridL(a_Buffer, dimL), singleGrid(false)
 {
-	VolumeToWorld = ToWorld;
-	BaseVolumeRegion::Func = func;
-	sigAMin = sigSMin = leMin = Spectrum(0.0f);
-	sigAMax = sigSMax = leMax = Spectrum(1.0f);
 	VolumeGrid::Update();
 }
 
@@ -189,7 +190,6 @@ Spectrum VolumeGrid::integrateDensity(const Ray& ray, float t0, float t1) const
 	return sigAMin + (sigAMax - sigAMin) * D_s + sigSMin + (sigSMax - sigSMin) * D_a;
 }
 
-//computes density * scattering coefficients
 bool VolumeGrid::invertDensityIntegral(const Ray& ray, float t0, float t1, float desiredDensity,
 									   float& integratedDensity, float &t, float &densityAtMinT, float &densityAtT) const
 {
@@ -313,7 +313,7 @@ Spectrum KernelAggregateVolume::tau(const Ray &ray, float minT, float maxT) cons
 	return s;
 }
 
-float KernelAggregateVolume::Sample(const Vec3f& p, const Vec3f& wo, CudaRNG& rng, Vec3f* wi)
+float KernelAggregateVolume::Sample(const Vec3f& p, const Vec3f& wo, CudaRNG& rng, Vec3f* wi) const
 {
 	PhaseFunctionSamplingRecord r2(wo);
 	r2.wi = wo;
@@ -329,7 +329,7 @@ float KernelAggregateVolume::Sample(const Vec3f& p, const Vec3f& wo, CudaRNG& rn
 	return 0.0f;
 }
 
-float KernelAggregateVolume::p(const Vec3f& p, const Vec3f& wo, const Vec3f& wi, CudaRNG& rng)
+float KernelAggregateVolume::p(const Vec3f& p, const Vec3f& wo, const Vec3f& wi, CudaRNG& rng) const
 {
 	PhaseFunctionSamplingRecord r2(wo, wi);
 	for(unsigned int i = 0; i < m_uVolumeCount; i++)
