@@ -360,11 +360,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     </CudaCompile>
     <CudaCompile Include="Integrators\PhotonTracer.cu" />
     <CudaCompile Include="Integrators\PrimTracer.cu" />
-    <CudaCompile Include="Integrators\Progressive Photon Mapping\PPPMTracer_EyePass.cu">
-      <FastMath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</FastMath>
-      <GPUDebugInfo Condition="'$(Configuration)|$(Platform)'=='CPU_Debug|x64'">false</GPUDebugInfo>
-      <HostDebugInfo Condition="'$(Configuration)|$(Platform)'=='CPU_Debug|x64'">false</HostDebugInfo>
-    </CudaCompile>
+    <CudaCompile Include="Integrators\Progressive Photon Mapping\PPPMTracer_EyePass.cu" />
     <CudaCompile Include="Integrators\Progressive Photon Mapping\PPPMTracer_PhotonPass.cu" />
     <CudaCompile Include="Integrators\Progressive Photon Mapping\VolEstimators\BeamGrid.cu" />
     <CudaCompile Include="Integrators\Pseudo Realtime\FastTracer.cu" />

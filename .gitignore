@@ -33,3 +33,4 @@ Build/
 *.dll
 *.bin
 *.lib
+CudaTracerLib_project_suppressions.cfg
