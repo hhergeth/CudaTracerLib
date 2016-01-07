@@ -48,12 +48,12 @@ unsigned int TraceResult::LightIndex() const
 	unsigned int nli = getMat().NodeLightIndex;
 	if (nli == UINT_MAX)
 		return UINT_MAX;
-	return m_pNode->m_uLights(nli);
+	return g_SceneData.m_sNodeData[m_nodeIdx].m_uLights(nli);
 }
 
 unsigned int TraceResult::getNodeIndex() const
 {
-	return (int)(m_pNode - g_SceneData.m_sNodeData.Data);
+	return m_nodeIdx;
 }
 
 const Material& TraceResult::getMat() const
@@ -63,17 +63,17 @@ const Material& TraceResult::getMat() const
 
 unsigned int TraceResult::getTriIndex() const
 {
-	return (int)(m_pTri - g_SceneData.m_sTriData.Data);
+	return m_triIdx;
 }
 
 void TraceResult::fillDG(DifferentialGeometry& dg) const
 {
-	CudaTracerLib::fillDG(m_fBaryCoords, m_pTri, m_pNode, dg);
+	CudaTracerLib::fillDG(m_fBaryCoords, &g_SceneData.m_sTriData[m_triIdx], &g_SceneData.m_sNodeData[m_nodeIdx], dg);
 }
 
 unsigned int TraceResult::getMatIndex() const
 {
-	return m_pTri->getMatIndex(m_pNode->m_uMaterialOffset);
+	return g_SceneData.m_sTriData[m_triIdx].getMatIndex(g_SceneData.m_sNodeData[m_nodeIdx].m_uMaterialOffset);
 }
 
 }

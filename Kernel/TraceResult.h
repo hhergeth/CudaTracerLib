@@ -17,17 +17,17 @@ struct TraceResult
 {
 	float m_fDist;
 	Vec2f m_fBaryCoords;
-	const TriangleData* m_pTri;
-	const Node* m_pNode;
+	unsigned int m_triIdx;
+	unsigned int m_nodeIdx;
 	CUDA_FUNC_IN bool hasHit() const
 	{
-		return m_pTri != 0;
+		return m_triIdx != UINT_MAX;
 	}
 	CUDA_FUNC_IN void Init()
 	{
 		m_fDist = FLT_MAX;
-		m_pNode = 0;
-		m_pTri = 0;
+		m_triIdx = UINT_MAX;
+		m_nodeIdx = UINT_MAX;
 	}
 	CUDA_DEVICE CUDA_HOST unsigned int getMatIndex() const;
 	CUDA_DEVICE CUDA_HOST Spectrum Le(const Vec3f& p, const Frame& sys, const Vec3f& w) const;

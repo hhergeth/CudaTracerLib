@@ -43,8 +43,8 @@ void traversalResult::toResult(TraceResult* tR, KernelDynamicScene& data)
 {
 	tR->m_fDist = dist;
 	tR->m_fBaryCoords = ((half2*)&bCoords)->ToFloat2();
-	tR->m_pNode = data.m_sNodeData.Data + nodeIdx;
-	tR->m_pTri = data.m_sTriData.Data + triIdx;
+	tR->m_nodeIdx = nodeIdx;
+	tR->m_triIdx = triIdx;
 }
 
 CUDA_FUNC_IN void loadModl(int i, float4x4* o)
@@ -120,10 +120,9 @@ bool traceRay(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result)
 						if (v >= 0.0f && u + v <= 1.0f)
 						{
 							unsigned int ti = index >> 1;
-							TriangleData* tri = g_SceneData.m_sTriData.Data + ti + mesh.m_uTriangleOffset;
 
-							a_Result->m_pNode = N;
-							a_Result->m_pTri = tri;
+							a_Result->m_nodeIdx = nodeIdx;
+							a_Result->m_triIdx = ti + mesh.m_uTriangleOffset;
 							a_Result->m_fBaryCoords = Vec2f(u, v);
 							a_Result->m_fDist = t;
 							found = true;
