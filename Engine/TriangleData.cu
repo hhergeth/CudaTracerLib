@@ -21,7 +21,7 @@ void TriangleData::setUvSetData(int setId, const Vec2f& a, const Vec2f& b, const
 	m_sHostData.UV_Sets[setId].TexCoord[2] = *(ushort2*)&c1;
 }
 
-void TriangleData::getUVSetData(int setId, Vec2f& a, Vec2f& b, Vec2f& c)
+void TriangleData::getUVSetData(int setId, Vec2f& a, Vec2f& b, Vec2f& c) const
 {
 #define ToVec2f(V) Vec2f(half((unsigned short)(V >> 16)).ToFloat(), half((unsigned short)(V & 0xffff)).ToFloat())
 	a = ToVec2f(m_sDeviceData.UVSets[setId].x);
@@ -62,7 +62,7 @@ void TriangleData::setData(const Vec3f& v0, const Vec3f& v1, const Vec3f& v2,
 	m_sDeviceData.DpduDpdv.z = b.y.bits() | (b.z.bits() << 16);
 }
 
-void TriangleData::getNormals(Vec3f& n0, Vec3f& n1, Vec3f& n2)
+void TriangleData::getNormals(Vec3f& n0, Vec3f& n1, Vec3f& n2) const
 {
 	uint2 nme = m_sDeviceData.NorMatExtra;
 	n0 = Uchar2ToNormalizedFloat3(nme.x);
@@ -129,7 +129,7 @@ void TriangleData::setData(const Vec3f& v0, const Vec3f& v1, const Vec3f& v2,
 	m_sHostData.Normal = NormalizedFloat3ToUchar3(n0 + n1 + n2);
 }
 
-void TriangleData::getNormals(Vec3f& n0, Vec3f& n1, Vec3f& n2)
+void TriangleData::getNormals(Vec3f& n0, Vec3f& n1, Vec3f& n2) const
 {
 	n0 = n1 = n2 = Uchar3ToNormalizedFloat3(m_sHostData.Normal);
 }
