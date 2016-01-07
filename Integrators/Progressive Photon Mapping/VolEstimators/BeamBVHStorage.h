@@ -12,8 +12,6 @@ class BeamBVHStorage : public IVolumeEstimator
 {
 	class BuilderCLB;
 public:
-	unsigned int m_uNumEmitted;
-
 	Beam* m_pDeviceBeams;
 	Beam* m_pHostBeams;
 	unsigned int m_uBeamIdx;
@@ -67,7 +65,6 @@ public:
 	{
 		m_pScene = scene;
 		m_uBeamIdx = 0;
-		m_uNumEmitted = 0;
 		m_fCurrentRadiusVol = radProvider->getCurrentRadius(1);
 	}
 
@@ -86,11 +83,6 @@ public:
 		return isFullK();
 	}
 
-	virtual unsigned int getNumEmitted() const
-	{
-		return m_uNumEmitted;
-	}
-
 	virtual size_t getSize() const
 	{
 		return sizeof(*this);
@@ -103,20 +95,20 @@ public:
 
 	virtual void PrepareForRendering();
 
-	CUDA_ONLY_FUNC void StoreBeam(const Beam& b, bool firstStore)
+	CUDA_ONLY_FUNC bool StoreBeam(const Beam& b)
 	{
 		unsigned int i = atomicInc(&m_uBeamIdx, (unsigned int)-1);
 		if (i < m_uNumBeams)
 		{
 			m_pDeviceBeams[i] = b;
-			if (firstStore)
-				atomicInc(&m_uNumEmitted, (unsigned int)-1);
+			return true;
 		}
+		else return false;
 	}
 
-	CUDA_ONLY_FUNC void StorePhoton(const Vec3f& pos, const Vec3f& wi, const Spectrum& phi, bool firstStore)
+	CUDA_ONLY_FUNC bool StorePhoton(const Vec3f& pos, const Vec3f& wi, const Spectrum& phi)
 	{
-
+		return false;
 	}
 
 	template<typename CLB> CUDA_FUNC_IN void iterateBeams(const Ray& r, float rayEnd, const CLB& clb) const
@@ -137,7 +129,7 @@ public:
 		}, host, m_pDeviceNodes);
 	}
 
-	template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum L_Volume(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr) const;
+	template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum L_Volume(float NumEmitted, float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr) const;
 };
 
 }

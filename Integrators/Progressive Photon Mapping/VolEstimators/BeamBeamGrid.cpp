@@ -12,7 +12,6 @@ namespace CudaTracerLib {
 void BeamBeamGrid::StartNewPass(const IRadiusProvider* radProvider, DynamicScene* scene)
 {
 	m_fCurrentRadiusVol = radProvider->getCurrentRadius(1);
-	m_uNumEmitted = 0;
 	m_uBeamIdx = 0;
 	m_sStorage.ResetBuffer();
 

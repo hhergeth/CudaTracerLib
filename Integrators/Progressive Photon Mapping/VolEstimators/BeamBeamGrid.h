@@ -12,7 +12,6 @@ struct BeamBeamGrid : public IVolumeEstimator
 	unsigned int m_uBeamIdx;
 	unsigned int m_uBeamLength;
 
-	unsigned int m_uNumEmitted;
 	float m_fCurrentRadiusVol;
 
 	BeamBeamGrid(unsigned int gridDim, unsigned int numBeams, int N = 100)
@@ -44,11 +43,6 @@ struct BeamBeamGrid : public IVolumeEstimator
 		return isFullK();
 	}
 
-	virtual unsigned int getNumEmitted() const
-	{
-		return m_uNumEmitted;
-	}
-
 	virtual void PrintStatus(std::vector<std::string>& a_Buf) const
 	{
 		a_Buf.push_back(format("%.2f%% Beam grid indices", (float)m_sStorage.getNumStoredEntries() / m_sStorage.getNumEntries() * 100));
@@ -62,14 +56,14 @@ struct BeamBeamGrid : public IVolumeEstimator
 
 	virtual void PrepareForRendering();
 
-	CUDA_ONLY_FUNC void StoreBeam(const Beam& b, bool firstStore);
+	CUDA_ONLY_FUNC bool StoreBeam(const Beam& b);
 
-	CUDA_ONLY_FUNC void StorePhoton(const Vec3f& pos, const Vec3f& wi, const Spectrum& phi, bool firstStore)
+	CUDA_ONLY_FUNC bool StorePhoton(const Vec3f& pos, const Vec3f& wi, const Spectrum& phi)
 	{
-
+		return false;
 	}
 
-	template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum L_Volume(float radius, CudaRNG& rng, const Ray& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr);
+	template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum L_Volume(float NumEmitted, float radius, CudaRNG& rng, const Ray& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr);
 };
 
 }

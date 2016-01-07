@@ -6,7 +6,7 @@
 
 namespace CudaTracerLib {
 
-CUDA_ONLY_FUNC void BeamBeamGrid::StoreBeam(const Beam& b, bool firstStore)
+CUDA_ONLY_FUNC bool BeamBeamGrid::StoreBeam(const Beam& b)
 {
 	unsigned int beam_idx = atomicInc(&m_uBeamIdx, (unsigned int)-1);
 	if (beam_idx < m_uBeamLength)
@@ -43,14 +43,14 @@ CUDA_ONLY_FUNC void BeamBeamGrid::StoreBeam(const Beam& b, bool firstStore)
 		//	storedAll &= m_sStorage.store(pos, beam_idx);
 		//});
 
-		if (firstStore && storedAll)
-			atomicInc(&m_uNumEmitted, (unsigned int)-1);
+		return storedAll;
 #endif
 	}
+	else return false;
 }
 
 CUDA_CONST unsigned int g_PassIdx;
-CUDA_DEVICE unsigned int g_NumPhotonEmitted;
+CUDA_DEVICE unsigned int g_NumPhotonEmittedSurface, g_NumPhotonEmittedVolume;
 CUDA_DEVICE SurfaceMapT g_SurfaceMap;
 CUDA_DEVICE SurfaceMapT g_SurfaceMapCaustic;
 CUDA_DEVICE CUDA_ALIGN(16) unsigned char g_VolEstimator[Dmax4(sizeof(PointStorage), sizeof(BeamGrid), sizeof(BeamBeamGrid), sizeof(BeamBVHStorage))];
@@ -66,10 +66,11 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 	BSDFSamplingRecord bRec(dg);
 	KernelAggregateVolume& V = g_SceneData.m_sVolume;
 	CUDA_SHARED unsigned int numStoredSurface;
-	numStoredSurface = 0;
+	CUDA_SHARED unsigned int numStoredVolume;
+	numStoredSurface = 0; numStoredVolume = 0;
 	__syncthreads();
 
-	while (atomicInc(&local_Counter, (unsigned int)-1) < local_Todo)// && !g_SurfaceMap.isFull() && !((VolEstimator*)g_VolEstimator)->isFullK()
+	while (atomicInc(&local_Counter, (unsigned int)-1) < local_Todo && !g_SurfaceMap.isFull() && !((VolEstimator*)g_VolEstimator)->isFullK())
 	{
 		Ray r;
 		const Light* light;
@@ -77,28 +78,35 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 		Spectrum Le = g_SceneData.sampleEmitterRay(r, light, sps, sds),
 			throughput(1.0f);
 		int depth = -1;
-		bool wasStoredSurface = false, wasStoredVolumePoint = false, wasStoredVolumeBeam = false;
+		bool wasStoredSurface = false, wasStoredVolume = false;
 		bool delta = false;
 		MediumSamplingRecord mRec;
 		bool medium = false;
 		const VolumeRegion* bssrdf = 0;
 
-		while (++depth < PPM_MaxRecursion && !Le.isZero())// && !g_SurfaceMap.isFull() && !((VolEstimator*)g_VolEstimator)->isFullK()
+		while (++depth < PPM_MaxRecursion && !Le.isZero() && !g_SurfaceMap.isFull() && !((VolEstimator*)g_VolEstimator)->isFullK())
 		{
 			TraceResult r2 = traceRay(r);
 			float minT, maxT;
 			bool inMedium = (!bssrdf && V.HasVolumes() && V.IntersectP(r, 0, r2.m_fDist, &minT, &maxT)) || bssrdf;
 			if (inMedium)
 			{
-				((VolEstimator*)g_VolEstimator)->StoreBeam(Beam(r.origin, r.direction, r2.m_fDist, throughput * Le), !wasStoredVolumeBeam);//store the beam even if sampled distance is to far ahead!
-				wasStoredVolumeBeam = true;
+				if (((VolEstimator*)g_VolEstimator)->StoreBeam(Beam(r.origin, r.direction, r2.m_fDist, throughput * Le)) && !wasStoredVolume)//store the beam even if sampled distance is too far ahead!
+				{
+					printf("A");
+					atomicInc(&numStoredVolume, UINT_MAX);
+					wasStoredVolume = true;
+				}
 			}
 			if ((!bssrdf && inMedium && V.sampleDistance(r, 0, r2.m_fDist, rng, mRec))
 				|| (bssrdf && bssrdf->sampleDistance(r, 0, r2.m_fDist, rng.randomFloat(), mRec)))
 			{//mRec.t
 				throughput *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
-				((VolEstimator*)g_VolEstimator)->StorePhoton(mRec.p, -r.direction, throughput * Le, !wasStoredVolumePoint);
-				wasStoredVolumePoint = true;
+				if (((VolEstimator*)g_VolEstimator)->StorePhoton(mRec.p, -r.direction, throughput * Le) && !wasStoredVolume)
+				{
+					atomicInc(&numStoredVolume, UINT_MAX);
+					wasStoredVolume = true;
+				}
 				if (bssrdf)
 				{
 					PhaseFunctionSamplingRecord pRec(-r.direction);
@@ -131,7 +139,7 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 						b |= g_SurfaceMapCaustic.store(cell_idx, ph);
 					if (b && !wasStoredSurface)
 					{
-						atomicInc(&numStoredSurface, (unsigned int)-1);
+						atomicInc(&numStoredSurface, UINT_MAX);
 						wasStoredSurface = true;
 					}
 				}
@@ -154,7 +162,10 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 
 	__syncthreads();
 	if (threadIdx.x == 0 && threadIdx.y == 0)
-		atomicAdd(&g_NumPhotonEmitted, numStoredSurface);
+	{
+		atomicAdd(&g_NumPhotonEmittedSurface, numStoredSurface);
+		atomicAdd(&g_NumPhotonEmittedVolume, numStoredVolume);
+	}
 
 	g_RNGData(rng);
 }
@@ -169,7 +180,8 @@ void PPPMTracer::doPhotonPass()
 	m_pVolumeEstimator->StartNewPass(this, m_pScene);
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_SurfaceMap, &m_sSurfaceMap, sizeof(m_sSurfaceMap)));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_SurfaceMapCaustic, &m_sSurfaceMapCaustic, sizeof(m_sSurfaceMapCaustic)));
-	ZeroSymbol(g_NumPhotonEmitted);
+	ZeroSymbol(g_NumPhotonEmittedSurface);
+	ZeroSymbol(g_NumPhotonEmittedVolume);
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_VolEstimator, m_pVolumeEstimator, m_pVolumeEstimator->getSize()));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_PassIdx, &m_uPassesDone, sizeof(m_uPassesDone)));
 
@@ -187,9 +199,9 @@ void PPPMTracer::doPhotonPass()
 		ThrowCudaErrors(cudaMemcpyFromSymbol(&m_sSurfaceMapCaustic, g_SurfaceMapCaustic, sizeof(m_sSurfaceMapCaustic)));
 		ThrowCudaErrors(cudaMemcpyFromSymbol(m_pVolumeEstimator, g_VolEstimator, m_pVolumeEstimator->getSize()));
 	}
-	ThrowCudaErrors(cudaMemcpyFromSymbol(&m_uPhotonEmittedPass, g_NumPhotonEmitted, sizeof(m_uPhotonEmittedPass)));
+	ThrowCudaErrors(cudaMemcpyFromSymbol(&m_uPhotonEmittedPassSurface, g_NumPhotonEmittedSurface, sizeof(m_uPhotonEmittedPassSurface)));
+	ThrowCudaErrors(cudaMemcpyFromSymbol(&m_uPhotonEmittedPassVolume, g_NumPhotonEmittedVolume, sizeof(m_uPhotonEmittedPassVolume)));
 	m_pVolumeEstimator->PrepareForRendering();
-	m_uPhotonEmittedPass = max(m_uPhotonEmittedPass, m_pVolumeEstimator->getNumEmitted());
 	m_sSurfaceMap.PrepareForUse();
 	if (finalGathering)
 		m_sSurfaceMapCaustic.PrepareForUse();

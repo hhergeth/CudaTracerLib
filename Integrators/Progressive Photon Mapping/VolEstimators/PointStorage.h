@@ -54,7 +54,6 @@ struct PointStorage : public IVolumeEstimator
 		}
 	};
 	SpatialLinkedMap<volPhoton> m_sStorage;
-	unsigned int m_uNumEmitted;
 	float m_fCurrentRadiusVol;
 
 	CUDA_FUNC_IN PointStorage()
@@ -76,7 +75,6 @@ struct PointStorage : public IVolumeEstimator
 	virtual void StartNewPass(const IRadiusProvider* radProvider, DynamicScene* scene)
 	{
 		m_fCurrentRadiusVol = radProvider->getCurrentRadius(3);
-		m_uNumEmitted = 0;
 		m_sStorage.ResetBuffer();
 	}
 
@@ -95,11 +93,6 @@ struct PointStorage : public IVolumeEstimator
 		return isFullK();
 	}
 
-	virtual unsigned int getNumEmitted() const
-	{
-		return m_uNumEmitted;
-	}
-
 	virtual size_t getSize() const
 	{
 		return sizeof(*this);
@@ -115,21 +108,20 @@ struct PointStorage : public IVolumeEstimator
 		m_sStorage.PrepareForUse();
 	}
 #ifdef __CUDACC__
-	CUDA_ONLY_FUNC void StoreBeam(const Beam& b, bool firstStore)
+	CUDA_ONLY_FUNC bool StoreBeam(const Beam& b)
 	{
-
+		return false;
 	}
 
-	CUDA_ONLY_FUNC void StorePhoton(const Vec3f& pos, const Vec3f& wi, const Spectrum& phi, bool firstStore)
+	CUDA_ONLY_FUNC bool StorePhoton(const Vec3f& pos, const Vec3f& wi, const Spectrum& phi)
 	{
 		if(!m_sStorage.getHashGrid().getAABB().Contains(pos))
-			return;
+			return false;
 		Vec3u cell_idx = m_sStorage.getHashGrid().Transform(pos);
-		if (m_sStorage.store(cell_idx, volPhoton(pos, wi, phi, m_sStorage.getHashGrid(), cell_idx)) && firstStore)
-			Platform::Increment(&m_uNumEmitted);
+		return m_sStorage.store(cell_idx, volPhoton(pos, wi, phi, m_sStorage.getHashGrid(), cell_idx));
 	}
 
-	template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum L_Volume(float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr);
+	template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum L_Volume(float NumEmitted, float a_r, CudaRNG& rng, const Ray& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr);
 #endif
 };
 

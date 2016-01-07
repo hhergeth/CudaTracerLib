@@ -36,9 +36,10 @@ void PPPMTracer::PrintStatus(std::vector<std::string>& a_Buf) const
 	double pC = math::floor((float)((double)m_uTotalPhotonsEmitted / 1000000.0));
 	a_Buf.push_back(format("Photons emitted : %d[Mil]", (int)pC));
 	double pCs = m_uTotalPhotonsEmitted / m_fAccRuntime / 1000000.0f;
-	double pCsLast = m_uPhotonEmittedPass / m_fLastRuntime / 1000000.0f;
+	double pCsLastSurf = m_uPhotonEmittedPassSurface / m_fLastRuntime / 1000000.0f, pCsLastVol = m_uPhotonEmittedPassVolume / m_fLastRuntime / 1000000.0f;
 	a_Buf.push_back(format("Photons/Sec avg : %f", (float)pCs));
-	a_Buf.push_back(format("Photons/Sec lst : %f", (float)pCsLast));
+	a_Buf.push_back(format("Photons Surf/Sec lst : %f", (float)pCsLastSurf));
+	a_Buf.push_back(format("Photons Vol/Sec lst : %f", (float)pCsLastVol));
 	a_Buf.push_back(format("Light Visibility : %f", m_fLightVisibility));
 	a_Buf.push_back(format("Photons per pass : %d*100,000", m_sSurfaceMap.getNumEntries() / 100000));
 	a_Buf.push_back(format("%.2f%% Surf Photons", float(m_sSurfaceMap.getNumStoredEntries()) / m_sSurfaceMap.getNumEntries() * 100));
@@ -63,7 +64,7 @@ void PPPMTracer::DoRender(Image* I)
 		auto timer = START_PERF_BLOCK("Photon Pass");
 		doPhotonPass();
 	}
-	m_uTotalPhotonsEmitted += m_uPhotonEmittedPass;
+	m_uTotalPhotonsEmitted += max(m_uPhotonEmittedPassSurface, m_uPhotonEmittedPassVolume);
 	{
 		auto timer = START_PERF_BLOCK("Camera Pass");
 		Tracer<true, true>::DoRender(I);

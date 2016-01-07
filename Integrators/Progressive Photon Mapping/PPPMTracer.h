@@ -77,7 +77,7 @@ private:
 	float m_fLightVisibility;
 
 	float m_fInitialRadius;
-	unsigned int m_uPhotonEmittedPass;
+	unsigned int m_uPhotonEmittedPassSurface, m_uPhotonEmittedPassVolume;
 	unsigned long long m_uTotalPhotonsEmitted;
 
 	unsigned int m_uBlocksPerLaunch;
