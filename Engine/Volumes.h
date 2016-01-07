@@ -304,37 +304,37 @@ public:
 	CALLER(sigma_a)
 	CUDA_FUNC_IN Spectrum sigma_a(const Vec3f& p, const Vec3f& w) const
 	{
-		return sigma_a_Caller<Spectrum>(*this, p, w);
+		return sigma_a_Helper::Caller<Spectrum>(this, p, w);
 	}
 
 	CALLER(sigma_s)
 	CUDA_FUNC_IN Spectrum sigma_s(const Vec3f& p, const Vec3f& w) const
 	{
-		return sigma_s_Caller<Spectrum>(*this, p, w);
+		return sigma_s_Helper::Caller<Spectrum>(this, p, w);
 	}
 
 	CALLER(Lve)
 	CUDA_FUNC_IN Spectrum Lve(const Vec3f& p, const Vec3f& w) const
 	{
-		return Lve_Caller<Spectrum>(*this, p, w);
+		return Lve_Helper::Caller<Spectrum>(this, p, w);
 	}
 
 	CALLER(sigma_t)
 	CUDA_FUNC_IN Spectrum sigma_t(const Vec3f &p, const Vec3f &wo) const
 	{
-		return sigma_t_Caller<Spectrum>(*this, p, wo);
+		return sigma_t_Helper::Caller<Spectrum>(this, p, wo);
 	}
 
 	CALLER(tau)
 	CUDA_FUNC_IN Spectrum tau(const Ray &ray, float minT, float maxT) const
 	{
-		return tau_Caller<Spectrum>(*this, ray, minT, maxT);
+		return tau_Helper::Caller<Spectrum>(this, ray, minT, maxT);
 	}
 
 	CALLER(sampleDistance)
 	CUDA_FUNC_IN bool sampleDistance(const Ray& ray, float minT, float maxT, float sample, MediumSamplingRecord& mRec) const
 	{
-		return sampleDistance_Caller<bool>(*this, ray, minT, maxT, sample, mRec);
+		return sampleDistance_Helper::Caller<bool>(this, ray, minT, maxT, sample, mRec);
 	}
 };
 

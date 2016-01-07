@@ -119,18 +119,18 @@ public:
 	CALLER(Evaluate)
 	CUDA_FUNC_IN float Evaluate(const PhaseFunctionSamplingRecord &pRec) const
 	{
-		return Evaluate_Caller<float>(*this, pRec);
+		return Evaluate_Helper::Caller<float>(this, pRec);
 	}
 
 	CALLER(Sample)
 	CUDA_FUNC_IN float Sample(PhaseFunctionSamplingRecord &pRec, CudaRNG& sampler) const
 	{
-		return Sample_Caller<float>(*this, pRec, sampler);
+		return Sample_Helper::Caller<float>(this, pRec, sampler);
 	}
 
 	CUDA_FUNC_IN float Sample(PhaseFunctionSamplingRecord &pRec, float &pdf, CudaRNG& sampler) const
 	{
-		return Sample_Caller<float>(*this, pRec, pdf, sampler);
+		return Sample_Helper::Caller<float>(this, pRec, pdf, sampler);
 	}
 
 	CALLER(pdf)

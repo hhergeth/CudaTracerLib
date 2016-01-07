@@ -105,19 +105,19 @@ struct Dispersion : public CudaVirtualAggregate<DispersionBase, DispersionLinear
 	CALLER(hasDispersion)
 	CUDA_FUNC_IN bool hasDispersion() const
 	{
-		return hasDispersion_Caller<bool>(*this);
+		return hasDispersion_Helper::Caller<bool>(this);
 	}
 
 	CALLER(calc_eta)
 	CUDA_FUNC_IN float calc_eta(float lambda) const
 	{
-		return calc_eta_Caller<float>(*this, lambda);
+		return calc_eta_Helper::Caller<float>(this, lambda);
 	}
 
 	CALLER(calc_lambda)
 	CUDA_FUNC_IN float calc_lambda(float eta) const
 	{
-		return calc_lambda_Caller<float>(*this, eta);
+		return calc_lambda_Helper::Caller<float>(this, eta);
 	}
 
 	//always returns eta and f/pdf or f or pdf in parameter

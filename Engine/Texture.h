@@ -247,13 +247,13 @@ public:
 	CALLER(Evaluate)
 		CUDA_FUNC_IN Spectrum Evaluate(const DifferentialGeometry & dg) const
 	{
-		return Evaluate_Caller<Spectrum>(*this, dg);
+		return Evaluate_Helper::Caller<Spectrum>(this, dg);
 	}
 
 	CALLER(Average)
 		CUDA_FUNC_IN Spectrum Average()
 	{
-		return Average_Caller<Spectrum>(*this);
+		return Average_Helper::Caller<Spectrum>(this);
 	}
 };
 

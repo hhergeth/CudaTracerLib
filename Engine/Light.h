@@ -375,67 +375,67 @@ public:
 	CALLER(sampleRay)
 	CUDA_FUNC_IN Spectrum sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const
 	{
-		return sampleRay_Caller<Spectrum>(*this, ray, spatialSample, directionalSample);
+		return sampleRay_Helper::Caller<Spectrum>(this, ray, spatialSample, directionalSample);
 	}
 
 	CALLER(eval)
 	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const Vec3f &d) const
 	{
-		return eval_Caller<Spectrum>(*this, p, sys, d);
+		return eval_Helper::Caller<Spectrum>(this, p, sys, d);
 	}
 
 	CALLER(sampleDirect)
 	CUDA_FUNC_IN Spectrum sampleDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const
 	{
-		return sampleDirect_Caller<Spectrum>(*this, dRec, sample);
+		return sampleDirect_Helper::Caller<Spectrum>(this, dRec, sample);
 	}
 
 	CALLER(pdfDirect)
 	CUDA_FUNC_IN float pdfDirect(const DirectSamplingRecord &dRec) const
 	{
-		return pdfDirect_Caller<float>(*this, dRec);
+		return pdfDirect_Helper::Caller<float>(this, dRec);
 	}
 
 	CALLER(samplePosition)
 	CUDA_FUNC_IN Spectrum samplePosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra = 0) const
 	{
-		return samplePosition_Caller<Spectrum>(*this, pRec, sample, extra);
+		return samplePosition_Helper::Caller<Spectrum>(this, pRec, sample, extra);
 	}
 
 	CALLER(evalPosition)
 	CUDA_FUNC_IN Spectrum evalPosition(const PositionSamplingRecord &pRec) const
 	{
-		return evalPosition_Caller<Spectrum>(*this, pRec);
+		return evalPosition_Helper::Caller<Spectrum>(this, pRec);
 	}
 
 	CALLER(pdfPosition)
 	CUDA_FUNC_IN float pdfPosition(const PositionSamplingRecord &pRec) const
 	{
-		return pdfPosition_Caller<float>(*this, pRec);
+		return pdfPosition_Helper::Caller<float>(this, pRec);
 	}
 
 	CALLER(sampleDirection)
 	CUDA_FUNC_IN Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra = 0) const
 	{
-		return sampleDirection_Caller<Spectrum>(*this, dRec, pRec, sample, extra);
+		return sampleDirection_Helper::Caller<Spectrum>(this, dRec, pRec, sample, extra);
 	}
 
 	CALLER(pdfDirection)
 	CUDA_FUNC_IN float pdfDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
 	{
-		return pdfDirection_Caller<float>(*this, dRec, pRec);
+		return pdfDirection_Helper::Caller<float>(this, dRec, pRec);
 	}
 
 	CALLER(evalDirection)
 	CUDA_FUNC_IN Spectrum evalDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
 	{
-		return evalDirection_Caller<Spectrum>(*this, dRec, pRec);
+		return evalDirection_Helper::Caller<Spectrum>(this, dRec, pRec);
 	}
 
 	CALLER(getBox)
 	CUDA_FUNC_IN AABB getBox(float eps) const
 	{
-		return getBox_Caller<AABB>(*this, eps);
+		return getBox_Helper::Caller<AABB>(this, eps);
 	}
 };
 

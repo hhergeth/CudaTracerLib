@@ -99,7 +99,7 @@ public:
 	CALLER(sample)
 	CUDA_FUNC_IN Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &_sample) const
 	{
-		return sample_Caller<Spectrum>(*this, bRec, pdf, _sample);
+		return sample_Helper::Caller<Spectrum>(this, bRec, pdf, _sample);
 	}
 	CUDA_FUNC_IN Spectrum sample(BSDFSamplingRecord &bRec, const Vec2f &_sample) const
 	{
@@ -109,12 +109,12 @@ public:
 	CALLER(f)
 	CUDA_FUNC_IN Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
 	{
-		return f_Caller<Spectrum>(*this, bRec, measure);
+		return f_Helper::Caller<Spectrum>(this, bRec, measure);
 	}
 	CALLER(pdf)
 	CUDA_FUNC_IN float pdf(const BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
 	{
-		return pdf_Caller<float>(*this, bRec, measure);
+		return pdf_Helper::Caller<float>(this, bRec, measure);
 	}
 	CUDA_FUNC_IN unsigned int getType() const
 	{
@@ -142,7 +142,7 @@ public:
 	CALLER(sample)
 	CUDA_FUNC_IN Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &_sample) const
 	{
-		return sample_Caller<Spectrum>(*this, bRec, pdf, _sample);
+		return sample_Helper::Caller<Spectrum>(this, bRec, pdf, _sample);
 	}
 	CUDA_FUNC_IN Spectrum sample(BSDFSamplingRecord &bRec, const Vec2f &_sample) const
 	{
@@ -152,12 +152,12 @@ public:
 	CALLER(f)
 	CUDA_FUNC_IN Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
 	{
-		return f_Caller<Spectrum>(*this, bRec, measure);
+		return f_Helper::Caller<Spectrum>(this, bRec, measure);
 	}
 	CALLER(pdf)
 	CUDA_FUNC_IN float pdf(const BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
 	{
-		return pdf_Caller<float>(*this, bRec, measure);
+		return pdf_Helper::Caller<float>(this, bRec, measure);
 	}
 	CUDA_FUNC_IN unsigned int getType() const
 	{

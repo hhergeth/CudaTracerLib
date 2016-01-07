@@ -176,7 +176,7 @@ public:
 	CALLER(Evaluate)
 	CUDA_FUNC_IN float Evaluate(float x, float y) const
 	{
-		return Evaluate_Caller<float>(*this, x, y);
+		return Evaluate_Helper::Caller<float>(this, x, y);
 	}
 };
 

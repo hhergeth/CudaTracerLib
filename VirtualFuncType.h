@@ -79,22 +79,25 @@ namespace CTVirtualHelper
 
 #define CALLER(FUNC_NAME) \
 	private: \
-	template<typename R, typename T, typename... Args> CUDA_FUNC_IN R FUNC_NAME##__INTERNAL__CALLER(CTVirtualHelper::Typer<Args...> typ, Args&&... args) const \
+	struct FUNC_NAME##_Helper \
+	{ \
+		template<typename R, typename T, typename... Args, typename AGG> CUDA_FUNC_IN static R FUNC_NAME##__INTERNAL__CALLER(const AGG* obj, CTVirtualHelper::Typer<Args...> typ, Args&&... args) \
 		{ \
-		if (this->Is<T>()) \
-			return this->As<T>()->FUNC_NAME(args...); \
-		return R(); \
+			if (obj->Is<T>()) \
+				return obj->As<T>()->FUNC_NAME(args...); \
+			return R(); \
 		} \
-	template<typename R, typename T, typename T2, typename... REST, typename... Args> CUDA_FUNC_IN R FUNC_NAME##__INTERNAL__CALLER(CTVirtualHelper::Typer<Args...> typ, Args&&... args) const \
+		template<typename R, typename T, typename T2, typename... REST, typename... Args, typename AGG> CUDA_FUNC_IN static R FUNC_NAME##__INTERNAL__CALLER(const AGG* obj, CTVirtualHelper::Typer<Args...> typ, Args&&... args) \
 		{ \
-		if (this->Is<T>()) \
-			return this->As<T>()->FUNC_NAME(args...); \
-		return FUNC_NAME##__INTERNAL__CALLER<R, T2, REST...>(CTVirtualHelper::Typer<Args...>(), CTVirtualHelper::forward<Args>(args)...); \
+			if (obj->Is<T>()) \
+				return obj->As<T>()->FUNC_NAME(args...); \
+			return FUNC_NAME##__INTERNAL__CALLER<R, T2, REST...>(obj, CTVirtualHelper::Typer<Args...>(), CTVirtualHelper::forward<Args>(args)...); \
 		} \
-	template<typename R, class BaseType, class... Types, typename... Args> CUDA_FUNC_IN R FUNC_NAME##_Caller(const CudaVirtualAggregate<BaseType, Types...>& obj, Args&&... args) const \
+		template<typename R, class BaseType, class... Types, typename... Args> CUDA_FUNC_IN static R Caller(const CudaVirtualAggregate<BaseType, Types...>* obj, Args&&... args) \
 		{ \
-		return FUNC_NAME##__INTERNAL__CALLER<R, Types...>(CTVirtualHelper::Typer<Args...>(), CTVirtualHelper::forward<Args>(args)...); \
+			return FUNC_NAME##__INTERNAL__CALLER<R, Types...>(obj, CTVirtualHelper::Typer<Args...>(), CTVirtualHelper::forward<Args>(args)...); \
 		} \
+	}; \
 	public:
 
 template<typename BaseType, typename... Types> struct CudaVirtualAggregate
