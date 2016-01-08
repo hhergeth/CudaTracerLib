@@ -75,7 +75,7 @@ struct TextureBase : public BaseType//, public BaseTypeHelper<5784916>
 struct BilerpTexture : public TextureBase//, public e_DerivedTypeHelper<1>
 {
 	TYPE_FUNC(1)
-		BilerpTexture(){}
+	BilerpTexture(){}
 	BilerpTexture(const TextureMapping2D& m, const Spectrum &t00, const Spectrum &t01, const Spectrum &t10, const Spectrum &t11)
 	{
 		mapping = m;
@@ -84,13 +84,17 @@ struct BilerpTexture : public TextureBase//, public e_DerivedTypeHelper<1>
 		v10 = t10;
 		v11 = t11;
 	}
-	CUDA_FUNC_IN Spectrum Evaluate(const DifferentialGeometry& map) const
+	CUDA_FUNC_IN Spectrum Evaluate(const Vec2f& _uv) const
 	{
-		Vec2f uv = mapping.Map(map);
+		Vec2f uv = mapping.TransformPoint(_uv);
 		return (1 - uv.x)*(1 - uv.y) * v00 + (1 - uv.x)*(uv.y) * v01 +
-			(uv.x)*(1 - uv.y) * v10 + (uv.x)*(uv.y) * v11;
+			   (uv.x)*(1 - uv.y) * v10 + (uv.x)*(uv.y) * v11;
 	}
-	CUDA_FUNC_IN Spectrum Average()
+	CUDA_FUNC_IN Spectrum Evaluate(const DifferentialGeometry& its) const
+	{
+		return Evaluate(its.uv[mapping.setId]);
+	}
+	CUDA_FUNC_IN Spectrum Average() const
 	{
 		return (v00 + v01 + v10 + v11) * 0.25f;
 	}
@@ -101,17 +105,17 @@ struct BilerpTexture : public TextureBase//, public e_DerivedTypeHelper<1>
 struct ConstantTexture : public TextureBase//, public e_DerivedTypeHelper<2>
 {
 	TYPE_FUNC(2)
-		ConstantTexture(){}
+	ConstantTexture(){}
 	ConstantTexture(const Spectrum& v)
 		: val(v)
 	{
 
 	}
-	CUDA_FUNC_IN Spectrum Evaluate(const DifferentialGeometry& map) const
+	CUDA_FUNC_IN Spectrum Evaluate(const DifferentialGeometry& its) const
 	{
 		return val;
 	}
-	CUDA_FUNC_IN Spectrum Average()
+	CUDA_FUNC_IN Spectrum Average() const
 	{
 		return val;
 	}
@@ -121,15 +125,15 @@ struct ConstantTexture : public TextureBase//, public e_DerivedTypeHelper<2>
 struct CheckerboardTexture : public TextureBase//, public e_DerivedTypeHelper<3>
 {
 	TYPE_FUNC(3)
-		CheckerboardTexture(){}
+	CheckerboardTexture(){}
 	CheckerboardTexture(const Spectrum& u, const Spectrum& v, const TextureMapping2D& m)
 		: val0(u), val1(v), mapping(m)
 	{
 
 	}
-	CUDA_FUNC_IN Spectrum Evaluate(const DifferentialGeometry& map) const
+	CUDA_FUNC_IN Spectrum Evaluate(const Vec2f& _uv) const
 	{
-		Vec2f uv = mapping.Map(map);
+		Vec2f uv = mapping.TransformPoint(_uv);
 		int x = 2 * math::modulo((int)(uv.x * 2), 2) - 1,
 			y = 2 * math::modulo((int)(uv.y * 2), 2) - 1;
 
@@ -138,7 +142,11 @@ struct CheckerboardTexture : public TextureBase//, public e_DerivedTypeHelper<3>
 		else
 			return val1;
 	}
-	CUDA_FUNC_IN Spectrum Average()
+	CUDA_FUNC_IN Spectrum Evaluate(const DifferentialGeometry& its) const
+	{
+		return Evaluate(its.uv[mapping.setId]);
+	}
+	CUDA_FUNC_IN Spectrum Average() const
 	{
 		return (val0 + val1) / 2.0f;
 	}
@@ -154,20 +162,24 @@ struct ImageTexture : public TextureBase//, public e_DerivedTypeHelper<4>
 		: mapping(m), file(_file), tex(0, 0), m_scale(scale)
 	{
 	}
+	CUDA_FUNC_IN Spectrum Evaluate(const Vec2f& _uv) const
+	{
+		Vec2f uv = mapping.TransformPoint(_uv);
+		return tex->Sample(uv) * m_scale;
+	}
 	CUDA_FUNC_IN Spectrum Evaluate(const DifferentialGeometry& its) const
 	{
-		Vec2f uv = mapping.Map(its);
 		if (its.hasUVPartials)
 		{
+			Vec2f uv = mapping.Map(its);
 			float dsdx, dsdy,
 				  dtdx, dtdy;
 			mapping.differentiate(its, dsdx, dsdy, dtdx, dtdy);
 			return tex->eval(uv, Vec2f(dsdx, dtdx), Vec2f(dsdy, dtdy)) * m_scale;
 		}
-		//	return tex->eval(uv, mapping.TransformDirection(Vec2f(1, 0)) * Vec2f(its.dudx, its.dvdx), mapping.TransformDirection(Vec2f(0, 1)) * Vec2f(its.dudy, its.dvdy)) * m_scale;
-		else return tex->Sample(uv) * m_scale;
+		else return Evaluate(its.uv[mapping.setId]);
 	}
-	CUDA_FUNC_IN Spectrum Average()
+	CUDA_FUNC_IN Spectrum Average() const
 	{
 		if (tex.operator*())
 			return tex->Sample(Vec2f(0), 1) * m_scale;
@@ -190,17 +202,21 @@ struct ImageTexture : public TextureBase//, public e_DerivedTypeHelper<4>
 struct UVTexture : public TextureBase//, public e_DerivedTypeHelper<5>
 {
 	TYPE_FUNC(5)
-		UVTexture(){}
+	UVTexture(){}
 	UVTexture(const TextureMapping2D& m)
 		: mapping(m)
 	{
 	}
-	CUDA_FUNC_IN Spectrum Evaluate(const DifferentialGeometry& map) const
+	CUDA_FUNC_IN Spectrum Evaluate(const Vec2f& _uv) const
 	{
-		float2 uv = mapping.Map(map);
+		Vec2f uv = mapping.TransformPoint(_uv);
 		return Spectrum(math::frac(uv.x), math::frac(uv.y), 0);
 	}
-	CUDA_FUNC_IN Spectrum Average()
+	CUDA_FUNC_IN Spectrum Evaluate(const DifferentialGeometry& its) const
+	{
+		return Evaluate(its.uv[mapping.setId]);
+	}
+	CUDA_FUNC_IN Spectrum Average() const
 	{
 		return Spectrum(0.5f);
 	}
@@ -210,17 +226,21 @@ struct UVTexture : public TextureBase//, public e_DerivedTypeHelper<5>
 struct WireframeTexture : public TextureBase//, public e_DerivedTypeHelper<6>
 {
 	TYPE_FUNC(6)
-		WireframeTexture(float lineWidth = 0.1f, const Spectrum& interior = Spectrum(0.5f), const Spectrum& edge = Spectrum(0.0f))
+	WireframeTexture(float lineWidth = 0.1f, const Spectrum& interior = Spectrum(0.5f), const Spectrum& edge = Spectrum(0.0f))
 		: width(lineWidth), interiorColor(interior), edgeColor(edge)
 	{
 	}
-	CUDA_FUNC_IN Spectrum Evaluate(const DifferentialGeometry& map) const
+	CUDA_FUNC_IN Spectrum Evaluate(const Vec2f& bary) const
 	{
-		if (map.bary.x < width || map.bary.y < width || map.bary.x + map.bary.y > 1.0f - width)
+		if (bary.x < width || bary.y < width || bary.x + bary.y > 1.0f - width)
 			return edgeColor;
 		else return interiorColor;
 	}
-	CUDA_FUNC_IN Spectrum Average()
+	CUDA_FUNC_IN Spectrum Evaluate(const DifferentialGeometry& its) const
+	{
+		return Evaluate(its.bary);
+	}
+	CUDA_FUNC_IN Spectrum Average() const
 	{
 		return Spectrum(0.1f);
 	}
@@ -231,11 +251,11 @@ struct WireframeTexture : public TextureBase//, public e_DerivedTypeHelper<6>
 struct ExtraDataTexture : public TextureBase//, public e_DerivedTypeHelper<7>
 {
 	TYPE_FUNC(7)
-		CUDA_FUNC_IN Spectrum Evaluate(const DifferentialGeometry& map) const
+	CUDA_FUNC_IN Spectrum Evaluate(const DifferentialGeometry& its) const
 	{
-		return Spectrum(float(map.extraData) / 255.0f);
+		return Spectrum(float(its.extraData) / 255.0f);
 	}
-	CUDA_FUNC_IN Spectrum Average()
+	CUDA_FUNC_IN Spectrum Average() const
 	{
 		return Spectrum(0.0f);
 	}
@@ -245,13 +265,13 @@ struct Texture : public CudaVirtualAggregate<TextureBase, BilerpTexture, Constan
 {
 public:
 	CALLER(Evaluate)
-		CUDA_FUNC_IN Spectrum Evaluate(const DifferentialGeometry & dg) const
+	CUDA_FUNC_IN Spectrum Evaluate(const DifferentialGeometry & its) const
 	{
-		return Evaluate_Helper::Caller<Spectrum>(this, dg);
+		return Evaluate_Helper::Caller<Spectrum>(this, its);
 	}
 
 	CALLER(Average)
-		CUDA_FUNC_IN Spectrum Average()
+	CUDA_FUNC_IN Spectrum Average() const
 	{
 		return Average_Helper::Caller<Spectrum>(this);
 	}
