@@ -82,7 +82,8 @@ bool traceRay(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result)
 	{
 		Node* N = g_SceneData.m_sNodeData.Data + nodeIdx;
 		KernelMesh mesh = g_SceneData.m_sMeshData[N->m_uMeshIndex];
-		//transform a_Result->m_fDist to local system
+		unsigned int meshBvhTriOff = mesh.m_uBVHTriangleOffset, meshBvhIndOff = mesh.m_uBVHIndicesOffset, meshTriOff = mesh.m_uTriangleOffset;
+		unsigned int nodeMatOff = N->m_uMaterialOffset;
 		float4x4 modl;
 		loadInvModl(nodeIdx, &modl);
 		Vec3f d = modl.TransformDirection(dir), o = modl.TransformPoint(ori);
@@ -92,16 +93,16 @@ bool traceRay(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result)
 			for (int triAddr = triIdx;; triAddr++)
 			{
 #ifdef ISCUDA
-				const float4 v00 = tex1Dfetch(t_tris, mesh.m_uBVHTriangleOffset + triAddr * 3 + 0);
-				const float4 v11 = tex1Dfetch(t_tris, mesh.m_uBVHTriangleOffset + triAddr * 3 + 1);
-				const float4 v22 = tex1Dfetch(t_tris, mesh.m_uBVHTriangleOffset + triAddr * 3 + 2);
-				unsigned int index = tex1Dfetch(t_triIndices, mesh.m_uBVHIndicesOffset + triAddr);
+				const float4 v00 = tex1Dfetch(t_tris, meshBvhTriOff + triAddr * 3 + 0);
+				const float4 v11 = tex1Dfetch(t_tris, meshBvhTriOff + triAddr * 3 + 1);
+				const float4 v22 = tex1Dfetch(t_tris, meshBvhTriOff + triAddr * 3 + 2);
+				unsigned int index = tex1Dfetch(t_triIndices, meshBvhIndOff + triAddr);
 #else
 				Vec4f* dat = (Vec4f*)g_SceneData.m_sBVHIntData.Data;
-				const Vec4f v00 = dat[mesh.m_uBVHTriangleOffset + triAddr * 3 + 0];
-				const Vec4f v11 = dat[mesh.m_uBVHTriangleOffset + triAddr * 3 + 1];
-				const Vec4f v22 = dat[mesh.m_uBVHTriangleOffset + triAddr * 3 + 2];
-				unsigned int index = g_SceneData.m_sBVHIndexData.Data[mesh.m_uBVHIndicesOffset + triAddr].index;
+				const Vec4f v00 = dat[meshBvhTriOff + triAddr * 3 + 0];
+				const Vec4f v11 = dat[meshBvhTriOff + triAddr * 3 + 1];
+				const Vec4f v22 = dat[meshBvhTriOff + triAddr * 3 + 2];
+				unsigned int index = g_SceneData.m_sBVHIndexData.Data[meshBvhIndOff + triAddr].index;
 #endif
 
 				float Oz = v00.w - o.x*v00.x - o.y*v00.y - o.z*v00.z;
@@ -121,11 +122,34 @@ bool traceRay(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result)
 						{
 							unsigned int ti = index >> 1;
 
-							a_Result->m_nodeIdx = nodeIdx;
-							a_Result->m_triIdx = ti + mesh.m_uTriangleOffset;
-							a_Result->m_fBaryCoords = Vec2f(u, v);
-							a_Result->m_fDist = t;
-							found = true;
+							bool alphaSurvive = true;
+							//if (scene)
+							{
+								TriangleData* tri = g_SceneData.m_sTriData.Data + ti + meshTriOff;
+								unsigned int mIdx = tri->getMatIndex(nodeMatOff);
+								auto& mat = g_SceneData.m_sMatData[mIdx];
+								if(mat.AlphaMap.used)
+								{
+#ifdef ISCUDA
+									float4 rowC = tex1Dfetch(t_TriDataB, ti * 4 + 2);
+									float4 rowD = tex1Dfetch(t_TriDataB, ti * 4 + 3);
+									Vec2f b = Vec2f(rowC.z, rowC.w), a = Vec2f(rowD.x, rowD.y), c = Vec2f(rowD.z, rowD.w);
+#else
+									Vec2f a, b, c;
+									tri->getUVSetData(0, a, b, c);
+#endif
+									Vec2f uv = u * a + v * b + (1 - u - v) * c;
+									alphaSurvive = mat.AlphaTest(Vec2f(u, v), uv);
+								}
+							}
+							if (alphaSurvive)
+							{
+								a_Result->m_nodeIdx = nodeIdx;
+								a_Result->m_triIdx = ti + meshTriOff;
+								a_Result->m_fBaryCoords = Vec2f(u, v);
+								a_Result->m_fDist = t;
+								found = true;
+							}
 						}
 					}
 				}
