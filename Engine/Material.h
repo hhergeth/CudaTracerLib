@@ -5,6 +5,7 @@
 
 namespace CudaTracerLib {
 
+struct TriangleData;
 struct Material
 {
 public:
@@ -33,7 +34,7 @@ public:
 	Material();
 	Material(const std::string& name);
 	CUDA_DEVICE CUDA_HOST bool SampleNormalMap(DifferentialGeometry& uv, const Vec3f& wi) const;
-	CUDA_DEVICE CUDA_HOST float SampleAlphaMap(const DifferentialGeometry& uv) const;
+	CUDA_DEVICE CUDA_HOST bool AlphaTest(const Vec2f& bary, const Vec2f& uv) const;
 	CUDA_DEVICE CUDA_HOST bool GetBSSRDF(const DifferentialGeometry& uv, const VolumeRegion** res) const;
 	template<typename L> void LoadTextures(L& callback)
 	{

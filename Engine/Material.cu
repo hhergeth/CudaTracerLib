@@ -1,4 +1,5 @@
 #include "Material.h"
+#include "TriangleData.h"
 
 namespace CudaTracerLib {
 
@@ -136,21 +137,31 @@ bool Material::SampleNormalMap(DifferentialGeometry& dg, const Vec3f& wi) const
 	else return false;
 }
 
-float Material::SampleAlphaMap(const DifferentialGeometry& uv) const
+bool Material::AlphaTest(const Vec2f& bary, const Vec2f& uv) const
 {
-	if (AlphaMap.used)
+	bool used = AlphaMap.used;
+	float th = m_fAlphaThreshold;
+	if (used)
 	{
-		if (AlphaMap.tex.Is<ImageTexture>())
+		float val = 1;
+		if (AlphaMap.tex.Is<ConstantTexture>())
+			val = AlphaMap.tex.As<ConstantTexture>()->val.average();
+		else if (AlphaMap.tex.Is<WireframeTexture>())
+			val = AlphaMap.tex.As<WireframeTexture>()->Evaluate(bary).average();
+		else
 		{
-			Vec2f uv2 = AlphaMap.tex.As<ImageTexture>()->mapping.Map(uv);
-			return AlphaMap.tex.As<ImageTexture>()->tex->SampleAlpha(uv2) != 1 ? 0 : 1;
+			if (AlphaMap.tex.Is<ImageTexture>())
+				val = AlphaMap.tex.As<ImageTexture>()->tex->SampleAlpha(AlphaMap.tex.As<ImageTexture>()->mapping.TransformPoint(uv));
+			else if (AlphaMap.tex.Is<BilerpTexture>())
+				val = AlphaMap.tex.As<BilerpTexture>()->Evaluate(uv).average();
+			else if (AlphaMap.tex.Is<CheckerboardTexture>())
+				val = AlphaMap.tex.As<CheckerboardTexture>()->Evaluate(uv).average();
+			else if (AlphaMap.tex.Is<UVTexture>())
+				val = AlphaMap.tex.As<UVTexture>()->Evaluate(uv).average();
 		}
-		Spectrum s = AlphaMap.tex.Evaluate(uv);
-		if (s.isZero())
-			return 0.0f;
-		else return 1.0f;
+		return val >= th;
 	}
-	else return 1.0f;
+	else return true;
 }
 
 bool Material::GetBSSRDF(const DifferentialGeometry& uv, const VolumeRegion** res) const
