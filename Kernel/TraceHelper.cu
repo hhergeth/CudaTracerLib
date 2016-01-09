@@ -73,11 +73,8 @@ CUDA_FUNC_IN void loadInvModl(int i, float4x4* o)
 #endif
 }
 
-bool traceRay(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result)
+template<bool USE_ALPHA> CUDA_FUNC_IN bool __traceRay_internal__(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result)
 {
-	Platform::Increment(&g_RayTracedCounter);
-	if(!g_SceneData.m_sNodeData.UsedCount)
-		return false;
 	return TracerayTemplate(Ray(ori, dir), a_Result->m_fDist, [&](int nodeIdx)
 	{
 		Node* N = g_SceneData.m_sNodeData.Data + nodeIdx;
@@ -123,12 +120,12 @@ bool traceRay(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result)
 							unsigned int ti = index >> 1;
 
 							bool alphaSurvive = true;
-							//if (scene)
+							if (USE_ALPHA)
 							{
 								TriangleData* tri = g_SceneData.m_sTriData.Data + ti + meshTriOff;
 								unsigned int mIdx = tri->getMatIndex(nodeMatOff);
 								auto& mat = g_SceneData.m_sMatData[mIdx];
-								if(mat.AlphaMap.used)
+								if (mat.AlphaMap.used)
 								{
 #ifdef ISCUDA
 									float4 rowC = tex1Dfetch(t_TriDataB, ti * 4 + 2);
@@ -159,6 +156,14 @@ bool traceRay(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result)
 			return found;
 		}, t_nodesA, g_SceneData.m_sBVHNodeData.Data, mesh.m_uBVHNodeOffset, 0);
 	}, t_SceneNodes, g_SceneData.m_sSceneBVH.m_pNodes, 0, g_SceneData.m_sSceneBVH.m_sStartNode);
+}
+
+bool traceRay(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result)
+{
+	Platform::Increment(&g_RayTracedCounter);
+	if(!g_SceneData.m_sNodeData.UsedCount)
+		return false;
+	return g_SceneData.doAlphaMapping ? __traceRay_internal__<true>(dir, ori, a_Result) : __traceRay_internal__<false>(dir, ori, a_Result);
 }
 
 void k_INITIALIZE(DynamicScene* a_Scene, const CudaRNGBuffer& a_RngBuf)

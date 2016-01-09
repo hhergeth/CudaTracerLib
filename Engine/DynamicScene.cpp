@@ -117,6 +117,14 @@ public:
 			dealloc(unusedRefs[i]);
 		unusedRefs.clear();
 	}
+
+	bool hasAlphaMappings()
+	{
+		for (auto r : *this)
+			if (r->AlphaMap.used)
+				return true;
+		return false;
+	}
 };
 
 class DynamicScene::LightStream : public Stream<Light>
@@ -509,6 +517,7 @@ KernelDynamicScene DynamicScene::getKernelSceneData(bool devicePointer)
 	r.m_sBox = getSceneBox();
 	r.m_Camera = *m_pCamera;
 	m_pLightStream->fillDeviceData(devicePointer, r);
+	r.doAlphaMapping = m_pMaterialBuffer->hasAlphaMappings();
 	return r;
 }
 

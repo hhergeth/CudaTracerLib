@@ -39,6 +39,7 @@ struct KernelDynamicScene
 	unsigned int m_uEnvMapIndex;
 	AABB m_sBox;
 	Sensor m_Camera;
+	bool doAlphaMapping;
 
 	//these are all lights, with inactive/deleted ones
 	KernelBuffer<Light> m_sLightBuf;
