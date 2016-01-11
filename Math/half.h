@@ -626,7 +626,7 @@ struct half2
 		x = half(_x);
 		y = half(_y);
 	}
-	CUDA_FUNC_IN Vec2f ToFloat2()
+	CUDA_FUNC_IN Vec2f ToFloat2() const
 	{
 		return Vec2f(x.ToFloat(), y.ToFloat());
 	}
@@ -648,7 +648,7 @@ struct half3
 		y = half(_y);
 		z = half(_z);
 	}
-	CUDA_FUNC_IN Vec3f ToFloat3()
+	CUDA_FUNC_IN Vec3f ToFloat3() const
 	{
 		return Vec3f(x.ToFloat(), y.ToFloat(), z.ToFloat());
 	}
@@ -672,7 +672,7 @@ struct half4
 		z = half(_z);
 		w = half(_w);
 	}
-	CUDA_FUNC_IN Vec4f ToFloat4()
+	CUDA_FUNC_IN Vec4f ToFloat4() const
 	{
 		return Vec4f(x.ToFloat(), y.ToFloat(), z.ToFloat(), w.ToFloat());
 	}
