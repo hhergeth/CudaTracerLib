@@ -6,7 +6,8 @@
 
 namespace CudaTracerLib {
 
-struct CUDA_ALIGN(16) AnimatedVertex
+//additional data besides triangle and bvh data
+struct AnimatedVertex
 {
 	Vec3f m_fVertexPos;
 	Vec3f m_fNormal;
@@ -21,14 +22,7 @@ struct CUDA_ALIGN(16) AnimatedVertex
 	}
 };
 
-struct e_TmpVertex
-{
-	Vec3f m_fPos;
-	Vec3f m_fNormal;
-	Vec3f m_fTangent;
-	Vec3f m_fBiTangent;
-};
-
+//frame of an animation, either storing host data for writing to a file or storing device data for compuation
 struct AnimationFrame
 {
 	StreamReference<char> m_sMatrices;
@@ -82,8 +76,8 @@ public:
 	BVHRebuilder* m_pBuilder;
 public:
 	AnimatedMesh(const std::string& path, IInStream& a_In, Stream<TriIntersectorData>* a_Stream0, Stream<TriangleData>* a_Stream1, Stream<BVHNodeData>* a_Stream2, Stream<TriIntersectorData2>* a_Stream3, Stream<Material>* a_Stream4, Stream<char>* a_Stream5);
-	void k_ComputeState(unsigned int a_Anim, unsigned int a_Frame, float a_lerp, Stream<BVHNodeData>* a_BVHNodeStream, e_TmpVertex* a_DeviceTmp, e_TmpVertex* a_HostTmp);
-	void CreateNewMesh(AnimatedMesh* A, Stream<TriIntersectorData>* a_Stream0, Stream<TriangleData>* a_Stream1, Stream<BVHNodeData>* a_Stream2, Stream<TriIntersectorData2>* a_Stream3, Stream<Material>* a_Stream4, Stream<char>* a_Stream5);
+	void k_ComputeState(unsigned int a_Anim, unsigned int a_Frame, float a_lerp, Stream<BVHNodeData>* a_BVHNodeStream, void* a_DeviceTmp, void* a_HostTmp);
+	void CreateNewMesh(AnimatedMesh* A, Stream<TriIntersectorData>* a_Stream0, Stream<TriangleData>* a_Stream1, Stream<BVHNodeData>* a_Stream2, Stream<TriIntersectorData2>* a_Stream3, Stream<Material>* a_Stream4, Stream<char>* a_Stream5) const;
 	void ComputeFrameIndex(float t, unsigned int a_Anim, unsigned int* a_FrameIndex, float* a_lerp)
 	{
 		float a = (float)m_pAnimations[a_Anim].m_uFrameRate * t;
@@ -92,7 +86,7 @@ public:
 		if (a_FrameIndex)
 			*a_FrameIndex = ((unsigned int)a) % m_pAnimations[a_Anim].m_pFrames.size();
 	}
-	unsigned int numAntimations()
+	unsigned int numAnimations()
 	{
 		return k_Data.m_uAnimCount;
 	}

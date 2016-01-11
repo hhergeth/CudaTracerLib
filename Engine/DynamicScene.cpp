@@ -201,9 +201,9 @@ DynamicScene::DynamicScene(Sensor* C, SceneInitData a_Data, IFileManager* fManag
 	m_pLightStream = new LightStream(a_Data.m_uNumLights);
 	m_pVolumes = new Stream<VolumeRegion>(128);
 	m_pBVH = new SceneBVH(a_Data.m_uNumNodes);
-	const int L = 1024 * 16;
-	CUDA_MALLOC(&m_pDeviceTmpFloats, sizeof(e_TmpVertex) * L);
-	m_pHostTmpFloats = (e_TmpVertex*)malloc(sizeof(e_TmpVertex) * L);
+	const int L = 1024 * 16, S = L * sizeof(Vec3f) * 5;
+	CUDA_MALLOC(&m_pDeviceTmpFloats, S);
+	m_pHostTmpFloats = (e_TmpVertex*)malloc(S);
 }
 
 DynamicScene::~DynamicScene()

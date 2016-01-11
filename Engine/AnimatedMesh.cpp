@@ -20,7 +20,6 @@ void AnimationFrame::deSerialize(IInStream& a_In, Stream<char>* Buf)
 {
 	size_t A;
 	a_In >> A;
-	//m_sMatrices = Buf->malloc(sizeof(float4x4) * (unsigned int)A);
 	m_sMatrices = Buf->malloc_aligned(sizeof(float4x4) * (unsigned int)A, 16);
 	a_In >> m_sMatrices;
 }
@@ -58,15 +57,15 @@ AnimatedMesh::AnimatedMesh(const std::string& path, IInStream& a_In, Stream<TriI
 		A.deSerialize(a_In, a_Stream5);
 		m_pAnimations.push_back(A);
 	}
-	m_sVertices = a_Stream5->malloc_aligned<AnimatedVertex>(sizeof(AnimatedVertex) * k_Data.m_uVertexCount);//malloc_aligned(a_Stream5, sizeof(AnimatedVertex) * k_Data.m_uVertexCount, 16);//
+	m_sVertices = a_Stream5->malloc_aligned<AnimatedVertex>(sizeof(AnimatedVertex) * k_Data.m_uVertexCount);
 	a_In >> m_sVertices;
-	m_sTriangles = a_Stream5->malloc_aligned<uint3>(sizeof(uint3) * m_sTriInfo.getLength());//malloc_aligned(a_Stream5, sizeof(uint3) * m_sTriInfo.getLength(), 16);//
+	m_sTriangles = a_Stream5->malloc_aligned<uint3>(sizeof(uint3) * m_sTriInfo.getLength());
 	a_In >> m_sTriangles;
 	a_Stream5->UpdateInvalidated();
 	m_pBuilder = 0;
 }
 
-void AnimatedMesh::CreateNewMesh(AnimatedMesh* A, Stream<TriIntersectorData>* a_Stream0, Stream<TriangleData>* a_Stream1, Stream<BVHNodeData>* a_Stream2, Stream<TriIntersectorData2>* a_Stream3, Stream<Material>* a_Stream4, Stream<char>* a_Stream5)
+void AnimatedMesh::CreateNewMesh(AnimatedMesh* A, Stream<TriIntersectorData>* a_Stream0, Stream<TriangleData>* a_Stream1, Stream<BVHNodeData>* a_Stream2, Stream<TriIntersectorData2>* a_Stream3, Stream<Material>* a_Stream4, Stream<char>* a_Stream5) const
 {
 	A->m_uType = MESH_ANIMAT_TOKEN;
 	A->m_sLocalBox = m_sLocalBox;

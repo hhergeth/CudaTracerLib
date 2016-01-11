@@ -29,6 +29,14 @@ CUDA_ONLY_FUNC float4x4 d_Compute(float4x4* a_Matrices, const AnimatedVertex& v)
 	return mat;
 }
 
+struct e_TmpVertex
+{
+	Vec3f m_fPos;
+	Vec3f m_fNormal;
+	Vec3f m_fTangent;
+	Vec3f m_fBiTangent;
+};
+
 __global__ void g_ComputeVertices(e_TmpVertex* a_Dest, AnimatedVertex* a_Source, float4x4* a_Matrices, float4x4* a_Matrices2, float a_lerp, unsigned int a_VCount)
 {
 	unsigned int N = blockIdx.x * blockDim.x + threadIdx.x;
@@ -62,7 +70,7 @@ __global__ void g_ComputeTriangles(e_TmpVertex* a_Tmp, uint3* a_TriData, Triangl
 		a_TriData2[N].setData(a_Tmp[t.x].m_fPos, a_Tmp[t.y].m_fPos, a_Tmp[t.z].m_fPos,
 			a_Tmp[t.x].m_fNormal, a_Tmp[t.y].m_fNormal, a_Tmp[t.z].m_fNormal);
 #else
-		//a_TriData2[N].m_sDeviceData.Row0.
+
 #endif
 	}
 }
@@ -71,17 +79,17 @@ class AnimProvider : public ISpatialInfoProvider
 {
 	TriIntersectorData* intData;
 	e_TmpVertex* vertexData;
-	uint3* triData;
+	Vec3u* triData;
 	unsigned int m_uNumTriangles;
 public:
 	AnimProvider(AnimatedMesh* M, e_TmpVertex* V, StreamReference<char> S)
 		: intData(M->m_sIntInfo(0)), vertexData(V), m_uNumTriangles(M->m_sTriInfo.getLength() / 3)
 	{
-		triData = (uint3*)S.operator char *();
+		triData = (Vec3u*)S.operator char *();
 	}
 	virtual AABB getBox(unsigned int idx)
 	{
-		uint3 t = triData[idx];
+		Vec3u t = triData[idx];
 		AABB b;
 		b.maxV = b.minV = vertexData[t.x].m_fPos;
 		b = b.Extend(vertexData[t.y].m_fPos);
@@ -95,7 +103,7 @@ public:
 	}
 	virtual void setObject(unsigned int a_IntersectorIdx, unsigned int a_ObjIdx)
 	{
-		uint3 t = triData[a_ObjIdx];
+		Vec3u t = triData[a_ObjIdx];
 		intData[a_IntersectorIdx].setData(vertexData[t.x].m_fPos, vertexData[t.y].m_fPos, vertexData[t.z].m_fPos);
 	}
 	virtual bool SplitNode(unsigned int a_ObjIdx, int dim, float pos, AABB& lBox, AABB& rBox, const AABB& refBox) const
@@ -135,17 +143,19 @@ public:
 		return true;
 	}
 };
-void AnimatedMesh::k_ComputeState(unsigned int a_Anim, unsigned int a_Frame, float a_lerp, Stream<BVHNodeData>* a_BVHNodeStream, e_TmpVertex* a_DeviceTmp, e_TmpVertex* a_HostTmp)
+void AnimatedMesh::k_ComputeState(unsigned int a_Anim, unsigned int a_Frame, float a_lerp, Stream<BVHNodeData>* a_BVHNodeStream, void* a_DeviceTmp, void* a_HostTmp)
 {
+	CT_ASSERT(a_Anim < m_pAnimations.size());
+	CT_ASSERT(a_Frame < m_pAnimations[a_Anim].m_pFrames.size());
 	unsigned int n = (a_Frame + 1) % m_pAnimations[a_Anim].m_pFrames.size();
 	float4x4* m0 = (float4x4*)m_pAnimations[a_Anim].m_pFrames[a_Frame].m_sMatrices.getDevice();
 	float4x4* m1 = (float4x4*)m_pAnimations[a_Anim].m_pFrames[n].m_sMatrices.getDevice();
-	g_ComputeVertices << <k_Data.m_uVertexCount / 256 + 1, 256 >> >(a_DeviceTmp, (AnimatedVertex*)m_sVertices.getDevice(), m0, m1, a_lerp, k_Data.m_uVertexCount);
+	g_ComputeVertices << <k_Data.m_uVertexCount / 256 + 1, 256 >> >((e_TmpVertex*)a_DeviceTmp, (AnimatedVertex*)m_sVertices.getDevice(), m0, m1, a_lerp, k_Data.m_uVertexCount);
 	ThrowCudaErrors(cudaDeviceSynchronize());
-	g_ComputeTriangles << <m_sTriInfo.getLength() / 256 + 1, 256 >> >(a_DeviceTmp, (uint3*)m_sTriangles.getDevice(), m_sTriInfo.getDevice(), m_sTriInfo.getLength());
+	g_ComputeTriangles << <m_sTriInfo.getLength() / 256 + 1, 256 >> >((e_TmpVertex*)a_DeviceTmp, (uint3*)m_sTriangles.getDevice(), m_sTriInfo.getDevice(), m_sTriInfo.getLength());
 	ThrowCudaErrors(cudaDeviceSynchronize());
-	ThrowCudaErrors(cudaMemcpy(a_HostTmp, a_DeviceTmp, sizeof(e_TmpVertex) * k_Data.m_uVertexCount, cudaMemcpyDeviceToHost));
-	AnimProvider p(this, a_HostTmp, this->m_sTriangles);
+	ThrowCudaErrors(cudaMemcpy(a_HostTmp, (e_TmpVertex*)a_DeviceTmp, sizeof(e_TmpVertex) * k_Data.m_uVertexCount, cudaMemcpyDeviceToHost));
+	AnimProvider p(this, (e_TmpVertex*)a_HostTmp, this->m_sTriangles);
 	ThrowCudaErrors(cudaDeviceSynchronize());
 	if (m_pBuilder)
 		m_pBuilder->Build(&p, true);
