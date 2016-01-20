@@ -21,6 +21,7 @@ class IVectorBase
 };
 
 template <class T, int L> class Vector;
+template<typename T, class Enable = void> struct NormalizedT;
 
 template <class T, int L, class S> class VectorBase : public IVectorBase
 {
@@ -43,17 +44,16 @@ public:
 	CUDA_FUNC_IN    bool            isZero(void) const                { const T* tp = getPtr(); for (int i = 0; i < L; i++) if (tp[i] != (T)0) return false; return true; }
 	CUDA_FUNC_IN    T               lenSqr(void) const                { const T* tp = getPtr(); T r = (T)0; for (int i = 0; i < L; i++) r += math::sqr(tp[i]); return r; }
 	CUDA_FUNC_IN    T               length(void) const                { return sqrt(lenSqr()); }
-	CUDA_FUNC_IN    S               normalized(T len = (T)1) const        { return operator*(len * math::rcp(length())); }
-	CUDA_FUNC_IN    void            normalize(T len = (T)1)              { set(normalized(len)); }
+	CUDA_FUNC_IN    NormalizedT<S>  normalized() const;
 	CUDA_FUNC_IN    T               min(void) const                { const T* tp = getPtr(); T r = tp[0]; for (int i = 1; i < L; i++) r = CudaTracerLib::min(r, tp[i]); return r; }
 	CUDA_FUNC_IN    T               max(void) const                { const T* tp = getPtr(); T r = tp[0]; for (int i = 1; i < L; i++) r = CudaTracerLib::max(r, tp[i]); return r; }
-	CUDA_FUNC_IN    int             arg_min(void) const                { const T* tp = getPtr(); int j = 0; for (int i = 1; i < L; i++) if(tp[i] < tp[j]) j = i; return j; }
+	CUDA_FUNC_IN    int             arg_min(void) const                { const T* tp = getPtr(); int j = 0; for (int i = 1; i < L; i++) if (tp[i] < tp[j]) j = i; return j; }
 	CUDA_FUNC_IN    int             arg_max(void) const                { const T* tp = getPtr(); int j = 0; for (int i = 1; i < L; i++) if (tp[i] > tp[j]) j = i; return j; }
 	CUDA_FUNC_IN    T               sum(void) const                { const T* tp = getPtr(); T r = tp[0]; for (int i = 1; i < L; i++) r += tp[i]; return r; }
-	CUDA_FUNC_IN    S               abs(void) const                { const T* tp = getPtr(); S r; T* rp = r.getPtr(); for (int i = 0; i < L; i++) rp[i]  = (T)math::abs  ((float)tp[i]); return r; }
-	CUDA_FUNC_IN	S				sign() const					{ const T* tp = getPtr(); S r; T* rp = r.getPtr(); for (int i = 0; i < L; i++) rp[i] = (T)math::sign ((float)tp[i]); return r; }
+	CUDA_FUNC_IN    S               abs(void) const                { const T* tp = getPtr(); S r; T* rp = r.getPtr(); for (int i = 0; i < L; i++) rp[i] = (T)math::abs((float)tp[i]); return r; }
+	CUDA_FUNC_IN	S				sign() const					{ const T* tp = getPtr(); S r; T* rp = r.getPtr(); for (int i = 0; i < L; i++) rp[i] = (T)math::sign((float)tp[i]); return r; }
 	CUDA_FUNC_IN	S				floor() const					{ const T* tp = getPtr(); S r; T* rp = r.getPtr(); for (int i = 0; i < L; i++) rp[i] = (T)math::floor((float)tp[i]); return r; }
-	CUDA_FUNC_IN	S				ceil() const					{ const T* tp = getPtr(); S r; T* rp = r.getPtr(); for (int i = 0; i < L; i++) rp[i] = (T)math::ceil ((float)tp[i]); return r; }
+	CUDA_FUNC_IN	S				ceil() const					{ const T* tp = getPtr(); S r; T* rp = r.getPtr(); for (int i = 0; i < L; i++) rp[i] = (T)math::ceil((float)tp[i]); return r; }
 
 	CUDA_FUNC_IN    Vector<T, L + 1> toHomogeneous(void) const              { const T* tp = getPtr(); Vector<T, L + 1> r; T* rp = r.getPtr(); for (int i = 0; i < L; i++) rp[i] = tp[i]; rp[L] = (T)1; return r; }
 	CUDA_FUNC_IN    Vector<T, L - 1> toCartesian(void) const                { const T* tp = getPtr(); Vector<T, L - 1> r; T* rp = r.getPtr(); T c = rcp(tp[L - 1]); for (int i = 0; i < L - 1; i++) rp[i] = tp[i] * c; return r; }
@@ -351,9 +351,21 @@ public:
 	template <class V> CUDA_FUNC_IN Vec4f& operator=(const VectorBase<float, 4, V>& v) { set(v); return *this; }
 };
 
+}
+
+#include "NormalizedT.h"
+
+namespace CudaTracerLib
+{
+
+template <class T, int L, class S> NormalizedT<S> VectorBase<T, L, S>::normalized() const
+{
+	return normalized_cast(operator*(math::rcp(length())));
+}
+
 template <class T, int L, class S> CUDA_FUNC_IN T lenSqr(const VectorBase<T, L, S>& v)                  { return v.lenSqr(); }
 template <class T, int L, class S> CUDA_FUNC_IN T length(const VectorBase<T, L, S>& v)                  { return v.length(); }
-template <class T, int L, class S> CUDA_FUNC_IN S normalize(const VectorBase<T, L, S>& v, T len = (T)1)    { return v.normalized(len); }
+template <class T, int L, class S> CUDA_FUNC_IN NormalizedT<S> normalize(const VectorBase<T, L, S>& v)    { return normalized_cast(v.normalized()); }
 template <class T, int L, class S> CUDA_FUNC_IN T min(const VectorBase<T, L, S>& v)                  { return v.min(); }
 template <class T, int L, class S> CUDA_FUNC_IN T max(const VectorBase<T, L, S>& v)                  { return v.max(); }
 template <class T, int L, class S> CUDA_FUNC_IN T sum(const VectorBase<T, L, S>& v)                  { return v.sum(); }

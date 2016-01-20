@@ -1,11 +1,12 @@
 #pragma once
 
 #include <Defines.h>
+#include <type_traits>
 
 namespace CudaTracerLib {
 
 class IVectorBase;
-template<typename T, class Enable = void> struct NormalizedT : public T
+template<typename T, class Enable> struct NormalizedT : public T
 {
 public:
 	CUDA_FUNC_IN explicit NormalizedT(const T& v)
@@ -27,26 +28,42 @@ public:
 
 	}
 
-	CUDA_FUNC_IN T lenSqr(void) const = delete;
+	/*CUDA_FUNC_IN T lenSqr(void) const = delete;
 	CUDA_FUNC_IN T length(void) const = delete;
 	CUDA_FUNC_IN S normalized(T len = (T)1) const = delete;
-	CUDA_FUNC_IN void normalize(T len = (T)1) = delete;
+	CUDA_FUNC_IN void normalize(T len = (T)1) = delete;*/
+
+	CUDA_FUNC_IN T lenSqr(void) const
+	{
+		return (T)1;
+	}
+	CUDA_FUNC_IN T length(void) const
+	{
+		return (T)1;
+	}
+	CUDA_FUNC_IN S normalized() const
+	{
+		return *this;
+	}
 };
 
-//these static functions will be perfered over the original functions because the template matches better then the base class
-template<typename VEC> VEC normalize(const VEC& v)
+
+template<typename VEC> CUDA_FUNC_IN VEC normalize(const NormalizedT<VEC>& v)
 {
-	static_assert(sizeof(VEC) == 0, "normalize is not necessary for normalized vector!");
+	//static_assert(sizeof(VEC) == 0, "normalize is not necessary for normalized vector!");
+	return v;
 }
 
-template<typename VEC> typename VEC::SCALAR_TYPE length(const VEC& v)
+template<typename VEC> CUDA_FUNC_IN typename VEC::SCALAR_TYPE length(const NormalizedT<VEC>& v)
 {
-	static_assert(sizeof(VEC) == 0, "length of normalized vector := 1!");
+	//static_assert(sizeof(VEC) == 0, "length of normalized vector := 1!");
+	return (typename VEC::SCALAR_TYPE)1;
 }
 
-template<typename VEC> typename VEC::SCALAR_TYPE lenSqr(const VEC& v)
+template<typename VEC> CUDA_FUNC_IN typename VEC::SCALAR_TYPE lenSqr(const NormalizedT<VEC>& v)
 {
-	static_assert(sizeof(VEC) == 0, "lenSqr of normalized vector := 1!");
+	//static_assert(sizeof(VEC) == 0, "lenSqr of normalized vector := 1!");
+	return (typename VEC::SCALAR_TYPE)1;
 }
 
 template<typename T> CUDA_FUNC_IN NormalizedT<T> normalized_cast(const T& v)
