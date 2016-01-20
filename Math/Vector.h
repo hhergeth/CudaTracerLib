@@ -15,11 +15,19 @@ All rights reserved.
 
 namespace CudaTracerLib {
 
+class IVectorBase
+{
+
+};
+
 template <class T, int L> class Vector;
 
-template <class T, int L, class S> class VectorBase
+template <class T, int L, class S> class VectorBase : public IVectorBase
 {
 public:
+	typedef T SCALAR_TYPE;
+	typedef S STORAGE_TYPE;
+
 	CUDA_FUNC_IN                    VectorBase(void)                      {}
 
 	CUDA_FUNC_IN    const T*        getPtr(void) const                { return ((S*)this)->getPtr(); }

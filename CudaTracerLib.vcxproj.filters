@@ -335,6 +335,9 @@
     <ClInclude Include="Engine\Dispersion.h">
       <Filter>Engine</Filter>
     </ClInclude>
+    <ClInclude Include="Math\NormalizedT.h">
+      <Filter>Math</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Base\FileStream.cpp">

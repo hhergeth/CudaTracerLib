@@ -284,6 +284,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="Kernel\BVHTracer.h" />
     <ClInclude Include="Kernel\RayBuffer.h" />
     <ClInclude Include="Kernel\TracerSettings.h" />
+    <ClInclude Include="Math\NormalizedT.h" />
     <ClInclude Include="Math\qMatrixWrapper.h" />
     <ClInclude Include="VirtualFuncType.h" />
   </ItemGroup>
