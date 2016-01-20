@@ -82,9 +82,9 @@ void TriangleData::fillDG(const float4x4& localToWorld, const float4x4& worldToL
 	dg.sys.s = dpdu - dg.sys.n * dot(dg.sys.n, dpdu);
 	dg.sys.t = cross(dg.sys.s, dg.sys.n);
 	dg.sys = dg.sys * localToWorld;
-	dg.sys.n.normalize();
-	dg.sys.s.normalize();
-	dg.sys.t.normalize();
+	dg.sys.n = dg.sys.n.normalized();
+	dg.sys.s = dg.sys.s.normalized();
+	dg.sys.t = dg.sys.t.normalized();
 	dg.n = normalize(worldToLocal.TransformTranspose(Vec4f(na + nb + nc, 0.0f)).getXYZ());
 	dg.dpdu = (localToWorld.TransformDirection(dpdu));
 	dg.dpdv = (localToWorld.TransformDirection(dpdv));

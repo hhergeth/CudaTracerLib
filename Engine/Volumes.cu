@@ -143,7 +143,7 @@ Spectrum VolumeGrid::integrateDensity(const Ray& ray, float t0, float t1) const
 	Ray rayL = ray * WorldToVolume;
 	float Td = rayL.direction.length();
 	float minTL = t0 * Td, maxTL = t1 * Td;
-	rayL.direction.normalize();
+	rayL.direction = normalize(rayL.direction);
 	float D_s = 0.0f, D_a = 0.0f;
 	TraverseGrid(rayL, minTL, maxTL, [&](float minT, float rayT, float maxT, float cellEndT, Vec3u& cell_pos, bool& cancelTraversal)
 	{
@@ -197,7 +197,7 @@ bool VolumeGrid::invertDensityIntegral(const Ray& ray, float t0, float t1, float
 	Ray rayL = ray * WorldToVolume;
 	float Td = rayL.direction.length();
 	float minTL = t0 * Td, maxTL = t1 * Td;
-	rayL.direction.normalize();
+	rayL.direction = normalize(rayL.direction);
 	bool found = false;
 	densityAtMinT = sigma_t(ray(t0), Vec3f(0)).average();
 	float Lcl_To_World = (t1 - t0) / (maxTL - minTL);
