@@ -12,8 +12,8 @@ CUDA_ONLY_FUNC bool BeamBeamGrid::StoreBeam(const Beam& b)
 	if (beam_idx < m_uBeamLength)
 	{
 		m_pDeviceBeams[beam_idx] = b;
-#ifdef ISCUDA
 		bool storedAll = true;
+#ifdef ISCUDA
 		//const AABB objaabb = b.getAABB(m_fCurrentRadiusVol);
 		//const int maxAxis = b.getDir().abs().arg_max();
 		//const int chopCount = (int)(objaabb.Size()[maxAxis] * m_sStorage.getHashGrid().m_vInvSize[maxAxis]) + 1;
@@ -42,9 +42,8 @@ CUDA_ONLY_FUNC bool BeamBeamGrid::StoreBeam(const Beam& b)
 		//{
 		//	storedAll &= m_sStorage.store(pos, beam_idx);
 		//});
-
-		return storedAll;
 #endif
+		return storedAll;
 	}
 	else return false;
 }

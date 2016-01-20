@@ -139,7 +139,7 @@ bool Material::SampleNormalMap(DifferentialGeometry& dg, const Vec3f& wi) const
 
 bool Material::AlphaTest(const Vec2f& bary, const Vec2f& uv) const
 {
-	bool used = AlphaMap.used;
+	int used = AlphaMap.used;
 	float th = m_fAlphaThreshold;
 	if (used)
 	{
