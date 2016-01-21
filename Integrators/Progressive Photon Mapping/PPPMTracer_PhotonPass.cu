@@ -92,7 +92,6 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 			{
 				if (((VolEstimator*)g_VolEstimator)->StoreBeam(Beam(r.origin, r.direction, r2.m_fDist, throughput * Le)) && !wasStoredVolume)//store the beam even if sampled distance is too far ahead!
 				{
-					printf("A");
 					atomicInc(&numStoredVolume, UINT_MAX);
 					wasStoredVolume = true;
 				}
@@ -133,9 +132,11 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 					ph.setPos(g_SurfaceMap.getHashGrid(), cell_idx, dg.P);
 					bool b = false;
 					if ((DIRECT && depth > 0) || !DIRECT)
+					{
 						b |= g_SurfaceMap.store(cell_idx, ph);
-					if (finalGathering && delta)
-						b |= g_SurfaceMapCaustic.store(cell_idx, ph);
+						if (finalGathering && delta)
+							b |= g_SurfaceMapCaustic.store(cell_idx, ph);
+					}
 					if (b && !wasStoredSurface)
 					{
 						atomicInc(&numStoredSurface, UINT_MAX);
@@ -143,7 +144,7 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 					}
 				}
 				Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
-				delta = bRec.sampledType & ETypeCombinations::EDelta;
+				delta &= bRec.sampledType & ETypeCombinations::EDelta;
 				if (!bssrdf && r2.getMat().GetBSSRDF(bRec.dg, &bssrdf))
 					bRec.wo.z *= -1.0f;
 				else

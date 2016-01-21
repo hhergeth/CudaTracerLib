@@ -177,12 +177,12 @@ template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& b
 			float ke = k_tr(r, math::sqrt(dist2));
 			Spectrum l = ph.getL();
 			if(F_IS_GLOSSY)
-				l *= mat.bsdf.f(bRec);
-			Lp += ke * l * cor_fac;
+				l *= mat.bsdf.f(bRec) / Frame::cosTheta(bRec.wo);//bsdf.f returns f * cos(thetha)
+			Lp += ke * l;// * cor_fac;
 		}
 	});
 	if(!F_IS_GLOSSY)
-		Lp *= mat.bsdf.f(bRec);
+		Lp *= mat.bsdf.f(bRec) / Frame::cosTheta(bRec.wo);
 	return Lp / g_NumPhotonEmittedSurface2;
 #else
 	return 1.0f;
@@ -322,7 +322,7 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 				Vec2f sample = rng.randomFloat2();
 				const Light* light = g_SceneData.sampleEmitter(pdf, sample);
 				DirectSamplingRecord dRec(bRec.dg.P, bRec.dg.sys.n);
-				Spectrum value = light->sampleDirect(dRec, rng.randomFloat2());
+				Spectrum value = light->sampleDirect(dRec, rng.randomFloat2()) / pdf;
 				bRec.wo = normalize(bRec.dg.toLocal(dRec.d));
 				bRec.typeMask = EBSDFType(EAll & ~EDelta);
 				Spectrum bsdfVal = r2.getMat().bsdf.f(bRec);
@@ -330,16 +330,16 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 				{
 					const float bsdfPdf = r2.getMat().bsdf.pdf(bRec);
 					const float weight = MonteCarlo::PowerHeuristic(1, dRec.pdf, 1, bsdfPdf);
-					float tmin, tmax;
 					if (g_SceneData.Occluded(Ray(dRec.ref, dRec.d), 0, dRec.dist))
 						value = 0.0f;
+					float tmin, tmax;
 					if (g_SceneData.m_sVolume.HasVolumes() && g_SceneData.m_sVolume.IntersectP(Ray(bRec.dg.P, dRec.d), 0, dRec.dist, &tmin, &tmax))
 					{
 						Spectrum Tr;
 						Spectrum Li = ((VolEstimator*)g_VolEstimator2)->L_Volume(g_NumPhotonEmittedVolume2, a_rVolume, rng, Ray(bRec.dg.P, dRec.d), tmin, tmax, VolHelper<true>(), Tr);
 						value = value * Tr + Li;
 					}
-					L += throughput * bsdfVal * weight * (value);
+					L += throughput * bsdfVal * weight * value;
 				}
 				bRec.typeMask = EAll;
 
