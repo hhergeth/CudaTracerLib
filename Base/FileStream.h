@@ -108,7 +108,12 @@ public:
 	DCL_IN(float4x4)
 #undef DCL_IN
 
-	template<typename H, typename D> IInStream& operator>>(BufferReference<H, D> rhs)
+	template<typename VEC> IInStream& operator>>(NormalizedT<VEC>& rhs)
+	{
+		return *this >> (VEC)rhs;
+	}
+
+	template<typename H, typename D> IInStream& operator>>(BufferReference<H, D>& rhs)
 	{
 		Read(rhs(0), rhs.getHostSize());
 		rhs.Invalidate();
@@ -217,7 +222,7 @@ public:
 			*this << arr(i);
 	}
 #define DCL_OUT(TYPE) \
-	FileOutputStream& operator<<(TYPE rhs) \
+	FileOutputStream& operator<<(const TYPE& rhs) \
 		{ \
 		Write(rhs); \
 		return *this; \
@@ -246,10 +251,15 @@ public:
 	DCL_OUT(float4x4)
 #undef DCL_OUT
 
-	template<typename H, typename D> FileOutputStream& operator<<(BufferReference<H, D> rhs)
+	template<typename H, typename D> FileOutputStream& operator<<(const BufferReference<H, D>& rhs)
 	{
 		_Write(rhs(0), rhs.getHostSize());
 		return *this;
+	}
+
+	template<typename VEC> FileOutputStream& operator<<(const NormalizedT<VEC>& rhs)
+	{
+		return *this << (VEC)rhs;
 	}
 };
 
