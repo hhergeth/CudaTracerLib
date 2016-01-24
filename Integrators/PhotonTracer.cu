@@ -36,7 +36,7 @@ template<bool CORRECT_DIFFERENTIALS> CUDA_FUNC_IN void handleSurfaceInteraction(
 		//compute pixel differentials
 		if (CORRECT_DIFFERENTIALS)
 		{
-			Ray r, rX, rY;
+			NormalizedT<Ray> r, rX, rY;
 			g_SceneData.sampleSensorRay(r, rX, rY, dRec.uv, Vec2f(0));
 			auto oldWi = bRec.wi;
 			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng, 0, &dRec.d);
@@ -75,7 +75,7 @@ template<bool CORRECT_DIFFERENTIALS> CUDA_FUNC_IN void doWork(Image& g_Image, Cu
 	DirectionSamplingRecord dRec;
 	power *= ((const Light*)pRec.object)->sampleDirection(dRec, pRec, rng.randomFloat2());
 
-	Ray r(pRec.p, dRec.d);
+	NormalizedT<Ray> r(pRec.p, dRec.d);
 	TraceResult r2;
 	r2.Init();
 	int depth = -1;
@@ -94,14 +94,14 @@ template<bool CORRECT_DIFFERENTIALS> CUDA_FUNC_IN void doWork(Image& g_Image, Cu
 		if ((!bssrdf && V.HasVolumes() && V.IntersectP(r, 0, r2.m_fDist, &minT, &maxT) && V.sampleDistance(r, 0, r2.m_fDist, rng, mRec)) || (bssrdf && bssrdf->sampleDistance(r, 0, r2.m_fDist, rng.randomFloat(), mRec)))
 		{
 			throughput *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
-			handleMediumInteraction(power * throughput, mRec, -r.dirUnit(), r2, g_Image, rng);
+			handleMediumInteraction(power * throughput, mRec, -r.dir(), r2, g_Image, rng);
 			if (bssrdf)
 			{
-				PhaseFunctionSamplingRecord pfRec(-r.dirUnit());
+				PhaseFunctionSamplingRecord pfRec(-r.dir());
 				throughput *= bssrdf->As()->Func.Sample(pfRec, rng);
 				r.dir() = pfRec.wi;
 			}
-			else throughput *= V.Sample(mRec.p, -r.dirUnit(), rng, (NormalizedT<Vec3f>*)&r.dir());
+			else throughput *= V.Sample(mRec.p, -r.dir(), rng, (NormalizedT<Vec3f>*)&r.dir());
 			r.ori() = mRec.p;
 			medium = true;
 		}
@@ -111,7 +111,7 @@ template<bool CORRECT_DIFFERENTIALS> CUDA_FUNC_IN void doWork(Image& g_Image, Cu
 		{
 			if (medium)
 				throughput *= mRec.transmittance / mRec.pdfFailure;
-			auto wo = bssrdf ? -r.dirUnit() : r.dirUnit();
+			auto wo = bssrdf ? -r.dir() : r.dir();
 			Spectrum f_i = power * throughput;
 			r2.getBsdfSample(wo, r(r2.m_fDist), bRec, ETransportMode::EImportance, &rng, &f_i);
 			handleSurfaceInteraction<false>(power * throughput, r2, bRec, r2, g_Image, rng);//CORRECT_DIFFERENTIALS
@@ -136,7 +136,7 @@ template<bool CORRECT_DIFFERENTIALS> CUDA_FUNC_IN void doWork(Image& g_Image, Cu
 				throughput /= q;
 			}
 
-			r = Ray(bRec.dg.P, bRec.getOutgoing());
+			r = NormalizedT<Ray>(bRec.dg.P, bRec.getOutgoing());
 		}
 	}
 }

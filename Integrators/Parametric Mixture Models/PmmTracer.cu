@@ -11,7 +11,7 @@ __global__ void tracePhotons()
 {
 	CudaRNG rng = g_RNGData();
 	TraceResult r2;
-	Ray r;
+	NormalizedT<Ray> r;
 	g_SceneData.sampleEmitterRay(r, rng.randomFloat2(), rng.randomFloat2());
 	int depth = 0;
 	while ((r2 = traceRay(r)).hasHit() && depth++ < 7)
@@ -27,7 +27,7 @@ __global__ void tracePhotons()
 		if (depth > 5)
 			if (rng.randomFloat() >= f.max())
 				break;
-		r = Ray(p, bRec.getOutgoing());
+		r = NormalizedT<Ray>(p, bRec.getOutgoing());
 		r2.Init();
 	}
 	g_RNGData(rng);

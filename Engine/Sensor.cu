@@ -2,14 +2,14 @@
 
 namespace CudaTracerLib {
 
-Spectrum SphericalSensor::sampleRay(Ray &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const
+Spectrum SphericalSensor::sampleRay(NormalizedT<Ray> &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const
 {
 	float sinPhi, cosPhi, sinTheta, cosTheta;
 	sincos((1.0f - pixelSample.x * m_invResolution.x) * 2 * PI, &sinPhi, &cosPhi);
 	sincos((1.0f - pixelSample.y * m_invResolution.y) * PI, &sinTheta, &cosTheta);
 
 	Vec3f d = Vec3f(sinPhi*sinTheta, cosTheta, -cosPhi*sinTheta);
-	ray = Ray(toWorld.Translation(), toWorld.TransformDirection(d));
+	ray = NormalizedT<Ray>(toWorld.Translation(), toWorld.TransformDirection(d).normalized());
 
 	return Spectrum(1.0f);
 }
@@ -112,7 +112,7 @@ float PerspectiveSensor::importance(const NormalizedT<Vec3f> &d) const
 	return invCosTheta * invCosTheta * invCosTheta * m_normalization;
 }
 
-Spectrum PerspectiveSensor::sampleRay(Ray &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const
+Spectrum PerspectiveSensor::sampleRay(NormalizedT<Ray> &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const
 {
 	Vec3f nearP = m_sampleToCamera.TransformPoint(Vec3f(
 		pixelSample.x * m_invResolution.x,
@@ -120,25 +120,25 @@ Spectrum PerspectiveSensor::sampleRay(Ray &ray, const Vec2f &pixelSample, const 
 
 	/* Turn that into a normalized ray direction, and
 		adjust the ray interval accordingly */
-	Vec3f d = normalize(nearP);
-	ray = Ray(toWorld.Translation(), toWorld.TransformDirection(d));
+	auto d = normalize(nearP);
+	ray = NormalizedT<Ray>(toWorld.Translation(), toWorld.TransformDirection(d).normalized());
 
 	return Spectrum(1.0f);
 }
 
-Spectrum PerspectiveSensor::sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const
+Spectrum PerspectiveSensor::sampleRayDifferential(NormalizedT<Ray> &ray, NormalizedT<Ray> &rayX, NormalizedT<Ray> &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const
 {
 	Vec3f nearP = m_sampleToCamera.TransformPoint(Vec3f(
 		pixelSample.x * m_invResolution.x,
 		pixelSample.y * m_invResolution.y, 0.0f));
 
 	NormalizedT<Vec3f> d = normalize(nearP);
-	ray = Ray(toWorld.Translation(), toWorld.TransformDirection(d));
+	ray = NormalizedT<Ray>(toWorld.Translation(), toWorld.TransformDirection(d).normalized());
 
 	rayX.ori() = rayY.ori() = ray.ori();
 
-	rayX.dir() = toWorld.TransformDirection(normalize(nearP + m_dx));
-	rayY.dir() = toWorld.TransformDirection(normalize(nearP + m_dy));
+	rayX.dir() = toWorld.TransformDirection(normalize(nearP + m_dx)).normalized();
+	rayY.dir() = toWorld.TransformDirection(normalize(nearP + m_dy)).normalized();
 	return Spectrum(1.0f);
 }
 
@@ -263,7 +263,7 @@ float ThinLensSensor::importance(const Vec3f &p, const NormalizedT<Vec3f> &d, Ve
 	return m_normalization * invCosTheta * invCosTheta * invCosTheta;
 }
 
-Spectrum ThinLensSensor::sampleRay(Ray &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const
+Spectrum ThinLensSensor::sampleRay(NormalizedT<Ray> &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const
 {
 	Vec2f tmp = Warp::squareToUniformDiskConcentric(apertureSample) * m_apertureRadius;
 
@@ -281,14 +281,14 @@ Spectrum ThinLensSensor::sampleRay(Ray &ray, const Vec2f &pixelSample, const Vec
 
 	/* Turn these into a normalized ray direction, and
 		adjust the ray interval accordingly */
-	NormalizedT<Vec3f> d = normalize(focusP - apertureP);
+	auto d = normalize(focusP - apertureP);
 
-	ray = Ray(toWorld.TransformPoint(apertureP), toWorld.TransformDirection(d));
+	ray = NormalizedT<Ray>(toWorld.TransformPoint(apertureP), toWorld.TransformDirection(d).normalized());
 
 	return Spectrum(1.0f);
 }
 
-Spectrum ThinLensSensor::sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const
+Spectrum ThinLensSensor::sampleRayDifferential(NormalizedT<Ray> &ray, NormalizedT<Ray> &rayX, NormalizedT<Ray> &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const
 {
 	Vec2f tmp = Warp::squareToUniformDiskConcentric(apertureSample) * m_apertureRadius;
 	Vec3f nearP = m_sampleToCamera.TransformPoint(Vec3f(
@@ -302,10 +302,10 @@ Spectrum ThinLensSensor::sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, c
 	Vec3f focusPy = (nearP + m_dy) * fDist;
 
 	NormalizedT<Vec3f> d = normalize(focusP - apertureP);
-	ray = Ray(toWorld.TransformPoint(apertureP), toWorld.TransformDirection(d));
+	ray = NormalizedT<Ray>(toWorld.TransformPoint(apertureP), toWorld.TransformDirection(d).normalized());
 	rayX.ori() = rayY.ori() = ray.ori();
-	rayX.dir() = toWorld.TransformDirection(normalize(focusPx - apertureP));
-	rayY.dir() = toWorld.TransformDirection(normalize(focusPy - apertureP));
+	rayX.dir() = toWorld.TransformDirection(normalize(focusPx - apertureP)).normalized();
+	rayY.dir() = toWorld.TransformDirection(normalize(focusPy - apertureP)).normalized();
 	return Spectrum(1.0f);
 }
 
@@ -414,23 +414,23 @@ void OrthographicSensor::Update()
 	m_scale = length(toWorld.Forward());
 }
 
-Spectrum OrthographicSensor::sampleRay(Ray &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const
+Spectrum OrthographicSensor::sampleRay(NormalizedT<Ray> &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const
 {
 	Vec3f nearP = m_sampleToCamera.TransformPoint(Vec3f(
 		pixelSample.x * m_invResolution.x,
 		pixelSample.y * m_invResolution.y, 0.0f));
 
-	ray = Ray(toWorld.TransformPoint(Vec3f(nearP.x, nearP.y, 0.0f)), toWorld.Forward());
+	ray = NormalizedT<Ray>(toWorld.TransformPoint(Vec3f(nearP.x, nearP.y, 0.0f)), toWorld.Forward().normalized());
 
 	return Spectrum(1.0f);
 }
 
-Spectrum OrthographicSensor::sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const
+Spectrum OrthographicSensor::sampleRayDifferential(NormalizedT<Ray> &ray, NormalizedT<Ray> &rayX, NormalizedT<Ray> &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const
 {
 	Vec3f nearP = m_sampleToCamera.TransformPoint(Vec3f(
 		pixelSample.x * m_invResolution.x,
 		pixelSample.y * m_invResolution.y, 0.0f));
-	ray = Ray(toWorld.TransformPoint(nearP), toWorld.Forward());
+	ray = NormalizedT<Ray>(toWorld.TransformPoint(nearP), toWorld.Forward().normalized());
 	rayX.ori() = toWorld.TransformPoint(nearP + m_dx);
 	rayY.ori() = toWorld.TransformPoint(nearP + m_dy);
 	rayX.dir() = rayY.dir() = ray.dir();
@@ -522,7 +522,7 @@ void TelecentricSensor::Update()
 	m_aperturePdf = 1.0f / (PI * m_apertureRadius * m_apertureRadius);
 }
 
-Spectrum TelecentricSensor::sampleRay(Ray &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const
+Spectrum TelecentricSensor::sampleRay(NormalizedT<Ray> &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const
 {
 	Vec2f diskSample = Warp::squareToUniformDiskConcentric(apertureSample)
 		* (m_apertureRadius / screenScale.x);
@@ -538,12 +538,12 @@ Spectrum TelecentricSensor::sampleRay(Ray &ray, const Vec2f &pixelSample, const 
 	Vec3f orig = Vec3f(diskSample.x + focusP.x,
 		diskSample.y + focusP.y, 0.0f);
 
-	ray = Ray(toWorld.TransformPoint(orig), toWorld.TransformDirection(focusP - orig));
+	ray = NormalizedT<Ray>(toWorld.TransformPoint(orig), toWorld.TransformDirection(focusP - orig).normalized());
 
 	return Spectrum(1.0f);
 }
 
-Spectrum TelecentricSensor::sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const
+Spectrum TelecentricSensor::sampleRayDifferential(NormalizedT<Ray> &ray, NormalizedT<Ray> &rayX, NormalizedT<Ray> &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const
 {
 	Vec2f diskSample = Warp::squareToUniformDiskConcentric(apertureSample) * (m_apertureRadius / screenScale.x);
 	Vec3f focusP = m_sampleToCamera.TransformPoint(Vec3f(
@@ -553,7 +553,7 @@ Spectrum TelecentricSensor::sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY
 	/* Compute the ray origin */
 	Vec3f orig = Vec3f(diskSample.x + focusP.x,
 		diskSample.y + focusP.y, 0.0f);
-	ray = Ray(toWorld.TransformPoint(orig), toWorld.TransformDirection(focusP - orig));
+	ray = NormalizedT<Ray>(toWorld.TransformPoint(orig), toWorld.TransformDirection(focusP - orig).normalized());
 	rayX.ori() = toWorld.TransformPoint(orig + m_dx);
 	rayY.ori() = toWorld.TransformPoint(orig + m_dy);
 	rayX.dir() = rayY.dir() = ray.dir();

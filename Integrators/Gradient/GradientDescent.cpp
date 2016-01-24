@@ -5,7 +5,7 @@
 
 namespace CudaTracerLib {
 
-void TracePath(Ray r, std::vector<PathVertex*>& p, int N2, ETransportMode mode, CudaRNG& rng)
+void TracePath(NormalizedT<Ray> r, std::vector<PathVertex*>& p, int N2, ETransportMode mode, CudaRNG& rng)
 {
 	TraceResult r2 = traceRay(r);
 	if (!r2.hasHit())
@@ -19,7 +19,7 @@ void TracePath(Ray r, std::vector<PathVertex*>& p, int N2, ETransportMode mode, 
 		Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
 		v.hasSampledDelta = (bRec.sampledType & ETypeCombinations::EDelta) != 0;
 		p.push_back(new SurfacePathVertex(v));
-		r = Ray(v.dg.P, bRec.getOutgoing());
+		r = NormalizedT<Ray>(v.dg.P, bRec.getOutgoing());
 		r2 = traceRay(r);
 	}
 }
@@ -51,11 +51,11 @@ void ConstructPath(const Vec2i& pixel, Path& P, int s, int t)
 	int maxSubPathLength = 6;
 
 	std::vector<PathVertex*> sensorPath, emitterPath;
-	Ray r;
+	NormalizedT<Ray> r;
 
 	g_SceneData.m_Camera.sampleRay(r, Vec2f(0.5f), Vec2f(0.5f));
 	CameraPathVertex* c_v = new CameraPathVertex();
-	c_v->n = r.dirUnit();
+	c_v->n = r.dir();
 	r = g_SceneData.GenerateSensorRay(pixel.x, pixel.y);
 	c_v->p = r.ori();
 	c_v->sensor = g_SceneData.m_Camera;
@@ -73,7 +73,7 @@ void ConstructPath(const Vec2i& pixel, Path& P, int s, int t)
 	l_v->n = pRec.n;
 	l_v->p = pRec.p;
 	emitterPath.push_back(l_v);
-	TracePath(Ray(pRec.p, dRec.d), emitterPath, maxSubPathLength, ETransportMode::EImportance, rng);
+	TracePath(NormalizedT<Ray>(pRec.p, dRec.d), emitterPath, maxSubPathLength, ETransportMode::EImportance, rng);
 
 	P = ConnectPaths(sensorPath, emitterPath, s, t);
 

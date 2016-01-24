@@ -51,15 +51,40 @@ public:
 		return direction;
 	}
 
-	CUDA_FUNC_IN NormalizedT<Vec3f> dirUnit() const
-	{
-		return direction.normalized();
-	}
-
 	friend std::ostream& operator<< (std::ostream & os, const Ray& rhs)
 	{
 		os << "[" << rhs.origin << ", " << rhs.direction << "]";
 		return os;
+	}
+};
+
+template<> struct NormalizedT<Ray> : public Ray
+{
+	CUDA_FUNC_IN NormalizedT()
+	{
+		
+	}
+
+	CUDA_FUNC_IN explicit NormalizedT(const Ray& v)
+		: Ray(v.ori(), v.dir().normalized())
+	{
+
+	}
+
+	CUDA_FUNC_IN NormalizedT(const Vec3f& o, const NormalizedT<Vec3f>& d)
+		: Ray(o, d)
+	{
+
+	}
+
+	CUDA_FUNC_IN const NormalizedT<Vec3f>& dir() const
+	{
+		return *(NormalizedT<Vec3f>*)&Ray::dir();
+	}
+
+	CUDA_FUNC_IN NormalizedT<Vec3f>& dir()
+	{
+		return *(NormalizedT<Vec3f>*)&Ray::dir();
 	}
 };
 

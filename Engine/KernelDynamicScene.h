@@ -69,29 +69,29 @@ struct KernelDynamicScene
 	CUDA_DEVICE CUDA_HOST float pdfEmitterPosition(const PositionSamplingRecord &pRec) const;
 	CUDA_DEVICE CUDA_HOST float pdfSensorPosition(const PositionSamplingRecord &pRec) const;
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleEmitterRay(Ray& ray, const Light*& emitter, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
-	CUDA_DEVICE CUDA_HOST Spectrum sampleSensorRay(Ray& ray, const Sensor*& emitter, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleEmitterRay(NormalizedT<Ray>& ray, const Light*& emitter, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleSensorRay(NormalizedT<Ray>& ray, const Sensor*& emitter, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
 
 	CUDA_DEVICE CUDA_HOST Spectrum evalTransmittance(const Vec3f& p1, const Vec3f& p2) const;
 
-	CUDA_FUNC_IN Spectrum sampleEmitterRay(Ray& ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const
+	CUDA_FUNC_IN Spectrum sampleEmitterRay(NormalizedT<Ray>& ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const
 	{
 		const Light* emitter;
 		return sampleEmitterRay(ray, emitter, spatialSample, directionalSample);
 	}
-	CUDA_FUNC_IN Spectrum sampleSensorRay(Ray& ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const
+	CUDA_FUNC_IN Spectrum sampleSensorRay(NormalizedT<Ray>& ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const
 	{
 		const Sensor* emitter;
 		return sampleSensorRay(ray, emitter, spatialSample, directionalSample);
 	}
-	CUDA_FUNC_IN Spectrum sampleSensorRay(Ray& ray, Ray& rX, Ray& rY, const Vec2f &spatialSample, const Vec2f &directionalSample) const
+	CUDA_FUNC_IN Spectrum sampleSensorRay(NormalizedT<Ray>& ray, NormalizedT<Ray>& rX, NormalizedT<Ray>& rY, const Vec2f &spatialSample, const Vec2f &directionalSample) const
 	{
 		return m_Camera.sampleRayDifferential(ray, rX, rY, spatialSample, directionalSample);
 	}
 
-	CUDA_FUNC_IN Ray GenerateSensorRay(int x, int y) const
+	CUDA_FUNC_IN NormalizedT<Ray> GenerateSensorRay(int x, int y) const
 	{
-		Ray r;
+		NormalizedT<Ray> r;
 		sampleSensorRay(r, Vec2f((float)x, (float)y), Vec2f(0));
 		return r;
 	}

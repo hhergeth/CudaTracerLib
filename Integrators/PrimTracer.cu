@@ -17,7 +17,7 @@ CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_NextRayCounter2;
 
 CUDA_FUNC_IN void computePixel(int x, int y, CudaRNG& rng, Image g_Image, bool depthImage, PathTrace_DrawMode mode, int maxPathLength)
 {
-	Ray r, rX, rY;
+	NormalizedT<Ray> r, rX, rY;
 	Spectrum imp = g_SceneData.m_Camera.sampleRayDifferential(r, rX, rY, Vec2f((float)x, (float)y), rng.randomFloat2());
 	TraceResult prim_res = traceRay(r);
 	Spectrum L(0.0f), through(1.0f);
@@ -54,7 +54,7 @@ CUDA_FUNC_IN void computePixel(int x, int y, CudaRNG& rng, Image g_Image, bool d
 				L = Spectrum(dg.bary.x, dg.bary.y, 0);
 			else
 			{
-				Spectrum Le = prim_res.Le(dg.P, bRec.dg.sys, -r.dirUnit());
+				Spectrum Le = prim_res.Le(dg.P, bRec.dg.sys, -r.dir());
 				Spectrum f = prim_res.getMat().bsdf.sample(bRec, rng.randomFloat2());
 				through = Transmittance(r, 0, prim_res.m_fDist);
 				bool isDelta = prim_res.getMat().bsdf.hasComponent(EDelta);
@@ -70,7 +70,7 @@ CUDA_FUNC_IN void computePixel(int x, int y, CudaRNG& rng, Image g_Image, bool d
 					int depth = 0;
 					do
 					{
-						r = Ray(dg.P, bRec.getOutgoing());
+						r = NormalizedT<Ray>(dg.P, bRec.getOutgoing());
 						prim_res = traceRay(r);
 						through *= Transmittance(r, 0, prim_res.m_fDist);
 						if (prim_res.hasHit())
@@ -84,7 +84,7 @@ CUDA_FUNC_IN void computePixel(int x, int y, CudaRNG& rng, Image g_Image, bool d
 
 					if (prim_res.hasHit() && prim_res.getMat().bsdf.hasComponent(ESmooth))
 					{
-						Le = prim_res.Le(dg.P, bRec.dg.sys, -r.dirUnit());
+						Le = prim_res.Le(dg.P, bRec.dg.sys, -r.dir());
 						if (mode == PathTrace_DrawMode::first_non_delta_Le)
 							L = Le;
 						else if (mode == PathTrace_DrawMode::first_non_delta_f)
@@ -235,7 +235,7 @@ void PrimTracer::Debug(Image* I, const Vec2i& pixel)
 	k_INITIALIZE(m_pScene, g_sRngs);
 	CudaRNG rng = g_RNGData();
 	computePixel(pixel.x, pixel.y, rng, *I, false, m_sParameters.getValue(KEY_DrawingMode()), m_sParameters.getValue(KEY_MaxPathLength()));
-	Ray r, rX, rY;
+	NormalizedT<Ray> r, rX, rY;
 	g_SceneData.sampleSensorRay(r, rX, rY, Vec2f((float)pixel.x, (float)pixel.y), rng.randomFloat2());
 	//traceTerrain(r, rng);
 }

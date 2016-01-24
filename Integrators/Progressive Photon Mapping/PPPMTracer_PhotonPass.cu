@@ -71,7 +71,7 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 
 	while (atomicInc(&local_Counter, (unsigned int)-1) < local_Todo && !g_SurfaceMap.isFull() && !((VolEstimator*)g_VolEstimator)->isFullK())
 	{
-		Ray r;
+		NormalizedT<Ray> r;
 		const Light* light;
 		Vec2f sps = rng.randomFloat2(), sds = rng.randomFloat2();
 		Spectrum Le = g_SceneData.sampleEmitterRay(r, light, sps, sds),
@@ -90,7 +90,7 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 			bool inMedium = (!bssrdf && V.HasVolumes() && V.IntersectP(r, 0, r2.m_fDist, &minT, &maxT)) || bssrdf;
 			if (inMedium)
 			{
-				if (((VolEstimator*)g_VolEstimator)->StoreBeam(Beam(r.ori(), r.dirUnit(), r2.m_fDist, throughput * Le)) && !wasStoredVolume)//store the beam even if sampled distance is too far ahead!
+				if (((VolEstimator*)g_VolEstimator)->StoreBeam(Beam(r.ori(), r.dir(), r2.m_fDist, throughput * Le)) && !wasStoredVolume)//store the beam even if sampled distance is too far ahead!
 				{
 					atomicInc(&numStoredVolume, UINT_MAX);
 					wasStoredVolume = true;
@@ -100,21 +100,21 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 				|| (bssrdf && bssrdf->sampleDistance(r, 0, r2.m_fDist, rng.randomFloat(), mRec)))
 			{//mRec.t
 				throughput *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
-				if (((VolEstimator*)g_VolEstimator)->StorePhoton(mRec.p, -r.dirUnit(), throughput * Le) && !wasStoredVolume)
+				if (((VolEstimator*)g_VolEstimator)->StorePhoton(mRec.p, -r.dir(), throughput * Le) && !wasStoredVolume)
 				{
 					atomicInc(&numStoredVolume, UINT_MAX);
 					wasStoredVolume = true;
 				}
 				if (bssrdf)
 				{
-					PhaseFunctionSamplingRecord pRec(-r.dirUnit(), r.dirUnit());
+					PhaseFunctionSamplingRecord pRec(-r.dir(), r.dir());
 					throughput *= bssrdf->As()->Func.Sample(pRec, rng);
 					r.dir() = pRec.wi;
 				}
 				else
 				{
 					NormalizedT<Vec3f> dir;
-					throughput *= V.Sample(mRec.p, -r.dirUnit(), rng, &dir);
+					throughput *= V.Sample(mRec.p, -r.dir(), rng, &dir);
 					r.dir() = dir;
 				}
 				r.ori() = mRec.p;
@@ -127,7 +127,7 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 			{
 				if (medium)
 					throughput *= mRec.transmittance / mRec.pdfFailure;
-				auto wo = bssrdf ? r.dirUnit() : -r.dirUnit();
+				auto wo = bssrdf ? r.dir() : -r.dir();
 				Spectrum f_i = throughput * Le;
 				r2.getBsdfSample(-wo, r(r2.m_fDist), bRec, ETransportMode::EImportance, &rng, &f_i);
 				if (r2.getMat().bsdf.hasComponent(ESmooth) && dot(bRec.dg.sys.n, wo) > 0.0f)
@@ -160,7 +160,7 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 					medium = false;
 				}
 
-				r = Ray(bRec.dg.P, bRec.getOutgoing());
+				r = NormalizedT<Ray>(bRec.dg.P, bRec.getOutgoing());
 			}
 		}
 	}

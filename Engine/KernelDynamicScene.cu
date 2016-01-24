@@ -178,7 +178,7 @@ float KernelDynamicScene::pdfSensorPosition(const PositionSamplingRecord &pRec) 
 	return sensor->pdfPosition(pRec);
 }
 
-Spectrum KernelDynamicScene::sampleEmitterRay(Ray& ray, const Light*& emitter, const Vec2f &spatialSample, const Vec2f &directionalSample) const
+Spectrum KernelDynamicScene::sampleEmitterRay(NormalizedT<Ray>& ray, const Light*& emitter, const Vec2f &spatialSample, const Vec2f &directionalSample) const
 {
 	Vec2f sample = spatialSample;
 	float emPdf;
@@ -187,7 +187,7 @@ Spectrum KernelDynamicScene::sampleEmitterRay(Ray& ray, const Light*& emitter, c
 	return emitter->sampleRay(ray, sample, directionalSample) / emPdf;
 }
 
-Spectrum KernelDynamicScene::sampleSensorRay(Ray& ray, const Sensor*& sensor, const Vec2f &spatialSample, const Vec2f &directionalSample) const
+Spectrum KernelDynamicScene::sampleSensorRay(NormalizedT<Ray>& ray, const Sensor*& sensor, const Vec2f &spatialSample, const Vec2f &directionalSample) const
 {
 	sensor = &m_Camera;
 	return sensor->sampleRay(ray, spatialSample, directionalSample);

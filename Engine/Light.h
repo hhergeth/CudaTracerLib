@@ -50,7 +50,7 @@ struct PointLight : public LightBase//, public e_DerivedTypeHelper<1>
 
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(NormalizedT<Ray> &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
 
 	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const NormalizedT<Vec3f> &d) const
 	{
@@ -114,7 +114,7 @@ struct DiffuseLight : public LightBase//, public e_DerivedTypeHelper<2>
 		m_rad_texture.SetData(ConstantTexture(L));
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(NormalizedT<Ray> &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
 
 	CUDA_DEVICE CUDA_HOST Spectrum eval(const Vec3f& p, const Frame& sys, const NormalizedT<Vec3f> &d) const;
 
@@ -180,7 +180,7 @@ struct DistantLight : public LightBase//, public e_DerivedTypeHelper<3>
 		setEmit(m_normalIrradiance * L);
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(NormalizedT<Ray> &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
 
 	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const NormalizedT<Vec3f> &d) const
 	{
@@ -249,7 +249,7 @@ struct SpotLight : public LightBase//, public e_DerivedTypeHelper<4>
 		m_invTransitionWidth = 1.0f / (m_cutoffAngle - m_beamWidth);
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(NormalizedT<Ray> &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
 
 	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const NormalizedT<Vec3f> &d) const
 	{
@@ -324,7 +324,7 @@ struct InfiniteLight : public LightBase//, public e_DerivedTypeHelper<5>
 		m_power = (surfaceArea * m_scale / m_normalization).average();
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(NormalizedT<Ray> &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
 
 	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const NormalizedT<Vec3f> &d) const
 	{
@@ -373,7 +373,7 @@ struct Light : public CudaVirtualAggregate<LightBase, PointLight, DiffuseLight, 
 {
 public:
 	CALLER(sampleRay)
-	CUDA_FUNC_IN Spectrum sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const
+	CUDA_FUNC_IN Spectrum sampleRay(NormalizedT<Ray> &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const
 	{
 		return sampleRay_Helper::Caller<Spectrum>(this, ray, spatialSample, directionalSample);
 	}

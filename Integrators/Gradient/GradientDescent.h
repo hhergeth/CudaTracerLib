@@ -276,7 +276,7 @@ public:
 	}
 };
 
-void TracePath(Ray r, std::vector<PathVertex*>& p, int N2, ETransportMode mode, CudaRNG& rng);
+void TracePath(NormalizedT<Ray> r, std::vector<PathVertex*>& p, int N2, ETransportMode mode, CudaRNG& rng);
 
 Path ConnectPaths(const std::vector<PathVertex*>& cameraPath, const std::vector<PathVertex*>& emitterPath);
 

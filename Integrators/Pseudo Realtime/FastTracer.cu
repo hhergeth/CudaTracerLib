@@ -38,7 +38,7 @@ __global__ void pathCreateKernelFT(unsigned int w, unsigned int h)
 		}
 
 		int x = rayidx % w, y = rayidx / w;
-		Ray r;
+		NormalizedT<Ray> r;
 		Spectrum W = g_SceneData.sampleSensorRay(r, Vec2f(x, y), Vec2f(0, 0));
 		traversalRay& ray = g_IntersectorFT(rayidx, 0);
 		ray.a = Vec4f(r.ori(), 0.0f);

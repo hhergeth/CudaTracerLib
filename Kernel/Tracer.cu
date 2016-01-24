@@ -14,7 +14,7 @@ template<bool RECURSIVE> __global__ void k_GuessPass(int w, int h, float scx, fl
 	CudaRNG rng = g_RNGData();
 	if (x < w && y < h)
 	{
-		Ray r = g_SceneData.GenerateSensorRay(float(x * scx), float(y * scy));
+		NormalizedT<Ray> r = g_SceneData.GenerateSensorRay(float(x * scx), float(y * scy));
 		TraceResult r2;
 		r2.Init();
 		int d = -1;
@@ -24,7 +24,7 @@ template<bool RECURSIVE> __global__ void k_GuessPass(int w, int h, float scx, fl
 			BSDFSamplingRecord bRec(dg);
 			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
 			r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
-			r = Ray(dg.P, bRec.getOutgoing());
+			r = NormalizedT<Ray>(dg.P, bRec.getOutgoing());
 			Vec3f per = math::clamp01((dg.P - g_SceneData.m_sBox.minV) / (g_SceneData.m_sBox.maxV - g_SceneData.m_sBox.minV)) * float(UINT_MAX);
 			Vec3u q = Vec3u((unsigned int)per.x, (unsigned int)per.y, (unsigned int)per.z);
 			atomicMin(&g_EyeHitBoxMin.x, q.x);
@@ -88,7 +88,7 @@ __global__ void estimateLightVisibility(int w, int h, float scx, float scy, int 
 	CudaRNG rng = g_RNGData();
 	if (x < w && y < h)
 	{
-		Ray r = g_SceneData.GenerateSensorRay(float(x * scx), float(y * scy));
+		NormalizedT<Ray> r = g_SceneData.GenerateSensorRay(float(x * scx), float(y * scy));
 		TraceResult r2;
 		r2.Init();
 		int d = -1;
@@ -107,7 +107,7 @@ __global__ void estimateLightVisibility(int w, int h, float scx, float scy, int 
 			}
 
 			r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
-			r = Ray(dg.P, bRec.getOutgoing());
+			r = NormalizedT<Ray>(dg.P, bRec.getOutgoing());
 		}
 		atomicAdd(&g_ShotRays, N);
 		atomicAdd(&g_SuccRays, S);

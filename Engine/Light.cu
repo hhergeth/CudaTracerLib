@@ -8,9 +8,9 @@
 
 namespace CudaTracerLib {
 
-Spectrum PointLight::sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const
+Spectrum PointLight::sampleRay(NormalizedT<Ray> &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const
 {
-	ray = Ray(lightPos, Warp::squareToUniformSphere(directionalSample));
+	ray = NormalizedT<Ray>(lightPos, Warp::squareToUniformSphere(directionalSample));
 	return m_intensity * (4 * PI);
 }
 
@@ -53,15 +53,15 @@ CUDA_FUNC_IN bool needsUVSample(const Texture& tex)
 	return !tex.Is<ConstantTexture>();
 }
 
-Spectrum DiffuseLight::sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const
+Spectrum DiffuseLight::sampleRay(NormalizedT<Ray> &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const
 {
 	PositionSamplingRecord pRec;
 	DifferentialGeometry dg;
 	shapeSet.SamplePosition(pRec, spatialSample, &dg.uv[0]);
 	dg.P = pRec.p;
 	dg.bary = pRec.uv;
-	Vec3f local = m_bOrthogonal ? Vec3f(0, 0, 1) : Warp::squareToCosineHemisphere(directionalSample);
-	ray = Ray(pRec.p, Frame(pRec.n).toWorld(local));
+	auto local = m_bOrthogonal ? NormalizedT<Vec3f>(0.0f, 0.0f, 1.0f) : Warp::squareToCosineHemisphere(directionalSample);
+	ray = NormalizedT<Ray>(pRec.p, Frame(pRec.n).toWorld(local));
 	return m_rad_texture.Evaluate(dg) * PI * shapeSet.Area();
 }
 
@@ -214,12 +214,12 @@ void DistantLight::setEmit(const Spectrum& L)
 	m_power = m_normalIrradiance / m_invSurfaceArea;
 }
 
-Spectrum DistantLight::sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const
+Spectrum DistantLight::sampleRay(NormalizedT<Ray> &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const
 {
 	Vec2f p = Warp::squareToUniformDiskConcentric(spatialSample);
 	Vec3f perpOffset = ToWorld.toWorld(Vec3f(p.x, p.y, 0) * radius);
-	NormalizedT<Vec3f> d = ToWorld.toWorld(NormalizedT<Vec3f>(0.0f, 0.0f, 1.0f));
-	ray = Ray(d * radius + perpOffset, d);
+	auto d = ToWorld.toWorld(NormalizedT<Vec3f>(0.0f, 0.0f, 1.0f));
+	ray = NormalizedT<Ray>(d * radius + perpOffset, d);
 	return m_power;
 }
 
@@ -279,10 +279,10 @@ SpotLight::SpotLight(Vec3f p, Vec3f t, Spectrum L, float width, float fall)
 	ToWorld = Frame((t - p).normalized());
 }
 
-Spectrum SpotLight::sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const
+Spectrum SpotLight::sampleRay(NormalizedT<Ray> &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const
 {
-	Vec3f local = Warp::squareToUniformCone(m_cosCutoffAngle, directionalSample);
-	ray = Ray(Position, ToWorld.toWorld(local));
+	auto local = Warp::squareToUniformCone(m_cosCutoffAngle, directionalSample);
+	ray = NormalizedT<Ray>(Position, ToWorld.toWorld(local).normalized());
 	float dirPdf = Warp::squareToUniformConePdf(m_cosCutoffAngle);
 	return m_intensity * falloffCurve(local.normalized()) / dirPdf;
 }
@@ -384,14 +384,14 @@ InfiniteLight::InfiniteLight(Stream<char>* a_Buffer, BufferReference<MIPMap, Ker
 	m_worldTransform = m_worldTransformInverse = float4x4::Identity();
 }
 
-Spectrum InfiniteLight::sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const
+Spectrum InfiniteLight::sampleRay(NormalizedT<Ray> &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const
 {
 	Vec3f d; Spectrum value; float pdf;
 	internalSampleDirection(directionalSample, d, value, pdf);
 	d = m_worldTransform.TransformDirection(-d);
 	Vec2f offset = Warp::squareToUniformDiskConcentric(spatialSample);
 	Vec3f perpOffset = Frame(d.normalized()).toWorld(Vec3f(offset.x, offset.y, 0.0f));
-	ray = Ray(m_SceneCenter + (perpOffset - d) * m_SceneRadius, d);
+	ray = NormalizedT<Ray>(m_SceneCenter + (perpOffset - d) * m_SceneRadius, d.normalized());
 
 	return value * PI * m_SceneRadius * m_SceneRadius / pdf;
 }

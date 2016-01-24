@@ -57,7 +57,7 @@ CUDA_FUNC_IN float revPdf(const Material& mat, BSDFSamplingRecord& bRec)
 
 struct BPTSubPathState
 {
-	Ray r;
+	NormalizedT<Ray> r;
 	Spectrum throughput;
 	bool delta;
 
@@ -117,7 +117,7 @@ CUDA_FUNC_IN void sampleEmitter(BPTSubPathState& v, CudaRNG& rng, float mMisVcWe
 
 	v.delta = 0;
 	v.throughput = Le;
-	v.r = Ray(pRec.p, dRec.d);
+	v.r = NormalizedT<Ray>(pRec.p, dRec.d);
 
 	DirectSamplingRecord directRec;
 	directRec.d = directRec.refN = NormalizedT<Vec3f>(1.0f, 0.0f, 0.0f);
@@ -147,7 +147,7 @@ CUDA_FUNC_IN void sampleCamera(BPTSubPathState& v, CudaRNG& rng, const Vec2f& pi
 
 	float cameraPdfW = pRec.pdf * dRec.pdf;
 
-	v.r = Ray(pRec.p, dRec.d);
+	v.r = NormalizedT<Ray>(pRec.p, dRec.d);
 	v.throughput = imp;
 	v.delta = 1;
 	v.dVCM = Mis(mLightSubPathCount / cameraPdfW);
@@ -190,7 +190,7 @@ CUDA_FUNC_IN bool sampleScattering(BPTSubPathState& v, BSDFSamplingRecord& bRec,
 		v.delta &= 0;
 	}
 
-	v.r = Ray(bRec.dg.P, bRec.getOutgoing());
+	v.r = NormalizedT<Ray>(bRec.dg.P, bRec.getOutgoing());
 	v.throughput *= f;
 	return true;
 }
@@ -201,9 +201,9 @@ CUDA_FUNC_IN Spectrum gatherLight(const BPTSubPathState& cameraState, BSDFSampli
 	float pdfLight = g_SceneData.pdfEmitterDiscrete(l);
 	PositionSamplingRecord pRec(bRec.dg.P, bRec.dg.sys.n, 0);
 	float directPdfA = l->pdfPosition(pRec);
-	DirectionSamplingRecord dRec(-cameraState.r.dirUnit());
+	DirectionSamplingRecord dRec(-cameraState.r.dir());
 	float emissionPdfW = l->pdfDirection(dRec, pRec) * directPdfA;
-	Spectrum L = l->eval(bRec.dg.P, bRec.dg.sys, -cameraState.r.dirUnit());
+	Spectrum L = l->eval(bRec.dg.P, bRec.dg.sys, -cameraState.r.dir());
 
 	if (L.isZero())
 		return Spectrum(0.0f);

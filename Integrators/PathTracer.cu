@@ -7,7 +7,7 @@ namespace CudaTracerLib {
 
 CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_NextRayCounter;
 
-template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(Ray& r, const Ray& rX, const Ray& rY, CudaRNG& rnd)
+template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(NormalizedT<Ray>& r, const NormalizedT<Ray>& rX, const NormalizedT<Ray>& rY, CudaRNG& rnd)
 {
 	Spectrum cl = Spectrum(0.0f);   // accumulated color
 	Spectrum cf = Spectrum(1.0f);  // accumulated reflectance
@@ -33,7 +33,7 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(Ray& r, const Ray& rX, con
 				Spectrum value = g_SceneData.sampleAttenuatedEmitterDirect(dRec, rnd.randomFloat2());
 				if (!value.isZero())
 				{
-					float p = V.p(mRec.p, -r.dirUnit(), dRec.d, rnd);
+					float p = V.p(mRec.p, -r.dir(), dRec.d, rnd);
 					if (p != 0 && !g_SceneData.Occluded(Ray(dRec.ref, dRec.d), 0, dRec.dist))
 					{
 						const float bsdfPdf = p;//phase functions are normalized
@@ -44,7 +44,7 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(Ray& r, const Ray& rX, con
 			}
 
 			NormalizedT<Vec3f> dir;
-			cf *= V.Sample(mRec.p, -r.dirUnit(), rnd, &dir);
+			cf *= V.Sample(mRec.p, -r.dir(), rnd, &dir);
 			r.dir() = dir;
 			r.ori() = mRec.p;
 		}
@@ -56,13 +56,13 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(Ray& r, const Ray& rX, con
 			if (depth == 1)
 				dg.computePartials(r, rX, rY);
 			if (!DIRECT || (depth == 1 || specularBounce))
-				cl += cf * r2.Le(bRec.dg.P, bRec.dg.sys, -r.dirUnit());
+				cl += cf * r2.Le(bRec.dg.P, bRec.dg.sys, -r.dir());
 			Spectrum f = r2.getMat().bsdf.sample(bRec, rnd.randomFloat2());
 			if (DIRECT)
 				cl += cf * UniformSampleOneLight(bRec, r2.getMat(), rnd, true);
 			specularBounce = (bRec.sampledType & EDelta) != 0;
 			cf = cf * f;
-			r = Ray(dg.P, bRec.getOutgoing());
+			r = NormalizedT<Ray>(dg.P, bRec.getOutgoing());
 		}
 		if (depth > 5)
 		{
@@ -76,7 +76,7 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(Ray& r, const Ray& rX, con
 	return cl;
 }
 
-template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTraceRegularization(Ray& r, const Ray& rX, const Ray& rY, CudaRNG& rnd, float g_fRMollifier)
+template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTraceRegularization(NormalizedT<Ray>& r, const NormalizedT<Ray>& rX, const NormalizedT<Ray>& rY, CudaRNG& rnd, float g_fRMollifier)
 {
 	TraceResult r2;
 	r2.Init();
@@ -93,7 +93,7 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTraceRegularization(Ray& r, cons
 		if (depth == 1)
 			dg.computePartials(r, rX, rY);
 		if (!DIRECT || (depth == 1 || specularBounce))
-			cl += cf * r2.Le(bRec.dg.P, bRec.dg.sys, -r.dirUnit());
+			cl += cf * r2.Le(bRec.dg.P, bRec.dg.sys, -r.dir());
 		Spectrum f = r2.getMat().bsdf.sample(bRec, rnd.randomFloat2());
 		if (DIRECT)
 		{
@@ -124,7 +124,7 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTraceRegularization(Ray& r, cons
 			else break;
 		}
 		cf = cf * f;
-		r = Ray(dg.P, bRec.getOutgoing());
+		r = NormalizedT<Ray>(dg.P, bRec.getOutgoing());
 		r2.Init();
 	}
 	//return hadDelta ? Spectrum(1, 0, 0) : Spectrum(0.0f);
@@ -139,7 +139,7 @@ void PathTracer::Debug(Image* I, const Vec2i& p)
 	float m = 1.0f*math::pow((float)m_uPassesDone, -1.0f / 6.0f);
 	k_INITIALIZE(m_pScene, g_sRngs);
 	CudaRNG rng = g_RNGData();		
-	Ray r, rX, rY;
+	NormalizedT<Ray> r, rX, rY;
 	Spectrum throughput = g_SceneData.sampleSensorRay(r, rX, rY, Vec2f((float)p.x, (float)p.y), rng.randomFloat2());
 	PathTrace<true>(r, rX, rY, rng);
 }
@@ -150,7 +150,7 @@ template<bool DIRECT, bool REGU> __global__ void pathKernel2(unsigned int w, uns
 	CudaRNG rng = g_RNGData();
 	if (pixel.x < w && pixel.y < h)
 	{
-		Ray r, rX, rY;
+		NormalizedT<Ray> r, rX, rY;
 		Vec2f pX = Vec2f(pixel.x, pixel.y) + rng.randomFloat2();
 		Spectrum imp = g_SceneData.sampleSensorRay(r, rX, rY, pX, rng.randomFloat2());
 		Spectrum col = imp * (REGU ? PathTraceRegularization<DIRECT>(r, rX, rY, rng, m) : PathTrace<DIRECT>(r, rX, rY, rng));

@@ -114,9 +114,9 @@ struct SphericalSensor : public SensorBase//, public e_DerivedTypeHelper<1>
 		SetFilmData(w, h);
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(NormalizedT<Ray> &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
 
-	CUDA_FUNC_IN Spectrum sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const
+	CUDA_FUNC_IN Spectrum sampleRayDifferential(NormalizedT<Ray> &ray, NormalizedT<Ray> &rayX, NormalizedT<Ray> &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const
 	{
 		return sampleRay(ray, pixelSample, apertureSample);
 	}
@@ -208,9 +208,9 @@ public:
 
 	CUDA_DEVICE CUDA_HOST float importance(const NormalizedT<Vec3f> &d) const;
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(NormalizedT<Ray> &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleRayDifferential(NormalizedT<Ray> &ray, NormalizedT<Ray> &rayX, NormalizedT<Ray> &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
 
 	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const NormalizedT<Vec3f> &d) const
 	{
@@ -290,9 +290,9 @@ public:
 
 	virtual void Update();
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(NormalizedT<Ray> &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleRayDifferential(NormalizedT<Ray> &ray, NormalizedT<Ray> &rayX, NormalizedT<Ray> &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
 
 	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const NormalizedT<Vec3f> &d) const
 	{
@@ -396,9 +396,9 @@ public:
 
 	virtual void Update();
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(NormalizedT<Ray> &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleRayDifferential(NormalizedT<Ray> &ray, NormalizedT<Ray> &rayX, NormalizedT<Ray> &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
 
 	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const NormalizedT<Vec3f> &d) const
 	{
@@ -480,9 +480,9 @@ public:
 
 	virtual void Update();
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(NormalizedT<Ray> &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sampleRayDifferential(NormalizedT<Ray> &ray, NormalizedT<Ray> &rayX, NormalizedT<Ray> &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
 
 	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const NormalizedT<Vec3f> &d) const
 	{
@@ -550,21 +550,21 @@ public:
 
 	float4x4 getProjectionMatrix() const;
 
-	CUDA_FUNC_IN Ray GenRay(int x, int y)
+	CUDA_FUNC_IN NormalizedT<Ray> GenRay(int x, int y)
 	{
-		Ray r;
+		NormalizedT<Ray> r;
 		sampleRay(r, Vec2f((float)x, (float)y), Vec2f(0, 0));
 		return r;
 	}
 
 	CALLER(sampleRay)
-	CUDA_FUNC_IN Spectrum sampleRay(Ray &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const
+	CUDA_FUNC_IN Spectrum sampleRay(NormalizedT<Ray> &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const
 	{
 		return sampleRay_Helper::Caller<Spectrum>(this, ray, pixelSample, apertureSample);
 	}
 
 	CALLER(sampleRayDifferential)
-	CUDA_FUNC_IN Spectrum sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const
+	CUDA_FUNC_IN Spectrum sampleRayDifferential(NormalizedT<Ray> &ray, NormalizedT<Ray> &rayX, NormalizedT<Ray> &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const
 	{
 		return sampleRayDifferential_Helper::Caller<Spectrum>(this, ray, rayX, rayY, pixelSample, apertureSample);
 	}

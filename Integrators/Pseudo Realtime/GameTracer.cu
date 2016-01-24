@@ -21,7 +21,7 @@ __global__ void primaryKernelBlocked(int width, int height, Image g_Image, bool 
 	{
 		DifferentialGeometry dg;
 		BSDFSamplingRecord bRec(dg);
-		Ray primaryRay;
+		NormalizedT<Ray> primaryRay;
 		TraceResult primaryRes;
 
 		Spectrum primary_Le(0.0f);//average of all 4 primary emittances
@@ -31,7 +31,7 @@ __global__ void primaryKernelBlocked(int width, int height, Image g_Image, bool 
 		for (int i = 0; i < 4; i++)
 		{
 			int x2 = x + i % 2, y2 = y + i / 2;
-			Ray r_i;
+			NormalizedT<Ray> r_i;
 			primary_f[i] = g_SceneData.m_Camera.sampleRay(r_i, Vec2f(x2, y2), rng.randomFloat2());
 			auto r2_i = traceRay(r_i);
 			primary_f[i] *= Transmittance(r_i, 0, r2_i.m_fDist);
@@ -42,7 +42,7 @@ __global__ void primaryKernelBlocked(int width, int height, Image g_Image, bool 
 				primary_rays_hit++;
 				primaryRes.getBsdfSample(primaryRay, bRec, ETransportMode::ERadiance, &rng);
 				uv_sets[i] = dg.uv[0];
-				primary_Le += primaryRes.Le(dg.P, bRec.dg.sys, -primaryRay.dirUnit());
+				primary_Le += primaryRes.Le(dg.P, bRec.dg.sys, -primaryRay.dir());
 			}
 			else primary_f[i] = g_SceneData.EvalEnvironment(primaryRay);
 			if (depthImage && x2 < width && y2 < height)
@@ -87,7 +87,7 @@ __global__ void primaryKernelBlocked(int width, int height, Image g_Image, bool 
 		for (int i = 0; i < N_i; i++)
 		{
 			primaryRes.getMat().bsdf.sample(bRec, rng.randomFloat2());
-			Ray indirect_ray = Ray(dg.P, bRec.getOutgoing());
+			NormalizedT<Ray> indirect_ray = NormalizedT<Ray>(dg.P, bRec.getOutgoing());
 			auto indirect_res = traceRay(indirect_ray);
 			if (indirect_res.hasHit())
 			{
@@ -183,7 +183,7 @@ void GameTracer::Debug(Image* I, const Vec2i& pixel)
 {
 	k_INITIALIZE(m_pScene, g_sRngs);
 	CudaRNG rng = g_RNGData();
-	Ray r, rX, rY;
+	NormalizedT<Ray> r, rX, rY;
 	g_SceneData.sampleSensorRay(r, rX, rY, Vec2f((float)pixel.x, (float)pixel.y), rng.randomFloat2());
 }
 
