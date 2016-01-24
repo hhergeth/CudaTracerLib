@@ -54,7 +54,7 @@ CUDA_FUNC_IN void computePixel(int x, int y, CudaRNG& rng, Image g_Image, bool d
 				L = Spectrum(dg.bary.x, dg.bary.y, 0);
 			else
 			{
-				Spectrum Le = prim_res.Le(dg.P, bRec.dg.sys, -r.direction);
+				Spectrum Le = prim_res.Le(dg.P, bRec.dg.sys, -r.dir());
 				Spectrum f = prim_res.getMat().bsdf.sample(bRec, rng.randomFloat2());
 				through = Transmittance(r, 0, prim_res.m_fDist);
 				bool isDelta = prim_res.getMat().bsdf.hasComponent(EDelta);
@@ -84,7 +84,7 @@ CUDA_FUNC_IN void computePixel(int x, int y, CudaRNG& rng, Image g_Image, bool d
 
 					if (prim_res.hasHit() && prim_res.getMat().bsdf.hasComponent(ESmooth))
 					{
-						Le = prim_res.Le(dg.P, bRec.dg.sys, -r.direction);
+						Le = prim_res.Le(dg.P, bRec.dg.sys, -r.dir());
 						if (mode == PathTrace_DrawMode::first_non_delta_Le)
 							L = Le;
 						else if (mode == PathTrace_DrawMode::first_non_delta_f)

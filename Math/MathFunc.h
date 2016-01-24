@@ -3,6 +3,9 @@
 #include <Defines.h>
 #include <math.h>
 #include <float.h>
+#pragma warning(push, 3)
+#include <vector_functions.h> // float4, etc.
+#pragma warning(pop)
 
 namespace CudaTracerLib {
 
@@ -123,12 +126,6 @@ public:
 		return f - floorf(f);
 	}
 
-	template<typename T> CUDA_FUNC_IN static T bilerp(const float2& uv, const T& lt, const T& rt, const T& ld, const T& rd)
-	{
-		T a = lt + (rt - lt) * uv.x, b = ld + (rd - ld) * uv.x;
-		return a + (b - a) * uv.y;
-	}
-
 	CUDA_FUNC_IN static int Floor2Int(float val) {
 		return (int)floorf(val);
 	}
@@ -145,6 +142,14 @@ public:
 	CUDA_FUNC_IN static float lerp(float a, float b, float t)
 	{
 		return a + t*(b - a);
+	}
+
+	template <class A, class B> CUDA_FUNC_IN static A lerp(const A& a, const A& b, const B& t) { return (A)(a * ((B)1 - t) + b * t); }
+
+	template<typename T> CUDA_FUNC_IN static T bilerp2(const T& lt, const T& rt, const T& ld, const T& rd, const float2& uv)
+	{
+		T a = lt + (rt - lt) * uv.x, b = ld + (rd - ld) * uv.x;
+		return a + (b - a) * uv.y;
 	}
 
 	template <class T> CUDA_FUNC_IN static T clamp(T& v, T& lo, T& hi) { return min(max(v, lo), hi); }
@@ -304,7 +309,6 @@ public:
 
 	template <class T> CUDA_FUNC_IN static T sqr(const T& a) { return a * a; }
 	template <class T> CUDA_FUNC_IN static T rcp(const T& a) { return (a) ? (T)1 / a : (T)0; }
-	template <class A, class B> CUDA_FUNC_IN static A lerp(const A& a, const A& b, const B& t) { return (A)(a * ((B)1 - t) + b * t); }
 };
 
 class kepler_math

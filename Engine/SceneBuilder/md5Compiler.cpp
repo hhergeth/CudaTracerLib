@@ -74,22 +74,24 @@ void compilemd5(IInStream& in, std::vector<IInStream*>& animFiles, FileOutputStr
 		off += (unsigned int)M.meshes[i]->verts.size();
 	}
 	unsigned int m_numVertices = (unsigned int)v_Data.size();
-	Vec3f* v_Normals = new Vec3f[m_numVertices], *v_Tangents = new Vec3f[m_numVertices], *v_BiTangents = new Vec3f[m_numVertices];
-	Platform::SetMemory(v_Normals, sizeof(Vec3f) * m_numVertices);
-	Platform::SetMemory(v_Tangents, sizeof(Vec3f) * m_numVertices);
-	Platform::SetMemory(v_BiTangents, sizeof(Vec3f) * m_numVertices);
-	ComputeTangentSpace(&v_Pos[0], &tCoord[0], &tData[0], (unsigned int)v_Pos.size(), (unsigned int)tData.size() / 3, v_Normals, v_Tangents, v_BiTangents);
+	std::vector<NormalizedT<Vec3f>> normals, tangents, bitangents;
+	normals.resize(m_numVertices); tangents.resize(m_numVertices); bitangents.resize(m_numVertices);
+	ComputeTangentSpace(&v_Pos[0], &tCoord[0], &tData[0], (unsigned int)v_Pos.size(), (unsigned int)tData.size() / 3, &normals[0], &tangents[0], &bitangents[0]);
 	for (unsigned int v = 0; v < m_numVertices; v++)
 	{
-		v_Data[v].m_fNormal = v_Normals[v];
-		v_Data[v].m_fTangent = v_Tangents[v];
-		v_Data[v].m_fBitangent = v_BiTangents[v];
+		v_Data[v].m_fNormal = normals[v];
+		v_Data[v].m_fTangent = tangents[v];
+		v_Data[v].m_fBitangent = bitangents[v];
 	}
 
 	std::vector<TriangleData> triData;
 	std::vector<Material> matData;
 	diffuse stdMaterial;
 	stdMaterial.m_reflectance = CreateTexture(Spectrum(1, 0, 0));
+
+	auto* n = (NormalizedT<Vec3f>*)alloca(sizeof(NormalizedT<Vec3f>) * 3),
+		* ta = (NormalizedT<Vec3f>*)alloca(sizeof(NormalizedT<Vec3f>) * 3),
+		* bi = (NormalizedT<Vec3f>*)alloca(sizeof(NormalizedT<Vec3f>) * 3);
 
 	off = 0;
 	for (int s = 0; s < M.meshes.size(); s++)
@@ -105,7 +107,7 @@ void compilemd5(IInStream& in, std::vector<IInStream*>& animFiles, FileOutputStr
 
 		for (int t = 0; t < sm->tris.size(); t++)
 		{
-			Vec3f P[3], N[3], Tan[3], BiTan[3];
+			Vec3f P[3];
 			Vec2f T[3];
 			for (int j = 0; j < 3; j++)
 			{
@@ -114,7 +116,7 @@ void compilemd5(IInStream& in, std::vector<IInStream*>& animFiles, FileOutputStr
 				T[j] = sm->verts[v - off].tc;
 				box = box.Extend(P[j]);
 			}
-			TriangleData d(P, s, T, N, Tan, BiTan);
+			TriangleData d(P, s, T, n, ta, bi);
 			triData.push_back(d);
 			Vec3u q = *(Vec3u*)&sm->tris[t].v + Vec3u(off);
 			triData2.push_back(q);

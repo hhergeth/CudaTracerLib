@@ -366,13 +366,14 @@ void compileply(IInStream& istream, FileOutputStream& a_Out)
 	//if(pos != size)
 	//	throw std::runtime_error(__FUNCTION__);
 
-	Vec3f* Normals = new Vec3f[vertexCount], *Tangents = new Vec3f[vertexCount];
-	ComputeTangentSpace(Vertices, TexCoords, Indices, vertexCount, faceCount, Normals, Tangents);
+	std::vector<NormalizedT<Vec3f>> normals, tangents, bitangents;
+	normals.resize(vertexCount); tangents.resize(vertexCount); bitangents.resize(vertexCount);
+	ComputeTangentSpace(Vertices, TexCoords, Indices, vertexCount, faceCount, &normals[0], &tangents[0], &bitangents[0]);
 	TriangleData* triData = new TriangleData[indexCount / 3];
 	Vec3f p[3];
-	Vec3f n[3];
-	Vec3f ta[3];
-	Vec3f bi[3];
+	auto* n = (NormalizedT<Vec3f>*)alloca(sizeof(NormalizedT<Vec3f>) * 3),
+		* ta = (NormalizedT<Vec3f>*)alloca(sizeof(NormalizedT<Vec3f>) * 3),
+		* bi = (NormalizedT<Vec3f>*)alloca(sizeof(NormalizedT<Vec3f>) * 3);
 	Vec2f te[3];
 	AABB box = AABB::Identity();
 	for (unsigned int t = 0; t < indexCount; t += 3)
@@ -382,14 +383,13 @@ void compileply(IInStream& istream, FileOutputStream& a_Out)
 			int l = Indices[t + j];
 			p[j] = Vertices[l];
 			te[j] = TexCoords[l];
-			ta[j] = normalize(Tangents[l]);
-			n[j] = normalize(Normals[l]);
+			ta[j] = tangents[l];
+			bi[j] = bitangents[l];
+			n[j] = normals[l];
 			box = box.Extend(p[j]);
 		}
 		triData[t / 3] = TriangleData(p, (unsigned char)0, te, n, ta, bi);
 	}
-	delete[] Normals;
-	delete[] Tangents;
 
 	Material defaultMat("Default_Material");
 	diffuse mat;

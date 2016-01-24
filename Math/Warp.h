@@ -27,18 +27,18 @@ CUDA_FUNC_IN float intervalToTent(float sample)
 class Warp
 {
 public:
-	CUDA_FUNC_IN static Vec3f squareToUniformSphere(const Vec2f &sample)
+	CUDA_FUNC_IN static NormalizedT<Vec3f> squareToUniformSphere(const Vec2f &sample)
 	{
 		float z = 1.0f - 2.0f * sample.y;
 		float r = math::sqrt(1.0f - z*z);
 		float sinPhi, cosPhi;
 		sincos(2.0f * PI * sample.x, &sinPhi, &cosPhi);
-		return Vec3f(r * cosPhi, r * sinPhi, z);
+		return NormalizedT<Vec3f>(r * cosPhi, r * sinPhi, z);
 	}
 
 	CUDA_FUNC_IN static float squareToUniformSpherePdf() { return INV_FOURPI; }
 
-	CUDA_FUNC_IN static Vec3f squareToUniformHemisphere(const Vec2f &sample)
+	CUDA_FUNC_IN static NormalizedT<Vec3f> squareToUniformHemisphere(const Vec2f &sample)
 	{
 		float z = sample.x;
 		float tmp = math::sqrt(1.0f - z*z);
@@ -46,19 +46,19 @@ public:
 		float sinPhi, cosPhi;
 		sincos(2.0f * PI * sample.y, &sinPhi, &cosPhi);
 
-		return Vec3f(cosPhi * tmp, sinPhi * tmp, z);
+		return NormalizedT<Vec3f>(cosPhi * tmp, sinPhi * tmp, z);
 	}
 
 	CUDA_FUNC_IN static float squareToUniformHemispherePdf() { return INV_TWOPI; }
 
-	CUDA_FUNC_IN static Vec3f squareToCosineHemisphere(const Vec2f &sample)
+	CUDA_FUNC_IN static NormalizedT<Vec3f> squareToCosineHemisphere(const Vec2f &sample)
 	{
 		Vec2f p = Warp::squareToUniformDiskConcentric(sample);
 		float z = math::sqrt(1.0f - p.x*p.x - p.y*p.y);
-		return Vec3f(p.x, p.y, z);
+		return NormalizedT<Vec3f>(p.x, p.y, z);
 	}
 
-	CUDA_FUNC_IN static float squareToCosineHemispherePdf(const Vec3f &d)
+	CUDA_FUNC_IN static float squareToCosineHemispherePdf(const NormalizedT<Vec3f> &d)
 	{
 		return INV_PI * Frame::cosTheta(d);
 	}

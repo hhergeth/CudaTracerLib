@@ -35,7 +35,7 @@ public:
 	};
 public:
 	TriangleData(){}
-	TriangleData(const Vec3f* P, unsigned char matIndex, const Vec2f* T, const Vec3f* N, const Vec3f* Tan, const Vec3f* BiTan);
+	TriangleData(const Vec3f* P, unsigned char matIndex, const Vec2f* T, const NormalizedT<Vec3f>* N, const Vec3f* Tan, const Vec3f* BiTan);
 	CUDA_DEVICE CUDA_HOST void fillDG(const float4x4& localToWorld, const float4x4& worldToLocal, DifferentialGeometry& dg) const;
 	CUDA_FUNC_IN unsigned int getMatIndex(const unsigned int off) const
 	{
@@ -43,10 +43,10 @@ public:
 		return v + off;
 	}
 	CUDA_DEVICE CUDA_HOST void setData(const Vec3f& v0, const Vec3f& v1, const Vec3f& v2,
-		const Vec3f& n0, const Vec3f& n1, const Vec3f& n3);
+									   const NormalizedT<Vec3f>& n0, const NormalizedT<Vec3f>& n1, const NormalizedT<Vec3f>& n3);
 	void setUvSetData(int setId, const Vec2f& a, const Vec2f& b, const Vec2f& c);
 	CUDA_DEVICE CUDA_HOST void getUVSetData(int setId, Vec2f& a, Vec2f& b, Vec2f& c) const;
-	CUDA_DEVICE CUDA_HOST void getNormals(Vec3f& n0, Vec3f& n1, Vec3f& n2) const;
+	CUDA_DEVICE CUDA_HOST void getNormals(NormalizedT<Vec3f>& n0, NormalizedT<Vec3f>& n1, NormalizedT<Vec3f>& n2) const;
 };
 #else
 struct TriangleData
@@ -64,7 +64,7 @@ struct TriangleData
 		} m_sDeviceData;
 	};
 	TriangleData(){}
-	TriangleData(const Vec3f* P, unsigned char matIndex, const Vec2f* T, const Vec3f* N, const Vec3f* Tan, const Vec3f* BiTan);
+	TriangleData(const Vec3f* P, unsigned char matIndex, const Vec2f* T, const NormalizedT<Vec3f>* N, const Vec3f* Tan, const Vec3f* BiTan);
 	CUDA_DEVICE CUDA_HOST void fillDG(const float4x4& localToWorld, const float4x4& worldToLocal, DifferentialGeometry& dg) const;
 	CUDA_FUNC_IN unsigned int getMatIndex(const unsigned int off) const
 	{
@@ -72,7 +72,7 @@ struct TriangleData
 		return unsigned int(v >> 24) + off;
 	}
 	CUDA_DEVICE CUDA_HOST void setData(const Vec3f& v0, const Vec3f& v1, const Vec3f& v2,
-		const Vec3f& n0, const Vec3f& n1, const Vec3f& n3);
+									   const NormalizedT<Vec3f>& n0, const NormalizedT<Vec3f>& n1, const NormalizedT<Vec3f>& n3);
 	void setUvSetData(int setId, const Vec2f& a, const Vec2f& b, const Vec2f& c)
 	{
 
@@ -81,7 +81,7 @@ struct TriangleData
 	{
 		a = b = c = Vec2f(0.0f);
 	}
-	CUDA_DEVICE CUDA_HOST void getNormals(Vec3f& n0, Vec3f& n1, Vec3f& n2) const;
+	CUDA_DEVICE CUDA_HOST void getNormals(NormalizedT<Vec3f>& n0, NormalizedT<Vec3f>& n1, NormalizedT<Vec3f>& n2) const;
 };
 #endif
 

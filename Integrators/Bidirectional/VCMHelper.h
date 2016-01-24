@@ -12,7 +12,7 @@ struct k_MISPhoton : public PPPMPhoton
 {
 	float dVC, dVCM, dVM;
 	CUDA_FUNC_IN k_MISPhoton(){}
-	CUDA_FUNC_IN k_MISPhoton(const Spectrum& l, const Vec3f& wi, const Vec3f& n, PhotonType type, float dvc, float dvcm, float dvm)
+	CUDA_FUNC_IN k_MISPhoton(const Spectrum& l, const NormalizedT<Vec3f>& wi, const NormalizedT<Vec3f>& n, PhotonType type, float dvc, float dvcm, float dvm)
 		: PPPMPhoton(l, wi, n, type), dVC(dvc), dVCM(dvcm), dVM(dvm)
 	{
 	}
@@ -120,8 +120,8 @@ CUDA_FUNC_IN void sampleEmitter(BPTSubPathState& v, CudaRNG& rng, float mMisVcWe
 	v.r = Ray(pRec.p, dRec.d);
 
 	DirectSamplingRecord directRec;
-	directRec.d = directRec.refN = Vec3f(1, 0, 0);
-	directRec.n = Vec3f(-1, 0, 0);
+	directRec.d = directRec.refN = NormalizedT<Vec3f>(1.0f, 0.0f, 0.0f);
+	directRec.n = NormalizedT<Vec3f>(-1.0f, 0.0f, 0.0f);
 	directRec.measure = EArea;
 
 	float directPdfW = l->pdfDirect(directRec) * emitterPdf;
@@ -201,9 +201,9 @@ CUDA_FUNC_IN Spectrum gatherLight(const BPTSubPathState& cameraState, BSDFSampli
 	float pdfLight = g_SceneData.pdfEmitterDiscrete(l);
 	PositionSamplingRecord pRec(bRec.dg.P, bRec.dg.sys.n, 0);
 	float directPdfA = l->pdfPosition(pRec);
-	DirectionSamplingRecord dRec(-cameraState.r.direction);
+	DirectionSamplingRecord dRec(-cameraState.r.dir());
 	float emissionPdfW = l->pdfDirection(dRec, pRec) * directPdfA;
-	Spectrum L = l->eval(bRec.dg.P, bRec.dg.sys, -cameraState.r.direction);
+	Spectrum L = l->eval(bRec.dg.P, bRec.dg.sys, -cameraState.r.dir());
 
 	if (L.isZero())
 		return Spectrum(0.0f);
@@ -233,10 +233,9 @@ template<bool TEST_VISIBILITY = true> CUDA_FUNC_IN void connectToCamera(const BP
 {
 	DirectSamplingRecord dRec(bRec.dg.P, bRec.dg.sys.n);
 	Spectrum directFactor = g_SceneData.m_Camera.sampleDirect(dRec, rng.randomFloat2());
-	bRec.wo = bRec.dg.toLocal(dRec.d);
+	bRec.wo = bRec.dg.toLocal(normalize((Vec3f)dRec.d));
 	Spectrum bsdfFactor = mat.bsdf.f(bRec);
-	float bsdfRevPdfW = revPdf(mat, bRec);//AAAA
-	float cosToCamera = math::abs(Frame::cosTheta(bRec.wo));
+	float bsdfRevPdfW = revPdf(mat, bRec);
 	float cameraPdfA = dRec.pdf;
 	if (dRec.measure != EArea)
 		cameraPdfA = PdfWtoA(cameraPdfA, distanceSquared(bRec.dg.P, dRec.p), dot(dRec.n, -dRec.d));
@@ -289,7 +288,7 @@ template<bool TEST_VISIBILITY = true> CUDA_FUNC_IN Spectrum connectToLight(const
 template<bool TEST_VISIBILITY = true> CUDA_FUNC_IN Spectrum connectVertices(BPTVertex& emitterVertex, const BPTSubPathState& cameraState, BSDFSamplingRecord& bRec, const Material& mat, float mMisVcWeightFactor, float mMisVmWeightFactor, bool use_mis)
 {
 	const float dist2 = distanceSquared(emitterVertex.dg.P, bRec.dg.P);
-	Vec3f direction = normalize(emitterVertex.dg.P - bRec.dg.P);
+	auto direction = normalize(emitterVertex.dg.P - bRec.dg.P);
 
 	bRec.wo = bRec.dg.toLocal(direction);
 	const Spectrum cameraBsdf = mat.bsdf.f(bRec);
@@ -353,11 +352,11 @@ template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_Surface2(VCMSurfMap& g_Curren
 			const float wCamera = aCameraState.dVCM * mMisVcWeightFactor + aCameraState.dVM * cameraBsdfRevPdfW;
 			const float misWeight = 1.f / (wLight + 1.f + wCamera);
 
-			Lp += (use_mis ? misWeight : 1.0f) * ke * l * cor_fac;
+			Lp += (use_mis ? misWeight : 1.0f) * ke * l / Frame::cosTheta(bRec.wo);//cor_fac;
 		}
 	});
 	if (!F_IS_GLOSSY)
-		Lp *= mat->bsdf.f(bRec);
+		Lp *= mat->bsdf.f(bRec) / Frame::cosTheta(bRec.wo);
 	return Lp / nPhotons;
 #else
 	return 1.0f;

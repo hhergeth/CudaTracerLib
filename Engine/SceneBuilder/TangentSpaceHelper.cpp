@@ -5,7 +5,7 @@
 namespace CudaTracerLib {
 
 //http://www.terathon.com/code/tangent.html
-void ComputeTangentSpace(const Vec3f* V, const Vec2f* T, const unsigned int* I, unsigned int vertexCount, unsigned int triCount, Vec3f* a_Normals, Vec3f* a_Tangents, Vec3f* a_BiTangents, bool flipOrder)
+void ComputeTangentSpace(const Vec3f* V, const Vec2f* T, const unsigned int* I, unsigned int vertexCount, unsigned int triCount, NormalizedT<Vec3f>* a_Normals, NormalizedT<Vec3f>* a_Tangents, NormalizedT<Vec3f>* a_BiTangents, bool flipOrder)
 {
 	bool hasUV = false;
 	if (T)
@@ -16,6 +16,7 @@ void ComputeTangentSpace(const Vec3f* V, const Vec2f* T, const unsigned int* I, 
 				break;
 			}
 
+	Vec3f* NOR = (Vec3f*)a_Normals;
 	Vec3f *tan1 = new Vec3f[vertexCount * 2];
 	Vec3f *tan2 = tan1 + vertexCount;
 	Platform::SetMemory(tan1, vertexCount * sizeof(float3) * 2);
@@ -33,9 +34,9 @@ void ComputeTangentSpace(const Vec3f* V, const Vec2f* T, const unsigned int* I, 
 		const Vec3f normal = cross(n1, n2);
 		//if(fsumf(n2 - n) > 1e-3)
 		//	throw std::runtime_error(__FUNCTION__);
-		a_Normals[i1] += normal;
-		a_Normals[i2] += normal;
-		a_Normals[i3] += normal;
+		NOR[i1] += normal;
+		NOR[i2] += normal;
+		NOR[i3] += normal;
 
 		float x1 = v2.x - v1.x;
 		float x2 = v3.x - v1.x;
@@ -71,9 +72,10 @@ void ComputeTangentSpace(const Vec3f* V, const Vec2f* T, const unsigned int* I, 
 
 	for (unsigned int a = 0; a < vertexCount; a++)
 	{
-		const Vec3f n = a_Normals[a] = normalize(a_Normals[a]);
-		const Vec3f t = tan1[a];
-		Vec3f tangent = normalize(t - n * dot(n, t));
+		auto n = NOR[a].normalized();
+		a_Normals[a] = n;
+		auto t = tan1[a];
+		auto tangent = normalize(t - n * dot(n, t));
 		a_Tangents[a] = tangent;
 
 		float h = (dot(cross(n, t), tan2[a]) < 0.0F) ? -1.0F : 1.0F;

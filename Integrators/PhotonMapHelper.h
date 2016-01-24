@@ -47,7 +47,7 @@ private:
 	unsigned int flag_type_pos;
 public:
 	CUDA_FUNC_IN PPPMPhoton(){}
-	CUDA_FUNC_IN PPPMPhoton(const Spectrum& l, const Vec3f& wi, const Vec3f& n, PhotonType type)
+	CUDA_FUNC_IN PPPMPhoton(const Spectrum& l, const NormalizedT<Vec3f>& wi, const NormalizedT<Vec3f>& n, PhotonType type)
 	{
 		Nor = NormalizedFloat3ToUchar2(n);
 		L = (l).toRGBE();
@@ -58,11 +58,11 @@ public:
 	{
 		return (PhotonType)((flag_type_pos >> 30) & 1);
 	}
-	CUDA_FUNC_IN Vec3f getNormal() const
+	CUDA_FUNC_IN NormalizedT<Vec3f> getNormal() const
 	{
 		return Uchar2ToNormalizedFloat3(Nor);
 	}
-	CUDA_FUNC_IN Vec3f getWi() const
+	CUDA_FUNC_IN NormalizedT<Vec3f> getWi() const
 	{
 		return Uchar2ToNormalizedFloat3(Wi);
 	}

@@ -29,9 +29,9 @@ Spectrum SphericalSensor::sampleDirect(DirectSamplingRecord &dRec, const Vec2f &
 	float sinTheta = math::safe_sqrt(1 - d.y*d.y);
 
 	dRec.p = toWorld.Translation();
-	dRec.d = (dRec.p - dRec.ref) * invDist;
+	dRec.d = NormalizedT<Vec3f>((dRec.p - dRec.ref) * invDist);
 	dRec.dist = dist;
-	dRec.n = Vec3f(0.0f);
+	dRec.n = NormalizedT<Vec3f>(0.0f);
 	dRec.pdf = 1;
 	dRec.measure = EDiscrete;
 
@@ -94,7 +94,7 @@ void PerspectiveSensor::Update()
 	m_normalization = 1.0f / (m_imageRect.Size().x * m_imageRect.Size().y);
 }
 
-float PerspectiveSensor::importance(const Vec3f &d) const
+float PerspectiveSensor::importance(const NormalizedT<Vec3f> &d) const
 {
 	float cosTheta = Frame::cosTheta(d);
 
@@ -132,7 +132,7 @@ Spectrum PerspectiveSensor::sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY
 		pixelSample.x * m_invResolution.x,
 		pixelSample.y * m_invResolution.y, 0.0f));
 
-	Vec3f d = normalize(nearP);
+	NormalizedT<Vec3f> d = normalize(nearP);
 	ray = Ray(toWorld.Translation(), toWorld.TransformDirection(d));
 
 	rayX.origin = rayY.origin = ray.origin;
@@ -166,16 +166,15 @@ Spectrum PerspectiveSensor::sampleDirect(DirectSamplingRecord &dRec, const Vec2f
 	Vec3f localD = refP;
 	float dist = length(localD),
 		invDist = 1.0f / dist;
-	localD *= invDist;
 
 	dRec.p = toWorld.Translation();
-	dRec.d = invDist * (dRec.p - dRec.ref);
+	dRec.d = NormalizedT<Vec3f>(invDist * (dRec.p - dRec.ref));
 	dRec.dist = dist;
-	dRec.n = toWorld.Forward();
+	dRec.n = toWorld.Forward().normalized();
 	dRec.pdf = 1;
 	dRec.measure = EDiscrete;
 
-	return Spectrum(importance(localD)*invDist*invDist);
+	return Spectrum(importance(NormalizedT<Vec3f>(localD * invDist))*invDist*invDist);
 }
 
 Spectrum PerspectiveSensor::sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const
@@ -196,8 +195,8 @@ Spectrum PerspectiveSensor::sampleDirection(DirectionSamplingRecord &dRec, Posit
 	Vec3f nearP = m_sampleToCamera.TransformPoint(samplePos);
 
 	/* Turn that into a normalized ray direction */
-	Vec3f d = normalize(nearP);
-	dRec.d = toWorld.TransformDirection(d);
+	NormalizedT<Vec3f> d = normalize(nearP);
+	dRec.d = toWorld.TransformDirection(d).normalized();
 	dRec.measure = ESolidAngle;
 	dRec.pdf = m_normalization / (d.z * d.z * d.z);
 
@@ -245,7 +244,7 @@ void ThinLensSensor::Update()
 	m_normalization = 1.0f / (m_imageRect.Size().x * m_imageRect.Size().y);
 }
 
-float ThinLensSensor::importance(const Vec3f &p, const Vec3f &d, Vec2f* sample) const
+float ThinLensSensor::importance(const Vec3f &p, const NormalizedT<Vec3f> &d, Vec2f* sample) const
 {
 	float cosTheta = Frame::cosTheta(d);
 	if (cosTheta <= 0)
@@ -282,7 +281,7 @@ Spectrum ThinLensSensor::sampleRay(Ray &ray, const Vec2f &pixelSample, const Vec
 
 	/* Turn these into a normalized ray direction, and
 		adjust the ray interval accordingly */
-	Vec3f d = normalize(focusP - apertureP);
+	NormalizedT<Vec3f> d = normalize(focusP - apertureP);
 
 	ray = Ray(toWorld.TransformPoint(apertureP), toWorld.TransformDirection(d));
 
@@ -302,7 +301,7 @@ Spectrum ThinLensSensor::sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, c
 	Vec3f focusPx = (nearP + m_dx) * fDist;
 	Vec3f focusPy = (nearP + m_dy) * fDist;
 
-	Vec3f d = normalize(focusP - apertureP);
+	NormalizedT<Vec3f> d = normalize(focusP - apertureP);
 	ray = Ray(toWorld.TransformPoint(apertureP), toWorld.TransformDirection(d));
 	rayX.origin = rayY.origin = ray.origin;
 	rayX.direction = toWorld.TransformDirection(normalize(focusPx - apertureP));
@@ -329,19 +328,19 @@ Spectrum ThinLensSensor::sampleDirect(DirectSamplingRecord &dRec, const Vec2f &s
 	Vec3f localD = (refP - apertureP);
 	float dist = length(localD),
 		invDist = 1.0f / dist;
-	localD *= invDist;
+	auto localDUnit = NormalizedT<Vec3f>(localD * invDist);
 
-	float value = importance(apertureP, localD, &dRec.uv);
+	float value = importance(apertureP, localDUnit, &dRec.uv);
 	if (value == 0.0f) {
 		dRec.pdf = 0.0f;
 		return Spectrum(0.0f);
 	}
 
 	dRec.p = toWorld.TransformPoint(apertureP);
-	dRec.d = (dRec.p - dRec.ref) * invDist;
+	dRec.d = NormalizedT<Vec3f>((dRec.p - dRec.ref) * invDist);
 	dRec.dist = dist;
-	dRec.n = toWorld.Forward();
-	dRec.pdf = m_aperturePdf * dist*dist / (Frame::cosTheta(localD));
+	dRec.n = toWorld.Forward().normalized();
+	dRec.pdf = m_aperturePdf * dist*dist / (Frame::cosTheta(localDUnit));
 	dRec.measure = ESolidAngle;
 
 	/* intentionally missing a cosine factor wrt. the aperture
@@ -386,8 +385,8 @@ Spectrum ThinLensSensor::sampleDirection(DirectionSamplingRecord &dRec, Position
 	Vec3f apertureP = toWorldInverse.TransformPoint(pRec.p);
 
 	/* Turn that into a normalized ray direction */
-	Vec3f d = normalize(nearP - apertureP);
-	dRec.d = toWorld.TransformDirection(d);
+	NormalizedT<Vec3f> d = normalize(nearP - apertureP);
+	dRec.d = toWorld.TransformDirection(d).normalized();
 	dRec.measure = ESolidAngle;
 	dRec.pdf = m_normalization / (d.z * d.z * d.z);
 
@@ -440,8 +439,8 @@ Spectrum OrthographicSensor::sampleRayDifferential(Ray &ray, Ray &rayX, Ray &ray
 
 Spectrum OrthographicSensor::sampleDirect(DirectSamplingRecord &dRec, const Vec2f &) const
 {
-	dRec.n = toWorld.Forward();
-	float scale = length(dRec.n);
+	auto n = toWorld.Forward();
+	float scale = length(n);
 
 	Vec3f localP = toWorldInverse.TransformPoint(dRec.ref);
 	localP.z *= scale;
@@ -455,7 +454,7 @@ Spectrum OrthographicSensor::sampleDirect(DirectSamplingRecord &dRec, const Vec2
 	}
 
 	dRec.p = toWorld.TransformPoint(Vec3f(localP.x, localP.y, 0.0f));
-	dRec.n /= scale;
+	dRec.n = NormalizedT<Vec3f>(n / scale);
 	dRec.d = -dRec.n;
 	dRec.dist = localP.z;
 	dRec.uv = Vec2f(sample.x * m_resolution.x,
@@ -482,7 +481,7 @@ Spectrum OrthographicSensor::samplePosition(PositionSamplingRecord &pRec, const 
 
 	nearP.z = 0.0f;
 	pRec.p = toWorld.TransformPoint(nearP);
-	pRec.n = toWorld.Forward();
+	pRec.n = toWorld.Forward().normalized();
 	pRec.pdf = m_invSurfaceArea;
 	pRec.measure = EArea;
 	return Spectrum(1.0f);
@@ -594,10 +593,10 @@ Spectrum TelecentricSensor::sampleDirect(DirectSamplingRecord &dRec, const Vec2f
 
 	dRec.uv = Vec2f(uv.x, uv.y);
 	dRec.p = toWorld.TransformPoint(diskP);
-	dRec.n = toWorld.Forward();
-	dRec.d = dRec.p - dRec.ref;
-	dRec.dist = length(dRec.d);
-	dRec.d /= dRec.dist;
+	dRec.n = toWorld.Forward().normalized();
+	Vec3f dir = dRec.p - dRec.ref;
+	dRec.dist = length(dir);
+	dRec.d = NormalizedT<Vec3f>(dir / dRec.dist);
 	dRec.measure = ESolidAngle;
 
 	dRec.pdf = dist*dist / (-dot(dRec.n, dRec.d)* PI * radius*radius);
@@ -631,7 +630,7 @@ Spectrum TelecentricSensor::samplePosition(PositionSamplingRecord &pRec, const V
 		aperturePos.x + samplePos.x, aperturePos.y + samplePos.y, 0.0f));
 
 	pRec.p = toWorld.TransformPoint(Vec3f(p.x, p.y, 0.0f));
-	pRec.n = toWorld.Forward();
+	pRec.n = toWorld.Forward().normalized();
 	pRec.pdf = m_aperturePdf;
 	pRec.measure = EArea;
 	return Spectrum(1.0f);
@@ -643,7 +642,7 @@ Spectrum TelecentricSensor::sampleDirection(DirectionSamplingRecord &dRec, Posit
 
 	/* Turn that into a normalized ray direction */
 	Vec3f d = normalize(nearP);
-	dRec.d = toWorld.TransformDirection(d);
+	dRec.d = toWorld.TransformDirection(d).normalized();
 	dRec.measure = ESolidAngle;
 	dRec.pdf = m_normalization / (d.z * d.z * d.z);
 

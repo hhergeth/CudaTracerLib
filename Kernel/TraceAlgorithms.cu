@@ -13,9 +13,9 @@ bool V(const Vec3f& a, const Vec3f& b, TraceResult* res)
 	return !g_SceneData.Occluded(Ray(a, d / l), 0, l, res);
 }
 
-float G(const Vec3f& N_x, const Vec3f& N_y, const Vec3f& x, const Vec3f& y)
+float G(const NormalizedT<Vec3f>& N_x, const NormalizedT<Vec3f>& N_y, const Vec3f& x, const Vec3f& y)
 {
-	Vec3f theta = normalize(y - x);
+	auto theta = normalize(y - x);
 	return absdot(N_x, theta) * absdot(N_y, -theta) / distanceSquared(x, y);
 }
 
@@ -37,8 +37,8 @@ CUDA_FUNC_IN Spectrum EstimateDirect(BSDFSamplingRecord bRec, const Material& ma
 	Spectrum retVal(0.0f);
 	if (!value.isZero())
 	{
-		Vec3f oldWo = bRec.wo;
-		bRec.wo = normalize(bRec.dg.toLocal(dRec.d));
+		auto oldWo = bRec.wo;
+		bRec.wo = bRec.dg.toLocal(dRec.d);
 		bRec.typeMask = flags;
 		Spectrum bsdfVal = mat.bsdf.f(bRec);
 		if (!bsdfVal.isZero() && !g_SceneData.Occluded(Ray(dRec.ref, dRec.d), 0, dRec.dist))

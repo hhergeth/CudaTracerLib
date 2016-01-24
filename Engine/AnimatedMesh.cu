@@ -32,9 +32,9 @@ CUDA_ONLY_FUNC float4x4 d_Compute(float4x4* a_Matrices, const AnimatedVertex& v)
 struct e_TmpVertex
 {
 	Vec3f m_fPos;
-	Vec3f m_fNormal;
-	Vec3f m_fTangent;
-	Vec3f m_fBiTangent;
+	NormalizedT<Vec3f> m_fNormal;
+	NormalizedT<Vec3f> m_fTangent;
+	NormalizedT<Vec3f> m_fBiTangent;
 };
 
 __global__ void g_ComputeVertices(e_TmpVertex* a_Dest, AnimatedVertex* a_Source, float4x4* a_Matrices, float4x4* a_Matrices2, float a_lerp, unsigned int a_VCount)

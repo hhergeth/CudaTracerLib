@@ -10,18 +10,18 @@
 
 namespace CudaTracerLib {
 
-CUDA_FUNC_IN Vec3f hemishphere(const Vec2f& q)
+CUDA_FUNC_IN NormalizedT<Vec3f> hemishphere(const Vec2f& q)
 {
 	Vec2f f = q * 2 - Vec2f(1);
 	return normalize(Vec3f(f, math::sqrt(1 - f.x * f.x - f.y * f.y)));
 }
 
-CUDA_FUNC_IN Spectrum func(BSDFALL& bsdf, Vec3f wo, int w, int h, int x, int y, bool cosTheta)
+CUDA_FUNC_IN Spectrum func(BSDFALL& bsdf, NormalizedT<Vec3f> wo, int w, int h, int x, int y, bool cosTheta)
 {
 	DifferentialGeometry dg;
 	dg.bary = Vec2f(0.5f);
 	dg.hasUVPartials = false;
-	dg.n = Vec3f(0, 0, 1);
+	dg.n = NormalizedT<Vec3f>(0.0f, 0.0f, 1.0f);
 	dg.P = Vec3f(0);
 	dg.uv[0] = Vec2f(0);
 	dg.sys = Frame(dg.n);
@@ -38,12 +38,12 @@ CUDA_FUNC_IN Spectrum func(BSDFALL& bsdf, Vec3f wo, int w, int h, int x, int y, 
 	return f / (cosTheta ? 1 : Frame::cosTheta(bRec.wo));
 }
 
-CUDA_FUNC_IN Spectrum func2(BSDFALL& bsdf, InfiniteLight& light, CudaRNG& rng, float3 wo, int w, int h, int x, int y, bool cosTheta)
+CUDA_FUNC_IN Spectrum func2(BSDFALL& bsdf, InfiniteLight& light, CudaRNG& rng, const NormalizedT<Vec3f>& wo, int w, int h, int x, int y, bool cosTheta)
 {
 	DifferentialGeometry dg;
 	dg.bary = Vec2f(0.5f);
 	dg.hasUVPartials = false;
-	dg.n = Vec3f(0, 0, 1);
+	dg.n = NormalizedT<Vec3f>(0.0f, 0.0f, 1.0f);
 	dg.P = Vec3f(0);
 	dg.uv[0] = Vec2f(0);
 	dg.sys = Frame(dg.n);
@@ -70,7 +70,7 @@ CUDA_FUNC_IN Spectrum func2(BSDFALL& bsdf, InfiniteLight& light, CudaRNG& rng, f
 
 CUDA_DEVICE BSDFALL g_BSDF;
 CUDA_DEVICE CUDA_ALIGN(256) char g_Light[sizeof(InfiniteLight)];
-CUDA_GLOBAL void BSDFCalc(Vec3f wo, Image I, Vec2i off, Vec2i size, float scale, bool cosTheta)
+CUDA_GLOBAL void BSDFCalc(const NormalizedT<Vec3f>& wo, Image I, Vec2i off, Vec2i size, float scale, bool cosTheta)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x, y = blockIdx.y * blockDim.y + threadIdx.y;
 	if (y < size.y)
@@ -80,7 +80,7 @@ CUDA_GLOBAL void BSDFCalc(Vec3f wo, Image I, Vec2i off, Vec2i size, float scale,
 	}
 }
 
-CUDA_GLOBAL void BSDFCalc2(Vec3f wo, Image I, Vec2i off, Vec2i size, float scale, bool cosTheta)
+CUDA_GLOBAL void BSDFCalc2(const NormalizedT<Vec3f>& wo, Image I, Vec2i off, Vec2i size, float scale, bool cosTheta)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x, y = blockIdx.y * blockDim.y + threadIdx.y;
 	if (y < size.y)

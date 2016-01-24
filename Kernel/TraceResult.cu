@@ -7,12 +7,12 @@
 
 namespace CudaTracerLib {
 
-void TraceResult::getBsdfSample(const Ray& r, BSDFSamplingRecord& bRec, ETransportMode mode, CudaRNG* rng, const Spectrum* f_i, const Vec3f* wo) const
+void TraceResult::getBsdfSample(const Ray& r, BSDFSamplingRecord& bRec, ETransportMode mode, CudaRNG* rng, const Spectrum* f_i, const NormalizedT<Vec3f>* wo) const
 {
-	getBsdfSample(r.direction, r(m_fDist), bRec, mode, rng, f_i, wo);
+	getBsdfSample(r.direction.normalized(), r(m_fDist), bRec, mode, rng, f_i, wo);
 }
 
-void TraceResult::getBsdfSample(const Vec3f& wi, const Vec3f& p, BSDFSamplingRecord& bRec, ETransportMode mode, CudaRNG* rng, const Spectrum* f_i, const Vec3f* wo) const
+void TraceResult::getBsdfSample(const NormalizedT<Vec3f>& wi, const Vec3f& p, BSDFSamplingRecord& bRec, ETransportMode mode, CudaRNG* rng, const Spectrum* f_i, const NormalizedT<Vec3f>* wo) const
 {
 	if (f_i)
 		bRec.f_i = *f_i;
@@ -29,13 +29,13 @@ void TraceResult::getBsdfSample(const Vec3f& wi, const Vec3f& p, BSDFSamplingRec
 	bRec.typeMask = ETypeCombinations::EAll;
 	bRec.dg.P = p;
 	fillDG(bRec.dg);
-	bRec.wi = normalize(bRec.dg.toLocal(-wi));
+	bRec.wi = bRec.dg.toLocal(-wi);
 	if (wo)
-		bRec.wo = normalize(bRec.dg.toLocal(*wo));
+		bRec.wo = bRec.dg.toLocal(*wo);
 	getMat().SampleNormalMap(bRec.dg, wi * m_fDist);
 }
 
-Spectrum TraceResult::Le(const Vec3f& p, const Frame& sys, const Vec3f& w) const
+Spectrum TraceResult::Le(const Vec3f& p, const Frame& sys, const NormalizedT<Vec3f>& w) const
 {
 	unsigned int i = LightIndex();
 	if (i == UINT_MAX)

@@ -2,7 +2,7 @@
 
 namespace CudaTracerLib {
 
-float MicrofacetDistribution::eval(const Vec3f &m, float alphaU, float alphaV) const
+float MicrofacetDistribution::eval(const NormalizedT<Vec3f> &m, float alphaU, float alphaV) const
 {
 	if (Frame::cosTheta(m) <= 0)
 		return 0.0f;
@@ -58,7 +58,7 @@ float MicrofacetDistribution::eval(const Vec3f &m, float alphaU, float alphaV) c
 	return result;
 }
 
-float MicrofacetDistribution::pdf(const Vec3f &m, float alphaU, float alphaV) const
+float MicrofacetDistribution::pdf(const NormalizedT<Vec3f> &m, float alphaU, float alphaV) const
 {
 	/* Usually, this is just D(m) * cos(theta_M) */
 	if (m_type != EAshikhminShirley)
@@ -83,7 +83,7 @@ float MicrofacetDistribution::pdf(const Vec3f &m, float alphaU, float alphaV) co
 	return result;
 }
 
-Vec3f MicrofacetDistribution::sample(const Vec2f &sample, float alphaU, float alphaV) const
+NormalizedT<Vec3f> MicrofacetDistribution::sample(const Vec2f &sample, float alphaU, float alphaV) const
 {
 	/* The azimuthal component is always selected
 		uniformly regardless of the distribution */
@@ -138,14 +138,14 @@ Vec3f MicrofacetDistribution::sample(const Vec2f &sample, float alphaU, float al
 	float sinPhiM, cosPhiM;
 	sincos(phiM, &sinPhiM, &cosPhiM);
 
-	return Vec3f(
+	return NormalizedT<Vec3f>(
 		sinThetaM * cosPhiM,
 		sinThetaM * sinPhiM,
 		cosThetaM
 		);
 }
 
-Vec3f MicrofacetDistribution::sample(const Vec2f &sample, float alphaU, float alphaV, float &pdf) const
+NormalizedT<Vec3f> MicrofacetDistribution::sample(const Vec2f &sample, float alphaU, float alphaV, float &pdf) const
 {
 	/* The azimuthal component is always selected
 		uniformly regardless of the distribution */
@@ -218,7 +218,7 @@ Vec3f MicrofacetDistribution::sample(const Vec2f &sample, float alphaU, float al
 		if (pdf < 1e-20f)
 			pdf = 0;
 
-		return Vec3f(
+		return NormalizedT<Vec3f>(
 			sinThetaM * cosPhiM,
 			sinThetaM * sinPhiM,
 			cosThetaM
@@ -233,14 +233,14 @@ Vec3f MicrofacetDistribution::sample(const Vec2f &sample, float alphaU, float al
 	const float sinThetaM = math::sqrt(
 		max((float)0, 1 - cosThetaM*cosThetaM));
 	float phiM = (2.0f * PI) * sample.y;
-	return Vec3f(
+	return NormalizedT<Vec3f>(
 		sinThetaM * std::cos(phiM),
 		sinThetaM * std::sin(phiM),
 		cosThetaM
 		);
 }
 
-float MicrofacetDistribution::G(const Vec3f &wi, const Vec3f &wo, const Vec3f &m, float alphaU, float alphaV) const
+float MicrofacetDistribution::G(const NormalizedT<Vec3f> &wi, const NormalizedT<Vec3f> &wo, const NormalizedT<Vec3f> &m, float alphaU, float alphaV) const
 {
 	if (m_type != EAshikhminShirley) {
 		return smithG1(wi, m, alphaU)
@@ -265,7 +265,7 @@ float MicrofacetDistribution::G(const Vec3f &wi, const Vec3f &wo, const Vec3f &m
 	}
 }
 
-float MicrofacetDistribution::smithG1(const Vec3f &v, const Vec3f &m, float alpha) const
+float MicrofacetDistribution::smithG1(const NormalizedT<Vec3f> &v, const NormalizedT<Vec3f> &m, float alpha) const
 {
 	const float tanTheta = math::abs(Frame::tanTheta(v));
 

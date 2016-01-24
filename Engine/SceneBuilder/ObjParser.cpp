@@ -799,11 +799,12 @@ void compileobj(IInStream& in, FileOutputStream& a_Out)
 	unsigned int m_numVertices = (unsigned int)state.vertices.size();
 	TriangleData* triData = new TriangleData[m_numTriangles];
 	Vec3f p[3];
-	Vec3f n[3];
-	Vec3f ta[3];
-	Vec3f bi[3];
+	auto* n = (NormalizedT<Vec3f>*)alloca(sizeof(NormalizedT<Vec3f>) * 3),
+		* ta = (NormalizedT<Vec3f>*)alloca(sizeof(NormalizedT<Vec3f>) * 3),
+		* bi = (NormalizedT<Vec3f>*)alloca(sizeof(NormalizedT<Vec3f>) * 3);
 	Vec2f t[3];
-	std::vector<Vec3f> positions, normals, tangents, bitangents;
+	std::vector<Vec3f> positions;
+	std::vector<NormalizedT<Vec3f>> normals, tangents, bitangents;
 	positions.resize(m_numVertices); normals.resize(m_numVertices); tangents.resize(m_numVertices); bitangents.resize(m_numVertices);
 	std::vector<Vec2f> texCoords;
 	texCoords.resize(m_numVertices);
@@ -812,9 +813,9 @@ void compileobj(IInStream& in, FileOutputStream& a_Out)
 		auto& v = state.vertices[i];
 		positions[i] = v.p;
 		texCoords[i] = v.t;
-		normals[i] = Vec3f(0.0f);
-		tangents[i] = Vec3f(0.0f);
-		bitangents[i] = Vec3f(0.0f);
+		normals[i] = NormalizedT<Vec3f>(0.0f);
+		tangents[i] = NormalizedT<Vec3f>(0.0f);
+		bitangents[i] = NormalizedT<Vec3f>(0.0f);
 	}
 	std::vector<Vec3i> indices;
 	indices.resize(state.numTriangles() * 3);
@@ -843,9 +844,9 @@ void compileobj(IInStream& in, FileOutputStream& a_Out)
 				box = box.Extend(p[j]);
 #ifdef EXT_TRI
 				t[j] = texCoords[l];
-				ta[j] = normalize(tangents[l]);
-				bi[j] = normalize(bitangents[l]);
-				n[j] = normalize(normals[l]);
+				ta[j] = tangents[l];
+				bi[j] = bitangents[l];
+				n[j] = normals[l];
 #endif
 			}
 			triData[triCount++] = TriangleData(p, (unsigned char)matIndex, t, n, ta, bi);

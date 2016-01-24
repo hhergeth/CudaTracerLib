@@ -38,7 +38,7 @@ template<bool CORRECT_DIFFERENTIALS> CUDA_FUNC_IN void handleSurfaceInteraction(
 		{
 			Ray r, rX, rY;
 			g_SceneData.sampleSensorRay(r, rX, rY, dRec.uv, Vec2f(0));
-			Vec3f oldWi = bRec.wi;
+			auto oldWi = bRec.wi;
 			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng, 0, &dRec.d);
 			bRec.dg.computePartials(r, rX, rY);
 			bRec.wi = oldWi;
@@ -53,9 +53,9 @@ template<bool CORRECT_DIFFERENTIALS> CUDA_FUNC_IN void handleSurfaceInteraction(
 	}
 }
 
-CUDA_FUNC_IN void handleMediumInteraction(const Spectrum& weight, MediumSamplingRecord& mRec, const Vec3f& wi, const TraceResult& r2, Image& g_Image, CudaRNG& rng)
+CUDA_FUNC_IN void handleMediumInteraction(const Spectrum& weight, MediumSamplingRecord& mRec, const NormalizedT<Vec3f>& wi, const TraceResult& r2, Image& g_Image, CudaRNG& rng)
 {
-	DirectSamplingRecord dRec(mRec.p, Vec3f(0));
+	DirectSamplingRecord dRec(mRec.p, NormalizedT<Vec3f>(0.0f));
 	Spectrum value = weight * g_SceneData.sampleAttenuatedSensorDirect(dRec, rng.randomFloat2());
 	if (!value.isZero() && V(dRec.p, dRec.ref))
 	{
@@ -94,14 +94,14 @@ template<bool CORRECT_DIFFERENTIALS> CUDA_FUNC_IN void doWork(Image& g_Image, Cu
 		if ((!bssrdf && V.HasVolumes() && V.IntersectP(r, 0, r2.m_fDist, &minT, &maxT) && V.sampleDistance(r, 0, r2.m_fDist, rng, mRec)) || (bssrdf && bssrdf->sampleDistance(r, 0, r2.m_fDist, rng.randomFloat(), mRec)))
 		{
 			throughput *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
-			handleMediumInteraction(power * throughput, mRec, -r.direction, r2, g_Image, rng);
+			handleMediumInteraction(power * throughput, mRec, -r.dir(), r2, g_Image, rng);
 			if (bssrdf)
 			{
-				PhaseFunctionSamplingRecord mRec(-r.direction);
-				throughput *= bssrdf->As()->Func.Sample(mRec, rng);
-				r.direction = mRec.wi;
+				PhaseFunctionSamplingRecord pfRec(-r.dir());
+				throughput *= bssrdf->As()->Func.Sample(pfRec, rng);
+				r.direction = pfRec.wi;
 			}
-			else throughput *= V.Sample(mRec.p, -r.direction, rng, &r.direction);
+			else throughput *= V.Sample(mRec.p, -r.dir(), rng, (NormalizedT<Vec3f>*)&r.direction);
 			r.origin = mRec.p;
 			medium = true;
 		}
@@ -111,7 +111,7 @@ template<bool CORRECT_DIFFERENTIALS> CUDA_FUNC_IN void doWork(Image& g_Image, Cu
 		{
 			if (medium)
 				throughput *= mRec.transmittance / mRec.pdfFailure;
-			Vec3f wo = bssrdf ? -r.direction : r.direction;
+			auto wo = bssrdf ? -r.dir() : r.dir();
 			Spectrum f_i = power * throughput;
 			r2.getBsdfSample(wo, r(r2.m_fDist), bRec, ETransportMode::EImportance, &rng, &f_i);
 			handleSurfaceInteraction<false>(power * throughput, r2, bRec, r2, g_Image, rng);//CORRECT_DIFFERENTIALS

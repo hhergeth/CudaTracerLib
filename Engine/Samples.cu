@@ -3,9 +3,9 @@
 
 namespace CudaTracerLib {
 
-Vec3f BSDFSamplingRecord::getOutgoing()
+NormalizedT<Vec3f> BSDFSamplingRecord::getOutgoing() const
 {
-	return normalize(dg.toWorld(wo));
+	return dg.sys.toWorld(wo);
 }
 
 BSDFSamplingRecord& BSDFSamplingRecord::operator=(const BSDFSamplingRecord& other)

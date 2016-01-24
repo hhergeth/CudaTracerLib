@@ -12,7 +12,7 @@ Spectrum coating::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &_sam
 		return Spectrum(0.0f);
 
 	float R12;
-	Vec3f wiPrime = refractIn(bRec.wi, R12);
+	auto wiPrime = refractIn(bRec.wi, R12);
 
 	float probSpecular = (R12*m_specularSamplingWeight) /
 		(R12*m_specularSamplingWeight +
@@ -33,7 +33,7 @@ Spectrum coating::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &_sam
 
 	if (choseSpecular) {
 		bRec.sampledType = EDeltaReflection;
-		bRec.wo = reflect(bRec.wi);
+		bRec.wo = Frame::reflect(bRec.wi);
 		bRec.eta = 1.0f;
 		pdf = sampleNested ? probSpecular : 1.0f;
 		return m_specularReflectance.Evaluate(bRec.dg) * (R12 / pdf);
@@ -42,14 +42,14 @@ Spectrum coating::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &_sam
 		if (R12 == 1.0f)
 			return Spectrum(0.0f);
 
-		Vec3f wiBackup = bRec.wi;
+		auto wiBackup = bRec.wi;
 		bRec.wi = wiPrime;
 		Spectrum result = m_nested.sample(bRec, pdf, sample);
 		bRec.wi = wiBackup;
 		if (result.isZero())
 			return Spectrum(0.0f);
 
-		Vec3f woPrime = bRec.wo;
+		auto woPrime = bRec.wo;
 
 		Spectrum sigmaA = m_sigmaA.Evaluate(bRec.dg) * m_thickness;
 		if (!sigmaA.isZero())
@@ -84,7 +84,7 @@ Spectrum coating::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 	bool sampleNested = (bRec.typeMask & m_nested.getType() & EAll) != 0;
 
 	if (measure == EDiscrete && sampleSpecular &&
-		math::abs(dot(reflect(bRec.wi), bRec.wo) - 1) < DeltaEpsilon) {
+		math::abs(dot(Frame::reflect(bRec.wi), bRec.wo) - 1) < DeltaEpsilon) {
 		return m_specularReflectance.Evaluate(bRec.dg) *
 			MonteCarlo::fresnelDielectricExt(math::abs(Frame::cosTheta(bRec.wi)), m_eta);
 	}
@@ -124,14 +124,14 @@ float coating::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 	bool sampleNested = (bRec.typeMask & m_nested.getType() & EAll) != 0;
 
 	float R12;
-	Vec3f wiPrime = refractIn(bRec.wi, R12);
+	auto wiPrime = refractIn(bRec.wi, R12);
 
 	float probSpecular = (R12*m_specularSamplingWeight) /
 		(R12*m_specularSamplingWeight +
 		(1 - R12) * (1 - m_specularSamplingWeight));
 
 	if (measure == EDiscrete && sampleSpecular &&
-		math::abs(dot(reflect(bRec.wi), bRec.wo) - 1) < DeltaEpsilon) {
+		math::abs(dot(Frame::reflect(bRec.wi), bRec.wo) - 1) < DeltaEpsilon) {
 		return sampleNested ? probSpecular : 1.0f;
 	}
 	else if (sampleNested) {
@@ -189,8 +189,8 @@ Spectrum roughcoating::sample(BSDFSamplingRecord &bRec, float &_pdf, const Vec2f
 
 	if (choseSpecular) {
 		/* Perfect specular reflection based on the microsurface normal */
-		Vec3f m = m_distribution.sample(sample, alphaT);
-		bRec.wo = reflect(bRec.wi, m);
+		auto m = m_distribution.sample(sample, alphaT);
+		bRec.wo = MonteCarlo::reflect(bRec.wi, m);
 		bRec.sampledType = EGlossyReflection;
 		bRec.eta = 1.0f;
 
@@ -199,7 +199,7 @@ Spectrum roughcoating::sample(BSDFSamplingRecord &bRec, float &_pdf, const Vec2f
 			return Spectrum(0.0f);
 	}
 	else {
-		Vec3f wiBackup = bRec.wi;
+		auto wiBackup = bRec.wi;
 		bRec.wi = refractTo(EInterior, bRec.wi);
 		Spectrum result = m_nested.sample(bRec, _pdf, sample);
 		bRec.wi = wiBackup;
@@ -232,8 +232,7 @@ Spectrum roughcoating::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 	Spectrum result(0.0f);
 	if (hasSpecular && Frame::cosTheta(bRec.wo) * Frame::cosTheta(bRec.wi) > 0) {
 		/* Calculate the reflection half-vector */
-		const Vec3f H = normalize(bRec.wo + bRec.wi)
-			* math::signum(Frame::cosTheta(bRec.wo));
+		const auto H = NormalizedT<Vec3f>(normalize(bRec.wo + bRec.wi)	* math::signum(Frame::cosTheta(bRec.wo)));
 
 		/* Evaluate the microsurface normal distribution */
 		const float D = m_distribution.eval(H, alphaT);
@@ -285,8 +284,7 @@ float roughcoating::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 	bool hasSpecular = (bRec.typeMask & EGlossyReflection) != 0 && measure == ESolidAngle;
 
 	/* Calculate the reflection half-vector */
-	const Vec3f H = normalize(bRec.wo + bRec.wi)
-		* math::signum(Frame::cosTheta(bRec.wo));
+	const auto H = NormalizedT<Vec3f>(normalize(bRec.wo + bRec.wi) * math::signum(Frame::cosTheta(bRec.wo)));
 
 	/* Evaluate the roughness texture */
 	float alpha = m_alpha.Evaluate(bRec.dg).average();

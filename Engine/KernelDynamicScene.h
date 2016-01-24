@@ -89,7 +89,7 @@ struct KernelDynamicScene
 		return m_Camera.sampleRayDifferential(ray, rX, rY, spatialSample, directionalSample);
 	}
 
-	CUDA_FUNC_IN Ray GenerateSensorRay(int x, int y)
+	CUDA_FUNC_IN Ray GenerateSensorRay(int x, int y) const
 	{
 		Ray r;
 		sampleSensorRay(r, Vec2f((float)x, (float)y), Vec2f(0));

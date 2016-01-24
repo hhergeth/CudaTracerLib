@@ -199,7 +199,7 @@ bool VolumeGrid::invertDensityIntegral(const Ray& ray, float t0, float t1, float
 	float minTL = t0 * Td, maxTL = t1 * Td;
 	rayL.direction = normalize(rayL.direction);
 	bool found = false;
-	densityAtMinT = sigma_t(ray(t0), Vec3f(0)).average();
+	densityAtMinT = sigma_t(ray(t0), NormalizedT<Vec3f>(rayL.direction)).average();
 	float Lcl_To_World = (t1 - t0) / (maxTL - minTL);
 	TraverseGrid(rayL, minTL, maxTL, [&](float minT, float rayT, float maxT, float cellEndT, Vec3u& cell_pos, bool& cancelTraversal)
 	{
@@ -246,8 +246,8 @@ bool VolumeGrid::sampleDistance(const Ray& ray, float minT, float maxT, float sa
 	{
 		success = true;
 		mRec.p = ray(mRec.t);
-		mRec.sigmaS = sigma_s(mRec.p, -ray.direction);
-		mRec.sigmaA = sigma_s(mRec.p, -ray.direction);
+		mRec.sigmaS = sigma_s(mRec.p, NormalizedT<Vec3f>(-ray.direction));
+		mRec.sigmaA = sigma_s(mRec.p, NormalizedT<Vec3f>(-ray.direction));
 	}
 	float expVal = math::exp(-integratedDensity);
 	mRec.pdfFailure = expVal;
@@ -273,7 +273,7 @@ bool KernelAggregateVolume::IntersectP(const Ray &ray, float minT, float maxT, f
 	return (*t0 < *t1);
 }
 
-Spectrum KernelAggregateVolume::sigma_a(const Vec3f& p, const Vec3f& w) const
+Spectrum KernelAggregateVolume::sigma_a(const Vec3f& p, const NormalizedT<Vec3f>& w) const
 {
 	Spectrum s = Spectrum(0.0f);
 	for(unsigned int i = 0; i < m_uVolumeCount; i++)
@@ -281,7 +281,7 @@ Spectrum KernelAggregateVolume::sigma_a(const Vec3f& p, const Vec3f& w) const
 	return s;
 }
 
-Spectrum KernelAggregateVolume::sigma_s(const Vec3f& p, const Vec3f& w) const
+Spectrum KernelAggregateVolume::sigma_s(const Vec3f& p, const NormalizedT<Vec3f>& w) const
 {
 	Spectrum s = Spectrum(0.0f);
 	for(unsigned int i = 0; i < m_uVolumeCount; i++)
@@ -289,7 +289,7 @@ Spectrum KernelAggregateVolume::sigma_s(const Vec3f& p, const Vec3f& w) const
 	return s;
 }
 
-Spectrum KernelAggregateVolume::Lve(const Vec3f& p, const Vec3f& w) const
+Spectrum KernelAggregateVolume::Lve(const Vec3f& p, const NormalizedT<Vec3f>& w) const
 {
 	Spectrum s = Spectrum(0.0f);
 	for(unsigned int i = 0; i < m_uVolumeCount; i++)
@@ -297,7 +297,7 @@ Spectrum KernelAggregateVolume::Lve(const Vec3f& p, const Vec3f& w) const
 	return s;
 }
 
-Spectrum KernelAggregateVolume::sigma_t(const Vec3f &p, const Vec3f &wo) const
+Spectrum KernelAggregateVolume::sigma_t(const Vec3f &p, const NormalizedT<Vec3f> &wo) const
 {
 	Spectrum s = Spectrum(0.0f);
 	for(unsigned int i = 0; i < m_uVolumeCount; i++)
@@ -313,7 +313,7 @@ Spectrum KernelAggregateVolume::tau(const Ray &ray, float minT, float maxT) cons
 	return s;
 }
 
-float KernelAggregateVolume::Sample(const Vec3f& p, const Vec3f& wo, CudaRNG& rng, Vec3f* wi) const
+float KernelAggregateVolume::Sample(const Vec3f& p, const NormalizedT<Vec3f>& wo, CudaRNG& rng, NormalizedT<Vec3f>* wi) const
 {
 	PhaseFunctionSamplingRecord r2(wo);
 	r2.wi = wo;
@@ -329,7 +329,7 @@ float KernelAggregateVolume::Sample(const Vec3f& p, const Vec3f& wo, CudaRNG& rn
 	return 0.0f;
 }
 
-float KernelAggregateVolume::p(const Vec3f& p, const Vec3f& wo, const Vec3f& wi, CudaRNG& rng) const
+float KernelAggregateVolume::p(const Vec3f& p, const NormalizedT<Vec3f>& wo, const NormalizedT<Vec3f>& wi, CudaRNG& rng) const
 {
 	PhaseFunctionSamplingRecord r2(wo, wi);
 	for(unsigned int i = 0; i < m_uVolumeCount; i++)

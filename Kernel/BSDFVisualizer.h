@@ -13,7 +13,7 @@ template<typename T> class Stream;
 class BSDFVisualizer : public Tracer<false, true>
 {
 public:
-	Vec3f m_wo;
+	NormalizedT<Vec3f> m_wo;
 	BSDFALL* m_Bsdf;
 	InfiniteLight* m_pLight;
 	Stream<char>* m_pBuffer;
@@ -23,7 +23,7 @@ public:
 	bool cosTheta;
 	bool drawEnvMap;
 	BSDFVisualizer()
-		: m_wo(Vec3f(0, 0, 1)), m_Bsdf(0), LScale(1), cosTheta(true), m_pBuffer(0), m_pBuffer2(0), drawEnvMap(false), m_pLight(0), m_pMipMap(0)
+		: m_wo(0.0f, 0.0f, 1.0f), m_Bsdf(0), LScale(1), cosTheta(true), m_pBuffer(0), m_pBuffer2(0), drawEnvMap(false), m_pLight(0), m_pMipMap(0)
 	{
 	}
 	~BSDFVisualizer();

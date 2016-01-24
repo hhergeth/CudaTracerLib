@@ -29,11 +29,11 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(Ray& r, const Ray& rX, con
 
 			if (DIRECT)//direct sampling
 			{
-				DirectSamplingRecord dRec(mRec.p, Vec3f(0));
+				DirectSamplingRecord dRec(mRec.p, NormalizedT<Vec3f>(0.0f));
 				Spectrum value = g_SceneData.sampleAttenuatedEmitterDirect(dRec, rnd.randomFloat2());
 				if (!value.isZero())
 				{
-					float p = V.p(mRec.p, -r.direction, dRec.d, rnd);
+					float p = V.p(mRec.p, -r.dir(), dRec.d, rnd);
 					if (p != 0 && !g_SceneData.Occluded(Ray(dRec.ref, dRec.d), 0, dRec.dist))
 					{
 						const float bsdfPdf = p;//phase functions are normalized
@@ -43,7 +43,9 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(Ray& r, const Ray& rX, con
 				}
 			}
 
-			cf *= V.Sample(mRec.p, -r.direction, rnd, &r.direction);
+			NormalizedT<Vec3f> dir;
+			cf *= V.Sample(mRec.p, -r.dir(), rnd, &dir);
+			r.direction = dir;
 			r.origin = mRec.p;
 		}
 		else if (r2.hasHit())
@@ -54,7 +56,7 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(Ray& r, const Ray& rX, con
 			if (depth == 1)
 				dg.computePartials(r, rX, rY);
 			if (!DIRECT || (depth == 1 || specularBounce))
-				cl += cf * r2.Le(bRec.dg.P, bRec.dg.sys, -r.direction);
+				cl += cf * r2.Le(bRec.dg.P, bRec.dg.sys, -r.dir());
 			Spectrum f = r2.getMat().bsdf.sample(bRec, rnd.randomFloat2());
 			if (DIRECT)
 				cl += cf * UniformSampleOneLight(bRec, r2.getMat(), rnd, true);
@@ -91,7 +93,7 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTraceRegularization(Ray& r, cons
 		if (depth == 1)
 			dg.computePartials(r, rX, rY);
 		if (!DIRECT || (depth == 1 || specularBounce))
-			cl += cf * r2.Le(bRec.dg.P, bRec.dg.sys, -r.direction);
+			cl += cf * r2.Le(bRec.dg.P, bRec.dg.sys, -r.dir());
 		Spectrum f = r2.getMat().bsdf.sample(bRec, rnd.randomFloat2());
 		if (DIRECT)
 		{
@@ -107,7 +109,7 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTraceRegularization(Ray& r, cons
 				{
 					float eps = atanf(g_fRMollifier / lDist);
 					float normalization = 1.0f / (2 * PI * (1 - cosf(eps)));
-					float l_dot_o = dot(lDir, normalize(bRec.getOutgoing()));
+					float l_dot_o = dot(lDir, bRec.getOutgoing());
 					float indicator = acosf(l_dot_o) <= eps;
 					cl += cf * f * l_s * (normalization * indicator);
 				}

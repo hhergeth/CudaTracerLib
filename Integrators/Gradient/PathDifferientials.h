@@ -4,27 +4,27 @@
 
 namespace CudaTracerLib {
 
-template<typename T, int M, int N> qMatrix<T, 1, N> ddot_dx(const qMatrix<T, M, 1>& a, const qMatrix<T, M, N>& da_dx, const qMatrix<T, M, 1>& b, const qMatrix<T, M, N>& db_dx)
+template<typename T, int M, int N> qMatrix<T, 1, N> CUDA_FUNC_IN ddot_dx(const qMatrix<T, M, 1>& a, const qMatrix<T, M, N>& da_dx, const qMatrix<T, M, 1>& b, const qMatrix<T, M, N>& db_dx)
 {
 	return b.transpose() * da_dx + a.transpose() * db_dx;
 }
 
-template<typename T, int M, int N> qMatrix<T, 1, N> ddot_dx(const qMatrix<T, M, 1>& a, const qMatrix<T, M, N>& da_dx)
+template<typename T, int M, int N> qMatrix<T, 1, N> CUDA_FUNC_IN ddot_dx(const qMatrix<T, M, 1>& a, const qMatrix<T, M, N>& da_dx)
 {
 	return ddot_dx(a, da_dx, a, da_dx);
 }
 
-template<typename T, int M, int N> qMatrix<T, 1, N> ddot_dx_const(const qMatrix<T, M, N>& da_dx, const qMatrix<T, M, 1>& b)
+template<typename T, int M, int N> CUDA_FUNC_IN qMatrix<T, 1, N> ddot_dx_const(const qMatrix<T, M, N>& da_dx, const qMatrix<T, M, 1>& b)
 {
 	return ddot_dx(qMatrix<T, M, 1>::Zero(), da_dx, b, qMatrix<T, M, N>::Zero());
 }
 
-template<typename T, int M, int N> qMatrix<T, 1, N> dnorm2_dx(const qMatrix<T, M, 1>& v, const qMatrix<T, M, N>& dv_dx)
+template<typename T, int M, int N> CUDA_FUNC_IN qMatrix<T, 1, N> dnorm2_dx(const qMatrix<T, M, 1>& v, const qMatrix<T, M, N>& dv_dx)
 {
 	return 0.5f * v.transpose() * v * ddot_dx(v, dv_dx);
 }
 
-qMatrix<float, 3, 4> A(const Frame& i, const Frame& j)
+CUDA_FUNC_IN qMatrix<float, 3, 4> A(const Frame& i, const Frame& j)
 {
 	qMatrix<float, 3, 4> a;
 	a.col(0, Q(-i.s));
@@ -34,7 +34,7 @@ qMatrix<float, 3, 4> A(const Frame& i, const Frame& j)
 	return a;
 }
 
-qMatrix<float, 1, 6> dfi_diffuse_du123_v123(const Vec3f& x_prev, const Vec3f& x_i, const Vec3f& x_next,
+CUDA_FUNC_IN qMatrix<float, 1, 6> dfi_diffuse_du123_v123(const Vec3f& x_prev, const Vec3f& x_i, const Vec3f& x_next,
 	const Frame& f_prev, const Frame& f_i, const Frame& f_next, float tau)
 {
 	float d = distance(x_next, x_i), d2 = d * d;
@@ -54,7 +54,7 @@ qMatrix<float, 1, 6> dfi_diffuse_du123_v123(const Vec3f& x_prev, const Vec3f& x_
 	return coeff * n.transpose() * H * C;*/
 }
 
-qMatrix<float, 1, 4> dG_du12_v12(const Vec3f& x_i, const Vec3f& x_j, const Frame& f_i, const Frame& f_j)
+CUDA_FUNC_IN qMatrix<float, 1, 4> dG_du12_v12(const Vec3f& x_i, const Vec3f& x_j, const Frame& f_i, const Frame& f_j)
 {
 	qMatrix<float, 3, 1> n_i = Q(f_i.n), n_j = Q(f_j.n);
 	float a = dot(x_j - x_i, f_i.n), b = dot(x_i - x_j, f_j.n), c = math::sqr(distanceSquared(x_j, x_i));

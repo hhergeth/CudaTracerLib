@@ -28,6 +28,7 @@ template <class T, int L, class S> class VectorBase : public IVectorBase
 public:
 	typedef T SCALAR_TYPE;
 	typedef S STORAGE_TYPE;
+	enum { DIMENSION = L };
 
 	CUDA_FUNC_IN                    VectorBase(void)                      {}
 
@@ -360,12 +361,12 @@ namespace CudaTracerLib
 
 template <class T, int L, class S> NormalizedT<S> VectorBase<T, L, S>::normalized() const
 {
-	return normalized_cast(operator*(math::rcp(length())));
+	return NormalizedT<S>(operator*(math::rcp(length())));
 }
 
 template <class T, int L, class S> CUDA_FUNC_IN T lenSqr(const VectorBase<T, L, S>& v)                  { return v.lenSqr(); }
 template <class T, int L, class S> CUDA_FUNC_IN T length(const VectorBase<T, L, S>& v)                  { return v.length(); }
-template <class T, int L, class S> CUDA_FUNC_IN NormalizedT<S> normalize(const VectorBase<T, L, S>& v)    { return normalized_cast(v.normalized()); }
+template <class T, int L, class S> CUDA_FUNC_IN NormalizedT<S> normalize(const VectorBase<T, L, S>& v)    { return NormalizedT<S>(v.normalized()); }
 template <class T, int L, class S> CUDA_FUNC_IN T min(const VectorBase<T, L, S>& v)                  { return v.min(); }
 template <class T, int L, class S> CUDA_FUNC_IN T max(const VectorBase<T, L, S>& v)                  { return v.max(); }
 template <class T, int L, class S> CUDA_FUNC_IN T sum(const VectorBase<T, L, S>& v)                  { return v.sum(); }

@@ -8,7 +8,7 @@ namespace CudaTracerLib {
 
 CUDA_FUNC_IN bool sphere_line_intersection(const Vec3f& p, float rad, const Ray& r, float& t_min, float& t_max)
 {
-	Vec3f d = r.direction.normalized();
+	auto d = r.direction.normalized();
 	Vec3f oc = r.origin - p;
 	float f = dot(d, oc);
 	float w = f * f - oc.lenSqr() + rad * rad;
@@ -41,13 +41,13 @@ template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum PointStorage::L_Volume(float Num
 			Vec3f ph_pos = ph.getPos(m_sStorage.getHashGrid(), cell_idx);
 			if (distanceSquared(ph_pos, x) < m_fCurrentRadiusVol * m_fCurrentRadiusVol)
 			{
-				float p = vol.p(x, -r.direction, ph.getWi(), rng);
+				float p = vol.p(x, -r.dir(), ph.getWi(), rng);
 				L_i += p * ph.getL() * Vs;
 			}
 		});
 		L_n += (-Tau - vol.tau(r, a, t)).exp() * L_i * d;
 		Tau += vol.tau(r, a, a + d);
-		L_n += vol.Lve(x, -1.0f * r.direction) * d;
+		L_n += vol.Lve(x, -r.dir()) * d;
 		a += d;
 	}
 	Tr = (-Tau).exp();
@@ -68,7 +68,7 @@ template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum BeamGrid::L_Volume(float NumEmit
 			float isectRadSqr = distanceSquared(ph_pos, r(l1));
 			if (isectRadSqr < ph.getRad() && l1 >= 0)
 			{
-				float p = vol.p(ph_pos, r.direction, ph.getWi(), rng);
+				float p = vol.p(ph_pos, r.dir(), ph.getWi(), rng);
 				Spectrum tauToPhoton = (-Tau - (l1 >= rayT ? vol.tau(r, rayT, l1) : -vol.tau(r, max(minT, l1), rayT))).exp();//corner case : the photon lies in the cell but the projected distance is before the cell
 
 				//Spectrum tauToPhotonC = (-vol.tau(r, tmin, l1)).exp();
@@ -90,7 +90,7 @@ template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum BeamGrid::L_Volume(float NumEmit
 		});
 		Tau += vol.tau(r, rayT, cellEndT);
 		float localDist = cellEndT - rayT;
-		L_n += vol.Lve(r(rayT + localDist / 2), -1.0f * r.direction) * localDist;
+		L_n += vol.Lve(r(rayT + localDist / 2), -r.dir()) * localDist;
 	});
 	Tr = (-Tau).exp();
 	return L_n;
@@ -105,8 +105,8 @@ template<bool USE_GLOBAL> CUDA_ONLY_FUNC Spectrum beam_beam_L(const VolHelper<US
 {
 	Spectrum photon_tau = vol.tau(Ray(B.getPos(), B.getDir()), 0, beamIsectDist);
 	Spectrum camera_tau = vol.tau(r, tmin, queryIsectDist);
-	Spectrum camera_sc = vol.sigma_s(r(queryIsectDist), r.direction);
-	float p = vol.p(r(queryIsectDist), r.direction, B.getDir(), rng);
+	Spectrum camera_sc = vol.sigma_s(r(queryIsectDist), r.dir());
+	float p = vol.p(r(queryIsectDist), r.dir(), B.getDir(), rng);
 	//return B.Phi / float(m_uNumEmitted) * camera_sc * (-photon_tau).exp() * (-camera_tau).exp() * p * (1 - beamBeamDistance * beamBeamDistance / (radius * radius)) * 3 / (4 * radius*sinTheta);
 	float t = math::clamp01(beamBeamDistance / radius), k = 1.0f + t * t * t * (-6.0f * t * t + 15.0f * t - 10.0f);
 	return camera_sc / radius * p * B.getL() / m_uNumEmitted * (-photon_tau).exp() * (-camera_tau).exp() / sinTheta * k;
@@ -209,7 +209,7 @@ template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_SurfaceFinalGathering(BSDFSam
 			L += f * (hasGlossy ? L_Surface<true>(bRec2, -r.direction, rad, r3.getMat()) : L_Surface<false>(bRec2, -r.direction, rad, r3.getMat()));
 			if (DIRECT)
 				L += f * UniformSampleOneLight(bRec2, r3.getMat(), rng);
-			else L += f * r3.Le(bRec2.dg.P, bRec2.dg.sys, -r.direction);
+			else L += f * r3.Le(bRec2.dg.P, bRec2.dg.sys, -r.dir());
 		}
 	}
 	bRec.typeMask = ETypeCombinations::EAll;
@@ -323,7 +323,7 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 				const Light* light = g_SceneData.sampleEmitter(pdf, sample);
 				DirectSamplingRecord dRec(bRec.dg.P, bRec.dg.sys.n);
 				Spectrum value = light->sampleDirect(dRec, rng.randomFloat2()) / pdf;
-				bRec.wo = normalize(bRec.dg.toLocal(dRec.d));
+				bRec.wo = bRec.dg.toLocal(dRec.d);
 				bRec.typeMask = EBSDFType(EAll & ~EDelta);
 				Spectrum bsdfVal = r2.getMat().bsdf.f(bRec);
 				if (!bsdfVal.isZero())
@@ -345,7 +345,7 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 
 				//L += throughput * UniformSampleOneLight(bRec, r2.getMat(), rng);
 			}
-			L += throughput * r2.Le(bRec.dg.P, bRec.dg.sys, -r.direction);//either it's the first bounce or it's a specular reflection
+			L += throughput * r2.Le(bRec.dg.P, bRec.dg.sys, -r.dir());//either it's the first bounce or it's a specular reflection
 			const VolumeRegion* bssrdf;
 			if (r2.getMat().GetBSSRDF(bRec.dg, &bssrdf))
 			{
@@ -355,7 +355,8 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 				TraceResult r3 = traceRay(rTrans);
 				Spectrum Tr;
 				L += throughput * ((VolEstimator*)g_VolEstimator2)->L_Volume(g_NumPhotonEmittedVolume2, a_rVolume, rng, rTrans, 0, r3.m_fDist, VolHelper<false>(bssrdf), Tr);
-				//throughput = throughput * Tr;//break;
+				//throughput = throughput * Tr;
+				break;
 			}
 			bool hasSmooth = r2.getMat().bsdf.hasComponent(ESmooth),
 				hasSpecGlossy = r2.getMat().bsdf.hasComponent(EDelta | EGlossy),
@@ -487,10 +488,8 @@ __global__ void k_PerPixelRadiusEst(int w, int h, float r_max, float r_1, k_Adap
 		{
 			const float search_rad = r_1;
 			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
-			Frame sys = Frame(bRec.dg.n);
-			sys.t *= search_rad;
-			sys.s *= search_rad;
-			Vec3f a = -1.0f * sys.t - sys.s, b = sys.t - sys.s, c = -1.0f * sys.t + sys.s, d = sys.t + sys.s;
+			auto f_t = bRec.dg.sys.t * search_rad, f_s = bRec.dg.sys.s * search_rad;
+			Vec3f a = -1.0f * f_t - f_s, b = f_t - f_s, c = -1.0f * f_t + f_s, d = f_t + f_s;
 			Vec3f low = min(min(a, b), min(c, d)) + bRec.dg.P, high = max(max(a, b), max(c, d)) + bRec.dg.P;
 			int k_found = 0;
 #ifdef ISCUDA

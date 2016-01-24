@@ -17,7 +17,7 @@ struct Beam
 	Vec3f pos;
 
 	CUDA_FUNC_IN Beam(){}
-	CUDA_FUNC_IN Beam(const Vec3f& p, const Vec3f& d, float t, const Spectrum& ph)
+	CUDA_FUNC_IN Beam(const Vec3f& p, const NormalizedT<Vec3f>& d, float t, const Spectrum& ph)
 		: pos(p), dir(NormalizedFloat3ToUchar2(d)), t(t), phi(ph.toRGBE())
 	{
 
@@ -27,7 +27,7 @@ struct Beam
 	{
 		return pos;
 	}
-	CUDA_FUNC_IN Vec3f getDir() const
+	CUDA_FUNC_IN NormalizedT<Vec3f> getDir() const
 	{
 		return Uchar2ToNormalizedFloat3(dir);
 	}
@@ -171,14 +171,14 @@ template<bool USE_GLOBAL> struct VolHelper
 		else return vol->IntersectP(ray, minT, maxT, t0, t1);
 	}
 
-	CUDA_FUNC_IN Spectrum sigma_s(const Vec3f& p, const Vec3f& w) const
+	CUDA_FUNC_IN Spectrum sigma_s(const Vec3f& p, const NormalizedT<Vec3f>& w) const
 	{
 		if (USE_GLOBAL)
 			return g_SceneData.m_sVolume.sigma_s(p, w);
 		else return vol->sigma_s(p, w);
 	}
 
-	CUDA_FUNC_IN Spectrum Lve(const Vec3f& p, const Vec3f& w) const
+	CUDA_FUNC_IN Spectrum Lve(const Vec3f& p, const NormalizedT<Vec3f>& w) const
 	{
 		if (USE_GLOBAL)
 			return g_SceneData.m_sVolume.Lve(p, w);
@@ -192,7 +192,7 @@ template<bool USE_GLOBAL> struct VolHelper
 		else return vol->tau(ray, minT, maxT);
 	}
 
-	CUDA_FUNC_IN float p(const Vec3f& p, const Vec3f& wo, const Vec3f& wi, CudaRNG& rng) const
+	CUDA_FUNC_IN float p(const Vec3f& p, const NormalizedT<Vec3f>& wo, const NormalizedT<Vec3f>& wi, CudaRNG& rng) const
 	{
 		PhaseFunctionSamplingRecord rec(wo, wi);
 		if (USE_GLOBAL)

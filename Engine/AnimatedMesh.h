@@ -10,9 +10,9 @@ namespace CudaTracerLib {
 struct AnimatedVertex
 {
 	Vec3f m_fVertexPos;
-	Vec3f m_fNormal;
-	Vec3f m_fTangent;
-	Vec3f m_fBitangent;
+	NormalizedT<Vec3f> m_fNormal;
+	NormalizedT<Vec3f> m_fTangent;
+	NormalizedT<Vec3f> m_fBitangent;
 	unsigned long long m_cBoneIndices;
 	unsigned long long m_fBoneWeights;
 	AnimatedVertex()

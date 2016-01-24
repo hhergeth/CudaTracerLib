@@ -14,7 +14,7 @@ class PathVertex
 {
 public:
 	virtual Vec3f getPos() const = 0;
-	virtual Vec3f getNor() const = 0;
+	virtual NormalizedT<Vec3f> getNor() const = 0;
 	virtual Frame getSys() const
 	{
 		Frame sys(getNor());
@@ -62,7 +62,7 @@ public:
 		return dg.P;
 	}
 
-	virtual Vec3f getNor() const
+	virtual NormalizedT<Vec3f> getNor() const
 	{
 		return dg.sys.n;
 	}
@@ -78,9 +78,9 @@ public:
 		bRec.eta = 1.0f;
 		bRec.sampledType = 0;
 		bRec.typeMask = ETypeCombinations::EAll;
-		Vec3f wi = normalize(prev->getPos() - dg.P), wo = normalize(next->getPos() - dg.P);
-		bRec.wi = normalize(bRec.dg.toLocal(wi));
-		bRec.wo = normalize(bRec.dg.toLocal(wo));
+		auto wi = normalize(prev->getPos() - dg.P), wo = normalize(next->getPos() - dg.P);
+		bRec.wi = bRec.dg.toLocal(wi);
+		bRec.wo = bRec.dg.toLocal(wo);
 		return res.getMat().bsdf.f(bRec, hasSampledDelta ? EDiscrete : ESolidAngle);
 	}
 
@@ -94,7 +94,8 @@ class LightPathVertex : public PathVertex
 {
 public:
 	Light light;
-	Vec3f p, n;
+	Vec3f p;
+	NormalizedT<Vec3f> n;
 
 	LightPathVertex()
 	{
@@ -113,7 +114,7 @@ public:
 		return p;
 	}
 
-	virtual Vec3f getNor() const
+	virtual NormalizedT<Vec3f> getNor() const
 	{
 		return n;
 	}
@@ -135,7 +136,8 @@ class CameraPathVertex : public PathVertex
 {
 public:
 	Sensor sensor;
-	Vec3f p, n;
+	Vec3f p;
+	NormalizedT<Vec3f> n;
 
 	CameraPathVertex()
 	{
@@ -152,7 +154,7 @@ public:
 		return p;
 	}
 
-	virtual Vec3f getNor() const
+	virtual NormalizedT<Vec3f> getNor() const
 	{
 		return n;
 	}

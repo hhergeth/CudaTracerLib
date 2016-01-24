@@ -29,125 +29,15 @@ public:
 			swapk(*t0, *t1);
 		return true;
 	}
-	CUDA_DEVICE CUDA_HOST static void RejectionSampleDisk(float *x, float *y, CudaRNG &rng);
-	CUDA_FUNC_IN static Vec3f UniformSampleHemisphere(float u1, float u2)
-	{
-		float z = u1;
-		float r = math::sqrt(max(0.f, 1.f - z*z));
-		float phi = 2 * PI * u2;
-		float x = r * cosf(phi);
-		float y = r * sinf(phi);
-		return Vec3f(x, y, z);
-	}
-	CUDA_FUNC_IN static float  UniformHemispherePdf()
-	{
-		return 1.0f / (2.0f * PI);
-	}
-	CUDA_FUNC_IN static Vec3f UniformSampleSphere(float u1, float u2)
-	{
-		float z = 1.f - 2.f * u1;
-		float r = math::sqrt(max(0.f, 1.f - z*z));
-		float phi = 2.f * PI * u2;
-		float x = r * cosf(phi);
-		float y = r * sinf(phi);
-		return Vec3f(x, y, z);
-	}
-	CUDA_FUNC_IN static float  UniformSpherePdf()
-	{
-		return 1.f / (4.f * PI);
-	}
-	CUDA_FUNC_IN static Vec3f UniformSampleCone(float u1, float u2, float costhetamax)
-	{
-		float costheta = (1.f - u1) + u1 * costhetamax;
-		float sintheta = math::sqrt(1.f - costheta*costheta);
-		float phi = u2 * 2.f * PI;
-		return Vec3f(cosf(phi) * sintheta, sinf(phi) * sintheta, costheta);
-	}
-	CUDA_FUNC_IN static Vec3f UniformSampleCone(float u1, float u2, float costhetamax, const Vec3f &x, const Vec3f &y, const Vec3f &z)
-	{
-		float costheta = math::lerp(costhetamax, 1.f, u1);
-		float sintheta = math::sqrt(1.f - costheta*costheta);
-		float phi = u2 * 2.f * PI;
-		return cosf(phi) * sintheta * x + sinf(phi) * sintheta * y + costheta * z;
-	}
-	CUDA_FUNC_IN static float  UniformConePdf(float cosThetaMax)
-	{
-		return 1.f / (2.f * PI * (1.f - cosThetaMax));
-	}
-	CUDA_FUNC_IN static void UniformSampleDisk(float u1, float u2, float *x, float *y)
-	{
-		float r = math::sqrt(u1);
-		float theta = 2.0f * PI * u2;
-		*x = r * cosf(theta);
-		*y = r * sinf(theta);
-	}
-	CUDA_FUNC_IN static void ConcentricSampleDisk(float u1, float u2, float *dx, float *dy)
-	{
-		float r, theta;
-		// Map uniform random numbers to $[-1,1]^2$
-		float sx = 2 * u1 - 1;
-		float sy = 2 * u2 - 1;
+	
+	CUDA_DEVICE CUDA_HOST static void RejectionSampleDisk(float *x, float *y, CudaRNG &rng);	
 
-		// Map square to $(r,\theta)$
-
-		// Handle degeneracy at the origin
-		if (sx == 0.0 && sy == 0.0) {
-			*dx = 0.0;
-			*dy = 0.0;
-			return;
-		}
-		if (sx >= -sy) {
-			if (sx > sy) {
-				// Handle first region of disk
-				r = sx;
-				if (sy > 0.0) theta = sy / r;
-				else          theta = 8.0f + sy / r;
-			}
-			else {
-				// Handle second region of disk
-				r = sy;
-				theta = 2.0f - sx / r;
-			}
-		}
-		else {
-			if (sx <= sy) {
-				// Handle third region of disk
-				r = -sx;
-				theta = 4.0f - sy / r;
-			}
-			else {
-				// Handle fourth region of disk
-				r = -sy;
-				theta = 6.0f + sx / r;
-			}
-		}
-		theta *= PI / 4.f;
-		*dx = r * cosf(theta);
-		*dy = r * sinf(theta);
-	}
-	CUDA_FUNC_IN static Vec3f CosineSampleHemisphere(float u1, float u2) {
-		Vec3f ret;
-		ConcentricSampleDisk(u1, u2, &ret.x, &ret.y);
-		ret.z = sqrt(max(0.f, 1.f - ret.x*ret.x - ret.y*ret.y));
-		return ret;
-	}
-	CUDA_FUNC_IN static float CosineHemispherePdf(float costheta, float phi)
-	{
-		return costheta / PI;
-	}
 	CUDA_DEVICE CUDA_HOST static void StratifiedSample1D(float *samples, int nSamples, CudaRNG &rng, bool jitter = true);
 	CUDA_DEVICE CUDA_HOST static void StratifiedSample2D(float *samples, int nx, int ny, CudaRNG &rng, bool jitter = true);
+	CUDA_DEVICE CUDA_HOST static void stratifiedSample1D(CudaRNG& random, float *dest, int count, bool jitter);
+	CUDA_DEVICE CUDA_HOST static void stratifiedSample2D(CudaRNG& random, Vec2f *dest, int countX, int countY, bool jitter);
 
-	CUDA_FUNC_IN static float SphericalTheta(const Vec3f &v)
-	{
-		return acosf(math::clamp(v.z, -1.f, 1.f));
-	}
-
-	CUDA_FUNC_IN static float SphericalPhi(const Vec3f &v)
-	{
-		float p = atan2f(v.y, v.x);
-		return (p < 0.f) ? p + 2.f * PI : p;
-	}
+	CUDA_DEVICE CUDA_HOST static void latinHypercube(CudaRNG& random, float *dest, unsigned int nSamples, size_t nDim);
 
 	CUDA_FUNC_IN static float BalanceHeuristic(int nf, float fPdf, int ng, float gPdf)
 	{
@@ -160,21 +50,21 @@ public:
 		return (f*f) / (f*f + g*g);
 	}
 
-	CUDA_FUNC_IN static Vec3f SphericalDirection(float theta, float phi)
+	CUDA_FUNC_IN static NormalizedT<Vec3f> SphericalDirection(float theta, float phi)
 	{
 		float sinTheta, cosTheta, sinPhi, cosPhi;
 
 		sincos(theta, &sinTheta, &cosTheta);
 		sincos(phi, &sinPhi, &cosPhi);
 
-		return Vec3f(
+		return NormalizedT<Vec3f>(
 			sinTheta * cosPhi,
 			sinTheta * sinPhi,
 			cosTheta
 			);
 	}
 
-	CUDA_FUNC_IN static Vec2f toSphericalCoordinates(const Vec3f &v)
+	CUDA_FUNC_IN static Vec2f toSphericalCoordinates(const NormalizedT<Vec3f> &v)
 	{
 		Vec2f result = Vec2f(
 			acos(v.z),
@@ -199,12 +89,6 @@ public:
 
 		return true;
 	}
-
-	CUDA_DEVICE CUDA_HOST static void stratifiedSample1D(CudaRNG& random, float *dest, int count, bool jitter);
-
-	CUDA_DEVICE CUDA_HOST static void stratifiedSample2D(CudaRNG& random, Vec2f *dest, int countX, int countY, bool jitter);
-
-	CUDA_DEVICE CUDA_HOST static void latinHypercube(CudaRNG& random, float *dest, unsigned int nSamples, size_t nDim);
 
 	CUDA_FUNC_IN static float fresnelDielectric(float cosThetaI, float cosThetaT, float eta) {
 		if (eta == 1)
@@ -331,8 +215,8 @@ public:
 		return 0.5f * (Rp2 + Rs2);
 	}
 
-	CUDA_FUNC_IN static Vec3f reflect(const Vec3f &wi, const Vec3f &n) {
-		return 2 * dot(wi, n) * (n)-wi;
+	CUDA_FUNC_IN static NormalizedT<Vec3f> reflect(const NormalizedT<Vec3f> &wi, const NormalizedT<Vec3f> &n) {
+		return NormalizedT<Vec3f>(2 * dot(wi, n) * (n)-wi);
 	}
 
 	CUDA_FUNC_IN static Vec3f refract(const Vec3f &wi, const Vec3f &n, float eta, float cosThetaT) {

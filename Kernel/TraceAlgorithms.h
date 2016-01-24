@@ -11,7 +11,7 @@ struct CudaRNG;
 
 CUDA_HOST CUDA_DEVICE bool V(const Vec3f& a, const Vec3f& b, TraceResult* res = 0);
 
-CUDA_HOST CUDA_DEVICE float G(const Vec3f& N_x, const Vec3f& N_y, const Vec3f& x, const Vec3f& y);
+CUDA_HOST CUDA_DEVICE float G(const NormalizedT<Vec3f>& N_x, const NormalizedT<Vec3f>& N_y, const Vec3f& x, const Vec3f& y);
 
 CUDA_HOST CUDA_DEVICE Spectrum Transmittance(const Ray& r, float tmin, float tmax);
 

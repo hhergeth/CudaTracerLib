@@ -148,20 +148,18 @@ void Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2
 	if (!Le.isZero())
 		lights.push_back(MeshPartLight(mat.Name, Le));
 	Vec3f p[3];
-	Vec3f n[3];
-	Vec3f ta[3];
-	Vec3f bi[3];
+	auto* n = (NormalizedT<Vec3f>*)alloca(sizeof(NormalizedT<Vec3f>) * 3), 
+		* ta = (NormalizedT<Vec3f>*)alloca(sizeof(NormalizedT<Vec3f>) * 3), 
+		* bi = (NormalizedT<Vec3f>*)alloca(sizeof(NormalizedT<Vec3f>) * 3);
 	Vec2f t[3];
 	t[0] = t[1] = t[2] = Vec2f(0.0f);
 	unsigned int numTriangles = indices ? nIndices / 3 : nVertices / 3;
 	TriangleData* triData = new TriangleData[numTriangles];
 	unsigned int triIndex = 0;
 #ifdef EXT_TRI
-	Vec3f* v_Normals = new Vec3f[nVertices], *v_Tangents = new Vec3f[nVertices], *v_BiTangents = new Vec3f[nVertices];
-	Platform::SetMemory(v_Normals, sizeof(Vec3f) * nVertices);
-	Platform::SetMemory(v_Tangents, sizeof(Vec3f) * nVertices);
-	Platform::SetMemory(v_BiTangents, sizeof(Vec3f) * nVertices);
-	ComputeTangentSpace(vertices, uvs, indices, nVertices, numTriangles, v_Normals, v_Tangents, v_BiTangents);
+	std::vector<NormalizedT<Vec3f>> normals, tangents, bitangents;
+	normals.resize(nVertices); tangents.resize(nVertices); bitangents.resize(nVertices);
+	ComputeTangentSpace(vertices, uvs, indices, nVertices, numTriangles, &normals[0], &tangents[0], &bitangents[0]);
 #endif
 	AABB box = AABB::Identity();
 	for (size_t ti = 0; ti < numTriangles; ti++)
@@ -174,9 +172,9 @@ void Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2
 #ifdef EXT_TRI
 			if (uvs)
 				t[j] = uvs[l];
-			ta[j] = normalize(v_Tangents[l]);
-			bi[j] = normalize(v_BiTangents[l]);
-			n[j] = normalize(v_Normals[l]);
+			ta[j] = tangents[l];
+			bi[j] = bitangents[l];
+			n[j] = normals[l];
 #endif
 		}
 		triData[triIndex++] = TriangleData(p, 0, t, n, ta, bi);
@@ -190,11 +188,6 @@ void Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2
 	a_Out << (unsigned int)1;
 	a_Out.Write(&mat, sizeof(Material));
 	ConstructBVH(vertices, indices, nVertices, numTriangles * 3, a_Out);
-#ifdef EXT_TRI
-	delete[] v_Normals;
-	delete[] v_Tangents;
-	delete[] v_BiTangents;
-#endif
 	delete[] triData;
 }
 
@@ -202,20 +195,18 @@ void Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2
 {
 	std::vector<MeshPartLight> lights;
 	Vec3f p[3];
-	Vec3f n[3];
-	Vec3f ta[3];
-	Vec3f bi[3];
+	auto* n = (NormalizedT<Vec3f>*)alloca(sizeof(NormalizedT<Vec3f>) * 3),
+		* ta = (NormalizedT<Vec3f>*)alloca(sizeof(NormalizedT<Vec3f>) * 3),
+		* bi = (NormalizedT<Vec3f>*)alloca(sizeof(NormalizedT<Vec3f>) * 3);
 	Vec2f t[3];
 	unsigned int numTriangles = indices ? nIndices / 3 : nVertices / 3;
 	TriangleData* triData = new TriangleData[numTriangles];
 	unsigned int triIndex = 0;
 #ifdef EXT_TRI
-	Vec3f* v_Normals = new Vec3f[nVertices], *v_Tangents = new Vec3f[nVertices], *v_BiTangents = new Vec3f[nVertices];
-	Platform::SetMemory(v_Normals, sizeof(Vec3f) * nVertices);
-	Platform::SetMemory(v_Tangents, sizeof(Vec3f) * nVertices);
-	Platform::SetMemory(v_BiTangents, sizeof(Vec3f) * nVertices);
+	std::vector<NormalizedT<Vec3f>> normals, tangents, bitangents;
+	normals.resize(nVertices); tangents.resize(nVertices); bitangents.resize(nVertices);
 	//compute the frame for the first set and hope the rest is aligned
-	ComputeTangentSpace(vertices, uvs[0], indices, nVertices, numTriangles, v_Normals, v_Tangents, v_BiTangents);
+	ComputeTangentSpace(vertices, uvs[0], indices, nVertices, numTriangles, &normals[0], &tangents[0], &bitangents[0]);
 #endif
 	AABB box = AABB::Identity();
 	unsigned int si = 0, pc = 0;
@@ -237,9 +228,9 @@ void Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2
 			p[j] = vertices[l];
 			box = box.Extend(p[j]);
 #ifdef EXT_TRI
-			ta[j] = normalize(v_Tangents[l]);
-			bi[j] = normalize(v_BiTangents[l]);
-			n[j] = normalize(v_Normals[l]);
+			ta[j] = tangents[l];
+			bi[j] = bitangents[l];
+			n[j] = normals[l];
 #endif
 		}
 		tri.setData(p[0], p[1], p[2], n[0], n[1], n[2]);
@@ -267,11 +258,6 @@ void Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2
 	a_Out << (unsigned int)mats.size();
 	a_Out.Write(&mats[0], sizeof(Material) * (unsigned int)mats.size());
 	ConstructBVH(vertices, indices, nVertices, numTriangles * 3, a_Out);
-#ifdef EXT_TRI
-	delete[] v_Normals;
-	delete[] v_Tangents;
-	delete[] v_BiTangents;
-#endif
 	delete[] triData;
 }
 

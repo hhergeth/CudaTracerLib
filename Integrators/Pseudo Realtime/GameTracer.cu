@@ -42,7 +42,7 @@ __global__ void primaryKernelBlocked(int width, int height, Image g_Image, bool 
 				primary_rays_hit++;
 				primaryRes.getBsdfSample(primaryRay, bRec, ETransportMode::ERadiance, &rng);
 				uv_sets[i] = dg.uv[0];
-				primary_Le += primaryRes.Le(dg.P, bRec.dg.sys, -primaryRay.direction);
+				primary_Le += primaryRes.Le(dg.P, bRec.dg.sys, -primaryRay.dir());
 			}
 			else primary_f[i] = g_SceneData.EvalEnvironment(primaryRay);
 			if (depthImage && x2 < width && y2 < height)
@@ -102,7 +102,7 @@ __global__ void primaryKernelBlocked(int width, int height, Image g_Image, bool 
 				Spectrum value = light->sampleDirect(dRec, sample) / pdf;
 				if (!value.isZero() && !g_SceneData.Occluded(Ray(dRec.ref, dRec.d), 0, dRec.dist))
 				{
-					indirect_bRec.wo = indirect_bRec.dg.toLocal(dRec.d).normalized();
+					indirect_bRec.wo = indirect_bRec.dg.sys.toLocal(dRec.d);
 					Spectrum indirect_f = indirect_res.getMat().bsdf.f(indirect_bRec);
 					for (int j = 0; j < 4; j++)
 					{
@@ -125,7 +125,7 @@ __global__ void primaryKernelBlocked(int width, int height, Image g_Image, bool 
 
 		if (nIteration > 2)
 		{
-			DirectSamplingRecord dRec(dg.P, Vec3f(0.0f));
+			DirectSamplingRecord dRec(dg.P, NormalizedT<Vec3f>(0.0f));
 			lastSensor.sampleDirect(dRec, Vec2f(0, 0));
 			if (dRec.pdf)
 			{
@@ -136,13 +136,13 @@ __global__ void primaryKernelBlocked(int width, int height, Image g_Image, bool 
 				{
 					Spectrum lu = LOAD(lastDirectImage, 0, 0), ru = LOAD(lastDirectImage, 1, 0),
 							 ld = LOAD(lastDirectImage, 0, 1), rd = LOAD(lastDirectImage, 1, 1);
-					Spectrum lastDirect = math::bilerp(dRec.uv - dRec.uv.floor(), lu, ru, ld, rd);
+					Spectrum lastDirect = math::bilerp2(lu, ru, ld, rd, dRec.uv - dRec.uv.floor());
 					if (lastDirect.max() != 0)
 						Est_Ld = math::lerp(lastDirect, Est_Ld, p);
 				}
 				Spectrum lu = LOAD(lastIndirectImage, 0, 0), ru = LOAD(lastIndirectImage, 1, 0),
 						 ld = LOAD(lastIndirectImage, 0, 1), rd = LOAD(lastIndirectImage, 1, 1);
-				Spectrum lastIndirect = math::bilerp(dRec.uv - dRec.uv.floor(), lu, ru, ld, rd);
+				Spectrum lastIndirect = math::bilerp2(lu, ru, ld, rd, dRec.uv - dRec.uv.floor());
 				if (lastIndirect.max() != 0)
 					for (int i = 0; i < 4; i++)
 						Est_Li[i] = math::lerp(lastIndirect, Est_Li[i], p);
@@ -156,7 +156,7 @@ __global__ void primaryKernelBlocked(int width, int height, Image g_Image, bool 
 			if (direct_sampling_succes)
 			{
 				dg.uv[0] = uv_sets[i];
-				bRec.wo = normalize(bRec.dg.toLocal(direct_sampling_point - dg.P));
+				bRec.wo = normalize(bRec.dg.sys.toLocal(direct_sampling_point - dg.P));
 				direct = Est_Ld * primaryRes.getMat().bsdf.f(bRec);
 			}
 			Spectrum L = primary_f[i] * (primary_Le + direct) + Est_Li[i] * INDIRECT_SCALE;

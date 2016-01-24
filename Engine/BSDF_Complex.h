@@ -52,20 +52,17 @@ struct coating : public BSDF//, public e_DerivedTypeHelper<13>
 		return coating(nested, eta, thickness, sig);
 	}
 private:
-	CUDA_FUNC_IN Vec3f reflect(const Vec3f &wi) const {
-		return Vec3f(-wi.x, -wi.y, wi.z);
-	}
 	/// Refract into the material, preserve sign of direction
-	CUDA_FUNC_IN Vec3f refractIn(const Vec3f &wi, float &R) const {
+	CUDA_FUNC_IN NormalizedT<Vec3f> refractIn(const NormalizedT<Vec3f> &wi, float &R) const {
 		float cosThetaT;
 		R = MonteCarlo::fresnelDielectricExt(math::abs(Frame::cosTheta(wi)), cosThetaT, m_eta);
-		return Vec3f(m_invEta*wi.x, m_invEta*wi.y, -math::sign(Frame::cosTheta(wi)) * cosThetaT);
+		return Vec3f(m_invEta*wi.x, m_invEta*wi.y, -math::sign(Frame::cosTheta(wi)) * cosThetaT).normalized();
 	}
 	/// Refract out of the material, preserve sign of direction
-	CUDA_FUNC_IN Vec3f refractOut(const Vec3f &wi, float &R) const {
+	CUDA_FUNC_IN NormalizedT<Vec3f> refractOut(const NormalizedT<Vec3f> &wi, float &R) const {
 		float cosThetaT;
 		R = MonteCarlo::fresnelDielectricExt(math::abs(Frame::cosTheta(wi)), cosThetaT, m_invEta);
-		return Vec3f(m_eta*wi.x, m_eta*wi.y, -math::sign(Frame::cosTheta(wi)) * cosThetaT);
+		return Vec3f(m_eta*wi.x, m_eta*wi.y, -math::sign(Frame::cosTheta(wi)) * cosThetaT).normalized();
 	}
 };
 
@@ -116,12 +113,8 @@ struct roughcoating : public BSDF//, public e_DerivedTypeHelper<14>
 		return roughcoating(type, nested, eta, thickness, sig, alpha, CreateTexture(Spectrum(1.0f)));
 	}
 private:
-	/// Helper function: reflect \c wi with respect to a given surface normal
-	CUDA_FUNC_IN Vec3f reflect(const Vec3f &wi, const Vec3f &m) const {
-		return 2 * dot(wi, m) * m - wi;
-	}
 	/// Refraction in local coordinates
-	CUDA_FUNC_IN Vec3f refractTo(EDestination dest, const Vec3f &wi) const {
+	CUDA_FUNC_IN NormalizedT<Vec3f> refractTo(EDestination dest, const NormalizedT<Vec3f> &wi) const {
 		float cosThetaI = Frame::cosTheta(wi);
 		float invEta = (dest == EInterior) ? m_invEta : m_eta;
 
@@ -133,27 +126,16 @@ private:
 
 		if (sinThetaTSqr >= 1.0f) {
 			/* Total internal reflection */
-			return Vec3f(0.0f);
+			return NormalizedT<Vec3f>(0.0f);
 		} else {
 			float cosThetaT = math::sqrt(1.0f - sinThetaTSqr);
 
 			/* Retain the directionality of the vector */
 			return Vec3f(invEta*wi.x, invEta*wi.y,
-				entering ? cosThetaT : -cosThetaT);
+				entering ? cosThetaT : -cosThetaT).normalized();
 		}
 	}
 };
-/*
-struct mixturebsdf : public BSDF
-{
-private:
-	BSDFALL* bsdfs[10];
-	float weights[10];
-	int num;
-public:
-	CUDA_FUNC_IN float pdf(Vec3f& a, Vec3f& b);
-};
-*/
 
 struct blend : public BSDF//, public e_DerivedTypeHelper<16>
 {

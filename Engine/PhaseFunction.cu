@@ -29,7 +29,7 @@ float HGPhaseFunction::Sample(PhaseFunctionSamplingRecord &pRec, CudaRNG& sample
 
 	sincos(2 * PI*sample.y, &sinPhi, &cosPhi);
 
-	pRec.wo = Frame(-pRec.wi).toWorld(Vec3f(
+	pRec.wo = Frame(-pRec.wi).toWorld(NormalizedT<Vec3f>(
 		sinTheta * cosPhi,
 		sinTheta * sinPhi,
 		cosTheta
@@ -95,10 +95,10 @@ void KajiyaKayPhaseFunction::Update()
 
 float KajiyaKayPhaseFunction::Evaluate(const PhaseFunctionSamplingRecord &pRec) const
 {
-	if (length(pRec.wi) == 0)
+	if (pRec.wi.max() == 0)
 		return m_kd / (4 * PI);
 
-	Frame frame(normalize(pRec.wi));
+	Frame frame(pRec.wi);
 	Vec3f reflectedLocal = frame.toLocal(pRec.wo);
 
 	reflectedLocal.z = -dot(pRec.wi, frame.n);
@@ -142,7 +142,7 @@ float RayleighPhaseFunction::Sample(PhaseFunctionSamplingRecord &pRec, CudaRNG& 
 		phi = 2 * PI*sample.y, cosPhi, sinPhi;
 	sincos(phi, &sinPhi, &cosPhi);
 
-	Vec3f dir = Vec3f(
+	auto dir = NormalizedT<Vec3f>(
 		sinTheta * cosPhi,
 		sinTheta * sinPhi,
 		cosTheta);

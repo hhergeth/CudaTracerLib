@@ -99,8 +99,8 @@ bool Material::SampleNormalMap(DifferentialGeometry& dg, const Vec3f& wi) const
 	{
 		Vec3f n;
 		NormalMap.tex.Evaluate(dg).toLinearRGB(n.x, n.y, n.z);
-		Vec3f nWorld = dg.toWorld(n - Vec3f(0.5f));
-		dg.sys.n = normalize(nWorld);
+		auto nWorld = dg.sys.toWorld(n - Vec3f(0.5f)).normalized();
+		dg.sys.n = nWorld;
 		dg.sys.t = normalize(cross(nWorld, dg.sys.s));
 		dg.sys.s = normalize(cross(nWorld, dg.sys.t));
 		return true;
@@ -111,7 +111,7 @@ bool Material::SampleNormalMap(DifferentialGeometry& dg, const Vec3f& wi) const
 		Vec2f uv = map.Map(dg);
 		if (enableParallaxOcclusion)
 		{
-			parallaxOcclusion(uv, HeightMap.tex.As<ImageTexture>()->tex.operator->(), dg.toLocal(-wi), HeightScale, parallaxMinSamples, parallaxMaxSamples);
+			parallaxOcclusion(uv, HeightMap.tex.As<ImageTexture>()->tex.operator->(), dg.sys.toLocal(-wi), HeightScale, parallaxMinSamples, parallaxMaxSamples);
 			dg.uv[map.setId] = map.TransformPointInverse(uv);
 		}
 
@@ -125,12 +125,11 @@ bool Material::SampleNormalMap(DifferentialGeometry& dg, const Vec3f& wi) const
 			dDispDv - dot(dg.sys.n, dg.dpdv));
 
 		dg.sys.n = normalize(cross(dpdu, dpdv));
-		dg.sys.s = normalize(dpdu - dg.sys.n
-			* dot(dg.sys.n, dpdu));
-		dg.sys.t = cross(dg.sys.n, dg.sys.s);
+		dg.sys.s = normalize(dpdu - dg.sys.n * dot(dg.sys.n, dpdu));
+		dg.sys.t = cross(dg.sys.n, dg.sys.s).normalized();
 
 		if (dot(dg.sys.n, dg.n) < 0)
-			dg.sys.n *= -1;
+			dg.sys.n = -dg.sys.n;
 
 		return true;
 	}

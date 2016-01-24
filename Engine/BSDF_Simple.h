@@ -88,15 +88,6 @@ struct dielectric : public BSDF//, public e_DerivedTypeHelper<3>
 		initTextureOffsets(m_specularTransmittance, m_specularReflectance);
 		eta_f.SetData(DispersionCauchy(e));
 	}
-	/// Reflection in local coordinates
-	CUDA_FUNC_IN Vec3f reflect(const Vec3f &wi) const {
-		return Vec3f(-wi.x, -wi.y, wi.z);
-	}
-	/// Refraction in local coordinates
-	CUDA_FUNC_IN Vec3f refract(const Vec3f &wi, float cosThetaT, float eta, float invEta) const {
-		float scale = -(cosThetaT < 0 ? invEta : eta);
-		return Vec3f(scale*wi.x, scale*wi.y, cosThetaT);
-	}
 	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
@@ -125,12 +116,8 @@ struct thindielectric : public BSDF//, public e_DerivedTypeHelper<4>
 		initTextureOffsets(m_specularTransmittance, m_specularReflectance);
 		m_eta = e;
 	}
-	CUDA_FUNC_IN Vec3f transmit(const Vec3f &wi) const {
-		return -1.0f * wi;
-	}
-	/// Reflection in local coordinates
-	CUDA_FUNC_IN Vec3f reflect(const Vec3f &wi) const {
-		return Vec3f(-wi.x, -wi.y, wi.z);
+	CUDA_FUNC_IN NormalizedT<Vec3f> transmit(const NormalizedT<Vec3f> &wi) const {
+		return -wi;
 	}
 	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
@@ -199,10 +186,6 @@ struct conductor : public BSDF//, public e_DerivedTypeHelper<6>
 		initTextureOffsets(m_specularReflectance);
 		m_eta = eta;
 		m_k = k;
-	}
-	/// Reflection in local coordinates
-	CUDA_FUNC_IN Vec3f reflect(const Vec3f &wi) const {
-		return Vec3f(-wi.x, -wi.y, wi.z);
 	}
 	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
@@ -284,9 +267,6 @@ struct plastic : public BSDF//, public e_DerivedTypeHelper<8>
 		m_fdrExt = fresnelDiffuseReflectance(m_eta);
 		float dAvg = m_diffuseReflectance.Average().getLuminance(), sAvg = m_specularReflectance.Average().getLuminance();
 		m_specularSamplingWeight = sAvg / (dAvg + sAvg);
-	}
-	CUDA_FUNC_IN Vec3f reflect(const Vec3f &wi) const {
-		return Vec3f(-wi.x, -wi.y, wi.z);
 	}
 	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
@@ -372,10 +352,6 @@ struct roughplastic : public BSDF//, public e_DerivedTypeHelper<9>
 		float dAvg = m_diffuseReflectance.Average().getLuminance(), sAvg = m_specularReflectance.Average().getLuminance();
 		m_specularSamplingWeight = sAvg / (dAvg + sAvg);
 	}
-	/// Helper function: reflect \c wi with respect to a given surface normal
-	CUDA_FUNC_IN Vec3f reflect(const Vec3f &wi, const Vec3f &m) const {
-		return 2 * dot(wi, m) * m - wi;
-	}
 	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
@@ -404,9 +380,6 @@ struct phong : public BSDF//, public e_DerivedTypeHelper<10>
 	{
 		float dAvg = m_diffuseReflectance.Average().getLuminance(), sAvg = m_specularReflectance.Average().getLuminance();
 		m_specularSamplingWeight = sAvg / (dAvg + sAvg);
-	}
-	CUDA_FUNC_IN Vec3f reflect(const Vec3f &wi) const {
-		return Vec3f(-wi.x, -wi.y, wi.z);
 	}	
 	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &_pdf, const Vec2f& _sample) const;
 	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;

@@ -94,7 +94,7 @@ struct PositionSamplingRecord
 {
 public:
 	Vec3f p;
-	Vec3f n;
+	NormalizedT<Vec3f> n;
 	float pdf;
 	EMeasure measure;
 	Vec2f uv;
@@ -102,7 +102,7 @@ public:
 	CUDA_ALIGN(16) const void* object;
 public:
 	CUDA_FUNC_IN PositionSamplingRecord() { }
-	CUDA_FUNC_IN PositionSamplingRecord(const Vec3f& _p, const Vec3f& _n, const void* _obj, EMeasure m = EArea)
+	CUDA_FUNC_IN PositionSamplingRecord(const Vec3f& _p, const NormalizedT<Vec3f>& _n, const void* _obj, EMeasure m = EArea)
 		: p(_p), n(_n), measure(m), object(_obj)
 	{
 
@@ -112,12 +112,12 @@ public:
 struct DirectionSamplingRecord
 {
 public:
-	Vec3f d;
+	NormalizedT<Vec3f> d;
 	float pdf;
 	EMeasure measure;
 public:
 	CUDA_FUNC_IN DirectionSamplingRecord() { }
-	CUDA_FUNC_IN DirectionSamplingRecord(const Vec3f &d, EMeasure m = ESolidAngle)
+	CUDA_FUNC_IN DirectionSamplingRecord(const NormalizedT<Vec3f> &d, EMeasure m = ESolidAngle)
 		: d(d), measure(m)
 	{
 	}
@@ -126,38 +126,34 @@ public:
 struct DirectSamplingRecord : public PositionSamplingRecord
 {
 	Vec3f ref;
-	Vec3f refN;
-	Vec3f d;
+	NormalizedT<Vec3f> refN;
+	NormalizedT<Vec3f> d;
 	float dist;
 
 	CUDA_FUNC_IN DirectSamplingRecord()
 	{
 	}
 
-	CUDA_FUNC_IN DirectSamplingRecord(const Vec3f& _p, const Vec3f& _n)
+	CUDA_FUNC_IN DirectSamplingRecord(const Vec3f& _p, const NormalizedT<Vec3f>& _n)
 		: PositionSamplingRecord(_p, _n, 0), ref(_p), refN(_n)
 	{
-		refN = _n;
 	}
 };
 
 struct PhaseFunctionSamplingRecord
 {
-	Vec3f wi;
-	Vec3f wo;
+	NormalizedT<Vec3f> wi;
+	NormalizedT<Vec3f> wo;
 	ETransportMode mode;
 
-	CUDA_FUNC_IN PhaseFunctionSamplingRecord(const Vec3f& _wo, ETransportMode m = ETransportMode::ERadiance)
+	CUDA_FUNC_IN PhaseFunctionSamplingRecord(const NormalizedT<Vec3f>& _wo, ETransportMode m = ETransportMode::ERadiance)
+		: wo(_wo), mode(m)
 	{
-		wo = _wo;
-		mode = m;
 	}
 
-	CUDA_FUNC_IN PhaseFunctionSamplingRecord(const Vec3f& _wo, const Vec3f& _wi, ETransportMode m = ETransportMode::ERadiance)
+	CUDA_FUNC_IN PhaseFunctionSamplingRecord(const NormalizedT<Vec3f>& _wo, const NormalizedT<Vec3f>& _wi, ETransportMode m = ETransportMode::ERadiance)
+		: wi(_wi), wo(_wo), mode(m)
 	{
-		wo = _wo;
-		wi = _wi;
-		mode = m;
 	}
 
 	CUDA_FUNC_IN void reverse()
@@ -172,9 +168,9 @@ struct BSDFSamplingRecord
 	CudaRNG* rng;
 	DifferentialGeometry& dg;
 	/// Normalized incident direction in local coordinates
-	Vec3f wi;
+	NormalizedT<Vec3f> wi;
 	/// Normalized outgoing direction in local coordinates
-	Vec3f wo;
+	NormalizedT<Vec3f> wo;
 	/// Relative index of refraction in the sampled direction
 	float eta;
 	ETransportMode mode;
@@ -183,7 +179,7 @@ struct BSDFSamplingRecord
 	Spectrum f_i;
 
 	CUDA_FUNC_IN BSDFSamplingRecord(DifferentialGeometry& dg) : dg(dg), f_i(0.0f) {}
-	CUDA_DEVICE CUDA_HOST Vec3f getOutgoing();
+	CUDA_DEVICE CUDA_HOST NormalizedT<Vec3f> getOutgoing() const;
 	CUDA_DEVICE CUDA_HOST BSDFSamplingRecord& operator=(const BSDFSamplingRecord& other);
 };
 

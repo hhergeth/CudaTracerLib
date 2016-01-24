@@ -121,7 +121,7 @@ struct SphericalSensor : public SensorBase//, public e_DerivedTypeHelper<1>
 		return sampleRay(ray, pixelSample, apertureSample);
 	}
 
-	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const Vec3f &d) const
+	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const NormalizedT<Vec3f> &d) const
 	{
 		return Spectrum(0.0f);
 	}
@@ -136,7 +136,7 @@ struct SphericalSensor : public SensorBase//, public e_DerivedTypeHelper<1>
 	CUDA_FUNC_IN Spectrum samplePosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const
 	{
 		pRec.p = toWorld.Translation();
-		pRec.n = Vec3f(0.0f);
+		pRec.n = NormalizedT<Vec3f>(0.0f);
 		pRec.pdf = 1.0f;
 		pRec.measure = EDiscrete;
 		return Spectrum(1.0f);
@@ -169,7 +169,7 @@ struct SphericalSensor : public SensorBase//, public e_DerivedTypeHelper<1>
 		sincos(samplePos.x * 2 * PI, &sinPhi, &cosPhi);
 		sincos(samplePos.y * PI, &sinTheta, &cosTheta);
 
-		dRec.d = toWorld.TransformPoint(Vec3f(sinPhi*sinTheta, cosTheta, -cosPhi*sinTheta));
+		dRec.d = toWorld.TransformPoint(Vec3f(sinPhi*sinTheta, cosTheta, -cosPhi*sinTheta)).normalized();
 		dRec.measure = ESolidAngle;
 		dRec.pdf = 1 / (2 * PI * PI * max(sinTheta, EPSILON));
 
@@ -206,13 +206,13 @@ public:
 
 	virtual void Update();
 
-	CUDA_DEVICE CUDA_HOST float importance(const Vec3f &d) const;
+	CUDA_DEVICE CUDA_HOST float importance(const NormalizedT<Vec3f> &d) const;
 
 	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
 
 	CUDA_DEVICE CUDA_HOST Spectrum sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
 
-	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const Vec3f &d) const
+	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const NormalizedT<Vec3f> &d) const
 	{
 		return Spectrum(0.0f);
 	}
@@ -227,7 +227,7 @@ public:
 	CUDA_FUNC_IN Spectrum samplePosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const
 	{
 		pRec.p = toWorld.Translation();
-		pRec.n = toWorld.Forward();
+		pRec.n = toWorld.Forward().normalized();
 		pRec.pdf = 1.0f;
 		pRec.measure = EDiscrete;
 		return Spectrum(1.0f);
@@ -250,7 +250,7 @@ public:
 		if (dRec.measure != ESolidAngle)
 			return 0.0f;
 
-		return importance(toWorldInverse.TransformDirection(dRec.d));
+		return importance(toWorldInverse.TransformDirection(dRec.d).normalized());
 	}
 
 	CUDA_FUNC_IN Spectrum evalDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
@@ -258,7 +258,7 @@ public:
 		if (dRec.measure != ESolidAngle)
 			return Spectrum(0.0f);
 
-		return Spectrum(importance(toWorldInverse.TransformDirection(dRec.d)));
+		return importance(toWorldInverse.TransformDirection(dRec.d).normalized());
 	}
 
 	CUDA_DEVICE CUDA_HOST bool getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, Vec2f &samplePosition) const;
@@ -270,7 +270,7 @@ struct ThinLensSensor : public SensorBase//, public e_DerivedTypeHelper<3>
 	Vec3f m_dx, m_dy;
 	float m_aperturePdf;
 	float m_normalization;
-	CUDA_DEVICE CUDA_HOST float importance(const Vec3f &p, const Vec3f &d, Vec2f* sample = 0) const;
+	CUDA_DEVICE CUDA_HOST float importance(const Vec3f &p, const NormalizedT<Vec3f> &d, Vec2f* sample = 0) const;
 public:
 	ThinLensSensor()
 		: SensorBase(ENeedsApertureSample | EPerspectiveSensor | EOnSurface | EDirectionSampleMapsToPixels | EProjectiveCamera)
@@ -294,7 +294,7 @@ public:
 
 	CUDA_DEVICE CUDA_HOST Spectrum sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
 
-	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const Vec3f &d) const
+	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const NormalizedT<Vec3f> &d) const
 	{
 		return Spectrum(0.0f);
 	}
@@ -308,7 +308,7 @@ public:
 		Vec2f aperturePos = Warp::squareToUniformDiskConcentric(sample) * m_apertureRadius;
 
 		pRec.p = toWorld.TransformPoint(Vec3f(aperturePos.x, aperturePos.y, 0.0f));
-		pRec.n = toWorld.Forward();
+		pRec.n = toWorld.Forward().normalized();
 		pRec.pdf = m_aperturePdf;
 		pRec.measure = EArea;
 		return Spectrum(1.0f);
@@ -331,7 +331,7 @@ public:
 		if (dRec.measure != ESolidAngle)
 			return 0.0f;
 
-		return importance(toWorldInverse.TransformPoint(pRec.p), toWorldInverse.TransformDirection(dRec.d));
+		return importance(toWorldInverse.TransformPoint(pRec.p), toWorldInverse.TransformDirection(dRec.d).normalized());
 	}
 
 	CUDA_FUNC_IN Spectrum evalDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
@@ -339,7 +339,7 @@ public:
 		if (dRec.measure != ESolidAngle)
 			return Spectrum(0.0f);
 
-		return Spectrum(importance(toWorldInverse.TransformPoint(pRec.p), toWorldInverse.TransformDirection(dRec.d)));
+		return importance(toWorldInverse.TransformPoint(pRec.p), toWorldInverse.TransformDirection(dRec.d).normalized());
 	}
 
 	CUDA_FUNC_IN bool getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, Vec2f &samplePosition) const
@@ -400,7 +400,7 @@ public:
 
 	CUDA_DEVICE CUDA_HOST Spectrum sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
 
-	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const Vec3f &d) const
+	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const NormalizedT<Vec3f> &d) const
 	{
 		return Spectrum(0.0f);
 	}
@@ -484,7 +484,7 @@ public:
 
 	CUDA_DEVICE CUDA_HOST Spectrum sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
 
-	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const Vec3f &d) const
+	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const NormalizedT<Vec3f> &d) const
 	{
 		return Spectrum(0.0f);
 	}
@@ -570,7 +570,7 @@ public:
 	}
 
 	CALLER(eval)
-	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const Vec3f &d) const
+	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const NormalizedT<Vec3f> &d) const
 	{
 		return eval_Helper::Caller<Spectrum>(this, p, sys, d);
 	}

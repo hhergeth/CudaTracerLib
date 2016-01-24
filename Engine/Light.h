@@ -52,7 +52,7 @@ struct PointLight : public LightBase//, public e_DerivedTypeHelper<1>
 
 	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
 
-	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const Vec3f &d) const
+	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const NormalizedT<Vec3f> &d) const
 	{
 		return Spectrum(0.0f);
 	}
@@ -116,7 +116,7 @@ struct DiffuseLight : public LightBase//, public e_DerivedTypeHelper<2>
 
 	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
 
-	CUDA_DEVICE CUDA_HOST Spectrum eval(const Vec3f& p, const Frame& sys, const Vec3f &d) const;
+	CUDA_DEVICE CUDA_HOST Spectrum eval(const Vec3f& p, const Frame& sys, const NormalizedT<Vec3f> &d) const;
 
 	CUDA_DEVICE CUDA_HOST Spectrum sampleDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const;
 
@@ -157,7 +157,7 @@ struct DistantLight : public LightBase//, public e_DerivedTypeHelper<3>
 	}
 
 	///r is the radius of the scene's bounding sphere
-	DistantLight(const Spectrum& L, Vec3f d, float r)
+	DistantLight(const Spectrum& L, NormalizedT<Vec3f> d, float r)
 		: LightBase(EDeltaDirection), ToWorld(d), radius(r * 1.1f)
 	{
 		float surfaceArea = PI * radius * radius;
@@ -182,7 +182,7 @@ struct DistantLight : public LightBase//, public e_DerivedTypeHelper<3>
 
 	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
 
-	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const Vec3f &d) const
+	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const NormalizedT<Vec3f> &d) const
 	{
 		return Spectrum(0.0f);
 	}
@@ -243,7 +243,7 @@ struct SpotLight : public LightBase//, public e_DerivedTypeHelper<4>
 
 	virtual void Update()
 	{
-		ToWorld = Frame(Target - Position);
+		ToWorld = Frame((Target - Position).normalized());
 		m_cosBeamWidth = cosf(m_beamWidth);
 		m_cosCutoffAngle = cosf(m_cutoffAngle);
 		m_invTransitionWidth = 1.0f / (m_cutoffAngle - m_beamWidth);
@@ -251,7 +251,7 @@ struct SpotLight : public LightBase//, public e_DerivedTypeHelper<4>
 
 	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
 
-	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const Vec3f &d) const
+	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const NormalizedT<Vec3f> &d) const
 	{
 		return Spectrum(0.0f);
 	}
@@ -292,7 +292,7 @@ struct SpotLight : public LightBase//, public e_DerivedTypeHelper<4>
 		return AABB(Position - Vec3f(eps), Position + Vec3f(eps));
 	}
 private:
-	CUDA_DEVICE CUDA_HOST Spectrum falloffCurve(const Vec3f &d) const;
+	CUDA_DEVICE CUDA_HOST Spectrum falloffCurve(const NormalizedT<Vec3f> &d) const;
 };
 
 struct InfiniteLight : public LightBase//, public e_DerivedTypeHelper<5>
@@ -326,7 +326,7 @@ struct InfiniteLight : public LightBase//, public e_DerivedTypeHelper<5>
 
 	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
 
-	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const Vec3f &d) const
+	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const NormalizedT<Vec3f> &d) const
 	{
 		return evalEnvironment(Ray(p, -1.0f * d));
 	}
@@ -379,7 +379,7 @@ public:
 	}
 
 	CALLER(eval)
-	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const Vec3f &d) const
+	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const NormalizedT<Vec3f> &d) const
 	{
 		return eval_Helper::Caller<Spectrum>(this, p, sys, d);
 	}

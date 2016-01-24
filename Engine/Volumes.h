@@ -15,7 +15,7 @@ struct MediumSamplingRecord
 {
 	float t;
 	Vec3f p;
-	Vec3f orientation;
+	NormalizedT<Vec3f> orientation;
 	Spectrum transmittance;
 	Spectrum sigmaA;
 	Spectrum sigmaS;
@@ -70,22 +70,22 @@ struct HomogeneousVolumeDensity : public BaseVolumeRegion//, public e_DerivedTyp
 	{
 	}
 
-	CUDA_FUNC_IN Spectrum sigma_a(const Vec3f& p, const Vec3f& w) const
+	CUDA_FUNC_IN Spectrum sigma_a(const Vec3f& p, const NormalizedT<Vec3f>& w) const
 	{
 		return insideWorld(p) ? sig_a : Spectrum(0.0f);
 	}
 
-	CUDA_FUNC_IN Spectrum sigma_s(const Vec3f& p, const Vec3f& w) const
+	CUDA_FUNC_IN Spectrum sigma_s(const Vec3f& p, const NormalizedT<Vec3f>& w) const
 	{
 		return insideWorld(p) ? sig_s : Spectrum(0.0f);
 	}
 
-	CUDA_FUNC_IN Spectrum Lve(const Vec3f& p, const Vec3f& w) const
+	CUDA_FUNC_IN Spectrum Lve(const Vec3f& p, const NormalizedT<Vec3f>& w) const
 	{
 		return insideWorld(p) ? le : Spectrum(0.0f);
 	}
 
-	CUDA_FUNC_IN Spectrum sigma_t(const Vec3f &p, const Vec3f &wo) const
+	CUDA_FUNC_IN Spectrum sigma_t(const Vec3f &p, const NormalizedT<Vec3f> &wo) const
 	{
 		return insideWorld(p) ? (sig_s + sig_a) : Spectrum(0.0f);
 	}
@@ -191,22 +191,22 @@ public:
 	VolumeGrid(const PhaseFunction& func, const float4x4& ToWorld, Stream<char>* a_Buffer, Vec3u dim);
 	VolumeGrid(const PhaseFunction& func, const float4x4& ToWorld, Stream<char>* a_Buffer, Vec3u dimA, Vec3u dimS, Vec3u dimL);
 
-	CUDA_FUNC_IN Spectrum sigma_a(const Vec3f& p, const Vec3f& w) const
+	CUDA_FUNC_IN Spectrum sigma_a(const Vec3f& p, const NormalizedT<Vec3f>& w) const
 	{
 		return sigAMin + (sigAMax - sigAMin) * densityA(p);
 	}
 
-	CUDA_FUNC_IN Spectrum sigma_s(const Vec3f& p, const Vec3f& w) const
+	CUDA_FUNC_IN Spectrum sigma_s(const Vec3f& p, const NormalizedT<Vec3f>& w) const
 	{
 		return sigSMin + (sigSMax - sigSMin) * densityS(p);
 	}
 
-	CUDA_FUNC_IN Spectrum Lve(const Vec3f& p, const Vec3f& w) const
+	CUDA_FUNC_IN Spectrum Lve(const Vec3f& p, const NormalizedT<Vec3f>& w) const
 	{
 		return leMin + (leMax - leMin) * densityL(p);
 	}
 
-	CUDA_FUNC_IN Spectrum sigma_t(const Vec3f &p, const Vec3f &wo) const
+	CUDA_FUNC_IN Spectrum sigma_t(const Vec3f &p, const NormalizedT<Vec3f> &wo) const
 	{
 		float a, s;
 		densityT(p, a, s);
@@ -302,25 +302,25 @@ public:
 	}
 
 	CALLER(sigma_a)
-	CUDA_FUNC_IN Spectrum sigma_a(const Vec3f& p, const Vec3f& w) const
+	CUDA_FUNC_IN Spectrum sigma_a(const Vec3f& p, const NormalizedT<Vec3f>& w) const
 	{
 		return sigma_a_Helper::Caller<Spectrum>(this, p, w);
 	}
 
 	CALLER(sigma_s)
-	CUDA_FUNC_IN Spectrum sigma_s(const Vec3f& p, const Vec3f& w) const
+	CUDA_FUNC_IN Spectrum sigma_s(const Vec3f& p, const NormalizedT<Vec3f>& w) const
 	{
 		return sigma_s_Helper::Caller<Spectrum>(this, p, w);
 	}
 
 	CALLER(Lve)
-	CUDA_FUNC_IN Spectrum Lve(const Vec3f& p, const Vec3f& w) const
+	CUDA_FUNC_IN Spectrum Lve(const Vec3f& p, const NormalizedT<Vec3f>& w) const
 	{
 		return Lve_Helper::Caller<Spectrum>(this, p, w);
 	}
 
 	CALLER(sigma_t)
-	CUDA_FUNC_IN Spectrum sigma_t(const Vec3f &p, const Vec3f &wo) const
+	CUDA_FUNC_IN Spectrum sigma_t(const Vec3f &p, const NormalizedT<Vec3f> &wo) const
 	{
 		return sigma_t_Helper::Caller<Spectrum>(this, p, wo);
 	}
@@ -353,22 +353,22 @@ public:
 	CUDA_DEVICE CUDA_HOST bool IntersectP(const Ray &ray, float minT, float maxT, float *t0, float *t1) const;
 
 	///The probability that light is abosrbed per unit distance
-	CUDA_DEVICE CUDA_HOST Spectrum sigma_a(const Vec3f& p, const Vec3f& w) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sigma_a(const Vec3f& p, const NormalizedT<Vec3f>& w) const;
 
 	///The probability that light is scattered per unit distance
-	CUDA_DEVICE CUDA_HOST Spectrum sigma_s(const Vec3f& p, const Vec3f& w) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sigma_s(const Vec3f& p, const NormalizedT<Vec3f>& w) const;
 
-	CUDA_DEVICE CUDA_HOST Spectrum Lve(const Vec3f& p, const Vec3f& w) const;
+	CUDA_DEVICE CUDA_HOST Spectrum Lve(const Vec3f& p, const NormalizedT<Vec3f>& w) const;
 
 	///Combined sigmas
-	CUDA_DEVICE CUDA_HOST Spectrum sigma_t(const Vec3f &p, const Vec3f &wo) const;
+	CUDA_DEVICE CUDA_HOST Spectrum sigma_t(const Vec3f &p, const NormalizedT<Vec3f> &wo) const;
 
 	///Calculates the volumes optical thickness along a ray in the volumes bounds
 	CUDA_DEVICE CUDA_HOST Spectrum tau(const Ray &ray, float minT, float maxT) const;
 
-	CUDA_DEVICE CUDA_HOST float Sample(const Vec3f& p, const Vec3f& wo, CudaRNG& rng, Vec3f* wi) const;
+	CUDA_DEVICE CUDA_HOST float Sample(const Vec3f& p, const NormalizedT<Vec3f>& wo, CudaRNG& rng, NormalizedT<Vec3f>* wi) const;
 
-	CUDA_DEVICE CUDA_HOST float p(const Vec3f& p, const Vec3f& wo, const Vec3f& wi, CudaRNG& rng) const;
+	CUDA_DEVICE CUDA_HOST float p(const Vec3f& p, const NormalizedT<Vec3f>& wo, const NormalizedT<Vec3f>& wi, CudaRNG& rng) const;
 
 	CUDA_DEVICE CUDA_HOST bool sampleDistance(const Ray& ray, float minT, float maxT, CudaRNG& rng, MediumSamplingRecord& mRec) const;
 

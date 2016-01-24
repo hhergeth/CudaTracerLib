@@ -109,7 +109,7 @@ template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(unsigned int N, 
 			BSDFSamplingRecord bRec(dg);
 			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
 			if (pathDepth == 0 || dat.dIdx == UINT_MAX)
-				dat.L += r2.Le(bRec.dg.P, bRec.dg.sys, -r.direction) * dat.throughput;
+				dat.L += r2.Le(bRec.dg.P, bRec.dg.sys, -r.dir()) * dat.throughput;
 			if (pathDepth + 1 != maxPathDepth)
 			{
 				Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
@@ -128,7 +128,7 @@ template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(unsigned int N, 
 				Spectrum value = g_SceneData.sampleEmitterDirect(dRec, rng.randomFloat2());
 				if (NEXT_EVENT_EST && r2.getMat().bsdf.hasComponent(ESmooth) && !value.isZero())
 				{
-					bRec.wo = normalize(bRec.dg.toLocal(dRec.d));
+					bRec.wo = bRec.dg.toLocal(dRec.d);
 					Spectrum bsdfVal = r2.getMat().bsdf.f(bRec);
 					const float bsdfPdf = r2.getMat().bsdf.pdf(bRec);
 					const float weight = MonteCarlo::PowerHeuristic(1, dRec.pdf, 1, bsdfPdf);

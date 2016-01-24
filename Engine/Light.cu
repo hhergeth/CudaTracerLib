@@ -20,11 +20,11 @@ Spectrum PointLight::sampleDirect(DirectSamplingRecord &dRec, const Vec2f &sampl
 	dRec.pdf = 1.0f;
 	dRec.measure = EDiscrete;
 	dRec.uv = Vec2f(0.5f);
-	dRec.d = dRec.p - dRec.ref;
-	dRec.dist = length(dRec.d);
+	Vec3f dir = dRec.p - dRec.ref;
+	dRec.dist = length(dir);
 	float invDist = 1.0f / dRec.dist;
-	dRec.d *= invDist;
-	dRec.n = Vec3f(0.0f);
+	dRec.d = NormalizedT<Vec3f>(dir * invDist);
+	dRec.n = NormalizedT<Vec3f>(0.0f);
 	dRec.pdf = 1;
 	dRec.measure = EDiscrete;
 
@@ -34,7 +34,7 @@ Spectrum PointLight::sampleDirect(DirectSamplingRecord &dRec, const Vec2f &sampl
 Spectrum PointLight::samplePosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const
 {
 	pRec.p = lightPos;
-	pRec.n = Vec3f(0);
+	pRec.n = NormalizedT<Vec3f>(0.0f);
 	pRec.pdf = 1.0f;
 	pRec.measure = EDiscrete;
 	return m_intensity * (4 * PI);
@@ -65,7 +65,7 @@ Spectrum DiffuseLight::sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec
 	return m_rad_texture.Evaluate(dg) * PI * shapeSet.Area();
 }
 
-Spectrum DiffuseLight::eval(const Vec3f& p, const Frame& sys, const Vec3f &d) const
+Spectrum DiffuseLight::eval(const Vec3f& p, const Frame& sys, const NormalizedT<Vec3f> &d) const
 {
 	if (dot(sys.n, d) <= 0 || (m_bOrthogonal && dot(d, sys.n) < 1 - DeltaEpsilon))
 		return 0.0f;
@@ -93,7 +93,7 @@ Spectrum DiffuseLight::sampleDirect(DirectSamplingRecord &dRec, const Vec2f &_sa
 		Vec3f p0, p1, p2;
 		Vec2f uv0, uv1, uv2;
 		shapeSet.sampleTriangle(p0, p1, p2, uv0, uv1, uv2, dRec.pdf, sample.x);
-		const Vec3f n = -normalize(cross(p2 - p0, p1 - p0));
+		const NormalizedT<Vec3f> n = normalize(cross(p1 - p0, p2 - p0));
 		float lambda = dot(p0, n) - dot(dRec.ref, n);// := (p_0 * n - p * n) / (n * n)
 		dRec.p = dRec.ref + lambda * n;
 		bool inTriangle = MonteCarlo::Barycentric(dRec.p, p0, p1, p2, dRec.uv.x, dRec.uv.y);
@@ -108,10 +108,10 @@ Spectrum DiffuseLight::sampleDirect(DirectSamplingRecord &dRec, const Vec2f &_sa
 		uv = dRec.uv.x * uv0 + dRec.uv.y * uv1 + (1 - dRec.uv.x - dRec.uv.y) * uv2;
 	}
 	else shapeSet.SamplePosition(dRec, sample, &uv);
-	dRec.d = dRec.p - dRec.ref;
-	float distSquared = dot(dRec.d, dRec.d);
+	Vec3f dir = dRec.p - dRec.ref;
+	float distSquared = dir.lenSqr();
 	dRec.dist = math::sqrt(distSquared);
-	dRec.d /= dRec.dist;
+	dRec.d = NormalizedT<Vec3f>(dir / dRec.dist);
 	float dp = absdot(dRec.d, dRec.n);
 	if (!m_bOrthogonal)
 	{
@@ -158,7 +158,7 @@ float DiffuseLight::pdfDirect(const DirectSamplingRecord &dRec) const
 
 Spectrum DiffuseLight::sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const
 {
-	Vec3f local = Warp::squareToCosineHemisphere(sample);
+	NormalizedT<Vec3f> local = Warp::squareToCosineHemisphere(sample);
 	dRec.d = m_bOrthogonal ? pRec.n : Frame(pRec.n).toWorld(local);
 	dRec.pdf = m_bOrthogonal ? 1 : Warp::squareToCosineHemispherePdf(local);
 	dRec.measure = ESolidAngle;
@@ -218,14 +218,14 @@ Spectrum DistantLight::sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec
 {
 	Vec2f p = Warp::squareToUniformDiskConcentric(spatialSample);
 	Vec3f perpOffset = ToWorld.toWorld(Vec3f(p.x, p.y, 0) * radius);
-	Vec3f d = ToWorld.toWorld(Vec3f(0, 0, 1));
+	NormalizedT<Vec3f> d = ToWorld.toWorld(NormalizedT<Vec3f>(0.0f, 0.0f, 1.0f));
 	ray = Ray(d * radius + perpOffset, d);
 	return m_power;
 }
 
 Spectrum DistantLight::sampleDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const
 {
-	Vec3f d = ToWorld.toWorld(Vec3f(0, 0, 1));
+	NormalizedT<Vec3f> d = ToWorld.toWorld(NormalizedT<Vec3f>(0.0f, 0.0f, 1.0f));
 	Vec3f diskCenter = d * radius;
 
 	float distance = dot(dRec.ref - diskCenter, d);
@@ -251,7 +251,7 @@ Spectrum DistantLight::samplePosition(PositionSamplingRecord &pRec, const Vec2f 
 	Vec2f p = Warp::squareToUniformDiskConcentric(sample);
 
 	Vec3f perpOffset = ToWorld.toWorld(Vec3f(p.x, p.y, 0) * radius);
-	Vec3f d = ToWorld.toWorld(Vec3f(0, 0, 1));
+	NormalizedT<Vec3f> d = ToWorld.toWorld(NormalizedT<Vec3f>(0.0f, 0.0f, 1.0f));
 
 	pRec.p = d * radius + perpOffset;
 	pRec.n = d;
@@ -276,7 +276,7 @@ SpotLight::SpotLight(Vec3f p, Vec3f t, Spectrum L, float width, float fall)
 	m_invTransitionWidth = 1.0f / (m_cutoffAngle - m_beamWidth);
 	Position = p;
 	Target = t;
-	ToWorld = Frame(t - p);
+	ToWorld = Frame((t - p).normalized());
 }
 
 Spectrum SpotLight::sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const
@@ -284,7 +284,7 @@ Spectrum SpotLight::sampleRay(Ray &ray, const Vec2f &spatialSample, const Vec2f 
 	Vec3f local = Warp::squareToUniformCone(m_cosCutoffAngle, directionalSample);
 	ray = Ray(Position, ToWorld.toWorld(local));
 	float dirPdf = Warp::squareToUniformConePdf(m_cosCutoffAngle);
-	return m_intensity * falloffCurve(local) / dirPdf;
+	return m_intensity * falloffCurve(local.normalized()) / dirPdf;
 }
 
 Spectrum SpotLight::sampleDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const
@@ -293,11 +293,11 @@ Spectrum SpotLight::sampleDirect(DirectSamplingRecord &dRec, const Vec2f &sample
 	dRec.pdf = 1.0f;
 	dRec.measure = EDiscrete;
 	dRec.uv = Vec2f(0.5f);
-	dRec.d = dRec.p - dRec.ref;
-	dRec.dist = length(dRec.d);
+	Vec3f dir = dRec.p - dRec.ref;
+	dRec.dist = length(dir);
 	float invDist = 1.0f / dRec.dist;
-	dRec.d *= invDist;
-	dRec.n = Vec3f(0.0f);
+	dRec.d = NormalizedT<Vec3f>(dir * invDist);
+	dRec.n = NormalizedT<Vec3f>(0.0f);
 	dRec.pdf = 1;
 	dRec.measure = EDiscrete;
 
@@ -307,7 +307,7 @@ Spectrum SpotLight::sampleDirect(DirectSamplingRecord &dRec, const Vec2f &sample
 Spectrum SpotLight::samplePosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const
 {
 	pRec.p = Position;
-	pRec.n = Vec3f(0.0f);
+	pRec.n = NormalizedT<Vec3f>(0.0f);
 	pRec.pdf = 1.0f;
 	pRec.measure = EDiscrete;
 	return m_intensity * (4 * PI);
@@ -316,15 +316,15 @@ Spectrum SpotLight::samplePosition(PositionSamplingRecord &pRec, const Vec2f &sa
 Spectrum SpotLight::sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const
 {
 	Vec3f d = Warp::squareToUniformCone(m_cosCutoffAngle, sample);
-	dRec.d = ToWorld.toWorld(d);
+	dRec.d = ToWorld.toWorld(d).normalized();
 	dRec.pdf = Warp::squareToUniformConePdf(m_cosCutoffAngle);
 	dRec.measure = ESolidAngle;
 	return evalDirection(dRec, pRec) / dRec.pdf;
 }
 
-Spectrum SpotLight::falloffCurve(const Vec3f &d) const
+Spectrum SpotLight::falloffCurve(const NormalizedT<Vec3f> &d) const
 {
-	const float cosTheta = Frame::cosTheta(normalize(d));
+	const float cosTheta = Frame::cosTheta(d);
 
 	if (cosTheta <= m_cosCutoffAngle)
 		return Spectrum(0.0f);
@@ -390,7 +390,7 @@ Spectrum InfiniteLight::sampleRay(Ray &ray, const Vec2f &spatialSample, const Ve
 	internalSampleDirection(directionalSample, d, value, pdf);
 	d = m_worldTransform.TransformDirection(-d);
 	Vec2f offset = Warp::squareToUniformDiskConcentric(spatialSample);
-	Vec3f perpOffset = Frame(d).toWorld(Vec3f(offset.x, offset.y, 0));
+	Vec3f perpOffset = Frame(d.normalized()).toWorld(Vec3f(offset.x, offset.y, 0.0f));
 	ray = Ray(m_SceneCenter + (perpOffset - d) * m_SceneRadius, d);
 
 	return value * PI * m_SceneRadius * m_SceneRadius / pdf;
@@ -407,7 +407,7 @@ Spectrum InfiniteLight::sampleDirect(DirectSamplingRecord &dRec, const Vec2f &sa
 	dRec.p = m_SceneCenter + d * m_SceneRadius;
 	dRec.n = -normalize(d);
 	dRec.dist = m_SceneRadius;
-	dRec.d = d;
+	dRec.d = d.normalized();
 	dRec.measure = ESolidAngle;
 
 	return value / pdf;
@@ -427,7 +427,7 @@ float InfiniteLight::pdfDirect(const DirectSamplingRecord &dRec) const
 
 Spectrum InfiniteLight::samplePosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const
 {
-	Vec3f d = Warp::squareToUniformSphere(sample);
+	NormalizedT<Vec3f> d = Warp::squareToUniformSphere(sample);
 
 	pRec.p = m_SceneCenter + d * m_SceneRadius;
 	pRec.n = -d;
@@ -444,7 +444,7 @@ Spectrum InfiniteLight::sampleDirection(DirectionSamplingRecord &dRec, PositionS
 
 	dRec.measure = ESolidAngle;
 	dRec.pdf = pdf;
-	dRec.d = m_worldTransform.TransformDirection(-d);
+	dRec.d = m_worldTransform.TransformDirection(-d).normalized();
 
 	/* Be wary of roundoff errors */
 	if (value.isZero() || pdf == 0)

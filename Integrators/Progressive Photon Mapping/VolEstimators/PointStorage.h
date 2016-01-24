@@ -15,7 +15,7 @@ struct PointStorage : public IVolumeEstimator
 		unsigned short wi;
 		half r;
 		CUDA_FUNC_IN volPhoton(){}
-		CUDA_FUNC_IN volPhoton(const Vec3f& p, const Vec3f& w, const Spectrum& ph, const HashGrid_Reg& grid, const Vec3u& cell_idx)
+		CUDA_FUNC_IN volPhoton(const Vec3f& p, const NormalizedT<Vec3f>& w, const Spectrum& ph, const HashGrid_Reg& grid, const Vec3u& cell_idx)
 		{
 			r = half(0.0f);
 			flag_type_pos = grid.EncodePos(p, cell_idx);
@@ -26,7 +26,7 @@ struct PointStorage : public IVolumeEstimator
 		{
 			return grid.DecodePos(flag_type_pos & 0x3fffffff, cell_idx);
 		}
-		CUDA_FUNC_IN Vec3f getWi() const
+		CUDA_FUNC_IN NormalizedT<Vec3f> getWi() const
 		{
 			return Uchar2ToNormalizedFloat3(wi);
 		}
@@ -113,7 +113,7 @@ struct PointStorage : public IVolumeEstimator
 		return false;
 	}
 
-	CUDA_ONLY_FUNC bool StorePhoton(const Vec3f& pos, const Vec3f& wi, const Spectrum& phi)
+	CUDA_ONLY_FUNC bool StorePhoton(const Vec3f& pos, const NormalizedT<Vec3f>& wi, const Spectrum& phi)
 	{
 		if(!m_sStorage.getHashGrid().getAABB().Contains(pos))
 			return false;

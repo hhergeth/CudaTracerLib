@@ -92,6 +92,10 @@ public:
 		vector.z = ((v.x * (xz - wy)) + (v.y * (yz + wx))) + (v.z * ((1.0f - xx) - yy));
 		return vector;
 	}
+	CUDA_FUNC_IN NormalizedT<Vec3f> operator *(const NormalizedT<Vec3f> &v) const
+	{
+		return NormalizedT<Vec3f>(operator*((Vec3f)v));
+	}
 	CUDA_FUNC_IN const Quaternion & operator *= (const Quaternion &q)
 	{
 		val.w = val.w*q.val.w - val.x*q.val.x - val.y*q.val.y - val.z*q.val.z;
