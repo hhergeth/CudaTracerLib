@@ -18,7 +18,8 @@ public:
 	{
 	}
 
-	CUDA_FUNC_IN static float4x4 As(float xx, float yx, float zx, float wx,
+	CUDA_FUNC_IN static float4x4 As(
+		float xx, float yx, float zx, float wx,
 		float xy, float yy, float zy, float wy,
 		float xz, float yz, float zz, float wz,
 		float xw, float yw, float zw, float ww)
@@ -70,13 +71,29 @@ public:
 		operator()(3, i) = r.w;
 	}
 
-	//operators
-	/*CUDA_FUNC_IN void operator *= (const float4x4& b)
+	//algebra
+	CUDA_FUNC_IN Vec3f Translation() const
 	{
-	float4x4 a = *this;
-	*this = a * b;
-	}*/
+		return TransformPoint(Vec3f(0.0f));
+	}
+	CUDA_FUNC_IN Vec3f Scale() const
+	{
+		return Vec3f(length(col(0).getXYZ()), length(col(1).getXYZ()), length(col(2).getXYZ()));
+	}
+	CUDA_FUNC_IN Vec3f Forward() const
+	{
+		return TransformDirection(Vec3f(0, 0, 1));
+	}
+	CUDA_FUNC_IN Vec3f Right() const
+	{
+		return TransformDirection(Vec3f(1, 0, 0));
+	}
+	CUDA_FUNC_IN Vec3f Up() const
+	{
+		return TransformDirection(Vec3f(0, 1, 0));
+	}
 
+	//operators
 	CUDA_FUNC_IN float4x4 operator + (const float4x4& a) const
 	{
 		float4x4 r;
@@ -126,16 +143,6 @@ public:
 		return f.getXYZ();
 	}
 
-	CUDA_FUNC_IN Vec4f TransformTranspose(const Vec4f& a) const
-	{
-		return Vec4f(
-			dot(col(0), a),
-			dot(col(1), a),
-			dot(col(2), a),
-			dot(col(3), a)
-			);
-	}
-
 	CUDA_FUNC_IN float4x4 transpose() const
 	{
 		float4x4 r;
@@ -147,6 +154,7 @@ public:
 
 	CUDA_DEVICE CUDA_HOST float4x4 inverse() const;
 
+	//geometric constructor functions
 	CUDA_FUNC_IN static float4x4 RotateX(float a)
 	{
 		float4x4 r = float4x4::Identity();
@@ -218,7 +226,7 @@ public:
 		return result;
 	}
 
-	CUDA_FUNC_IN static const float4x4 Identity()
+	CUDA_FUNC_IN static float4x4 Identity()
 	{
 		float4x4 r;
 		r.zeros();
@@ -374,27 +382,6 @@ public:
 		mat.col(2, Vec4f(0, 0, -(f + n) / (f - n), 1));
 		mat.col(3, Vec4f(0, 0, -(n * f) / (f - n), 0));
 		return mat;
-	}
-
-	CUDA_FUNC_IN Vec3f Translation() const
-	{
-		return TransformPoint(Vec3f(0.0f));
-	}
-	CUDA_FUNC_IN Vec3f Scale() const
-	{
-		return Vec3f(length(col(0).getXYZ()), length(col(1).getXYZ()), length(col(2).getXYZ()));
-	}
-	CUDA_FUNC_IN Vec3f Forward() const
-	{
-		return TransformDirection(Vec3f(0, 0, 1));
-	}
-	CUDA_FUNC_IN Vec3f Right() const
-	{
-		return TransformDirection(Vec3f(1, 0, 0));
-	}
-	CUDA_FUNC_IN Vec3f Up() const
-	{
-		return TransformDirection(Vec3f(0, 1, 0));
 	}
 
 	friend std::ostream& operator<< (std::ostream & os, const float4x4& rhs)

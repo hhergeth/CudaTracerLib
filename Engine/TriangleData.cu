@@ -85,7 +85,7 @@ void TriangleData::fillDG(const float4x4& localToWorld, const float4x4& worldToL
 	n = localToWorld.TransformDirection(n); s = localToWorld.TransformDirection(s);
 	Vec3f t = cross(s, n);
 	dg.sys = Frame(s.normalized(), t.normalized(), n.normalized());
-	dg.n = normalize(localToWorld.TransformTranspose(Vec4f(na + nb + nc, 0.0f)).getXYZ());
+	dg.n = normalize(localToWorld.TransformDirection(na + nb + nc));
 	dg.dpdu = (localToWorld.TransformDirection(dpdu));
 	dg.dpdv = (localToWorld.TransformDirection(dpdv));
 	for (int i = 0; i < NUM_UV_SETS; i++)
@@ -115,7 +115,7 @@ void TriangleData::fillDG(const float4x4& localToWorld, const float4x4& worldToL
 {
 	NormalizedT<Vec3f> n = normalize(Uchar3ToNormalizedFloat3(m_sHostData.Normal));
 	dg.sys = Frame(n) * localToWorld;
-	dg.n = normalize(worldToLocal.TransformTranspose(Vec4f(n, 0.0f)).getXYZ());
+	dg.n = normalize(localToWorld.TransformDirection(na + nb + nc));
 	dg.dpdu = Vec3f(1,0,0);
 	dg.dpdv = Vec3f(0,0,1);
 	for (int i = 0; i < NUM_UV_SETS; i++)

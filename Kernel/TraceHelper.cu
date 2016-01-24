@@ -229,7 +229,7 @@ void fillDG(const Vec2f& bary, const TriangleData* tri, const Node* node, Differ
 	n = localToWorld.TransformDirection(n); s = localToWorld.TransformDirection(s);
 	Vec3f t = cross(s, n);
 	dg.sys = Frame(s.normalized(), t.normalized(), n.normalized());
-	dg.n = normalize(localToWorld.TransformTranspose(Vec4f(na + nb + nc, 0.0f)).getXYZ());
+	dg.n = normalize(localToWorld.TransformDirection(na + nb + nc));
 	dg.dpdu = localToWorld.TransformDirection(dpdu);
 	dg.dpdv = localToWorld.TransformDirection(dpdv);
 	Vec2f ta = Vec2f(rowC.z, rowC.w), tb = Vec2f(rowD.x, rowD.y), tc = Vec2f(rowD.z, rowD.w);
