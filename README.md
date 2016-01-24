@@ -15,7 +15,7 @@ This library, for simplicity called CudaTracerLib, is a CUDA based ray tracer li
 ##### There are four dependencies:
 
 - CUDA 7.5
-- Boost, used for filesystem(compiled library!) and string functions
+- Boost, used for filesystem (compiled library!) and string functions
 - FreeImage, used for loading and saving images.
 - qMatrixLib, a tiny header only matrix library, available here https://github.com/hhergeth/qMatrixLib
 
