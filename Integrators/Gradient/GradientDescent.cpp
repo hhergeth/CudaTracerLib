@@ -55,9 +55,9 @@ void ConstructPath(const Vec2i& pixel, Path& P, int s, int t)
 
 	g_SceneData.m_Camera.sampleRay(r, Vec2f(0.5f), Vec2f(0.5f));
 	CameraPathVertex* c_v = new CameraPathVertex();
-	c_v->n = r.dir();
+	c_v->n = r.dirUnit();
 	r = g_SceneData.GenerateSensorRay(pixel.x, pixel.y);
-	c_v->p = r.origin;
+	c_v->p = r.ori();
 	c_v->sensor = g_SceneData.m_Camera;
 	sensorPath.push_back(c_v);
 	TracePath(r, sensorPath, maxSubPathLength, ETransportMode::ERadiance, rng);

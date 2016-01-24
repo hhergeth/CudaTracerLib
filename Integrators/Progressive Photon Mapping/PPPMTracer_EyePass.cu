@@ -8,8 +8,8 @@ namespace CudaTracerLib {
 
 CUDA_FUNC_IN bool sphere_line_intersection(const Vec3f& p, float rad, const Ray& r, float& t_min, float& t_max)
 {
-	auto d = r.direction.normalized();
-	Vec3f oc = r.origin - p;
+	auto d = r.dirUnit();
+	Vec3f oc = r.ori() - p;
 	float f = dot(d, oc);
 	float w = f * f - oc.lenSqr() + rad * rad;
 	if (w < 0)
@@ -41,13 +41,13 @@ template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum PointStorage::L_Volume(float Num
 			Vec3f ph_pos = ph.getPos(m_sStorage.getHashGrid(), cell_idx);
 			if (distanceSquared(ph_pos, x) < m_fCurrentRadiusVol * m_fCurrentRadiusVol)
 			{
-				float p = vol.p(x, -r.dir(), ph.getWi(), rng);
+				float p = vol.p(x, -r.dirUnit(), ph.getWi(), rng);
 				L_i += p * ph.getL() * Vs;
 			}
 		});
 		L_n += (-Tau - vol.tau(r, a, t)).exp() * L_i * d;
 		Tau += vol.tau(r, a, a + d);
-		L_n += vol.Lve(x, -r.dir()) * d;
+		L_n += vol.Lve(x, -r.dirUnit()) * d;
 		a += d;
 	}
 	Tr = (-Tau).exp();
@@ -64,11 +64,11 @@ template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum BeamGrid::L_Volume(float NumEmit
 		{
 			const volPhoton& ph = m_sStorage(beam_idx.i & ~(1 << 31));
 			Vec3f ph_pos = ph.getPos(m_sStorage.getHashGrid(), cell_pos);
-			float l1 = dot(ph_pos - r.origin, r.direction);
+			float l1 = dot(ph_pos - r.ori(), r.dir());
 			float isectRadSqr = distanceSquared(ph_pos, r(l1));
 			if (isectRadSqr < ph.getRad() && l1 >= 0)
 			{
-				float p = vol.p(ph_pos, r.dir(), ph.getWi(), rng);
+				float p = vol.p(ph_pos, r.dirUnit(), ph.getWi(), rng);
 				Spectrum tauToPhoton = (-Tau - (l1 >= rayT ? vol.tau(r, rayT, l1) : -vol.tau(r, max(minT, l1), rayT))).exp();//corner case : the photon lies in the cell but the projected distance is before the cell
 
 				//Spectrum tauToPhotonC = (-vol.tau(r, tmin, l1)).exp();
@@ -90,7 +90,7 @@ template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum BeamGrid::L_Volume(float NumEmit
 		});
 		Tau += vol.tau(r, rayT, cellEndT);
 		float localDist = cellEndT - rayT;
-		L_n += vol.Lve(r(rayT + localDist / 2), -r.dir()) * localDist;
+		L_n += vol.Lve(r(rayT + localDist / 2), -r.dirUnit()) * localDist;
 	});
 	Tr = (-Tau).exp();
 	return L_n;
@@ -105,8 +105,8 @@ template<bool USE_GLOBAL> CUDA_ONLY_FUNC Spectrum beam_beam_L(const VolHelper<US
 {
 	Spectrum photon_tau = vol.tau(Ray(B.getPos(), B.getDir()), 0, beamIsectDist);
 	Spectrum camera_tau = vol.tau(r, tmin, queryIsectDist);
-	Spectrum camera_sc = vol.sigma_s(r(queryIsectDist), r.dir());
-	float p = vol.p(r(queryIsectDist), r.dir(), B.getDir(), rng);
+	Spectrum camera_sc = vol.sigma_s(r(queryIsectDist), r.dirUnit());
+	float p = vol.p(r(queryIsectDist), r.dirUnit(), B.getDir(), rng);
 	//return B.Phi / float(m_uNumEmitted) * camera_sc * (-photon_tau).exp() * (-camera_tau).exp() * p * (1 - beamBeamDistance * beamBeamDistance / (radius * radius)) * 3 / (4 * radius*sinTheta);
 	float t = math::clamp01(beamBeamDistance / radius), k = 1.0f + t * t * t * (-6.0f * t * t + 15.0f * t - 10.0f);
 	return camera_sc / radius * p * B.getL() / m_uNumEmitted * (-photon_tau).exp() * (-camera_tau).exp() / sinTheta * k;
@@ -136,7 +136,7 @@ template<bool USE_GLOBAL> CUDA_ONLY_FUNC Spectrum BeamBeamGrid::L_Volume(float N
 	{
 		const Beam& B = m_pDeviceBeams[i];
 		float beamBeamDistance, sinTheta, queryIsectDist, beamIsectDist;
-		if (Beam::testIntersectionBeamBeam(r.origin, r.direction, tmin, tmax, B.getPos(), B.getDir(), 0, B.t, radius * radius, beamBeamDistance, sinTheta, queryIsectDist, beamIsectDist))
+		if (Beam::testIntersectionBeamBeam(r.ori(), r.dir(), tmin, tmax, B.getPos(), B.getDir(), 0, B.t, radius * radius, beamBeamDistance, sinTheta, queryIsectDist, beamIsectDist))
 			L_n += beam_beam_L(vol, rng, B, r, radius, beamIsectDist, queryIsectDist, beamBeamDistance, NumEmitted, sinTheta, tmin);
 	}
 	Tr = (-vol.tau(r, tmin, tmax)).exp();
@@ -146,13 +146,13 @@ template<bool USE_GLOBAL> CUDA_ONLY_FUNC Spectrum BeamBeamGrid::L_Volume(float N
 template<bool USE_GLOBAL> Spectrum BeamBVHStorage::L_Volume(float NumEmitted, float radius, CudaRNG& rng, const Ray& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr) const
 {
 	Spectrum L_n = Spectrum(0.0f);
-	iterateBeams(Ray(r(tmin), r.direction), tmax - tmin, [&](unsigned int ref_idx)
+	iterateBeams(Ray(r(tmin), r.dir()), tmax - tmin, [&](unsigned int ref_idx)
 	{
 		const BeamRef& R = m_pDeviceRefs[ref_idx];
 		//unsigned int beam_idx = R.getIdx();
 		const Beam& B = R.beam;// this->m_pDeviceBeams[beam_idx];
 		float beamBeamDistance, sinTheta, queryIsectDist, beamIsectDist;
-		if (Beam::testIntersectionBeamBeam(r.origin, r.direction, tmin, tmax, B.getPos(), B.getDir(), R.t_min, R.t_max, radius * radius, beamBeamDistance, sinTheta, queryIsectDist, beamIsectDist))
+		if (Beam::testIntersectionBeamBeam(r.ori(), r.dir(), tmin, tmax, B.getPos(), B.getDir(), R.t_min, R.t_max, radius * radius, beamBeamDistance, sinTheta, queryIsectDist, beamIsectDist))
 			L_n += beam_beam_L(vol, rng, B, r, radius, beamIsectDist, queryIsectDist, beamBeamDistance, NumEmitted, sinTheta, tmin);
 	});
 	Tr = (-vol.tau(r, tmin, tmax)).exp();
@@ -206,10 +206,10 @@ template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_SurfaceFinalGathering(BSDFSam
 		{
 			r3.getBsdfSample(r, bRec2, ETransportMode::ERadiance, &rng);
 			bool hasGlossy = r3.getMat().bsdf.hasComponent(EGlossy);
-			L += f * (hasGlossy ? L_Surface<true>(bRec2, -r.direction, rad, r3.getMat()) : L_Surface<false>(bRec2, -r.direction, rad, r3.getMat()));
+			L += f * (hasGlossy ? L_Surface<true>(bRec2, -r.dir(), rad, r3.getMat()) : L_Surface<false>(bRec2, -r.dir(), rad, r3.getMat()));
 			if (DIRECT)
 				L += f * UniformSampleOneLight(bRec2, r3.getMat(), rng);
-			else L += f * r3.Le(bRec2.dg.P, bRec2.dg.sys, -r.dir());
+			else L += f * r3.Le(bRec2.dg.P, bRec2.dg.sys, -r.dirUnit());
 		}
 	}
 	bRec.typeMask = ETypeCombinations::EAll;
@@ -301,7 +301,7 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 		r2.Init();
 		int depth = -1;
 		Spectrum L(0.0f);
-		while (traceRay(r.direction, r.origin, &r2) && depth++ < 5)
+		while (traceRay(r.dir(), r.ori(), &r2) && depth++ < 5)
 		{
 			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
 			if (depth == 0)
@@ -345,7 +345,7 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 
 				//L += throughput * UniformSampleOneLight(bRec, r2.getMat(), rng);
 			}
-			L += throughput * r2.Le(bRec.dg.P, bRec.dg.sys, -r.dir());//either it's the first bounce or it's a specular reflection
+			L += throughput * r2.Le(bRec.dg.P, bRec.dg.sys, -r.dirUnit());//either it's the first bounce or it's a specular reflection
 			const VolumeRegion* bssrdf;
 			if (r2.getMat().GetBSSRDF(bRec.dg, &bssrdf))
 			{
@@ -367,8 +367,8 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 				float r_i = USE_PerPixelRadius ? rad : a_rSurface;
 				Spectrum l;
 				if (hasGlossy)
-					l = finalGathering ? L_SurfaceFinalGathering<true>(bRec, -r.direction, r_i, r2, rng, DIRECT) : L_Surface<true>(bRec, -r.direction, r_i, r2.getMat());
-				else l = finalGathering ? L_SurfaceFinalGathering<false>(bRec, -r.direction, r_i, r2, rng, DIRECT) : L_Surface<false>(bRec, -r.direction, r_i, r2.getMat());
+					l = finalGathering ? L_SurfaceFinalGathering<true>(bRec, -r.dir(), r_i, r2, rng, DIRECT) : L_Surface<true>(bRec, -r.dir(), r_i, r2.getMat());
+				else l = finalGathering ? L_SurfaceFinalGathering<false>(bRec, -r.dir(), r_i, r2, rng, DIRECT) : L_Surface<false>(bRec, -r.dir(), r_i, r2.getMat());
 				L += throughput * (hasGlossy ? 0.5f : 1) * l;
 				//L += throughput * L_Surface(bRec, a_rSurface, &r2.getMat(), a_AdpEntries, pixel.x, pixel.y, throughput, a_PassIndex, img);
 				if (!hasSpecGlossy)

@@ -29,7 +29,7 @@ CUDA_FUNC_IN TraceResult traceRay(const Ray& r)
 {
 	TraceResult r2;
 	r2.Init();
-	traceRay(r.direction, r.origin, &r2);
+	traceRay(r.dir(), r.ori(), &r2);
 	return r2;
 }
 

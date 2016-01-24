@@ -54,19 +54,19 @@ void TriIntersectorData::getData(Vec3f& v0, Vec3f& v1, Vec3f& v2) const
 
 bool TriIntersectorData::Intersect(const Ray& r, float* dist, Vec2f* bary) const
 {
-	float Oz = a.w - r.origin.x*a.x - r.origin.y*a.y - r.origin.z*a.z;
-	float invDz = 1.0f / (r.direction.x*a.x + r.direction.y*a.y + r.direction.z*a.z);
+	float Oz = a.w - r.ori().x*a.x - r.ori().y*a.y - r.ori().z*a.z;
+	float invDz = 1.0f / (r.dir().x*a.x + r.dir().y*a.y + r.dir().z*a.z);
 	float t = Oz * invDz;
 	float tmax = dist ? *dist : FLT_MAX;
 	if (t > 0.0001f && t < tmax)
 	{
-		float Ox = b.w + r.origin.x*b.x + r.origin.y*b.y + r.origin.z*b.z;
-		float Dx = r.direction.x*b.x + r.direction.y*b.y + r.direction.z*b.z;
+		float Ox = b.w + r.ori().x*b.x + r.ori().y*b.y + r.ori().z*b.z;
+		float Dx = r.dir().x*b.x + r.dir().y*b.y + r.dir().z*b.z;
 		float u = Ox + t*Dx;
 		if (u >= 0.0f)
 		{
-			float Oy = c.w + r.origin.x*c.x + r.origin.y*c.y + r.origin.z*c.z;
-			float Dy = r.direction.x*c.x + r.direction.y*c.y + r.direction.z*c.z;
+			float Oy = c.w + r.ori().x*c.x + r.ori().y*c.y + r.ori().z*c.z;
+			float Dy = r.dir().x*c.x + r.dir().y*c.y + r.dir().z*c.z;
 			float v = Oy + t*Dy;
 			if (v >= 0.0f && u + v <= 1.0f)
 			{

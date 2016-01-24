@@ -5,8 +5,6 @@
 
 namespace CudaTracerLib {
 
-struct Ray;
-
 struct TriIntersectorData2
 {
 	unsigned int index;

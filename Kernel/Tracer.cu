@@ -18,7 +18,7 @@ template<bool RECURSIVE> __global__ void k_GuessPass(int w, int h, float scx, fl
 		TraceResult r2;
 		r2.Init();
 		int d = -1;
-		while (traceRay(r.direction, r.origin, &r2) && ++d < 5)
+		while (traceRay(r.dir(), r.ori(), &r2) && ++d < 5)
 		{
 			DifferentialGeometry dg;
 			BSDFSamplingRecord bRec(dg);
@@ -93,7 +93,7 @@ __global__ void estimateLightVisibility(int w, int h, float scx, float scy, int 
 		r2.Init();
 		int d = -1;
 		unsigned int N = 0, S = 0;
-		while (traceRay(r.direction, r.origin, &r2) && ++d < recursion_depth)
+		while (traceRay(r.dir(), r.ori(), &r2) && ++d < recursion_depth)
 		{
 			DifferentialGeometry dg;
 			BSDFSamplingRecord bRec(dg);

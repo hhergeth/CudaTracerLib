@@ -17,10 +17,10 @@ void DifferentialGeometry::computePartials(const Ray& r, const Ray& rx, const Ra
 
 	const float
 		pp = dot(n, P),
-		pox = dot(n, rx.origin),
-		poy = dot(n, ry.origin),
-		prx = dot(n, rx.direction),
-		pry = dot(n, ry.direction);
+		pox = dot(n, rx.ori()),
+		poy = dot(n, ry.ori()),
+		prx = dot(n, rx.dir()),
+		pry = dot(n, ry.dir());
 
 	if (prx == 0 || pry == 0)
 	{
@@ -54,8 +54,8 @@ void DifferentialGeometry::computePartials(const Ray& r, const Ray& rx, const Ra
 	A[1][0] = dpduA[axes[1]];
 	A[1][1] = dpdvA[axes[1]];
 
-	Vec3f px = rx.origin + rx.direction * tx,
-		py = ry.origin + ry.direction * ty;
+	Vec3f px = rx.ori() + rx.dir() * tx,
+		py = ry.ori() + ry.dir() * ty;
 	float pA[] = { P.x, P.y, P.z };
 	float pxA[] = { px.x, px.y, px.z };
 	float pyA[] = { py.x, py.y, py.z };

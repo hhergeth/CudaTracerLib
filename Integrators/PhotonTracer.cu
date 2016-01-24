@@ -94,15 +94,15 @@ template<bool CORRECT_DIFFERENTIALS> CUDA_FUNC_IN void doWork(Image& g_Image, Cu
 		if ((!bssrdf && V.HasVolumes() && V.IntersectP(r, 0, r2.m_fDist, &minT, &maxT) && V.sampleDistance(r, 0, r2.m_fDist, rng, mRec)) || (bssrdf && bssrdf->sampleDistance(r, 0, r2.m_fDist, rng.randomFloat(), mRec)))
 		{
 			throughput *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
-			handleMediumInteraction(power * throughput, mRec, -r.dir(), r2, g_Image, rng);
+			handleMediumInteraction(power * throughput, mRec, -r.dirUnit(), r2, g_Image, rng);
 			if (bssrdf)
 			{
-				PhaseFunctionSamplingRecord pfRec(-r.dir());
+				PhaseFunctionSamplingRecord pfRec(-r.dirUnit());
 				throughput *= bssrdf->As()->Func.Sample(pfRec, rng);
-				r.direction = pfRec.wi;
+				r.dir() = pfRec.wi;
 			}
-			else throughput *= V.Sample(mRec.p, -r.dir(), rng, (NormalizedT<Vec3f>*)&r.direction);
-			r.origin = mRec.p;
+			else throughput *= V.Sample(mRec.p, -r.dirUnit(), rng, (NormalizedT<Vec3f>*)&r.dir());
+			r.ori() = mRec.p;
 			medium = true;
 		}
 		else if (!r2.hasHit())
@@ -111,7 +111,7 @@ template<bool CORRECT_DIFFERENTIALS> CUDA_FUNC_IN void doWork(Image& g_Image, Cu
 		{
 			if (medium)
 				throughput *= mRec.transmittance / mRec.pdfFailure;
-			auto wo = bssrdf ? -r.dir() : r.dir();
+			auto wo = bssrdf ? -r.dirUnit() : r.dirUnit();
 			Spectrum f_i = power * throughput;
 			r2.getBsdfSample(wo, r(r2.m_fDist), bRec, ETransportMode::EImportance, &rng, &f_i);
 			handleSurfaceInteraction<false>(power * throughput, r2, bRec, r2, g_Image, rng);//CORRECT_DIFFERENTIALS

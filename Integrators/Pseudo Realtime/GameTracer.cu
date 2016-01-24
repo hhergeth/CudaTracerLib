@@ -42,7 +42,7 @@ __global__ void primaryKernelBlocked(int width, int height, Image g_Image, bool 
 				primary_rays_hit++;
 				primaryRes.getBsdfSample(primaryRay, bRec, ETransportMode::ERadiance, &rng);
 				uv_sets[i] = dg.uv[0];
-				primary_Le += primaryRes.Le(dg.P, bRec.dg.sys, -primaryRay.dir());
+				primary_Le += primaryRes.Le(dg.P, bRec.dg.sys, -primaryRay.dirUnit());
 			}
 			else primary_f[i] = g_SceneData.EvalEnvironment(primaryRay);
 			if (depthImage && x2 < width && y2 < height)

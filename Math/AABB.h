@@ -155,7 +155,7 @@ struct AABB
 
 	CUDA_FUNC_IN bool Intersect(const Ray& r, float* min = 0, float* max = 0) const
 	{
-		return Intersect(r.direction, r.origin, min, max);
+		return Intersect(r.dir(), r.ori(), min, max);
 	}
 
 	friend std::ostream& operator<< (std::ostream & os, const AABB& rhs)

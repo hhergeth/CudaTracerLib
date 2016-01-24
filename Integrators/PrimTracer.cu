@@ -38,11 +38,11 @@ CUDA_FUNC_IN void computePixel(int x, int y, CudaRNG& rng, Image g_Image, bool d
 			dg.computePartials(r, rX, rY);
 
 			if (mode == PathTrace_DrawMode::v_absdot_n_geo)
-				L = Spectrum(absdot(-r.direction, dg.n));
+				L = Spectrum(absdot(-r.dir(), dg.n));
 			else if (mode == PathTrace_DrawMode::v_dot_n_geo)
-				L = Spectrum(dot(-r.direction, dg.n));
+				L = Spectrum(dot(-r.dir(), dg.n));
 			else if (mode == PathTrace_DrawMode::v_dot_n_shade)
-				L = Spectrum(dot(-r.direction, dg.sys.n));
+				L = Spectrum(dot(-r.dir(), dg.sys.n));
 			else if (mode == PathTrace_DrawMode::n_geo_colored || mode == PathTrace_DrawMode::n_shade_colored)
 			{
 				Vec3f n = ((mode == PathTrace_DrawMode::n_geo_colored ? bRec.dg.n : bRec.dg.sys.n) + Vec3f(1)) / 2;
@@ -54,7 +54,7 @@ CUDA_FUNC_IN void computePixel(int x, int y, CudaRNG& rng, Image g_Image, bool d
 				L = Spectrum(dg.bary.x, dg.bary.y, 0);
 			else
 			{
-				Spectrum Le = prim_res.Le(dg.P, bRec.dg.sys, -r.dir());
+				Spectrum Le = prim_res.Le(dg.P, bRec.dg.sys, -r.dirUnit());
 				Spectrum f = prim_res.getMat().bsdf.sample(bRec, rng.randomFloat2());
 				through = Transmittance(r, 0, prim_res.m_fDist);
 				bool isDelta = prim_res.getMat().bsdf.hasComponent(EDelta);
@@ -84,7 +84,7 @@ CUDA_FUNC_IN void computePixel(int x, int y, CudaRNG& rng, Image g_Image, bool d
 
 					if (prim_res.hasHit() && prim_res.getMat().bsdf.hasComponent(ESmooth))
 					{
-						Le = prim_res.Le(dg.P, bRec.dg.sys, -r.dir());
+						Le = prim_res.Le(dg.P, bRec.dg.sys, -r.dirUnit());
 						if (mode == PathTrace_DrawMode::first_non_delta_Le)
 							L = Le;
 						else if (mode == PathTrace_DrawMode::first_non_delta_f)
@@ -141,9 +141,9 @@ CUDA_FUNC_IN Spectrum traceTerrain(Ray& r, CudaRNG& rng)
 	if (!box.Intersect(r, &t_min, &t_max))
 		return Spectrum(0, 0, 1);
 
-	r.origin = r(t_min + 5e-2f);
-	float ray_ratio = length(Vec2f(r.direction.x, r.direction.z));
-	Vec3f pos = r.origin;
+	r.ori() = r(t_min + 5e-2f);
+	float ray_ratio = length(Vec2f(r.dir().x, r.dir().z));
+	Vec3f pos = r.ori();
 	float lastD;
 	bool leftBox = false, currentOverTerrain = true; int N = 0;
 	while (N++ < cone_steps)
@@ -157,8 +157,8 @@ CUDA_FUNC_IN Spectrum traceTerrain(Ray& r, CudaRNG& rng)
 			break;
 		float c = tex.y;
 		float h = (pos.y - tex.x);
-		float d = lastD = c*h / (ray_ratio - c * r.direction.y);
-		pos += r.direction * d;
+		float d = lastD = c*h / (ray_ratio - c * r.dir().y);
+		pos += r.dir() * d;
 	}
 	if (leftBox)//|| N > cone_steps - 2
 		return Spectrum(0, 1, 0);
@@ -169,11 +169,11 @@ CUDA_FUNC_IN Spectrum traceTerrain(Ray& r, CudaRNG& rng)
 		float2 tex = sample_tex(pos);
 		lastD *= 0.5f;
 		if (tex.x >= pos.y)
-			pos -= lastD * r.direction;
-		else pos += lastD * r.direction;
+			pos -= lastD * r.dir();
+		else pos += lastD * r.dir();
 	}
 
-	return -dot(sample_normal(pos), r.direction);//length(pos - r.origin);
+	return -dot(sample_normal(pos), r.dir());//length(pos - r.origin);
 }
 
 __global__ void primaryKernel(int width, int height, Image g_Image, bool depthImage, PathTrace_DrawMode mode, int maxPathLength)

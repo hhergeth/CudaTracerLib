@@ -41,8 +41,8 @@ CUDA_GLOBAL void createLightRays(unsigned int g_DeviceNumLightPaths)
 		auto& ent = g_sLightBufA(idx);
 		ent.m_uVertexStart = idx;
 		ent.state = state;
-		g_sLightBufA.operator()(idx, 0).a = Vec4f(state.r.origin, 0);
-		g_sLightBufA.operator()(idx, 0).b = Vec4f(state.r.direction, FLT_MAX);
+		g_sLightBufA.operator()(idx, 0).a = Vec4f(state.r.ori(), 0);
+		g_sLightBufA.operator()(idx, 0).b = Vec4f(state.r.dir(), FLT_MAX);
 	}
 	g_RNGData(rng);
 }
@@ -79,7 +79,7 @@ CUDA_GLOBAL void extendLighRays(unsigned int N, BPTVertex* g_pLightVertices, Ima
 			}
 			g_pLightVertices[vIdx * MAX_LIGHT_SUB_PATH_LENGTH + vOff] = v;
 
-			auto ph = k_MISPhoton(v.throughput, -ent.state.r.dir(), v.bRec.dg.sys.n, PhotonType::pt_Diffuse, v.dVC, v.dVCM, v.dVM);
+			auto ph = k_MISPhoton(v.throughput, -ent.state.r.dirUnit(), v.bRec.dg.sys.n, PhotonType::pt_Diffuse, v.dVC, v.dVCM, v.dVM);
 			Vec3u cell_idx = g_NextMap2.getHashGrid().Transform(v.bRec.dg.P);
 			ph.setPos(g_NextMap2.getHashGrid(), cell_idx, v.bRec.dg.P);
 			if (!g_NextMap2.store(cell_idx, ph))
@@ -93,8 +93,8 @@ CUDA_GLOBAL void extendLighRays(unsigned int N, BPTVertex* g_pLightVertices, Ima
 				ent.m_uVertexStart = ((vOff + 1) << 24) | vIdx;
 				unsigned int newRayIdx = g_sLightBufB.insertRay(0);
 				g_sLightBufB(newRayIdx) = ent;
-				g_sLightBufB(newRayIdx, 0).a = Vec4f(ent.state.r.origin, 0);
-				g_sLightBufB(newRayIdx, 0).b = Vec4f(ent.state.r.direction, FLT_MAX);
+				g_sLightBufB(newRayIdx, 0).a = Vec4f(ent.state.r.ori(), 0);
+				g_sLightBufB(newRayIdx, 0).b = Vec4f(ent.state.r.dir(), FLT_MAX);
 			}
 		}
 	}
@@ -172,8 +172,8 @@ CUDA_GLOBAL void createCameraRays(int xoff, int yoff, int blockW, int blockH, in
 		ent.y = pixel.y;
 		ent.acc = Spectrum(0.0f);
 		ent.state = state;
-		g_sCamBufA.operator()(idx, 0).a = Vec4f(state.r.origin, 0);
-		g_sCamBufA.operator()(idx, 0).b = Vec4f(state.r.direction, FLT_MAX);
+		g_sCamBufA.operator()(idx, 0).a = Vec4f(state.r.ori(), 0);
+		g_sCamBufA.operator()(idx, 0).b = Vec4f(state.r.dir(), FLT_MAX);
 	}
 	g_RNGData(rng);
 }
@@ -270,8 +270,8 @@ CUDA_GLOBAL void extendCameraRays(unsigned int N, Image I, int iteration, bool l
 				extended = true;
 				unsigned int newRayIdx = g_sCamBufB.insertRay(0);
 				g_sCamBufB(newRayIdx) = ent;
-				g_sCamBufB(newRayIdx, 0).a = Vec4f(ent.state.r.origin, 0);
-				g_sCamBufB(newRayIdx, 0).b = Vec4f(ent.state.r.direction, FLT_MAX);
+				g_sCamBufB(newRayIdx, 0).a = Vec4f(ent.state.r.ori(), 0);
+				g_sCamBufB(newRayIdx, 0).b = Vec4f(ent.state.r.dir(), FLT_MAX);
 			}
 		}
 		if (!extended)

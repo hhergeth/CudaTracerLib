@@ -201,9 +201,9 @@ CUDA_FUNC_IN Spectrum gatherLight(const BPTSubPathState& cameraState, BSDFSampli
 	float pdfLight = g_SceneData.pdfEmitterDiscrete(l);
 	PositionSamplingRecord pRec(bRec.dg.P, bRec.dg.sys.n, 0);
 	float directPdfA = l->pdfPosition(pRec);
-	DirectionSamplingRecord dRec(-cameraState.r.dir());
+	DirectionSamplingRecord dRec(-cameraState.r.dirUnit());
 	float emissionPdfW = l->pdfDirection(dRec, pRec) * directPdfA;
-	Spectrum L = l->eval(bRec.dg.P, bRec.dg.sys, -cameraState.r.dir());
+	Spectrum L = l->eval(bRec.dg.P, bRec.dg.sys, -cameraState.r.dirUnit());
 
 	if (L.isZero())
 		return Spectrum(0.0f);
@@ -336,7 +336,7 @@ template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_Surface2(VCMSurfMap& g_Curren
 	{
 		float dist2 = distanceSquared(ph.getPos(g_CurrentMap.getHashGrid(), cell_idx), bRec.dg.P);
 		Vec3f photonNormal = ph.getNormal();
-		float wiDotGeoN = absdot(photonNormal, -aCameraState.r.direction);
+		float wiDotGeoN = absdot(photonNormal, -aCameraState.r.dir());
 		if (dist2 < r * r && dot(photonNormal, bRec.dg.sys.n) > 0.1f && wiDotGeoN > 1e-2f)
 		{
 			bRec.wo = bRec.dg.toLocal(ph.getWi());

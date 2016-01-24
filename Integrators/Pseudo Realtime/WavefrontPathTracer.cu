@@ -40,8 +40,8 @@ __global__ void pathCreateKernelWPT(unsigned int w, unsigned int h)
 		Ray r;
 		Spectrum W = g_SceneData.sampleSensorRay(r, Vec2f(x, y), Vec2f(0, 0));
 		traversalRay& ray = g_IntersectorWPT(rayidx, 0);
-		ray.a = Vec4f(r.origin, 0.0f);
-		ray.b = Vec4f(r.direction, FLT_MAX);
+		ray.a = Vec4f(r.ori(), 0.0f);
+		ray.b = Vec4f(r.dir(), FLT_MAX);
 		auto& dat = g_IntersectorWPT(rayidx);
 		dat.x = x;
 		dat.y = y;
@@ -109,7 +109,7 @@ template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(unsigned int N, 
 			BSDFSamplingRecord bRec(dg);
 			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
 			if (pathDepth == 0 || dat.dIdx == UINT_MAX)
-				dat.L += r2.Le(bRec.dg.P, bRec.dg.sys, -r.dir()) * dat.throughput;
+				dat.L += r2.Le(bRec.dg.P, bRec.dg.sys, -r.dirUnit()) * dat.throughput;
 			if (pathDepth + 1 != maxPathDepth)
 			{
 				Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());

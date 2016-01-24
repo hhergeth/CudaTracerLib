@@ -9,7 +9,7 @@ namespace CudaTracerLib {
 
 void TraceResult::getBsdfSample(const Ray& r, BSDFSamplingRecord& bRec, ETransportMode mode, CudaRNG* rng, const Spectrum* f_i, const NormalizedT<Vec3f>* wo) const
 {
-	getBsdfSample(r.direction.normalized(), r(m_fDist), bRec, mode, rng, f_i, wo);
+	getBsdfSample(r.dirUnit(), r(m_fDist), bRec, mode, rng, f_i, wo);
 }
 
 void TraceResult::getBsdfSample(const NormalizedT<Vec3f>& wi, const Vec3f& p, BSDFSamplingRecord& bRec, ETransportMode mode, CudaRNG* rng, const Spectrum* f_i, const NormalizedT<Vec3f>* wo) const

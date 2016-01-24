@@ -525,7 +525,7 @@ float InfiniteLight::internalPdfDirection(const Vec3f &d) const
 
 Spectrum InfiniteLight::evalEnvironment(const Ray &ray) const
 {
-	Vec3f v = normalize(m_worldTransformInverse.TransformDirection(ray.direction));
+	Vec3f v = normalize(m_worldTransformInverse.TransformDirection(ray.dir()));
 
 	/* Convert to latitude-longitude texture coordinates */
 	Vec2f uv = Vec2f(
@@ -540,7 +540,7 @@ Spectrum InfiniteLight::evalEnvironment(const Ray &ray) const
 
 Spectrum InfiniteLight::evalEnvironment(const Ray &ray, const Ray& rX, const Ray& rY) const
 {
-	Vec3f v = normalize(m_worldTransformInverse.TransformDirection(ray.direction));
+	Vec3f v = normalize(m_worldTransformInverse.TransformDirection(ray.dir()));
 
 	/* Convert to latitude-longitude texture coordinates */
 	Vec2f uv = Vec2f(
@@ -548,8 +548,8 @@ Spectrum InfiniteLight::evalEnvironment(const Ray &ray, const Ray& rX, const Ray
 		math::safe_acos(v.y) * INV_PI
 		);
 
-	Vec3f  dvdx = rX.direction - v,
-		dvdy = rY.direction - v;
+	Vec3f  dvdx = rX.dir() - v,
+		dvdy = rY.dir() - v;
 
 	float	t1 = INV_TWOPI / (v.x*v.x + v.z*v.z),
 		t2 = -INV_PI / max(math::safe_sqrt(1.0f - v.y*v.y), 1e-4f);

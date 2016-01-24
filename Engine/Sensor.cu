@@ -135,10 +135,10 @@ Spectrum PerspectiveSensor::sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY
 	NormalizedT<Vec3f> d = normalize(nearP);
 	ray = Ray(toWorld.Translation(), toWorld.TransformDirection(d));
 
-	rayX.origin = rayY.origin = ray.origin;
+	rayX.ori() = rayY.ori() = ray.ori();
 
-	rayX.direction = toWorld.TransformDirection(normalize(nearP + m_dx));
-	rayY.direction = toWorld.TransformDirection(normalize(nearP + m_dy));
+	rayX.dir() = toWorld.TransformDirection(normalize(nearP + m_dx));
+	rayY.dir() = toWorld.TransformDirection(normalize(nearP + m_dy));
 	return Spectrum(1.0f);
 }
 
@@ -303,9 +303,9 @@ Spectrum ThinLensSensor::sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY, c
 
 	NormalizedT<Vec3f> d = normalize(focusP - apertureP);
 	ray = Ray(toWorld.TransformPoint(apertureP), toWorld.TransformDirection(d));
-	rayX.origin = rayY.origin = ray.origin;
-	rayX.direction = toWorld.TransformDirection(normalize(focusPx - apertureP));
-	rayY.direction = toWorld.TransformDirection(normalize(focusPy - apertureP));
+	rayX.ori() = rayY.ori() = ray.ori();
+	rayX.dir() = toWorld.TransformDirection(normalize(focusPx - apertureP));
+	rayY.dir() = toWorld.TransformDirection(normalize(focusPy - apertureP));
 	return Spectrum(1.0f);
 }
 
@@ -431,9 +431,9 @@ Spectrum OrthographicSensor::sampleRayDifferential(Ray &ray, Ray &rayX, Ray &ray
 		pixelSample.x * m_invResolution.x,
 		pixelSample.y * m_invResolution.y, 0.0f));
 	ray = Ray(toWorld.TransformPoint(nearP), toWorld.Forward());
-	rayX.origin = toWorld.TransformPoint(nearP + m_dx);
-	rayY.origin = toWorld.TransformPoint(nearP + m_dy);
-	rayX.direction = rayY.direction = ray.direction;
+	rayX.ori() = toWorld.TransformPoint(nearP + m_dx);
+	rayY.ori() = toWorld.TransformPoint(nearP + m_dy);
+	rayX.dir() = rayY.dir() = ray.dir();
 	return Spectrum(1.0f);
 }
 
@@ -554,9 +554,9 @@ Spectrum TelecentricSensor::sampleRayDifferential(Ray &ray, Ray &rayX, Ray &rayY
 	Vec3f orig = Vec3f(diskSample.x + focusP.x,
 		diskSample.y + focusP.y, 0.0f);
 	ray = Ray(toWorld.TransformPoint(orig), toWorld.TransformDirection(focusP - orig));
-	rayX.origin = toWorld.TransformPoint(orig + m_dx);
-	rayY.origin = toWorld.TransformPoint(orig + m_dy);
-	rayX.direction = rayY.direction = ray.direction;
+	rayX.ori() = toWorld.TransformPoint(orig + m_dx);
+	rayY.ori() = toWorld.TransformPoint(orig + m_dy);
+	rayX.dir() = rayY.dir() = ray.dir();
 	return Spectrum(1.0f);
 }
 

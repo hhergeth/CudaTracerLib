@@ -53,7 +53,7 @@ bool HomogeneousVolumeDensity::sampleDistance(const Ray& ray, float minT, float 
 		mRec.p = ray(mRec.t);
 		mRec.sigmaA = sig_a;
 		mRec.sigmaS = sig_s;
-		if (mRec.p == ray.origin)
+		if (mRec.p == ray.ori())
 			success = false;
 	}
 	else
@@ -131,9 +131,9 @@ void VolumeGrid::Update()
 Spectrum VolumeGrid::tau(const Ray &ray, const float minT, const float maxT) const
 {
 	float t0, t1;
-	float length = CudaTracerLib::length(ray.direction);
+	float length = CudaTracerLib::length(ray.dir());
 	if (length == 0.f) return 0.f;
-	Ray rn(ray.origin, ray.direction / length);
+	Ray rn(ray.ori(), ray.dir() / length);
 	if (!IntersectP(rn, minT * length, maxT * length, &t0, &t1)) return 0.0f;
 	return integrateDensity(rn, t0, t1);
 }
@@ -141,9 +141,9 @@ Spectrum VolumeGrid::tau(const Ray &ray, const float minT, const float maxT) con
 Spectrum VolumeGrid::integrateDensity(const Ray& ray, float t0, float t1) const
 {
 	Ray rayL = ray * WorldToVolume;
-	float Td = rayL.direction.length();
+	float Td = rayL.dir().length();
 	float minTL = t0 * Td, maxTL = t1 * Td;
-	rayL.direction = normalize(rayL.direction);
+	rayL.dir() = normalize(rayL.dir());
 	float D_s = 0.0f, D_a = 0.0f;
 	TraverseGrid(rayL, minTL, maxTL, [&](float minT, float rayT, float maxT, float cellEndT, Vec3u& cell_pos, bool& cancelTraversal)
 	{
@@ -195,11 +195,11 @@ bool VolumeGrid::invertDensityIntegral(const Ray& ray, float t0, float t1, float
 {
 	integratedDensity = densityAtMinT = densityAtT = 0.0f;
 	Ray rayL = ray * WorldToVolume;
-	float Td = rayL.direction.length();
+	float Td = rayL.dir().length();
 	float minTL = t0 * Td, maxTL = t1 * Td;
-	rayL.direction = normalize(rayL.direction);
+	rayL.dir() = normalize(rayL.dir());
 	bool found = false;
-	densityAtMinT = sigma_t(ray(t0), NormalizedT<Vec3f>(rayL.direction)).average();
+	densityAtMinT = sigma_t(ray(t0), NormalizedT<Vec3f>(rayL.dir())).average();
 	float Lcl_To_World = (t1 - t0) / (maxTL - minTL);
 	TraverseGrid(rayL, minTL, maxTL, [&](float minT, float rayT, float maxT, float cellEndT, Vec3u& cell_pos, bool& cancelTraversal)
 	{
@@ -235,9 +235,9 @@ bool VolumeGrid::invertDensityIntegral(const Ray& ray, float t0, float t1, float
 bool VolumeGrid::sampleDistance(const Ray& ray, float minT, float maxT, float sample, MediumSamplingRecord& mRec) const
 {
 	float t0, t1;
-	float length = CudaTracerLib::length(ray.direction);
+	float length = CudaTracerLib::length(ray.dir());
 	if (length == 0.f) return 0.f;
-	Ray rn(ray.origin, ray.direction / length);
+	Ray rn(ray.ori(), ray.dir() / length);
 	if (!IntersectP(rn, minT * length, maxT * length, &t0, &t1)) return false;
 	float integratedDensity, densityAtMinT, densityAtT;
 	float desiredDensity = -logf(1 - sample);
@@ -246,8 +246,8 @@ bool VolumeGrid::sampleDistance(const Ray& ray, float minT, float maxT, float sa
 	{
 		success = true;
 		mRec.p = ray(mRec.t);
-		mRec.sigmaS = sigma_s(mRec.p, NormalizedT<Vec3f>(-ray.direction));
-		mRec.sigmaA = sigma_s(mRec.p, NormalizedT<Vec3f>(-ray.direction));
+		mRec.sigmaS = sigma_s(mRec.p, NormalizedT<Vec3f>(-ray.dir()));
+		mRec.sigmaA = sigma_s(mRec.p, NormalizedT<Vec3f>(-ray.dir()));
 	}
 	float expVal = math::exp(-integratedDensity);
 	mRec.pdfFailure = expVal;

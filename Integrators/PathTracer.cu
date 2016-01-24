@@ -33,7 +33,7 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(Ray& r, const Ray& rX, con
 				Spectrum value = g_SceneData.sampleAttenuatedEmitterDirect(dRec, rnd.randomFloat2());
 				if (!value.isZero())
 				{
-					float p = V.p(mRec.p, -r.dir(), dRec.d, rnd);
+					float p = V.p(mRec.p, -r.dirUnit(), dRec.d, rnd);
 					if (p != 0 && !g_SceneData.Occluded(Ray(dRec.ref, dRec.d), 0, dRec.dist))
 					{
 						const float bsdfPdf = p;//phase functions are normalized
@@ -44,9 +44,9 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(Ray& r, const Ray& rX, con
 			}
 
 			NormalizedT<Vec3f> dir;
-			cf *= V.Sample(mRec.p, -r.dir(), rnd, &dir);
-			r.direction = dir;
-			r.origin = mRec.p;
+			cf *= V.Sample(mRec.p, -r.dirUnit(), rnd, &dir);
+			r.dir() = dir;
+			r.ori() = mRec.p;
 		}
 		else if (r2.hasHit())
 		{
@@ -56,7 +56,7 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(Ray& r, const Ray& rX, con
 			if (depth == 1)
 				dg.computePartials(r, rX, rY);
 			if (!DIRECT || (depth == 1 || specularBounce))
-				cl += cf * r2.Le(bRec.dg.P, bRec.dg.sys, -r.dir());
+				cl += cf * r2.Le(bRec.dg.P, bRec.dg.sys, -r.dirUnit());
 			Spectrum f = r2.getMat().bsdf.sample(bRec, rnd.randomFloat2());
 			if (DIRECT)
 				cl += cf * UniformSampleOneLight(bRec, r2.getMat(), rnd, true);
@@ -87,13 +87,13 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTraceRegularization(Ray& r, cons
 	DifferentialGeometry dg;
 	BSDFSamplingRecord bRec(dg);
 	//bool hadDelta = false;
-	while (traceRay(r.direction, r.origin, &r2) && depth++ < 7)
+	while (traceRay(r.dir(), r.ori(), &r2) && depth++ < 7)
 	{
 		r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rnd);// return (Spectrum(bRec.map.sys.n) + Spectrum(1)) / 2.0f; //return bRec.map.sys.n;
 		if (depth == 1)
 			dg.computePartials(r, rX, rY);
 		if (!DIRECT || (depth == 1 || specularBounce))
-			cl += cf * r2.Le(bRec.dg.P, bRec.dg.sys, -r.dir());
+			cl += cf * r2.Le(bRec.dg.P, bRec.dg.sys, -r.dirUnit());
 		Spectrum f = r2.getMat().bsdf.sample(bRec, rnd.randomFloat2());
 		if (DIRECT)
 		{

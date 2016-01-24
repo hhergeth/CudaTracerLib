@@ -90,7 +90,7 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 			bool inMedium = (!bssrdf && V.HasVolumes() && V.IntersectP(r, 0, r2.m_fDist, &minT, &maxT)) || bssrdf;
 			if (inMedium)
 			{
-				if (((VolEstimator*)g_VolEstimator)->StoreBeam(Beam(r.origin, r.dir(), r2.m_fDist, throughput * Le)) && !wasStoredVolume)//store the beam even if sampled distance is too far ahead!
+				if (((VolEstimator*)g_VolEstimator)->StoreBeam(Beam(r.ori(), r.dirUnit(), r2.m_fDist, throughput * Le)) && !wasStoredVolume)//store the beam even if sampled distance is too far ahead!
 				{
 					atomicInc(&numStoredVolume, UINT_MAX);
 					wasStoredVolume = true;
@@ -100,24 +100,24 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 				|| (bssrdf && bssrdf->sampleDistance(r, 0, r2.m_fDist, rng.randomFloat(), mRec)))
 			{//mRec.t
 				throughput *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
-				if (((VolEstimator*)g_VolEstimator)->StorePhoton(mRec.p, -r.dir(), throughput * Le) && !wasStoredVolume)
+				if (((VolEstimator*)g_VolEstimator)->StorePhoton(mRec.p, -r.dirUnit(), throughput * Le) && !wasStoredVolume)
 				{
 					atomicInc(&numStoredVolume, UINT_MAX);
 					wasStoredVolume = true;
 				}
 				if (bssrdf)
 				{
-					PhaseFunctionSamplingRecord pRec(-r.dir(), r.dir());
+					PhaseFunctionSamplingRecord pRec(-r.dirUnit(), r.dirUnit());
 					throughput *= bssrdf->As()->Func.Sample(pRec, rng);
-					r.direction = pRec.wi;
+					r.dir() = pRec.wi;
 				}
 				else
 				{
 					NormalizedT<Vec3f> dir;
-					throughput *= V.Sample(mRec.p, -r.dir(), rng, &dir);
-					r.direction = dir;
+					throughput *= V.Sample(mRec.p, -r.dirUnit(), rng, &dir);
+					r.dir() = dir;
 				}
-				r.origin = mRec.p;
+				r.ori() = mRec.p;
 				delta = false;
 				medium = true;
 			}
@@ -127,7 +127,7 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 			{
 				if (medium)
 					throughput *= mRec.transmittance / mRec.pdfFailure;
-				auto wo = bssrdf ? r.dir() : -r.dir();
+				auto wo = bssrdf ? r.dirUnit() : -r.dirUnit();
 				Spectrum f_i = throughput * Le;
 				r2.getBsdfSample(-wo, r(r2.m_fDist), bRec, ETransportMode::EImportance, &rng, &f_i);
 				if (r2.getMat().bsdf.hasComponent(ESmooth) && dot(bRec.dg.sys.n, wo) > 0.0f)

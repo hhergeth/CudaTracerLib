@@ -16,12 +16,12 @@ template<typename CLB> CUDA_FUNC_IN bool TracerayTemplate(const Ray& r, float& r
 	int traversalStack[64];
 	traversalStack[0] = EntrypointSentinel;
 	const float ooeps = math::exp2(-80.0f);
-	float   idirx = 1.0f / (math::abs(r.direction.x) > ooeps ? r.direction.x : copysignf(ooeps, r.direction.x));
-	float   idiry = 1.0f / (math::abs(r.direction.y) > ooeps ? r.direction.y : copysignf(ooeps, r.direction.y));
-	float   idirz = 1.0f / (math::abs(r.direction.z) > ooeps ? r.direction.z : copysignf(ooeps, r.direction.z));
-	float   origx = r.origin.x;
-	float	origy = r.origin.y;
-	float	origz = r.origin.z;						// Ray origin.
+	float   idirx = 1.0f / (math::abs(r.dir().x) > ooeps ? r.dir().x : copysignf(ooeps, r.dir().x));
+	float   idiry = 1.0f / (math::abs(r.dir().y) > ooeps ? r.dir().y : copysignf(ooeps, r.dir().y));
+	float   idirz = 1.0f / (math::abs(r.dir().z) > ooeps ? r.dir().z : copysignf(ooeps, r.dir().z));
+	float   origx = r.ori().x;
+	float	origy = r.ori().y;
+	float	origz = r.ori().z;						// Ray origin.
 	float   oodx = origx * idirx;
 	float   oody = origy * idiry;
 	float   oodz = origz * idirz;
@@ -135,12 +135,12 @@ template<typename CLB> CUDA_FUNC_IN bool TracerayTemplate(const Ray& r, float& r
 	int traversalStack[64];
 	traversalStack[0] = EntrypointSentinel;
 	const float ooeps = math::exp2(-80.0f);
-	float   idirx = 1.0f / (math::abs(r.direction.x) > ooeps ? r.direction.x : copysignf(ooeps, r.direction.x));
-	float   idiry = 1.0f / (math::abs(r.direction.y) > ooeps ? r.direction.y : copysignf(ooeps, r.direction.y));
-	float   idirz = 1.0f / (math::abs(r.direction.z) > ooeps ? r.direction.z : copysignf(ooeps, r.direction.z));
-	float   origx = r.origin.x;
-	float	origy = r.origin.y;
-	float	origz = r.origin.z;						// Ray origin.
+	float   idirx = 1.0f / (math::abs(r.dir().x) > ooeps ? r.dir().x : copysignf(ooeps, r.dir().x));
+	float   idiry = 1.0f / (math::abs(r.dir().y) > ooeps ? r.dir().y : copysignf(ooeps, r.dir().y));
+	float   idirz = 1.0f / (math::abs(r.dir().z) > ooeps ? r.dir().z : copysignf(ooeps, r.dir().z));
+	float   origx = r.ori().x;
+	float	origy = r.ori().y;
+	float	origz = r.ori().z;						// Ray origin.
 	float   oodx = origx * idirx;
 	float   oody = origy * idiry;
 	float   oodz = origz * idirz;
