@@ -87,7 +87,7 @@ struct roughcoating : public BSDF//, public e_DerivedTypeHelper<14>
 	{
 		initTextureOffsets(m_sigmaA, m_specularReflectance, m_alpha);
 	}
-	roughcoating(MicrofacetDistribution::EType type, const BSDFFirst& nested, float eta, float thickness, Texture& sig, Texture& alpha, Texture& specular)
+	roughcoating(MicrofacetDistribution::EType type, const BSDFFirst& nested, float eta, float thickness, const Texture& sig, const Texture& alpha, const Texture& specular)
 		: BSDF(EBSDFType(EGlossyReflection | nested.getType())), m_nested(nested), m_eta(eta), m_invEta(1.0f / eta), m_thickness(thickness), m_sigmaA(sig), m_alpha(alpha), m_specularReflectance(specular)
 	{
 		initTextureOffsets2(nested.As()->getTextureList(), m_sigmaA, m_specularReflectance, m_alpha);
