@@ -68,7 +68,7 @@ unsigned int TraceResult::getTriIndex() const
 
 void TraceResult::fillDG(DifferentialGeometry& dg) const
 {
-	CudaTracerLib::fillDG(m_fBaryCoords, &g_SceneData.m_sTriData[m_triIdx], &g_SceneData.m_sNodeData[m_nodeIdx], dg);
+	CudaTracerLib::fillDG(m_fBaryCoords, m_triIdx, m_nodeIdx, dg);
 }
 
 unsigned int TraceResult::getMatIndex() const

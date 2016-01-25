@@ -206,19 +206,18 @@ void k_INITIALIZE(DynamicScene* a_Scene, const CudaRNGBuffer& a_RngBuf)
 	g_RayTracedCounterHost = 0;
 }
 
-void fillDG(const Vec2f& bary, const TriangleData* tri, const Node* node, DifferentialGeometry& dg)
+void fillDG(const Vec2f& bary, unsigned int triIdx, unsigned int nodeIdx, DifferentialGeometry& dg)
 {
 	float4x4 localToWorld, worldToLocal;
-	loadModl((unsigned int)(node - g_SceneData.m_sNodeData.Data), &localToWorld);
-	loadInvModl((unsigned int)(node - g_SceneData.m_sNodeData.Data), &worldToLocal);
+	loadModl(nodeIdx, &localToWorld);
+	loadInvModl(nodeIdx, &worldToLocal);
 	dg.bary = bary;
 	dg.hasUVPartials = false;
 #if defined(ISCUDA) && NUM_UV_SETS == 1 && defined(EXT_TRI)
-	unsigned int i = tri - g_SceneData.m_sTriData.Data;
-	int2 nme = tex1Dfetch(t_TriDataA, i * 4 + 0);
-	float4 rowB = tex1Dfetch(t_TriDataB, i * 4 + 1);
-	float4 rowC = tex1Dfetch(t_TriDataB, i * 4 + 2);
-	float4 rowD = tex1Dfetch(t_TriDataB, i * 4 + 3);
+	int2 nme = tex1Dfetch(t_TriDataA, triIdx * 4 + 0);
+	float4 rowB = tex1Dfetch(t_TriDataB, triIdx * 4 + 1);
+	float4 rowC = tex1Dfetch(t_TriDataB, triIdx * 4 + 2);
+	float4 rowD = tex1Dfetch(t_TriDataB, triIdx * 4 + 3);
 	NormalizedT<Vec3f> na = Uchar2ToNormalizedFloat3(nme.x), nb = Uchar2ToNormalizedFloat3(nme.x >> 16), nc = Uchar2ToNormalizedFloat3(nme.y);
 	float w = 1.0f - dg.bary.x - dg.bary.y, u = dg.bary.x, v = dg.bary.y;
 	dg.extraData = nme.y >> 24;
@@ -238,7 +237,7 @@ void fillDG(const Vec2f& bary, const TriangleData* tri, const Node* node, Differ
 	if (dot(dg.n, dg.sys.n) < 0.0f)
 		dg.n = -dg.n;
 #else
-	tri->fillDG(localToWorld, worldToLocal, dg);
+	g_SceneData.m_sTriData[triIdx].fillDG(localToWorld, dg);
 #endif
 }
 

@@ -33,7 +33,7 @@ CUDA_FUNC_IN TraceResult traceRay(const Ray& r)
 	return r2;
 }
 
-CUDA_DEVICE CUDA_HOST void fillDG(const Vec2f& bary, const TriangleData* tri, const Node* node, DifferentialGeometry& dg);
+CUDA_DEVICE CUDA_HOST void fillDG(const Vec2f& bary, unsigned int triIdx, unsigned int nodeIdx, DifferentialGeometry& dg);
 
 void k_INITIALIZE(DynamicScene* a_Scene, const CudaRNGBuffer& a_RngBuf);
 

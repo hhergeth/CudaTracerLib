@@ -35,7 +35,7 @@ public:
 public:
 	TriangleData(){}
 	TriangleData(const Vec3f* P, unsigned char matIndex, const Vec2f* T, const NormalizedT<Vec3f>* N, const Vec3f* Tan, const Vec3f* BiTan);
-	CUDA_DEVICE CUDA_HOST void fillDG(const float4x4& localToWorld, const float4x4& worldToLocal, DifferentialGeometry& dg) const;
+	CUDA_DEVICE CUDA_HOST void fillDG(const float4x4& localToWorld, DifferentialGeometry& dg) const;
 	CUDA_FUNC_IN unsigned int getMatIndex(const unsigned int off) const
 	{
 		unsigned int v = (m_sDeviceData.NorMatExtra.y >> 16) & 0xff;
@@ -64,7 +64,7 @@ struct TriangleData
 	};
 	TriangleData(){}
 	TriangleData(const Vec3f* P, unsigned char matIndex, const Vec2f* T, const NormalizedT<Vec3f>* N, const Vec3f* Tan, const Vec3f* BiTan);
-	CUDA_DEVICE CUDA_HOST void fillDG(const float4x4& localToWorld, const float4x4& worldToLocal, DifferentialGeometry& dg) const;
+	CUDA_DEVICE CUDA_HOST void fillDG(const float4x4& localToWorld, DifferentialGeometry& dg) const;
 	CUDA_FUNC_IN unsigned int getMatIndex(const unsigned int off) const
 	{
 		unsigned int v = m_sDeviceData.Row0;

@@ -72,7 +72,7 @@ void TriangleData::getNormals(NormalizedT<Vec3f>& n0, NormalizedT<Vec3f>& n1, No
 	n2 = Uchar2ToNormalizedFloat3(nme.y);
 }
 
-void TriangleData::fillDG(const float4x4& localToWorld, const float4x4& worldToLocal, DifferentialGeometry& dg) const
+void TriangleData::fillDG(const float4x4& localToWorld, DifferentialGeometry& dg) const
 {
 	uint2 nme = m_sDeviceData.NorMatExtra;
 	Vec3f na = Uchar2ToNormalizedFloat3(nme.x), nb = Uchar2ToNormalizedFloat3(nme.x >> 16), nc = Uchar2ToNormalizedFloat3(nme.y);
@@ -111,7 +111,7 @@ TriangleData::TriangleData(const Vec3f* P, unsigned char matIndex, const Vec2f* 
 	m_sHostData.MatIndex = matIndex;
 }
 
-void TriangleData::fillDG(const float4x4& localToWorld, const float4x4& worldToLocal, DifferentialGeometry& dg) const
+void TriangleData::fillDG(const float4x4& localToWorld, DifferentialGeometry& dg) const
 {
 	NormalizedT<Vec3f> n = normalize(Uchar3ToNormalizedFloat3(m_sHostData.Normal));
 	dg.sys = Frame(n) * localToWorld;
