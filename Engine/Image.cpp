@@ -133,7 +133,7 @@ FIBITMAP* Image::toFreeImage()
 	return bitmap;
 }
 
-void Image::WriteDisplayImage(const std::string& fileName, const std::string& exif_comment)
+void Image::WriteDisplayImage(const std::string& fileName)
 {
 	FIBITMAP* bitmap = toFreeImage();
 	FREE_IMAGE_FORMAT ff = FreeImage_GetFIFFromFilename(fileName.c_str());
