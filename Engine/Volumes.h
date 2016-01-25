@@ -4,6 +4,7 @@
 #include "PhaseFunction.h"
 #include <VirtualFuncType.h>
 #include <CudaMemoryManager.h>
+#include <Math/Spectrum.h>
 
 //Implementation and interface copied from Mitsuba as well as PBRT.
 

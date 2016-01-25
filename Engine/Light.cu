@@ -322,6 +322,11 @@ Spectrum SpotLight::sampleDirection(DirectionSamplingRecord &dRec, PositionSampl
 	return evalDirection(dRec, pRec) / dRec.pdf;
 }
 
+float SpotLight::pdfDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
+{
+	return (dRec.measure == ESolidAngle) ? Warp::squareToUniformConePdf(m_cosCutoffAngle) : 0.0f;
+}
+
 Spectrum SpotLight::falloffCurve(const NormalizedT<Vec3f> &d) const
 {
 	const float cosTheta = Frame::cosTheta(d);

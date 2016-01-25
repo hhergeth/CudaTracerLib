@@ -1,5 +1,5 @@
 #include "CudaRandom.h"
-#include <MathTypes.h>
+#include <Math/Vector.h>
 #include <CudaMemoryManager.h>
 
 namespace CudaTracerLib {

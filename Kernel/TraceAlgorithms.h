@@ -1,6 +1,6 @@
 #pragma once
 
-#include <MathTypes.h>
+#include <Math/Vector.h>
 
 namespace CudaTracerLib {
 
@@ -8,6 +8,8 @@ struct TraceResult;
 struct BSDFSamplingRecord;
 struct Material;
 struct CudaRNG;
+struct Spectrum;
+struct Ray;
 
 CUDA_HOST CUDA_DEVICE bool V(const Vec3f& a, const Vec3f& b, TraceResult* res = 0);
 

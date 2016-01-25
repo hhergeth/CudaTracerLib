@@ -1,10 +1,11 @@
 #pragma once
 
-#include <MathTypes.h>
 #include <Base/FixedSizeArray.h>
 
 namespace CudaTracerLib {
 
+struct AABB;
+struct float4x4;
 class Mesh;
 struct Material;
 template<typename H, typename D> class BufferReference;

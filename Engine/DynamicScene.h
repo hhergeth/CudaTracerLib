@@ -1,6 +1,9 @@
 #pragma once
 
-#include <MathTypes.h>
+#include <Math/Vector.h>
+#include <Math/float4x4.h>
+#include <Math/Spectrum.h>
+#include <Math/AABB.h>
 #include "KernelDynamicScene.h"
 #include "MeshCompiler.h"
 #include "SceneInitData.h"

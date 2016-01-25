@@ -1,8 +1,11 @@
 #pragma once
 
-#include <MathTypes.h>
+#include <Math/Vector.h>
+#include <Math/Frame.h>
 
 namespace CudaTracerLib {
+
+struct Ray;
 
 struct DifferentialGeometry
 {

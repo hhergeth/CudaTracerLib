@@ -1,6 +1,5 @@
 #pragma once
 
-#include <MathTypes.h>
 #include <VirtualFuncType.h>
 
 namespace CudaTracerLib {

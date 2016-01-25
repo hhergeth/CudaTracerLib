@@ -1,6 +1,5 @@
 #pragma once
 
-#include <MathTypes.h>
 #include "ShapeSet.h"
 #include "MIPMap_device.h"
 #include "AbstractEmitter.h"
@@ -277,10 +276,7 @@ struct SpotLight : public LightBase//, public e_DerivedTypeHelper<4>
 
 	CUDA_DEVICE CUDA_HOST Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const;
 
-	CUDA_FUNC_IN float pdfDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
-	{
-		return (dRec.measure == ESolidAngle) ? Warp::squareToUniformConePdf(m_cosCutoffAngle) : 0.0f;
-	}
+	CUDA_DEVICE CUDA_HOST float pdfDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const;
 
 	CUDA_FUNC_IN Spectrum evalDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
 	{

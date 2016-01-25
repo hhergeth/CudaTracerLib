@@ -1,7 +1,9 @@
 #pragma once
-#include <MathTypes.h>
+#include <Math/Vector.h>
 
 namespace CudaTracerLib {
+
+struct Spectrum;
 
 #define MAX_MIPS 16
 #define MTS_MIPMAP_LUT_SIZE 64

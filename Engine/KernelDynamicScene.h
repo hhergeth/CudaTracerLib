@@ -1,6 +1,8 @@
 #pragma once
 
-#include <MathTypes.h>
+#include <Math/Vector.h>
+#include <Math/Spectrum.h>
+#include <Math/AABB.h>
 #include "Buffer_device.h"
 #include "SceneBVH_device.h"
 #include "Volumes.h"

@@ -1,5 +1,6 @@
 #include "DifferentialGeometry.h"
 #include <Math/Sampling.h>
+#include <Math/Ray.h>
 
 //Implementation copied from Mitsuba.
 

@@ -4,7 +4,8 @@
 #include <stdexcept>
 #include <vector>
 #include <fstream>
-#include <MathTypes.h>
+#include <Math/Vector.h>
+#include <Math/Quaternion.h>
 
 // MD5 Loader, by A.J. Tavakoli
 

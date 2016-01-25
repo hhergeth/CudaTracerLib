@@ -1,5 +1,5 @@
 #pragma once
-#include <MathTypes.h>
+#include <Math/AABB.h>
 #include <Engine/TriIntersectorData.h>
 #include <Base/Timer.h>
 #include <vector>

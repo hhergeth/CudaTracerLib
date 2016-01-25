@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Math/float4x4.h>
+#include <Math/Spectrum.h>
 #include "MIPMap_device.h"
 #include "DifferentialGeometry.h"
 #include <Base/FixedString.h>

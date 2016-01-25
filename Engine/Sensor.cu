@@ -1,4 +1,5 @@
 #include "Sensor.h"
+#include <Math/Warp.h>
 
 namespace CudaTracerLib {
 
@@ -390,6 +391,17 @@ Spectrum ThinLensSensor::sampleDirection(DirectionSamplingRecord &dRec, Position
 	dRec.measure = ESolidAngle;
 	dRec.pdf = m_normalization / (d.z * d.z * d.z);
 
+	return Spectrum(1.0f);
+}
+
+Spectrum ThinLensSensor::samplePosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const
+{
+	Vec2f aperturePos = Warp::squareToUniformDiskConcentric(sample) * m_apertureRadius;
+
+	pRec.p = toWorld.TransformPoint(Vec3f(aperturePos.x, aperturePos.y, 0.0f));
+	pRec.n = toWorld.Forward().normalized();
+	pRec.pdf = m_aperturePdf;
+	pRec.measure = EArea;
 	return Spectrum(1.0f);
 }
 

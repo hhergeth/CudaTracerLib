@@ -1,6 +1,8 @@
 #include "PhaseFunction.h"
 #include <Base/CudaRandom.h>
 #include "Samples.h"
+#include <Math/Frame.h>
+#include <Math/Warp.h>
 
 namespace CudaTracerLib {
 

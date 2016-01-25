@@ -3,7 +3,7 @@
 #include <math.h>
 #include <cmath>
 #include <Defines.h>
-#include <MathTypes.h>
+#include <Math/Vector.h>
 #include <qMatrixAlgorithms.h>
 #include <qMatrixHelper.h>
 #include <Base/CudaRandom.h>

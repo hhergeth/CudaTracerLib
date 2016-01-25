@@ -2,6 +2,7 @@
 
 #include "MathFunc.h"
 #include "Vector.h"
+#include "float4x4.h"
 
 namespace CudaTracerLib {
 

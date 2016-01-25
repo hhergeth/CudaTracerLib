@@ -1,6 +1,7 @@
 #pragma once
 
-#include <MathTypes.h>
+#include <Math/Vector.h>
+#include <Math/Spectrum.h>
 
 //Implementation and interface copied from Mitsuba.
 

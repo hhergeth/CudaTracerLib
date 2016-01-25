@@ -2,7 +2,11 @@
 
 #include <iostream>
 #include <fstream>
-#include <MathTypes.h>
+
+#include <Math/Vector.h>
+#include <Math/float4x4.h>
+#include <Math/Spectrum.h>
+#include <Math/AABB.h>
 #include "FixedString.h"
 #include <Engine/Buffer_device.h>
 

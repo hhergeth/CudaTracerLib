@@ -1,4 +1,5 @@
 #include "MicrofacetDistribution.h"
+#include <Math/Frame.h>
 
 namespace CudaTracerLib {
 

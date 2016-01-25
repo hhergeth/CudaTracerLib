@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Filter.h"
+#include <Math/Spectrum.h>
 
 #ifdef ISWINDOWS
 struct ID3D11Resource;

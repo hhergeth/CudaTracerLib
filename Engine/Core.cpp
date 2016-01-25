@@ -1,9 +1,7 @@
 #include <StdAfx.h>
 #include "Core.h"
 #include <CudaMemoryManager.h>
-#include <MathTypes.h>
 #include "RoughTransmittance.h"
-#include "MIPMap.h"
 #include <Kernel/Tracer.h>
 #include <ctime>
 #include <cuda_runtime.h>

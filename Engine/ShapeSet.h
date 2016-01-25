@@ -1,6 +1,7 @@
 #pragma once
 
-#include <MathTypes.h>
+#include <Math/float4x4.h>
+#include <Math/AABB.h>
 
 namespace CudaTracerLib {
 

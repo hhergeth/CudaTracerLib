@@ -1,6 +1,6 @@
 #pragma once
 
-#include <MathTypes.h>
+#include <Math/MathFunc.h>
 #include <VirtualFuncType.h>
 
 //Implementation and interface designed after PBRT.

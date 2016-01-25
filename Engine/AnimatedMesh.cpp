@@ -1,8 +1,7 @@
 #include "StdAfx.h"
 #include "AnimatedMesh.h"
 #include "Buffer.h"
-#include <MathTypes.h>
-#include <Base/Platform.h>
+#include <Math/Vector.h>
 #include <Base/FileStream.h>
 #include "TriangleData.h"
 #include "Material.h"

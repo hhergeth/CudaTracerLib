@@ -1,7 +1,6 @@
 #pragma once
 		 
 #include <Defines.h>
-#include <MathTypes.h>
 #include <Engine/TriIntersectorData.h>
 
 namespace CudaTracerLib {

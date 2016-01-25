@@ -1,6 +1,5 @@
 #pragma once
 
-#include <MathTypes.h>
 #include <Kernel/TraceAlgorithms.h>
 #include <Engine/Light.h>
 #include "../PhotonMapHelper.h"

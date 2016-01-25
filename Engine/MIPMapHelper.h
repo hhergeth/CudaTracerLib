@@ -1,5 +1,6 @@
 #pragma once
 #include "MIPMap.h"
+#include <Math/Spectrum.h>
 
 namespace CudaTracerLib {
 

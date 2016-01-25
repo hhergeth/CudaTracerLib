@@ -1,8 +1,8 @@
 #pragma once
 
-#include <MathTypes.h>
+#include <Math/float4x4.h>
+#include <Math/AABB.h>
 #include "SceneBVH_device.h"
-#include <set>
 #include "Buffer_device.h"
 
 namespace CudaTracerLib {

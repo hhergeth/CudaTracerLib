@@ -1,6 +1,6 @@
 #include "TriangleData.h"
-#include "Node.h"
 #include <Math/Compression.h>
+#include <Math/half.h>
 
 namespace CudaTracerLib {
 

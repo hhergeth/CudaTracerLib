@@ -2,12 +2,12 @@
 
 //Implementation and interface copied from Mitsuba.
 #include <vector>
-#include <MathTypes.h>
 #include "Engine/Texture.h"
 #include "Engine/Samples.h"
 #include "Engine/PhaseFunction.h"
 #include "MicrofacetDistribution.h"
 #include <Math/Sampling.h>
+#include <Math/Warp.h>
 #include <VirtualFuncType.h>
 #include "Dispersion.h"
 

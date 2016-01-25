@@ -1,6 +1,7 @@
 #pragma once
 
-#include <MathTypes.h>
+#include <Math/Spectrum.h>
+#include <string>
 
 namespace CudaTracerLib {
 

@@ -1,6 +1,7 @@
 #include "Image.h"
 #include <cuda_surface_types.h>
 #include <Base/Platform.h>
+#include <Math/Vector.h>
 
 #ifdef ISWINDOWS
 #include <windows.h>

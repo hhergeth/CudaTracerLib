@@ -1,6 +1,7 @@
 #pragma once
 #include <Defines.h>
-#include <MathTypes.h>
+#include <Math/Vector.h>
+#include <Math/Spectrum.h>
 #include <Kernel/TraceHelper.h>
 #include <vector>
 #include <Base/Platform.h>

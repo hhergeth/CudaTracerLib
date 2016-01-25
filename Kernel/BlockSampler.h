@@ -1,6 +1,6 @@
 #pragma once
 
-#include <MathTypes.h>
+#include <Math/Vector.h>
 #include "BlockSampler_device.h"
 
 namespace CudaTracerLib {

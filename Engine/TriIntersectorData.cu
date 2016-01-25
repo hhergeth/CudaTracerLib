@@ -1,5 +1,4 @@
 #include "TriIntersectorData.h"
-#include <MathTypes.h>
 
 namespace CudaTracerLib {
 

@@ -1,10 +1,12 @@
 #pragma once
 
-#include <MathTypes.h>
+#include <Math/Vector.h>
 
 //Implementation and interface copied from Mitsuba.
 
 namespace CudaTracerLib {
+
+struct Spectrum;
 
 struct MicrofacetDistribution
 {

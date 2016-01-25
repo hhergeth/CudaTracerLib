@@ -1,6 +1,6 @@
 #pragma once
 
-#include <MathTypes.h>
+#include <Math/AABB.h>
 #include <set>
 #include <functional>
 #include <fstream>

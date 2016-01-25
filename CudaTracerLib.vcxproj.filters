@@ -40,7 +40,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Defines.h" />
-    <ClInclude Include="MathTypes.h" />
     <ClInclude Include="Base\CudaRandom.h">
       <Filter>Base</Filter>
     </ClInclude>

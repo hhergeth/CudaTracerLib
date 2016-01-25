@@ -1,6 +1,6 @@
 #pragma once
 
-#include <MathTypes.h>
+#include <Math/Ray.h>
 
 namespace CudaTracerLib {
 
@@ -12,6 +12,8 @@ struct Material;
 struct BSDFSamplingRecord;
 enum ETransportMode : int;
 struct CudaRNG;
+struct Frame;
+struct Spectrum;
 
 struct TraceResult
 {

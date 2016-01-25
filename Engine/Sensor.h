@@ -1,11 +1,16 @@
 #pragma once
 
-#include <MathTypes.h>
+#include <Math/float4x4.h>
+#include <Math/Ray.h>
+#include <Math/Spectrum.h>
+#include <Math/AABB.h>
 #include "Samples.h"
 #include "AbstractEmitter.h"
 #include <VirtualFuncType.h>
 
 namespace CudaTracerLib {
+
+struct Frame;
 
 enum ESensorFlags
 {
@@ -303,16 +308,7 @@ public:
 
 	CUDA_DEVICE CUDA_HOST float pdfDirect(const DirectSamplingRecord &dRec) const;
 
-	CUDA_FUNC_IN Spectrum samplePosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const
-	{
-		Vec2f aperturePos = Warp::squareToUniformDiskConcentric(sample) * m_apertureRadius;
-
-		pRec.p = toWorld.TransformPoint(Vec3f(aperturePos.x, aperturePos.y, 0.0f));
-		pRec.n = toWorld.Forward().normalized();
-		pRec.pdf = m_aperturePdf;
-		pRec.measure = EArea;
-		return Spectrum(1.0f);
-	}
+	CUDA_DEVICE CUDA_HOST Spectrum samplePosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const;
 
 	CUDA_FUNC_IN Spectrum evalPosition(const PositionSamplingRecord &pRec) const
 	{
