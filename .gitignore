@@ -34,3 +34,4 @@ Build/
 *.bin
 *.lib
 CudaTracerLib_project_suppressions.cfg
+CudaTracerLib.vcxproj*
