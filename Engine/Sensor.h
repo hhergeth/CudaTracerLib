@@ -41,7 +41,7 @@ struct SensorBase : public AbstractEmitter//, public BaseTypeHelper<5459539>
 public:
 	float aspect;
 	Vec2f m_resolution, m_invResolution;
-	float4x4 toWorld, toWorldInverse;
+	NormalizedT<OrthogonalAffineMap> toWorld;
 	float4x4 m_cameraToSample, m_sampleToCamera;
 	Vec2f m_fNearFarDepths;
 	float fov;
@@ -56,18 +56,16 @@ public:
 	SensorBase(unsigned int type)
 		: AbstractEmitter(type)
 	{
-		toWorld = float4x4::Identity();
+		toWorld = NormalizedT<OrthogonalAffineMap>::Identity();
 	}
 	virtual void Update()
 	{
-		toWorldInverse = toWorld.inverse();
 		m_invResolution = Vec2f(1) / m_resolution;
 		aspect = m_resolution.x / m_resolution.y;
 	}
-	virtual void SetToWorld(const float4x4& w)
+	virtual void SetToWorld(const NormalizedT<OrthogonalAffineMap>& w)
 	{
 		toWorld = w;
-		toWorldInverse = w.inverse();
 		Update();
 	}
 	///_fov in degrees
@@ -98,7 +96,7 @@ public:
 		m_focusDistance = a;
 		Update();
 	}
-	float4x4 getWorld()
+	NormalizedT<OrthogonalAffineMap> getWorld()
 	{
 		return toWorld;
 	}
@@ -232,7 +230,7 @@ public:
 	CUDA_FUNC_IN Spectrum samplePosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const
 	{
 		pRec.p = toWorld.Translation();
-		pRec.n = toWorld.Forward().normalized();
+		pRec.n = toWorld.Forward();
 		pRec.pdf = 1.0f;
 		pRec.measure = EDiscrete;
 		return Spectrum(1.0f);
@@ -254,8 +252,8 @@ public:
 	{
 		if (dRec.measure != ESolidAngle)
 			return 0.0f;
-
-		return importance(toWorldInverse.TransformDirection(dRec.d).normalized());
+		
+		return importance(toWorld.TransformDirectionTranspose(dRec.d));
 	}
 
 	CUDA_FUNC_IN Spectrum evalDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
@@ -263,7 +261,7 @@ public:
 		if (dRec.measure != ESolidAngle)
 			return Spectrum(0.0f);
 
-		return importance(toWorldInverse.TransformDirection(dRec.d).normalized());
+		return importance(toWorld.TransformDirectionTranspose(dRec.d));
 	}
 
 	CUDA_DEVICE CUDA_HOST bool getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, Vec2f &samplePosition) const;
@@ -327,7 +325,7 @@ public:
 		if (dRec.measure != ESolidAngle)
 			return 0.0f;
 
-		return importance(toWorldInverse.TransformPoint(pRec.p), toWorldInverse.TransformDirection(dRec.d).normalized());
+		return importance(toWorld.TransformPointTranspose(pRec.p), toWorld.TransformDirectionTranspose(dRec.d));
 	}
 
 	CUDA_FUNC_IN Spectrum evalDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
@@ -335,13 +333,13 @@ public:
 		if (dRec.measure != ESolidAngle)
 			return Spectrum(0.0f);
 
-		return importance(toWorldInverse.TransformPoint(pRec.p), toWorldInverse.TransformDirection(dRec.d).normalized());
+		return importance(toWorld.TransformPointTranspose(pRec.p), toWorld.TransformDirectionTranspose(dRec.d));
 	}
 
 	CUDA_FUNC_IN bool getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, Vec2f &samplePosition) const
 	{
-		Vec3f localP(toWorldInverse.TransformPoint(pRec.p));
-		Vec3f localD(toWorldInverse.TransformDirection(dRec.d));
+		auto localP = toWorld.TransformPointTranspose(pRec.p);
+		auto localD = toWorld.TransformDirectionTranspose(dRec.d);
 
 		if (localD.z <= 0)
 			return false;
@@ -530,11 +528,11 @@ struct Sensor : public CudaVirtualAggregate<SensorBase, SphericalSensor, Perspec
 {
 public:
 	//storage for the last viewing frustum, might(!) be computed, don't depend on it
-	float4x4 View() const;
+	NormalizedT<OrthogonalAffineMap> View() const;
 
 	Vec3f Position() const;
 
-	void SetToWorld(const Vec3f& pos, const float4x4& rot);
+	void SetToWorld(const Vec3f& pos, const NormalizedT<OrthogonalAffineMap>& rot);
 
 	void SetToWorld(const Vec3f& pos, const Vec3f& f);
 
@@ -542,7 +540,7 @@ public:
 
 	void SetFilmData(int w, int h);
 
-	void SetToWorld(const float4x4& w);
+	void SetToWorld(const NormalizedT<OrthogonalAffineMap>& w);
 
 	float4x4 getProjectionMatrix() const;
 

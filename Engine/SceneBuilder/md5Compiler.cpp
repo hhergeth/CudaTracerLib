@@ -10,7 +10,7 @@
 
 namespace CudaTracerLib {
 
-void build_Animation(Anim* A, MD5Model* M, Animation& res, const std::string& name, const std::vector<float4x4>& inverseJoints)
+void build_Animation(Anim* A, MD5Model* M, Animation& res, const std::string& name, const std::vector<NormalizedT<OrthogonalAffineMap>>& inverseJoints)
 {
 	res.m_sName = name;
 	res.m_uFrameRate = A->bFrameRate;
@@ -139,7 +139,7 @@ void compilemd5(IInStream& in, std::vector<IInStream*>& animFiles, FileOutputStr
 	mesh.m_uJointCount = (unsigned int)M.joints.size();
 	mesh.m_uVertexCount = (unsigned int)v_Pos.size();
 	a_Out.Write(mesh);
-	std::vector<float4x4> inverseJoints;
+	std::vector<NormalizedT<OrthogonalAffineMap>> inverseJoints;
 	for (unsigned int i = 0; i < M.joints.size(); i++)
 		inverseJoints.push_back((float4x4::Translate(M.joints[i].pos) % M.joints[i].quat.toMatrix()).inverse());
 	for (int a = 0; a < M.anims.size(); a++)

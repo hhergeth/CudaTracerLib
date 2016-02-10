@@ -386,7 +386,7 @@ InfiniteLight::InfiniteLight(Stream<char>* a_Buffer, BufferReference<MIPMap, Ker
 	float lvl = 0.65f, qpdf;
 	unsigned int INDEX = MonteCarlo::sampleReuse(m_cdfRows.operator->(), radianceMap.m_uHeight, lvl, qpdf);
 
-	m_worldTransform = m_worldTransformInverse = float4x4::Identity();
+	m_worldTransform = NormalizedT<OrthogonalAffineMap>::Identity();
 }
 
 Spectrum InfiniteLight::sampleRay(NormalizedT<Ray> &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const
@@ -420,7 +420,7 @@ Spectrum InfiniteLight::sampleDirect(DirectSamplingRecord &dRec, const Vec2f &sa
 
 float InfiniteLight::pdfDirect(const DirectSamplingRecord &dRec) const
 {
-	float pdfSA = internalPdfDirection(m_worldTransformInverse.TransformDirection(dRec.d));
+	float pdfSA = internalPdfDirection(m_worldTransform.TransformDirectionTranspose(dRec.d));
 
 	if (dRec.measure == ESolidAngle)
 		return pdfSA;
@@ -460,7 +460,7 @@ Spectrum InfiniteLight::sampleDirection(DirectionSamplingRecord &dRec, PositionS
 
 Spectrum InfiniteLight::evalDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
 {
-	Vec3f v = m_worldTransformInverse.TransformDirection(-1.0f * dRec.d);
+	Vec3f v = m_worldTransform.TransformDirectionTranspose(-1.0f * dRec.d);
 
 	/* Convert to latitude-longitude texture coordinates */
 	Vec2f uv = Vec2f(
@@ -530,7 +530,7 @@ float InfiniteLight::internalPdfDirection(const Vec3f &d) const
 
 Spectrum InfiniteLight::evalEnvironment(const Ray &ray) const
 {
-	Vec3f v = normalize(m_worldTransformInverse.TransformDirection(ray.dir()));
+	Vec3f v = normalize(m_worldTransform.TransformDirectionTranspose(ray.dir()));
 
 	/* Convert to latitude-longitude texture coordinates */
 	Vec2f uv = Vec2f(
@@ -545,7 +545,7 @@ Spectrum InfiniteLight::evalEnvironment(const Ray &ray) const
 
 Spectrum InfiniteLight::evalEnvironment(const Ray &ray, const Ray& rX, const Ray& rY) const
 {
-	Vec3f v = normalize(m_worldTransformInverse.TransformDirection(ray.dir()));
+	Vec3f v = normalize(m_worldTransform.TransformDirectionTranspose(ray.dir()));
 
 	/* Convert to latitude-longitude texture coordinates */
 	Vec2f uv = Vec2f(

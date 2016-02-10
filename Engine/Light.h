@@ -303,7 +303,7 @@ struct InfiniteLight : public LightBase//, public e_DerivedTypeHelper<5>
 	float m_invSurfaceArea;
 	Vec2f m_size, m_pixelSize;
 	Spectrum m_scale;
-	float4x4 m_worldTransform, m_worldTransformInverse;
+	NormalizedT<OrthogonalAffineMap> m_worldTransform;
 
 	const AABB* m_pSceneBox;
 
@@ -347,7 +347,7 @@ struct InfiniteLight : public LightBase//, public e_DerivedTypeHelper<5>
 
 	CUDA_FUNC_IN float pdfDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
 	{
-		return internalPdfDirection(m_worldTransformInverse.TransformDirection(-dRec.d));
+		return internalPdfDirection(m_worldTransform.TransformDirectionTranspose(-dRec.d));
 	}
 
 	CUDA_DEVICE CUDA_HOST Spectrum evalDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const;

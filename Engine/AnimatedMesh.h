@@ -26,7 +26,7 @@ struct AnimatedVertex
 struct AnimationFrame
 {
 	StreamReference<char> m_sMatrices;
-	std::vector<float4x4> m_sHostConstructionData;
+	std::vector<NormalizedT<OrthogonalAffineMap>> m_sHostConstructionData;
 
 	AnimationFrame(){}
 
