@@ -6,6 +6,9 @@
 
 namespace CudaTracerLib {
 
+struct OrthogonalAffineMap;
+template<> struct NormalizedT<OrthogonalAffineMap>;
+
 struct CUDA_ALIGN(16) float4x4
 {
 	float data[16];
@@ -29,6 +32,20 @@ public:
 		r.row(1, Vec4f(xy, yy, zy, wy));
 		r.row(2, Vec4f(xz, yz, zz, wz));
 		r.row(3, Vec4f(xw, yw, zw, ww));
+		return r;
+	}
+
+	CUDA_FUNC_IN static float4x4 As(const Vec4f& col0, const Vec4f& col1, const Vec4f& col2, const Vec4f& col3)
+	{
+		float4x4 r;
+		r.col(0, col0);	r.col(1, col1);	r.col(2, col2);	r.col(3, col3);
+		return r;
+	}
+
+	CUDA_FUNC_IN static float4x4 As(const Vec3f& col0, const Vec3f& col1, const Vec3f& col2, const Vec3f& col3)
+	{
+		float4x4 r;
+		r.col(0, Vec4f(col0, 0.0f));	r.col(1, Vec4f(col1, 0.0f));	r.col(2, Vec4f(col2, 0.0f));	r.col(3, Vec4f(col3, 1.0f));
 		return r;
 	}
 
@@ -93,55 +110,9 @@ public:
 		return TransformDirection(Vec3f(0, 1, 0));
 	}
 
-	//operators
-	CUDA_FUNC_IN float4x4 operator + (const float4x4& a) const
-	{
-		float4x4 r;
-		for (int i = 0; i < 4; i++)
-			for (int j = 0; j < 4; j++)
-				r(i, j) = operator()(i, j) + a(i, j);
-		return r;
-	}
+	CUDA_FUNC_IN Vec3f TransformPoint(const Vec3f& p) const;
 
-	CUDA_FUNC_IN float4x4 operator % (const float4x4& a) const
-	{
-		float4x4 r;
-		for (int i = 0; i < 4; i++)
-			for (int j = 0; j < 4; j++)
-				r(i, j) = dot(row(i), a.col(j));
-		return r;
-	}
-
-	CUDA_FUNC_IN Vec4f operator * (const Vec4f& a) const
-	{
-		return Vec4f(
-			dot(row(0), a),
-			dot(row(1), a),
-			dot(row(2), a),
-			dot(row(3), a)
-			);
-	}
-
-	CUDA_FUNC_IN float4x4 operator * (const float a) const
-	{
-		float4x4 r;
-		for (int i = 0; i < 4; i++)
-			for (int j = 0; j < 4; j++)
-				r(i, j) = operator()(i, j) * a;
-		return r;
-	}
-
-	CUDA_FUNC_IN Vec3f TransformPoint(const Vec3f& p) const
-	{
-		Vec4f f = *this * Vec4f(p, 1.0f);
-		return f.getXYZ() / f.w;
-	}
-
-	CUDA_FUNC_IN Vec3f TransformDirection(const Vec3f& d) const
-	{
-		Vec4f f = *this * Vec4f(d, 0.0f);
-		return f.getXYZ();
-	}
+	CUDA_FUNC_IN Vec3f TransformDirection(const Vec3f& d) const;
 
 	CUDA_FUNC_IN float4x4 transpose() const
 	{
@@ -155,38 +126,13 @@ public:
 	CUDA_DEVICE CUDA_HOST float4x4 inverse() const;
 
 	//geometric constructor functions
-	CUDA_FUNC_IN static float4x4 RotateX(float a)
-	{
-		float4x4 r = float4x4::Identity();
-		float cosa = cosf(a), sina = sin(a);
-		r(1, 1) = cosa;
-		r(1, 2) = -sina;
-		r(2, 1) = sina;
-		r(2, 2) = cosa;
-		return r;
-	}
+	CUDA_FUNC_IN static NormalizedT<OrthogonalAffineMap> RotateX(float a);
 
-	CUDA_FUNC_IN static float4x4 RotateY(float a)
-	{
-		float4x4 r = float4x4::Identity();
-		float cosa = cosf(a), sina = sin(a);
-		r(0, 0) = cosa;
-		r(0, 2) = sina;
-		r(2, 0) = -sina;
-		r(2, 2) = cosa;
-		return r;
-	}
+	CUDA_FUNC_IN static NormalizedT<OrthogonalAffineMap> RotateY(float a);
 
-	CUDA_FUNC_IN static float4x4 RotateZ(float a)
-	{
-		float4x4 r = float4x4::Identity();
-		float cosa = cosf(a), sina = sin(a);
-		r(0, 0) = cosa;
-		r(0, 1) = -sina;
-		r(1, 0) = sina;
-		r(1, 1) = cosa;
-		return r;
-	}
+	CUDA_FUNC_IN static NormalizedT<OrthogonalAffineMap> RotateZ(float a);
+
+	CUDA_FUNC_IN static NormalizedT<OrthogonalAffineMap> RotationAxis(const NormalizedT<Vec3f>& _axis, const float angle);
 
 	CUDA_FUNC_IN static float4x4 OuterProduct(const Vec4f& a, const Vec4f& b)
 	{
@@ -196,36 +142,7 @@ public:
 				r(i, j) = a[i] * b[j];
 		return r;
 	}
-
-	CUDA_FUNC_IN static float4x4 RotationAxis(const Vec3f& _axis, const float angle)
-	{
-		Vec3f naxis = normalize(_axis);
-		float sinTheta, cosTheta;
-		sincos(angle, &sinTheta, &cosTheta);
-		float4x4 result;
-		result(0, 0) = naxis.x * naxis.x + (1.0f - naxis.x * naxis.x) * cosTheta;
-		result(0, 1) = naxis.x * naxis.y * (1.0f - cosTheta) - naxis.z * sinTheta;
-		result(0, 2) = naxis.x * naxis.z * (1.0f - cosTheta) + naxis.y * sinTheta;
-		result(0, 3) = 0;
-
-		result(1, 0) = naxis.x * naxis.y * (1.0f - cosTheta) + naxis.z * sinTheta;
-		result(1, 1) = naxis.y * naxis.y + (1.0f - naxis.y * naxis.y) * cosTheta;
-		result(1, 2) = naxis.y * naxis.z * (1.0f - cosTheta) - naxis.x * sinTheta;
-		result(1, 3) = 0;
-
-		result(2, 0) = naxis.x * naxis.z * (1.0f - cosTheta) - naxis.y * sinTheta;
-		result(2, 1) = naxis.y * naxis.z * (1.0f - cosTheta) + naxis.x * sinTheta;
-		result(2, 2) = naxis.z * naxis.z + (1.0f - naxis.z * naxis.z) * cosTheta;
-		result(2, 3) = 0;
-
-		result(3, 0) = 0;
-		result(3, 1) = 0;
-		result(3, 2) = 0;
-		result(3, 3) = 1;
-
-		return result;
-	}
-
+	
 	CUDA_FUNC_IN static float4x4 Identity()
 	{
 		float4x4 r;
@@ -234,33 +151,13 @@ public:
 		return r;
 	}
 
-	CUDA_FUNC_IN static float4x4 Translate(const Vec3f& t)
-	{
-		return Translate(t.x, t.y, t.z);
-	}
+	CUDA_FUNC_IN static NormalizedT<OrthogonalAffineMap> Translate(const Vec3f& t);
 
-	CUDA_FUNC_IN static float4x4 Translate(float x, float y, float z)
-	{
-		float4x4 r = float4x4::Identity();
-		r(0, 3) = x;
-		r(1, 3) = y;
-		r(2, 3) = z;
-		return r;
-	}
+	CUDA_FUNC_IN static NormalizedT<OrthogonalAffineMap> Translate(float x, float y, float z);
 
-	CUDA_FUNC_IN static float4x4 Scale(const Vec3f& s)
-	{
-		return Scale(s.x, s.y, s.z);
-	}
+	CUDA_FUNC_IN static OrthogonalAffineMap Scale(const Vec3f& s);
 
-	CUDA_FUNC_IN static float4x4 Scale(float x, float y, float z)
-	{
-		float4x4 r = float4x4::Identity();
-		r(0, 0) = x;
-		r(1, 1) = y;
-		r(2, 2) = z;
-		return r;
-	}
+	CUDA_FUNC_IN static OrthogonalAffineMap Scale(float x, float y, float z);
 
 	CUDA_FUNC_IN static float4x4 Perspective(float fov, float clipNear, float clipFar)
 	{
@@ -310,11 +207,7 @@ public:
 		return trafo;
 	}
 
-	CUDA_FUNC_IN static float4x4 orthographic(float clipNear, float clipFar)
-	{
-		return Scale(Vec3f(1.0f, 1.0f, 1.0f / (clipFar - clipNear))) %
-			Translate(Vec3f(0.0f, 0.0f, -clipNear));
-	}
+	CUDA_FUNC_IN static float4x4 orthographic(float clipNear, float clipFar);
 
 	CUDA_FUNC_IN static float4x4 glOrthographic(float clipNear, float clipFar)
 	{
@@ -350,18 +243,7 @@ public:
 		return trafo;
 	}
 
-	CUDA_FUNC_IN static float4x4 lookAt(const Vec3f &p, const Vec3f &t, const Vec3f &up)
-	{
-		Vec3f dir = normalize(t - p);
-		Vec3f left = normalize(cross(up, dir));
-		Vec3f newUp = cross(dir, left);
-		float4x4 result;
-		result(0, 0) = left.x;  result(1, 0) = left.y;  result(2, 0) = left.z;  result(3, 0) = 0;
-		result(0, 1) = newUp.x; result(1, 1) = newUp.y; result(2, 1) = newUp.z; result(3, 1) = 0;
-		result(0, 2) = dir.x;   result(1, 2) = dir.y;   result(2, 2) = dir.z;   result(3, 2) = 0;
-		result(0, 3) = p.x;     result(1, 3) = p.y;     result(2, 3) = p.z;     result(3, 3) = 1;
-		return result;
-	}
+	CUDA_FUNC_IN static NormalizedT<OrthogonalAffineMap> lookAt(const Vec3f &p, const Vec3f &t, const Vec3f &up);
 
 	CUDA_FUNC_IN static float4x4 Orthographic(float w, float h, float n, float f)
 	{
@@ -393,5 +275,244 @@ public:
 		return os;
 	}
 };
+
+//operators
+CUDA_FUNC_IN float4x4 operator + (const float4x4& lhs, const float4x4& rhs)
+{
+	float4x4 r;
+	for (int i = 0; i < 4; i++)
+		for (int j = 0; j < 4; j++)
+			r(i, j) = lhs(i, j) + rhs(i, j);
+	return r;
+}
+
+CUDA_FUNC_IN float4x4 operator % (const float4x4& lhs, const float4x4& rhs)
+{
+	float4x4 r;
+	for (int i = 0; i < 4; i++)
+		for (int j = 0; j < 4; j++)
+			r(i, j) = dot(lhs.row(i), rhs.col(j));
+	return r;
+}
+
+CUDA_FUNC_IN Vec4f operator * (const float4x4& lhs, const Vec4f& rhs)
+{
+	return Vec4f(
+		dot(lhs.row(0), rhs),
+		dot(lhs.row(1), rhs),
+		dot(lhs.row(2), rhs),
+		dot(lhs.row(3), rhs)
+		);
+}
+
+CUDA_FUNC_IN float4x4 operator * (float lhs, const float4x4& rhs)
+{
+	float4x4 r;
+	for (int i = 0; i < 4; i++)
+		for (int j = 0; j < 4; j++)
+			r(i, j) = rhs(i, j) * lhs;
+	return r;
+}
+
+CUDA_FUNC_IN float4x4 operator * (const float4x4& lhs, float rhs)
+{
+	return rhs * lhs;
+}
+
+Vec3f float4x4::TransformPoint(const Vec3f& p) const
+{
+	Vec4f f = *this * Vec4f(p, 1.0f);
+	return f.getXYZ() / f.w;
+}
+
+Vec3f float4x4::TransformDirection(const Vec3f& d) const
+{
+	Vec4f f = *this * Vec4f(d, 0.0f);
+	return f.getXYZ();
+}
+
+//The 3x3 rotational part is assumed to be orthogonal, the homogenous part must equal zero
+struct OrthogonalAffineMap : public float4x4
+{
+	CUDA_FUNC_IN OrthogonalAffineMap()
+	{
+
+	}
+
+	CUDA_FUNC_IN explicit OrthogonalAffineMap(const float4x4& m)
+		: float4x4(m)
+	{
+
+	}
+
+	CUDA_FUNC_IN OrthogonalAffineMap inverse() const
+	{
+		return transpose();
+	}
+
+	CUDA_FUNC_IN OrthogonalAffineMap transpose() const
+	{
+		return OrthogonalAffineMap(float4x4::As(row(0).getXYZ(), row(1).getXYZ(), row(2).getXYZ(), -Translation()));
+	}
+
+	CUDA_FUNC_IN static OrthogonalAffineMap Identity()
+	{
+		return OrthogonalAffineMap(float4x4::Identity());
+	}
+};
+
+CUDA_FUNC_IN OrthogonalAffineMap operator % (const OrthogonalAffineMap& lhs, const OrthogonalAffineMap& rhs)
+{
+	return OrthogonalAffineMap(*(float4x4*)&lhs % *(float4x4*)&rhs);
+}
+
+template<> struct NormalizedT<OrthogonalAffineMap> : public OrthogonalAffineMap
+{
+	CUDA_FUNC_IN NormalizedT()
+	{
+
+	}
+
+	CUDA_FUNC_IN explicit NormalizedT(const OrthogonalAffineMap& v)
+		: OrthogonalAffineMap(v)
+	{
+
+	}
+
+	CUDA_FUNC_IN NormalizedT<Vec3f> TransformDirection(const NormalizedT<Vec3f>& d) const
+	{
+		return NormalizedT<Vec3f>(OrthogonalAffineMap::TransformDirection(d));
+	}
+
+	CUDA_FUNC_IN static NormalizedT<OrthogonalAffineMap> Identity()
+	{
+		return NormalizedT<OrthogonalAffineMap>(OrthogonalAffineMap::Identity());
+	}
+
+	CUDA_FUNC_IN NormalizedT<Vec3f> Right() const
+	{
+		return TransformDirection(NormalizedT<Vec3f>(1.0f, 0.0f, 0.0f));
+	}
+	CUDA_FUNC_IN NormalizedT<Vec3f> Up() const
+	{
+		return TransformDirection(NormalizedT<Vec3f>(0.0f, 1.0f, 0.0f));
+	}
+	CUDA_FUNC_IN NormalizedT<Vec3f> Forward() const
+	{
+		return TransformDirection(NormalizedT<Vec3f>(0.0f, 0.0f, 1.0f));
+	}
+};
+
+CUDA_FUNC_IN NormalizedT<OrthogonalAffineMap> operator % (const NormalizedT<OrthogonalAffineMap>& lhs, const NormalizedT<OrthogonalAffineMap>& rhs)
+{
+	return NormalizedT<OrthogonalAffineMap>(*(OrthogonalAffineMap*)&lhs % *(OrthogonalAffineMap*)&rhs);
+}
+
+NormalizedT<OrthogonalAffineMap> float4x4::RotateX(float a)
+{
+	auto r = NormalizedT<OrthogonalAffineMap>::Identity();
+	float cosa = cosf(a), sina = sin(a);
+	r(1, 1) = cosa;
+	r(1, 2) = -sina;
+	r(2, 1) = sina;
+	r(2, 2) = cosa;
+	return r;
+}
+
+NormalizedT<OrthogonalAffineMap> float4x4::RotateY(float a)
+{
+	auto r = NormalizedT<OrthogonalAffineMap>::Identity();
+	float cosa = cosf(a), sina = sin(a);
+	r(0, 0) = cosa;
+	r(0, 2) = sina;
+	r(2, 0) = -sina;
+	r(2, 2) = cosa;
+	return r;
+}
+
+NormalizedT<OrthogonalAffineMap> float4x4::RotateZ(float a)
+{
+	auto r = NormalizedT<OrthogonalAffineMap>::Identity();
+	float cosa = cosf(a), sina = sin(a);
+	r(0, 0) = cosa;
+	r(0, 1) = -sina;
+	r(1, 0) = sina;
+	r(1, 1) = cosa;
+	return r;
+}
+
+NormalizedT<OrthogonalAffineMap> float4x4::RotationAxis(const NormalizedT<Vec3f>& naxis, const float angle)
+{
+	float sinTheta, cosTheta;
+	sincos(angle, &sinTheta, &cosTheta);
+	NormalizedT<OrthogonalAffineMap> result;
+	result(0, 0) = naxis.x * naxis.x + (1.0f - naxis.x * naxis.x) * cosTheta;
+	result(0, 1) = naxis.x * naxis.y * (1.0f - cosTheta) - naxis.z * sinTheta;
+	result(0, 2) = naxis.x * naxis.z * (1.0f - cosTheta) + naxis.y * sinTheta;
+	result(0, 3) = 0;
+
+	result(1, 0) = naxis.x * naxis.y * (1.0f - cosTheta) + naxis.z * sinTheta;
+	result(1, 1) = naxis.y * naxis.y + (1.0f - naxis.y * naxis.y) * cosTheta;
+	result(1, 2) = naxis.y * naxis.z * (1.0f - cosTheta) - naxis.x * sinTheta;
+	result(1, 3) = 0;
+
+	result(2, 0) = naxis.x * naxis.z * (1.0f - cosTheta) - naxis.y * sinTheta;
+	result(2, 1) = naxis.y * naxis.z * (1.0f - cosTheta) + naxis.x * sinTheta;
+	result(2, 2) = naxis.z * naxis.z + (1.0f - naxis.z * naxis.z) * cosTheta;
+	result(2, 3) = 0;
+
+	result(3, 0) = 0;
+	result(3, 1) = 0;
+	result(3, 2) = 0;
+	result(3, 3) = 1;
+
+	return result;
+}
+
+NormalizedT<OrthogonalAffineMap> float4x4::Translate(const Vec3f& t)
+{
+	return Translate(t.x, t.y, t.z);
+}
+
+NormalizedT<OrthogonalAffineMap> float4x4::Translate(float x, float y, float z)
+{
+	auto r = NormalizedT<OrthogonalAffineMap>::Identity();
+	r(0, 3) = x;
+	r(1, 3) = y;
+	r(2, 3) = z;
+	return r;
+}
+
+OrthogonalAffineMap float4x4::Scale(const Vec3f& s)
+{
+	return Scale(s.x, s.y, s.z);
+}
+
+OrthogonalAffineMap float4x4::Scale(float x, float y, float z)
+{
+	auto r = OrthogonalAffineMap::Identity();
+	r(0, 0) = x;
+	r(1, 1) = y;
+	r(2, 2) = z;
+	return r;
+}
+
+NormalizedT<OrthogonalAffineMap> float4x4::lookAt(const Vec3f &p, const Vec3f &t, const Vec3f &up)
+{
+	Vec3f dir = normalize(t - p);
+	Vec3f left = normalize(cross(up, dir));
+	Vec3f newUp = cross(dir, left);
+	NormalizedT<OrthogonalAffineMap> result;
+	result(0, 0) = left.x;  result(1, 0) = left.y;  result(2, 0) = left.z;  result(3, 0) = 0;
+	result(0, 1) = newUp.x; result(1, 1) = newUp.y; result(2, 1) = newUp.z; result(3, 1) = 0;
+	result(0, 2) = dir.x;   result(1, 2) = dir.y;   result(2, 2) = dir.z;   result(3, 2) = 0;
+	result(0, 3) = p.x;     result(1, 3) = p.y;     result(2, 3) = p.z;     result(3, 3) = 1;
+	return result;
+}
+
+float4x4 float4x4::orthographic(float clipNear, float clipFar)
+{
+	return Scale(Vec3f(1.0f, 1.0f, 1.0f / (clipFar - clipNear))) % Translate(Vec3f(0.0f, 0.0f, -clipNear));
+}
 
 }
