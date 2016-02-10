@@ -345,6 +345,16 @@ struct OrthogonalAffineMap : public float4x4
 
 	}
 
+	CUDA_FUNC_IN Vec3f TransformDirectionTranspose(const Vec3f& d) const
+	{
+		return Vec3f(dot(d, col(0).getXYZ()), dot(d, col(1).getXYZ()), dot(d, col(2).getXYZ()));
+	}
+
+	CUDA_FUNC_IN Vec3f TransformPointTranspose(const Vec3f& d) const
+	{
+		return TransformDirectionTranspose(d) - TransformDirectionTranspose(Translation());
+	}
+
 	CUDA_FUNC_IN OrthogonalAffineMap inverse() const
 	{
 		return transpose();
@@ -352,7 +362,7 @@ struct OrthogonalAffineMap : public float4x4
 
 	CUDA_FUNC_IN OrthogonalAffineMap transpose() const
 	{
-		return OrthogonalAffineMap(float4x4::As(row(0).getXYZ(), row(1).getXYZ(), row(2).getXYZ(), -Translation()));
+		return OrthogonalAffineMap(float4x4::As(row(0).getXYZ(), row(1).getXYZ(), row(2).getXYZ(), -TransformDirectionTranspose(Translation())));
 	}
 
 	CUDA_FUNC_IN static OrthogonalAffineMap Identity()
@@ -379,9 +389,35 @@ template<> struct NormalizedT<OrthogonalAffineMap> : public OrthogonalAffineMap
 
 	}
 
+	CUDA_FUNC_IN NormalizedT<OrthogonalAffineMap> inverse() const
+	{
+		return transpose();
+	}
+
+	CUDA_FUNC_IN NormalizedT<OrthogonalAffineMap> transpose() const
+	{
+		return NormalizedT<OrthogonalAffineMap>(OrthogonalAffineMap::transpose());
+	}
+
 	CUDA_FUNC_IN NormalizedT<Vec3f> TransformDirection(const NormalizedT<Vec3f>& d) const
 	{
-		return NormalizedT<Vec3f>(OrthogonalAffineMap::TransformDirection(d));
+		return NormalizedT<Vec3f>(TransformDirection((Vec3f)d));
+	}
+
+	CUDA_FUNC_IN NormalizedT<Vec3f> TransformDirectionTranspose(const NormalizedT<Vec3f>& d) const
+	{
+		return NormalizedT<Vec3f>(TransformDirectionTranspose((Vec3f)d));
+	}
+
+	//these functions are hidden by the previous ones
+	CUDA_FUNC_IN Vec3f TransformDirection(const Vec3f& d) const
+	{
+		return OrthogonalAffineMap::TransformDirection(d);
+	}
+
+	CUDA_FUNC_IN Vec3f TransformDirectionTranspose(const Vec3f& d) const
+	{
+		return OrthogonalAffineMap::TransformDirectionTranspose(d);
 	}
 
 	CUDA_FUNC_IN static NormalizedT<OrthogonalAffineMap> Identity()

@@ -147,7 +147,7 @@ public:
 		}
 		return result;
 	}
-	CUDA_FUNC_IN float4x4 toMatrix() const
+	CUDA_FUNC_IN NormalizedT<OrthogonalAffineMap> toMatrix() const
 	{
 		float xx = val.x * val.x;
 		float yy = val.y * val.y;
@@ -158,7 +158,7 @@ public:
 		float yw = val.y * val.w;
 		float yz = val.y * val.z;
 		float xw = val.x * val.w;
-		float4x4 r;
+		NormalizedT<OrthogonalAffineMap> r;
 		r.col(0, Vec4f(1.0f - (2.0f * (yy + zz)), 2.0f * (xy + zw), 2.0f * (zx - yw), 0));
 		r.col(1, Vec4f(2.0f * (xy - zw), 1.0f - (2.0f * (zz + xx)), 2.0f * (yz + xw), 0));
 		r.col(2, Vec4f(2.0f * (zx + yw), 2.0f * (yz - xw), 1.0f - (2.0f * (yy + xx)), 0));
