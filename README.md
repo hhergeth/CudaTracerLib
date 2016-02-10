@@ -12,21 +12,13 @@ This library, for simplicity called CudaTracerLib, is a CUDA based ray tracer li
 
 
 ### Building from Source
-##### There are four dependencies:
 
-- CUDA 7.5
-- Boost, used for filesystem (compiled library!) and string functions
-- FreeImage, used for loading and saving images.
-- qMatrixLib, a tiny header only matrix library, available here https://github.com/hhergeth/qMatrixLib
-
-##### For Windows users there is a Visual Studio 2013 project file available:
+##### For Windows users there is a Visual Studio 2013 project file (with dependencies included) available:
 
 - Install the CUDA 7.5 toolkit from the official Nvidia site.
-- Grab a copy of the precompiled boost libraries and extract them somewhere or compile them on your own.
-- Download the FreeImage source code from [here](http://freeimage.sourceforge.net/download.html "FreeImage source code"). Use the provided Visual Studio solution file to build the static lib, but pay attention to set the compiler version to the same used for compiling this library!
-- Download [qMatrixLib](https://github.com/hhergeth/qMatrixLib) and extract it somewhere handy.
-- Set the include path of FreeImage, qMatrixLib and Boost under VC++ Directories/Include Directories
-- Later when linking against CudaTracerLib add appropriate paths under VC++ Directories/Library Directories. Also go to Linker/Input/Additional Dependencies and add FreeImage.lib. Linking against the compiled Boost libraries requires no further action.
+- Extract the [windows dependencies](http://hhergeth.markab.uberspace.de/CudaTracerLib%20dependencies.rar) somewhere.
+- Clone this repository into a subdirectory.
+- Move the CudaTracerLib.vcxproj* project files into this subdirectory. Open the solution file.
 
 ##### All other platforms can use the accompanying CMake file:
 
@@ -35,8 +27,7 @@ This library, for simplicity called CudaTracerLib, is a CUDA based ray tracer li
 - There are multiple unofficial CMake versions of FreeImage available. Use one of these to compile the library or check if there are precompiled versions available as for example for Debian.
 - Download [qMatrixLib](https://github.com/hhergeth/qMatrixLib) and extract it somewhere handy.
 - Specify the paths of FreeImage, Boost (if necessary) and qMatrixLib (QMATRIX\_INCLUDE\_DIR) in CMake.
-
-The microfacet and spectral probability distribution files from Mitsuba/PBRT are also necessary. They can be obtained from the [Mitsuba build](http://www.mitsuba-renderer.org/download.html) or [here from the repository](https://www.mitsuba-renderer.org/repos/mitsuba). Only the _data/ior_ and _data/microfacet_ folders are required.
+- The microfacet and spectral probability distribution files from Mitsuba/PBRT are also necessary. They can be obtained from the [Mitsuba build](http://www.mitsuba-renderer.org/download.html) or [here from the repository](https://www.mitsuba-renderer.org/repos/mitsuba). Only the _data/ior_ and _data/microfacet_ folders are required.
 
 Examples of how to use this library and an implementation of a custom rendering algorithm can be found in the [Github wiki](https://github.com/hhergeth/CudaTracerLib/wiki/Code-Examples).
 
