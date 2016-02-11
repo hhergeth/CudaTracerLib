@@ -225,12 +225,12 @@ void fillDG(const Vec2f& bary, unsigned int triIdx, unsigned int nodeIdx, Differ
 	Vec3f dpdu = Vec3f(rowB.x, rowB.y, rowB.z);
 	Vec3f dpdv = Vec3f(rowB.w, rowC.x, rowC.y);
 	Vec3f s = dpdu - n * dot(n, dpdu);
-	n = localToWorld.TransformDirection(n); s = localToWorld.TransformDirection(s);
 	Vec3f t = cross(s, n);
-	dg.sys = Frame(s.normalized(), t.normalized(), n.normalized());
-	dg.n = normalize(localToWorld.TransformDirection(na + nb + nc));
+	s = localToWorld.TransformDirection(s); t = localToWorld.TransformDirection(t);
+	dg.sys = Frame(s.normalized(), t.normalized(), cross(t, s).normalized());
 	dg.dpdu = localToWorld.TransformDirection(dpdu);
 	dg.dpdv = localToWorld.TransformDirection(dpdv);
+	dg.n = cross(dg.dpdu, dg.dpdv).normalized();
 	Vec2f ta = Vec2f(rowC.z, rowC.w), tb = Vec2f(rowD.x, rowD.y), tc = Vec2f(rowD.z, rowD.w);
 	dg.uv[0] = u * ta + v * tb + w * tc;
 

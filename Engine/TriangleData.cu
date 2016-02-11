@@ -82,12 +82,12 @@ void TriangleData::fillDG(const float4x4& localToWorld, DifferentialGeometry& dg
 	Vec3f dpdu = Vec3f(half((unsigned short)dpd.x), half((unsigned short)(dpd.x >> 16)), half((unsigned short)dpd.y));
 	Vec3f dpdv = Vec3f(half((unsigned short)(dpd.y >> 16)), half((unsigned short)dpd.z), half((unsigned short)(dpd.z >> 16)));
 	Vec3f s = dpdu - n * dot(n, dpdu);
-	n = localToWorld.TransformDirection(n); s = localToWorld.TransformDirection(s);
 	Vec3f t = cross(s, n);
-	dg.sys = Frame(s.normalized(), t.normalized(), n.normalized());
-	dg.n = normalize(localToWorld.TransformDirection(na + nb + nc));
+	s = localToWorld.TransformDirection(s); t = localToWorld.TransformDirection(t);//transform the tangents, compute the normal
+	dg.sys = Frame(s.normalized(), t.normalized(), cross(t, s).normalized());
 	dg.dpdu = (localToWorld.TransformDirection(dpdu));
 	dg.dpdv = (localToWorld.TransformDirection(dpdv));
+	dg.n = cross(dg.dpdu, dg.dpdv).normalized();
 	for (int i = 0; i < NUM_UV_SETS; i++)
 	{
 		uint3 uvset = m_sDeviceData.UVSets[i];
