@@ -145,6 +145,7 @@ Spectrum VolumeGrid::integrateDensity(const Ray& ray, float t0, float t1) const
 	float minTL = t0 * Td, maxTL = t1 * Td;
 	rayL.dir() = normalize(rayL.dir());
 	float D_s = 0.0f, D_a = 0.0f;
+	Vec3f cell_size = Vec3f(1) / grid.dimF, dir = rayL.dir() / cell_size;
 	TraverseGrid(rayL, minTL, maxTL, [&](float minT, float rayT, float maxT, float cellEndT, Vec3u& cell_pos, bool& cancelTraversal)
 	{
 		float d_s, d_a;
@@ -158,31 +159,6 @@ Spectrum VolumeGrid::integrateDensity(const Ray& ray, float t0, float t1) const
 		d_s /= 2; d_a /= 2;
 		D_s += d_s * (cellEndT - rayT);
 		D_a += d_a * (cellEndT - rayT);
-		
-		//Performs analytic integration over the cell, somewhat buggy
-		/*unsigned char xFlag = 0x66, zFlag = 0xcc;
-		float V[8], G = 0;
-		for (int i = 0; i < 8; i++)
-		{
-			V[i] = grid.value(cell_pos.x + ((xFlag >> i) & 1), cell_pos.y + i / 4, cell_pos.z + ((zFlag >> i) & 1));
-			G += V[i];
-		}
-		float A = V[1] - V[0], B = V[4] - V[0], C = V[3] - V[0], D = V[0] + V[5] - V[1] - V[4],
-			  E = V[0] - V[1] - V[3], F = V[0] - V[3] - V[4];
-
-		Vec3f c = rayL(rayT) - Vec3f(cell_pos.x, cell_pos.y, cell_pos.z) / grid.dimF, d = rayL.direction;
-		float q = cellEndT - rayT, q2 = math::sqr(q);
-		Vec4f Q(q, 1.0f / 2.0f * q2, 1.0f / 3.0f * q * q2, 1.0f / 4.0f * q2 * q2);
-
-		float T = 0;
-		T += A * (c.x * Q.x + d.x * Q.y) + B * (c.y * Q.x + d.y * Q.y) + C * (c.z * Q.x + d.z * Q.y);
-		T += D * (Q.x * c.x * c.y + Q.y * (c.x * d.y + c.y * d.x) + Q.z * d.x * d.y);
-		T += E * (Q.x * c.x * c.z + Q.y * (c.x * d.z + c.z * d.x) + Q.z * d.x * d.z);
-		T += F * (Q.x * c.z * c.y + Q.y * (c.z * d.y + c.y * d.z) + Q.z * d.z * d.y);
-		T += G * (Q.x * c.x * c.y * c.z + Q.y * (c.x * c.y * d.y + c.y * c.z * d.x + c.x * c.y * d.z) + Q.z * (c.z * d.x * d.y + c.x * d.y * d.z + c.y * d.x * d.z) + Q.w * d.x * d.y * d.z);
-
-		D_s += T;
-		D_a += T;*/
 	}, AABB(Vec3f(0), Vec3f(1)), grid.dimF);
 	float Lcl_To_World = (t1 - t0) / (maxTL - minTL);
 	D_a *= Lcl_To_World;
