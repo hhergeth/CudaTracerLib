@@ -54,31 +54,31 @@ template<typename VEC> struct NormalizedT<VEC, typename std::enable_if<std::is_b
 
 	}
 
-	CUDA_FUNC_IN T lenSqr(void) const = delete;
-	CUDA_FUNC_IN T length(void) const = delete;
-	CUDA_FUNC_IN S normalized() const = delete;
+	T lenSqr(void) const = delete;
+	T length(void) const = delete;
+	S normalized() const = delete;
 
-	CUDA_FUNC_IN S& operator+=  (const T& a) = delete;
-	CUDA_FUNC_IN S& operator-=  (const T& a) = delete;
-	CUDA_FUNC_IN S& operator*=  (const T& a) = delete;
-	CUDA_FUNC_IN S& operator/=  (const T& a) = delete;
-	CUDA_FUNC_IN S& operator%=  (const T& a) = delete;
-	CUDA_FUNC_IN S& operator&=  (const T& a) = delete;
-	CUDA_FUNC_IN S& operator|=  (const T& a) = delete;
-	CUDA_FUNC_IN S& operator^=  (const T& a) = delete;
-	CUDA_FUNC_IN S& operator<<= (const T& a) = delete;
-	CUDA_FUNC_IN S& operator>>= (const T& a) = delete;
+	S& operator+=  (const T& a) = delete;
+	S& operator-=  (const T& a) = delete;
+	S& operator*=  (const T& a) = delete;
+	S& operator/=  (const T& a) = delete;
+	S& operator%=  (const T& a) = delete;
+	S& operator&=  (const T& a) = delete;
+	S& operator|=  (const T& a) = delete;
+	S& operator^=  (const T& a) = delete;
+	S& operator<<= (const T& a) = delete;
+	S& operator>>= (const T& a) = delete;
 
-	template <class V, int L> CUDA_FUNC_IN S& operator+=  (const VectorBase<T, L, V>& v) = delete;
-	template <class V, int L> CUDA_FUNC_IN S& operator-=  (const VectorBase<T, L, V>& v) = delete;
-	template <class V, int L> CUDA_FUNC_IN S& operator*=  (const VectorBase<T, L, V>& v) = delete;
-	template <class V, int L> CUDA_FUNC_IN S& operator/=  (const VectorBase<T, L, V>& v) = delete;
-	template <class V, int L> CUDA_FUNC_IN S& operator%=  (const VectorBase<T, L, V>& v) = delete;
-	template <class V, int L> CUDA_FUNC_IN S& operator&=  (const VectorBase<T, L, V>& v) = delete;
-	template <class V, int L> CUDA_FUNC_IN S& operator|=  (const VectorBase<T, L, V>& v) = delete;
-	template <class V, int L> CUDA_FUNC_IN S& operator^=  (const VectorBase<T, L, V>& v) = delete;
-	template <class V, int L> CUDA_FUNC_IN S& operator<<= (const VectorBase<T, L, V>& v) = delete;
-	template <class V, int L> CUDA_FUNC_IN S& operator>>= (const VectorBase<T, L, V>& v) = delete;
+	template <class V, int L> S& operator+=  (const VectorBase<T, L, V>& v) = delete;
+	template <class V, int L> S& operator-=  (const VectorBase<T, L, V>& v) = delete;
+	template <class V, int L> S& operator*=  (const VectorBase<T, L, V>& v) = delete;
+	template <class V, int L> S& operator/=  (const VectorBase<T, L, V>& v) = delete;
+	template <class V, int L> S& operator%=  (const VectorBase<T, L, V>& v) = delete;
+	template <class V, int L> S& operator&=  (const VectorBase<T, L, V>& v) = delete;
+	template <class V, int L> S& operator|=  (const VectorBase<T, L, V>& v) = delete;
+	template <class V, int L> S& operator^=  (const VectorBase<T, L, V>& v) = delete;
+	template <class V, int L> S& operator<<= (const VectorBase<T, L, V>& v) = delete;
+	template <class V, int L> S& operator>>= (const VectorBase<T, L, V>& v) = delete;
 };
 
 template<typename VEC> NormalizedT<VEC> CUDA_FUNC_IN operator - (const NormalizedT<VEC>& in)
