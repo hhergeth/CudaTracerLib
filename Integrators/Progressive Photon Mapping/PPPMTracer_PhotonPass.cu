@@ -54,7 +54,7 @@ CUDA_DEVICE SurfaceMapT g_SurfaceMap;
 CUDA_DEVICE SurfaceMapT g_SurfaceMapCaustic;
 CUDA_DEVICE CUDA_ALIGN(16) unsigned char g_VolEstimator[Dmax4(sizeof(PointStorage), sizeof(BeamGrid), sizeof(BeamBeamGrid), sizeof(BeamBVHStorage))];
 
-template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thread, bool DIRECT, bool finalGathering)
+template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thread, bool DIRECT, bool finalGathering, float probSurface, float probVolume)
 {
 	CudaRNG rng = g_RNGData();
 	CUDA_SHARED unsigned int local_Counter;
@@ -88,7 +88,10 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 			TraceResult r2 = traceRay(r);
 			float minT, maxT;
 			bool inMedium = (!bssrdf && V.HasVolumes() && V.IntersectP(r, 0, r2.m_fDist, &minT, &maxT)) || bssrdf;
-			if (inMedium)
+			bool storeVol = true;
+			if (V.HasVolumes())
+				storeVol = rng.randomFloat() < probVolume;
+			if (inMedium && storeVol)
 			{
 				if (((VolEstimator*)g_VolEstimator)->StoreBeam(Beam(r.ori(), r.dir(), r2.m_fDist, throughput * Le)) && !wasStoredVolume)//store the beam even if sampled distance is too far ahead!
 				{
@@ -100,11 +103,12 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 				|| (bssrdf && bssrdf->sampleDistance(r, 0, r2.m_fDist, rng.randomFloat(), mRec)))
 			{//mRec.t
 				throughput *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
-				if (((VolEstimator*)g_VolEstimator)->StorePhoton(mRec.p, -r.dir(), throughput * Le) && !wasStoredVolume)
-				{
-					atomicInc(&numStoredVolume, UINT_MAX);
-					wasStoredVolume = true;
-				}
+				if (storeVol)
+					if (((VolEstimator*)g_VolEstimator)->StorePhoton(mRec.p, -r.dir(), throughput * Le) && !wasStoredVolume)
+					{
+						atomicInc(&numStoredVolume, UINT_MAX);
+						wasStoredVolume = true;
+					}
 				if (bssrdf)
 				{
 					PhaseFunctionSamplingRecord pRec(-r.dir(), r.dir());
@@ -130,7 +134,7 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 				auto wo = bssrdf ? r.dir() : -r.dir();
 				Spectrum f_i = throughput * Le;
 				r2.getBsdfSample(-wo, r(r2.m_fDist), bRec, ETransportMode::EImportance, &rng, &f_i);
-				if (r2.getMat().bsdf.hasComponent(ESmooth) && dot(bRec.dg.sys.n, wo) > 0.0f)
+				if (rng.randomFloat() < probSurface && r2.getMat().bsdf.hasComponent(ESmooth) && dot(bRec.dg.sys.n, wo) > 0.0f)
 				{
 					auto ph = PPPMPhoton(throughput * Le, wo, bRec.dg.n, delta ? PhotonType::pt_Caustic : PhotonType::pt_Diffuse);
 					Vec3u cell_idx = g_SurfaceMap.getHashGrid().Transform(dg.P);
@@ -193,13 +197,13 @@ void PPPMTracer::doPhotonPass()
 	while (!m_sSurfaceMap.isFull() && !m_pVolumeEstimator->isFull())
 	{
 		if (dynamic_cast<BeamGrid*>(m_pVolumeEstimator))
-			k_PhotonPass<BeamGrid> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >(PPM_Photons_Per_Thread, m_useDirectLighting, finalGathering);
+			k_PhotonPass<BeamGrid> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >(PPM_Photons_Per_Thread, m_useDirectLighting, finalGathering, m_fProbSurface, m_fProbVolume);
 		else if(dynamic_cast<PointStorage*>(m_pVolumeEstimator))
-			k_PhotonPass<PointStorage> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >(PPM_Photons_Per_Thread, m_useDirectLighting, finalGathering);
+			k_PhotonPass<PointStorage> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >(PPM_Photons_Per_Thread, m_useDirectLighting, finalGathering, m_fProbSurface, m_fProbVolume);
 		else if (dynamic_cast<BeamBeamGrid*>(m_pVolumeEstimator))
-			k_PhotonPass<BeamBeamGrid> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >(PPM_Photons_Per_Thread, m_useDirectLighting, finalGathering);
+			k_PhotonPass<BeamBeamGrid> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >(PPM_Photons_Per_Thread, m_useDirectLighting, finalGathering, m_fProbSurface, m_fProbVolume);
 		else if (dynamic_cast<BeamBVHStorage*>(m_pVolumeEstimator))
-			k_PhotonPass<BeamBVHStorage> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >(PPM_Photons_Per_Thread, m_useDirectLighting, finalGathering);
+			k_PhotonPass<BeamBVHStorage> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >(PPM_Photons_Per_Thread, m_useDirectLighting, finalGathering, m_fProbSurface, m_fProbVolume);
 		ThrowCudaErrors(cudaMemcpyFromSymbol(&m_sSurfaceMap, g_SurfaceMap, sizeof(m_sSurfaceMap)));
 		ThrowCudaErrors(cudaMemcpyFromSymbol(&m_sSurfaceMapCaustic, g_SurfaceMapCaustic, sizeof(m_sSurfaceMapCaustic)));
 		ThrowCudaErrors(cudaMemcpyFromSymbol(m_pVolumeEstimator, g_VolEstimator, m_pVolumeEstimator->getSize()));
@@ -212,6 +216,13 @@ void PPPMTracer::doPhotonPass()
 		m_sSurfaceMapCaustic.PrepareForUse();
 	if (m_uTotalPhotonsEmitted == 0)
 		doPerPixelRadiusEstimation();
+	size_t volLength, volCount;
+	m_pVolumeEstimator->getStatusInfo(volLength, volCount);
+	if (m_adaptiveProbabilities)
+	{
+		m_fProbVolume = math::clamp01(m_fProbVolume * (float)m_sSurfaceMap.getNumStoredEntries() / m_sSurfaceMap.getNumEntries());
+		m_fProbSurface = math::clamp01(m_fProbSurface * (float)volCount / volLength);
+	}
 }
 
 }

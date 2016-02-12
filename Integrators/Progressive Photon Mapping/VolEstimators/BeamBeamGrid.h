@@ -43,6 +43,12 @@ struct BeamBeamGrid : public IVolumeEstimator
 		return isFullK();
 	}
 
+	virtual void getStatusInfo(size_t& length, size_t& count) const
+	{
+		length = m_uBeamLength;
+		count = m_uBeamIdx;
+	}
+
 	virtual void PrintStatus(std::vector<std::string>& a_Buf) const
 	{
 		a_Buf.push_back(format("%.2f%% Beam grid indices", (float)m_sStorage.getNumStoredEntries() / m_sStorage.getNumEntries() * 100));

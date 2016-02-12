@@ -93,6 +93,12 @@ struct PointStorage : public IVolumeEstimator
 		return isFullK();
 	}
 
+	virtual void getStatusInfo(size_t& length, size_t& count) const
+	{
+		length = m_sStorage.getNumEntries();
+		count = m_sStorage.getNumStoredEntries();
+	}
+
 	virtual size_t getSize() const
 	{
 		return sizeof(*this);

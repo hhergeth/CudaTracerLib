@@ -153,6 +153,8 @@ public:
 	virtual size_t getSize() const = 0;
 
 	virtual void PrintStatus(std::vector<std::string>& a_Buf) const = 0;
+
+	virtual void getStatusInfo(size_t& length, size_t& count) const = 0;
 };
 
 template<bool USE_GLOBAL> struct VolHelper

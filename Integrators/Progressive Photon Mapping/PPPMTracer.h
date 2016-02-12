@@ -88,6 +88,8 @@ private:
 	unsigned int k_Intial;
 	float m_fIntitalRadMin, m_fIntitalRadMax;
 	bool m_useDirectLighting;
+	float m_fProbSurface, m_fProbVolume;
+	bool m_adaptiveProbabilities;
 public:
 
 	PARAMETER_KEY(bool, Direct)

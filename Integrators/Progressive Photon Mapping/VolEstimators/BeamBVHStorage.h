@@ -78,6 +78,12 @@ public:
 		return m_uBeamIdx >= m_uNumBeams;
 	}
 
+	virtual void getStatusInfo(size_t& length, size_t& count) const
+	{
+		length = m_uNumBeams;
+		count = m_uBeamIdx;
+	}
+
 	virtual bool isFull() const
 	{
 		return isFullK();
