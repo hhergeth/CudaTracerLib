@@ -97,11 +97,7 @@ public:
 	PARAMETER_KEY(bool, FinalGathering)
 
 	PPPMTracer();
-	virtual ~PPPMTracer()
-	{
-		m_sSurfaceMap.Free();
-		CUDA_FREE(m_pEntries);
-	}
+	virtual ~PPPMTracer();
 	virtual void Resize(unsigned int _w, unsigned int _h);
 	virtual void Debug(Image* I, const Vec2i& pixel);
 	virtual void PrintStatus(std::vector<std::string>& a_Buf) const;

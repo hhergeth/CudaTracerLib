@@ -6,6 +6,7 @@
 #include "TriangleData.h"
 #include "Material.h"
 #include "TriIntersectorData.h"
+#include "BVHRebuilder.h"
 
 namespace CudaTracerLib {
 
@@ -62,6 +63,15 @@ AnimatedMesh::AnimatedMesh(const std::string& path, IInStream& a_In, Stream<TriI
 	a_In >> m_sTriangles;
 	a_Stream5->UpdateInvalidated();
 	m_pBuilder = 0;
+}
+
+void AnimatedMesh::FreeAnim(Stream<char>* a_Stream5)
+{
+	if (m_pBuilder)
+		delete m_pBuilder;
+	a_Stream5->dealloc(m_sVertices);
+	a_Stream5->dealloc(m_sTriangles);
+	m_pAnimations.~vector();
 }
 
 void AnimatedMesh::CreateNewMesh(AnimatedMesh* A, Stream<TriIntersectorData>* a_Stream0, Stream<TriangleData>* a_Stream1, Stream<BVHNodeData>* a_Stream2, Stream<TriIntersectorData2>* a_Stream3, Stream<Material>* a_Stream4, Stream<char>* a_Stream5) const

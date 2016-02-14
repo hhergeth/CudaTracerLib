@@ -408,7 +408,8 @@ struct ImportState
 void loadMtl(ImportState& s, IInStream& mtlIn, const std::string& dirName)
 {
 	char ptrLast[256];
-	ObjMaterial* mat = NULL;
+	ObjMaterial mat;
+	bool hasMat = false;
 	std::string lineS;
 	while (mtlIn.getline(lineS))
 	{
@@ -423,14 +424,15 @@ void loadMtl(ImportState& s, IInStream& mtlIn, const std::string& dirName)
 		}
 		else if (parseLiteral(ptr, "newmtl ") && parseSpace(ptr) && *ptr) // material name
 		{
-			if (mat != 0)
-				s.materialHash.add(std::string(ptrLast), *mat);
+			if (hasMat)
+				s.materialHash.add(std::string(ptrLast), mat);
 			if (!s.materialHash.contains(std::string(ptr)))
 			{
-				mat = new ObjMaterial();
+				mat = ObjMaterial();
+				hasMat = true;
 				Platform::SetMemory(ptrLast, sizeof(ptrLast));
 				memcpy(ptrLast, ptr, strlen(ptr));
-				mat->Name = std::string(ptrLast);
+				mat.Name = std::string(ptrLast);
 			}
 			valid = true;
 		}
@@ -446,84 +448,84 @@ void loadMtl(ImportState& s, IInStream& mtlIn, const std::string& dirName)
 		{
 			if (parseLiteral(ptr, "spectral ") || parseLiteral(ptr, "xyz "))
 				valid = true;
-			else if (parseFloats(ptr, (float*)&mat->diffuse, 3) && parseSpace(ptr) && !*ptr)
+			else if (parseFloats(ptr, (float*)&mat.diffuse, 3) && parseSpace(ptr) && !*ptr)
 				valid = true;
 		}
 		else if (parseLiteral(ptr, "Ks ") && parseSpace(ptr)) // specular color
 		{
 			if (parseLiteral(ptr, "spectral ") || parseLiteral(ptr, "xyz "))
 				valid = true;
-			else if (parseFloats(ptr, (float*)&mat->specular, 3) && parseSpace(ptr) && !*ptr)
+			else if (parseFloats(ptr, (float*)&mat.specular, 3) && parseSpace(ptr) && !*ptr)
 				valid = true;
 		}
 		else if (parseLiteral(ptr, "d ") && parseSpace(ptr)) // alpha
 		{
-			if (parseFloat(ptr, mat->diffuse.w) && parseSpace(ptr) && !*ptr)
+			if (parseFloat(ptr, mat.diffuse.w) && parseSpace(ptr) && !*ptr)
 				valid = true;
 		}
 		else if (parseLiteral(ptr, "Ns ") && parseSpace(ptr)) // glossiness
 		{
-			if (parseFloat(ptr, mat->glossiness) && parseSpace(ptr) && !*ptr)
+			if (parseFloat(ptr, mat.glossiness) && parseSpace(ptr) && !*ptr)
 				valid = true;
-			if (mat->glossiness <= 0.0f)
+			if (mat.glossiness <= 0.0f)
 			{
-				mat->glossiness = 1.0f;
-				mat->specular = Vec3f(0);
+				mat.glossiness = 1.0f;
+				mat.specular = Vec3f(0);
 			}
 		}
 		else if (parseLiteral(ptr, "map_Kd ")) // diffuse texture
 		{
 			TextureSpec tex;
-			mat->textures[TextureType_Diffuse] = std::string(ptr);
+			mat.textures[TextureType_Diffuse] = std::string(ptr);
 			valid = parseTexture(ptr, tex, dirName);
 		}
 		else if (parseLiteral(ptr, "Ke "))
 		{
-			if (parseFloats(ptr, (float*)&mat->emission, 3) && parseSpace(ptr) && !*ptr)
+			if (parseFloats(ptr, (float*)&mat.emission, 3) && parseSpace(ptr) && !*ptr)
 				valid = true;
 		}
 		else if (parseLiteral(ptr, "Tf "))
 		{
-			if (parseFloats(ptr, (float*)&mat->Tf, 3) && parseSpace(ptr) && !*ptr)
+			if (parseFloats(ptr, (float*)&mat.Tf, 3) && parseSpace(ptr) && !*ptr)
 				valid = true;
 		}
 		else if (parseLiteral(ptr, "Ni ") && parseSpace(ptr)) // alpha
 		{
-			if (parseFloat(ptr, mat->IndexOfRefraction) && parseSpace(ptr) && !*ptr)
+			if (parseFloat(ptr, mat.IndexOfRefraction) && parseSpace(ptr) && !*ptr)
 				valid = true;
 		}
 		else if (parseLiteral(ptr, "illum ") && parseSpace(ptr)) // alpha
 		{
-			if (parseInt(ptr, mat->IlluminationModel) && parseSpace(ptr) && !*ptr)
+			if (parseInt(ptr, mat.IlluminationModel) && parseSpace(ptr) && !*ptr)
 				valid = true;
 		}
 		else if (parseLiteral(ptr, "map_d ") || parseLiteral(ptr, "map_D ") || parseLiteral(ptr, "map_opacity ")) // alpha texture
 		{
 			TextureSpec tex;
 			valid = parseTexture(ptr, tex, dirName);
-			mat->textures[TextureType_Alpha] = tex.texture;
+			mat.textures[TextureType_Alpha] = tex.texture;
 		}
 		else if (parseLiteral(ptr, "disp ")) // displacement map
 		{
 			TextureSpec tex;
 			valid = parseTexture(ptr, tex, dirName);
-			mat->displacementCoef = tex.gain;
-			mat->displacementBias = tex.base * tex.gain;
-			mat->textures[TextureType_Displacement] = tex.texture;
+			mat.displacementCoef = tex.gain;
+			mat.displacementBias = tex.base * tex.gain;
+			mat.textures[TextureType_Displacement] = tex.texture;
 		}
 		else if (parseLiteral(ptr, "bump ") || parseLiteral(ptr, "map_bump ") || parseLiteral(ptr, "map_Bump ")) // bump map
 		{
 			TextureSpec tex;
-			mat->displacementCoef = tex.gain;
-			mat->displacementBias = tex.base * tex.gain;
-			mat->textures[TextureType_Displacement] = std::string(ptr);
+			mat.displacementCoef = tex.gain;
+			mat.displacementBias = tex.base * tex.gain;
+			mat.textures[TextureType_Displacement] = std::string(ptr);
 			valid = parseTexture(ptr, tex, dirName);
 		}
 		else if (parseLiteral(ptr, "refl ")) // environment map
 		{
 			TextureSpec tex;
 			valid = parseTexture(ptr, tex, dirName);
-			mat->textures[TextureType_Environment] = tex.texture;
+			mat.textures[TextureType_Environment] = tex.texture;
 		}
 		else if (
 			parseLiteral(ptr, "vp ") ||             // parameter space vertex
@@ -549,8 +551,8 @@ void loadMtl(ImportState& s, IInStream& mtlIn, const std::string& dirName)
 			valid = true;
 		}
 	}
-	if (mat != 0)
-		s.materialHash.add(std::string(ptrLast), *mat);
+	if (hasMat)
+		s.materialHash.add(std::string(ptrLast), mat);
 }
 
 static Texture CreateTexture(const char* p, const Spectrum& col)

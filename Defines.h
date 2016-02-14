@@ -104,6 +104,7 @@ template<typename T> CUDA_FUNC_IN void swapk(T& a, T& b)
 #define RND_16(VAL) RND_UP(VAL, 16)
 
 void CudaSetToZero(void* dest, size_t length);
+void CudaSetToZero_FreeBuffer();
 template<typename T> inline void ZeroMemoryCuda(T* cudaVar)
 {
 	CudaSetToZero(cudaVar, sizeof(T));

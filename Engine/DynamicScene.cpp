@@ -151,6 +151,11 @@ public:
 		CUDA_MALLOC(&m_pDeviceLightWeights, sizeof(float) * L);
 		m_pHostLeightWeights = new float[L];
 	}
+	~LightStream()
+	{
+		CUDA_FREE(m_pDeviceLightWeights);
+		delete[] m_pHostLeightWeights;
+	}
 
 	float getWeight(StreamReference<Light> ref) const
 	{
@@ -216,7 +221,12 @@ DynamicScene::~DynamicScene()
 	DEALLOC(m_pBVHStream)
 	DEALLOC(m_pBVHIndicesStream)
 	DEALLOC(m_pMaterialBuffer)
+	for (auto ref : *m_pTextureBuffer)
+		ref->Free();
 	DEALLOC(m_pTextureBuffer)
+	for (auto ref : *m_pMeshBuffer)
+		if (ref->m_uType == MESH_ANIMAT_TOKEN)
+			((AnimatedMesh*)ref.operator->())->FreeAnim(m_pAnimStream);
 	DEALLOC(m_pMeshBuffer)
 	DEALLOC(m_pNodeStream)
 	DEALLOC(m_pAnimStream)
@@ -296,9 +306,9 @@ StreamReference<Node> DynamicScene::CreateNode(const std::string& a_Token, IInSt
 
 StreamReference<Node> DynamicScene::CreateNode(const std::string& a_MeshFile2, bool force_recompile)
 {
-	IInStream& in = *OpenFile(a_MeshFile2);
-	StreamReference<Node> n = CreateNode(boost::filesystem::path(std::string(a_MeshFile2)).filename().string(), in, force_recompile);
-	in.Close();
+	IInStream* in = OpenFile(a_MeshFile2);
+	StreamReference<Node> n = CreateNode(boost::filesystem::path(std::string(a_MeshFile2)).filename().string(), *in, force_recompile);
+	delete in;
 	return n;
 }
 
@@ -438,6 +448,8 @@ bool DynamicScene::UpdateScene()
 	{
 		BufferReference<Mesh, KernelMesh> ref = m_pMeshBuffer->m_UnusedEntries[i];
 		ref->Free(m_pTriIntStream, m_pTriDataStream, m_pBVHStream, m_pBVHIndicesStream, m_pMaterialBuffer);
+		if (ref->m_uType == MESH_ANIMAT_TOKEN)
+			((AnimatedMesh*)ref.operator->())->FreeAnim(m_pAnimStream);
 		m_pMeshBuffer->dealloc(ref);
 	}
 	m_pMeshBuffer->m_UnusedEntries.clear();
