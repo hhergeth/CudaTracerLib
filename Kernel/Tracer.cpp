@@ -36,6 +36,8 @@ TracerBase::~TracerBase()
 	ThrowCudaErrors(cudaEventDestroy(start));
 	ThrowCudaErrors(cudaEventDestroy(stop));
 	start = stop = 0;
+	if (m_pBlockSampler)
+		delete m_pBlockSampler;
 }
 
 BlockSampleImage TracerBase::getDeviceBlockSampler() const

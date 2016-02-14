@@ -71,6 +71,7 @@ SceneBVH::~SceneBVH()
 	delete m_pNodes;
 	delete m_pTransforms;
 	delete m_pInvTransforms;
+	delete m_pBuilder;
 }
 
 void SceneBVH::setTransform(BufferReference<Node, Node> n, const float4x4& mat)

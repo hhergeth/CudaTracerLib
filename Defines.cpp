@@ -44,10 +44,17 @@ void __ThrowCudaErrors__(const char* file, int line, ...)
 	}
 }
 
+static void* zeroBuf = 0;
+static size_t zeroBufLength = 0;
+
+void CudaSetToZero_FreeBuffer()
+{
+	if (zeroBuf)
+		free(zeroBuf);
+}
+
 void CudaSetToZero(void* dest, size_t length)
 {
-	static void* zeroBuf = 0;
-	static size_t zeroBufLength = 0;
 	if (!zeroBuf || zeroBufLength < length)
 	{
 		if (zeroBuf)

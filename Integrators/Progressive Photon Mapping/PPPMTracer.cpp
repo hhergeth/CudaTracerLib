@@ -30,6 +30,13 @@ PPPMTracer::PPPMTracer()
 	//m_pVolumeEstimator = new BeamBeamGrid(10, 10000, 3000);
 }
 
+PPPMTracer::~PPPMTracer()
+{
+	m_sSurfaceMap.Free();
+	CUDA_FREE(m_pEntries);
+	delete m_pVolumeEstimator;
+}
+
 void PPPMTracer::PrintStatus(std::vector<std::string>& a_Buf) const
 {
 	a_Buf.push_back(GET_PERF_BLOCKS().ToString());

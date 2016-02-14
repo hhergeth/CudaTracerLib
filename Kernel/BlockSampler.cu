@@ -159,6 +159,11 @@ struct order
 	}
 };
 
+IBlockSampler::~IBlockSampler()
+{
+	
+}
+
 BlockSampler::BlockSampler(Image* img)
 	: img(img)
 {

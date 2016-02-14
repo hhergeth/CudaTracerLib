@@ -41,6 +41,7 @@ struct BlockSampleImage
 class IBlockSampler
 {
 public:
+	virtual ~IBlockSampler();
 	virtual void Free() = 0;
 	virtual void AddPass() = 0;
 	virtual void Clear() = 0;

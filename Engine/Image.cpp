@@ -87,17 +87,12 @@ void Image::copyToHost()
 
 FIBITMAP* Image::toFreeImage()
 {
-	static RGBCOL* colData = 0;
-	static int xDim = 0;
-	static int yDim = 0;
-	if (colData == 0 || xDim != xResolution || yDim != yResolution)
-	{
-		if (colData)
-			delete[] colData;
-		xDim = xResolution;
-		yDim = yResolution;
-		colData = new RGBCOL[xResolution * yResolution];
-	}
+	static const int xDim = 4096;
+	static const int yDim = 4096;
+	static RGBCOL colData[xDim * yDim];
+	if (yResolution > yDim || xResolution > xDim)
+		throw std::runtime_error("Image resolution too high!");
+
 	if (outState == 1)
 	{
 		ThrowCudaErrors(cudaGraphicsMapResources(1, &viewCudaResource));
