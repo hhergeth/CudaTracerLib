@@ -14,6 +14,10 @@ namespace CudaTracerLib {
 class IBaseParameterConstraint
 {
 public:
+	virtual  ~IBaseParameterConstraint()
+	{
+		
+	}
 	virtual std::string Serialize() const = 0;
 };
 
@@ -79,15 +83,19 @@ template<typename T> class TracerParameter;
 class ITracerParameter
 {
 protected:
-	std::unique_ptr<const IBaseParameterConstraint> constraint;
+	const IBaseParameterConstraint* constraint;
 	ITracerParameter(const IBaseParameterConstraint* constraint)
 		: constraint(constraint)
 	{
 
 	}
 public:
-	virtual const IBaseParameterConstraint* getConstraint() const { return constraint.get(); }
-	template<typename T> const IParameterConstraint<T>* getConstraint() const { return dynamic_cast<const IParameterConstraint<T>*>(constraint.get()); }
+	virtual ~ITracerParameter()
+	{
+		delete constraint;
+	}
+	virtual const IBaseParameterConstraint* getConstraint() const { return constraint; }
+	template<typename T> const IParameterConstraint<T>* getConstraint() const { return dynamic_cast<const IParameterConstraint<T>*>(constraint); }
 	template<typename T> TracerParameter<T>* As() { return dynamic_cast<TracerParameter<T>*>(this); }
 	template<typename T> const TracerParameter<T>* As() const { return dynamic_cast<const TracerParameter<T>*>(this); }
 	template<typename T> bool isOfType() const { return As<T>() != 0; }
@@ -231,7 +239,7 @@ template<typename T> struct TracerParameterKey
 
 class TracerParameterCollection
 {
-	std::map<std::string, std::unique_ptr<ITracerParameter>> parameter;
+	std::map<std::string, ITracerParameter*> parameter;
 	template<typename T, typename... Ts> void add(TracerParameter<T>* a, const std::string& name, Ts&&... rest)
 	{
 		add(a, name);
@@ -239,18 +247,23 @@ class TracerParameterCollection
 	}
 	template<typename T> void add(TracerParameter<T>* a, const std::string& name)
 	{
-		parameter[name] = std::unique_ptr<ITracerParameter>(a);
+		parameter[name] = a;
 	}
 public:
 	TracerParameterCollection()
 	{
 
 	}
+	~TracerParameterCollection()
+	{
+		for (auto& i : parameter)
+			delete i.second;
+	}
 	void iterate(std::function<void(const std::string&, ITracerParameter*)>& f) const
 	{
 		for (auto& i : parameter)
 		{
-			f(i.first, i.second.get());
+			f(i.first, i.second);
 		}
 	}
 	ITracerParameter* operator[](const std::string& name) const
@@ -258,7 +271,7 @@ public:
 		auto it = parameter.find(name);
 		if (it == parameter.end())
 			return 0;
-		else return it->second.get();
+		else return it->second;
 	}
 	template<typename T> TracerParameter<T>* get(const std::string& name) const
 	{
@@ -305,14 +318,14 @@ public:
 		TracerParameterCollection& operator<<(ITracerParameter* para)
 		{
 			state = 2;
-			settings.parameter[lastName] = std::unique_ptr<ITracerParameter>(para);
+			settings.parameter[lastName] = para;
 			return settings;
 		}
 
 		TracerParameterCollection& operator<<(T val)
 		{
 			state = 2;
-			settings.parameter[lastName] = std::unique_ptr<ITracerParameter>(new EnumTracerParameter<T>(val));
+			settings.parameter[lastName] = new EnumTracerParameter<T>(val);
 			return settings;
 		}
 	};
