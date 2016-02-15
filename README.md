@@ -18,7 +18,7 @@ This library, for simplicity called CudaTracerLib, is a CUDA based ray tracer li
 - Install the CUDA 7.5 toolkit from the official Nvidia site.
 - Extract the [windows dependencies](http://hhergeth.markab.uberspace.de/CudaTracerLib%20dependencies.rar) somewhere.
 - Clone this repository into a subdirectory.
-- Move the CudaTracerLib.vcxproj* project files into this subdirectory. Open the solution file.
+- Move the CudaTracerLib.vcxproj* project files into this subdirectory. Open the solution file (use the CPU_Debug configuration).
 
 ##### All other platforms can use the accompanying CMake file:
 
