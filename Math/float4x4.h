@@ -95,7 +95,7 @@ public:
 	}
 	CUDA_FUNC_IN Vec3f Scale() const
 	{
-		return Vec3f(length(col(0).getXYZ()), length(col(1).getXYZ()), length(col(2).getXYZ()));
+		return Vec3f(col(0).getXYZ().length(), col(1).getXYZ().length(), col(2).getXYZ().length());
 	}
 	CUDA_FUNC_IN Vec3f Forward() const
 	{
@@ -108,6 +108,12 @@ public:
 	CUDA_FUNC_IN Vec3f Up() const
 	{
 		return TransformDirection(Vec3f(0, 1, 0));
+	}
+
+	//returns the value of the frobenius norm
+	CUDA_FUNC_IN float length() const
+	{
+		return math::sqrt(row(0).lenSqr() + row(1).lenSqr() + row(2).lenSqr() + row(3).lenSqr());
 	}
 
 	CUDA_FUNC_IN Vec3f TransformPoint(const Vec3f& p) const;
@@ -283,6 +289,15 @@ CUDA_FUNC_IN float4x4 operator + (const float4x4& lhs, const float4x4& rhs)
 	for (int i = 0; i < 4; i++)
 		for (int j = 0; j < 4; j++)
 			r(i, j) = lhs(i, j) + rhs(i, j);
+	return r;
+}
+
+CUDA_FUNC_IN float4x4 operator - (const float4x4& lhs, const float4x4& rhs)
+{
+	float4x4 r;
+	for (int i = 0; i < 4; i++)
+		for (int j = 0; j < 4; j++)
+			r(i, j) = lhs(i, j) - rhs(i, j);
 	return r;
 }
 
