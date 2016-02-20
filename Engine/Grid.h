@@ -34,12 +34,14 @@ template<bool REGULAR> struct HashGrid
 
 	CUDA_FUNC_IN unsigned int Hash(const Vec3u& p) const
 	{
+		if (p.x >= m_gridSize || p.y >= m_gridSize || p.z >= m_gridSize)
+		{
+			printf("n = %d, p = {%d, %d, %d}\n", m_gridSize, p.x, p.y, p.z);
+			return UINT_MAX;
+		}
 		if (REGULAR)
 		{
-			unsigned int h = p.z * m_gridSize * m_gridSize + p.y * m_gridSize + p.x;
-			if (h >= m_nElements)
-				printf("h = %d, p = {%d, %d, %d}\n", h, p.x, p.y, p.z);
-			return h;
+			return p.z * m_gridSize * m_gridSize + p.y * m_gridSize + p.x;
 		}
 		else
 		{
@@ -62,6 +64,11 @@ template<bool REGULAR> struct HashGrid
 
 	CUDA_FUNC_IN Vec3u InvHash(unsigned int idx) const
 	{
+		if (idx >= m_nElements)
+		{
+			printf("Invalid value for InvHash idx = %d when n^3 = %d\n", idx, m_nElements);
+			return Vec3u(UINT_MAX);
+		}
 		if (REGULAR)
 		{
 			unsigned int k = idx / (m_gridSize * m_gridSize);
@@ -83,7 +90,8 @@ template<bool REGULAR> struct HashGrid
 	CUDA_FUNC_IN  Vec3u Transform(const Vec3f& p) const
 	{
 		Vec3f q = (p - m_vMin) * m_vInvSize;
-		return clamp(Vec3u((unsigned int)q.x, (unsigned int)q.y, (unsigned int)q.z), Vec3u(0), Vec3u(m_gridSize - 1));
+		q = clamp(q, Vec3f(0.0f), Vec3f(m_gridSize - 1));
+		return Vec3u((unsigned int)q.x, (unsigned int)q.y, (unsigned int)q.z);
 	}
 
 	CUDA_FUNC_IN Vec3f InverseTransform(const Vec3u& i) const
