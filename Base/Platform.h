@@ -19,7 +19,7 @@ public:
 
 	//standard x86 memset which uses a 8 bit as value
 	CUDA_HOST static void SetMemory(void* dest, size_t length, unsigned char val = 0);
-	//memset which uses 32 bit as value as in cudaMemset
+	//memset which uses 32 bit as value
 	CUDA_HOST static void SetMemoryExt(void* dest, size_t length, unsigned int val = 0);
 	CUDA_HOST static void OutputDebug(const std::string& msg);
 };
