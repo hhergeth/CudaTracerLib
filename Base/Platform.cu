@@ -52,9 +52,10 @@ float Platform::Add(float* add, float val)
 #endif
 }
 
-void Platform::SetMemory(void* dest, unsigned long long length, unsigned int val)
+void Platform::SetMemory(void* dest, size_t length, unsigned char val)
 {
-	memset(dest, val, length);
+	if (dest && length)
+		memset(dest, val, length);
 }
 
 void Platform::OutputDebug(const std::string& msg)
@@ -68,10 +69,12 @@ void Platform::OutputDebug(const std::string& msg)
 
 std::string vformat(const char *fmt, va_list ap)
 {
+	va_list ap2;
+	va_copy(ap2, ap);
 	int l = vsnprintf(0, 0, fmt, ap);
 	std::string str;
 	str.resize(l);
-	int n = vsnprintf((char*)str.c_str(), l, fmt, ap);
+	int n = vsnprintf((char*)str.c_str(), l, fmt, ap2);
 	if (n != l)
 		throw std::runtime_error("Error formating string!");
 	return str;
