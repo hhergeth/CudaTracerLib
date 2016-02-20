@@ -16,7 +16,7 @@ template<int LENGTH> struct FixedString : public FixedSizeArray<char, LENGTH, tr
 	FixedString(const std::string& s)
 		: FixedSizeArray<char, LENGTH>(s.c_str(), s.length())
 	{
-		push_back('\0');
+		FixedSizeArray<char, LENGTH, true, 0>::push_back('\0');
 	}
 
 	FixedString(const char* s)
@@ -28,8 +28,9 @@ template<int LENGTH> struct FixedString : public FixedSizeArray<char, LENGTH, tr
 	void resize(size_t l)
 	{
 		FixedSizeArray<char, LENGTH, true, 0>::resize(l);
-		if (LENGTH - length > 0)
-			Platform::SetMemory(FixedSizeArray<char, LENGTH, true, 0>::buffer + length, (LENGTH - length));
+		auto l2 = FixedSizeArray<char, LENGTH, true, 0>::length;
+		if (LENGTH - l2 > 0)
+			Platform::SetMemory(FixedSizeArray<char, LENGTH, true, 0>::buffer + l2, (LENGTH - l2));
 	}
 
 	operator std::string() const
