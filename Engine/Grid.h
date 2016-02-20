@@ -58,7 +58,7 @@ template<bool REGULAR> struct HashGrid
 
 	CUDA_FUNC_IN Vec3u InvHash(unsigned int idx) const
 	{
-		CT_ASSERT(idx < m_nElements);
+		CTL_ASSERT(idx < m_nElements);
 		if (idx >= m_nElements)
 			return Vec3u(UINT_MAX);
 		if (REGULAR)

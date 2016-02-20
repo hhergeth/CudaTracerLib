@@ -28,7 +28,7 @@ const Light* KernelDynamicScene::sampleEmitter(float& emPdf, Vec2f& sample) cons
 		return 0;
 	unsigned int idx = (unsigned int)(STL_upper_bound(m_pLightCDF, m_pLightCDF + m_numLights, sample.x) - m_pLightCDF);
 	//unsigned int idx = (unsigned int)(m_sLightData.UsedCount * sample.x);
-	CT_ASSERT(idx < m_numLights);
+	CTL_ASSERT(idx < m_numLights);
 	if (idx >= m_numLights)
 		idx = m_numLights - 1;
 	//sample.x = sample.x - idx / float(m_sLightData.UsedCount);

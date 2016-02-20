@@ -19,7 +19,7 @@ void TraceResult::getBsdfSample(const NormalizedT<Vec3f>& wi, const Vec3f& p, BS
 	else
 	{
 		bRec.f_i = Spectrum(0.0f);
-		CT_ASSERT(mode == ETransportMode::ERadiance);
+		CTL_ASSERT(mode == ETransportMode::ERadiance);
 	}
 	bRec.rng = rng;
 	bRec.eta = 1.0f;

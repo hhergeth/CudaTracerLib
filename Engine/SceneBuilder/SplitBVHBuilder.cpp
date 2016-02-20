@@ -24,8 +24,8 @@ typedef void(*SortSwapFunc)    (void* data, int idxA, int idxB);    // Swaps A a
 
 void insertionSort(int start, int size, void* data, SortCompareFunc compareFunc, SortSwapFunc swapFunc)
 {
-	CT_ASSERT(compareFunc && swapFunc);
-	CT_ASSERT(size >= 0);
+	CTL_ASSERT(compareFunc && swapFunc);
+	CTL_ASSERT(size >= 0);
 
 	for (int i = 1; i < size; i++)
 	{
@@ -40,8 +40,8 @@ void insertionSort(int start, int size, void* data, SortCompareFunc compareFunc,
 
 int median3(int low, int high, void* data, SortCompareFunc compareFunc)
 {
-	CT_ASSERT(compareFunc);
-	CT_ASSERT(low >= 0 && high >= 2);
+	CTL_ASSERT(compareFunc);
+	CTL_ASSERT(low >= 0 && high >= 2);
 
 	int l = low;
 	int c = (low + high) >> 1;
@@ -73,7 +73,7 @@ int partition(int low, int high, void* data, SortCompareFunc compareFunc, SortSw
 			j--;
 		while (compareFunc(data, high - 1, j));
 
-		CT_ASSERT(i >= low && j >= low && i < high && j < high);
+		CTL_ASSERT(i >= low && j >= low && i < high && j < high);
 		if (i >= j)
 			break;
 
@@ -90,8 +90,8 @@ int partition(int low, int high, void* data, SortCompareFunc compareFunc, SortSw
 
 void qsort(int low, int high, void* data, SortCompareFunc compareFunc, SortSwapFunc swapFunc)
 {
-	CT_ASSERT(compareFunc && swapFunc);
-	CT_ASSERT(low <= high);
+	CTL_ASSERT(compareFunc && swapFunc);
+	CTL_ASSERT(low <= high);
 
 	int stack[QSORT_STACK_SIZE];
 	int sp = 0;
@@ -100,7 +100,7 @@ void qsort(int low, int high, void* data, SortCompareFunc compareFunc, SortSwapF
 	while (sp)
 	{
 		high = stack[--sp];
-		CT_ASSERT(low <= high);
+		CTL_ASSERT(low <= high);
 
 		// Small enough or stack full => use insertion sort.
 
@@ -114,7 +114,7 @@ void qsort(int low, int high, void* data, SortCompareFunc compareFunc, SortSwapF
 		// Partition and sort sub-partitions.
 
 		int i = partition(low, high, data, compareFunc, swapFunc);
-		CT_ASSERT(sp + 2 <= QSORT_STACK_SIZE);
+		CTL_ASSERT(sp + 2 <= QSORT_STACK_SIZE);
 		if (high - i > 2)
 			stack[sp++] = high;
 		if (i - low > 1)
@@ -126,8 +126,8 @@ void qsort(int low, int high, void* data, SortCompareFunc compareFunc, SortSwapF
 
 void sort(void* data, int start, int end, SortCompareFunc compareFunc, SortSwapFunc swapFunc)
 {
-	CT_ASSERT(start <= end);
-	CT_ASSERT(compareFunc && swapFunc);
+	CTL_ASSERT(start <= end);
+	CTL_ASSERT(compareFunc && swapFunc);
 
 	// Nothing to do => skip.
 

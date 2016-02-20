@@ -145,8 +145,8 @@ public:
 };
 void AnimatedMesh::k_ComputeState(unsigned int a_Anim, unsigned int a_Frame, float a_lerp, Stream<BVHNodeData>* a_BVHNodeStream, void* a_DeviceTmp, void* a_HostTmp)
 {
-	CT_ASSERT(a_Anim < m_pAnimations.size());
-	CT_ASSERT(a_Frame < m_pAnimations[a_Anim].m_pFrames.size());
+	CTL_ASSERT(a_Anim < m_pAnimations.size());
+	CTL_ASSERT(a_Frame < m_pAnimations[a_Anim].m_pFrames.size());
 	unsigned int n = (a_Frame + 1) % m_pAnimations[a_Anim].m_pFrames.size();
 	float4x4* m0 = (float4x4*)m_pAnimations[a_Anim].m_pFrames[a_Frame].m_sMatrices.getDevice();
 	float4x4* m1 = (float4x4*)m_pAnimations[a_Anim].m_pFrames[n].m_sMatrices.getDevice();

@@ -76,7 +76,7 @@ Spectrum DiffuseLight::eval(const Vec3f& p, const Frame& sys, const NormalizedT<
 		dg.n = sys.n;
 		dg.sys = sys;
 		if (needsUVSample(m_rad_texture))
-			CT_ASSERT(shapeSet.getPosition(p, &dg.bary, dg.uv));
+			CTL_ASSERT(shapeSet.getPosition(p, &dg.bary, dg.uv));
 		return m_rad_texture.Evaluate(dg);
 	}
 }
@@ -193,7 +193,7 @@ Spectrum DiffuseLight::evalPosition(const PositionSamplingRecord &pRec) const
 	DifferentialGeometry dg;
 	dg.P = pRec.p;
 	if (needsUVSample(m_rad_texture))
-		CT_ASSERT(shapeSet.getPosition(dg.P, &dg.bary, &dg.uv[0]));
+		CTL_ASSERT(shapeSet.getPosition(dg.P, &dg.bary, &dg.uv[0]));
 	return m_rad_texture.Evaluate(dg) * PI;
 }
 

@@ -185,7 +185,7 @@ public:
 	//count is in bytes!
 	template<typename T> StreamReference<char> malloc_aligned(unsigned int a_Count)
 	{
-		CT_ASSERT((a_Count % sizeof(T)) == 0);
+		CTL_ASSERT((a_Count % sizeof(T)) == 0);
 		return malloc_aligned(a_Count, std::alignment_of<T>::value);
 	}
 

@@ -67,13 +67,13 @@ template<typename T, int LENGTH, bool RESET = true, unsigned char RESET_VALUE = 
 
 	CUDA_FUNC_IN T& operator()(size_t idx)
 	{
-		CT_ASSERT(idx < length);
+		CTL_ASSERT(idx < length);
 		return buffer[idx];
 	}
 
 	CUDA_FUNC_IN const T& operator()(size_t idx) const
 	{
-		CT_ASSERT(idx < length);
+		CTL_ASSERT(idx < length);
 		return buffer[idx];
 	}
 

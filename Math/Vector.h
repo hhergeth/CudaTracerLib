@@ -34,12 +34,12 @@ public:
 
 	CUDA_FUNC_IN    const T*        getPtr(void) const                { return ((S*)this)->getPtr(); }
 	CUDA_FUNC_IN    T*              getPtr(void)                      { return ((S*)this)->getPtr(); }
-	CUDA_FUNC_IN    const T&        get(int idx) const             { CT_ASSERT(idx >= 0 && idx < L); return getPtr()[idx]; }
-	CUDA_FUNC_IN    T&              get(int idx)                   { CT_ASSERT(idx >= 0 && idx < L); return getPtr()[idx]; }
+	CUDA_FUNC_IN    const T&        get(int idx) const             { CTL_ASSERT(idx >= 0 && idx < L); return getPtr()[idx]; }
+	CUDA_FUNC_IN    T&              get(int idx)                   { CTL_ASSERT(idx >= 0 && idx < L); return getPtr()[idx]; }
 	CUDA_FUNC_IN    T               set(int idx, const T& a)       { T& slot = get(idx); T old = slot; slot = a; return old; }
 
 	CUDA_FUNC_IN    void            set(const T& a)                { T* tp = getPtr(); for (int i = 0; i < L; i++) tp[i] = a; }
-	CUDA_FUNC_IN    void            set(const T* ptr)              { CT_ASSERT(ptr); T* tp = getPtr(); for (int i = 0; i < L; i++) tp[i] = ptr[i]; }
+	CUDA_FUNC_IN    void            set(const T* ptr)              { CTL_ASSERT(ptr); T* tp = getPtr(); for (int i = 0; i < L; i++) tp[i] = ptr[i]; }
 	CUDA_FUNC_IN    void            setZero(void)                      { set((T)0); }
 
 	CUDA_FUNC_IN    bool            isZero(void) const                { const T* tp = getPtr(); for (int i = 0; i < L; i++) if (tp[i] != (T)0) return false; return true; }
