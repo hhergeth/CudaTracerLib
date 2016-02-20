@@ -28,11 +28,9 @@ const Light* KernelDynamicScene::sampleEmitter(float& emPdf, Vec2f& sample) cons
 		return 0;
 	unsigned int idx = (unsigned int)(STL_upper_bound(m_pLightCDF, m_pLightCDF + m_numLights, sample.x) - m_pLightCDF);
 	//unsigned int idx = (unsigned int)(m_sLightData.UsedCount * sample.x);
+	CT_ASSERT(idx < m_numLights);
 	if (idx >= m_numLights)
-	{
-		printf("sampled incorrect light! N = %d, sample.x = %f, idx = %d\n", m_numLights, sample.x, idx);
 		idx = m_numLights - 1;
-	}
 	//sample.x = sample.x - idx / float(m_sLightData.UsedCount);
 	float fU = m_pLightCDF[idx], fL = idx > 0 ? m_pLightCDF[idx - 1] : 0.0f;
 	sample.x = (sample.x - fL) / (fU - fL);
