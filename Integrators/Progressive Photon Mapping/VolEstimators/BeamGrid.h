@@ -69,7 +69,7 @@ struct BeamGrid : public PointStorage
 		return sizeof(*this);
 	}
 
-	virtual void PrepareForRendering();
+	CTL_EXPORT virtual void PrepareForRendering();
 
 	virtual void PrintStatus(std::vector<std::string>& a_Buf) const
 	{

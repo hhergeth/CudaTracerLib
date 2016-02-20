@@ -22,12 +22,12 @@ class Image
 public:
 	CUDA_FUNC_IN Image(){}
 
-	Image(int xRes, int yRes, unsigned int viewGLTexture);
+	CTL_EXPORT Image(int xRes, int yRes, unsigned int viewGLTexture);
 #ifdef ISWINDOWS
-	Image(int xRes, int yRes, ID3D11Resource *pD3DResource);
+	CTL_EXPORT Image(int xRes, int yRes, ID3D11Resource *pD3DResource);
 #endif
-	Image(int xRes, int yRes, RGBCOL* target = 0);
-	void Free();
+	CTL_EXPORT Image(int xRes, int yRes, RGBCOL* target = 0);
+	CTL_EXPORT void Free();
 	CUDA_FUNC_IN void getExtent(unsigned int& xRes, unsigned int &yRes) const
 	{
 		xRes = xResolution;
@@ -41,7 +41,7 @@ public:
 	{
 		return yResolution;
 	}
-	CUDA_DEVICE CUDA_HOST void AddSample(float sx, float sy, const Spectrum &L);
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST void AddSample(float sx, float sy, const Spectrum &L);
 	CUDA_FUNC_IN void ClearSample(int sx, int sy)
 	{
 		*getPixel(sy * xResolution + sx) = Pixel();
@@ -56,12 +56,12 @@ public:
 	{
 		filter = filt;
 	}
-	CUDA_DEVICE CUDA_HOST void SetSample(int sx, int sy, RGBCOL c);
-	CUDA_DEVICE CUDA_HOST void Splat(float sx, float sy, const Spectrum &L);
-	void WriteDisplayImage(const std::string& fileName);
-	void StartRendering();
-	void EndRendering();
-	void Clear();
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST void SetSample(int sx, int sy, RGBCOL c);
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST void Splat(float sx, float sy, const Spectrum &L);
+	CTL_EXPORT void WriteDisplayImage(const std::string& fileName);
+	CTL_EXPORT void StartRendering();
+	CTL_EXPORT void EndRendering();
+	CTL_EXPORT void Clear();
 	struct Pixel {
 		CUDA_FUNC_IN Pixel() {
 			rgb[0] = rgb[1] = rgb[2] = 0;
@@ -88,7 +88,7 @@ public:
 	{
 		return drawStyle;
 	}
-	void DoUpdateDisplay(float splat);
+	CTL_EXPORT void DoUpdateDisplay(float splat);
 	RGBCOL* getCudaPixels(){ return viewTarget; }
 	CUDA_FUNC_IN Spectrum getPixel(int x, int y)
 	{
@@ -98,15 +98,15 @@ public:
 	{
 		return *getPixel(y * xResolution + x);
 	}
-	void DrawSamplePlacement(int numPasses);
+	CTL_EXPORT void DrawSamplePlacement(int numPasses);
 	void disableUpdate()
 	{
 		m_bDoUpdate = false;
 	}
-	void copyToHost();
-	void SaveToMemory(void** mem, size_t& size, const std::string& type);
-	static void ComputeDiff(const Image& A, const Image& B, Image& dest, float scale);
-	void setOutputScale(float f){ m_fOutScale = f; }
+	CTL_EXPORT void copyToHost();
+	CTL_EXPORT void SaveToMemory(void** mem, size_t& size, const std::string& type);
+	CTL_EXPORT static void ComputeDiff(const Image& A, const Image& B, Image& dest, float scale);
+	CTL_EXPORT void setOutputScale(float f){ m_fOutScale = f; }
 private:
 	FIBITMAP* toFreeImage();
 	void InternalUpdateDisplay();

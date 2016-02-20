@@ -9,11 +9,11 @@ namespace CudaTracerLib {
 class VCM : public Tracer<true, true>
 {
 public:
-	VCM();
+	CTL_EXPORT VCM();
 protected:
-	virtual void DoRender(Image* I);
-	virtual void StartNewTrace(Image* I);
-	virtual void RenderBlock(Image* I, int x, int y, int blockW, int blockH);
+	CTL_EXPORT virtual void DoRender(Image* I);
+	CTL_EXPORT virtual void StartNewTrace(Image* I);
+	CTL_EXPORT virtual void RenderBlock(Image* I, int x, int y, int blockW, int blockH);
 private:
 	//current will be used for lookup, next will be stored in
 	VCMSurfMap m_sPhotonMapsCurrent, m_sPhotonMapsNext;

@@ -31,11 +31,11 @@ public:
 	mpHlp HeightMap;
 	mpHlp AlphaMap;
 public:
-	Material();
-	Material(const std::string& name);
-	CUDA_DEVICE CUDA_HOST bool SampleNormalMap(DifferentialGeometry& uv, const Vec3f& wi) const;
-	CUDA_DEVICE CUDA_HOST bool AlphaTest(const Vec2f& bary, const Vec2f& uv) const;
-	CUDA_DEVICE CUDA_HOST bool GetBSSRDF(const DifferentialGeometry& uv, const VolumeRegion** res) const;
+	CTL_EXPORT Material();
+	CTL_EXPORT Material(const std::string& name);
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST bool SampleNormalMap(DifferentialGeometry& uv, const Vec3f& wi) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST bool AlphaTest(const Vec2f& bary, const Vec2f& uv) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST bool GetBSSRDF(const DifferentialGeometry& uv, const VolumeRegion** res) const;
 	template<typename L> void LoadTextures(L& callback)
 	{
 		if (NormalMap.used && NormalMap.tex.Is<ImageTexture>())

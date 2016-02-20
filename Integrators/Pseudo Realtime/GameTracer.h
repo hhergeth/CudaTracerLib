@@ -17,10 +17,10 @@ public:
 	{
 		
 	}
-	virtual void Debug(Image* I, const Vec2i& pixel);
-	virtual void Resize(unsigned int _w, unsigned int _h);
+	CTL_EXPORT virtual void Debug(Image* I, const Vec2i& pixel);
+	CTL_EXPORT virtual void Resize(unsigned int _w, unsigned int _h);
 protected:
-	virtual void DoRender(Image* I);
+	CTL_EXPORT virtual void DoRender(Image* I);
 };
 
 }

@@ -25,20 +25,20 @@ private:
 	BufferReference<BVHNodeData, BVHNodeData> node_ref;
 	BufferReference<float4x4, float4x4> tr_ref, iv_tr_ref;
 public:
-	SceneBVH(size_t a_NodeCount);
-	~SceneBVH();
-	bool Build(Stream<Node>* nodStream, Buffer<Mesh, KernelMesh>* mesh_buf);
-	KernelSceneBVH getData(bool devicePointer = true);
-	size_t getDeviceSizeInBytes();
-	void setTransform(BufferReference<Node, Node> n, const float4x4& mat);
-	void invalidateNode(BufferReference<Node, Node> n);
-	void addNode(BufferReference<Node, Node> n);
-	void removeNode(BufferReference<Node, Node> n);
-	const float4x4& getNodeTransform(BufferReference<Node, Node> n);
-	BVHNodeData* getBVHNode(unsigned int i);
-	bool needsBuild();
-	AABB getSceneBox();
-	void printGraph(const std::string& path);
+	CTL_EXPORT SceneBVH(size_t a_NodeCount);
+	CTL_EXPORT ~SceneBVH();
+	CTL_EXPORT bool Build(Stream<Node>* nodStream, Buffer<Mesh, KernelMesh>* mesh_buf);
+	CTL_EXPORT KernelSceneBVH getData(bool devicePointer = true);
+	CTL_EXPORT size_t getDeviceSizeInBytes();
+	CTL_EXPORT void setTransform(BufferReference<Node, Node> n, const float4x4& mat);
+	CTL_EXPORT void invalidateNode(BufferReference<Node, Node> n);
+	CTL_EXPORT void addNode(BufferReference<Node, Node> n);
+	CTL_EXPORT void removeNode(BufferReference<Node, Node> n);
+	CTL_EXPORT const float4x4& getNodeTransform(BufferReference<Node, Node> n);
+	CTL_EXPORT BVHNodeData* getBVHNode(unsigned int i);
+	CTL_EXPORT bool needsBuild();
+	CTL_EXPORT AABB getSceneBox();
+	CTL_EXPORT void printGraph(const std::string& path);
 };
 
 }

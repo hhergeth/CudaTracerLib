@@ -96,28 +96,28 @@ public:
 	PARAMETER_KEY(bool, PerPixelRadius)
 	PARAMETER_KEY(bool, FinalGathering)
 
-	PPPMTracer();
-	virtual ~PPPMTracer();
-	virtual void Resize(unsigned int _w, unsigned int _h);
-	virtual void Debug(Image* I, const Vec2i& pixel);
-	virtual void PrintStatus(std::vector<std::string>& a_Buf) const;
+	CTL_EXPORT PPPMTracer();
+	CTL_EXPORT virtual ~PPPMTracer();
+	CTL_EXPORT virtual void Resize(unsigned int _w, unsigned int _h);
+	CTL_EXPORT virtual void Debug(Image* I, const Vec2i& pixel);
+	CTL_EXPORT virtual void PrintStatus(std::vector<std::string>& a_Buf) const;
 	virtual float getCurrentRadius(float exp) const
 	{
 		return CudaTracerLib::getCurrentRadius(m_fInitialRadius, m_uPassesDone, exp);
 	}
-	void getRadiusAt(int x, int y, float& r, float& rd) const;
+	CTL_EXPORT void getRadiusAt(int x, int y, float& r, float& rd) const;
 	void getCurrentRMinRMax(float& rMin, float& rMax) const
 	{
 		rMin = CudaTracerLib::getCurrentRadius(r_min, m_uPassesDone, 2);
 		rMax = CudaTracerLib::getCurrentRadius(r_max, m_uPassesDone, 2);
 	}
 protected:
-	virtual void DoRender(Image* I);
-	virtual void StartNewTrace(Image* I);
-	virtual void RenderBlock(Image* I, int x, int y, int blockW, int blockH);
+	CTL_EXPORT virtual void DoRender(Image* I);
+	CTL_EXPORT virtual void StartNewTrace(Image* I);
+	CTL_EXPORT virtual void RenderBlock(Image* I, int x, int y, int blockW, int blockH);
 private:
-	void doPhotonPass();
-	void doPerPixelRadiusEstimation();
+	CTL_EXPORT void doPhotonPass();
+	CTL_EXPORT void doPerPixelRadiusEstimation();
 };
 
 }

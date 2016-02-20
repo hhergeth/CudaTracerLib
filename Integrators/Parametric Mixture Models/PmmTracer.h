@@ -16,16 +16,16 @@ struct DirectionModel;
 class PmmTracer : public Tracer<false, true>
 {
 public:
-	PmmTracer();
+	CTL_EXPORT PmmTracer();
 	~PmmTracer()
 	{
 		sMap.Free();
 		dMap.Free();
 	}
-	virtual void Debug(Image* I, const Vec2i& pixel);
+	CTL_EXPORT virtual void Debug(Image* I, const Vec2i& pixel);
 protected:
-	virtual void DoRender(Image* I);
-	virtual void StartNewTrace(Image* I);
+	CTL_EXPORT virtual void DoRender(Image* I);
+	CTL_EXPORT virtual void StartNewTrace(Image* I);
 private:
 	int passIteration;
 	SpatialLinkedMap<SpatialEntry> sMap;

@@ -30,14 +30,14 @@ public:
 		return true;
 	}
 	
-	CUDA_DEVICE CUDA_HOST static void RejectionSampleDisk(float *x, float *y, CudaRNG &rng);	
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST static void RejectionSampleDisk(float *x, float *y, CudaRNG &rng);
 
-	CUDA_DEVICE CUDA_HOST static void StratifiedSample1D(float *samples, int nSamples, CudaRNG &rng, bool jitter = true);
-	CUDA_DEVICE CUDA_HOST static void StratifiedSample2D(float *samples, int nx, int ny, CudaRNG &rng, bool jitter = true);
-	CUDA_DEVICE CUDA_HOST static void stratifiedSample1D(CudaRNG& random, float *dest, int count, bool jitter);
-	CUDA_DEVICE CUDA_HOST static void stratifiedSample2D(CudaRNG& random, Vec2f *dest, int countX, int countY, bool jitter);
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST static void StratifiedSample1D(float *samples, int nSamples, CudaRNG &rng, bool jitter = true);
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST static void StratifiedSample2D(float *samples, int nx, int ny, CudaRNG &rng, bool jitter = true);
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST static void stratifiedSample1D(CudaRNG& random, float *dest, int count, bool jitter);
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST static void stratifiedSample2D(CudaRNG& random, Vec2f *dest, int countX, int countY, bool jitter);
 
-	CUDA_DEVICE CUDA_HOST static void latinHypercube(CudaRNG& random, float *dest, unsigned int nSamples, size_t nDim);
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST static void latinHypercube(CudaRNG& random, float *dest, unsigned int nSamples, size_t nDim);
 
 	CUDA_FUNC_IN static float BalanceHeuristic(int nf, float fPdf, int ng, float gPdf)
 	{
@@ -264,7 +264,7 @@ public:
 		return MonteCarlo::fresnelDielectricExt(cosThetaI, cosThetaT, eta);
 	}
 
-	CUDA_DEVICE CUDA_HOST static unsigned int sampleReuse(float *cdf, unsigned int size, float &sample, float& pdf);
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST static unsigned int sampleReuse(float *cdf, unsigned int size, float &sample, float& pdf);
 
 	//http://gamedev.stackexchange.com/questions/23743/whats-the-most-efficient-way-to-find-barycentric-coordinates
 	// point p with respect to triangle (a, b, c)

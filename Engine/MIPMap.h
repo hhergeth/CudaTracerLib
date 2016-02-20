@@ -24,13 +24,13 @@ public:
 	ImageFilter m_uFilterMode;
 	std::string m_pPath;
 	MIPMap() = default;
-	MIPMap(const std::string& a_InputFile, IInStream& a_In);
-	void Free();
-	static void CompileToBinary(const std::string& a_InputFile, FileOutputStream& a_Out, bool a_MipMap);
-	static void CompileToBinary(const std::string& in, const std::string& out, bool a_MipMap);
-	static void CreateSphericalSkydomeTexture(const std::string& front, const std::string& back, const std::string& left, const std::string& right, const std::string& top, const std::string& bottom, const std::string& outFile);
-	static void CreateRelaxedConeMap(const std::string& a_InputFile, FileOutputStream& Out);
-	KernelMIPMap getKernelData();
+	CTL_EXPORT MIPMap(const std::string& a_InputFile, IInStream& a_In);
+	CTL_EXPORT void Free();
+	CTL_EXPORT static void CompileToBinary(const std::string& a_InputFile, FileOutputStream& a_Out, bool a_MipMap);
+	CTL_EXPORT static void CompileToBinary(const std::string& in, const std::string& out, bool a_MipMap);
+	CTL_EXPORT static void CreateSphericalSkydomeTexture(const std::string& front, const std::string& back, const std::string& left, const std::string& right, const std::string& top, const std::string& bottom, const std::string& outFile);
+	CTL_EXPORT static void CreateRelaxedConeMap(const std::string& a_InputFile, FileOutputStream& Out);
+	CTL_EXPORT KernelMIPMap getKernelData();
 	unsigned int getNumMips() const
 	{
 		return m_uLevels;

@@ -177,10 +177,10 @@ public:
 		}
 	};
 
-	SplitBVHBuilder(IBVHBuilderCallback* clb, const Platform& P, const BuildParams& stats);
+	CTL_EXPORT SplitBVHBuilder(IBVHBuilderCallback* clb, const Platform& P, const BuildParams& stats);
 	~SplitBVHBuilder(void);
 
-	void                run(void);
+	CTL_EXPORT void                run(void);
 
 private:
 	static bool             sortCompare(void* data, int idxA, int idxB);

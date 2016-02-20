@@ -26,7 +26,7 @@ struct BeamBeamGrid : public IVolumeEstimator
 		CUDA_FREE(m_pDeviceBeams);
 	}
 
-	virtual void StartNewPass(const IRadiusProvider* radProvider, DynamicScene* scene);
+	CTL_EXPORT virtual void StartNewPass(const IRadiusProvider* radProvider, DynamicScene* scene);
 
 	virtual void StartNewRendering(const AABB& box)
 	{
@@ -60,7 +60,7 @@ struct BeamBeamGrid : public IVolumeEstimator
 		return sizeof(*this);
 	}
 
-	virtual void PrepareForRendering();
+	CTL_EXPORT virtual void PrepareForRendering();
 
 	CUDA_ONLY_FUNC bool StoreBeam(const Beam& b);
 

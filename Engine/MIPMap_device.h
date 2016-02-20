@@ -68,17 +68,17 @@ struct KernelMIPMap
 	float m_weightLut[MTS_MIPMAP_LUT_SIZE];
 
 	//Texture functions
-	CUDA_DEVICE CUDA_HOST Spectrum Sample(const Vec2f& uv) const;
-	CUDA_DEVICE CUDA_HOST float SampleAlpha(const Vec2f& uv) const;
-	CUDA_DEVICE CUDA_HOST void evalGradient(const Vec2f& uv, Spectrum* gradient) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum Sample(const Vec2f& uv) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST float SampleAlpha(const Vec2f& uv) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST void evalGradient(const Vec2f& uv, Spectrum* gradient) const;
 	//MipMap functions
-	CUDA_DEVICE CUDA_HOST Spectrum Sample(const Vec2f& a_UV, float width) const;
-	CUDA_DEVICE CUDA_HOST Spectrum Sample(float width, int x, int y) const;
-	CUDA_DEVICE CUDA_HOST Spectrum eval(const Vec2f& uv, const Vec2f& d0, const Vec2f& d1) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum Sample(const Vec2f& a_UV, float width) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum Sample(float width, int x, int y) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum eval(const Vec2f& uv, const Vec2f& d0, const Vec2f& d1) const;
 private:
-	CUDA_DEVICE CUDA_HOST Spectrum Texel(unsigned int level, const Vec2f& a_UV) const;
-	CUDA_DEVICE CUDA_HOST Spectrum triangle(unsigned int level, const Vec2f& a_UV) const;
-	CUDA_DEVICE CUDA_HOST Spectrum evalEWA(unsigned int level, const Vec2f &uv, float A, float B, float C) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum Texel(unsigned int level, const Vec2f& a_UV) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum triangle(unsigned int level, const Vec2f& a_UV) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum evalEWA(unsigned int level, const Vec2f &uv, float A, float B, float C) const;
 };
 
 }

@@ -13,17 +13,17 @@ namespace CudaTracerLib {
 #define m_x2 (0.64185334234578130578f)
 #define m_x3 (0.23638319966214988028f)
 
-CUDA_DEVICE CUDA_HOST float legendreP(int l, float x);
+CTL_EXPORT CUDA_DEVICE CUDA_HOST float legendreP(int l, float x);
 
-CUDA_DEVICE CUDA_HOST float legendreP(int l, int m, float x);
+CTL_EXPORT CUDA_DEVICE CUDA_HOST float legendreP(int l, int m, float x);
 
-CUDA_DEVICE CUDA_HOST Vec2f legendrePD(int l, float x);
+CTL_EXPORT CUDA_DEVICE CUDA_HOST Vec2f legendrePD(int l, float x);
 
-CUDA_DEVICE CUDA_HOST Vec2f legendreQ(int l, float x);
+CTL_EXPORT CUDA_DEVICE CUDA_HOST Vec2f legendreQ(int l, float x);
 
-CUDA_DEVICE CUDA_HOST void gaussLegendre(int n, float *nodes, float *weights);
+CTL_EXPORT CUDA_DEVICE CUDA_HOST void gaussLegendre(int n, float *nodes, float *weights);
 
-CUDA_DEVICE CUDA_HOST void gaussLobatto(int n, float *nodes, float *weights);
+CTL_EXPORT CUDA_DEVICE CUDA_HOST void gaussLobatto(int n, float *nodes, float *weights);
 
 class GaussLobattoIntegrator
 {

@@ -19,8 +19,8 @@ public:
 	FixedSizeArray<unsigned int, MAX_AREALIGHT_NUM, true, 0xff> m_uLights;
 public:
 	Node() {}
-	Node(unsigned int MeshIndex, Mesh* mesh, BufferReference<Material, Material> mat);
-	AABB getWorldBox(Mesh* mesh, const float4x4& mat) const;
+	CTL_EXPORT Node(unsigned int MeshIndex, Mesh* mesh, BufferReference<Material, Material> mat);
+	CTL_EXPORT AABB getWorldBox(Mesh* mesh, const float4x4& mat) const;
 };
 
 }

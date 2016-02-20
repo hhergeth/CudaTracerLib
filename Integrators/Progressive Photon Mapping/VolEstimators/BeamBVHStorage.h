@@ -58,8 +58,8 @@ public:
 	AABB volBox;
 
 	BeamBVHStorage(){}
-	BeamBVHStorage(unsigned int nBeams);
-	virtual void Free();
+	CTL_EXPORT BeamBVHStorage(unsigned int nBeams);
+	CTL_EXPORT virtual void Free();
 
 	virtual void StartNewPass(const IRadiusProvider* radProvider, DynamicScene* scene)
 	{
@@ -99,7 +99,7 @@ public:
 		a_Buf.push_back(format("%.2f%% Vol Beams", (float)m_uBeamIdx / m_uNumBeams * 100));
 	}
 
-	virtual void PrepareForRendering();
+	CTL_EXPORT virtual void PrepareForRendering();
 
 	CUDA_ONLY_FUNC bool StoreBeam(const Beam& b)
 	{

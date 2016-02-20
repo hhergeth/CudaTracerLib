@@ -50,11 +50,11 @@ struct HGPhaseFunction : public BasePhaseFunction//, public e_DerivedTypeHelper<
 		
 	}
 
-	CUDA_DEVICE CUDA_HOST float Evaluate(const PhaseFunctionSamplingRecord &pRec) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST float Evaluate(const PhaseFunctionSamplingRecord &pRec) const;
 
-	CUDA_DEVICE CUDA_HOST float Sample(PhaseFunctionSamplingRecord &pRec, CudaRNG& sampler) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST float Sample(PhaseFunctionSamplingRecord &pRec, CudaRNG& sampler) const;
 
-	CUDA_DEVICE CUDA_HOST float Sample(PhaseFunctionSamplingRecord &pRec, float &pdf, CudaRNG& sampler) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST float Sample(PhaseFunctionSamplingRecord &pRec, float &pdf, CudaRNG& sampler) const;
 };
 
 struct IsotropicPhaseFunction : public BasePhaseFunction//, public e_DerivedTypeHelper<2>
@@ -66,11 +66,11 @@ struct IsotropicPhaseFunction : public BasePhaseFunction//, public e_DerivedType
 	{
 	}
 
-	CUDA_DEVICE CUDA_HOST float Evaluate(const PhaseFunctionSamplingRecord &pRec) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST float Evaluate(const PhaseFunctionSamplingRecord &pRec) const;
 
-	CUDA_DEVICE CUDA_HOST float Sample(PhaseFunctionSamplingRecord &pRec, CudaRNG& sampler) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST float Sample(PhaseFunctionSamplingRecord &pRec, CudaRNG& sampler) const;
 
-	CUDA_DEVICE CUDA_HOST float Sample(PhaseFunctionSamplingRecord &pRec, float &pdf, CudaRNG& sampler) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST float Sample(PhaseFunctionSamplingRecord &pRec, float &pdf, CudaRNG& sampler) const;
 };
 
 struct KajiyaKayPhaseFunction : public BasePhaseFunction//, public e_DerivedTypeHelper<3>
@@ -78,17 +78,17 @@ struct KajiyaKayPhaseFunction : public BasePhaseFunction//, public e_DerivedType
 	TYPE_FUNC(3)
 	float m_ks, m_kd, m_exponent, m_normalization;
 
-	KajiyaKayPhaseFunction();
+	CTL_EXPORT KajiyaKayPhaseFunction();
 
-	KajiyaKayPhaseFunction(float ks, float kd, float e);
+	CTL_EXPORT KajiyaKayPhaseFunction(float ks, float kd, float e);
 
-	virtual void Update();
+	CTL_EXPORT virtual void Update();
 
-	CUDA_DEVICE CUDA_HOST float Evaluate(const PhaseFunctionSamplingRecord &pRec) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST float Evaluate(const PhaseFunctionSamplingRecord &pRec) const;
 
-	CUDA_DEVICE CUDA_HOST float Sample(PhaseFunctionSamplingRecord &pRec, CudaRNG& sampler) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST float Sample(PhaseFunctionSamplingRecord &pRec, CudaRNG& sampler) const;
 
-	CUDA_DEVICE CUDA_HOST float Sample(PhaseFunctionSamplingRecord &pRec, float &pdf, CudaRNG& sampler) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST float Sample(PhaseFunctionSamplingRecord &pRec, float &pdf, CudaRNG& sampler) const;
 };
 
 struct RayleighPhaseFunction : public BasePhaseFunction//, public e_DerivedTypeHelper<4>
@@ -100,11 +100,11 @@ struct RayleighPhaseFunction : public BasePhaseFunction//, public e_DerivedTypeH
 	{
 	}
 
-	CUDA_DEVICE CUDA_HOST float Evaluate(const PhaseFunctionSamplingRecord &pRec) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST float Evaluate(const PhaseFunctionSamplingRecord &pRec) const;
 
-	CUDA_DEVICE CUDA_HOST float Sample(PhaseFunctionSamplingRecord &pRec, CudaRNG& sampler) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST float Sample(PhaseFunctionSamplingRecord &pRec, CudaRNG& sampler) const;
 
-	CUDA_DEVICE CUDA_HOST float Sample(PhaseFunctionSamplingRecord &pRec, float &pdf, CudaRNG& sampler) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST float Sample(PhaseFunctionSamplingRecord &pRec, float &pdf, CudaRNG& sampler) const;
 };
 
 struct PhaseFunction : public CudaVirtualAggregate<BasePhaseFunction, HGPhaseFunction, IsotropicPhaseFunction, KajiyaKayPhaseFunction, RayleighPhaseFunction>

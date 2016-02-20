@@ -48,7 +48,7 @@ struct BaseVolumeRegion : public BaseType//, public BaseTypeHelper<5001046>
 			pl.x <= 1 && pl.y <= 1 && pl.z <= 1;
 	}
 
-	CUDA_DEVICE CUDA_HOST bool IntersectP(const Ray &ray, const float minT, const float maxT, float *t0, float *t1) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST bool IntersectP(const Ray &ray, const float minT, const float maxT, float *t0, float *t1) const;
 };
 
 struct HomogeneousVolumeDensity : public BaseVolumeRegion//, public e_DerivedTypeHelper<1>
@@ -91,9 +91,9 @@ struct HomogeneousVolumeDensity : public BaseVolumeRegion//, public e_DerivedTyp
 		return insideWorld(p) ? (sig_s + sig_a) : Spectrum(0.0f);
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum tau(const Ray &ray, const float minT, const float maxT) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum tau(const Ray &ray, const float minT, const float maxT) const;
 
-	CUDA_DEVICE CUDA_HOST bool sampleDistance(const Ray& ray, float minT, float maxT, float sample, MediumSamplingRecord& mRec) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST bool sampleDistance(const Ray& ray, float minT, float maxT, float sample, MediumSamplingRecord& mRec) const;
 public:
 	Spectrum sig_a, sig_s, le;
 };
@@ -106,8 +106,8 @@ struct DenseVolGridBaseType
 	{
 		
 	}
-	DenseVolGridBaseType(Stream<char>* a_Buffer, Vec3u dim, size_t sizePerElement, size_t alignment);
-	void InvalidateDeviceData(Stream<char>* a_Buffer);
+	CTL_EXPORT DenseVolGridBaseType(Stream<char>* a_Buffer, Vec3u dim, size_t sizePerElement, size_t alignment);
+	CTL_EXPORT void InvalidateDeviceData(Stream<char>* a_Buffer);
 	template<typename T> CUDA_FUNC_IN e_Variable<T> getVar() const
 	{
 		return data.As<T>();
@@ -188,9 +188,9 @@ struct VolumeGrid : public BaseVolumeRegion//, public e_DerivedTypeHelper<2>
 {
 	TYPE_FUNC(2)
 public:
-	VolumeGrid();
-	VolumeGrid(const PhaseFunction& func, const float4x4& ToWorld, Stream<char>* a_Buffer, Vec3u dim);
-	VolumeGrid(const PhaseFunction& func, const float4x4& ToWorld, Stream<char>* a_Buffer, Vec3u dimA, Vec3u dimS, Vec3u dimL);
+	CTL_EXPORT VolumeGrid();
+	CTL_EXPORT VolumeGrid(const PhaseFunction& func, const float4x4& ToWorld, Stream<char>* a_Buffer, Vec3u dim);
+	CTL_EXPORT VolumeGrid(const PhaseFunction& func, const float4x4& ToWorld, Stream<char>* a_Buffer, Vec3u dimA, Vec3u dimS, Vec3u dimL);
 
 	CUDA_FUNC_IN Spectrum sigma_a(const Vec3f& p, const NormalizedT<Vec3f>& w) const
 	{
@@ -214,9 +214,9 @@ public:
 		return sigAMin + (sigAMax - sigAMin) * a + sigSMin + (sigSMax - sigSMin) * s;
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum tau(const Ray &ray, const float minT, const float maxT) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum tau(const Ray &ray, const float minT, const float maxT) const;
 
-	CUDA_DEVICE CUDA_HOST bool sampleDistance(const Ray& ray, float minT, float maxT, float sample, MediumSamplingRecord& mRec) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST bool sampleDistance(const Ray& ray, float minT, float maxT, float sample, MediumSamplingRecord& mRec) const;
 
 	CUDA_FUNC_IN void Voxelize(const Vec3f& p, const DenseVolGrid<float>* V, float& i, float& j, float& k) const
 	{
@@ -242,9 +242,9 @@ public:
 	bool singleGrid;
 	float m_stepSize;
 private:
-	CUDA_DEVICE CUDA_HOST Spectrum integrateDensity(const Ray& ray, float minT, float maxT) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum integrateDensity(const Ray& ray, float minT, float maxT) const;
 
-	CUDA_DEVICE CUDA_HOST bool invertDensityIntegral(const Ray& ray, float minT, float maxT, float desiredDensity,
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST bool invertDensityIntegral(const Ray& ray, float minT, float maxT, float desiredDensity,
 		float& integratedDensity, float &t, float &densityAtMinT, float &densityAtT) const;
 
 	CUDA_FUNC_IN Vec3f tr(const Vec3f& p, const Vec3f& dimF) const
@@ -348,30 +348,30 @@ public:
 	AABB box;
 public:
 	CUDA_FUNC_IN KernelAggregateVolume(){}
-	KernelAggregateVolume(Stream<VolumeRegion>* D, bool devicePointer = true);
+	CTL_EXPORT KernelAggregateVolume(Stream<VolumeRegion>* D, bool devicePointer = true);
 
 	///Calculates the intersection of the ray with the bound of the volume
-	CUDA_DEVICE CUDA_HOST bool IntersectP(const Ray &ray, float minT, float maxT, float *t0, float *t1) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST bool IntersectP(const Ray &ray, float minT, float maxT, float *t0, float *t1) const;
 
 	///The probability that light is abosrbed per unit distance
-	CUDA_DEVICE CUDA_HOST Spectrum sigma_a(const Vec3f& p, const NormalizedT<Vec3f>& w) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sigma_a(const Vec3f& p, const NormalizedT<Vec3f>& w) const;
 
 	///The probability that light is scattered per unit distance
-	CUDA_DEVICE CUDA_HOST Spectrum sigma_s(const Vec3f& p, const NormalizedT<Vec3f>& w) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sigma_s(const Vec3f& p, const NormalizedT<Vec3f>& w) const;
 
-	CUDA_DEVICE CUDA_HOST Spectrum Lve(const Vec3f& p, const NormalizedT<Vec3f>& w) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum Lve(const Vec3f& p, const NormalizedT<Vec3f>& w) const;
 
 	///Combined sigmas
-	CUDA_DEVICE CUDA_HOST Spectrum sigma_t(const Vec3f &p, const NormalizedT<Vec3f> &wo) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sigma_t(const Vec3f &p, const NormalizedT<Vec3f> &wo) const;
 
 	///Calculates the volumes optical thickness along a ray in the volumes bounds
-	CUDA_DEVICE CUDA_HOST Spectrum tau(const Ray &ray, float minT, float maxT) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum tau(const Ray &ray, float minT, float maxT) const;
 
-	CUDA_DEVICE CUDA_HOST float Sample(const Vec3f& p, const NormalizedT<Vec3f>& wo, CudaRNG& rng, NormalizedT<Vec3f>* wi) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST float Sample(const Vec3f& p, const NormalizedT<Vec3f>& wo, CudaRNG& rng, NormalizedT<Vec3f>* wi) const;
 
-	CUDA_DEVICE CUDA_HOST float p(const Vec3f& p, const NormalizedT<Vec3f>& wo, const NormalizedT<Vec3f>& wi, CudaRNG& rng) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST float p(const Vec3f& p, const NormalizedT<Vec3f>& wo, const NormalizedT<Vec3f>& wi, CudaRNG& rng) const;
 
-	CUDA_DEVICE CUDA_HOST bool sampleDistance(const Ray& ray, float minT, float maxT, CudaRNG& rng, MediumSamplingRecord& mRec) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST bool sampleDistance(const Ray& ray, float minT, float maxT, CudaRNG& rng, MediumSamplingRecord& mRec) const;
 
 	CUDA_FUNC_IN bool HasVolumes() const
 	{

@@ -12,7 +12,7 @@ public:
 	{
 		m_sParameters << KEY_CorrectDifferentials() << CreateSetBool(false);
 	}
-	virtual void Debug(Image* I, const Vec2i& pixel);
+	CTL_EXPORT virtual void Debug(Image* I, const Vec2i& pixel);
 	virtual void PrintStatus(std::vector<std::string>& a_Buf) const
 	{
 		float nPhotons = math::floor((float)(m_uPassesDone * w * h) / 1000000.0f);
@@ -20,7 +20,7 @@ public:
 		a_Buf.push_back(format("Photons per second : %f[Mil]", nPhotons / m_fAccRuntime));
 	}
 protected:
-	virtual void DoRender(Image* I);
+	CTL_EXPORT virtual void DoRender(Image* I);
 };
 
 }

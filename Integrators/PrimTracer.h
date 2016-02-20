@@ -15,10 +15,10 @@ public:
 	PARAMETER_KEY(PathTrace_DrawMode, DrawingMode)
 	PARAMETER_KEY(int, MaxPathLength)
 
-	PrimTracer();
-	virtual void Debug(Image* I, const Vec2i& pixel);
+	CTL_EXPORT PrimTracer();
+	CTL_EXPORT virtual void Debug(Image* I, const Vec2i& pixel);
 protected:
-	virtual void DoRender(Image* I);
+	CTL_EXPORT virtual void DoRender(Image* I);
 };
 
 }

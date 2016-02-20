@@ -385,48 +385,48 @@ public:
 	}
 
 	/// Return the luminance in candelas.
-	CUDA_HOST CUDA_DEVICE float getLuminance() const;
+	CTL_EXPORT CUDA_HOST CUDA_DEVICE float getLuminance() const;
 
-	CUDA_HOST CUDA_DEVICE void toLinearRGB(float &r, float &g, float &b) const;
+	CTL_EXPORT CUDA_HOST CUDA_DEVICE void toLinearRGB(float &r, float &g, float &b) const;
 
-	CUDA_HOST CUDA_DEVICE void fromLinearRGB(float r, float g, float b, EConversionIntent intent = EReflectance);
+	CTL_EXPORT CUDA_HOST CUDA_DEVICE void fromLinearRGB(float r, float g, float b, EConversionIntent intent = EReflectance);
 
-	CUDA_HOST CUDA_DEVICE void toXYZ(float &x, float &y, float &z) const;
+	CTL_EXPORT CUDA_HOST CUDA_DEVICE void toXYZ(float &x, float &y, float &z) const;
 
-	CUDA_HOST CUDA_DEVICE void fromXYZ(float x, float y, float z, EConversionIntent intent = EReflectance);
+	CTL_EXPORT CUDA_HOST CUDA_DEVICE void fromXYZ(float x, float y, float z, EConversionIntent intent = EReflectance);
 
-	CUDA_HOST CUDA_DEVICE void toIPT(float &I, float &P, float &T) const;
+	CTL_EXPORT CUDA_HOST CUDA_DEVICE void toIPT(float &I, float &P, float &T) const;
 
-	CUDA_HOST CUDA_DEVICE void fromIPT(float I, float P, float T, EConversionIntent intent = EReflectance);
+	CTL_EXPORT CUDA_HOST CUDA_DEVICE void fromIPT(float I, float P, float T, EConversionIntent intent = EReflectance);
 
-	CUDA_HOST CUDA_DEVICE void toSRGB(float &r, float &g, float &b) const;
+	CTL_EXPORT CUDA_HOST CUDA_DEVICE void toSRGB(float &r, float &g, float &b) const;
 
-	CUDA_HOST CUDA_DEVICE void fromSRGB(float r, float g, float b);
+	CTL_EXPORT CUDA_HOST CUDA_DEVICE void fromSRGB(float r, float g, float b);
 
-	CUDA_HOST CUDA_DEVICE RGBE toRGBE() const;
+	CTL_EXPORT CUDA_HOST CUDA_DEVICE RGBE toRGBE() const;
 
-	CUDA_HOST CUDA_DEVICE void fromRGBE(RGBE rgbe, EConversionIntent intent = EIlluminant);
+	CTL_EXPORT CUDA_HOST CUDA_DEVICE void fromRGBE(RGBE rgbe, EConversionIntent intent = EIlluminant);
 
-	CUDA_HOST CUDA_DEVICE RGBCOL toRGBCOL() const;
+	CTL_EXPORT CUDA_HOST CUDA_DEVICE RGBCOL toRGBCOL() const;
 
-	CUDA_HOST CUDA_DEVICE void fromRGBCOL(RGBCOL col);
+	CTL_EXPORT CUDA_HOST CUDA_DEVICE void fromRGBCOL(RGBCOL col);
 
-	CUDA_HOST CUDA_DEVICE void toYxy(float &Y, float &x, float &y) const;
+	CTL_EXPORT CUDA_HOST CUDA_DEVICE void toYxy(float &Y, float &x, float &y) const;
 
-	CUDA_HOST CUDA_DEVICE void fromYxy(float Y, float x, float y, EConversionIntent intent = EReflectance);
+	CTL_EXPORT CUDA_HOST CUDA_DEVICE void fromYxy(float Y, float x, float y, EConversionIntent intent = EReflectance);
 
-	CUDA_HOST CUDA_DEVICE void fromHSL(float h, float s, float l);
+	CTL_EXPORT CUDA_HOST CUDA_DEVICE void fromHSL(float h, float s, float l);
 
-	CUDA_HOST CUDA_DEVICE void toHSL(float& h, float& s, float& l) const;
+	CTL_EXPORT CUDA_HOST CUDA_DEVICE void toHSL(float& h, float& s, float& l) const;
 
-	void fromContinuousSpectrum(const float* wls, const float* vals, unsigned int N);
+	CTL_EXPORT void fromContinuousSpectrum(const float* wls, const float* vals, unsigned int N);
 
 	//samples a wavelength from the spectral power distribution of this spectrum
-	CUDA_HOST CUDA_DEVICE float SampleWavelength(Spectrum& res, float& pdf, float sample) const;
+	CTL_EXPORT CUDA_HOST CUDA_DEVICE float SampleWavelength(Spectrum& res, float& pdf, float sample) const;
 
-	CUDA_HOST CUDA_DEVICE float PdfWavelength(float lambda) const;
+	CTL_EXPORT CUDA_HOST CUDA_DEVICE float PdfWavelength(float lambda) const;
 
-	CUDA_HOST CUDA_DEVICE Spectrum FWavelength(float lambda) const;
+	CTL_EXPORT CUDA_HOST CUDA_DEVICE Spectrum FWavelength(float lambda) const;
 };
 
 static const int   CIE_samples = 471;
@@ -463,8 +463,8 @@ public:
 
 		void init();
 	};
-	static void StaticInitialize();
-	static void StaticDeinitialize();
+	CTL_EXPORT static void StaticInitialize();
+	CTL_EXPORT static void StaticDeinitialize();
 	CUDA_FUNC_IN static staticData* getData();
 };
 

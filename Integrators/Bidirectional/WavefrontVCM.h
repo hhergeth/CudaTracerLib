@@ -28,12 +28,12 @@ typedef RayBuffer<k_BPTCamSubPathState, 1> k_WVCM_CamBuffer;
 class WavefrontVCM : public Tracer<true, true>
 {
 public:
-	WavefrontVCM(unsigned int a_NumLightRays = 1024 * 100);
-	~WavefrontVCM();
+	CTL_EXPORT WavefrontVCM(unsigned int a_NumLightRays = 1024 * 100);
+	CTL_EXPORT ~WavefrontVCM();
 protected:
-	virtual void DoRender(Image* I);
-	virtual void StartNewTrace(Image* I);
-	virtual void RenderBlock(Image* I, int x, int y, int blockW, int blockH);
+	CTL_EXPORT virtual void DoRender(Image* I);
+	CTL_EXPORT virtual void StartNewTrace(Image* I);
+	CTL_EXPORT virtual void RenderBlock(Image* I, int x, int y, int blockW, int blockH);
 private:
 
 	//current will be used for lookup, next will be stored in
@@ -50,9 +50,9 @@ private:
 	BPTVertex* m_pDeviceLightVertices;
 	k_WVCM_CamBuffer m_sCamBufA, m_sCamBufB;
 	unsigned int m_uLightOff;
-	void cppTest();
+	CTL_EXPORT void cppTest();
 protected:
-	virtual float getSplatScale();
+	CTL_EXPORT virtual float getSplatScale();
 };
 
 }

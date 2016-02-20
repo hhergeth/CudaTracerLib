@@ -47,7 +47,7 @@ public:
 		bufB = new WavefrontPathTracerBuffer(w * h);
 	}
 protected:
-	virtual void DoRender(Image* I);
+	CTL_EXPORT virtual void DoRender(Image* I);
 private:
 	WavefrontPathTracerBuffer* bufA, *bufB;
 };

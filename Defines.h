@@ -13,6 +13,18 @@ namespace CudaTracerLib {
 #define ISWINDOWS
 #endif
 
+#ifdef CTL_EXPORT_SYMBOLS
+#define CTL_EXPORT __declspec(dllexport)
+#endif
+
+#ifdef CTL_IMPORT_SYMBOLS
+#define CTL_EXPORT __declspec(dllimport)
+#endif
+
+#ifndef CTL_EXPORT
+#define CTL_EXPORT
+#endif
+
 //__forceinline__
 #define CUDA_INLINE inline
 
@@ -50,12 +62,12 @@ namespace CudaTracerLib {
 
 #if _DEBUG
 #if __CUDACC__
-#define CT_ASSERT(X) ((X) ? ((void)0) : printf("Assertion failed!\n%s:%d\n%s", __FILE__, __LINE__, #X))
+#define CTL_ASSERT(X) ((X) ? ((void)0) : printf("Assertion failed!\n%s:%d\n%s", __FILE__, __LINE__, #X))
 #else
-#define CT_ASSERT(X) ((X) ? ((void)0) : fail("Assertion failed!\n%s:%d\n%s", __FILE__, __LINE__, #X))
+#define CTL_ASSERT(X) ((X) ? ((void)0) : fail("Assertion failed!\n%s:%d\n%s", __FILE__, __LINE__, #X))
 #endif
 #else
-#   define CT_ASSERT(X) ((void)0)
+#   define CTL_ASSERT(X) ((void)0)
 #endif
 
 //http://stackoverflow.com/questions/12778949/cuda-memory-alignment
@@ -70,12 +82,12 @@ namespace CudaTracerLib {
 #error "Please provide a definition for MY_ALIGN macro for your host compiler!"
 #endif
 
-void fail(const char* format, ...);
+CTL_EXPORT void fail(const char* format, ...);
 
-void __ThrowCudaErrors__(const char* file, int line, ...);
+CTL_EXPORT void __ThrowCudaErrors__(const char* file, int line, ...);
 #define ThrowCudaErrors(...) __ThrowCudaErrors__(__FILE__, __LINE__, ##__VA_ARGS__, -1)
 
-template<typename T> CUDA_FUNC_IN void swapk(T& a, T& b)
+template<typename T> CTL_EXPORT CUDA_FUNC_IN void swapk(T& a, T& b)
 {
 	T q = a;
 	a = b;
@@ -103,8 +115,8 @@ template<typename T> CUDA_FUNC_IN void swapk(T& a, T& b)
 #define RND_UP(VAL, MOD) (VAL + (((VAL) % (MOD)) != 0 ? ((MOD) - ((VAL) % (MOD))) : (0)))
 #define RND_16(VAL) RND_UP(VAL, 16)
 
-void CudaSetToZero(void* dest, size_t length);
-void CudaSetToZero_FreeBuffer();
+CTL_EXPORT void CudaSetToZero(void* dest, size_t length);
+CTL_EXPORT void CudaSetToZero_FreeBuffer();
 template<typename T> inline void ZeroMemoryCuda(T* cudaVar)
 {
 	CudaSetToZero(cudaVar, sizeof(T));

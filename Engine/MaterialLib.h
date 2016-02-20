@@ -16,7 +16,7 @@ struct MaterialEntry {
 class MaterialLibrary
 {
 private:
-	static MaterialEntry* getMat(const std::string& name);
+	CTL_EXPORT static MaterialEntry* getMat(const std::string& name);
 public:
 	static bool hasMat(const std::string& name)
 	{
@@ -50,8 +50,8 @@ public:
 			return m->eta;
 		return 0.0f;
 	}
-	static size_t getNumMats();
-	static const std::string& getMatName(size_t idx);
+	CTL_EXPORT static size_t getNumMats();
+	CTL_EXPORT static const std::string& getMatName(size_t idx);
 };
 
 }

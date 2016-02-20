@@ -180,8 +180,8 @@ struct BSDFSamplingRecord
 	Spectrum f_i;
 
 	CUDA_FUNC_IN BSDFSamplingRecord(DifferentialGeometry& dg) : dg(dg), f_i(0.0f) {}
-	CUDA_DEVICE CUDA_HOST NormalizedT<Vec3f> getOutgoing() const;
-	CUDA_DEVICE CUDA_HOST BSDFSamplingRecord& operator=(const BSDFSamplingRecord& other);
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST NormalizedT<Vec3f> getOutgoing() const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST BSDFSamplingRecord& operator=(const BSDFSamplingRecord& other);
 };
 
 }

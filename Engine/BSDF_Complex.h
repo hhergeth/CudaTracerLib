@@ -42,9 +42,9 @@ struct coating : public BSDF//, public e_DerivedTypeHelper<13>
 		float avgAbsorption = (m_sigmaA.Average()*(-2*m_thickness)).exp().average();
 		m_specularSamplingWeight = 1.0f / (avgAbsorption + 1.0f);
 	}
-	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const;
-	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
-	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	template<typename T> static coating Create(const T& val, float eta, float thickness, Texture& sig)
 	{
 		BSDFFirst nested;
@@ -103,9 +103,9 @@ struct roughcoating : public BSDF//, public e_DerivedTypeHelper<14>
 		float avgAbsorption = (m_sigmaA.Average()*(-2*m_thickness)).exp().average();
 		m_specularSamplingWeight = 1.0f / (avgAbsorption + 1.0f);
 	}
-	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const;
-	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
-	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	template<typename T> static roughcoating Create(const T& val, MicrofacetDistribution::EType type, float eta, float thickness, Texture& sig, Texture& alpha)
 	{
 		BSDFFirst nested;
@@ -163,9 +163,9 @@ public:
 		bsdfs[0] = nested1;
 		bsdfs[1] = nested2;
 	}
-	CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const;
-	CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
-	CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	template<typename U, typename V> static blend Create(const U& a, const V& b, const Texture& weight)
 	{
 		BSDFFirst n1, n2;

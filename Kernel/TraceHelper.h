@@ -9,9 +9,9 @@ extern CUDA_ALIGN(16) CUDA_CONST KernelDynamicScene g_SceneDataDevice;
 extern CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_RayTracedCounterDevice;
 extern CUDA_ALIGN(16) CUDA_CONST CudaRNGBuffer g_RNGDataDevice;
 
-extern CUDA_ALIGN(16) KernelDynamicScene g_SceneDataHost;
-extern CUDA_ALIGN(16) unsigned int g_RayTracedCounterHost;
-extern CUDA_ALIGN(16) CudaRNGBuffer g_RNGDataHost;
+CTL_EXPORT extern CUDA_ALIGN(16) KernelDynamicScene g_SceneDataHost;
+CTL_EXPORT extern CUDA_ALIGN(16) unsigned int g_RayTracedCounterHost;
+CTL_EXPORT extern CUDA_ALIGN(16) CudaRNGBuffer g_RNGDataHost;
 
 #ifdef ISCUDA
 #define g_SceneData g_SceneDataDevice
@@ -23,7 +23,7 @@ extern CUDA_ALIGN(16) CudaRNGBuffer g_RNGDataHost;
 #define g_RNGData g_RNGDataHost
 #endif
 
-__device__ __host__ bool traceRay(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result);
+CTL_EXPORT CUDA_DEVICE CUDA_HOST bool traceRay(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result);
 
 CUDA_FUNC_IN TraceResult traceRay(const Ray& r)
 {
@@ -33,12 +33,12 @@ CUDA_FUNC_IN TraceResult traceRay(const Ray& r)
 	return r2;
 }
 
-CUDA_DEVICE CUDA_HOST void fillDG(const Vec2f& bary, unsigned int triIdx, unsigned int nodeIdx, DifferentialGeometry& dg);
+CTL_EXPORT CUDA_DEVICE CUDA_HOST void fillDG(const Vec2f& bary, unsigned int triIdx, unsigned int nodeIdx, DifferentialGeometry& dg);
 
-void k_INITIALIZE(DynamicScene* a_Scene, const CudaRNGBuffer& a_RngBuf);
+CTL_EXPORT void k_INITIALIZE(DynamicScene* a_Scene, const CudaRNGBuffer& a_RngBuf);
 
-unsigned int k_getNumRaysTraced();
-void k_setNumRaysTraced(unsigned int i);
+CTL_EXPORT unsigned int k_getNumRaysTraced();
+CTL_EXPORT void k_setNumRaysTraced(unsigned int i);
 
 struct traversalRay
 {
@@ -55,6 +55,6 @@ struct CUDA_ALIGN(16) traversalResult
 	CUDA_DEVICE CUDA_HOST void toResult(TraceResult* tR, KernelDynamicScene& g_SceneData);
 };
 
-void __internal__IntersectBuffers(int N, traversalRay* a_RayBuffer, traversalResult* a_ResBuffer, bool SKIP_OUTER, bool ANY_HIT);
+CTL_EXPORT void __internal__IntersectBuffers(int N, traversalRay* a_RayBuffer, traversalResult* a_ResBuffer, bool SKIP_OUTER, bool ANY_HIT);
 
 }

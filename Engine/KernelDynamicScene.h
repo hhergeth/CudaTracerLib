@@ -53,28 +53,28 @@ struct KernelDynamicScene
 	//pdf of length m_sLightBuf.Length(!), for each light with its correct index
 	float* m_pLightPDF;
 
-	CUDA_DEVICE CUDA_HOST bool Occluded(const Ray& r, float tmin, float tmax, TraceResult* res = 0) const;
-	CUDA_DEVICE CUDA_HOST Spectrum EvalEnvironment(const Ray& r) const;
-	CUDA_DEVICE CUDA_HOST Spectrum EvalEnvironment(const Ray& r, const Ray& rX, const Ray& rY) const;
-	CUDA_DEVICE CUDA_HOST const Light* sampleEmitter(float& emPdf, Vec2f& sample) const;
-	CUDA_DEVICE CUDA_HOST float pdfEmitterDiscrete(const Light *emitter) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST bool Occluded(const Ray& r, float tmin, float tmax, TraceResult* res = 0) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum EvalEnvironment(const Ray& r) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum EvalEnvironment(const Ray& r, const Ray& rX, const Ray& rY) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST const Light* sampleEmitter(float& emPdf, Vec2f& sample) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST float pdfEmitterDiscrete(const Light *emitter) const;
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleEmitterDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const;
-	CUDA_DEVICE CUDA_HOST Spectrum sampleAttenuatedEmitterDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const;
-	CUDA_DEVICE CUDA_HOST Spectrum sampleSensorDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const;
-	CUDA_DEVICE CUDA_HOST Spectrum sampleAttenuatedSensorDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const;
-	CUDA_DEVICE CUDA_HOST float pdfEmitterDirect(const DirectSamplingRecord &dRec) const;
-	CUDA_DEVICE CUDA_HOST float pdfSensorDirect(const DirectSamplingRecord &dRec) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sampleEmitterDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sampleAttenuatedEmitterDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sampleSensorDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sampleAttenuatedSensorDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST float pdfEmitterDirect(const DirectSamplingRecord &dRec) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST float pdfSensorDirect(const DirectSamplingRecord &dRec) const;
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleEmitterPosition(PositionSamplingRecord &pRec, const Vec2f &sample) const;
-	CUDA_DEVICE CUDA_HOST Spectrum sampleSensorPosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra = NULL) const;
-	CUDA_DEVICE CUDA_HOST float pdfEmitterPosition(const PositionSamplingRecord &pRec) const;
-	CUDA_DEVICE CUDA_HOST float pdfSensorPosition(const PositionSamplingRecord &pRec) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sampleEmitterPosition(PositionSamplingRecord &pRec, const Vec2f &sample) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sampleSensorPosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra = NULL) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST float pdfEmitterPosition(const PositionSamplingRecord &pRec) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST float pdfSensorPosition(const PositionSamplingRecord &pRec) const;
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleEmitterRay(NormalizedT<Ray>& ray, const Light*& emitter, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
-	CUDA_DEVICE CUDA_HOST Spectrum sampleSensorRay(NormalizedT<Ray>& ray, const Sensor*& emitter, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sampleEmitterRay(NormalizedT<Ray>& ray, const Light*& emitter, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sampleSensorRay(NormalizedT<Ray>& ray, const Sensor*& emitter, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
 
-	CUDA_DEVICE CUDA_HOST Spectrum evalTransmittance(const Vec3f& p1, const Vec3f& p2) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum evalTransmittance(const Vec3f& p1, const Vec3f& p2) const;
 
 	CUDA_FUNC_IN Spectrum sampleEmitterRay(NormalizedT<Ray>& ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const
 	{
@@ -98,9 +98,9 @@ struct KernelDynamicScene
 		return r;
 	}
 
-	CUDA_DEVICE CUDA_HOST const Light* getLight(const TraceResult& tr) const;
-	CUDA_DEVICE CUDA_HOST const Light* getLight(unsigned int idx) const;
-	CUDA_DEVICE CUDA_HOST const Light* getEnvironmentMap() const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST const Light* getLight(const TraceResult& tr) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST const Light* getLight(unsigned int idx) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST const Light* getEnvironmentMap() const;
 };
 
 }

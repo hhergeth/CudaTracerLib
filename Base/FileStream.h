@@ -44,7 +44,7 @@ public:
 		}
 		else return false;
 	}
-	bool ReadTo(std::string& str, char end);
+	CTL_EXPORT bool ReadTo(std::string& str, char end);
 	bool getline(std::string& str)
 	{
 		return ReadTo(str, '\n');
@@ -55,7 +55,7 @@ public:
 		getline(s);
 		return s;
 	}
-	unsigned char* ReadToEnd();
+	CTL_EXPORT unsigned char* ReadToEnd();
 	template<typename T> T* ReadToEnd()
 	{
 		return (T*)ReadToEnd();
@@ -83,7 +83,7 @@ public:
 	}
 public:
 #define DCL_IN(TYPE) \
-	IInStream& operator>>(TYPE& rhs) \
+	CTL_EXPORT IInStream& operator>>(TYPE& rhs) \
 	{ \
 		Read(rhs); \
 		return *this; \
@@ -132,19 +132,19 @@ private:
 	void* H;
 	std::string path;
 public:
-	explicit FileInputStream(const std::string& a_Name);
+	CTL_EXPORT explicit FileInputStream(const std::string& a_Name);
 	virtual ~FileInputStream()
 	{
 		Close();
 	}
-	virtual void Close();
+	CTL_EXPORT virtual void Close();
 	virtual size_t getPos()
 	{
 		return numBytesRead;
 	}
-	virtual void Read(void* a_Data, size_t a_Size);
-	void Move(int off);
-	virtual const std::string& getFilePath() const
+	CTL_EXPORT virtual void Read(void* a_Data, size_t a_Size);
+	CTL_EXPORT void Move(int off);
+	CTL_EXPORT virtual const std::string& getFilePath() const
 	{
 		return path;
 	}
@@ -157,9 +157,9 @@ private:
 	const unsigned char* buf;
 	std::string path;
 public:
-	MemInputStream(const unsigned char* buf, size_t length, bool canKeep = false);
-	explicit MemInputStream(FileInputStream& in);
-	explicit MemInputStream(const std::string& a_Name);
+	CTL_EXPORT MemInputStream(const unsigned char* buf, size_t length, bool canKeep = false);
+	CTL_EXPORT explicit MemInputStream(FileInputStream& in);
+	CTL_EXPORT explicit MemInputStream(const std::string& a_Name);
 	~MemInputStream()
 	{
 		Close();
@@ -177,7 +177,7 @@ public:
 	{
 		return numBytesRead;
 	}
-	virtual void Read(void* a_Data, size_t a_Size);
+	CTL_EXPORT virtual void Read(void* a_Data, size_t a_Size);
 	void Move(int off)
 	{
 		numBytesRead += off;
@@ -188,21 +188,21 @@ public:
 	}
 };
 
-IInStream* OpenFile(const std::string& filename);
+CTL_EXPORT IInStream* OpenFile(const std::string& filename);
 
 class FileOutputStream
 {
 private:
 	size_t numBytesWrote;
 	void* H;
-	void _Write(const void* data, size_t size);
+	CTL_EXPORT void _Write(const void* data, size_t size);
 public:
-	explicit FileOutputStream(const std::string& a_Name);
+	CTL_EXPORT explicit FileOutputStream(const std::string& a_Name);
 	virtual ~FileOutputStream()
 	{
 		Close();
 	}
-	void Close();
+	CTL_EXPORT void Close();
 	size_t GetNumBytesWritten() const
 	{
 		return numBytesWrote;
@@ -226,7 +226,7 @@ public:
 			*this << arr(i);
 	}
 #define DCL_OUT(TYPE) \
-	FileOutputStream& operator<<(const TYPE& rhs) \
+	CTL_EXPORT FileOutputStream& operator<<(const TYPE& rhs) \
 		{ \
 		Write(rhs); \
 		return *this; \

@@ -22,7 +22,7 @@ struct DifferentialGeometry
 
 	CUDA_FUNC_IN DifferentialGeometry() {}
 
-	CUDA_DEVICE CUDA_HOST void computePartials(const Ray& r, const Ray& rx, const Ray& ry);
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST void computePartials(const Ray& r, const Ray& rx, const Ray& ry);
 
 	CUDA_FUNC_IN NormalizedT<Vec3f> toWorld(const NormalizedT<Vec3f>& v) const
 	{

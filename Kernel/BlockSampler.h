@@ -34,18 +34,18 @@ class BlockSampler : public IBlockSampler
 	float* m_pDeviceWeight;
 public:
 
-	BlockSampler(Image* img);
+	CTL_EXPORT BlockSampler(Image* img);
 	virtual ~BlockSampler()
 	{
 		Free();
 	}
-	virtual void Free();
+	CTL_EXPORT virtual void Free();
 	float getBlockVariance(int idx) const
 	{
 		return m_pHostBlockData[idx];
 	}
-	virtual void AddPass();
-	virtual void Clear();
+	CTL_EXPORT virtual void AddPass();
+	CTL_EXPORT virtual void Clear();
 	virtual unsigned int NumBlocks() const
 	{
 		if (hasValidData)
@@ -81,7 +81,7 @@ public:
 	{
 		return BlockSampleImage(img, m_pLumData);
 	}
-	void DrawVariance(bool blocks) const;
+	CTL_EXPORT void DrawVariance(bool blocks) const;
 	unsigned int* getNumSamplesPerBlock() const
 	{
 		return m_pHostSamplesData;

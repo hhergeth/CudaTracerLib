@@ -50,12 +50,12 @@ public:
 class TracerBase
 {
 public:
-	static CudaRNGBuffer g_sRngs;
-	static AABB GetEyeHitPointBox(DynamicScene* s, bool recursive);
-	static float GetLightVisibility(DynamicScene* s, int recursion_depth);
-	static TraceResult TraceSingleRay(Ray r, DynamicScene* s);
-	static void InitRngs(unsigned int N = 1 << 16);
-	static void RenderDepth(DeviceDepthImage dImg, DynamicScene* s);
+	CTL_EXPORT static CudaRNGBuffer g_sRngs;
+	CTL_EXPORT static AABB GetEyeHitPointBox(DynamicScene* s, bool recursive);
+	CTL_EXPORT static float GetLightVisibility(DynamicScene* s, int recursion_depth);
+	CTL_EXPORT static TraceResult TraceSingleRay(Ray r, DynamicScene* s);
+	CTL_EXPORT static void InitRngs(unsigned int N = 1 << 16);
+	CTL_EXPORT static void RenderDepth(DeviceDepthImage dImg, DynamicScene* s);
 
 	PARAMETER_KEY(bool, SamplerActive)
 
@@ -70,8 +70,8 @@ public:
 #endif
 	}
 
-	TracerBase();
-	virtual ~TracerBase();
+	CTL_EXPORT TracerBase();
+	CTL_EXPORT virtual ~TracerBase();
 	virtual void InitializeScene(DynamicScene* a_Scene)
 	{
 		m_pScene = a_Scene;
@@ -112,7 +112,7 @@ public:
 	{
 		return m_pBlockSampler;
 	}
-	BlockSampleImage getDeviceBlockSampler() const;
+	CTL_EXPORT BlockSampleImage getDeviceBlockSampler() const;
 	TracerParameterCollection& getParameters() { return m_sParameters; }
 protected:
 	float m_fLastRuntime;
@@ -125,7 +125,7 @@ protected:
 	cudaEvent_t start, stop;
 	IBlockSampler* m_pBlockSampler;
 	TracerParameterCollection m_sParameters;
-	void allocateBlockSampler(Image* I);
+	CTL_EXPORT void allocateBlockSampler(Image* I);
 };
 
 template<bool USE_BLOCKSAMPLER, bool PROGRESSIVE> class Tracer : public TracerBase

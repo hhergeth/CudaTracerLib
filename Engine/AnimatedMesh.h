@@ -30,9 +30,9 @@ struct AnimationFrame
 
 	AnimationFrame(){}
 
-	void serialize(FileOutputStream& a_Out);
+	CTL_EXPORT void serialize(FileOutputStream& a_Out);
 
-	void deSerialize(IInStream& a_In, Stream<char>* Buf);
+	CTL_EXPORT void deSerialize(IInStream& a_In, Stream<char>* Buf);
 };
 
 struct Animation
@@ -52,9 +52,9 @@ struct Animation
 	{
 	}
 
-	void serialize(FileOutputStream& a_Out);
+	CTL_EXPORT void serialize(FileOutputStream& a_Out);
 
-	void deSerialize(IInStream& a_In, Stream<char>* Buf);
+	CTL_EXPORT void deSerialize(IInStream& a_In, Stream<char>* Buf);
 };
 
 struct e_KernelAnimatedMesh
@@ -75,10 +75,10 @@ public:
 	StreamReference<char> m_sTriangles;
 	BVHRebuilder* m_pBuilder;
 public:
-	AnimatedMesh(const std::string& path, IInStream& a_In, Stream<TriIntersectorData>* a_Stream0, Stream<TriangleData>* a_Stream1, Stream<BVHNodeData>* a_Stream2, Stream<TriIntersectorData2>* a_Stream3, Stream<Material>* a_Stream4, Stream<char>* a_Stream5);
-	void FreeAnim(Stream<char>* a_Stream5);
-	void k_ComputeState(unsigned int a_Anim, unsigned int a_Frame, float a_lerp, Stream<BVHNodeData>* a_BVHNodeStream, void* a_DeviceTmp, void* a_HostTmp);
-	void CreateNewMesh(AnimatedMesh* A, Stream<TriIntersectorData>* a_Stream0, Stream<TriangleData>* a_Stream1, Stream<BVHNodeData>* a_Stream2, Stream<TriIntersectorData2>* a_Stream3, Stream<Material>* a_Stream4, Stream<char>* a_Stream5) const;
+	CTL_EXPORT AnimatedMesh(const std::string& path, IInStream& a_In, Stream<TriIntersectorData>* a_Stream0, Stream<TriangleData>* a_Stream1, Stream<BVHNodeData>* a_Stream2, Stream<TriIntersectorData2>* a_Stream3, Stream<Material>* a_Stream4, Stream<char>* a_Stream5);
+	CTL_EXPORT void FreeAnim(Stream<char>* a_Stream5);
+	CTL_EXPORT void k_ComputeState(unsigned int a_Anim, unsigned int a_Frame, float a_lerp, Stream<BVHNodeData>* a_BVHNodeStream, void* a_DeviceTmp, void* a_HostTmp);
+	CTL_EXPORT void CreateNewMesh(AnimatedMesh* A, Stream<TriIntersectorData>* a_Stream0, Stream<TriangleData>* a_Stream1, Stream<BVHNodeData>* a_Stream2, Stream<TriIntersectorData2>* a_Stream3, Stream<Material>* a_Stream4, Stream<char>* a_Stream5) const;
 	void ComputeFrameIndex(float t, unsigned int a_Anim, unsigned int* a_FrameIndex, float* a_lerp)
 	{
 		float a = (float)m_pAnimations[a_Anim].m_uFrameRate * t;

@@ -32,11 +32,11 @@ struct TriIntersectorData
 private:
 	Vec4f a, b, c;
 public:
-	CUDA_DEVICE CUDA_HOST void setData(const Vec3f& v0, const Vec3f& v1, const Vec3f& v2);
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST void setData(const Vec3f& v0, const Vec3f& v1, const Vec3f& v2);
 
-	CUDA_DEVICE CUDA_HOST void getData(Vec3f& v0, Vec3f& v1, Vec3f& v2) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST void getData(Vec3f& v0, Vec3f& v1, Vec3f& v2) const;
 
-	CUDA_DEVICE CUDA_HOST bool Intersect(const Ray& r, float* dist = 0, Vec2f* bary = 0) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST bool Intersect(const Ray& r, float* dist = 0, Vec2f* bary = 0) const;
 };
 
 struct BVHNodeData

@@ -276,19 +276,19 @@ public:
 	}
 };
 
-void TracePath(NormalizedT<Ray> r, std::vector<PathVertex*>& p, int N2, ETransportMode mode, CudaRNG& rng);
+CTL_EXPORT void TracePath(NormalizedT<Ray> r, std::vector<PathVertex*>& p, int N2, ETransportMode mode, CudaRNG& rng);
 
-Path ConnectPaths(const std::vector<PathVertex*>& cameraPath, const std::vector<PathVertex*>& emitterPath);
+CTL_EXPORT Path ConnectPaths(const std::vector<PathVertex*>& cameraPath, const std::vector<PathVertex*>& emitterPath);
 
-void ConstructPath(const Vec2i& pixel, Path& P, int s, int t);
+CTL_EXPORT void ConstructPath(const Vec2i& pixel, Path& P, int s, int t);
 
 inline void ConstructPath(int x, int y, Path& P, int s, int t)
 {
 	ConstructPath(Vec2i(x, y), P, s, t);
 }
 
-std::vector<Vec2f> DifferientiatePath(Path& P);
+CTL_EXPORT std::vector<Vec2f> DifferientiatePath(Path& P);
 
-void OptimizePath(Path& P);
+CTL_EXPORT void OptimizePath(Path& P);
 
 }

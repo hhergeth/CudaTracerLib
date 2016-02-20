@@ -32,7 +32,7 @@ public:
 		bufA = new FastTracerBuffer(w * h);
 	}
 protected:
-	virtual void DoRender(Image* I);
+	CTL_EXPORT virtual void DoRender(Image* I);
 private:
 	FastTracerBuffer* bufA;
 };

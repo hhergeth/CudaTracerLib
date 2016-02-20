@@ -26,12 +26,12 @@ public:
 		: m_wo(0.0f, 0.0f, 1.0f), m_Bsdf(0), LScale(1), cosTheta(true), m_pBuffer(0), m_pBuffer2(0), drawEnvMap(false), m_pLight(0), m_pMipMap(0)
 	{
 	}
-	~BSDFVisualizer();
-	virtual void Debug(Image* I, const Vec2i& pixel);
-	void DrawRegion(Image* I, const Vec2i& off, const Vec2i& size);
-	void setSkydome(const char* compiledPath);
+	CTL_EXPORT ~BSDFVisualizer();
+	CTL_EXPORT virtual void Debug(Image* I, const Vec2i& pixel);
+	CTL_EXPORT void DrawRegion(Image* I, const Vec2i& off, const Vec2i& size);
+	CTL_EXPORT void setSkydome(const char* compiledPath);
 protected:
-	virtual void DoRender(Image* I);
+	CTL_EXPORT virtual void DoRender(Image* I);
 	virtual void StartNewTrace(Image* I)
 	{
 		I->Clear();

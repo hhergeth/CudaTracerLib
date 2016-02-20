@@ -61,24 +61,24 @@ class BVHRebuilder
 	bool recomputeAll;
 
 public:
-	BVHRebuilder(BVHNodeData* data, unsigned int a_BVHNodeLength, unsigned int a_SceneNodeLength, TriIntersectorData2* indices, unsigned int a_IndicesLength);
-	BVHRebuilder(Mesh* mesh, ISpatialInfoProvider* data);
-	~BVHRebuilder();
+	CTL_EXPORT BVHRebuilder(BVHNodeData* data, unsigned int a_BVHNodeLength, unsigned int a_SceneNodeLength, TriIntersectorData2* indices, unsigned int a_IndicesLength);
+	CTL_EXPORT BVHRebuilder(Mesh* mesh, ISpatialInfoProvider* data);
+	CTL_EXPORT ~BVHRebuilder();
 
-	bool Build(ISpatialInfoProvider* data, bool invalidateAll = false);
-	void SetEmpty();
-	bool needsBuild() const;
-	void printGraph(const std::string& path);
+	CTL_EXPORT bool Build(ISpatialInfoProvider* data, bool invalidateAll = false);
+	CTL_EXPORT void SetEmpty();
+	CTL_EXPORT bool needsBuild() const;
+	CTL_EXPORT void printGraph(const std::string& path);
 
-	void addNode(unsigned int n);
-	void removeNode(unsigned int n);
-	void invalidateNode(unsigned int n);
+	CTL_EXPORT void addNode(unsigned int n);
+	CTL_EXPORT void removeNode(unsigned int n);
+	CTL_EXPORT void invalidateNode(unsigned int n);
 
 	const std::bitset<MAX_NODES>& getInvalidatedNodes() const { return nodesToRecompute; }
 	unsigned int getNumBVHIndicesUsed() const { return m_UBVHIndicesCount; }
 	int getStartNode() const{ return startNode; }
 	unsigned int getNumBVHNodesUsed() const { return m_uBvhNodeCount; }
-	AABB getBox() const;
+	CTL_EXPORT AABB getBox() const;
 private:
 	int BuildInfoTree(BVHIndex idx, BVHIndex parent);
 	void removeNodeAndCollapse(BVHIndex nodeIdx, BVHIndex childIdx);

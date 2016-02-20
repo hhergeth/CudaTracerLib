@@ -129,7 +129,7 @@ public:
 		return r;
 	}
 
-	CUDA_DEVICE CUDA_HOST float4x4 inverse() const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST float4x4 inverse() const;
 
 	//geometric constructor functions
 	CUDA_FUNC_IN static NormalizedT<OrthogonalAffineMap> RotateX(float a);

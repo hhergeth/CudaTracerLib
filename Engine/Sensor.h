@@ -117,7 +117,7 @@ struct SphericalSensor : public SensorBase//, public e_DerivedTypeHelper<1>
 		SetFilmData(w, h);
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(NormalizedT<Ray> &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sampleRay(NormalizedT<Ray> &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
 
 	CUDA_FUNC_IN Spectrum sampleRayDifferential(NormalizedT<Ray> &ray, NormalizedT<Ray> &rayX, NormalizedT<Ray> &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const
 	{
@@ -129,7 +129,7 @@ struct SphericalSensor : public SensorBase//, public e_DerivedTypeHelper<1>
 		return Spectrum(0.0f);
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sampleDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const;
 
 	CUDA_FUNC_IN float pdfDirect(const DirectSamplingRecord &dRec) const
 	{
@@ -179,11 +179,11 @@ struct SphericalSensor : public SensorBase//, public e_DerivedTypeHelper<1>
 		return Spectrum(1.0f);
 	}
 
-	CUDA_DEVICE CUDA_HOST float pdfDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST float pdfDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const;
 
-	CUDA_DEVICE CUDA_HOST Spectrum evalDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum evalDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const;
 
-	CUDA_DEVICE CUDA_HOST bool getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, Vec2f &samplePosition) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST bool getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, Vec2f &samplePosition) const;
 };
 
 struct PerspectiveSensor : public SensorBase//, public e_DerivedTypeHelper<2>
@@ -207,20 +207,20 @@ public:
 		fov = math::Radians(_fov);
 	}
 
-	virtual void Update();
+	CTL_EXPORT virtual void Update();
 
-	CUDA_DEVICE CUDA_HOST float importance(const NormalizedT<Vec3f> &d) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST float importance(const NormalizedT<Vec3f> &d) const;
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(NormalizedT<Ray> &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sampleRay(NormalizedT<Ray> &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleRayDifferential(NormalizedT<Ray> &ray, NormalizedT<Ray> &rayX, NormalizedT<Ray> &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sampleRayDifferential(NormalizedT<Ray> &ray, NormalizedT<Ray> &rayX, NormalizedT<Ray> &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
 
 	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const NormalizedT<Vec3f> &d) const
 	{
 		return Spectrum(0.0f);
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sampleDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const;
 
 	CUDA_FUNC_IN float pdfDirect(const DirectSamplingRecord &dRec) const
 	{
@@ -246,7 +246,7 @@ public:
 		return (pRec.measure == EDiscrete) ? 1.0f : 0.0f;
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const;
 
 	CUDA_FUNC_IN float pdfDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
 	{
@@ -264,7 +264,7 @@ public:
 		return importance(toWorld.TransformDirectionTranspose(dRec.d));
 	}
 
-	CUDA_DEVICE CUDA_HOST bool getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, Vec2f &samplePosition) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST bool getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, Vec2f &samplePosition) const;
 };
 
 struct ThinLensSensor : public SensorBase//, public e_DerivedTypeHelper<3>
@@ -273,7 +273,7 @@ struct ThinLensSensor : public SensorBase//, public e_DerivedTypeHelper<3>
 	Vec3f m_dx, m_dy;
 	float m_aperturePdf;
 	float m_normalization;
-	CUDA_DEVICE CUDA_HOST float importance(const Vec3f &p, const NormalizedT<Vec3f> &d, Vec2f* sample = 0) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST float importance(const Vec3f &p, const NormalizedT<Vec3f> &d, Vec2f* sample = 0) const;
 public:
 	ThinLensSensor()
 		: SensorBase(ENeedsApertureSample | EPerspectiveSensor | EOnSurface | EDirectionSampleMapsToPixels | EProjectiveCamera)
@@ -291,22 +291,22 @@ public:
 		m_focusDistance = dist;
 	}
 
-	virtual void Update();
+	CTL_EXPORT virtual void Update();
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(NormalizedT<Ray> &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sampleRay(NormalizedT<Ray> &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleRayDifferential(NormalizedT<Ray> &ray, NormalizedT<Ray> &rayX, NormalizedT<Ray> &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sampleRayDifferential(NormalizedT<Ray> &ray, NormalizedT<Ray> &rayX, NormalizedT<Ray> &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
 
 	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const NormalizedT<Vec3f> &d) const
 	{
 		return Spectrum(0.0f);
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sampleDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const;
 
-	CUDA_DEVICE CUDA_HOST float pdfDirect(const DirectSamplingRecord &dRec) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST float pdfDirect(const DirectSamplingRecord &dRec) const;
 
-	CUDA_DEVICE CUDA_HOST Spectrum samplePosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum samplePosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const;
 
 	CUDA_FUNC_IN Spectrum evalPosition(const PositionSamplingRecord &pRec) const
 	{
@@ -318,7 +318,7 @@ public:
 		return (pRec.measure == EArea) ? m_aperturePdf : 0.0f;
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const;
 
 	CUDA_FUNC_IN float pdfDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
 	{
@@ -388,25 +388,25 @@ public:
 		Update();
 	}
 
-	virtual void Update();
+	CTL_EXPORT virtual void Update();
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(NormalizedT<Ray> &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sampleRay(NormalizedT<Ray> &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleRayDifferential(NormalizedT<Ray> &ray, NormalizedT<Ray> &rayX, NormalizedT<Ray> &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sampleRayDifferential(NormalizedT<Ray> &ray, NormalizedT<Ray> &rayX, NormalizedT<Ray> &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
 
 	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const NormalizedT<Vec3f> &d) const
 	{
 		return Spectrum(0.0f);
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleDirect(DirectSamplingRecord &dRec, const Vec2f &) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sampleDirect(DirectSamplingRecord &dRec, const Vec2f &) const;
 
 	CUDA_FUNC_IN float pdfDirect(const DirectSamplingRecord &dRec) const
 	{
 		return (dRec.measure == EDiscrete) ? 1.0f : 0.0f;
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum samplePosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum samplePosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const;
 
 	CUDA_FUNC_IN Spectrum evalPosition(const PositionSamplingRecord &pRec) const
 	{
@@ -437,7 +437,7 @@ public:
 		return Spectrum((pRec.measure == EDiscrete) ? 1.0f : 0.0f);
 	}
 
-	CUDA_DEVICE CUDA_HOST bool getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, Vec2f &samplePosition) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST bool getSamplePosition(const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec, Vec2f &samplePosition) const;
 };
 
 struct TelecentricSensor : public SensorBase//, public e_DerivedTypeHelper<5>
@@ -472,25 +472,25 @@ public:
 		Update();
 	}
 
-	virtual void Update();
+	CTL_EXPORT virtual void Update();
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleRay(NormalizedT<Ray> &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sampleRay(NormalizedT<Ray> &ray, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleRayDifferential(NormalizedT<Ray> &ray, NormalizedT<Ray> &rayX, NormalizedT<Ray> &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sampleRayDifferential(NormalizedT<Ray> &ray, NormalizedT<Ray> &rayX, NormalizedT<Ray> &rayY, const Vec2f &pixelSample, const Vec2f &apertureSample) const;
 
 	CUDA_FUNC_IN Spectrum eval(const Vec3f& p, const Frame& sys, const NormalizedT<Vec3f> &d) const
 	{
 		return Spectrum(0.0f);
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sampleDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const;
 
 	CUDA_FUNC_IN float pdfDirect(const DirectSamplingRecord &dRec) const
 	{
 		return 0.0f;
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum samplePosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum samplePosition(PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const;
 
 	CUDA_FUNC_IN Spectrum evalPosition(const PositionSamplingRecord &pRec) const
 	{
@@ -502,7 +502,7 @@ public:
 		return (pRec.measure == EArea) ? m_aperturePdf : 0.0f;
 	}
 
-	CUDA_DEVICE CUDA_HOST Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sampleDirection(DirectionSamplingRecord &dRec, PositionSamplingRecord &pRec, const Vec2f &sample, const Vec2f *extra) const;
 
 	CUDA_FUNC_IN float pdfDirection(const DirectionSamplingRecord &dRec, const PositionSamplingRecord &pRec) const
 	{
@@ -528,21 +528,21 @@ struct Sensor : public CudaVirtualAggregate<SensorBase, SphericalSensor, Perspec
 {
 public:
 	//storage for the last viewing frustum, might(!) be computed, don't depend on it
-	NormalizedT<OrthogonalAffineMap> View() const;
+	CTL_EXPORT NormalizedT<OrthogonalAffineMap> View() const;
 
-	Vec3f Position() const;
+	CTL_EXPORT Vec3f Position() const;
 
-	void SetToWorld(const Vec3f& pos, const NormalizedT<OrthogonalAffineMap>& rot);
+	CTL_EXPORT void SetToWorld(const Vec3f& pos, const NormalizedT<OrthogonalAffineMap>& rot);
 
-	void SetToWorld(const Vec3f& pos, const Vec3f& f);
+	CTL_EXPORT void SetToWorld(const Vec3f& pos, const Vec3f& f);
 
-	void SetToWorld(const Vec3f& pos, const Vec3f& tar, const Vec3f& up);
+	CTL_EXPORT void SetToWorld(const Vec3f& pos, const Vec3f& tar, const Vec3f& up);
 
-	void SetFilmData(int w, int h);
+	CTL_EXPORT void SetFilmData(int w, int h);
 
-	void SetToWorld(const NormalizedT<OrthogonalAffineMap>& w);
+	CTL_EXPORT void SetToWorld(const NormalizedT<OrthogonalAffineMap>& w);
 
-	float4x4 getProjectionMatrix() const;
+	CTL_EXPORT float4x4 getProjectionMatrix() const;
 
 	CUDA_FUNC_IN NormalizedT<Ray> GenRay(int x, int y)
 	{

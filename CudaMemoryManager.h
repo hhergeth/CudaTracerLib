@@ -19,15 +19,15 @@ struct CudaMemoryEntry
 class CudaMemoryManager
 {
 public:
-	static std::map<void*, CudaMemoryEntry> alloced_entries;
-	static std::vector<CudaMemoryEntry> freed_entries;
+	CTL_EXPORT static std::map<void*, CudaMemoryEntry> alloced_entries;
+	CTL_EXPORT static std::vector<CudaMemoryEntry> freed_entries;
 public:
-	static cudaError_t Cuda_malloc_managed(void** v, size_t i, const std::string& callig_func);
+	CTL_EXPORT static cudaError_t Cuda_malloc_managed(void** v, size_t i, const std::string& callig_func);
 	template<typename T> static cudaError_t Cuda_malloc_managed(T** v, size_t i, const std::string& callig_func)
 	{
 		return Cuda_malloc_managed((void**)v, i, callig_func);
 	}
-	static cudaError_t Cuda_free_managed(void* v, const std::string& callig_func);
+	CTL_EXPORT static cudaError_t Cuda_free_managed(void* v, const std::string& callig_func);
 	template<typename T> static cudaError_t Cuda_free_managed(T* v, const std::string&callig_func)
 	{
 		return Cuda_free_managed((void*)v, callig_func);

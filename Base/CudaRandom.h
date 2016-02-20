@@ -286,9 +286,9 @@ public:
 	{
 		Initialize(a_Index);
 	}
-	CUDA_DEVICE CUDA_HOST void Initialize(unsigned int a_Index);
-	CUDA_DEVICE CUDA_HOST float randomFloat();
-	CUDA_DEVICE CUDA_HOST unsigned long randomUint();
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST void Initialize(unsigned int a_Index);
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST float randomFloat();
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST unsigned long randomUint();
 
 	CUDA_FUNC_IN Vec2f randomFloat2()
 	{
@@ -312,14 +312,14 @@ private:
 	CudaRNG* m_pDeviceGenerators;
 public:
 	//curandSetGeneratorOffset(GENERATOR[i], i * a_Offset);
-	explicit CudaRNGBuffer(unsigned int a_Length);
+	CTL_EXPORT explicit CudaRNGBuffer(unsigned int a_Length);
 	CudaRNGBuffer(){}
-	void Free();
-	CUDA_DEVICE CUDA_HOST CudaRNG operator()();
-	CUDA_DEVICE CUDA_HOST void operator()(CudaRNG& val);
-	void NextPass();
+	CTL_EXPORT void Free();
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST CudaRNG operator()();
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST void operator()(CudaRNG& val);
+	CTL_EXPORT void NextPass();
 private:
-	void createGenerators();
+	CTL_EXPORT void createGenerators();
 };
 
 }
