@@ -6,10 +6,10 @@ namespace CudaTracerLib {
 CUDA_CONST decltype(BeamGrid::m_sStorage) g_PhotonStorage;
 CUDA_DEVICE decltype(BeamGrid::m_sBeamGridStorage) g_BeamGridStorage;
 
-__global__ void buildBeams(float r, int dimN, float nnSearch)
+__global__ void buildBeams(float r, Vec3u dimN, float nnSearch)
 {
 	Vec3u cell_idx(blockDim.x * blockIdx.x + threadIdx.x, blockDim.y * blockIdx.y + threadIdx.y, blockDim.z * blockIdx.z + threadIdx.z);
-	if (cell_idx.x < dimN && cell_idx.y < dimN && cell_idx.z < dimN)
+	if (cell_idx.x < dimN.x && cell_idx.y < dimN.y && cell_idx.z < dimN.z)
 	{
 #ifdef ISCUDA
 		Vec3f cellCenter = g_PhotonStorage.getHashGrid().getCell(cell_idx).Center();
@@ -38,10 +38,11 @@ __global__ void buildBeams(float r, int dimN, float nnSearch)
 void BeamGrid::PrepareForRendering()
 {
 	PointStorage::PrepareForRendering();
-	int l = 6, l2 = m_sStorage.getHashGrid().m_gridSize / l + 1;
+	int l = 6;
+	auto l2 = m_sStorage.getHashGrid().m_gridDim / l + Vec3u(1);
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_PhotonStorage, &m_sStorage, sizeof(m_sStorage)));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_BeamGridStorage, &m_sBeamGridStorage, sizeof(m_sBeamGridStorage)));
-	buildBeams << <dim3(l2, l2, l2), dim3(l, l, l) >> >(m_fCurrentRadiusVol, m_sStorage.getHashGrid().m_gridSize, photonDensNum);
+	buildBeams << <dim3(l2.x, l2.y, l2.z), dim3(l, l, l) >> >(m_fCurrentRadiusVol, m_sStorage.getHashGrid().m_gridDim, photonDensNum);
 	ThrowCudaErrors(cudaMemcpyFromSymbol(&m_sStorage, g_PhotonStorage, sizeof(m_sStorage)));
 	ThrowCudaErrors(cudaMemcpyFromSymbol(&m_sBeamGridStorage, g_BeamGridStorage, sizeof(m_sBeamGridStorage)));
 

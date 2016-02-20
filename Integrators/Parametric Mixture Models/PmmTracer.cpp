@@ -8,7 +8,7 @@
 namespace CudaTracerLib {
 
 PmmTracer::PmmTracer()
-	: sMap(100, 10000), dMap(20)
+	: sMap(Vec3u(100), 10000), dMap(Vec3u(20))
 {
 }
 

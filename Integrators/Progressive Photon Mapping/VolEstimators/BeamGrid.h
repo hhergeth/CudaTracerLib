@@ -41,7 +41,7 @@ struct BeamGrid : public PointStorage
 	}
 
 	BeamGrid(unsigned int gridDim, unsigned int numPhotons, int N = 20, float nnSearch = 1)
-		: PointStorage(gridDim, numPhotons), photonDensNum(nnSearch), m_sBeamGridStorage(gridDim, gridDim * gridDim * gridDim * (1 + N))
+		: PointStorage(gridDim, numPhotons), photonDensNum(nnSearch), m_sBeamGridStorage(Vec3u(gridDim), gridDim * gridDim * gridDim * (1 + N))
 	{
 
 	}

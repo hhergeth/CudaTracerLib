@@ -38,7 +38,7 @@ template<int max_SAMPLES> __global__ void updateCache(float ny)
 	Vec3u i = Vec3u(blockIdx.x * blockDim.x + threadIdx.x,
 		blockIdx.y * blockDim.y + threadIdx.y,
 		blockIdx.z * blockDim.z + threadIdx.z);
-	if (i.x < g_dMap.gridSize && i.y < g_dMap.gridSize && i.z < g_dMap.gridSize)
+	if (i.x < g_dMap.m_gridSize.x && i.y < g_dMap.m_gridSize.y && i.z < g_dMap.m_gridSize.z)
 	{
 		Vec3f mi = g_dMap.hashMap.InverseTransform(i), ma = g_dMap.hashMap.InverseTransform(i + Vec3u(1));
 		unsigned int idx = g_dMap.hashMap.Hash(i);
@@ -94,8 +94,9 @@ void PmmTracer::DoRender(Image* I)
 		cudaMemcpyFromSymbol(&sMap, g_sMap, sizeof(sMap));
 	}
 	cudaMemcpyToSymbol(g_dMap, &dMap, sizeof(dMap));
-	int l = 6, L = dMap.gridSize / l + 1;
-	updateCache<16> << <dim3(L, L, L), dim3(l, l, l) >> >(ny(passIteration++));
+	int l = 6;
+	auto L = dMap.m_gridSize / l + 1;
+	updateCache<16> << <dim3(L.x, L.y, L.z), dim3(l, l, l) >> >(ny(passIteration++));
 
 	unsigned int p = 16, w, h;
 	I->getExtent(w, h);

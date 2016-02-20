@@ -16,12 +16,13 @@ void BeamBeamGrid::StartNewPass(const IRadiusProvider* radProvider, DynamicScene
 	m_sStorage.ResetBuffer();
 
 	float r = radProvider->getCurrentRadius(1);
-	Vec3f dim = Vec3f((float)m_sStorage.getHashGrid().m_gridSize);
-	float d = dim.min();
-	if (r > d)
+	auto d = m_sStorage.getHashGrid().m_gridDim;
+	Vec3f dim = Vec3f((float)d.x, (float)d.y, (float)d.z);
+	float D = dim.min();
+	if (r > D)
 	{
 		std::cout << "WARNING beam beam traversal can be bugged!";
-		std::cout << "r = " << r << ", d = " << d << "\n";
+		std::cout << "r = " << r << ", d = " << D << "\n";
 	}
 }
 
@@ -89,7 +90,7 @@ void BeamBeamGrid::PrepareForRendering()
 	std::vector<unsigned int> hostMap;
 	hostIndices.resize(m_sStorage.getNumStoredEntries());
 	CUDA_MEMCPY_TO_HOST(&hostIndices[0], m_sStorage.getDeviceData(), hostIndices.size() * sizeof(SpatialLinkedMap<int>::linkedEntry));
-	hostMap.resize(m_sStorage.getHashGrid().m_gridSize * m_sStorage.getHashGrid().m_gridSize * m_sStorage.getHashGrid().m_gridSize);
+	hostMap.resize(m_sStorage.getHashGrid().m_gridDim.x * m_sStorage.getHashGrid().m_gridDim.y * m_sStorage.getHashGrid().m_gridDim.z);
 	CUDA_MEMCPY_TO_HOST(&hostMap[0], m_sStorage.getDeviceGrid(), hostMap.size() * sizeof(unsigned int));
 	auto bitset = new std::bitset<1024 * 1024 * 10>();
 	m_sStorage.ForAllCells([&](const Vec3u& pos)

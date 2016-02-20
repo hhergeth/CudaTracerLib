@@ -62,7 +62,7 @@ struct PointStorage : public IVolumeEstimator
 	}
 
 	PointStorage(unsigned int gridDim, unsigned int numPhotons)
-		: m_sStorage(gridDim, numPhotons)
+		: m_sStorage(Vec3u(gridDim), numPhotons)
 	{
 
 	}

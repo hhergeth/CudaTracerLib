@@ -15,7 +15,7 @@ struct BeamBeamGrid : public IVolumeEstimator
 	float m_fCurrentRadiusVol;
 
 	BeamBeamGrid(unsigned int gridDim, unsigned int numBeams, int N = 100)
-		: m_sStorage(gridDim, gridDim * gridDim * gridDim * N), m_uBeamLength(numBeams)
+		: m_sStorage(Vec3u(gridDim), gridDim * gridDim * gridDim * N), m_uBeamLength(numBeams)
 	{
 		CUDA_MALLOC(&m_pDeviceBeams, sizeof(Beam) * m_uBeamLength);
 	}

@@ -50,7 +50,7 @@ public:
 
 	template<typename CLB> CUDA_FUNC_IN void ForAllCells(const Vec3u& min_cell, const Vec3u& max_cell, const CLB& clb)
 	{
-		Vec3u a = min(min_cell, Vec3u(hashMap.m_gridSize - 1)), b = min(max_cell, Vec3u(hashMap.m_gridSize - 1));
+		Vec3u a = min(min_cell, hashMap.m_gridDim - Vec3u(1)), b = min(max_cell, hashMap.m_gridDim - Vec3u(1));
 		for (unsigned int ax = a.x; ax <= b.x; ax++)
 			for (unsigned int ay = a.y; ay <= b.y; ay++)
 				for (unsigned int az = a.z; az <= b.z; az++)
@@ -66,7 +66,7 @@ public:
 
 	template<typename CLB> CUDA_FUNC_IN void ForAllCells(const CLB& clb)
 	{
-		ForAllCells(Vec3u(0), Vec3u(hashMap.m_gridSize - 1), clb);
+		ForAllCells(Vec3u(0), hashMap.m_gridDim - Vec3u(1), clb);
 	}
 };
 
@@ -81,18 +81,19 @@ public:
 		T value;
 	};
 private:
-	unsigned int numData, gridSize;
+	unsigned int numData;
+	Vec3u m_gridSize;
 	linkedEntry* deviceData;
 	unsigned int* deviceMap;
 	unsigned int deviceDataIdx;
 public:
 
 	CUDA_FUNC_IN SpatialLinkedMap(){}
-	SpatialLinkedMap(unsigned int gridSize, unsigned int numData)
-		: numData(numData), gridSize(gridSize)
+	SpatialLinkedMap(const Vec3u& gridSize, unsigned int numData)
+		: numData(numData), m_gridSize(gridSize)
 	{
 		CUDA_MALLOC(&deviceData, sizeof(linkedEntry) * numData);
-		CUDA_MALLOC(&deviceMap, sizeof(unsigned int) * gridSize * gridSize * gridSize);
+		CUDA_MALLOC(&deviceMap, sizeof(unsigned int) * m_gridSize.x * m_gridSize.y * m_gridSize.z);
 		ThrowCudaErrors(cudaMemset(deviceData, 0xffffffff, sizeof(linkedEntry) * numData));
 	}
 
@@ -104,13 +105,13 @@ public:
 
 	void SetSceneDimensions(const AABB& box)
 	{
-		BaseType::hashMap = HashGrid_Reg(box, gridSize);
+		BaseType::hashMap = HashGrid_Reg(box, m_gridSize);
 	}
 
 	void ResetBuffer()
 	{
 		deviceDataIdx = 0;
-		ThrowCudaErrors(cudaMemset(deviceMap, 0xffffffff, sizeof(unsigned int) * gridSize * gridSize * gridSize));
+		ThrowCudaErrors(cudaMemset(deviceMap, 0xffffffff, sizeof(unsigned int) * m_gridSize.x * m_gridSize.y * m_gridSize.z));
 	}
 
 	unsigned int getNumEntries() const
@@ -244,9 +245,9 @@ template<typename T> class SpatialFlatMap : public SpatialGrid<T, SpatialFlatMap
 {
 typedef SpatialGrid<T, SpatialFlatMap<T>> BaseType;
 public:
+	Vec3u m_gridSize;
 	unsigned int numData, idxData;
 	T* deviceData, *deviceData2;
-	unsigned int gridSize;
 	unsigned int* deviceGrid;
 	Vec2u* deviceList;
 	unsigned int* m_deviceIdxCounter;
@@ -259,19 +260,19 @@ public:
 
 	}
 
-	SpatialFlatMap(unsigned int gridSize, unsigned int numData)
-		: numData(numData), gridSize(gridSize), idxData(0)
+	SpatialFlatMap(const Vec3u& gridSize, unsigned int numData)
+		: numData(numData), m_gridSize(gridSize), idxData(0)
 	{
 		CUDA_MALLOC(&deviceData, sizeof(T) * numData);
 		CUDA_MALLOC(&deviceData2, sizeof(T) * numData);
-		CUDA_MALLOC(&deviceGrid, sizeof(unsigned int) * gridSize * gridSize * gridSize);
+		CUDA_MALLOC(&deviceGrid, sizeof(unsigned int) * m_gridSize.x * m_gridSize.y * m_gridSize.z);
 		CUDA_MALLOC(&deviceList, sizeof(Vec2u) * numData);
 		CUDA_MALLOC(&m_deviceIdxCounter, sizeof(unsigned int));
 
 		hostData1 = new T[numData];
 		hostData2 = new T[numData];
 		hostList = new Vec2u[numData];
-		hostGrid = new unsigned int[gridSize * gridSize * gridSize];
+		hostGrid = new unsigned int[m_gridSize.x * m_gridSize.y * m_gridSize.z];
 	}
 
 	void Free()
@@ -289,7 +290,7 @@ public:
 
 	void SetSceneDimensions(const AABB& box)
 	{
-		BaseType::hashMap = HashGrid_Reg(box, gridSize);
+		BaseType::hashMap = HashGrid_Reg(box, m_gridSize);
 	}
 
 	void ResetBuffer()
@@ -302,6 +303,7 @@ public:
 		auto& Tt = GET_PERF_BLOCKS();
 
 		idxData = min(idxData, numData);
+		auto GP = m_gridSize.x * m_gridSize.y * m_gridSize.z;
 
 #ifndef __CUDACC__
 		throw std::runtime_error("Use this from a cuda file please!");
@@ -313,7 +315,7 @@ public:
 		ThrowCudaErrors(cudaMemcpy(hostList, deviceList, sizeof(Vec2u) * idxData, cudaMemcpyDeviceToHost));
 		{
 			auto bl = Tt.StartBlock("reset");
-			for (unsigned int idx = 0; idx < gridSize * gridSize * gridSize; idx++)
+			for (unsigned int idx = 0; idx < GP; idx++)
 				hostGrid[idx] = UINT_MAX;
 		}
 		{
@@ -331,7 +333,7 @@ public:
 				hostData2[i - 1].setFlag();
 			}
 		}
-		ThrowCudaErrors(cudaMemcpy(deviceGrid, hostGrid, sizeof(unsigned int) * gridSize * gridSize * gridSize, cudaMemcpyHostToDevice));
+		ThrowCudaErrors(cudaMemcpy(deviceGrid, hostGrid, sizeof(unsigned int) * GP, cudaMemcpyHostToDevice));
 		ThrowCudaErrors(cudaMemcpy(deviceData, hostData2, sizeof(T) * idxData, cudaMemcpyHostToDevice));*/
 #else
 		{
@@ -340,7 +342,7 @@ public:
 		}
 		{
 			auto bl = Tt.StartBlock("reset");
-			ThrowCudaErrors(cudaMemset(deviceGrid, 0xffffffff, gridSize * gridSize * gridSize));
+			ThrowCudaErrors(cudaMemset(deviceGrid, 0xffffffff, GP));
 		}
 		{
 			auto bl = Tt.StartBlock("build");
@@ -411,15 +413,15 @@ public:
 //a mapping from R^3 -> T, ie. associating one element with each point in the grid
 template<typename T> struct SpatialSet
 {
-	unsigned int gridSize;
+	Vec3u m_gridSize;
 	T* deviceData;
 	HashGrid_Reg hashMap;
 public:
 	SpatialSet(){}
-	SpatialSet(unsigned int gridSize)
-		: gridSize(gridSize)
+	SpatialSet(const Vec3u& gridSize)
+		: m_gridSize(gridSize)
 	{
-		CUDA_MALLOC(&deviceData, sizeof(T) * gridSize * gridSize * gridSize);
+		CUDA_MALLOC(&deviceData, sizeof(T) * m_gridSize.x * m_gridSize.y * m_gridSize.z);
 	}
 
 	void Free()
@@ -429,12 +431,12 @@ public:
 
 	void SetSceneDimensions(const AABB& box)
 	{
-		hashMap = HashGrid_Reg(box, gridSize);
+		hashMap = HashGrid_Reg(box, m_gridSize);
 	}
 
 	void ResetBuffer()
 	{
-		ThrowCudaErrors(cudaMemset(deviceData, 0, sizeof(T) * gridSize * gridSize * gridSize));
+		ThrowCudaErrors(cudaMemset(deviceData, 0, sizeof(T) * m_gridSize.x * m_gridSize.y * m_gridSize.z));
 	}
 
 	CUDA_FUNC_IN const T& operator()(const Vec3f& p) const
@@ -459,7 +461,7 @@ public:
 
 	CUDA_FUNC_IN unsigned int NumEntries()
 	{
-		return gridSize * gridSize * gridSize;
+		return m_gridSize.x * m_gridSize.y * m_gridSize.z;
 	}
 };
 

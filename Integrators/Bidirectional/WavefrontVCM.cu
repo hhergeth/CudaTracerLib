@@ -9,7 +9,7 @@ WavefrontVCM::WavefrontVCM(unsigned int a_NumLightRays)
 
 	int gridLength = 200;
 	int numPhotons = a_NumLightRays * MAX_LIGHT_SUB_PATH_LENGTH;
-	m_sPhotonMapsNext = VCMSurfMap(gridLength, numPhotons);
+	m_sPhotonMapsNext = VCMSurfMap(Vec3u(gridLength), numPhotons);
 }
 
 WavefrontVCM::~WavefrontVCM()

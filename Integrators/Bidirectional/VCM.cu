@@ -163,8 +163,8 @@ VCM::VCM()
 {
 	int gridLength = 250;
 	int numPhotons = 1024 * 1024 * MAX_SUB_PATH_LENGTH;
-	m_sPhotonMapsCurrent = VCMSurfMap(gridLength, numPhotons);
-	m_sPhotonMapsNext = VCMSurfMap(gridLength, numPhotons);
+	m_sPhotonMapsCurrent = VCMSurfMap(Vec3u(gridLength), numPhotons);
+	m_sPhotonMapsNext = VCMSurfMap(Vec3u(gridLength), numPhotons);
 }
 
 }

@@ -22,9 +22,9 @@ PPPMTracer::PPPMTracer()
 #endif
 	m_uTotalPhotonsEmitted = -1;
 	unsigned int numPhotons = (m_uBlocksPerLaunch + 2) * PPM_slots_per_block;
-	m_sSurfaceMap = SurfaceMapT(250, numPhotons);
+	m_sSurfaceMap = SurfaceMapT(Vec3u(250), numPhotons);
 	if (m_sParameters.getValue(KEY_FinalGathering()))
-		m_sSurfaceMapCaustic = SurfaceMapT(250, numPhotons);
+		m_sSurfaceMapCaustic = SurfaceMapT(Vec3u(250), numPhotons);
 	m_pVolumeEstimator = new PointStorage(100, numPhotons);
 	//m_pVolumeEstimator = new BeamGrid(100, numPhotons, 30, 2);
 	//m_pVolumeEstimator = new BeamBVHStorage(100);
