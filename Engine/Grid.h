@@ -33,9 +33,7 @@ template<bool REGULAR> struct HashGrid
 
 	CUDA_FUNC_IN unsigned int Hash(const Vec3u& p) const
 	{
-		bool inGrid = p.x < m_gridDim.x && p.y < m_gridDim.y && p.z < m_gridDim.z;
-		CTL_ASSERT(inGrid);
-		if (!inGrid)
+		if (p.x >= m_gridDim.x || p.y >= m_gridDim.y || p.z >= m_gridDim.z)
 			return UINT_MAX;
 
 		if (REGULAR)
@@ -63,7 +61,6 @@ template<bool REGULAR> struct HashGrid
 
 	CUDA_FUNC_IN Vec3u InvHash(unsigned int idx) const
 	{
-		CTL_ASSERT(idx < m_nElements);
 		if (idx >= m_nElements)
 			return Vec3u(UINT_MAX);
 		if (REGULAR)
@@ -149,14 +146,14 @@ template<typename F> CUDA_FUNC_IN void TraverseGrid(const Ray& r, float tmin, fl
 	float minT = rayT = math::clamp(rayT, tmin, tmax);
 	maxT = math::clamp(maxT, tmin, tmax);
 	Vec3f q = (r(rayT) - box.minV) / m_vCellSize;
-	Vec3u Pos = clamp(Vec3u((unsigned int)q.x, (unsigned int)q.y, (unsigned int)q.z), Vec3u(0u), Vec3u((unsigned int)gridSize.x - 1, (unsigned int)gridSize.y - 1, (unsigned int)gridSize.z - 1));
+	Vec3u Pos = (clamp(q, Vec3f(0.0f), gridSize - Vec3f(1))).floor_u();
 	Vec3i Step(sign<int>(r.dir().x), sign<int>(r.dir().y), sign<int>(r.dir().z));
 	Vec3f inv_d = r.dir();
 	const float ooeps = math::exp2(-40.0f);
 	inv_d.x = 1.0f / (math::abs(r.dir().x) > ooeps ? r.dir().x : copysignf(ooeps, r.dir().x));
 	inv_d.y = 1.0f / (math::abs(r.dir().y) > ooeps ? r.dir().y : copysignf(ooeps, r.dir().y));
 	inv_d.z = 1.0f / (math::abs(r.dir().z) > ooeps ? r.dir().z : copysignf(ooeps, r.dir().z));
-	Vec3f NextCrossingT = Vec3f(rayT) + (box.minV + (Vec3f((float)Pos.x, (float)Pos.y, (float)Pos.z) + max(Vec3f(0.0f), sign(r.dir()))) * m_vCellSize - r(rayT)) * inv_d,
+	Vec3f NextCrossingT = Vec3f(rayT) + (box.minV + (Vec3f(Pos) + max(Vec3f(0.0f), sign(r.dir()))) * m_vCellSize - r(rayT)) * inv_d,
 		DeltaT = abs(m_vCellSize * inv_d);
 	bool cancelTraversal = false;
 	for (; !cancelTraversal;)
@@ -174,7 +171,7 @@ template<typename F> CUDA_FUNC_IN void TraverseGrid(const Ray& r, float tmin, fl
 
 template<typename F> CUDA_FUNC_IN void TraverseGrid(const Ray& r, const HashGrid_Reg& grid, float tmin, float tmax, const F& clb)
 {
-	return TraverseGrid(r, tmin, tmax, clb, grid.m_sBox, Vec3f(grid.m_gridDim.x, grid.m_gridDim.y, grid.m_gridDim.z));
+	return TraverseGrid(r, tmin, tmax, clb, grid.m_sBox, Vec3f(grid.m_gridDim));
 }
 
 }

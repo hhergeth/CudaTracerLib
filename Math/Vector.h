@@ -55,6 +55,10 @@ public:
 	CUDA_FUNC_IN	S				sign() const					{ const T* tp = getPtr(); S r; T* rp = r.getPtr(); for (int i = 0; i < L; i++) rp[i] = (T)math::sign((float)tp[i]); return r; }
 	CUDA_FUNC_IN	S				floor() const					{ const T* tp = getPtr(); S r; T* rp = r.getPtr(); for (int i = 0; i < L; i++) rp[i] = (T)math::floor((float)tp[i]); return r; }
 	CUDA_FUNC_IN	S				ceil() const					{ const T* tp = getPtr(); S r; T* rp = r.getPtr(); for (int i = 0; i < L; i++) rp[i] = (T)math::ceil((float)tp[i]); return r; }
+	CUDA_FUNC_IN	Vector<int, L>  floor_i() const					{ const T* tp = getPtr(); Vector<int, L> r; int* rp = r.getPtr(); for (int i = 0; i < L; i++) rp[i] = (int)math::floor((float)tp[i]); return r; }
+	CUDA_FUNC_IN	Vector<unsigned int, L>  floor_u() const					{ const T* tp = getPtr(); Vector<unsigned int, L> r; unsigned int* rp = r.getPtr(); for (int i = 0; i < L; i++) rp[i] = (unsigned int)math::floor((float)tp[i]); return r; }
+	CUDA_FUNC_IN	Vector<int, L>  ceil_i() const					{ const T* tp = getPtr(); Vector<int, L> r; int* rp = r.getPtr(); for (int i = 0; i < L; i++) rp[i] = (int)math::ceil((float)tp[i]); return r; }
+	CUDA_FUNC_IN	Vector<unsigned int, L>  ceil_u() const					{ const T* tp = getPtr(); Vector<unsigned int, L> r; unsigned int* rp = r.getPtr(); for (int i = 0; i < L; i++) rp[i] = (unsigned int)math::ceil((float)tp[i]); return r; }
 
 	CUDA_FUNC_IN    Vector<T, L + 1> toHomogeneous(void) const              { const T* tp = getPtr(); Vector<T, L + 1> r; T* rp = r.getPtr(); for (int i = 0; i < L; i++) rp[i] = tp[i]; rp[L] = (T)1; return r; }
 	CUDA_FUNC_IN    Vector<T, L - 1> toCartesian(void) const                { const T* tp = getPtr(); Vector<T, L - 1> r; T* rp = r.getPtr(); T c = rcp(tp[L - 1]); for (int i = 0; i < L - 1; i++) rp[i] = tp[i] * c; return r; }
@@ -263,9 +267,9 @@ public:
 	CUDA_FUNC_IN                    Vec4u(void)                      {  }
 	explicit CUDA_FUNC_IN                    Vec4u(unsigned int a)                     { set(a); }
 	CUDA_FUNC_IN                    Vec4u(unsigned int xx, unsigned int yy, unsigned int zz, unsigned int ww) { x = xx; y = yy; z = zz; w = ww; }
-	CUDA_FUNC_IN                    Vec4u(const Vec2i& xy, unsigned int zz, unsigned int ww) { x = xy.x; y = xy.y; z = zz; w = ww; }
-	CUDA_FUNC_IN                    Vec4u(const Vec3i& xyz, unsigned int ww)  { x = xyz.x; y = xyz.y; z = xyz.z; w = ww; }
-	CUDA_FUNC_IN                    Vec4u(const Vec2i& xy, const Vec2i& zw) { x = xy.x; y = xy.y; z = zw.x; w = zw.y; }
+	CUDA_FUNC_IN                    Vec4u(const Vec2u& xy, unsigned int zz, unsigned int ww) { x = xy.x; y = xy.y; z = zz; w = ww; }
+	CUDA_FUNC_IN                    Vec4u(const Vec3u& xyz, unsigned int ww)  { x = xyz.x; y = xyz.y; z = xyz.z; w = ww; }
+	CUDA_FUNC_IN                    Vec4u(const Vec2u& xy, const Vec2u& zw) { x = xy.x; y = xy.y; z = zw.x; w = zw.y; }
 
 	CUDA_FUNC_IN    const unsigned int*      getPtr(void) const                { return &x; }
 	CUDA_FUNC_IN    unsigned int*            getPtr(void)                      { return &x; }
@@ -288,6 +292,7 @@ public:
 	explicit CUDA_FUNC_IN                    Vec2f(float a)                     { set(a); }
 	CUDA_FUNC_IN                    Vec2f(float xx, float yy)            { x = xx; y = yy; }
 	CUDA_FUNC_IN                    Vec2f(const Vec2i& v)            { x = (float)v.x; y = (float)v.y; }
+	CUDA_FUNC_IN                    Vec2f(const Vec2u& v)            { x = (float)v.x; y = (float)v.y; }
 
 	CUDA_FUNC_IN    const float*      getPtr(void) const                { return &x; }
 	CUDA_FUNC_IN    float*            getPtr(void)                      { return &x; }
@@ -312,6 +317,7 @@ public:
 	CUDA_FUNC_IN                    Vec3f(float xx, float yy, float zz)    { x = xx; y = yy; z = zz; }
 	CUDA_FUNC_IN                    Vec3f(const Vec2f& xy, float zz)   { x = xy.x; y = xy.y; z = zz; }
 	CUDA_FUNC_IN                    Vec3f(const Vec3i& v)            { x = (float)v.x; y = (float)v.y; z = (float)v.z; }
+	CUDA_FUNC_IN                    Vec3f(const Vec3u& v)            { x = (float)v.x; y = (float)v.y; z = (float)v.z; }
 
 	CUDA_FUNC_IN    const float*      getPtr(void) const                { return &x; }
 	CUDA_FUNC_IN    float*            getPtr(void)                      { return &x; }
@@ -338,6 +344,7 @@ public:
 	CUDA_FUNC_IN                    Vec4f(const Vec3f& xyz, float ww)  { x = xyz.x; y = xyz.y; z = xyz.z; w = ww; }
 	CUDA_FUNC_IN                    Vec4f(const Vec2f& xy, const Vec2f& zw) { x = xy.x; y = xy.y; z = zw.x; w = zw.y; }
 	CUDA_FUNC_IN                    Vec4f(const Vec4i& v)            { x = (float)v.x; y = (float)v.y; z = (float)v.z; w = (float)v.w; }
+	CUDA_FUNC_IN                    Vec4f(const Vec4u& v)            { x = (float)v.x; y = (float)v.y; z = (float)v.z; w = (float)v.w; }
 
 	CUDA_FUNC_IN    const float*      getPtr(void) const                { return &x; }
 	CUDA_FUNC_IN    float*            getPtr(void)                      { return &x; }
