@@ -14,15 +14,22 @@ template<int LENGTH> struct FixedString : public FixedSizeArray<char, LENGTH, tr
 	}
 
 	FixedString(const std::string& s)
-		: FixedSizeArray<char, LENGTH>(s.c_str(), s.length() + 1)
+		: FixedSizeArray<char, LENGTH>(s.c_str(), s.length())
 	{
-		FixedSizeArray<char, LENGTH>::buffer[FixedSizeArray<char, LENGTH>::length - 1] = 0;
+		push_back('\0');
 	}
 
 	FixedString(const char* s)
 		: FixedSizeArray<char, LENGTH>(s, strlen(s) + 1)
 	{
 
+	}
+
+	void resize(size_t l)
+	{
+		FixedSizeArray<char, LENGTH, true, 0>::resize(l);
+		if (LENGTH - length > 0)
+			Platform::SetMemory(FixedSizeArray<char, LENGTH, true, 0>::buffer + length, (LENGTH - length));
 	}
 
 	operator std::string() const

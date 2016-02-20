@@ -38,9 +38,10 @@ template<typename T, int LENGTH, bool RESET = true, unsigned char RESET_VALUE = 
 
 	std::vector<T> toVector() const
 	{
-		std::vector<T> res(length);
+		std::vector<T> res;
+		res.resize(length);
 		for (unsigned int l = 0; l < length; l++)
-			res.push_back(operator()(l));
+			res[l] = operator()(l);
 		return res;
 	}
 
