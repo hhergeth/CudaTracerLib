@@ -147,8 +147,8 @@ struct PhaseFunctionSamplingRecord
 	NormalizedT<Vec3f> wo;
 	ETransportMode mode;
 
-	CUDA_FUNC_IN PhaseFunctionSamplingRecord(const NormalizedT<Vec3f>& _wo, ETransportMode m = ETransportMode::ERadiance)
-		: wo(_wo), mode(m)
+	CUDA_FUNC_IN PhaseFunctionSamplingRecord(const NormalizedT<Vec3f>& _wi, ETransportMode m = ETransportMode::ERadiance)
+		: wi(_wi), mode(m)
 	{
 	}
 
