@@ -165,7 +165,7 @@ bool Material::AlphaTest(const Vec2f& bary, const Vec2f& uv) const
 
 bool Material::GetBSSRDF(const DifferentialGeometry& uv, const VolumeRegion** res) const
 {
-	if (usedBssrdf)
+	if (usedBssrdf && res)
 		*res = &bssrdf;
 	return !!usedBssrdf;
 }

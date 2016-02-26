@@ -345,7 +345,7 @@ void DynamicScene::DeleteNode(StreamReference<Node> ref)
 BufferReference<MIPMap, KernelMIPMap> DynamicScene::LoadTexture(const std::string& file, bool a_MipMap)
 {
 	path rawFilePath(m_pFileManager->getTexturePath(file));
-	if (!exists(rawFilePath))
+	if (!exists(rawFilePath) || is_directory(rawFilePath))
 	{
 		std::cout << "Texture : " << file << " was not found\n";
 		return LoadTexture("404.jpg", a_MipMap);
