@@ -32,14 +32,14 @@ bool HomogeneousVolumeDensity::sampleDistance(const Ray& ray, float minT, float 
 {
 	float m_mediumSamplingWeight = -1;
 	Spectrum sig_t = sig_a + sig_s, albedo = sig_s / sig_t;
-	for (int i = 0; i < 2; i++)
+	for (int i = 0; i < SPECTRUM_SAMPLES; i++)
 		if (albedo[i] > m_mediumSamplingWeight && sig_t[i] != 0)
 			m_mediumSamplingWeight = albedo[i];
 	if (m_mediumSamplingWeight > 0)
 		m_mediumSamplingWeight = max(m_mediumSamplingWeight, 0.5f);
 	float sampledDistance = FLT_MAX;
 	int channel = int(rand * SPECTRUM_SAMPLES);
-	rand = (rand - channel * 1.0f / SPECTRUM_SAMPLES) * SPECTRUM_SAMPLES;
+	rand = rand * SPECTRUM_SAMPLES - channel;
 	if (rand < m_mediumSamplingWeight)
 	{
 		rand /= m_mediumSamplingWeight;
