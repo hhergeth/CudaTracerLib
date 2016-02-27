@@ -121,7 +121,7 @@ public:
 	bool hasAlphaMappings()
 	{
 		for (auto r : *this)
-			if (r->AlphaMap.used)
+			if (r->AlphaMap.used())
 				return true;
 		return false;
 	}
@@ -544,7 +544,7 @@ void DynamicScene::instanciateNodeMaterials(StreamReference<Node> n)
 	for (size_t i = 0; i < newMaterials.getLength(); i++)
 	{
 		Material* m2 = newMaterials(i);
-		if (m2->AlphaMap.used && m2->AlphaMap.tex.Is<ImageTexture>())
+		if (m2->AlphaMap.used() && m2->AlphaMap.tex.Is<ImageTexture>())
 			m_pTextureBuffer->LoadCached(m2->AlphaMap.tex.As<ImageTexture>()->file, b);
 		if (m2->HeightMap.used && m2->HeightMap.tex.Is<ImageTexture>())
 			m_pTextureBuffer->LoadCached(m2->HeightMap.tex.As<ImageTexture>()->file, b);

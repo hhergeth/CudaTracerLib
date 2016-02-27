@@ -789,7 +789,7 @@ void compileobj(IInStream& in, FileOutputStream& a_Out)
 		}
 		if (M.textures[TextureType_Displacement].size())
 		{
-			mat.SetHeightMap(M.textures[TextureType_Displacement].c_str());
+			mat.SetHeightMap(CreateTexture(M.textures[TextureType_Displacement].c_str(), Spectrum()));
 		}
 
 		if (length(M.emission))

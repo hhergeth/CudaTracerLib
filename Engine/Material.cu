@@ -20,10 +20,10 @@ Material::Material()
 	Name = "NoNameMaterial";
 	HeightScale = 1.0f;
 	NodeLightIndex = UINT_MAX;
-	m_fAlphaThreshold = 1.0f;
 	bsdf.setTypeToken(0);
 	usedBssrdf = 0;
-	AlphaMap.used = NormalMap.used = HeightMap.used = 0;
+	NormalMap.used = HeightMap.used = 0;
+	AlphaMap.state = AlphaBlendState::Disabled;
 	initbssrdf(bssrdf);
 }
 
@@ -35,10 +35,10 @@ Material::Material(const std::string& name)
 	Name = name;
 	HeightScale = 1.0f;
 	NodeLightIndex = UINT_MAX;
-	m_fAlphaThreshold = 1.0f;
 	bsdf.setTypeToken(0);
 	usedBssrdf = 0;
-	AlphaMap.used = NormalMap.used = HeightMap.used = 0;
+	NormalMap.used = HeightMap.used = 0;
+	AlphaMap.state = AlphaBlendState::Disabled;
 	initbssrdf(bssrdf);
 }
 
@@ -136,29 +136,54 @@ bool Material::SampleNormalMap(DifferentialGeometry& dg, const Vec3f& wi) const
 	else return false;
 }
 
+CUDA_FUNC_IN Spectrum sample_fast(const Texture& tex, const Vec2f& bary, const Vec2f& uv)
+{
+	Spectrum val;
+	if (tex.Is<ConstantTexture>())
+		val = tex.As<ConstantTexture>()->val.average();
+	else if (tex.Is<WireframeTexture>())
+		val = tex.As<WireframeTexture>()->Evaluate(bary).average();
+	else
+	{
+		if (tex.Is<ImageTexture>())
+			val = tex.As<ImageTexture>()->tex->SampleAlpha(tex.As<ImageTexture>()->mapping.TransformPoint(uv));
+		else if (tex.Is<BilerpTexture>())
+			val = tex.As<BilerpTexture>()->Evaluate(uv).average();
+		else if (tex.Is<CheckerboardTexture>())
+			val = tex.As<CheckerboardTexture>()->Evaluate(uv).average();
+		else if (tex.Is<UVTexture>())
+			val = tex.As<UVTexture>()->Evaluate(uv).average();
+	}
+	return val;
+}
+
 bool Material::AlphaTest(const Vec2f& bary, const Vec2f& uv) const
 {
-	int used = AlphaMap.used;
-	float th = m_fAlphaThreshold;
-	if (used)
+	if (AlphaMap.used())
 	{
-		float val = 1;
-		if (AlphaMap.tex.Is<ConstantTexture>())
-			val = AlphaMap.tex.As<ConstantTexture>()->val.average();
-		else if (AlphaMap.tex.Is<WireframeTexture>())
-			val = AlphaMap.tex.As<WireframeTexture>()->Evaluate(bary).average();
+		auto* refl_tex = bsdf.As()->getTexture(0);
+		auto* refl_img = refl_tex ? refl_tex->As<ImageTexture>() : 0;
+		auto refl_uv = refl_img ? refl_img->mapping.TransformPoint(uv) : Vec2f(0.0f);
+		auto* alpha_img = AlphaMap.tex.As<ImageTexture>();
+
+		if (((AlphaMap.state == AlphaBlendState::AlphaMap_Alpha && alpha_img != 0) ||
+			 (AlphaMap.state == AlphaBlendState::ReflectanceMap_Alpha && refl_img != 0)))
+		{
+			float alpha = FLT_MAX;
+			if (AlphaMap.state == AlphaBlendState::AlphaMap_Alpha)
+				alpha = alpha_img->tex->SampleAlpha(alpha_img->mapping.TransformPoint(uv));
+			else alpha = refl_img->tex->SampleAlpha(refl_uv);
+			return alpha >= AlphaMap.test_val_scalar;
+		}
 		else
 		{
-			if (AlphaMap.tex.Is<ImageTexture>())
-				val = AlphaMap.tex.As<ImageTexture>()->tex->SampleAlpha(AlphaMap.tex.As<ImageTexture>()->mapping.TransformPoint(uv));
-			else if (AlphaMap.tex.Is<BilerpTexture>())
-				val = AlphaMap.tex.As<BilerpTexture>()->Evaluate(uv).average();
-			else if (AlphaMap.tex.Is<CheckerboardTexture>())
-				val = AlphaMap.tex.As<CheckerboardTexture>()->Evaluate(uv).average();
-			else if (AlphaMap.tex.Is<UVTexture>())
-				val = AlphaMap.tex.As<UVTexture>()->Evaluate(uv).average();
+			Spectrum val = AlphaMap.state & 4 ? sample_fast(*refl_tex, bary, uv) : sample_fast(AlphaMap.tex, bary, uv);
+			if ((AlphaMap.state & 3) == 1)
+				return val.getLuminance() >= AlphaMap.test_val_scalar;
+			else if ((AlphaMap.state & 3) == 3)
+				return (val - AlphaMap.test_val_color).abs().max() <= AlphaMap.test_val_scalar;
+			else return true;
 		}
-		return val >= th;
 	}
 	else return true;
 }

@@ -84,6 +84,10 @@ public:
 			texs.push_back((Texture*)((unsigned long long)this + m_uTextureOffsets[n++]));
 		return texs;
 	}
+	CUDA_FUNC_IN Texture* getTexture(unsigned int idx)
+	{
+		return (Texture*)((unsigned long long)this + m_uTextureOffsets[idx]);
+	}
 };
 
 }

@@ -125,7 +125,7 @@ template<bool USE_ALPHA> CUDA_FUNC_IN bool __traceRay_internal__(const Vec3f& di
 								TriangleData* tri = g_SceneData.m_sTriData.Data + ti + meshTriOff;
 								unsigned int mIdx = tri->getMatIndex(nodeMatOff);
 								auto& mat = g_SceneData.m_sMatData[mIdx];
-								if (mat.AlphaMap.used)
+								if (mat.AlphaMap.used())
 								{
 #ifdef ISCUDA
 									float4 rowC = tex1Dfetch(t_TriDataB, ti * 4 + 2);
