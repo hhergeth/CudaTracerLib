@@ -57,7 +57,13 @@ struct PPPMParameters
 	float probVolume;
 	unsigned int PassIdx;
 };
-CUDA_CONST PPPMParameters g_Parameters;
+CUDA_CONST PPPMParameters g_ParametersDevice;
+static PPPMParameters g_ParametersHost;
+#ifdef ISCUDA
+#define g_Parameters g_ParametersDevice	
+#else
+#define g_Parameters g_ParametersHost
+#endif
 CUDA_DEVICE unsigned int g_NumPhotonEmittedSurface, g_NumPhotonEmittedVolume;
 CUDA_DEVICE SurfaceMapT g_SurfaceMap;
 CUDA_DEVICE SurfaceMapT g_SurfaceMapCaustic;
@@ -183,8 +189,9 @@ void PPPMTracer::doPhotonPass()
 	ZeroSymbol(g_NumPhotonEmittedVolume);
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_VolEstimator, m_pVolumeEstimator, m_pVolumeEstimator->getSize()));
 
-	PPPMParameters para = { m_useDirectLighting, finalGathering, m_fProbSurface, m_fProbVolume, m_uPassesDone };
-	ThrowCudaErrors(cudaMemcpyToSymbol(g_Parameters, &para, sizeof(para)));
+	PPPMParameters para = g_ParametersHost = { m_useDirectLighting, finalGathering, m_fProbSurface, m_fProbVolume, m_uPassesDone };
+	para.DIRECT = g_ParametersHost.DIRECT;
+	ThrowCudaErrors(cudaMemcpyToSymbol(g_ParametersDevice, &para, sizeof(para)));
 
 	while (!m_sSurfaceMap.isFull() && !m_pVolumeEstimator->isFull())
 	{
