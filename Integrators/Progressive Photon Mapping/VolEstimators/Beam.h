@@ -181,6 +181,20 @@ template<bool USE_GLOBAL> struct VolHelper
 		else return vol->sigma_s(p, w);
 	}
 
+	CUDA_FUNC_IN Spectrum sigma_a(const Vec3f& p, const NormalizedT<Vec3f>& w) const
+	{
+		if (USE_GLOBAL)
+			return g_SceneData.m_sVolume.sigma_a(p, w);
+		else return vol->sigma_a(p, w);
+	}
+
+	CUDA_FUNC_IN Spectrum sigma_t(const Vec3f& p, const NormalizedT<Vec3f>& w) const
+	{
+		if (USE_GLOBAL)
+			return g_SceneData.m_sVolume.sigma_t(p, w);
+		else return vol->sigma_t(p, w);
+	}
+
 	CUDA_FUNC_IN Spectrum Lve(const Vec3f& p, const NormalizedT<Vec3f>& w) const
 	{
 		if (USE_GLOBAL)
