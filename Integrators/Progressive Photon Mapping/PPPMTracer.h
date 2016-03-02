@@ -89,12 +89,12 @@ private:
 	float m_fIntitalRadMin, m_fIntitalRadMax;
 	bool m_useDirectLighting;
 	float m_fProbSurface, m_fProbVolume;
-	bool m_adaptiveProbabilities;
 public:
 
 	PARAMETER_KEY(bool, Direct)
 	PARAMETER_KEY(bool, PerPixelRadius)
 	PARAMETER_KEY(bool, FinalGathering)
+	PARAMETER_KEY(bool, AdaptiveAccProb)
 
 	CTL_EXPORT PPPMTracer();
 	CTL_EXPORT virtual ~PPPMTracer();

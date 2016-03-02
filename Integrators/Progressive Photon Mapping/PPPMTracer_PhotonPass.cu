@@ -217,7 +217,7 @@ void PPPMTracer::doPhotonPass()
 		doPerPixelRadiusEstimation();
 	size_t volLength, volCount;
 	m_pVolumeEstimator->getStatusInfo(volLength, volCount);
-	if (m_adaptiveProbabilities)
+	if (m_sParameters.getValue(KEY_AdaptiveAccProb()))
 	{
 		m_fProbVolume = math::clamp01(m_fProbVolume * (float)m_sSurfaceMap.getNumStoredEntries() / m_sSurfaceMap.getNumEntries());
 		m_fProbSurface = math::clamp01(m_fProbSurface * (float)volCount / volLength);

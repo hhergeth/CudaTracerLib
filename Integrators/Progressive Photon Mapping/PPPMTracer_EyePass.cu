@@ -398,30 +398,6 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 	g_RNGData(rng);
 }
 
-__global__ void k_EyePass2(Vec2i off, int w, int h, float a_PassIndex, float a_rSurface, float a_rVolume, k_AdaptiveStruct A, BlockSampleImage img, float rMax, float rMin)
-{
-	Vec2i pixel = TracerBase::getPixelPos(off.x, off.y);
-	/*Ray r = g_SceneData.GenerateSensorRay(pixel.x, pixel.y);
-	BeamBeamGrid* grid = (BeamBeamGrid*)g_VolEstimator2;
-	int n = 0;
-	#ifdef ISCUDA
-	TraverseGrid(r, grid->m_sStorage.hashMap, 0, FLT_MAX, [&](float minT, float rayT, float maxT, float cellEndT, Vec3u& cell_pos, bool& cancelTraversal)
-	{
-	grid->m_sStorage.ForAll(cell_pos, [&](unsigned int ABC, int beam_idx)
-	{
-	n += beam_idx == 1234;
-	//if(pixel.x == 200 && pixel.y == 200)
-	//	printf("(%u, %d), ", ABC, beam_idx);
-	});
-	});
-	#endif
-	img.Add(pixel.x, pixel.y, Spectrum(n!=0));*/
-	float rq = (getCurrentRadius(A(pixel.x, pixel.y).r_std, a_PassIndex, 2) - a_rSurface) / getCurrentRadius(rMax, a_PassIndex, 2);
-	img.Add(pixel.x, pixel.y, Spectrum(rq > 0 ? rq : 0, rq < 0 ? -rq : 0, 0));
-	//float ab = getCurrentRadius(A(pixel.x, pixel.y).r, a_PassIndex, 2) < a_rSurface;
-	//img.Add(pixel.x, pixel.y, Spectrum(ab));
-}
-
 void PPPMTracer::Debug(Image* I, const Vec2i& pixel)
 {
 	
@@ -453,7 +429,6 @@ void PPPMTracer::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 		k_EyePass<BeamBeamGrid> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, (float)m_uPassesDone, radius2, radius3, A, img, m_useDirectLighting, perPixelRad, finalGathering);
 	else if (dynamic_cast<BeamBVHStorage*>(m_pVolumeEstimator))
 		k_EyePass<BeamBVHStorage> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, (float)m_uPassesDone, radius2, radius3, A, img, m_useDirectLighting, perPixelRad, finalGathering);
-	//k_EyePass2 << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, m_uPassesDone, radius2, radius3, A, img, m_fIntitalRadMin, m_fIntitalRadMax);
 
 	ThrowCudaErrors(cudaThreadSynchronize());
 }
