@@ -29,6 +29,11 @@ struct BeamGrid : public PointStorage
 		{
 			i |= 1 << 31;
 		}
+
+		CUDA_FUNC_IN int getIndex() const
+		{
+			return i & 0x7fffffff;
+		}
 	};
 
 	SpatialLinkedMap<entry> m_sBeamGridStorage;

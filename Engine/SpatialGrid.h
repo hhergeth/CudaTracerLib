@@ -114,12 +114,12 @@ public:
 		ThrowCudaErrors(cudaMemset(deviceMap, 0xffffffff, sizeof(unsigned int) * m_gridSize.x * m_gridSize.y * m_gridSize.z));
 	}
 
-	unsigned int getNumEntries() const
+	CUDA_FUNC_IN unsigned int getNumEntries() const
 	{
 		return numData;
 	}
 
-	unsigned int getNumStoredEntries() const
+	CUDA_FUNC_IN unsigned int getNumStoredEntries() const
 	{
 		return deviceDataIdx;
 	}

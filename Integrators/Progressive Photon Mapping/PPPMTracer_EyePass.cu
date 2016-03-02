@@ -5,7 +5,6 @@
 #include <Engine/Light.h>
 
 namespace CudaTracerLib {
-
 CUDA_FUNC_IN bool sphere_line_intersection(const Vec3f& p, float rad, const Ray& r, float& t_min, float& t_max)
 {
 	auto d = r.dir();
@@ -62,21 +61,16 @@ template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum BeamGrid::L_Volume(float NumEmit
 	{
 		m_sBeamGridStorage.ForAllCellEntries(cell_pos, [&](unsigned int, entry beam_idx)
 		{
-			const volPhoton& ph = m_sStorage(beam_idx.i & ~(1 << 31));
+			const volPhoton& ph = m_sStorage(beam_idx.getIndex());
 			Vec3f ph_pos = ph.getPos(m_sStorage.getHashGrid(), cell_pos);
 			float l1 = dot(ph_pos - r.ori(), r.dir());
 			float isectRadSqr = distanceSquared(ph_pos, r(l1));
-			if (isectRadSqr < ph.getRad() && l1 >= 0)
+			if (isectRadSqr < ph.getRad() && rayT <= l1 && l1 <= cellEndT)
 			{
 				float p = vol.p(ph_pos, r.dir(), ph.getWi(), rng);
-				Spectrum tauToPhoton = (-Tau - (l1 >= rayT ? vol.tau(r, rayT, l1) : -vol.tau(r, max(minT, l1), rayT))).exp();//corner case : the photon lies in the cell but the projected distance is before the cell
+				Spectrum tauToPhoton = (-Tau - vol.tau(r, rayT, l1)).exp();
 
-				//Spectrum tauToPhotonC = (-vol.tau(r, tmin, l1)).exp();
-				//if ((tauToPhotonC - tauToPhoton).abs().max() > 1e-3f)
-				//	printf("{%f, %f, %f}, {%f, %f, %f}\n", tauToPhotonC[0], tauToPhotonC[1], tauToPhotonC[2], tauToPhoton[0], tauToPhoton[1], tauToPhoton[2]);
-
-				L_n += p * ph.getL() / NumEmitted * tauToPhoton * 
-					(1 - isectRadSqr / ph.getRad()) / (ph.getRad() * PI * 0.5f);
+				L_n += p * ph.getL() * tauToPhoton / (PI * NumEmitted * ph.getRad());
 			}
 			/*float t1, t2;
 			if (sphere_line_intersection(ph_pos, m_fCurrentRadiusVol, r, t1, t2))
