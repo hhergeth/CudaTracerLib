@@ -5,12 +5,12 @@
 #include <Engine/Light.h>
 
 namespace CudaTracerLib {
-CUDA_FUNC_IN bool sphere_line_intersection(const Vec3f& p, float rad, const Ray& r, float& t_min, float& t_max)
+CUDA_FUNC_IN bool sphere_line_intersection(const Vec3f& p, float radSqr, const Ray& r, float& t_min, float& t_max)
 {
 	auto d = r.dir();
 	Vec3f oc = r.ori() - p;
 	float f = dot(d, oc);
-	float w = f * f - oc.lenSqr() + rad * rad;
+	float w = f * f - oc.lenSqr() + radSqr;
 	if (w < 0)
 		return false;
 	t_min = -f - math::sqrt(w);
@@ -62,23 +62,21 @@ template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum BeamGrid::L_Volume(float NumEmit
 		m_sBeamGridStorage.ForAllCellEntries(cell_pos, [&](unsigned int, entry beam_idx)
 		{
 			const volPhoton& ph = m_sStorage(beam_idx.getIndex());
-			Vec3f ph_pos = ph.getPos(m_sStorage.getHashGrid(), cell_pos);
+			Vec3f ph_pos = ph.POS;
 			float l1 = dot(ph_pos - r.ori(), r.dir());
 			float isectRadSqr = distanceSquared(ph_pos, r(l1));
 			if (isectRadSqr < ph.getRad() && rayT <= l1 && l1 <= cellEndT)
 			{
-				float p = vol.p(ph_pos, r.dir(), ph.getWi(), rng);
+				//transmittance from camera vertex along ray to query point
 				Spectrum tauToPhoton = (-Tau - vol.tau(r, rayT, l1)).exp();
-
+				float p = vol.p(ph_pos, r.dir(), ph.getWi(), rng);
 				L_n += p * ph.getL() * tauToPhoton / (PI * NumEmitted * ph.getRad());
 			}
 			/*float t1, t2;
-			if (sphere_line_intersection(ph_pos, m_fCurrentRadiusVol, r, t1, t2))
+			if (sphere_line_intersection(ph_pos, ph.getRad(), r, t1, t2))
 			{
-				//transmittance from camera vertex along ray to query point
-				Spectrum tauToPhoton = (-Tau - (l1 >= rayT ? vol.tau(r, rayT, t1) : -vol.tau(r, max(minT, t1), rayT))).exp();//corner case : the photon lies in the cell but the projected distance is before the cell
-				float p = vol.p(r((t1 + t2) / 2), r.direction, ph.getWi(), rng);
-				float Vs = 1.0f / (4.0f / 3.0f * PI * m_fCurrentRadiusVol * m_fCurrentRadiusVol * m_fCurrentRadiusVol * NumEmitted);
+				float Vs = 1.0f / (4.0f / 3.0f * PI * ph.getRad() * math::sqrt(ph.getRad()) * NumEmitted);
+				float p = vol.p(r((t1 + t2) / 2), r.dir(), ph.getWi(), rng);
 				L_n += p * ph.getL() * Vs * (-vol.tau(r, t1, t2)).exp();
 			}*/
 		});

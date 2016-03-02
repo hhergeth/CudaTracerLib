@@ -11,20 +11,24 @@ struct PointStorage : public IVolumeEstimator
 	struct volPhoton
 	{
 		unsigned int flag_type_pos;
+		unsigned int cell_flat_idx;
 		RGBE phi;
 		unsigned short wi;
 		half r;
+		Vec3f POS;
 		CUDA_FUNC_IN volPhoton(){}
 		CUDA_FUNC_IN volPhoton(const Vec3f& p, const NormalizedT<Vec3f>& w, const Spectrum& ph, const HashGrid_Reg& grid, const Vec3u& cell_idx)
 		{
+			POS = p;
 			r = half(0.0f);
 			flag_type_pos = grid.EncodePos(p, cell_idx);
+			cell_flat_idx = grid.FlattenIndex(cell_idx);
 			phi = ph.toRGBE();
 			wi = NormalizedFloat3ToUchar2(w);
 		}
 		CUDA_FUNC_IN Vec3f getPos(const HashGrid_Reg& grid, const Vec3u& cell_idx) const
 		{
-			return grid.DecodePos(flag_type_pos & 0x3fffffff, cell_idx);
+			return grid.FlattenIndex(cell_idx) == cell_flat_idx ? grid.DecodePos(flag_type_pos & 0x3fffffff, cell_idx) : Vec3f(FLT_MAX);
 		}
 		CUDA_FUNC_IN NormalizedT<Vec3f> getWi() const
 		{

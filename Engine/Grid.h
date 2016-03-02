@@ -17,6 +17,10 @@ template<bool REGULAR> struct HashGrid
 	CUDA_FUNC_IN HashGrid(const AABB& box, const Vec3u& gridSize)
 		: m_sBox(box), m_nElements(gridSize.x * gridSize.y * gridSize.z), m_gridDim(gridSize)
 	{
+#ifndef ISCUDA
+		if (gridSize.max() > 1024)
+			throw std::runtime_error("Cannot create grids of size > 1024 due to issues with flattening index!");
+#endif
 		m_vCellSize = m_sBox.Size() / Vec3f((float)m_gridDim.x, (float)m_gridDim.y, (float)m_gridDim.z);
 		m_vInvSize = Vec3f(1.0f) / m_vCellSize;
 	}
@@ -112,6 +116,16 @@ template<bool REGULAR> struct HashGrid
 		Vec3f low = Vec3f((float)i.x, (float)i.y, (float)i.z) * m_vCellSize + m_sBox.minV;
 		Vec3f m = (Vec3f((float)((p & q) >> 16), (float)((p & q2) >> 8), (float)(p & q3)) / 255.0f) * m_vCellSize + low;
 		return m;
+	}
+
+	CUDA_FUNC_IN unsigned int FlattenIndex(const Vec3u& idx) const
+	{
+		return (idx.x << 20) | (idx.y << 10) | (idx.z);
+	}
+
+	CUDA_FUNC_IN Vec3u ExpandIndex(unsigned int flat_idx) const
+	{
+		return Vec3u((flat_idx >> 20) & 0x3ff, (flat_idx >> 10) & 0x3ff, flat_idx & 0x3ff);
 	}
 
 	CUDA_FUNC_IN AABB getAABB() const
