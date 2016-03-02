@@ -65,17 +65,18 @@ template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum BeamGrid::L_Volume(float NumEmit
 			Vec3f ph_pos = ph.POS;
 			float l1 = dot(ph_pos - r.ori(), r.dir());
 			float isectRadSqr = distanceSquared(ph_pos, r(l1));
-			if (isectRadSqr < ph.getRad() && rayT <= l1 && l1 <= cellEndT)
+			float ph_rad1 = ph.getRad1(), ph_rad2 = math::sqr(ph_rad1);
+			if (isectRadSqr < ph_rad2 && rayT <= l1 && l1 <= cellEndT)
 			{
 				//transmittance from camera vertex along ray to query point
 				Spectrum tauToPhoton = (-Tau - vol.tau(r, rayT, l1)).exp();
 				float p = vol.p(ph_pos, r.dir(), ph.getWi(), rng);
-				L_n += p * ph.getL() * tauToPhoton / (PI * NumEmitted * ph.getRad());
+				L_n += p * ph.getL() * tauToPhoton / (PI * NumEmitted * ph_rad2);
 			}
 			/*float t1, t2;
-			if (sphere_line_intersection(ph_pos, ph.getRad(), r, t1, t2))
+			if (sphere_line_intersection(ph_pos, ph_rad2, r, t1, t2))
 			{
-				float Vs = 1.0f / (4.0f / 3.0f * PI * ph.getRad() * math::sqrt(ph.getRad()) * NumEmitted);
+				float Vs = 1.0f / (4.0f / 3.0f * PI * ph_rad2 * ph_rad1 * NumEmitted);
 				float p = vol.p(r((t1 + t2) / 2), r.dir(), ph.getWi(), rng);
 				L_n += p * ph.getL() * Vs * (-vol.tau(r, t1, t2)).exp();
 			}*/

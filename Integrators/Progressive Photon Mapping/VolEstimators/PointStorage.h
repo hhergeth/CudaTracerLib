@@ -40,11 +40,11 @@ struct PointStorage : public IVolumeEstimator
 			s.fromRGBE(phi);
 			return s;
 		}
-		CUDA_FUNC_IN float getRad() const
+		CUDA_FUNC_IN float getRad1() const
 		{
 			return r.ToFloat();
 		}
-		CUDA_FUNC_IN void setRad(float f)
+		CUDA_FUNC_IN void setRad1(float f)
 		{
 			r = half(f);
 		}
