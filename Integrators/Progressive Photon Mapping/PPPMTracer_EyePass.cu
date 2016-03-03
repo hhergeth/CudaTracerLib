@@ -62,9 +62,9 @@ template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum BeamGrid::L_Volume(float NumEmit
 		{
 			const volPhoton& ph = m_sStorage(beam_idx.getIndex());
 			Vec3f ph_pos = ph.POS;
+			float ph_rad1 = ph.getRad1(), ph_rad2 = math::sqr(ph_rad1);
 			float l1 = dot(ph_pos - r.ori(), r.dir());
 			float isectRadSqr = distanceSquared(ph_pos, r(l1));
-			float ph_rad1 = ph.getRad1(), ph_rad2 = math::sqr(ph_rad1);
 			if (isectRadSqr < ph_rad2 && rayT <= l1 && l1 <= cellEndT)
 			{
 				//transmittance from camera vertex along ray to query point

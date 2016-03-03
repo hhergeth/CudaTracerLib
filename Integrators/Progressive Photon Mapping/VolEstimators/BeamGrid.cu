@@ -49,6 +49,9 @@ void BeamGrid::PrepareForRendering()
 	m_sBeamGridStorage.PrepareForUse();
 	ThrowCudaErrors(cudaDeviceSynchronize());
 
+	if (m_sBeamGridStorage.getNumStoredEntries() >= m_sBeamGridStorage.getNumEntries())
+		std::cout << "Warning : Stored " << m_sBeamGridStorage.getNumStoredEntries() << " indices but only capacity for " << m_sBeamGridStorage.getNumEntries() << "!\n";
+
 	/*typedef decltype(m_sBeamGridStorage)::linkedEntry ent;
 	unsigned int N = m_sBeamGridStorage.getNumEntries(), N2 = m_sBeamGridStorage.getHashGrid().m_nElements;
 	static ent* hostData = 0;
