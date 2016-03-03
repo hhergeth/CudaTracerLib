@@ -36,10 +36,6 @@ template<bool REGULAR> struct HashGrid
 	CUDA_FUNC_IN HashGrid(const AABB& box, const Vec3u& gridSize)
 		: m_sBox(box), m_nElements(gridSize.x * gridSize.y * gridSize.z), m_gridDim(gridSize)
 	{
-#ifndef ISCUDA
-		if (gridSize.max() > 1024)
-			throw std::runtime_error("Cannot create grids of size > 1024 due to issues with flattening index!");
-#endif
 		m_vCellSize = m_sBox.Size() / Vec3f((float)m_gridDim.x, (float)m_gridDim.y, (float)m_gridDim.z);
 		m_vInvSize = Vec3f(1.0f) / m_vCellSize;
 	}
@@ -137,14 +133,17 @@ template<bool REGULAR> struct HashGrid
 		return m;
 	}
 
-	CUDA_FUNC_IN unsigned int FlattenIndex(const Vec3u& idx) const
+	template<int LEFT_BITS = 0, typename STORAGE_TYPE> CUDA_FUNC_IN STORAGE_TYPE FlattenIndex(const Vec3u& idx) const
 	{
-		return (idx.x << 20) | (idx.y << 10) | (idx.z);
+		const unsigned int n_bits_per_component = (sizeof(STORAGE_TYPE) * 8 - LEFT_BITS) / 3;
+		return (idx.x << (n_bits_per_component * 2)) | (idx.y << n_bits_per_component) | (idx.z);
 	}
 
-	CUDA_FUNC_IN Vec3u ExpandIndex(unsigned int flat_idx) const
+	template<int LEFT_BITS = 0, typename STORAGE_TYPE> CUDA_FUNC_IN Vec3u ExpandIndex(STORAGE_TYPE flat_idx) const
 	{
-		return Vec3u((flat_idx >> 20) & 0x3ff, (flat_idx >> 10) & 0x3ff, flat_idx & 0x3ff);
+		const unsigned int n_bits_per_component = (sizeof(STORAGE_TYPE) * 8 - LEFT_BITS) / 3;
+		const STORAGE_TYPE mask = (1 << n_bits_per_component) - 1;
+		return Vec3u((flat_idx >> (n_bits_per_component * 2)) & mask, (flat_idx >> n_bits_per_component) & mask, flat_idx & mask);
 	}
 
 	CUDA_FUNC_IN AABB getAABB() const
