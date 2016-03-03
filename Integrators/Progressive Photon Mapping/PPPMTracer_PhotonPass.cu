@@ -119,7 +119,7 @@ template<typename VolEstimator> struct PPPMPhotonParticleProcessHandler
 		numSurfaceInteractions++;
 	}
 
-	CUDA_FUNC_IN void handleMediumSampling(const Spectrum& weight, const NormalizedT<Ray>& r, const TraceResult& r2)
+	CUDA_FUNC_IN void handleMediumSampling(const Spectrum& weight, const NormalizedT<Ray>& r, const TraceResult& r2, const MediumSamplingRecord& mRec, bool sampleInMedium)
 	{
 		bool storeVol = rng.randomFloat() < g_Parameters.probVolume;
 		if (storeVol && ((VolEstimator*)g_VolEstimator)->StoreBeam(Beam(r.ori(), r.dir(), r2.m_fDist, weight)) && !wasStoredVolume)

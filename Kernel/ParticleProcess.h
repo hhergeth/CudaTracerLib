@@ -21,12 +21,12 @@ struct ParticleProcessHandler
 
 	}
 
-	CUDA_FUNC_IN void handleMediumSampling(const Spectrum& weight, const NormalizedT<Ray>& r, const TraceResult& r2)
+	CUDA_FUNC_IN void handleMediumSampling(const Spectrum& weight, const NormalizedT<Ray>& r, const TraceResult& r2, const MediumSamplingRecord& mRec, bool sampleInMedium)
 	{
 
 	}
 
-	CUDA_FUNC_IN void handleMediumInteraction(const Spectrum& weight, MediumSamplingRecord& mRec, const NormalizedT<Vec3f>& wi, const TraceResult& r2)
+	CUDA_FUNC_IN void handleMediumInteraction(const Spectrum& weight, const MediumSamplingRecord& mRec, const NormalizedT<Vec3f>& wi, const TraceResult& r2)
 	{
 
 	}
@@ -70,7 +70,7 @@ template<typename PROCESS> CUDA_FUNC_IN void ParticleProcess(int maxDepth, int r
 		}
 
 		if (sampledDistance)
-			P.handleMediumSampling(power * throughput, r, r2);
+			P.handleMediumSampling(power * throughput, r, r2, mRec, distInMedium);
 
 		if (distInMedium)
 		{

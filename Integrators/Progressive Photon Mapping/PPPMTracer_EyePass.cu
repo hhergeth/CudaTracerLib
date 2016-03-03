@@ -99,13 +99,13 @@ CUDA_CONST CUDA_ALIGN(16) unsigned char g_VolEstimator2[Dmax4(sizeof(PointStorag
 
 template<bool USE_GLOBAL> CUDA_ONLY_FUNC Spectrum beam_beam_L(const VolHelper<USE_GLOBAL>& vol, CudaRNG& rng, const Beam& B, const NormalizedT<Ray>& r, float radius, float beamIsectDist, float queryIsectDist, float beamBeamDistance, int m_uNumEmitted, float sinTheta, float tmin)
 {
+	//radius = radius * sinTheta;
 	Spectrum photon_tau = vol.tau(Ray(B.getPos(), B.getDir()), 0, beamIsectDist);
 	Spectrum camera_tau = vol.tau(r, tmin, queryIsectDist);
 	Spectrum camera_sc = vol.sigma_s(r(queryIsectDist), r.dir());
 	float p = vol.p(r(queryIsectDist), r.dir(), B.getDir(), rng);
-	//return B.Phi / float(m_uNumEmitted) * camera_sc * (-photon_tau).exp() * (-camera_tau).exp() * p * (1 - beamBeamDistance * beamBeamDistance / (radius * radius)) * 3 / (4 * radius*sinTheta);
-	float t = math::clamp01(beamBeamDistance / radius), k = 1.0f + t * t * t * (-6.0f * t * t + 15.0f * t - 10.0f);
-	return camera_sc / radius * p * B.getL() / m_uNumEmitted * (-photon_tau).exp() * (-camera_tau).exp() / sinTheta * k;
+	//return B.getL() / float(m_uNumEmitted) * camera_sc * (-photon_tau).exp() * (-camera_tau).exp() * p * (1 - beamBeamDistance * beamBeamDistance / (radius * radius)) * 3 / (4 * radius*sinTheta);
+	return camera_sc * p * B.getL() / m_uNumEmitted * (-photon_tau).exp() * (-camera_tau).exp() / sinTheta * k_tr<1>(radius, beamBeamDistance);
 }
 
 template<bool USE_GLOBAL> CUDA_ONLY_FUNC Spectrum BeamBeamGrid::L_Volume(float NumEmitted, CudaRNG& rng, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr)

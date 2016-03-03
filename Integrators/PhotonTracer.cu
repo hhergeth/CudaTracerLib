@@ -67,12 +67,12 @@ template<bool CORRECT_DIFFERENTIALS> struct PhotonTracerParticleProcessHandler
 		}
 	}
 
-	CUDA_FUNC_IN void handleMediumSampling(const Spectrum& weight, const NormalizedT<Ray>& r, const TraceResult& r2)
+	CUDA_FUNC_IN void handleMediumSampling(const Spectrum& weight, const NormalizedT<Ray>& r, const TraceResult& r2, const MediumSamplingRecord& mRec, bool sampleInMedium)
 	{
 		
 	}
 
-	CUDA_FUNC_IN void handleMediumInteraction(const Spectrum& weight, MediumSamplingRecord& mRec, const NormalizedT<Vec3f>& wi, const TraceResult& r2)
+	CUDA_FUNC_IN void handleMediumInteraction(const Spectrum& weight, const MediumSamplingRecord& mRec, const NormalizedT<Vec3f>& wi, const TraceResult& r2)
 	{
 		DirectSamplingRecord dRec(mRec.p, NormalizedT<Vec3f>(0.0f));
 		Spectrum value = weight * g_SceneData.sampleAttenuatedSensorDirect(dRec, rng.randomFloat2());
