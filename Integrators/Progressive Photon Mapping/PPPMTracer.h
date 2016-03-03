@@ -76,16 +76,18 @@ private:
 
 	float m_fLightVisibility;
 
-	float m_fInitialRadius;
+	float m_fInitialRadiusSurf, m_fInitialRadiusVol;
 	unsigned int m_uPhotonEmittedPassSurface, m_uPhotonEmittedPassVolume;
 	unsigned long long m_uTotalPhotonsEmitted;
 
 	unsigned int m_uBlocksPerLaunch;
 
+	//adaptive data
 	k_AdaptiveEntry* m_pEntries;
 	float r_min, r_max;
 
 	unsigned int k_Intial;
+	//used when computing intial radius from density
 	float m_fIntitalRadMin, m_fIntitalRadMax;
 	bool m_useDirectLighting;
 	float m_fProbSurface, m_fProbVolume;
@@ -95,6 +97,7 @@ public:
 	PARAMETER_KEY(bool, PerPixelRadius)
 	PARAMETER_KEY(bool, FinalGathering)
 	PARAMETER_KEY(bool, AdaptiveAccProb)
+	PARAMETER_KEY(float, VolRadiusScale)
 
 	CTL_EXPORT PPPMTracer();
 	CTL_EXPORT virtual ~PPPMTracer();
@@ -103,7 +106,11 @@ public:
 	CTL_EXPORT virtual void PrintStatus(std::vector<std::string>& a_Buf) const;
 	virtual float getCurrentRadius(float exp) const
 	{
-		return CudaTracerLib::getCurrentRadius(m_fInitialRadius, m_uPassesDone, exp);
+		return getCurrentRadius(exp, false);
+	}
+	float getCurrentRadius(float exp, bool surf) const
+	{
+		return CudaTracerLib::getCurrentRadius(surf ? m_fInitialRadiusSurf : m_fInitialRadiusVol, m_uPassesDone, exp);
 	}
 	CTL_EXPORT void getRadiusAt(int x, int y, float& r, float& rd) const;
 	void getCurrentRMinRMax(float& rMin, float& rMax) const

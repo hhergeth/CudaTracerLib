@@ -15,7 +15,8 @@ PPPMTracer::PPPMTracer()
 	m_sParameters << KEY_Direct() << CreateSetBool(true)
 		<< KEY_PerPixelRadius()   << CreateSetBool(false)
 		<< KEY_FinalGathering()   << CreateSetBool(false)
-		<< KEY_AdaptiveAccProb()  << CreateSetBool(true);
+		<< KEY_AdaptiveAccProb()  << CreateSetBool(true)
+		<< KEY_VolRadiusScale()   << CreateInterval(1.0f, 0.0f, FLT_MAX);
 #ifdef NDEBUG
 	m_uBlocksPerLaunch = 180;
 #else
@@ -30,6 +31,12 @@ PPPMTracer::PPPMTracer()
 	//m_pVolumeEstimator = new BeamGrid(100, numPhotons, 30, 2);
 	//m_pVolumeEstimator = new BeamBVHStorage(100);
 	//m_pVolumeEstimator = new BeamBeamGrid(10, 10000, 3000);
+	if (m_sParameters.getValue(KEY_AdaptiveAccProb()))
+	{
+		size_t volLength, volCount;
+		m_pVolumeEstimator->getStatusInfo(volLength, volCount);
+		m_fProbVolume = math::clamp01(volLength / (float)m_sSurfaceMap.getNumEntries());
+	}
 }
 
 PPPMTracer::~PPPMTracer()
@@ -106,7 +113,8 @@ void PPPMTracer::StartNewTrace(Image* I)
 	float r = (m_sEyeBox.maxV - m_sEyeBox.minV).sum() / float(w);
 	m_sEyeBox.minV -= Vec3f(r);
 	m_sEyeBox.maxV += Vec3f(r);
-	m_fInitialRadius = r;
+	m_fInitialRadiusSurf = r;
+	m_fInitialRadiusVol = m_fInitialRadiusSurf * m_sParameters.getValue(KEY_VolRadiusScale());
 	AABB volBox = m_pScene->getKernelSceneData().m_sVolume.box;
 	for (auto it : m_pScene->getNodes())
 	{
