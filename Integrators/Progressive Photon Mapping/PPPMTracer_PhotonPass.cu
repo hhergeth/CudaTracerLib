@@ -219,8 +219,10 @@ void PPPMTracer::doPhotonPass()
 	m_pVolumeEstimator->getStatusInfo(volLength, volCount);
 	if (m_sParameters.getValue(KEY_AdaptiveAccProb()))
 	{
-		m_fProbVolume = math::clamp01(m_fProbVolume * (float)m_sSurfaceMap.getNumStoredEntries() / m_sSurfaceMap.getNumEntries());
-		m_fProbSurface = math::clamp01(m_fProbSurface * (float)volCount / volLength);
+		if (m_sSurfaceMap.getNumStoredEntries())
+			m_fProbVolume = math::clamp01(m_fProbVolume * (float)m_sSurfaceMap.getNumStoredEntries() / m_sSurfaceMap.getNumEntries());
+		if (volCount)
+			m_fProbSurface = math::clamp01(m_fProbSurface * (float)volCount / volLength);
 	}
 }
 
