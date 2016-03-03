@@ -340,7 +340,7 @@ template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_Surface2(VCMSurfMap& g_Curren
 		{
 			bRec.wo = bRec.dg.toLocal(ph.getWi());
 			float cor_fac = math::abs(Frame::cosTheta(bRec.wi) / (wiDotGeoN * Frame::cosTheta(bRec.wo)));
-			float ke = k_tr(r, math::sqrt(dist2));
+			float ke = k_tr<2>(r, math::sqrt(dist2));
 			Spectrum l = ph.getL();
 			if (F_IS_GLOSSY)
 				l *= mat->bsdf.f(bRec);

@@ -169,7 +169,7 @@ template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& b
 		{
 			bRec.wo = bRec.dg.toLocal(ph.getWi());
 			float cor_fac = math::abs(Frame::cosTheta(bRec.wi) / (wiDotGeoN * Frame::cosTheta(bRec.wo)));
-			float ke = k_tr(r, math::sqrt(dist2));
+			float ke = k_tr<2>(r, math::sqrt(dist2));
 			Spectrum l = ph.getL();
 			if(F_IS_GLOSSY)
 				l *= mat.bsdf.f(bRec) / Frame::cosTheta(bRec.wo);//bsdf.f returns f * cos(thetha)
@@ -253,7 +253,7 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED
 			ent.E_DI2 = ent.E_DI2 * scaleA + psi * psi * scaleB;
 			if (dist2 < r * r)
 			{
-				float kri = k_tr(r, math::sqrt(dist2));
+				float kri = k_tr<2>(r, math::sqrt(dist2));
 				Lp += kri * ph.getL() / float(g_NumPhotonEmittedSurface2) * bsdfFactor;
 				ent.E_psi = ent.E_psi * scaleA + psi * scaleB;
 				ent.E_psi2 = ent.E_psi2 * scaleA + psi * psi * scaleB;

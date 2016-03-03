@@ -22,14 +22,14 @@ CUDA_FUNC_IN float k(float t)
 	return (1.0f + t * t * t * (-6.0f * t * t + 15.0f * t - 10.0f));
 }
 
-CUDA_FUNC_IN float k_tr(float r, float t)
+template<int D> CUDA_FUNC_IN float k_tr(float r, float t)
 {
-	return k(t / r) / (r * r);
+	return k(t / r) / (D == 1 ? r : (D == 2 ? r * r : (D == 3 ? r * r * r : math::pow(r, (float)D))));
 }
 
 template<typename VEC> CUDA_FUNC_IN float k_tr(float r, const VEC& t)
 {
-	return k_tr(r, length(t));
+	return k_tr<VEC::DIMENSION>(r, length(t));
 }
 
 enum PhotonType
