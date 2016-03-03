@@ -61,7 +61,7 @@ template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum BeamGrid::L_Volume(float NumEmit
 		m_sBeamGridStorage.ForAllCellEntries(cell_pos, [&](unsigned int, entry beam_idx)
 		{
 			const volPhoton& ph = m_sStorage(beam_idx.getIndex());
-			Vec3f ph_pos = ph.POS;
+			Vec3f ph_pos = ph.getPos(m_sStorage.getHashGrid(), cell_pos);
 			float ph_rad1 = ph.getRad1(), ph_rad2 = math::sqr(ph_rad1);
 			float l1 = dot(ph_pos - r.ori(), r.dir());
 			float isectRadSqr = distanceSquared(ph_pos, r(l1));

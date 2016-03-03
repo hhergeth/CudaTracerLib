@@ -10,25 +10,26 @@ struct PointStorage : public IVolumeEstimator
 {
 	struct volPhoton
 	{
-		unsigned int flag_type_pos;
-		unsigned int cell_flat_idx;
+	private:
+		unsigned int flag_type_pos_ll;
 		RGBE phi;
 		unsigned short wi;
 		half r;
-		Vec3f POS;
+		Vec3f Pos;
+	public:
 		CUDA_FUNC_IN volPhoton(){}
 		CUDA_FUNC_IN volPhoton(const Vec3f& p, const NormalizedT<Vec3f>& w, const Spectrum& ph, const HashGrid_Reg& grid, const Vec3u& cell_idx)
 		{
-			POS = p;
+			Pos = p;
 			r = half(0.0f);
-			flag_type_pos = grid.EncodePos(p, cell_idx);
-			cell_flat_idx = grid.FlattenIndex(cell_idx);
+			flag_type_pos_ll = 0;// EncodePos<4, decltype(flag_type_pos_ll)>(grid.getAABB(), p);
+
 			phi = ph.toRGBE();
 			wi = NormalizedFloat3ToUchar2(w);
 		}
 		CUDA_FUNC_IN Vec3f getPos(const HashGrid_Reg& grid, const Vec3u& cell_idx) const
 		{
-			return grid.FlattenIndex(cell_idx) == cell_flat_idx ? grid.DecodePos(flag_type_pos & 0x3fffffff, cell_idx) : Vec3f(FLT_MAX);
+			return Pos;// DecodePos<4>(grid.getAABB(), flag_type_pos_ll);
 		}
 		CUDA_FUNC_IN NormalizedT<Vec3f> getWi() const
 		{
@@ -50,11 +51,11 @@ struct PointStorage : public IVolumeEstimator
 		}
 		CUDA_FUNC_IN bool getFlag() const
 		{
-			return (flag_type_pos >> 31) != 0;
+			return (flag_type_pos_ll & 1) != 0;
 		}
 		CUDA_FUNC_IN void setFlag()
 		{
-			flag_type_pos |= 0x80000000;
+			flag_type_pos_ll |= 1;
 		}
 	};
 	SpatialLinkedMap<volPhoton> m_sStorage;
