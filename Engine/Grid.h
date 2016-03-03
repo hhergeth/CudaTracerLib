@@ -4,6 +4,25 @@
 
 namespace CudaTracerLib {
 
+//leaves the first \arg LEFT_BITS bits in the result empty
+template<int LEFT_BITS = 0, typename SORAGE_TYPE> CUDA_FUNC_IN SORAGE_TYPE EncodePos(const AABB& box, const Vec3f& pos)
+{
+	const unsigned int n_bits_per_component = (sizeof(SORAGE_TYPE) * 8 - LEFT_BITS) / 3;
+	const float scale = (float)((1 << n_bits_per_component) - 1);
+	const auto rel_pos = (pos - box.minV) / box.Size();
+	SORAGE_TYPE x = (SORAGE_TYPE)(rel_pos.x * scale), y = (SORAGE_TYPE)(rel_pos.y * scale), z = (SORAGE_TYPE)(rel_pos.z * scale);
+	return ((x << (2 * n_bits_per_component)) | (y << n_bits_per_component) | z) << LEFT_BITS;
+}
+
+template<int LEFT_BITS = 0, typename SORAGE_TYPE> CUDA_FUNC_IN Vec3f DecodePos(const AABB& box, SORAGE_TYPE pos_encoded)
+{
+	const unsigned int n_bits_per_component = (sizeof(SORAGE_TYPE) * 8 - LEFT_BITS) / 3;
+	const SORAGE_TYPE mask = (1 << n_bits_per_component) - 1;
+	pos_encoded = pos_encoded >> LEFT_BITS;
+	SORAGE_TYPE x = (pos_encoded >> (2 * n_bits_per_component)) & mask, y = (pos_encoded >> n_bits_per_component) & mask, z = pos_encoded & mask;
+	return math::lerp(box.minV, box.maxV, Vec3f((float)x, (float)y, (float)z) / mask);
+}
+
 template<bool REGULAR> struct HashGrid
 {
 	Vec3u m_gridDim;
