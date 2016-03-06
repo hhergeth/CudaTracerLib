@@ -31,7 +31,7 @@ class Lehmer_GENERATOR
 {
 	unsigned int X_i;
 public:
-	CUDA_FUNC_IN explicit Lehmer_GENERATOR(unsigned int seed = 123456789L)
+	CUDA_FUNC_IN explicit Lehmer_GENERATOR(unsigned int seed = 12345)
 	{
 		X_i = seed;
 	}
@@ -63,7 +63,7 @@ class TAUSWORTHE_GENERATOR
 	}
 	unsigned int z1, z2, z3, z4;
 public:
-	CUDA_FUNC_IN explicit TAUSWORTHE_GENERATOR(unsigned int seed)
+	CUDA_FUNC_IN explicit TAUSWORTHE_GENERATOR(unsigned int seed = 12345)
 	{
 		z1 = seed + 1 + 1;
 		z2 = seed + 7 + 1;
@@ -86,7 +86,7 @@ class Xorshift_GENERATOR
 {
 	unsigned int y;
 public:
-	CUDA_FUNC_IN explicit Xorshift_GENERATOR(unsigned int seed)
+	CUDA_FUNC_IN explicit Xorshift_GENERATOR(unsigned int seed = 12345)
 	{
 		y = seed;
 	}
@@ -105,7 +105,7 @@ public:
 	}
 };
 
-struct CudaRNG
+struct Curand_GENERATOR
 {
 	curandState state;
 private:
@@ -281,15 +281,27 @@ private:
 		_curand_init_scratch(seed, subsequence, offset, state, (unsigned int*)scratch);
 	}
 public:
-	CUDA_FUNC_IN explicit CudaRNG() = default;
-	CUDA_FUNC_IN explicit CudaRNG(unsigned int a_Index)
+	CUDA_FUNC_IN explicit Curand_GENERATOR(unsigned int a_Index = 12345)
 	{
 		Initialize(a_Index);
 	}
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST void Initialize(unsigned int a_Index);
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST float randomFloat();
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST unsigned long randomUint();
+};
 
+struct CudaRNG : public Curand_GENERATOR
+{
+	CUDA_FUNC_IN explicit CudaRNG() = default;
+	CUDA_FUNC_IN explicit CudaRNG(unsigned int seed)
+		: Curand_GENERATOR(seed)
+	{
+		
+	}
+	void Initialize(unsigned int a_Index)
+	{
+		*this = CudaRNG(a_Index);
+	}
 	CUDA_FUNC_IN Vec2f randomFloat2()
 	{
 		return Vec2f(randomFloat(), randomFloat());

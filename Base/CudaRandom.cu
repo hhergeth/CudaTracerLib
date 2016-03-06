@@ -4,7 +4,7 @@
 
 namespace CudaTracerLib {
 
-float CudaRNG::randomFloat()
+float Curand_GENERATOR::randomFloat()
 {
 	float f;
 #ifdef ISCUDA
@@ -15,7 +15,7 @@ float CudaRNG::randomFloat()
 	return f * (1 - 1e-5f);//curand_uniform := (0, 1] -> [0, 1)
 }
 
-unsigned long CudaRNG::randomUint()
+unsigned long Curand_GENERATOR::randomUint()
 {
 #ifdef ISCUDA
 	return curand(&state);
@@ -24,7 +24,7 @@ unsigned long CudaRNG::randomUint()
 #endif
 }
 
-void CudaRNG::Initialize(unsigned int a_Index)
+void Curand_GENERATOR::Initialize(unsigned int a_Index)
 {
 #ifdef ISCUDA
 	curand_init(1234, a_Index, 0, &state);
@@ -53,7 +53,7 @@ void CudaRNGBuffer::createGenerators()
 {
 	for (unsigned int i = 0; i < m_uNumGenerators; i++)
 	{
-		(m_pHostGenerators + i)->Initialize(i);
+		m_pHostGenerators[i] = CudaRNG(i);
 	}
 	CUDA_MEMCPY_TO_DEVICE(m_pDeviceGenerators, m_pHostGenerators, sizeof(CudaRNG) * m_uNumGenerators);
 }
