@@ -18,7 +18,8 @@ __global__ void tracePhotons()
 	{
 		DifferentialGeometry dg;
 		BSDFSamplingRecord bRec(dg);
-		r2.getBsdfSample(r, bRec, ETransportMode::EImportance, &rng);
+		Spectrum fi = 1.0f;
+		r2.getBsdfSample(r, bRec, ETransportMode::EImportance, &rng, &fi);
 		Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
 		if (f.isZero())
 			break;
@@ -90,17 +91,18 @@ void PmmTracer::DoRender(Image* I)
 	cudaMemcpyToSymbol(g_sMap, &sMap, sizeof(sMap));
 	while (!sMap.isFull())
 	{
-		tracePhotons << < 20, 256 >> >();
+		tracePhotons << < 10, 256 >> >();
 		cudaMemcpyFromSymbol(&sMap, g_sMap, sizeof(sMap));
 	}
 	cudaMemcpyToSymbol(g_dMap, &dMap, sizeof(dMap));
 	int l = 6;
 	auto L = dMap.m_gridSize / l + 1;
 	updateCache<16> << <dim3(L.x, L.y, L.z), dim3(l, l, l) >> >(ny(passIteration++));
-
+	ThrowCudaErrors(cudaThreadSynchronize());
 	unsigned int p = 16, w, h;
 	I->getExtent(w, h);
 	visualize << <dim3(w / p + 1, h / p + 1, 1), dim3(p, p, 1) >> >(*I, w, h, 20.0f * (float)passIteration);
+	ThrowCudaErrors(cudaThreadSynchronize());
 	int rectWidth = 64;
 	if (modelToShow)
 	{
@@ -109,7 +111,7 @@ void PmmTracer::DoRender(Image* I)
 		visualizePdf << <dim3(8, 8, 1), dim3(8, 8, 1) >> >(*I, rectWidth, rectWidth, w - rectWidth, h - rectWidth, model);
 	}
 
-	cudaError_t r = cudaThreadSynchronize();
+	ThrowCudaErrors(cudaThreadSynchronize());
 }
 
 void PmmTracer::StartNewTrace(Image* I)
@@ -148,6 +150,11 @@ void PmmTracer::Debug(Image* I, const Vec2i& p)
 	k_INITIALIZE(m_pScene, g_sRngs);
 	Ray r = g_SceneData.GenerateSensorRay(p.x, p.y);
 	TraceResult r2 = traceRay(r);
+	if (!r2.hasHit())
+	{
+		modelToShow = 0;
+		return;
+	}
 	Vec3f pa = r(r2.m_fDist);
 	unsigned int idx = dMap.hashMap.Hash(pa);
 	modelToShow = new unsigned int(idx);

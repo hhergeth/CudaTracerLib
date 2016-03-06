@@ -88,8 +88,9 @@ template<int D, int K> struct GaussianMixtureModel
 			for (int i = 0; i < D; i++)
 				for (int j = 0; j < D; j++)
 					coVar(i, j) = rng.randomFloat();
-			coVar = coVar + coVar;
-			coVar = coVar + float(D) * mat::Id();
+			coVar = coVar.transpose() * coVar;
+			//coVar = coVar + coVar;
+			//coVar = coVar + float(D) * mat::Id();
 			return Component(mean, coVar);
 		}
 	};
@@ -167,31 +168,19 @@ template<int D, int K> struct GaussianMixtureModel
 		}
 		CUDA_FUNC_IN SufStat operator*(float f) const
 		{
-			SufStat s;
-			s.u = u * f;
-			s.s = this->s * f;
-			s.ss = ss * f;
-			return s;
+			SufStat r;
+			r.u = u * f;
+			r.s = s * f;
+			r.ss = ss * f;
+			return r;
 		}
 		CUDA_FUNC_IN SufStat operator+(const SufStat& rhs) const
 		{
-			SufStat s;
-			s.u = u + rhs.u;
-			s.s = this->s + rhs.s;
-			s.ss = ss + rhs.ss;
-			return s;
-		}
-		CUDA_FUNC_IN void mul(float f)
-		{
-			u = u * f;
-			s = s * f;
-			ss = ss * f;
-		}
-		CUDA_FUNC_IN void add(const SufStat& stat)
-		{
-			u = u + stat.u;
-			s = s + stat.s;
-			ss = ss + stat.ss;
+			SufStat r;
+			r.u = u + rhs.u;
+			r.s = s + rhs.s;
+			r.ss = ss + rhs.ss;
+			return r;
 		}
 	};
 
@@ -206,6 +195,8 @@ template<int D, int K> struct GaussianMixtureModel
 			mat A = stats[j].s * mu.transpose() + mu * stats[j].s.transpose();
 			mat B = mu * mu.transpose();
 			mat sigma = (b_nI + (stats[j].ss - A + stats[j].u * B) / w) / ((a - 2) / float(n) + stats[j].u / w);
+			if (!sigma.is_symmetric())
+				sigma.id();
 			components[j] = Component(mu, sigma);
 		}
 	}
@@ -227,8 +218,8 @@ template<int D, int K> struct GaussianMixtureModel
 			SufStat s;
 			s.zero();
 			for (int q = 0; q < N; q++)
-				s.add(SufStat(samples[q], gamma[q][j]));
-			s.mul(1.0f / float(N));
+				s = s + SufStat(samples[q], gamma[q][j]);
+			s = s * (1.0f / float(N));
 			stats[j] = stats[j] * (1.0f - ny) + s * ny;
 		}
 		RecomputeFromStats(stats, n_all, w_all);
@@ -310,6 +301,8 @@ struct DirectionModel
 	CUDA_FUNC_IN void Initialze(CudaRNG& rng)
 	{
 		gmm = GaussianMixtureModel<2, K>::Random(rng, VEC<float, 2>() % 0 % 0, VEC<float, 2>() % 1 % 1);
+		for (int i = 0; i < K; i++)
+			stats[i].zero();
 	}
 
 	template<int MAX_SAMPLES> CUDA_FUNC_IN void Update(SpatialLinkedMap<SpatialEntry>& sMap, const Vec3f& mi, const Vec3f& ma, float ny)
