@@ -79,7 +79,7 @@ template<typename PROCESS> CUDA_FUNC_IN void ParticleProcess(int maxDepth, int r
 			if (bssrdf)
 			{
 				PhaseFunctionSamplingRecord pfRec(-r.dir());
-				throughput *= bssrdf->As()->Func.Sample(pfRec, rng);
+				throughput *= bssrdf->As()->Func.Sample(pfRec, rng.randomFloat2());
 				r.dir() = pfRec.wo;
 			}
 			else throughput *= V.Sample(mRec.p, -r.dir(), rng, (NormalizedT<Vec3f>*)&r.dir());

@@ -1343,7 +1343,7 @@ Spectrum hk::sample(BSDFSamplingRecord &bRec, float &_pdf, const Vec2f &_sample)
 
 		/* Sample According to the phase function lobes */
 		PhaseFunctionSamplingRecord pRec(bRec.wi, bRec.wo);
-		m_phase.Sample(pRec, _pdf, *bRec.rng);
+		m_phase.Sample(pRec, _pdf, sample);
 
 		/* Store the sampled direction */
 		bRec.wo = pRec.wo;

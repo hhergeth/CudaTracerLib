@@ -12,10 +12,8 @@ float HGPhaseFunction::Evaluate(const PhaseFunctionSamplingRecord &pRec) const
 	return (1.0f / (4.0f * PI)) * (1 - m_g*m_g) / (temp * math::sqrt(temp));
 }
 
-float HGPhaseFunction::Sample(PhaseFunctionSamplingRecord &pRec, CudaRNG& sampler) const
+float HGPhaseFunction::Sample(PhaseFunctionSamplingRecord &pRec, const Vec2f& sample) const
 {
-	Vec2f sample = sampler.randomFloat2();
-
 	float cosTheta;
 	if (math::abs(m_g) < EPSILON)
 	{
@@ -40,9 +38,9 @@ float HGPhaseFunction::Sample(PhaseFunctionSamplingRecord &pRec, CudaRNG& sample
 	return 1.0f;
 }
 
-float HGPhaseFunction::Sample(PhaseFunctionSamplingRecord &pRec, float &pdf, CudaRNG& sampler) const
+float HGPhaseFunction::Sample(PhaseFunctionSamplingRecord &pRec, float &pdf, const Vec2f& sample) const
 {
-	HGPhaseFunction::Sample(pRec, sampler);
+	HGPhaseFunction::Sample(pRec, sample);
 	pdf = HGPhaseFunction::Evaluate(pRec);
 	return 1.0f;
 }
@@ -52,16 +50,15 @@ float IsotropicPhaseFunction::Evaluate(const PhaseFunctionSamplingRecord &pRec) 
 	return Warp::squareToUniformSpherePdf();
 }
 
-float IsotropicPhaseFunction::Sample(PhaseFunctionSamplingRecord &pRec, CudaRNG& sampler) const
+float IsotropicPhaseFunction::Sample(PhaseFunctionSamplingRecord &pRec, const Vec2f& sample) const
 {
-	Vec2f sample = sampler.randomFloat2();
 	pRec.wo = Warp::squareToUniformSphere(sample);
 	return 1.0f;
 }
 
-float IsotropicPhaseFunction::Sample(PhaseFunctionSamplingRecord &pRec, float &pdf, CudaRNG& sampler) const
+float IsotropicPhaseFunction::Sample(PhaseFunctionSamplingRecord &pRec, float &pdf, const Vec2f& sample) const
 {
-	pRec.wo = Warp::squareToUniformSphere(sampler.randomFloat2());
+	pRec.wo = Warp::squareToUniformSphere(sample);
 	pdf = Warp::squareToUniformSpherePdf();
 	return 1.0f;
 }
@@ -112,15 +109,15 @@ float KajiyaKayPhaseFunction::Evaluate(const PhaseFunctionSamplingRecord &pRec) 
 	return math::pow(max(0.0f, dot(R, pRec.wo)), m_exponent) * m_normalization * m_ks + m_kd / (4 * PI);
 }
 
-float KajiyaKayPhaseFunction::Sample(PhaseFunctionSamplingRecord &pRec, CudaRNG& sampler) const
+float KajiyaKayPhaseFunction::Sample(PhaseFunctionSamplingRecord &pRec, const Vec2f& sample) const
 {
-	pRec.wo = Warp::squareToUniformSphere(sampler.randomFloat2());
+	pRec.wo = Warp::squareToUniformSphere(sample);
 	return Evaluate(pRec) * (4 * PI);
 }
 
-float KajiyaKayPhaseFunction::Sample(PhaseFunctionSamplingRecord &pRec, float &pdf, CudaRNG& sampler) const
+float KajiyaKayPhaseFunction::Sample(PhaseFunctionSamplingRecord &pRec, float &pdf, const Vec2f& sample) const
 {
-	pRec.wo = Warp::squareToUniformSphere(sampler.randomFloat2());
+	pRec.wo = Warp::squareToUniformSphere(sample);
 	pdf = Warp::squareToUniformSpherePdf();
 	return Evaluate(pRec) * (4 * PI);
 }
@@ -131,10 +128,8 @@ float RayleighPhaseFunction::Evaluate(const PhaseFunctionSamplingRecord &pRec) c
 	return (3.0f / (16.0f*PI)) * (1 + mu*mu);
 }
 
-float RayleighPhaseFunction::Sample(PhaseFunctionSamplingRecord &pRec, CudaRNG& sampler) const
+float RayleighPhaseFunction::Sample(PhaseFunctionSamplingRecord &pRec, const Vec2f& sample) const
 {
-	Vec2f sample(sampler.randomFloat2());
-
 	float z = 2 * (2 * sample.x - 1),
 		tmp = math::sqrt(z*z + 1),
 		A = math::pow(z + tmp, (float)(1.0f / 3.0f)),
@@ -153,9 +148,9 @@ float RayleighPhaseFunction::Sample(PhaseFunctionSamplingRecord &pRec, CudaRNG& 
 	return 1.0f;
 }
 
-float RayleighPhaseFunction::Sample(PhaseFunctionSamplingRecord &pRec, float &pdf, CudaRNG& sampler) const
+float RayleighPhaseFunction::Sample(PhaseFunctionSamplingRecord &pRec, float &pdf, const Vec2f& sample) const
 {
-	RayleighPhaseFunction::Sample(pRec, sampler);
+	RayleighPhaseFunction::Sample(pRec, sample);
 	pdf = RayleighPhaseFunction::Evaluate(pRec);
 	return 1.0f;
 }

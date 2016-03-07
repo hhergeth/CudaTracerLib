@@ -298,7 +298,7 @@ float KernelAggregateVolume::Sample(const Vec3f& p, const NormalizedT<Vec3f>& wo
 		if (m_pVolumes[i].WorldBound().Contains(p))
 		{
 			float pdf;
-			float pf = m_pVolumes[i].As()->Func.Sample(r2, pdf, rng);
+			float pf = m_pVolumes[i].As()->Func.Sample(r2, pdf, rng.randomFloat2());
 			*wi = r2.wo;
 			return pf;
 		}
@@ -315,6 +315,7 @@ float KernelAggregateVolume::p(const Vec3f& p, const NormalizedT<Vec3f>& wo, con
 	return 0.0f;
 }
 
+//http://stackoverflow.com/questions/7669057/find-nth-set-bit-in-an-int
 CUDA_FUNC_IN int ffsn(unsigned int v, int n) {
 	for (int i = 0; i<n - 1; i++) {
 		v &= v - 1; // remove the least significant bit
