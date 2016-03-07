@@ -13,6 +13,12 @@ unsigned int MonteCarlo::sampleReuse(float *cdf, unsigned int size, float &sampl
 	return index;
 }
 
+void MonteCarlo::sampleReuse(unsigned int N, float& pdf, unsigned int& slot)
+{
+	slot = int(pdf * N);
+	pdf = pdf * N - slot;
+}
+
 void MonteCarlo::stratifiedSample1D(CudaRNG& random, float *dest, int count, bool jitter)
 {
 	float invCount = 1.0f / count;

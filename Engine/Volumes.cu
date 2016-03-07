@@ -3,6 +3,7 @@
 #include <Base/CudaRandom.h>
 #include "Samples.h"
 #include "Grid.h"
+#include <Math/Sampling.h>
 
 namespace CudaTracerLib {
 
@@ -38,8 +39,8 @@ bool HomogeneousVolumeDensity::sampleDistance(const Ray& ray, float minT, float 
 	if (m_mediumSamplingWeight > 0)
 		m_mediumSamplingWeight = max(m_mediumSamplingWeight, 0.5f);
 	float sampledDistance = FLT_MAX;
-	int channel = int(rand * SPECTRUM_SAMPLES);
-	rand = rand * SPECTRUM_SAMPLES - channel;
+	unsigned int channel;
+	MonteCarlo::sampleReuse(SPECTRUM_SAMPLES, rand, channel);
 	if (rand < m_mediumSamplingWeight)
 	{
 		rand /= m_mediumSamplingWeight;

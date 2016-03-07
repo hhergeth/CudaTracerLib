@@ -266,6 +266,8 @@ public:
 
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST static unsigned int sampleReuse(float *cdf, unsigned int size, float &sample, float& pdf);
 
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST static void sampleReuse(unsigned int N, float& pdf, unsigned int& slot);
+
 	//http://gamedev.stackexchange.com/questions/23743/whats-the-most-efficient-way-to-find-barycentric-coordinates
 	// point p with respect to triangle (a, b, c)
 	CUDA_FUNC_IN static bool Barycentric(const Vec3f& p, const Vec3f& a, const Vec3f& b, const Vec3f& c, float& u, float& v)
