@@ -298,7 +298,7 @@ struct CudaRNG : public Curand_GENERATOR
 	{
 		
 	}
-	void Initialize(unsigned int a_Index)
+	CUDA_FUNC_IN void Initialize(unsigned int a_Index)
 	{
 		*this = CudaRNG(a_Index);
 	}
@@ -323,7 +323,6 @@ private:
 	CudaRNG* m_pHostGenerators;
 	CudaRNG* m_pDeviceGenerators;
 public:
-	//curandSetGeneratorOffset(GENERATOR[i], i * a_Offset);
 	CTL_EXPORT explicit CudaRNGBuffer(unsigned int a_Length);
 	CudaRNGBuffer(){}
 	CTL_EXPORT void Free();
