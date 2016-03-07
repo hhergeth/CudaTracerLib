@@ -308,7 +308,7 @@ float KernelAggregateVolume::Sample(const Vec3f& p, const NormalizedT<Vec3f>& wo
 
 float KernelAggregateVolume::p(const Vec3f& p, const NormalizedT<Vec3f>& wo, const NormalizedT<Vec3f>& wi, CudaRNG& rng) const
 {
-	PhaseFunctionSamplingRecord r2(wo, wi);
+	PhaseFunctionSamplingRecord r2(wi, wo);
 	for(unsigned int i = 0; i < m_uVolumeCount; i++)
 		if (m_pVolumes[i].WorldBound().Contains(p))
 			return m_pVolumes[i].As()->Func.Evaluate(r2);
