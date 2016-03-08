@@ -7,19 +7,19 @@
 
 namespace CudaTracerLib {
 
-bool BaseVolumeRegion::IntersectP(const Ray &ray, const float minT, const float maxT, float *t0, float *t1) const
+bool BaseVolumeRegion::IntersectP(const Ray &ray, float minT, float maxT, float *t0, float *t1) const
 {
 	Ray r = ray * WorldToVolume;
-	bool b = AABB(Vec3f(0), Vec3f(1)).Intersect(r, t0, t1);
+	bool b = AABB(Vec3f(0), Vec3f(1)).Intersect<true>(r, &minT, &maxT);
 	if(b)
 	{
-		*t0 = math::clamp(*t0, minT, maxT);
-		*t1 = math::clamp(*t1, minT, maxT);
+		if (t0) *t0 = minT;
+		if (t1) *t1 = maxT;
 	}
-	return b && *t1 > *t0 && *t1 > 0;
+	return b;
 }
 
-Spectrum HomogeneousVolumeDensity::tau(const Ray &ray, const float minT, const float maxT) const
+Spectrum HomogeneousVolumeDensity::tau(const Ray &ray, float minT, float maxT) const
 {
 	float t0, t1;
 	if (!IntersectP(ray, minT, maxT, &t0, &t1))
