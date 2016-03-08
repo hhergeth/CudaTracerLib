@@ -209,12 +209,11 @@ template<bool USE_GLOBAL> struct VolHelper
 		else return vol->tau(ray, minT, maxT);
 	}
 
-	CUDA_FUNC_IN float p(const Vec3f& p, const NormalizedT<Vec3f>& wo, const NormalizedT<Vec3f>& wi, CudaRNG& rng) const
+	CUDA_FUNC_IN float p(const Vec3f& p, const PhaseFunctionSamplingRecord& pRec) const
 	{
-		PhaseFunctionSamplingRecord rec(wi, wo);
 		if (USE_GLOBAL)
-			return g_SceneData.m_sVolume.p(p, wo, wi, rng);
-		else return vol->As()->Func.Evaluate(rec);
+			return g_SceneData.m_sVolume.p(p, pRec);
+		else return vol->As()->Func.Evaluate(pRec);
 	}
 };
 

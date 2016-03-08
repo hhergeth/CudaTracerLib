@@ -365,10 +365,16 @@ public:
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum tau(const Ray &ray, float minT, float maxT) const;
 
 	///Samples the combined phase functions
-	CTL_EXPORT CUDA_DEVICE CUDA_HOST float Sample(const Vec3f& p, const NormalizedT<Vec3f>& wo, CudaRNG& rng, NormalizedT<Vec3f>* wi) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST float Sample(const Vec3f& p, PhaseFunctionSamplingRecord& pRec, float& pdf, const Vec2f& sample) const;
+
+	CUDA_FUNC_IN float Sample(const Vec3f& p, PhaseFunctionSamplingRecord& pRec, const Vec2f& sample) const
+	{
+		float pdf;
+		return Sample(p, pRec, pdf, sample);
+	}
 
 	///Computes the combined phase function value
-	CTL_EXPORT CUDA_DEVICE CUDA_HOST float p(const Vec3f& p, const NormalizedT<Vec3f>& wo, const NormalizedT<Vec3f>& wi, CudaRNG& rng) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST float p(const Vec3f& p, const PhaseFunctionSamplingRecord& pRec) const;
 
 	///Samples a distance in the combined medium
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST bool sampleDistance(const Ray& ray, float minT, float maxT, CudaRNG& rng, MediumSamplingRecord& mRec) const;

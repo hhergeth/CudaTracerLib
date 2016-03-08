@@ -76,13 +76,11 @@ template<typename PROCESS> CUDA_FUNC_IN void ParticleProcess(int maxDepth, int r
 		{
 			throughput *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
 			P.handleMediumInteraction(power * throughput, mRec, -r.dir(), r2);
+			PhaseFunctionSamplingRecord pfRec(-r.dir());
 			if (bssrdf)
-			{
-				PhaseFunctionSamplingRecord pfRec(-r.dir());
 				throughput *= bssrdf->As()->Func.Sample(pfRec, rng.randomFloat2());
-				r.dir() = pfRec.wo;
-			}
-			else throughput *= V.Sample(mRec.p, -r.dir(), rng, (NormalizedT<Vec3f>*)&r.dir());
+			else throughput *= V.Sample(mRec.p, pfRec, rng.randomFloat2());
+			r.dir() = pfRec.wo;
 			r.ori() = mRec.p;
 		}
 		else if (!r2.hasHit())

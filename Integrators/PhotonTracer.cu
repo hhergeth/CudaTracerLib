@@ -78,7 +78,8 @@ template<bool CORRECT_DIFFERENTIALS> struct PhotonTracerParticleProcessHandler
 		Spectrum value = weight * g_SceneData.sampleAttenuatedSensorDirect(dRec, rng.randomFloat2());
 		if (!value.isZero() && V(dRec.p, dRec.ref))
 		{
-			value *= g_SceneData.m_sVolume.p(mRec.p, wi, (dRec.ref - dRec.p).normalized(), rng);
+			PhaseFunctionSamplingRecord pRec(wi, dRec.d);
+			value *= g_SceneData.m_sVolume.p(mRec.p, pRec);
 			if (!value.isZero())
 				g_Image.Splat(dRec.uv.x, dRec.uv.y, value);
 		}

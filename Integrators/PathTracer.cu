@@ -33,7 +33,8 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(NormalizedT<Ray>& r, const
 				Spectrum value = g_SceneData.sampleAttenuatedEmitterDirect(dRec, rnd.randomFloat2());
 				if (!value.isZero())
 				{
-					float p = V.p(mRec.p, -r.dir(), dRec.d, rnd);
+					PhaseFunctionSamplingRecord pRec(-r.dir(), dRec.d);
+					float p = V.p(mRec.p, pRec);
 					if (p != 0 && !g_SceneData.Occluded(Ray(dRec.ref, dRec.d), 0, dRec.dist))
 					{
 						const float bsdfPdf = p;//phase functions are normalized
@@ -43,9 +44,9 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(NormalizedT<Ray>& r, const
 				}
 			}
 
-			NormalizedT<Vec3f> dir;
-			cf *= V.Sample(mRec.p, -r.dir(), rnd, &dir);
-			r.dir() = dir;
+			PhaseFunctionSamplingRecord pRec(-r.dir());
+			cf *= V.Sample(mRec.p, pRec, rnd.randomFloat2());
+			r.dir() = pRec.wo;
 			r.ori() = mRec.p;
 		}
 		else if (r2.hasHit())

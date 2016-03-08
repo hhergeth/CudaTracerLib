@@ -290,31 +290,25 @@ Spectrum KernelAggregateVolume::tau(const Ray &ray, float minT, float maxT) cons
 	return s;
 }
 
-float KernelAggregateVolume::Sample(const Vec3f& p, const NormalizedT<Vec3f>& wo, CudaRNG& rng, NormalizedT<Vec3f>* wi) const
+float KernelAggregateVolume::Sample(const Vec3f& p, PhaseFunctionSamplingRecord& pRec, float& pdf, const Vec2f& _sample) const
 {
-	float vol_sample_pdf = 0; float sample = rng.randomFloat();
-	const auto* vol = sampleVolume(Ray(p, wo), 0, FLT_MAX, sample, vol_sample_pdf);
+	Vec2f sample = _sample;
+	float vol_sample_pdf = 0;
+	const auto* vol = sampleVolume(Ray(p, pRec.wi), 0, FLT_MAX, sample.x, vol_sample_pdf);
 	if (vol)
-	{
-		float sample_pdf;
-		PhaseFunctionSamplingRecord pRec(wo, *wi);
-		float pf_val = vol->As()->Func.Sample(pRec, sample_pdf, rng.randomFloat2());
-		*wi = pRec.wo;
-		return pf_val;
-	}
+		return vol->As()->Func.Sample(pRec, pdf, sample);
 	else return 0.0f;
 }
 
-float KernelAggregateVolume::p(const Vec3f& p, const NormalizedT<Vec3f>& wo, const NormalizedT<Vec3f>& wi, CudaRNG& rng) const
+float KernelAggregateVolume::p(const Vec3f& p, const PhaseFunctionSamplingRecord& pRec) const
 {
-	PhaseFunctionSamplingRecord r2(wi, wo);
 	float ph = 0, sumWt = 0;
 	for(unsigned int i = 0; i < m_uVolumeCount; i++)
 		if (m_pVolumes[i].WorldBound().Contains(p))
 		{
-			float wt = m_pVolumes[i].sigma_s(p, wo).average();
+			float wt = m_pVolumes[i].sigma_s(p, pRec.wo).average();
 			sumWt += wt;
-			ph += wt * m_pVolumes[i].As()->Func.Evaluate(r2);
+			ph += wt * m_pVolumes[i].As()->Func.Evaluate(pRec);
 		}
 	return sumWt != 0 ? ph / sumWt : 0.0f;
 }

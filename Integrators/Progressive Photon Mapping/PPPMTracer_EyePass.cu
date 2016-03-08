@@ -39,7 +39,8 @@ template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum PointStorage::L_Volume(float Num
 			Vec3f ph_pos = ph.getPos(m_sStorage.getHashGrid(), cell_idx);
 			if (distanceSquared(ph_pos, x) < m_fCurrentRadiusVol * m_fCurrentRadiusVol)
 			{
-				float p = vol.p(x, -r.dir(), ph.getWi(), rng);
+				PhaseFunctionSamplingRecord pRec(-r.dir(), ph.getWi());
+				float p = vol.p(x, pRec);
 				L_i += p * ph.getL() * Vs;
 			}
 		});
@@ -69,7 +70,8 @@ template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum BeamGrid::L_Volume(float NumEmit
 			{
 				//transmittance from camera vertex along ray to query point
 				Spectrum tauToPhoton = (-Tau - vol.tau(r, rayT, l1)).exp();
-				float p = vol.p(ph_pos, r.dir(), ph.getWi(), rng);
+				PhaseFunctionSamplingRecord pRec(-r.dir(), ph.getWi());
+				float p = vol.p(ph_pos, pRec);
 				L_n += p * ph.getL() * tauToPhoton / (PI * NumEmitted * ph_rad2);
 			}
 			/*float t1, t2;
@@ -102,7 +104,8 @@ template<bool USE_GLOBAL> CUDA_ONLY_FUNC Spectrum beam_beam_L(const VolHelper<US
 	Spectrum photon_tau = vol.tau(Ray(B.getPos(), B.getDir()), 0, beamIsectDist);
 	Spectrum camera_tau = vol.tau(r, tmin, queryIsectDist);
 	Spectrum camera_sc = vol.sigma_s(r(queryIsectDist), r.dir());
-	float p = vol.p(r(queryIsectDist), r.dir(), B.getDir(), rng);
+	PhaseFunctionSamplingRecord pRec(-r.dir(), B.getDir());
+	float p = vol.p(r(queryIsectDist), pRec);
 	//return B.getL() / float(m_uNumEmitted) * camera_sc * (-photon_tau).exp() * (-camera_tau).exp() * p * (1 - beamBeamDistance * beamBeamDistance / (radius * radius)) * 3 / (4 * radius*sinTheta);
 	return camera_sc * p * B.getL() / m_uNumEmitted * (-photon_tau).exp() * (-camera_tau).exp() / sinTheta * k_tr<1>(radius, beamBeamDistance);
 }
