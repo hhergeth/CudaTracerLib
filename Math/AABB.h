@@ -117,7 +117,9 @@ struct AABB
 		return b;
 	}
 
-	CUDA_FUNC_IN bool Intersect_FMA(const Vec3f& I, const Vec3f& OI, float* min = 0, float* max = 0) const
+	///ref \USE_BOUNDS specifies whether to use *min, *max as bounds to test the intersection
+	///If an argument is passed the resulting intersection range will be stored there
+	template<bool USE_BOUNDS = false> CUDA_FUNC_IN bool Intersect_FMA(const Vec3f& I, const Vec3f& OI, float* min = 0, float* max = 0) const
 	{
 		float tx1 = minV.x * I.x - OI.x;
 		float tx2 = maxV.x * I.x - OI.x;
@@ -125,8 +127,8 @@ struct AABB
 		float ty2 = maxV.y * I.y - OI.y;
 		float tz1 = minV.z * I.z - OI.z;
 		float tz2 = maxV.z * I.z - OI.z;
-		float mi = kepler_math::spanBeginKepler(tx1, tx2, ty1, ty2, tz1, tz2, 0);
-		float ma = kepler_math::spanEndKepler(tx1, tx2, ty1, ty2, tz1, tz2, FLT_MAX);
+		float mi = kepler_math::spanBeginKepler(tx1, tx2, ty1, ty2, tz1, tz2, USE_BOUNDS ? *min : 0);
+		float ma = kepler_math::spanEndKepler(tx1, tx2, ty1, ty2, tz1, tz2, USE_BOUNDS ? *max : FLT_MAX);
 		bool b = ma > mi && ma > 0;
 		if (min && b)
 			*min = mi;
@@ -135,7 +137,9 @@ struct AABB
 		return b;
 	}
 
-	CUDA_FUNC_IN bool Intersect(const Vec3f& m_Dir, const Vec3f& m_Ori, float* min = 0, float* max = 0) const
+	///ref \USE_BOUNDS specifies whether to use *min, *max as bounds to test the intersection
+	///If an argument is passed the resulting intersection range will be stored there
+	template<bool USE_BOUNDS = false> CUDA_FUNC_IN bool Intersect(const Vec3f& m_Dir, const Vec3f& m_Ori, float* min = 0, float* max = 0) const
 	{
 		float tx1 = (minV.x - m_Ori.x) / m_Dir.x;
 		float tx2 = (maxV.x - m_Ori.x) / m_Dir.x;
@@ -143,8 +147,8 @@ struct AABB
 		float ty2 = (maxV.y - m_Ori.y) / m_Dir.y;
 		float tz1 = (minV.z - m_Ori.z) / m_Dir.z;
 		float tz2 = (maxV.z - m_Ori.z) / m_Dir.z;
-		float mi = kepler_math::spanBeginKepler(tx1, tx2, ty1, ty2, tz1, tz2, 0);
-		float ma = kepler_math::spanEndKepler(tx1, tx2, ty1, ty2, tz1, tz2, FLT_MAX);
+		float mi = kepler_math::spanBeginKepler(tx1, tx2, ty1, ty2, tz1, tz2, USE_BOUNDS ? *min : 0);
+		float ma = kepler_math::spanEndKepler(tx1, tx2, ty1, ty2, tz1, tz2, USE_BOUNDS ? *max : FLT_MAX);
 		bool b = ma > mi && ma > 0;
 		if (min && b)
 			*min = mi;
@@ -153,9 +157,11 @@ struct AABB
 		return b;
 	}
 
-	CUDA_FUNC_IN bool Intersect(const Ray& r, float* min = 0, float* max = 0) const
+	///ref \USE_BOUNDS specifies whether to use *min, *max as bounds to test the intersection
+	///If an argument is passed the resulting intersection range will be stored there
+	template<bool USE_BOUNDS = false> CUDA_FUNC_IN bool Intersect(const Ray& r, float* min = 0, float* max = 0) const
 	{
-		return Intersect(r.dir(), r.ori(), min, max);
+		return Intersect<USE_BOUNDS>(r.dir(), r.ori(), min, max);
 	}
 
 	friend std::ostream& operator<< (std::ostream & os, const AABB& rhs)
