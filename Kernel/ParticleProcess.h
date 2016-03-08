@@ -34,7 +34,7 @@ struct ParticleProcessHandler
 
 */
 
-template<typename PROCESS> CUDA_FUNC_IN void ParticleProcess(int maxDepth, int rrStartDepth, CudaRNG& rng, PROCESS& P)
+template<bool PARTICIPATING_MEDIA = true, bool SUBSURFACE_SCATTERING = true, typename PROCESS> CUDA_FUNC_IN void ParticleProcess(int maxDepth, int rrStartDepth, CudaRNG& rng, PROCESS& P)
 {
 	PositionSamplingRecord pRec;
 	Spectrum power = g_SceneData.sampleEmitterPosition(pRec, rng.randomFloat2()), throughput = Spectrum(1.0f);
@@ -58,7 +58,7 @@ template<typename PROCESS> CUDA_FUNC_IN void ParticleProcess(int maxDepth, int r
 		TraceResult r2 = traceRay(r);
 		float minT, maxT;
 		bool distInMedium = false, sampledDistance = false;
-		if (!bssrdf && V.HasVolumes() && V.IntersectP(r, 0, r2.m_fDist, &minT, &maxT))
+		if (PARTICIPATING_MEDIA && !bssrdf && V.HasVolumes() && V.IntersectP(r, 0, r2.m_fDist, &minT, &maxT))
 		{
 			sampledDistance = true;
 			distInMedium = V.sampleDistance(r, 0, r2.m_fDist, rng, mRec);
@@ -94,7 +94,7 @@ template<typename PROCESS> CUDA_FUNC_IN void ParticleProcess(int maxDepth, int r
 			r2.getBsdfSample(wo, r(r2.m_fDist), bRec, ETransportMode::EImportance, &rng, &f_i);
 			P.handleSurfaceInteraction(power * throughput, r, r2, bRec, !!bssrdf);
 			Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
-			if (!bssrdf && r2.getMat().GetBSSRDF(bRec.dg, &bssrdf))
+			if (SUBSURFACE_SCATTERING && !bssrdf && r2.getMat().GetBSSRDF(bRec.dg, &bssrdf))
 				bRec.wo.z *= -1.0f;
 			else
 			{
