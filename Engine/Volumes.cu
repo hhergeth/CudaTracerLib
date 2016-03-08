@@ -292,27 +292,31 @@ Spectrum KernelAggregateVolume::tau(const Ray &ray, float minT, float maxT) cons
 
 float KernelAggregateVolume::Sample(const Vec3f& p, const NormalizedT<Vec3f>& wo, CudaRNG& rng, NormalizedT<Vec3f>* wi) const
 {
-	PhaseFunctionSamplingRecord r2(wo);
-	r2.wi = wo;
-	for(unsigned int i = 0; i < m_uVolumeCount; i++)
-		if (m_pVolumes[i].WorldBound().Contains(p))
-		{
-			float pdf;
-			float pf = m_pVolumes[i].As()->Func.Sample(r2, pdf, rng.randomFloat2());
-			*wi = r2.wo;
-			return pf;
-		}
-		
-	return 0.0f;
+	float vol_sample_pdf = 0; float sample = rng.randomFloat();
+	const auto* vol = sampleVolume(Ray(p, wo), 0, FLT_MAX, sample, vol_sample_pdf);
+	if (vol)
+	{
+		float sample_pdf;
+		PhaseFunctionSamplingRecord pRec(wo, *wi);
+		float pf_val = vol->As()->Func.Sample(pRec, sample_pdf, rng.randomFloat2());
+		*wi = pRec.wo;
+		return pf_val;
+	}
+	else return 0.0f;
 }
 
 float KernelAggregateVolume::p(const Vec3f& p, const NormalizedT<Vec3f>& wo, const NormalizedT<Vec3f>& wi, CudaRNG& rng) const
 {
 	PhaseFunctionSamplingRecord r2(wi, wo);
+	float ph = 0, sumWt = 0;
 	for(unsigned int i = 0; i < m_uVolumeCount; i++)
 		if (m_pVolumes[i].WorldBound().Contains(p))
-			return m_pVolumes[i].As()->Func.Evaluate(r2);
-	return 0.0f;
+		{
+			float wt = m_pVolumes[i].sigma_s(p, wo).average();
+			sumWt += wt;
+			ph += wt * m_pVolumes[i].As()->Func.Evaluate(r2);
+		}
+	return sumWt != 0 ? ph / sumWt : 0.0f;
 }
 
 //http://stackoverflow.com/questions/7669057/find-nth-set-bit-in-an-int
@@ -325,25 +329,16 @@ CUDA_FUNC_IN int ffsn(unsigned int v, int n) {
 
 bool KernelAggregateVolume::sampleDistance(const Ray& ray, float minT, float maxT, CudaRNG& rng, MediumSamplingRecord& mRec) const
 {
-	if (m_uVolumeCount == 1 && m_pVolumes[0].WorldBound().Intersect(ray))
-		return m_pVolumes[0].sampleDistance(ray, minT, maxT, rng.randomFloat(), mRec);
-	else if (m_uVolumeCount == 1)
-		return false;
-
-	float n = 0;
-	unsigned int flag = 0;
-	for (unsigned int i = 0; i < m_uVolumeCount; i++)
-		if (m_pVolumes[i].WorldBound().Intersect(ray))
-		{
-			n++;
-			flag |= 1 << i;
-		}
-	if (!n)
-		return 0;
-	float sample = rng.randomFloat();
-	int nth = int(sample * n);
-	int i = ffsn(flag, nth);
-	return m_pVolumes[i].sampleDistance(ray, minT, maxT, rng.randomFloat(), mRec);
+	float vol_sample_pdf = 0; float sample = rng.randomFloat();
+	const auto* vol = sampleVolume(ray, minT, maxT, sample, vol_sample_pdf);
+	if(vol && vol->sampleDistance(ray, minT, maxT, rng.randomFloat(), mRec))
+	{
+		//mRec.pdfSuccess *= vol_sample_pdf;
+		//mRec.pdfSuccessRev *= vol_sample_pdf;
+		//mRec.pdfFailure *= vol_sample_pdf;
+		return true;
+	}
+	else return false;
 }
 
 KernelAggregateVolume::KernelAggregateVolume(Stream<VolumeRegion>* D, bool devicePointer)
@@ -357,6 +352,30 @@ KernelAggregateVolume::KernelAggregateVolume(Stream<VolumeRegion>* D, bool devic
 	box = AABB::Identity();
 	for (unsigned int i = 0; i < m_uVolumeCount; i++)
 		box = box.Extend(D->operator()(i)->WorldBound());
+}
+
+const VolumeRegion* KernelAggregateVolume::sampleVolume(const Ray& ray, float minT, float maxT, float& sample, float& pdf) const
+{
+	if (m_uVolumeCount == 0)
+		return 0;
+	else if (m_uVolumeCount == 1)
+		return m_pVolumes[0].WorldBound().Intersect<true>(ray, &minT, &maxT) ? m_pVolumes : 0;
+
+	unsigned int n = 0;
+	unsigned int flag = 0;
+	for (unsigned int i = 0; i < m_uVolumeCount; i++)
+		if (m_pVolumes[i].WorldBound().Intersect<true>(ray, &minT, &maxT))//the pointers will only be set in case true is returned
+		{
+			n++;
+			flag |= 1 << i;
+		}
+	if (!n)
+		return 0;
+	unsigned int nth;
+	MonteCarlo::sampleReuse(n, sample, nth);
+	int i = ffsn(flag, nth);
+	pdf = 1.0f / n;
+	return m_pVolumes + i;
 }
 
 }

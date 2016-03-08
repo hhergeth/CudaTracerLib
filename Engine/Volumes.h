@@ -353,25 +353,27 @@ public:
 	///Calculates the intersection of the ray with the bound of the volume
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST bool IntersectP(const Ray &ray, float minT, float maxT, float *t0, float *t1) const;
 
-	///The probability that light is abosrbed per unit distance
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sigma_a(const Vec3f& p, const NormalizedT<Vec3f>& w) const;
 
-	///The probability that light is scattered per unit distance
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sigma_s(const Vec3f& p, const NormalizedT<Vec3f>& w) const;
 
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum Lve(const Vec3f& p, const NormalizedT<Vec3f>& w) const;
 
-	///Combined sigmas
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sigma_t(const Vec3f &p, const NormalizedT<Vec3f> &wo) const;
 
 	///Calculates the volumes optical thickness along a ray in the volumes bounds
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum tau(const Ray &ray, float minT, float maxT) const;
 
+	///Samples the combined phase functions
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST float Sample(const Vec3f& p, const NormalizedT<Vec3f>& wo, CudaRNG& rng, NormalizedT<Vec3f>* wi) const;
 
+	///Computes the combined phase function value
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST float p(const Vec3f& p, const NormalizedT<Vec3f>& wo, const NormalizedT<Vec3f>& wi, CudaRNG& rng) const;
 
+	///Samples a distance in the combined medium
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST bool sampleDistance(const Ray& ray, float minT, float maxT, CudaRNG& rng, MediumSamplingRecord& mRec) const;
+
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST const VolumeRegion* sampleVolume(const Ray& ray, float minT, float maxT, float& sample, float& pdf) const;
 
 	CUDA_FUNC_IN bool HasVolumes() const
 	{
