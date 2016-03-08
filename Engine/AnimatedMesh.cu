@@ -2,7 +2,6 @@
 #include "AnimatedMesh.h"
 #include "BVHRebuilder.h"
 #include "TriangleData.h"
-#include "Material.h"
 #include "TriIntersectorData.h"
 
 namespace CudaTracerLib {

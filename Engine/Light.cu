@@ -1,10 +1,9 @@
 #include <stdafx.h>
 #include "Buffer.h"
 #include "Light.h"
-#include "Mesh.h"
 #include "MIPMap.h"
 #include <Math/Sampling.h>
-#include "TriangleData.h"
+#include <Math/Warp.h>
 
 namespace CudaTracerLib {
 

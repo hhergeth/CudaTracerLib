@@ -4,6 +4,7 @@
 #include "TriIntersectorData.h"
 #include "TriangleData.h"
 #include <Kernel/TraceHelper.h>
+#include <Math/Warp.h>
 
 namespace CudaTracerLib {
 

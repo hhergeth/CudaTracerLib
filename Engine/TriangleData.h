@@ -1,9 +1,10 @@
 #pragma once
 
 #include <Math/float4x4.h>
-#include "Material.h"
 
 namespace CudaTracerLib {
+
+struct DifferentialGeometry;
 
 #ifdef EXT_TRI
 struct TriangleData

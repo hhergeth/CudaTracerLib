@@ -1,6 +1,7 @@
 #include "TriangleData.h"
 #include <Math/Compression.h>
 #include <Math/half.h>
+#include "DifferentialGeometry.h"
 
 namespace CudaTracerLib {
 
