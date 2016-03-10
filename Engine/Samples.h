@@ -166,7 +166,6 @@ struct PhaseFunctionSamplingRecord
 
 struct BSDFSamplingRecord
 {
-	CudaRNG* rng;
 	DifferentialGeometry& dg;
 	/// Normalized incident direction in local coordinates
 	NormalizedT<Vec3f> wi;

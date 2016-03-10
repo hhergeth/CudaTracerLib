@@ -51,7 +51,7 @@ template<bool CORRECT_DIFFERENTIALS> struct PhotonTracerParticleProcessHandler
 				NormalizedT<Ray> r, rX, rY;
 				g_SceneData.sampleSensorRay(r, rX, rY, dRec.uv, Vec2f(0));
 				auto oldWi = bRec.wi;
-				r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng, 0, &dRec.d);
+				r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, 0, &dRec.d);
 				bRec.dg.computePartials(r, rX, rY);
 				bRec.wi = oldWi;
 			}

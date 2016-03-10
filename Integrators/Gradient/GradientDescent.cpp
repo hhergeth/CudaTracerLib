@@ -15,7 +15,7 @@ void TracePath(NormalizedT<Ray> r, std::vector<PathVertex*>& p, int N2, ETranspo
 	{
 		SurfacePathVertex v(r2);
 		BSDFSamplingRecord bRec(v.dg);
-		r2.getBsdfSample(r, bRec, mode, &rng);
+		r2.getBsdfSample(r, bRec, mode);
 		Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
 		v.hasSampledDelta = (bRec.sampledType & ETypeCombinations::EDelta) != 0;
 		p.push_back(new SurfacePathVertex(v));

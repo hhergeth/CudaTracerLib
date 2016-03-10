@@ -8,12 +8,12 @@
 
 namespace CudaTracerLib {
 
-void TraceResult::getBsdfSample(const NormalizedT<Ray>& r, BSDFSamplingRecord& bRec, ETransportMode mode, CudaRNG* rng, const Spectrum* f_i, const NormalizedT<Vec3f>* wo) const
+void TraceResult::getBsdfSample(const NormalizedT<Ray>& r, BSDFSamplingRecord& bRec, ETransportMode mode, const Spectrum* f_i, const NormalizedT<Vec3f>* wo) const
 {
-	getBsdfSample(r.dir(), r(m_fDist), bRec, mode, rng, f_i, wo);
+	getBsdfSample(r.dir(), r(m_fDist), bRec, mode, f_i, wo);
 }
 
-void TraceResult::getBsdfSample(const NormalizedT<Vec3f>& wi, const Vec3f& p, BSDFSamplingRecord& bRec, ETransportMode mode, CudaRNG* rng, const Spectrum* f_i, const NormalizedT<Vec3f>* wo) const
+void TraceResult::getBsdfSample(const NormalizedT<Vec3f>& wi, const Vec3f& p, BSDFSamplingRecord& bRec, ETransportMode mode, const Spectrum* f_i, const NormalizedT<Vec3f>* wo) const
 {
 	if (f_i)
 		bRec.f_i = *f_i;
@@ -22,7 +22,6 @@ void TraceResult::getBsdfSample(const NormalizedT<Vec3f>& wi, const Vec3f& p, BS
 		bRec.f_i = Spectrum(0.0f);
 		CTL_ASSERT(mode == ETransportMode::ERadiance);
 	}
-	bRec.rng = rng;
 	bRec.eta = 1.0f;
 	bRec.mode = mode;
 	bRec.sampledType = 0;

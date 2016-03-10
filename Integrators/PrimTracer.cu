@@ -34,7 +34,7 @@ CUDA_FUNC_IN void computePixel(int x, int y, CudaRNG& rng, Image g_Image, bool d
 		{
 			DifferentialGeometry dg;
 			BSDFSamplingRecord bRec(dg);
-			prim_res.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
+			prim_res.getBsdfSample(r, bRec, ETransportMode::ERadiance);
 			dg.computePartials(r, rX, rY);
 
 			if (mode == PathTrace_DrawMode::v_absdot_n_geo)
@@ -75,7 +75,7 @@ CUDA_FUNC_IN void computePixel(int x, int y, CudaRNG& rng, Image g_Image, bool d
 						through *= Transmittance(r, 0, prim_res.m_fDist);
 						if (prim_res.hasHit())
 						{
-							prim_res.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
+							prim_res.getBsdfSample(r, bRec, ETransportMode::ERadiance);
 							f = prim_res.getMat().bsdf.sample(bRec, rng.randomFloat2());
 							if (!prim_res.getMat().bsdf.hasComponent(ESmooth))
 								through *= f;

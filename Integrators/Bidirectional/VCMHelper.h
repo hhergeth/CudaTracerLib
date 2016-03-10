@@ -95,7 +95,6 @@ struct BPTVertex
 		dg = other.dg;
 		bRec.eta = other.bRec.eta;
 		bRec.mode = other.bRec.mode;
-		bRec.rng = other.bRec.rng;
 		bRec.sampledType = other.bRec.sampledType;
 		bRec.typeMask = other.bRec.typeMask;
 		bRec.wi = other.bRec.wi;

@@ -25,7 +25,6 @@ BSDFSamplingRecord& BSDFSamplingRecord::operator=(const BSDFSamplingRecord& othe
 	for (int i = 0; i < NUM_UV_SETS; i++)
 		dg.uv[i] = other.dg.uv[i];
 
-	rng = other.rng;
 	wi = other.wi;
 	wo = other.wo;
 	eta = other.eta;

@@ -62,7 +62,7 @@ CUDA_GLOBAL void extendLighRays(unsigned int N, BPTVertex* g_pLightVertices, Ima
 			res.toResult(&r2, g_SceneData);
 			BPTVertex v;
 			v.mat = 0;
-			r2.getBsdfSample(ent.state.r, v.bRec, ETransportMode::EImportance, &rng, &ent.state.throughput);
+			r2.getBsdfSample(ent.state.r, v.bRec, ETransportMode::EImportance, &ent.state.throughput);
 
 			if (vOff > 1 || true)
 				ent.state.dVCM *= r2.m_fDist * r2.m_fDist;
@@ -193,7 +193,7 @@ CUDA_GLOBAL void performPPMEstimate(unsigned int N, float a_Radius, float nPhoto
 			TraceResult r2;
 			res.toResult(&r2, g_SceneData);
 
-			r2.getBsdfSample(ent.state.r, bRec, ETransportMode::ERadiance, &rng);
+			r2.getBsdfSample(ent.state.r, bRec, ETransportMode::ERadiance);
 
 			ent.state.dVCM *= r2.m_fDist * r2.m_fDist;
 			ent.state.dVCM /= math::abs(Frame::cosTheta(bRec.wi));
@@ -226,7 +226,7 @@ CUDA_GLOBAL void extendCameraRays(unsigned int N, Image I, int iteration, bool l
 			TraceResult r2;
 			res.toResult(&r2, g_SceneData);
 
-			r2.getBsdfSample(ent.state.r, bRec, ETransportMode::ERadiance, &rng);
+			r2.getBsdfSample(ent.state.r, bRec, ETransportMode::ERadiance);
 
 			ent.state.dVCM *= r2.m_fDist * r2.m_fDist;
 			ent.state.dVCM /= math::abs(Frame::cosTheta(bRec.wi));
@@ -255,7 +255,6 @@ CUDA_GLOBAL void extendCameraRays(unsigned int N, Image I, int iteration, bool l
 					lv.bRec = BSDFSamplingRecord(lv.dg);
 					lv.bRec.eta = v.bRec.eta;
 					lv.bRec.mode = v.bRec.mode;
-					lv.bRec.rng = v.bRec.rng;
 					lv.bRec.sampledType = v.bRec.sampledType;
 					lv.bRec.typeMask = v.bRec.typeMask;
 					lv.bRec.wi = v.bRec.wi;

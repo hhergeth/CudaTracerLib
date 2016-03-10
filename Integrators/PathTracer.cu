@@ -53,7 +53,7 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(NormalizedT<Ray>& r, const
 		{
 			if (isInMedium)
 				cf *= mRec.transmittance / mRec.pdfFailure;
-			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rnd);
+			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance);
 			if (depth == 1)
 				dg.computePartials(r, rX, rY);
 			if (!DIRECT || (depth == 1 || specularBounce))
@@ -90,7 +90,7 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTraceRegularization(NormalizedT<
 	//bool hadDelta = false;
 	while (traceRay(r.dir(), r.ori(), &r2) && depth++ < 7)
 	{
-		r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rnd);// return (Spectrum(bRec.map.sys.n) + Spectrum(1)) / 2.0f; //return bRec.map.sys.n;
+		r2.getBsdfSample(r, bRec, ETransportMode::ERadiance);// return (Spectrum(bRec.map.sys.n) + Spectrum(1)) / 2.0f; //return bRec.map.sys.n;
 		if (depth == 1)
 			dg.computePartials(r, rX, rY);
 		if (!DIRECT || (depth == 1 || specularBounce))

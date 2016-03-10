@@ -97,7 +97,7 @@ template<bool PARTICIPATING_MEDIA = true, bool SUBSURFACE_SCATTERING = true, typ
 				throughput *= mRec.transmittance / mRec.pdfFailure;
 			auto wo = bssrdf ? -r.dir() : r.dir();
 			Spectrum f_i = power * throughput;
-			r2.getBsdfSample(wo, r(r2.m_fDist), bRec, ETransportMode::EImportance, &rng, &f_i);
+			r2.getBsdfSample(wo, r(r2.m_fDist), bRec, ETransportMode::EImportance, &f_i);
 			P.handleSurfaceInteraction(power * throughput, r, r2, bRec, !!bssrdf);
 			Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
 			if (SUBSURFACE_SCATTERING && !bssrdf && r2.getMat().GetBSSRDF(bRec.dg, &bssrdf))

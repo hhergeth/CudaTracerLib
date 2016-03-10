@@ -11,7 +11,6 @@ struct TriangleData;
 struct Material;
 struct BSDFSamplingRecord;
 enum ETransportMode : int;
-struct CudaRNG;
 struct Frame;
 struct Spectrum;
 
@@ -40,9 +39,9 @@ struct TraceResult
 
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST void fillDG(DifferentialGeometry& dg) const;
 	//wi towards p, wo away
-	CTL_EXPORT CUDA_DEVICE CUDA_HOST void getBsdfSample(const NormalizedT<Ray>& r, BSDFSamplingRecord& bRec, ETransportMode mode, CudaRNG* rng, const Spectrum* f_i = 0, const NormalizedT<Vec3f>* wo = 0) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST void getBsdfSample(const NormalizedT<Ray>& r, BSDFSamplingRecord& bRec, ETransportMode mode, const Spectrum* f_i = 0, const NormalizedT<Vec3f>* wo = 0) const;
 	//wi towards p, wo away
-	CTL_EXPORT CUDA_DEVICE CUDA_HOST void getBsdfSample(const NormalizedT<Vec3f>& wi, const Vec3f& p, BSDFSamplingRecord& bRec, ETransportMode mode, CudaRNG* rng, const Spectrum* f_i = 0, const NormalizedT<Vec3f>* wo = 0) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST void getBsdfSample(const NormalizedT<Vec3f>& wi, const Vec3f& p, BSDFSamplingRecord& bRec, ETransportMode mode, const Spectrum* f_i = 0, const NormalizedT<Vec3f>* wo = 0) const;
 };
 
 }

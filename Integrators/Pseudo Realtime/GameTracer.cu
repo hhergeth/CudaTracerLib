@@ -40,7 +40,7 @@ __global__ void primaryKernelBlocked(int width, int height, Image g_Image, bool 
 				primaryRay = r_i;
 				primaryRes = r2_i;
 				primary_rays_hit++;
-				primaryRes.getBsdfSample(primaryRay, bRec, ETransportMode::ERadiance, &rng);
+				primaryRes.getBsdfSample(primaryRay, bRec, ETransportMode::ERadiance);
 				uv_sets[i] = dg.uv[0];
 				primary_Le += primaryRes.Le(dg.P, bRec.dg.sys, -primaryRay.dir());
 			}
@@ -93,7 +93,7 @@ __global__ void primaryKernelBlocked(int width, int height, Image g_Image, bool 
 			{
 				DifferentialGeometry indirect_dg;
 				BSDFSamplingRecord indirect_bRec(indirect_dg);
-				indirect_res.getBsdfSample(indirect_ray, indirect_bRec, ETransportMode::ERadiance, &rng);
+				indirect_res.getBsdfSample(indirect_ray, indirect_bRec, ETransportMode::ERadiance);
 				float pdf;
 				Vec2f sample = rng.randomFloat2();
 				const Light* light = g_SceneData.sampleEmitter(pdf, sample);

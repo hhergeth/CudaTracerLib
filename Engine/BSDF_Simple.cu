@@ -540,6 +540,9 @@ Spectrum roughdielectric::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec
 #endif
 
 	/* Sample M, the microsurface normal */
+	unsigned int N_REUSE = 10, slot;
+	MonteCarlo::sampleReuse(N_REUSE, sample.x, slot);
+	float sample_z = slot / (float)N_REUSE;
 	float microfacetPDF;
 	const auto m = m_distribution.sample(sample,
 		sampleAlphaU, sampleAlphaV, microfacetPDF);
@@ -553,8 +556,7 @@ Spectrum roughdielectric::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec
 	float F = MonteCarlo::fresnelDielectricExt(dot(bRec.wi, m), cosThetaT, m_eta);
 
 	if (hasReflection && hasTransmission) {
-		CudaRNG* rng = bRec.rng;
-		if (rng->randomFloat() > F) {
+		if (sample_z > F) {
 			sampleReflection = false;
 			pdf *= 1 - F;
 		}

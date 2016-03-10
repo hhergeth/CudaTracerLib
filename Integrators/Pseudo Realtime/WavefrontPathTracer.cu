@@ -107,7 +107,7 @@ template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(unsigned int N, 
 			res.toResult(&r2, g_SceneData);
 			DifferentialGeometry dg;
 			BSDFSamplingRecord bRec(dg);
-			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
+			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance);
 			if (pathDepth == 0 || dat.dIdx == UINT_MAX)
 				dat.L += r2.Le(bRec.dg.P, bRec.dg.sys, -r.dir()) * dat.throughput;
 			if (pathDepth + 1 != maxPathDepth)

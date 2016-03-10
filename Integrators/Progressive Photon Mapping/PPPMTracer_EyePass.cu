@@ -201,7 +201,7 @@ template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_SurfaceFinalGathering(BSDFSam
 		TraceResult r3 = traceRay(r);
 		if (r3.hasHit())
 		{
-			r3.getBsdfSample(r, bRec2, ETransportMode::ERadiance, &rng);
+			r3.getBsdfSample(r, bRec2, ETransportMode::ERadiance);
 			bool hasGlossy = r3.getMat().bsdf.hasComponent(EGlossy);
 			L += f * (hasGlossy ? L_Surface<true>(bRec2, -r.dir(), rad, r3.getMat()) : L_Surface<false>(bRec2, -r.dir(), rad, r3.getMat()));
 			if (DIRECT)
@@ -300,7 +300,7 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 		Spectrum L(0.0f);
 		while (traceRay(r.dir(), r.ori(), &r2) && depth++ < 5)
 		{
-			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
+			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance);
 			if (depth == 0)
 				dg.computePartials(r, rX, rY);
 			if (g_SceneData.m_sVolume.HasVolumes())
@@ -458,7 +458,7 @@ __global__ void k_PerPixelRadiusEst(int w, int h, float r_max, float r_1, k_Adap
 		if (r2.hasHit())
 		{
 			const float search_rad = r_1;
-			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance, &rng);
+			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance);
 			auto f_t = bRec.dg.sys.t * search_rad, f_s = bRec.dg.sys.s * search_rad;
 			Vec3f a = -1.0f * f_t - f_s, b = f_t - f_s, c = -1.0f * f_t + f_s, d = f_t + f_s;
 			Vec3f low = min(min(a, b), min(c, d)) + bRec.dg.P, high = max(max(a, b), max(c, d)) + bRec.dg.P;
