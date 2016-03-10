@@ -94,6 +94,17 @@ template<typename T> CTL_EXPORT CUDA_FUNC_IN void swapk(T& a, T& b)
 	b = q;
 }
 
+CUDA_FUNC_IN unsigned int getGlobalIdx_2D_2D()
+{
+#ifdef ISCUDA
+	unsigned int blockId = blockIdx.x + blockIdx.y * gridDim.x;
+	unsigned int threadId = blockId * (blockDim.x * blockDim.y) + (threadIdx.y * blockDim.x) + threadIdx.x;
+	return threadId;
+#else
+	return 0u;
+#endif
+}
+
 #define Dmax2(A, B) ((A) > (B) ? (A) : (B))
 #define Dmax3(A, B, C) Dmax2(Dmax2(A, B), C)
 #define Dmax4(A, B, C, D) Dmax2(Dmax3(A, B, C), D)

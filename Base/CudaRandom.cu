@@ -58,18 +58,6 @@ void CudaRNGBuffer::createGenerators()
 	CUDA_MEMCPY_TO_DEVICE(m_pDeviceGenerators, m_pHostGenerators, sizeof(CudaRNG) * m_uNumGenerators);
 }
 
-CUDA_FUNC_IN unsigned int getGlobalIdx_2D_2D()
-{
-#ifdef ISCUDA
-	unsigned int blockId = blockIdx.x + blockIdx.y * gridDim.x;
-	unsigned int threadId = blockId * (blockDim.x * blockDim.y) + (threadIdx.y * blockDim.x) + threadIdx.x;
-	return threadId;
-#else
-	return 0u;
-#endif
-}
-
-
 CudaRNG CudaRNGBuffer::operator()()
 {
 	unsigned int idx = getGlobalIdx_2D_2D();
