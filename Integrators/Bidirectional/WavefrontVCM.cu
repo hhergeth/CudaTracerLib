@@ -32,7 +32,7 @@ CUDA_DEVICE k_WVCM_CamBuffer g_sCamBufA, g_sCamBufB;
 
 CUDA_GLOBAL void createLightRays(unsigned int g_DeviceNumLightPaths)
 {
-	CudaRNG rng = g_RNGData();
+	CudaRNG rng = g_SamplerData();
 	unsigned int idx = blockIdx.x * blockDim.x * blockDim.y + threadIdx.y * blockDim.x + threadIdx.x;
 	if (idx < g_DeviceNumLightPaths)
 	{
@@ -44,12 +44,12 @@ CUDA_GLOBAL void createLightRays(unsigned int g_DeviceNumLightPaths)
 		g_sLightBufA.operator()(idx, 0).a = Vec4f(state.r.ori(), 0);
 		g_sLightBufA.operator()(idx, 0).b = Vec4f(state.r.dir(), FLT_MAX);
 	}
-	g_RNGData(rng);
+	g_SamplerData(rng);
 }
 
 CUDA_GLOBAL void extendLighRays(unsigned int N, BPTVertex* g_pLightVertices, Image I, int iteration)
 {
-	CudaRNG rng = g_RNGData();
+	CudaRNG rng = g_SamplerData();
 	unsigned int idx = blockIdx.x * blockDim.x * blockDim.y + threadIdx.y * blockDim.x + threadIdx.x;
 	if (idx < N)
 	{
@@ -98,13 +98,12 @@ CUDA_GLOBAL void extendLighRays(unsigned int N, BPTVertex* g_pLightVertices, Ima
 			}
 		}
 	}
-	g_RNGData(rng);
+	g_SamplerData(rng);
 }
 
 void WavefrontVCM::DoRender(Image* I)
 {
 	m_uLightOff = 0;
-	k_INITIALIZE(m_pScene, g_sRngs);
 	float a_Radius = this->getCurrentRadius(2);
 	const float etaVCM = (PI * a_Radius * a_Radius) * m_uNumLightRays;
 	float MisVmWeightFactor = 1;
@@ -160,7 +159,7 @@ void WavefrontVCM::StartNewTrace(Image* I)
 
 CUDA_GLOBAL void createCameraRays(int xoff, int yoff, int blockW, int blockH, int w, int h)
 {
-	CudaRNG rng = g_RNGData();
+	CudaRNG rng = g_SamplerData();
 	Vec2i pixel = TracerBase::getPixelPos(xoff, yoff);
 	unsigned int idx = (pixel.y - yoff) * blockW + (pixel.x - xoff);
 	if (pixel.x < w && pixel.y < h)
@@ -175,14 +174,14 @@ CUDA_GLOBAL void createCameraRays(int xoff, int yoff, int blockW, int blockH, in
 		g_sCamBufA.operator()(idx, 0).a = Vec4f(state.r.ori(), 0);
 		g_sCamBufA.operator()(idx, 0).b = Vec4f(state.r.dir(), FLT_MAX);
 	}
-	g_RNGData(rng);
+	g_SamplerData(rng);
 }
 
 CUDA_GLOBAL void performPPMEstimate(unsigned int N, float a_Radius, float nPhotons)
 {
 	DifferentialGeometry dg;
 	BSDFSamplingRecord bRec(dg);
-	CudaRNG rng = g_RNGData();
+	CudaRNG rng = g_SamplerData();
 	unsigned int idx = blockIdx.x * blockDim.x * blockDim.y + threadIdx.y * blockDim.x + threadIdx.x;
 	if (idx < N)
 	{
@@ -207,14 +206,14 @@ CUDA_GLOBAL void performPPMEstimate(unsigned int N, float a_Radius, float nPhoto
 			g_sCamBufA(idx).acc = ent.acc + ent.state.throughput * phL;
 		}
 	}
-	g_RNGData(rng);
+	g_SamplerData(rng);
 }
 
 CUDA_GLOBAL void extendCameraRays(unsigned int N, Image I, int iteration, bool lastIteration, float a_Radius, unsigned int lightOff, unsigned int numLightPaths, BPTVertex* g_pLightVertices)
 {
 	DifferentialGeometry dg;
 	BSDFSamplingRecord bRec(dg);
-	CudaRNG rng = g_RNGData();
+	CudaRNG rng = g_SamplerData();
 	unsigned int idx = blockIdx.x * blockDim.x * blockDim.y + threadIdx.y * blockDim.x + threadIdx.x;
 	if (idx < N)
 	{
@@ -276,7 +275,7 @@ CUDA_GLOBAL void extendCameraRays(unsigned int N, Image I, int iteration, bool l
 		if (!extended)
 			I.AddSample(ent.x, ent.y, ent.acc);
 	}
-	g_RNGData(rng);
+	g_SamplerData(rng);
 }
 
 void WavefrontVCM::RenderBlock(Image* I, int x, int y, int blockW, int blockH)

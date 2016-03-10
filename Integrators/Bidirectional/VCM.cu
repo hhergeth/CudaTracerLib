@@ -119,10 +119,10 @@ CUDA_FUNC_IN void _VCM(const Vec2f& pixelPosition, BlockSampleImage& img, CudaRN
 __global__ void pathKernel(unsigned int w, unsigned int h, int xoff, int yoff, BlockSampleImage img, float a_Radius, int a_NumIteration, float nPhotons)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x + xoff, y = blockIdx.y * blockDim.y + threadIdx.y + yoff;
-	CudaRNG rng = g_RNGData();
+	CudaRNG rng = g_SamplerData();
 	if (x < w && y < h)
 		_VCM(Vec2f(x, y), img, rng, w, h, a_Radius, a_NumIteration, nPhotons);
-	g_RNGData(rng);
+	g_SamplerData(rng);
 }
 
 void VCM::RenderBlock(Image* I, int x, int y, int blockW, int blockH)

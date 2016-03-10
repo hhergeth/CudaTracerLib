@@ -9,7 +9,7 @@ CUDA_DEVICE SpatialSet<DirectionModel> g_dMap;
 
 __global__ void tracePhotons()
 {
-	CudaRNG rng = g_RNGData();
+	CudaRNG rng = g_SamplerData();
 	TraceResult r2;
 	NormalizedT<Ray> r;
 	g_SceneData.sampleEmitterRay(r, rng.randomFloat2(), rng.randomFloat2());
@@ -31,7 +31,7 @@ __global__ void tracePhotons()
 		r = NormalizedT<Ray>(p, bRec.getOutgoing());
 		r2.Init();
 	}
-	g_RNGData(rng);
+	g_SamplerData(rng);
 }
 
 template<int max_SAMPLES> __global__ void updateCache(float ny)
@@ -122,13 +122,13 @@ void PmmTracer::StartNewTrace(Image* I)
 	sMap.SetSceneDimensions(box);
 	dMap.ResetBuffer();
 	dMap.SetSceneDimensions(box);
-	CudaRNG rng = g_RNGData();
+	CudaRNG rng = g_SamplerData();
 	DirectionModel* models = new DirectionModel[dMap.NumEntries()];
 	for (unsigned int i = 0; i < dMap.NumEntries(); i++)
 		models[i].Initialze(rng);
 	cudaMemcpy(dMap.deviceData, models, dMap.NumEntries() * sizeof(DirectionModel), cudaMemcpyHostToDevice);
 	delete[] models;
-	g_RNGData(rng);
+	g_SamplerData(rng);
 }
 
 void PmmTracer::Debug(Image* I, const Vec2i& p)
@@ -147,7 +147,7 @@ void PmmTracer::Debug(Image* I, const Vec2i& p)
 	CUDA_FREE(deviceNum);
 	plotPoints(directions, N);*/
 
-	k_INITIALIZE(m_pScene, g_sRngs);
+	k_INITIALIZE(m_pScene);
 	Ray r = g_SceneData.GenerateSensorRay(p.x, p.y);
 	TraceResult r2 = traceRay(r);
 	if (!r2.hasHit())

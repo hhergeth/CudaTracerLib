@@ -5,22 +5,9 @@
 
 namespace CudaTracerLib {
 
-CudaRNGBuffer TracerBase::g_sRngs;
-static bool initrng = false;
-
-void TracerBase::InitRngs(unsigned int N)
-{
-	if (!initrng)
-	{
-		initrng = 1;
-		g_sRngs = CudaRNGBuffer(N);
-	}
-}
-
 TracerBase::TracerBase()
 	: m_pScene(0), m_pBlockSampler(0)
 {
-	InitRngs(15000);
 	ThrowCudaErrors(cudaEventCreate(&start));
 	ThrowCudaErrors(cudaEventCreate(&stop));
 	m_sParameters << KEY_SamplerActive() << CreateSetBool(false);

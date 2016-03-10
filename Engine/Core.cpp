@@ -7,12 +7,14 @@
 #include <cuda_runtime.h>
 #define FREEIMAGE_LIB
 #include <FreeImage.h>
+#include <Kernel/TraceHelper.h>
 
 namespace CudaTracerLib {
 
 void InitializeCuda4Tracer(const std::string& dataPath)
 {
 	ThrowCudaErrors(cudaFree(0));
+	InitializeKernel();
 	SpectrumHelper::StaticInitialize();
 	FreeImage_Initialise();
 	RoughTransmittanceManager::StaticInitialize(dataPath);
@@ -20,7 +22,7 @@ void InitializeCuda4Tracer(const std::string& dataPath)
 
 void DeInitializeCuda4Tracer()
 {
-	TracerBase::g_sRngs.Free();
+	DeinitializeKernel();
 	FreeImage_DeInitialise();
 	SpectrumHelper::StaticDeinitialize();
 	RoughTransmittanceManager::StaticDeinitialize();

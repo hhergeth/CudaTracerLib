@@ -2,7 +2,6 @@
 #include <Math/Compression.h>
 #include <Math/half.h>
 #include "cuda_runtime.h"
-#include <Engine/Sensor.h>
 #include <Engine/Mesh.h>
 #include <Engine/TriangleData.h>
 #include <Engine/Material.h>
@@ -21,13 +20,11 @@ enum
 
 KernelDynamicScene g_SceneDataDevice;
 unsigned int g_RayTracedCounterDevice;
-Sensor g_CameraDataDevice;
-CudaRNGBuffer g_RNGDataDevice;
+SamplerData g_SamplerDataDevice;
 
 KernelDynamicScene g_SceneDataHost;
 unsigned int g_RayTracedCounterHost;
-Sensor g_CameraDataHost;
-CudaRNGBuffer g_RNGDataHost;
+SamplerData g_SamplerDataHost;
 
 texture<float4, 1>		t_nodesA;
 texture<float4, 1>		t_tris;
@@ -166,10 +163,26 @@ bool traceRay(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result)
 	return g_SceneData.doAlphaMapping ? __traceRay_internal__<true>(dir, ori, a_Result) : __traceRay_internal__<false>(dir, ori, a_Result);
 }
 
-void k_INITIALIZE(DynamicScene* a_Scene, const CudaRNGBuffer& a_RngBuf)
+void k_INITIALIZE(DynamicScene* a_Scene, ISamplingSequenceGenerator* sampler)
 {
 	if (!a_Scene)
 		return;
+#ifdef SEQUENCE_SAMPLER
+	if (sampler)
+		sampler->Compute(g_SamplerDataHost);
+	else
+	{
+		static CudaRNG rng = CudaRNG();
+		for (int i = 0; i < SamplerData::NUM_SEQUENCES; i++)
+		{
+			for (int j = 0; j < SamplerData::LEN_SEQUENCE; j++)
+			{
+				g_SamplerDataHost.dim1(i)[j] = rng.randomFloat();
+				g_SamplerDataHost.dim2(i)[j] = rng.randomFloat2();
+			}
+		}
+	}
+#endif
 
 	KernelDynamicScene a_Data = a_Scene->getKernelSceneData();
 
@@ -197,13 +210,22 @@ void k_INITIALIZE(DynamicScene* a_Scene, const CudaRNGBuffer& a_RngBuf)
 	ThrowCudaErrors(cudaGetSymbolAddress(&symAdd, g_SceneDataDevice));
 	if (symAdd)
 		ThrowCudaErrors(cudaMemcpyToSymbol(g_SceneDataDevice, &a_Data, sizeof(a_Data)));
-	ThrowCudaErrors(cudaGetSymbolAddress(&symAdd, g_RNGDataDevice));
+	ThrowCudaErrors(cudaGetSymbolAddress(&symAdd, g_SamplerDataDevice));
 	if (symAdd)
-		ThrowCudaErrors(cudaMemcpyToSymbol(g_RNGDataDevice, &a_RngBuf, sizeof(a_RngBuf)));
+		ThrowCudaErrors(cudaMemcpyToSymbol(g_SamplerDataDevice, &g_SamplerDataHost, sizeof(g_SamplerDataHost)));
 
 	g_SceneDataHost = a_Scene->getKernelSceneData(false);
-	g_RNGDataHost = a_RngBuf;
 	g_RayTracedCounterHost = 0;
+}
+
+void InitializeKernel()
+{
+	g_SamplerDataHost = ConstructDefaultSamplerData();
+}
+
+void DeinitializeKernel()
+{
+	g_SamplerDataHost.Free();
 }
 
 void fillDG(const Vec2f& bary, unsigned int triIdx, unsigned int nodeIdx, DifferentialGeometry& dg)

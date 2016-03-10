@@ -147,7 +147,7 @@ template<typename VolEstimator> struct PPPMPhotonParticleProcessHandler
 
 template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thread)
 {
-	CudaRNG rng = g_RNGData();
+	CudaRNG rng = g_SamplerData();
 	CUDA_SHARED unsigned int local_Counter;
 	local_Counter = 0;
 	unsigned int local_Todo = photons_per_thread * blockDim.x * blockDim.y;
@@ -172,7 +172,7 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 		atomicAdd(&g_NumPhotonEmittedVolume, numStoredVolume);
 	}
 
-	g_RNGData(rng);
+	g_SamplerData(rng);
 }
 
 void PPPMTracer::doPhotonPass()

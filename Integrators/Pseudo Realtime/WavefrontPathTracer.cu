@@ -62,7 +62,7 @@ CUDA_ONLY_FUNC Vec2f stratifiedSample(const Vec2f& f, int pass)
 
 template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(unsigned int N, Image I, int pathDepth, int iterationIdx, int maxPathDepth, bool depthImage)
 {
-	CudaRNG rng = g_RNGData();
+	CudaRNG rng = g_SamplerData();
 	int rayidx;
 	__shared__ volatile int nextRayArray[MaxBlockHeight];
 	do
@@ -152,7 +152,7 @@ template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(unsigned int N, 
 			I.AddSample(dat.x.ToFloat(), dat.y.ToFloat(), dat.L);
 		}
 	} while (true);
-	g_RNGData(rng);
+	g_SamplerData(rng);
 }
 
 void WavefrontPathTracer::DoRender(Image* I)

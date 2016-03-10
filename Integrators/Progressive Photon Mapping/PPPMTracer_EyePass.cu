@@ -285,7 +285,7 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED
 
 template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int h, float a_PassIndex, float a_rSurface, k_AdaptiveStruct a_AdpEntries, BlockSampleImage img, bool DIRECT, bool USE_PerPixelRadius, bool finalGathering)
 {
-	CudaRNG rng = g_RNGData();
+	CudaRNG rng = g_SamplerData();
 	DifferentialGeometry dg;
 	BSDFSamplingRecord bRec(dg);
 	Vec2i pixel = TracerBase::getPixelPos(off.x, off.y);
@@ -395,7 +395,7 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 		}
 		img.Add(screenPos.x, screenPos.y, L);
 	}
-	g_RNGData(rng);
+	g_SamplerData(rng);
 }
 
 void PPPMTracer::Debug(Image* I, const Vec2i& pixel)
@@ -450,7 +450,7 @@ __global__ void k_PerPixelRadiusEst(int w, int h, float r_max, float r_1, k_Adap
 		e.E_psi = e.E_psi2 = e.E_DI = e.E_DI2 = e.DI = 0.0f;
 
 		//initial per pixel rad estimate
-		CudaRNG rng = g_RNGData();
+		CudaRNG rng = g_SamplerData();
 		DifferentialGeometry dg;
 		BSDFSamplingRecord bRec(dg);
 		NormalizedT<Ray> r = g_SceneData.GenerateSensorRay(x, y);
@@ -477,7 +477,7 @@ __global__ void k_PerPixelRadiusEst(int w, int h, float r_max, float r_1, k_Adap
 		else e.r_std = r_1;
 		atomicMin(&g_MinRad, floatToOrderedInt(e.r_std));
 		atomicMax(&g_MaxRad, floatToOrderedInt(e.r_std));
-		g_RNGData(rng);
+		g_SamplerData(rng);
 	}
 }
 

@@ -91,7 +91,7 @@ template<bool CORRECT_DIFFERENTIALS> struct PhotonTracerParticleProcessHandler
 
 template<bool CORRECT_DIFFERENTIALS> __global__ void pathKernel(unsigned int N, Image g_Image)
 {
-	CudaRNG rng = g_RNGData();
+	CudaRNG rng = g_SamplerData();
 	auto process = PhotonTracerParticleProcessHandler<CORRECT_DIFFERENTIALS>(g_Image, rng);
 	__shared__ volatile int nextRayArray[MaxBlockHeight];
 	volatile int& rayBase = nextRayArray[threadIdx.y];
@@ -106,14 +106,13 @@ template<bool CORRECT_DIFFERENTIALS> __global__ void pathKernel(unsigned int N, 
 
 		ParticleProcess(12, 7, rng, process);
 	} while (true);
-	g_RNGData(rng);
+	g_SamplerData(rng);
 }
 
 void PhotonTracer::DoRender(Image* I)
 {
 	unsigned int zero = 0;
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_NextRayCounter3, &zero, sizeof(unsigned int)));
-	k_INITIALIZE(m_pScene, g_sRngs);
 	if (m_sParameters.getValue(KEY_CorrectDifferentials()))
 		pathKernel<true> << < 180, dim3(32, MaxBlockHeight, 1) >> >(w * h, *I);
 	else pathKernel<false> << < 180, dim3(32, MaxBlockHeight, 1) >> >(w * h, *I);
@@ -122,12 +121,12 @@ void PhotonTracer::DoRender(Image* I)
 
 void PhotonTracer::Debug(Image* I, const Vec2i& pixel)
 {
-	k_INITIALIZE(m_pScene, g_sRngs);
-	CudaRNG rng = g_RNGData();
+	k_INITIALIZE(m_pScene);
+	CudaRNG rng = g_SamplerData();
 	auto process = PhotonTracerParticleProcessHandler<false>(*I, rng);
 	for (int i = 0; i < 1000; i++)
 		ParticleProcess(12, 7, rng, process);
-	g_RNGData(rng);
+	g_SamplerData(rng);
 }
 
 }

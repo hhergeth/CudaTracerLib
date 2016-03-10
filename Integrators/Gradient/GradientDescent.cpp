@@ -47,7 +47,7 @@ Path ConnectPaths(const std::vector<PathVertex*>& cameraPath, const std::vector<
 
 void ConstructPath(const Vec2i& pixel, Path& P, int s, int t)
 {
-	CudaRNG rng = g_RNGData();
+	CudaRNG rng = g_SamplerData();
 	int maxSubPathLength = 6;
 
 	std::vector<PathVertex*> sensorPath, emitterPath;
@@ -77,7 +77,7 @@ void ConstructPath(const Vec2i& pixel, Path& P, int s, int t)
 
 	P = ConnectPaths(sensorPath, emitterPath, s, t);
 
-	g_RNGData(rng);
+	g_SamplerData(rng);
 }
 
 qMatrix<float, 1, 4> dG_du12_v12(const Path& P, size_t i)

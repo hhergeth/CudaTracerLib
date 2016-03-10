@@ -50,7 +50,6 @@ public:
 class TracerBase
 {
 public:
-	CTL_EXPORT static CudaRNGBuffer g_sRngs;
 	CTL_EXPORT static AABB GetEyeHitPointBox(DynamicScene* s, bool recursive);
 	CTL_EXPORT static float GetLightVisibility(DynamicScene* s, int recursion_depth);
 	CTL_EXPORT static TraceResult TraceSingleRay(Ray r, DynamicScene* s);
@@ -149,7 +148,6 @@ public:
 	{
 		if (USE_BLOCKSAMPLER && !m_pBlockSampler)
 			allocateBlockSampler(I);
-		g_sRngs.NextPass();
 		ThrowCudaErrors(cudaEventRecord(start, 0));
 		if (a_NewTrace || !PROGRESSIVE)
 		{
@@ -161,7 +159,7 @@ public:
 				m_pBlockSampler->Clear();
 			StartNewTrace(I);
 		}
-		k_INITIALIZE(m_pScene, g_sRngs);
+		k_INITIALIZE(m_pScene);
 		k_setNumRaysTraced(0);
 		m_uPassesDone++;
 		DoRender(I);

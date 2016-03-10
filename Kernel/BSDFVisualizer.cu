@@ -38,7 +38,7 @@ CUDA_FUNC_IN Spectrum func(BSDFALL& bsdf, NormalizedT<Vec3f> wo, int w, int h, i
 	return f / (cosTheta ? 1 : Frame::cosTheta(bRec.wo));
 }
 
-CUDA_FUNC_IN Spectrum func2(BSDFALL& bsdf, InfiniteLight& light, CudaRNG& rng, const NormalizedT<Vec3f>& wo, int w, int h, int x, int y, bool cosTheta)
+CUDA_FUNC_IN Spectrum func2(BSDFALL& bsdf, InfiniteLight& light, TAUSWORTHE_GENERATOR rng, const NormalizedT<Vec3f>& wo, int w, int h, int x, int y, bool cosTheta)
 {
 	DifferentialGeometry dg;
 	dg.bary = Vec2f(0.5f);
@@ -62,7 +62,7 @@ CUDA_FUNC_IN Spectrum func2(BSDFALL& bsdf, InfiniteLight& light, CudaRNG& rng, c
 	int N = 20;
 	for (int i = 0; i < N; i++)
 	{
-		Spectrum f = bsdf.sample(bRec, rng.randomFloat2());
+		Spectrum f = bsdf.sample(bRec, Vec2f(rng.randomFloat(), rng.randomFloat()));
 		q += f * light.evalEnvironment(Ray(Vec3f(0), bRec.wo));
 	}
 	return q / float(N);
@@ -80,15 +80,14 @@ CUDA_GLOBAL void BSDFCalc(const NormalizedT<Vec3f>& wo, Image I, Vec2i off, Vec2
 	}
 }
 
-CUDA_GLOBAL void BSDFCalc2(const NormalizedT<Vec3f>& wo, Image I, Vec2i off, Vec2i size, float scale, bool cosTheta)
+CUDA_GLOBAL void BSDFCalc2(const NormalizedT<Vec3f>& wo, Image I, Vec2i off, Vec2i size, float scale, bool cosTheta, unsigned int seed)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x, y = blockIdx.y * blockDim.y + threadIdx.y;
 	if (y < size.y)
 	{
-		CudaRNG rng = g_RNGData();
+		auto rng = TAUSWORTHE_GENERATOR(seed + getGlobalIdx_2D_2D());
 		Spectrum f = func2(g_BSDF, *(InfiniteLight*)g_Light, rng, wo, size.x, size.y, x, y, cosTheta) * scale;
 		I.AddSample(x + off.x, y + off.y, f);
-		g_RNGData(rng);
 	}
 }
 
@@ -96,13 +95,13 @@ void BSDFVisualizer::DrawRegion(Image* I, const Vec2i& off, const Vec2i& size)
 {
 	if (!m_Bsdf)
 		return;
-	ThrowCudaErrors(cudaMemcpyToSymbol(g_RNGDataDevice, &Tracer::g_sRngs, sizeof(CudaRNGBuffer)));
 	int p = 16;
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_BSDF, m_Bsdf, sizeof(BSDFALL)));
 	if (drawEnvMap)
 	{
+		static int seed = 12345;
 		ThrowCudaErrors(cudaMemcpyToSymbol(g_Light, m_pLight, sizeof(InfiniteLight)));
-		BSDFCalc2 << <dim3(size.x / p + 1, size.y / p + 1, 1), dim3(p, p, 1) >> >(m_wo, *I, off, size, LScale, cosTheta);
+		BSDFCalc2 << <dim3(size.x / p + 1, size.y / p + 1, 1), dim3(p, p, 1) >> >(m_wo, *I, off, size, LScale, cosTheta, seed++);
 		I->DoUpdateDisplay(0);
 	}
 	else
@@ -119,11 +118,11 @@ void BSDFVisualizer::DoRender(Image* I)
 
 void BSDFVisualizer::Debug(Image* I, const Vec2i& p)
 {
-	g_RNGDataHost = Tracer::g_sRngs;
+	/*g_RNGDataHost = Tracer::g_sRngs;
 	CudaRNG rng = g_RNGData();
 	if (drawEnvMap)
 		func2(*m_Bsdf, *m_pLight, rng, m_wo, w, h, p.x, p.y, cosTheta);
-	func(*m_Bsdf, m_wo, w, h, p.x, p.y, cosTheta);
+	func(*m_Bsdf, m_wo, w, h, p.x, p.y, cosTheta);*/
 }
 
 void BSDFVisualizer::setSkydome(const char* compiledPath)

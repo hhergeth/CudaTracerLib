@@ -316,21 +316,4 @@ struct CudaRNG : public Curand_GENERATOR
 	}
 };
 
-class CudaRNGBuffer
-{
-private:
-	unsigned int m_uNumGenerators;
-	CudaRNG* m_pHostGenerators;
-	CudaRNG* m_pDeviceGenerators;
-public:
-	CTL_EXPORT explicit CudaRNGBuffer(unsigned int a_Length);
-	CudaRNGBuffer(){}
-	CTL_EXPORT void Free();
-	CTL_EXPORT CUDA_DEVICE CUDA_HOST CudaRNG operator()();
-	CTL_EXPORT CUDA_DEVICE CUDA_HOST void operator()(CudaRNG& val);
-	CTL_EXPORT void NextPass();
-private:
-	CTL_EXPORT void createGenerators();
-};
-
 }

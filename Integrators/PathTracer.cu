@@ -138,17 +138,18 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTraceRegularization(NormalizedT<
 void PathTracer::Debug(Image* I, const Vec2i& p)
 {
 	float m = 1.0f*math::pow((float)m_uPassesDone, -1.0f / 6.0f);
-	k_INITIALIZE(m_pScene, g_sRngs);
-	CudaRNG rng = g_RNGData();		
+	k_INITIALIZE(m_pScene);
+	CudaRNG rng = g_SamplerData();
 	NormalizedT<Ray> r, rX, rY;
 	Spectrum throughput = g_SceneData.sampleSensorRay(r, rX, rY, Vec2f((float)p.x, (float)p.y), rng.randomFloat2());
 	PathTrace<true>(r, rX, rY, rng);
+	g_SamplerData(rng);
 }
 
 template<bool DIRECT, bool REGU> __global__ void pathKernel2(unsigned int w, unsigned int h, unsigned int xoff, unsigned int yoff, BlockSampleImage img, float m)
 {
 	Vec2i pixel = TracerBase::getPixelPos(xoff, yoff);
-	CudaRNG rng = g_RNGData();
+	CudaRNG rng = g_SamplerData();
 	if (pixel.x < w && pixel.y < h)
 	{
 		NormalizedT<Ray> r, rX, rY;
@@ -157,7 +158,7 @@ template<bool DIRECT, bool REGU> __global__ void pathKernel2(unsigned int w, uns
 		Spectrum col = imp * (REGU ? PathTraceRegularization<DIRECT>(r, rX, rY, rng, m) : PathTrace<DIRECT>(r, rX, rY, rng));
 		img.Add(pX.x, pX.y, col);
 	}
-	g_RNGData(rng);
+	g_SamplerData(rng);
 }
 
 void PathTracer::RenderBlock(Image* I, int x, int y, int blockW, int blockH)

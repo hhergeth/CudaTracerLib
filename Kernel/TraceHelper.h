@@ -2,25 +2,22 @@
 #include "TraceResult.h"
 #include <Base/CudaRandom.h>
 #include <Engine/KernelDynamicScene.h>
+#include "Sampler_device.h"
 
 namespace CudaTracerLib {
 
 extern CUDA_ALIGN(16) CUDA_CONST KernelDynamicScene g_SceneDataDevice;
 extern CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_RayTracedCounterDevice;
-extern CUDA_ALIGN(16) CUDA_CONST CudaRNGBuffer g_RNGDataDevice;
 
 CTL_EXPORT extern CUDA_ALIGN(16) KernelDynamicScene g_SceneDataHost;
 CTL_EXPORT extern CUDA_ALIGN(16) unsigned int g_RayTracedCounterHost;
-CTL_EXPORT extern CUDA_ALIGN(16) CudaRNGBuffer g_RNGDataHost;
 
 #ifdef ISCUDA
 #define g_SceneData g_SceneDataDevice
 #define g_RayTracedCounter g_RayTracedCounterDevice
-#define g_RNGData g_RNGDataDevice
 #else
 #define g_SceneData g_SceneDataHost
 #define g_RayTracedCounter g_RayTracedCounterHost
-#define g_RNGData g_RNGDataHost
 #endif
 
 CTL_EXPORT CUDA_DEVICE CUDA_HOST bool traceRay(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result);
@@ -35,7 +32,10 @@ CUDA_FUNC_IN TraceResult traceRay(const Ray& r)
 
 CTL_EXPORT CUDA_DEVICE CUDA_HOST void fillDG(const Vec2f& bary, unsigned int triIdx, unsigned int nodeIdx, DifferentialGeometry& dg);
 
-CTL_EXPORT void k_INITIALIZE(DynamicScene* a_Scene, const CudaRNGBuffer& a_RngBuf);
+CTL_EXPORT void InitializeKernel();
+CTL_EXPORT void DeinitializeKernel();
+
+CTL_EXPORT void k_INITIALIZE(DynamicScene* a_Scene, ISamplingSequenceGenerator* sampler = 0);
 
 CTL_EXPORT unsigned int k_getNumRaysTraced();
 CTL_EXPORT void k_setNumRaysTraced(unsigned int i);

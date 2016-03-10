@@ -106,10 +106,10 @@ __global__ void pathKernel(unsigned int w, unsigned int h, int xoff, int yoff, B
 	bool use_mis, int force_s, int force_t, float LScale)
 {
 	Vec2i pixel = TracerBase::getPixelPos(xoff, yoff);
-	CudaRNG rng = g_RNGData();
+	CudaRNG rng = g_SamplerData();
 	if (pixel.x < w && pixel.y < h)
 		BPT(Vec2f(pixel.x + rng.randomFloat(), pixel.y + rng.randomFloat()), img, rng, w, h, use_mis, force_s, force_t, LScale);
-	g_RNGData(rng);
+	g_SamplerData(rng);
 }
 
 void BDPT::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
@@ -120,13 +120,13 @@ void BDPT::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 
 void BDPT::Debug(Image* I, const Vec2i& pixel)
 {
-	k_INITIALIZE(m_pScene, g_sRngs);
+	k_INITIALIZE(m_pScene);
 	//Li(*gI, g_RNGData(), pixel.x, pixel.y);
-	CudaRNG rng = g_RNGData();
+	CudaRNG rng = g_SamplerData();
 	BlockSampleImage img = getDeviceBlockSampler();
 	BPT(Vec2f(pixel), img, rng, w, h, 
 		m_sParameters.getValue(KEY_UseMis()), m_sParameters.getValue(KEY_Force_s()), m_sParameters.getValue(KEY_Force_t()), m_sParameters.getValue(KEY_ResultMultiplier()));
-	g_RNGData(rng);
+	g_SamplerData(rng);
 }
 
 }
