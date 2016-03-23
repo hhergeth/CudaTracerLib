@@ -38,6 +38,10 @@ protected:
 
 	}
 public:
+	virtual ~IDepthTracer()
+	{
+		
+	}
 	virtual void setDepthBuffer(const DeviceDepthImage& img)
 	{
 		hasImage = true;
