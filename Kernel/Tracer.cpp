@@ -2,15 +2,17 @@
 #include "Tracer.h"
 #include "TraceHelper.h"
 #include "BlockSampler.h"
+#include "Sampler.h"
 
 namespace CudaTracerLib {
 
 TracerBase::TracerBase()
-	: m_pScene(0), m_pBlockSampler(0)
+	: m_pScene(0), m_pBlockSampler(0), m_pSamplingSequenceGenerator(0)
 {
 	ThrowCudaErrors(cudaEventCreate(&start));
 	ThrowCudaErrors(cudaEventCreate(&stop));
-	m_sParameters << KEY_SamplerActive() << CreateSetBool(false);
+	m_sParameters << KEY_SamplerActive() << CreateSetBool(false)
+				  << KEY_SamplingSequenceType() << SamplingSequenceGeneratorTypes::Independent;
 }
 
 TracerBase::~TracerBase()
@@ -25,6 +27,11 @@ TracerBase::~TracerBase()
 	start = stop = 0;
 	if (m_pBlockSampler)
 		delete m_pBlockSampler;
+}
+
+void UpdateSamplingSequenceGenerator(SamplingSequenceGeneratorTypes type, ISamplingSequenceGenerator*& gen)
+{
+	
 }
 
 BlockSampleImage TracerBase::getDeviceBlockSampler() const

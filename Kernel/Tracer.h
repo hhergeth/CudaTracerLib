@@ -51,6 +51,11 @@ public:
 	const DeviceDepthImage& getDeviceDepthBuffer() const { return img; }
 };
 
+#define SSGT(X) X(Independent) X(Stratified) X(LowDiscrepency) X(Sobol)
+ENUMIZE(SamplingSequenceGeneratorTypes, SSGT)
+#undef SSGT
+void UpdateSamplingSequenceGenerator(SamplingSequenceGeneratorTypes type, ISamplingSequenceGenerator*& gen);
+
 class TracerBase
 {
 public:
@@ -60,6 +65,7 @@ public:
 	CTL_EXPORT static void RenderDepth(DeviceDepthImage dImg, DynamicScene* s);
 
 	PARAMETER_KEY(bool, SamplerActive)
+	PARAMETER_KEY(SamplingSequenceGeneratorTypes, SamplingSequenceType)
 
 	CUDA_DEVICE static Vec2i getPixelPos(unsigned int xoff, unsigned int yoff)
 	{
@@ -82,7 +88,7 @@ public:
 	virtual void DoPass(Image* I, bool a_NewTrace) = 0;
 	virtual void Debug(Image* I, const Vec2i& pixel)
 	{
-		UpdateKernel(m_pScene, 0, &m_uPassesDone);
+		UpdateKernel(m_pScene, m_pSamplingSequenceGenerator, &m_uPassesDone);
 		UpdateSamplerData(1);
 		DebugInternal(I, pixel);
 	}
@@ -137,6 +143,7 @@ protected:
 	cudaEvent_t start, stop;
 	IBlockSampler* m_pBlockSampler;
 	TracerParameterCollection m_sParameters;
+	ISamplingSequenceGenerator* m_pSamplingSequenceGenerator;
 	CTL_EXPORT void allocateBlockSampler(Image* I);
 	virtual void DebugInternal(Image* I, const Vec2i& pixel)
 	{
@@ -176,7 +183,8 @@ public:
 				m_pBlockSampler->Clear();
 			StartNewTrace(I);
 		}
-		UpdateKernel(m_pScene, 0, &m_uPassesDone);
+		UpdateSamplingSequenceGenerator(m_sParameters.getValue(KEY_SamplingSequenceType()), m_pSamplingSequenceGenerator);
+		UpdateKernel(m_pScene, m_pSamplingSequenceGenerator, &m_uPassesDone);
 		k_setNumRaysTraced(0);
 		m_uPassesDone++;
 		DoRender(I);
