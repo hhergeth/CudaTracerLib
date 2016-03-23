@@ -38,6 +38,7 @@ private:
 	Sequence<float> m_d1Data[N_SEQUENCES];
 	Sequence<float2> m_d2Data[N_SEQUENCES];
 	int m_num_sequences_per, m_num_sequences_per_sqrt;
+	int m_passIdx;
 public:
 	CUDA_FUNC_IN SequenceSamplerData() = default;
 	void Free()
@@ -76,6 +77,14 @@ public:
 	{
 		m_num_sequences_per = val / N_SEQUENCES;
 		m_num_sequences_per_sqrt = max(1, (int)math::sqrt((float)m_num_sequences_per));
+	}
+	CUDA_FUNC_IN void setPassIndex(unsigned int idx)
+	{
+		m_passIdx = idx;
+	}
+	CUDA_FUNC_IN unsigned int getPassIndex() const
+	{
+		return m_passIdx;
 	}
 
 	CUDA_FUNC_IN SamplerType operator()();

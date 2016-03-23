@@ -168,19 +168,25 @@ bool traceRay(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result)
 //small helper class to fill the sampler data in case no sampler generator is passed
 struct IndependentSequenceGenerator
 {
-	template<int N_SEQUENCES, int SEQ_LEN> void fill(SequenceSamplerData<N_SEQUENCES, SEQ_LEN>& data)
+	template<int N_SEQUENCES, int SEQ_LEN> void fill(SequenceSamplerData<N_SEQUENCES, SEQ_LEN>& data, ISamplingSequenceGenerator* sampler, const unsigned int* passIdx)
 	{
 		static CudaRNG rng = CudaRNG();
-		for (int i = 0; i < N_SEQUENCES; i++)
+		if (sampler)
 		{
-			for (int j = 0; j < SEQ_LEN; j++)
+			for (int i = 0; i < N_SEQUENCES; i++)
 			{
-				data.dim1(i)[j] = rng.randomFloat();
-				data.dim2(i)[j] = rng.randomFloat2();
+				for (int j = 0; j < SEQ_LEN; j++)
+				{
+					data.dim1(i)[j] = rng.randomFloat();
+					data.dim2(i)[j] = rng.randomFloat2();
+				}
 			}
 		}
+
+		static unsigned int global_pass_idx = 0;
+		data.setPassIndex(passIdx ? *passIdx : global_pass_idx++);
 	}
-	void fill(RandomSamplerData& data)
+	void fill(RandomSamplerData& data, ISamplingSequenceGenerator* sampler, const unsigned int* passIdx)
 	{
 		//nothing to do
 	}
@@ -189,12 +195,7 @@ void UpdateKernel(DynamicScene* a_Scene, ISamplingSequenceGenerator* sampler, co
 {
 	if (sampler)
 		sampler->Compute(g_SamplerDataHost);
-	else IndependentSequenceGenerator().fill(g_SamplerDataHost);
-
-	if (passIdx)
-		g_PassIndexHost = *passIdx;
-	else g_PassIndexHost++;
-	CopyToSymbol(g_PassIndexDevice, g_PassIndexHost);
+	IndependentSequenceGenerator().fill(g_SamplerDataHost, sampler, passIdx);
 
 	if (!a_Scene)
 		return;
