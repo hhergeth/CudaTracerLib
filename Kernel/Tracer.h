@@ -82,7 +82,9 @@ public:
 	virtual void DoPass(Image* I, bool a_NewTrace) = 0;
 	virtual void Debug(Image* I, const Vec2i& pixel)
 	{
-
+		UpdateKernel(m_pScene, 0, &m_uPassesDone);
+		UpdateSamplerData(1);
+		DebugInternal(I, pixel);
 	}
 	virtual void PrintStatus(std::vector<std::string>& a_Buf) const
 	{
@@ -136,6 +138,10 @@ protected:
 	IBlockSampler* m_pBlockSampler;
 	TracerParameterCollection m_sParameters;
 	CTL_EXPORT void allocateBlockSampler(Image* I);
+	virtual void DebugInternal(Image* I, const Vec2i& pixel)
+	{
+		
+	}
 };
 
 template<bool USE_BLOCKSAMPLER, bool PROGRESSIVE> class Tracer : public TracerBase
@@ -170,7 +176,7 @@ public:
 				m_pBlockSampler->Clear();
 			StartNewTrace(I);
 		}
-		k_INITIALIZE(m_pScene);
+		UpdateKernel(m_pScene, 0, &m_uPassesDone);
 		k_setNumRaysTraced(0);
 		m_uPassesDone++;
 		DoRender(I);

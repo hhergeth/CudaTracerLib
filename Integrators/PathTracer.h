@@ -13,9 +13,9 @@ public:
 	{
 		m_sParameters << KEY_Direct() << CreateSetBool(true) << KEY_Regularization() << CreateSetBool(false);
 	}
-	CTL_EXPORT virtual void Debug(Image* I, const Vec2i& pixel);
 protected:
 	CTL_EXPORT virtual void RenderBlock(Image* I, int x, int y, int blockW, int blockH);
+	CTL_EXPORT virtual void DebugInternal(Image* I, const Vec2i& pixel);
 };
 
 }

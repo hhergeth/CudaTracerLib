@@ -43,7 +43,7 @@ CTL_EXPORT CUDA_DEVICE CUDA_HOST void fillDG(const Vec2f& bary, unsigned int tri
 CTL_EXPORT void InitializeKernel();
 CTL_EXPORT void DeinitializeKernel();
 
-CTL_EXPORT void k_INITIALIZE(DynamicScene* a_Scene, ISamplingSequenceGenerator* sampler = 0, unsigned int* passIdx = 0);
+CTL_EXPORT void UpdateKernel(DynamicScene* a_Scene, ISamplingSequenceGenerator* sampler = 0, const unsigned int* passIdx = 0);
 CTL_EXPORT void UpdateSamplerData(unsigned int numSequences);
 
 CTL_EXPORT unsigned int k_getNumRaysTraced();

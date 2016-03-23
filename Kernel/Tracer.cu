@@ -46,7 +46,7 @@ AABB TracerBase::GetEyeHitPointBox(DynamicScene* m_pScene, bool recursive)
 	Vec3u ma = Vec3u(0), mi = Vec3u(UINT_MAX);
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_EyeHitBoxMin, &mi, 12));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_EyeHitBoxMax, &ma, 12));
-	k_INITIALIZE(m_pScene);
+	UpdateKernel(m_pScene);
 	int qw = 128, qh = 128, p0 = 16;
 	float a = (float)m_pScene->getCamera()->As()->m_resolution.x / qw, b = (float)m_pScene->getCamera()->As()->m_resolution.y / qh;
 	if (recursive)
@@ -74,7 +74,7 @@ CUDA_GLOBAL void traceKernel(Ray r)
 
 TraceResult TracerBase::TraceSingleRay(Ray r, DynamicScene* s)
 {
-	k_INITIALIZE(s);
+	UpdateKernel(s);
 	return traceRay(r);
 }
 
@@ -119,7 +119,7 @@ float TracerBase::GetLightVisibility(DynamicScene* s, int recursion_depth)
 	unsigned int zero = 0;
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_ShotRays, &zero, sizeof(unsigned int)));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_SuccRays, &zero, sizeof(unsigned int)));
-	k_INITIALIZE(s);
+	UpdateKernel(s);
 
 	int qw = 128, qh = 128, p0 = 16;
 	float a = (float)s->getCamera()->As()->m_resolution.x / qw, b = (float)s->getCamera()->As()->m_resolution.y / qh;
@@ -144,7 +144,7 @@ __global__ void depthKernel(DeviceDepthImage dImg)
 
 void TracerBase::RenderDepth(DeviceDepthImage dImg, DynamicScene* s)
 {
-	k_INITIALIZE(s);
+	UpdateKernel(s);
 	depthKernel << <dim3(dImg.w / 16 + 1, dImg.h / 16 + 1), dim3(16, 16) >> >(dImg);
 	ThrowCudaErrors(cudaDeviceSynchronize());
 }

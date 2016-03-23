@@ -398,7 +398,7 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 	g_SamplerData(rng);
 }
 
-void PPPMTracer::Debug(Image* I, const Vec2i& pixel)
+void PPPMTracer::DebugInternal(Image* I, const Vec2i& pixel)
 {
 	
 }

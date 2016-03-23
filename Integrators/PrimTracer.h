@@ -16,9 +16,9 @@ public:
 	PARAMETER_KEY(int, MaxPathLength)
 
 	CTL_EXPORT PrimTracer();
-	CTL_EXPORT virtual void Debug(Image* I, const Vec2i& pixel);
 protected:
 	CTL_EXPORT virtual void DoRender(Image* I);
+	CTL_EXPORT virtual void DebugInternal(Image* I, const Vec2i& pixel);
 };
 
 }

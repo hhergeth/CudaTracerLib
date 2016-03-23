@@ -185,7 +185,7 @@ struct IndependentSequenceGenerator
 		//nothing to do
 	}
 };
-void k_INITIALIZE(DynamicScene* a_Scene, ISamplingSequenceGenerator* sampler, unsigned int* passIdx)
+void UpdateKernel(DynamicScene* a_Scene, ISamplingSequenceGenerator* sampler, const unsigned int* passIdx)
 {
 	if (sampler)
 		sampler->Compute(g_SamplerDataHost);

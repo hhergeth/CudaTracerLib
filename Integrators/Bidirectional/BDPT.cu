@@ -115,9 +115,8 @@ void BDPT::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 													m_sParameters.getValue(KEY_UseMis()), m_sParameters.getValue(KEY_Force_s()), m_sParameters.getValue(KEY_Force_t()), m_sParameters.getValue(KEY_ResultMultiplier()));
 }
 
-void BDPT::Debug(Image* I, const Vec2i& pixel)
+void BDPT::DebugInternal(Image* I, const Vec2i& pixel)
 {
-	k_INITIALIZE(m_pScene);
 	//Li(*gI, g_RNGData(), pixel.x, pixel.y);
 	auto rng = g_SamplerData();
 	BlockSampleImage img = getDeviceBlockSampler();

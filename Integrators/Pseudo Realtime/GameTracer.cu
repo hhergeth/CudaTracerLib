@@ -179,9 +179,8 @@ void GameTracer::DoRender(Image* I)
 	swapk(m_pDeviceLastIndirectImage1, m_pDeviceLastIndirectImage2);
 }
 
-void GameTracer::Debug(Image* I, const Vec2i& pixel)
+void GameTracer::DebugInternal(Image* I, const Vec2i& pixel)
 {
-	k_INITIALIZE(m_pScene);
 	auto rng = g_SamplerData();
 	NormalizedT<Ray> r, rX, rY;
 	g_SceneData.sampleSensorRay(r, rX, rY, Vec2f((float)pixel.x, (float)pixel.y), rng.randomFloat2());

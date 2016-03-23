@@ -102,7 +102,6 @@ public:
 	CTL_EXPORT PPPMTracer();
 	CTL_EXPORT virtual ~PPPMTracer();
 	CTL_EXPORT virtual void Resize(unsigned int _w, unsigned int _h);
-	CTL_EXPORT virtual void Debug(Image* I, const Vec2i& pixel);
 	CTL_EXPORT virtual void PrintStatus(std::vector<std::string>& a_Buf) const;
 	virtual float getCurrentRadius(float exp) const
 	{
@@ -122,6 +121,7 @@ protected:
 	CTL_EXPORT virtual void DoRender(Image* I);
 	CTL_EXPORT virtual void StartNewTrace(Image* I);
 	CTL_EXPORT virtual void RenderBlock(Image* I, int x, int y, int blockW, int blockH);
+	CTL_EXPORT virtual void DebugInternal(Image* I, const Vec2i& pixel);
 private:
 	CTL_EXPORT void doPhotonPass();
 	CTL_EXPORT void doPerPixelRadiusEstimation();

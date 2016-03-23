@@ -131,9 +131,9 @@ void PmmTracer::StartNewTrace(Image* I)
 	g_SamplerData(rng);
 }
 
-void PmmTracer::Debug(Image* I, const Vec2i& p)
+void PmmTracer::DebugInternal(Image* I, const Vec2i& p)
 {
-	/*k_INITIALIZE(m_pScene, g_sRngs);
+	/*
 	float3* deviceDirs;
 	unsigned int* deviceNum;
 	CUDA_MALLOC(&deviceDirs, sizeof(float3) * 10000);
@@ -147,7 +147,6 @@ void PmmTracer::Debug(Image* I, const Vec2i& p)
 	CUDA_FREE(deviceNum);
 	plotPoints(directions, N);*/
 
-	k_INITIALIZE(m_pScene);
 	Ray r = g_SceneData.GenerateSensorRay(p.x, p.y);
 	TraceResult r2 = traceRay(r);
 	if (!r2.hasHit())

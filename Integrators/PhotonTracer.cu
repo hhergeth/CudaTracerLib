@@ -120,9 +120,8 @@ void PhotonTracer::DoRender(Image* I)
 	ThrowCudaErrors(cudaDeviceSynchronize());
 }
 
-void PhotonTracer::Debug(Image* I, const Vec2i& pixel)
+void PhotonTracer::DebugInternal(Image* I, const Vec2i& pixel)
 {
-	k_INITIALIZE(m_pScene);
 	auto rng = g_SamplerData();
 	auto process = PhotonTracerParticleProcessHandler<false>(*I, rng);
 	for (int i = 0; i < 1000; i++)

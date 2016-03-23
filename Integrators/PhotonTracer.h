@@ -12,7 +12,6 @@ public:
 	{
 		m_sParameters << KEY_CorrectDifferentials() << CreateSetBool(false);
 	}
-	CTL_EXPORT virtual void Debug(Image* I, const Vec2i& pixel);
 	virtual void PrintStatus(std::vector<std::string>& a_Buf) const
 	{
 		float nPhotons = math::floor((float)(m_uPassesDone * w * h) / 1000000.0f);
@@ -21,6 +20,7 @@ public:
 	}
 protected:
 	CTL_EXPORT virtual void DoRender(Image* I);
+	CTL_EXPORT virtual void DebugInternal(Image* I, const Vec2i& pixel);
 };
 
 }

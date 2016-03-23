@@ -81,6 +81,7 @@ void PPPMTracer::DoRender(Image* I)
 		doPhotonPass();
 	}
 	m_uTotalPhotonsEmitted += max(m_uPhotonEmittedPassSurface, m_uPhotonEmittedPassVolume);
+	setNumSequences();
 	{
 		auto timer = START_PERF_BLOCK("Camera Pass");
 		Tracer<true, true>::DoRender(I);

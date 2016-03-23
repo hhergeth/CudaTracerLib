@@ -135,10 +135,9 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTraceRegularization(NormalizedT<
 	return cl;
 }
 
-void PathTracer::Debug(Image* I, const Vec2i& p)
+void PathTracer::DebugInternal(Image* I, const Vec2i& p)
 {
 	float m = 1.0f*math::pow((float)m_uPassesDone, -1.0f / 6.0f);
-	k_INITIALIZE(m_pScene);
 	auto rng = g_SamplerData();
 	NormalizedT<Ray> r, rX, rY;
 	Spectrum throughput = g_SceneData.sampleSensorRay(r, rX, rY, Vec2f((float)p.x, (float)p.y), rng.randomFloat2());

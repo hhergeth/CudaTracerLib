@@ -231,9 +231,8 @@ void PrimTracer::DoRender(Image* I)
 	primaryKernel << < 180, dim3(32, MaxBlockHeight, 1) >> >(w, h, *I, hasDepthBuffer(), m_sParameters.getValue(KEY_DrawingMode()), m_sParameters.getValue(KEY_MaxPathLength()));
 }
 
-void PrimTracer::Debug(Image* I, const Vec2i& pixel)
+void PrimTracer::DebugInternal(class Image* I, const Vec2i& pixel)
 {
-	k_INITIALIZE(m_pScene);
 	auto rng = g_SamplerData();
 	computePixel(pixel.x, pixel.y, rng, *I, false, m_sParameters.getValue(KEY_DrawingMode()), m_sParameters.getValue(KEY_MaxPathLength()));
 	NormalizedT<Ray> r, rX, rY;

@@ -22,10 +22,10 @@ public:
 		sMap.Free();
 		dMap.Free();
 	}
-	CTL_EXPORT virtual void Debug(Image* I, const Vec2i& pixel);
 protected:
 	CTL_EXPORT virtual void DoRender(Image* I);
 	CTL_EXPORT virtual void StartNewTrace(Image* I);
+	CTL_EXPORT virtual void DebugInternal(Image* I, const Vec2i& pixel);
 private:
 	int passIteration;
 	SpatialLinkedMap<SpatialEntry> sMap;

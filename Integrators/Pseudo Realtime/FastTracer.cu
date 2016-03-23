@@ -92,7 +92,6 @@ __global__ void doDirectKernel(unsigned int w, unsigned int h, Image I, float SC
 
 void FastTracer::DoRender(Image* I)
 {
-	k_INITIALIZE(m_pScene);
 	ZeroSymbol(g_NextRayCounterFT);
 	CopyToSymbol(g_IntersectorFT, *bufA);
 	pathCreateKernelFT << < dim3(180, 1, 1), dim3(32, 6, 1) >> >(w, h);
