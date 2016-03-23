@@ -5,7 +5,7 @@
 
 namespace CudaTracerLib {
 
-void TracePath(NormalizedT<Ray> r, std::vector<PathVertex*>& p, int N2, ETransportMode mode, CudaRNG& rng)
+void TracePath(NormalizedT<Ray> r, std::vector<PathVertex*>& p, int N2, ETransportMode mode, Sampler& rng)
 {
 	TraceResult r2 = traceRay(r);
 	if (!r2.hasHit())
@@ -47,7 +47,7 @@ Path ConnectPaths(const std::vector<PathVertex*>& cameraPath, const std::vector<
 
 void ConstructPath(const Vec2i& pixel, Path& P, int s, int t)
 {
-	CudaRNG rng = g_SamplerData();
+	auto rng = g_SamplerData();
 	int maxSubPathLength = 6;
 
 	std::vector<PathVertex*> sensorPath, emitterPath;

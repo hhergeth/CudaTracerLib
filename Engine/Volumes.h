@@ -377,7 +377,7 @@ public:
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST float p(const Vec3f& p, const PhaseFunctionSamplingRecord& pRec) const;
 
 	///Samples a distance in the combined medium
-	CTL_EXPORT CUDA_DEVICE CUDA_HOST bool sampleDistance(const Ray& ray, float minT, float maxT, CudaRNG& rng, MediumSamplingRecord& mRec) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST bool sampleDistance(const Ray& ray, float minT, float maxT, float sample, MediumSamplingRecord& mRec) const;
 
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST const VolumeRegion* sampleVolume(const Ray& ray, float minT, float maxT, float& sample, float& pdf) const;
 

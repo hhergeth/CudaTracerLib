@@ -34,7 +34,7 @@ struct ParticleProcessHandler
 
 */
 
-template<bool PARTICIPATING_MEDIA = true, bool SUBSURFACE_SCATTERING = true, typename PROCESS> CUDA_FUNC_IN void ParticleProcess(int maxDepth, int rrStartDepth, CudaRNG& rng, PROCESS& P)
+template<bool PARTICIPATING_MEDIA = true, bool SUBSURFACE_SCATTERING = true, typename PROCESS> CUDA_FUNC_IN void ParticleProcess(int maxDepth, int rrStartDepth, Sampler& rng, PROCESS& P)
 {
 	PositionSamplingRecord pRec;
 	Spectrum power = g_SceneData.sampleEmitterPosition(pRec, rng.randomFloat2()), throughput = Spectrum(1.0f);
@@ -61,7 +61,7 @@ template<bool PARTICIPATING_MEDIA = true, bool SUBSURFACE_SCATTERING = true, typ
 		if (PARTICIPATING_MEDIA && !bssrdf && V.HasVolumes() && V.IntersectP(r, 0, r2.m_fDist, &minT, &maxT))
 		{
 			sampledDistance = true;
-			distInMedium = V.sampleDistance(r, 0, r2.m_fDist, rng, mRec);
+			distInMedium = V.sampleDistance(r, 0, r2.m_fDist, rng.randomFloat(), mRec);
 		}
 		else if (bssrdf)
 		{

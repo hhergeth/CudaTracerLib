@@ -321,11 +321,11 @@ CUDA_FUNC_IN int ffsn(unsigned int v, int n) {
 	return v & ~(v - 1); // extract the least significant bit
 }
 
-bool KernelAggregateVolume::sampleDistance(const Ray& ray, float minT, float maxT, CudaRNG& rng, MediumSamplingRecord& mRec) const
+bool KernelAggregateVolume::sampleDistance(const Ray& ray, float minT, float maxT, float sample, MediumSamplingRecord& mRec) const
 {
-	float vol_sample_pdf = 0; float sample = rng.randomFloat();
+	float vol_sample_pdf = 0;
 	const auto* vol = sampleVolume(ray, minT, maxT, sample, vol_sample_pdf);
-	if(vol && vol->sampleDistance(ray, minT, maxT, rng.randomFloat(), mRec))
+	if(vol && vol->sampleDistance(ray, minT, maxT, sample, mRec))
 	{
 		//mRec.pdfSuccess *= vol_sample_pdf;
 		//mRec.pdfSuccessRev *= vol_sample_pdf;

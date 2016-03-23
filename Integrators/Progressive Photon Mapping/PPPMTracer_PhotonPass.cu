@@ -71,7 +71,7 @@ CUDA_DEVICE CUDA_ALIGN(16) unsigned char g_VolEstimator[Dmax4(sizeof(PointStorag
 
 template<typename VolEstimator> struct PPPMPhotonParticleProcessHandler
 {
-	CudaRNG& rng;
+	Sampler& rng;
 	bool wasStoredSurface;
 	bool wasStoredVolume;
 	bool delta;
@@ -79,7 +79,7 @@ template<typename VolEstimator> struct PPPMPhotonParticleProcessHandler
 	unsigned int* numStoredVolume;
 	int numSurfaceInteractions;
 
-	CUDA_FUNC_IN PPPMPhotonParticleProcessHandler(CudaRNG& r, unsigned int* nStoredSuface, unsigned int* nStoredVol)
+	CUDA_FUNC_IN PPPMPhotonParticleProcessHandler(Sampler& r, unsigned int* nStoredSuface, unsigned int* nStoredVol)
 		: rng(r), wasStoredSurface(false), wasStoredVolume(false), delta(false), numStoredSurface(nStoredSuface), numStoredVolume(nStoredVol), numSurfaceInteractions(0)
 	{
 
@@ -147,7 +147,7 @@ template<typename VolEstimator> struct PPPMPhotonParticleProcessHandler
 
 template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thread)
 {
-	CudaRNG rng = g_SamplerData();
+	auto rng = g_SamplerData();
 	CUDA_SHARED unsigned int local_Counter;
 	local_Counter = 0;
 	unsigned int local_Todo = photons_per_thread * blockDim.x * blockDim.y;
@@ -159,8 +159,10 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 	numStoredSurface = 0; numStoredVolume = 0;
 	__syncthreads();
 
-	while (atomicInc(&local_Counter, (unsigned int)-1) < local_Todo && !g_SurfaceMap.isFull() && !((VolEstimator*)g_VolEstimator)->isFullK())
+	unsigned int local_idx;
+	while ((local_idx = atomicInc(&local_Counter, (unsigned int)-1)) < local_Todo && !g_SurfaceMap.isFull() && !((VolEstimator*)g_VolEstimator)->isFullK())
 	{
+		rng.StartSequence(blockIdx.x * local_Todo + local_idx);
 		auto process = PPPMPhotonParticleProcessHandler<VolEstimator>(rng, &numStoredSurface, &numStoredVolume);
 		ParticleProcess(PPM_MaxRecursion, PPM_MaxRecursion, rng, process);
 	}
@@ -192,6 +194,8 @@ void PPPMTracer::doPhotonPass()
 	PPPMParameters para = g_ParametersHost = { m_useDirectLighting, finalGathering, m_fProbSurface, m_fProbVolume, m_uPassesDone };
 	para.DIRECT = g_ParametersHost.DIRECT;
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_ParametersDevice, &para, sizeof(para)));
+
+	setNumSequences(m_uBlocksPerLaunch * PPM_BlockX * PPM_BlockY * PPM_Photons_Per_Thread);
 
 	while (!m_sSurfaceMap.isFull() && !m_pVolumeEstimator->isFull())
 	{

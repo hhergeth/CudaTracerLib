@@ -76,7 +76,7 @@ template<int D, int K> struct GaussianMixtureModel
 			return Q * x + mean;
 		}
 
-		CUDA_FUNC_IN static Component Random(CudaRNG& rng, const vec& min, const vec& max)
+		CUDA_FUNC_IN static Component Random(Sampler& rng, const vec& min, const vec& max)
 		{
 			vec mean;
 			mat coVar;
@@ -132,7 +132,7 @@ template<int D, int K> struct GaussianMixtureModel
 		return s;
 	}
 
-	CUDA_FUNC_IN static GaussianMixtureModel<D, K> Random(CudaRNG& rng, const vec& mi, const vec& ma)
+	CUDA_FUNC_IN static GaussianMixtureModel<D, K> Random(Sampler& rng, const vec& mi, const vec& ma)
 	{
 		GaussianMixtureModel<D, K> res;
 		for (int i = 0; i < K; i++)
@@ -298,7 +298,7 @@ struct DirectionModel
 	{
 	}
 
-	CUDA_FUNC_IN void Initialze(CudaRNG& rng)
+	CUDA_FUNC_IN void Initialze(Sampler& rng)
 	{
 		gmm = GaussianMixtureModel<2, K>::Random(rng, VEC<float, 2>() % 0 % 0, VEC<float, 2>() % 1 % 1);
 		for (int i = 0; i < K; i++)

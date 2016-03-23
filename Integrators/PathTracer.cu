@@ -7,7 +7,7 @@ namespace CudaTracerLib {
 
 CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_NextRayCounter;
 
-template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(NormalizedT<Ray>& r, const NormalizedT<Ray>& rX, const NormalizedT<Ray>& rY, CudaRNG& rnd)
+template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(NormalizedT<Ray>& r, const NormalizedT<Ray>& rX, const NormalizedT<Ray>& rY, Sampler& rnd)
 {
 	Spectrum cl = Spectrum(0.0f);   // accumulated color
 	Spectrum cf = Spectrum(1.0f);  // accumulated reflectance
@@ -23,7 +23,7 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(NormalizedT<Ray>& r, const
 		r2 = traceRay(r);
 		float minT, maxT;
 		bool isInMedium = V.IntersectP(r, 0, r2.m_fDist, &minT, &maxT);
-		if (V.HasVolumes() && isInMedium && V.sampleDistance(r, 0, r2.m_fDist, rnd, mRec))
+		if (V.HasVolumes() && isInMedium && V.sampleDistance(r, 0, r2.m_fDist, rnd.randomFloat(), mRec))
 		{
 			cf *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
 
@@ -77,7 +77,7 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(NormalizedT<Ray>& r, const
 	return cl;
 }
 
-template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTraceRegularization(NormalizedT<Ray>& r, const NormalizedT<Ray>& rX, const NormalizedT<Ray>& rY, CudaRNG& rnd, float g_fRMollifier)
+template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTraceRegularization(NormalizedT<Ray>& r, const NormalizedT<Ray>& rX, const NormalizedT<Ray>& rY, Sampler& rnd, float g_fRMollifier)
 {
 	TraceResult r2;
 	r2.Init();
@@ -139,7 +139,7 @@ void PathTracer::Debug(Image* I, const Vec2i& p)
 {
 	float m = 1.0f*math::pow((float)m_uPassesDone, -1.0f / 6.0f);
 	k_INITIALIZE(m_pScene);
-	CudaRNG rng = g_SamplerData();
+	auto rng = g_SamplerData();
 	NormalizedT<Ray> r, rX, rY;
 	Spectrum throughput = g_SceneData.sampleSensorRay(r, rX, rY, Vec2f((float)p.x, (float)p.y), rng.randomFloat2());
 	PathTrace<true>(r, rX, rY, rng);
@@ -149,7 +149,7 @@ void PathTracer::Debug(Image* I, const Vec2i& p)
 template<bool DIRECT, bool REGU> __global__ void pathKernel2(unsigned int w, unsigned int h, unsigned int xoff, unsigned int yoff, BlockSampleImage img, float m)
 {
 	Vec2i pixel = TracerBase::getPixelPos(xoff, yoff);
-	CudaRNG rng = g_SamplerData();
+	auto rng = g_SamplerData();
 	if (pixel.x < w && pixel.y < h)
 	{
 		NormalizedT<Ray> r, rX, rY;

@@ -8,16 +8,24 @@ namespace CudaTracerLib {
 
 extern CUDA_ALIGN(16) CUDA_CONST KernelDynamicScene g_SceneDataDevice;
 extern CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_RayTracedCounterDevice;
+extern CUDA_ALIGN(16) CUDA_CONST SamplerData g_SamplerDataDevice;
+extern CUDA_CONST unsigned int g_PassIndexDevice;
 
 CTL_EXPORT extern CUDA_ALIGN(16) KernelDynamicScene g_SceneDataHost;
 CTL_EXPORT extern CUDA_ALIGN(16) unsigned int g_RayTracedCounterHost;
+CTL_EXPORT extern CUDA_ALIGN(16) SamplerData g_SamplerDataHost;
+CTL_EXPORT extern unsigned int g_PassIndexHost;
 
 #ifdef ISCUDA
 #define g_SceneData g_SceneDataDevice
 #define g_RayTracedCounter g_RayTracedCounterDevice
+#define g_SamplerData g_SamplerDataDevice
+#define g_PassIndex g_PassIndexDevice
 #else
 #define g_SceneData g_SceneDataHost
 #define g_RayTracedCounter g_RayTracedCounterHost
+#define g_SamplerData g_SamplerDataHost
+#define g_PassIndex g_PassIndexHost
 #endif
 
 CTL_EXPORT CUDA_DEVICE CUDA_HOST bool traceRay(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result);
@@ -35,7 +43,8 @@ CTL_EXPORT CUDA_DEVICE CUDA_HOST void fillDG(const Vec2f& bary, unsigned int tri
 CTL_EXPORT void InitializeKernel();
 CTL_EXPORT void DeinitializeKernel();
 
-CTL_EXPORT void k_INITIALIZE(DynamicScene* a_Scene, ISamplingSequenceGenerator* sampler = 0);
+CTL_EXPORT void k_INITIALIZE(DynamicScene* a_Scene, ISamplingSequenceGenerator* sampler = 0, unsigned int* passIdx = 0);
+CTL_EXPORT void UpdateSamplerData(unsigned int numSequences);
 
 CTL_EXPORT unsigned int k_getNumRaysTraced();
 CTL_EXPORT void k_setNumRaysTraced(unsigned int i);

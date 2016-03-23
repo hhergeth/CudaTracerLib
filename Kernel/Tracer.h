@@ -53,7 +53,6 @@ public:
 	CTL_EXPORT static AABB GetEyeHitPointBox(DynamicScene* s, bool recursive);
 	CTL_EXPORT static float GetLightVisibility(DynamicScene* s, int recursion_depth);
 	CTL_EXPORT static TraceResult TraceSingleRay(Ray r, DynamicScene* s);
-	CTL_EXPORT static void InitRngs(unsigned int N = 1 << 16);
 	CTL_EXPORT static void RenderDepth(DeviceDepthImage dImg, DynamicScene* s);
 
 	PARAMETER_KEY(bool, SamplerActive)
@@ -113,6 +112,14 @@ public:
 	}
 	CTL_EXPORT BlockSampleImage getDeviceBlockSampler() const;
 	TracerParameterCollection& getParameters() { return m_sParameters; }
+	virtual void setNumSequences() const
+	{
+		setNumSequences(w * h);
+	}
+	virtual void setNumSequences(unsigned int n) const
+	{
+		UpdateSamplerData(n);
+	}
 protected:
 	float m_fLastRuntime;
 	unsigned int m_uLastNumRaysTraced;

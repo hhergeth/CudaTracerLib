@@ -18,7 +18,7 @@ CUDA_FUNC_IN bool sphere_line_intersection(const Vec3f& p, float radSqr, const R
 	return true;
 }
 
-template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum PointStorage::L_Volume(float NumEmitted, CudaRNG& rng, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr)
+template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum PointStorage::L_Volume(float NumEmitted, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr)
 {
 	Spectrum Tau = Spectrum(0.0f);
 	float Vs = 1.0f / (4.0f / 3.0f * PI * m_fCurrentRadiusVol * m_fCurrentRadiusVol * m_fCurrentRadiusVol * NumEmitted);
@@ -53,7 +53,7 @@ template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum PointStorage::L_Volume(float Num
 	return L_n;
 }
 
-template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum BeamGrid::L_Volume(float NumEmitted, CudaRNG& rng, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr)
+template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum BeamGrid::L_Volume(float NumEmitted, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr)
 {
 	Spectrum Tau = Spectrum(0.0f);
 	Spectrum L_n = Spectrum(0.0f);
@@ -99,7 +99,7 @@ CUDA_CONST SurfaceMapT g_SurfMapCaustic;
 CUDA_CONST unsigned int g_NumPhotonEmittedSurface2, g_NumPhotonEmittedVolume2;
 CUDA_CONST CUDA_ALIGN(16) unsigned char g_VolEstimator2[Dmax4(sizeof(PointStorage), sizeof(BeamGrid), sizeof(BeamBeamGrid), sizeof(BeamBVHStorage))];
 
-template<bool USE_GLOBAL> CUDA_ONLY_FUNC Spectrum beam_beam_L(const VolHelper<USE_GLOBAL>& vol, CudaRNG& rng, const Beam& B, const NormalizedT<Ray>& r, float radius, float beamIsectDist, float queryIsectDist, float beamBeamDistance, int m_uNumEmitted, float sinTheta, float tmin)
+template<bool USE_GLOBAL> CUDA_ONLY_FUNC Spectrum beam_beam_L(const VolHelper<USE_GLOBAL>& vol, const Beam& B, const NormalizedT<Ray>& r, float radius, float beamIsectDist, float queryIsectDist, float beamBeamDistance, int m_uNumEmitted, float sinTheta, float tmin)
 {
 	Spectrum photon_tau = vol.tau(Ray(B.getPos(), B.getDir()), 0, beamIsectDist);
 	Spectrum camera_tau = vol.tau(r, tmin, queryIsectDist);
@@ -110,7 +110,7 @@ template<bool USE_GLOBAL> CUDA_ONLY_FUNC Spectrum beam_beam_L(const VolHelper<US
 	return camera_sc * p * B.getL() / m_uNumEmitted * (-photon_tau).exp() * (-camera_tau).exp() / sinTheta * k_tr<1>(radius, beamBeamDistance);
 }
 
-template<bool USE_GLOBAL> CUDA_ONLY_FUNC Spectrum BeamBeamGrid::L_Volume(float NumEmitted, CudaRNG& rng, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr)
+template<bool USE_GLOBAL> CUDA_ONLY_FUNC Spectrum BeamBeamGrid::L_Volume(float NumEmitted, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr)
 {
 	Spectrum L_n = Spectrum(0.0f), Tau = Spectrum(0.0f);
 	/*TraverseGrid(r, m_sStorage.hashMap, tmin, tmax, [&](float minT, float rayT, float maxT, float cellEndT, const Vec3u& cell_pos, bool& cancelTraversal)
@@ -134,13 +134,13 @@ template<bool USE_GLOBAL> CUDA_ONLY_FUNC Spectrum BeamBeamGrid::L_Volume(float N
 		const Beam& B = m_pDeviceBeams[i];
 		float beamBeamDistance, sinTheta, queryIsectDist, beamIsectDist;
 		if (Beam::testIntersectionBeamBeam(r.ori(), r.dir(), tmin, tmax, B.getPos(), B.getDir(), 0, B.t, math::sqr(m_fCurrentRadiusVol), beamBeamDistance, sinTheta, queryIsectDist, beamIsectDist))
-			L_n += beam_beam_L(vol, rng, B, r, m_fCurrentRadiusVol, beamIsectDist, queryIsectDist, beamBeamDistance, NumEmitted, sinTheta, tmin);
+			L_n += beam_beam_L(vol, B, r, m_fCurrentRadiusVol, beamIsectDist, queryIsectDist, beamBeamDistance, NumEmitted, sinTheta, tmin);
 	}
 	Tr = (-vol.tau(r, tmin, tmax)).exp();
 	return L_n;
 }
 
-template<bool USE_GLOBAL> Spectrum BeamBVHStorage::L_Volume(float NumEmitted, CudaRNG& rng, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr) const
+template<bool USE_GLOBAL> Spectrum BeamBVHStorage::L_Volume(float NumEmitted, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr) const
 {
 	Spectrum L_n = Spectrum(0.0f);
 	iterateBeams(Ray(r(tmin), r.dir()), tmax - tmin, [&](unsigned int ref_idx)
@@ -150,7 +150,7 @@ template<bool USE_GLOBAL> Spectrum BeamBVHStorage::L_Volume(float NumEmitted, Cu
 		const Beam& B = R.beam;// this->m_pDeviceBeams[beam_idx];
 		float beamBeamDistance, sinTheta, queryIsectDist, beamIsectDist;
 		if (Beam::testIntersectionBeamBeam(r.ori(), r.dir(), tmin, tmax, B.getPos(), B.getDir(), R.t_min, R.t_max, math::sqr(m_fCurrentRadiusVol), beamBeamDistance, sinTheta, queryIsectDist, beamIsectDist))
-			L_n += beam_beam_L(vol, rng, B, r, m_fCurrentRadiusVol, beamIsectDist, queryIsectDist, beamBeamDistance, NumEmitted, sinTheta, tmin);
+			L_n += beam_beam_L(vol, B, r, m_fCurrentRadiusVol, beamIsectDist, queryIsectDist, beamBeamDistance, NumEmitted, sinTheta, tmin);
 	});
 	Tr = (-vol.tau(r, tmin, tmax)).exp();
 	return L_n;
@@ -186,7 +186,7 @@ template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& b
 #endif
 }
 
-template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_SurfaceFinalGathering(BSDFSamplingRecord& bRec, const Vec3f& wi, float rad, TraceResult& r2, CudaRNG& rng, bool DIRECT)
+template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_SurfaceFinalGathering(BSDFSamplingRecord& bRec, const Vec3f& wi, float rad, TraceResult& r2, Sampler& rng, bool DIRECT)
 {
 	Spectrum LCaustic = L_Surface<F_IS_GLOSSY>(bRec, wi, rad, r2.getMat(), &g_SurfMapCaustic);
 	Spectrum L(0.0f);
@@ -285,7 +285,7 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED
 
 template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int h, float a_PassIndex, float a_rSurface, k_AdaptiveStruct a_AdpEntries, BlockSampleImage img, bool DIRECT, bool USE_PerPixelRadius, bool finalGathering)
 {
-	CudaRNG rng = g_SamplerData();
+	auto rng = g_SamplerData();
 	DifferentialGeometry dg;
 	BSDFSamplingRecord bRec(dg);
 	Vec2i pixel = TracerBase::getPixelPos(off.x, off.y);
@@ -309,7 +309,7 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 				if (g_SceneData.m_sVolume.IntersectP(r, 0, r2.m_fDist, &tmin, &tmax))
 				{
 					Spectrum Tr(1.0f);
-					L += throughput * ((VolEstimator*)g_VolEstimator2)->L_Volume(g_NumPhotonEmittedVolume2, rng, r, tmin, tmax, VolHelper<true>(), Tr);
+					L += throughput * ((VolEstimator*)g_VolEstimator2)->L_Volume(g_NumPhotonEmittedVolume2, r, tmin, tmax, VolHelper<true>(), Tr);
 					throughput = throughput * Tr;
 				}
 			}
@@ -333,7 +333,7 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 					if (g_SceneData.m_sVolume.HasVolumes() && g_SceneData.m_sVolume.IntersectP(Ray(bRec.dg.P, dRec.d), 0, dRec.dist, &tmin, &tmax))
 					{
 						Spectrum Tr;
-						Spectrum Li = ((VolEstimator*)g_VolEstimator2)->L_Volume(g_NumPhotonEmittedVolume2, rng, NormalizedT<Ray>(bRec.dg.P, dRec.d), tmin, tmax, VolHelper<true>(), Tr);
+						Spectrum Li = ((VolEstimator*)g_VolEstimator2)->L_Volume(g_NumPhotonEmittedVolume2, NormalizedT<Ray>(bRec.dg.P, dRec.d), tmin, tmax, VolHelper<true>(), Tr);
 						value = value * Tr + Li;
 					}
 					L += throughput * bsdfVal * weight * value;
@@ -351,7 +351,7 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 				NormalizedT<Ray> rTrans = NormalizedT<Ray>(bRec.dg.P, bRec.getOutgoing());
 				TraceResult r3 = traceRay(rTrans);
 				Spectrum Tr;
-				L += throughput * ((VolEstimator*)g_VolEstimator2)->L_Volume(g_NumPhotonEmittedVolume2, rng, rTrans, 0, r3.m_fDist, VolHelper<false>(bssrdf), Tr);
+				L += throughput * ((VolEstimator*)g_VolEstimator2)->L_Volume(g_NumPhotonEmittedVolume2, rTrans, 0, r3.m_fDist, VolHelper<false>(bssrdf), Tr);
 				//throughput = throughput * Tr;
 				break;
 			}
@@ -390,7 +390,7 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 			Spectrum Tr(1);
 			float tmin, tmax;
 			if (g_SceneData.m_sVolume.HasVolumes() && g_SceneData.m_sVolume.IntersectP(r, 0, r2.m_fDist, &tmin, &tmax))
-				L += throughput * ((VolEstimator*)g_VolEstimator2)->L_Volume(g_NumPhotonEmittedVolume2, rng, r, tmin, tmax, VolHelper<true>(), Tr);
+				L += throughput * ((VolEstimator*)g_VolEstimator2)->L_Volume(g_NumPhotonEmittedVolume2, r, tmin, tmax, VolHelper<true>(), Tr);
 			L += Tr * throughput * g_SceneData.EvalEnvironment(r);
 		}
 		img.Add(screenPos.x, screenPos.y, L);
@@ -450,7 +450,7 @@ __global__ void k_PerPixelRadiusEst(int w, int h, float r_max, float r_1, k_Adap
 		e.E_psi = e.E_psi2 = e.E_DI = e.E_DI2 = e.DI = 0.0f;
 
 		//initial per pixel rad estimate
-		CudaRNG rng = g_SamplerData();
+		auto rng = g_SamplerData();
 		DifferentialGeometry dg;
 		BSDFSamplingRecord bRec(dg);
 		NormalizedT<Ray> r = g_SceneData.GenerateSensorRay(x, y);

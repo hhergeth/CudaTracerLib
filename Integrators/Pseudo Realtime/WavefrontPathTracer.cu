@@ -14,6 +14,7 @@ CUDA_DEVICE DeviceDepthImage g_DepthImageWPT;
 
 __global__ void pathCreateKernelWPT(unsigned int w, unsigned int h)
 {
+	auto rng = g_SamplerData();
 	int rayidx;
 	__shared__ volatile int nextRayArray[MaxBlockHeight];
 	do
@@ -38,7 +39,8 @@ __global__ void pathCreateKernelWPT(unsigned int w, unsigned int h)
 
 		int x = rayidx % w, y = rayidx / w;
 		NormalizedT<Ray> r;
-		Spectrum W = g_SceneData.sampleSensorRay(r, Vec2f(x, y), Vec2f(0, 0));
+		rng.StartSequence(rayidx);
+		Spectrum W = g_SceneData.sampleSensorRay(r, Vec2f(x, y), rng.randomFloat2());
 		traversalRay& ray = g_IntersectorWPT(rayidx, 0);
 		ray.a = Vec4f(r.ori(), 0.0f);
 		ray.b = Vec4f(r.dir(), FLT_MAX);
@@ -49,6 +51,7 @@ __global__ void pathCreateKernelWPT(unsigned int w, unsigned int h)
 		dat.L = Spectrum(0.0f);
 		dat.dIdx = UINT_MAX;
 	} while (true);
+	g_SamplerData(rng);
 }
 
 
@@ -62,7 +65,7 @@ CUDA_ONLY_FUNC Vec2f stratifiedSample(const Vec2f& f, int pass)
 
 template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(unsigned int N, Image I, int pathDepth, int iterationIdx, int maxPathDepth, bool depthImage)
 {
-	CudaRNG rng = g_SamplerData();
+	auto rng = g_SamplerData();
 	int rayidx;
 	__shared__ volatile int nextRayArray[MaxBlockHeight];
 	do
@@ -84,6 +87,7 @@ template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(unsigned int N, 
 			if (rayidx >= N)
 				break;
 		}
+		rng.StartSequence(rayidx);
 
 		auto dat = g_IntersectorWPT(rayidx);
 		if (NEXT_EVENT_EST && pathDepth > 0 && dat.dIdx != UINT_MAX)

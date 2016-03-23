@@ -15,7 +15,7 @@ enum
 CUDA_DEVICE DeviceDepthImage g_DepthImage2;
 CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_NextRayCounter2;
 
-CUDA_FUNC_IN void computePixel(int x, int y, CudaRNG& rng, Image g_Image, bool depthImage, PathTrace_DrawMode mode, int maxPathLength)
+CUDA_FUNC_IN void computePixel(int x, int y, Sampler& rng, Image g_Image, bool depthImage, PathTrace_DrawMode mode, int maxPathLength)
 {
 	NormalizedT<Ray> r, rX, rY;
 	Spectrum imp = g_SceneData.m_Camera.sampleRayDifferential(r, rX, rY, Vec2f((float)x, (float)y), rng.randomFloat2());
@@ -178,7 +178,7 @@ CUDA_FUNC_IN Spectrum traceTerrain(Ray& r, CudaRNG& rng)
 
 __global__ void primaryKernel(int width, int height, Image g_Image, bool depthImage, PathTrace_DrawMode mode, int maxPathLength)
 {
-	CudaRNG rng = g_SamplerData();
+	auto rng = g_SamplerData();
 	int rayidx;
 	int N = width * height;
 	__shared__ volatile int nextRayArray[MaxBlockHeight];
@@ -202,6 +202,7 @@ __global__ void primaryKernel(int width, int height, Image g_Image, bool depthIm
 				break;
 		}
 		int x = rayidx % width, y = rayidx / width;
+		rng.StartSequence(rayidx);
 		computePixel(x, y, rng, g_Image, depthImage, mode, maxPathLength);
 	} while (true);
 	g_SamplerData(rng);
@@ -233,7 +234,7 @@ void PrimTracer::DoRender(Image* I)
 void PrimTracer::Debug(Image* I, const Vec2i& pixel)
 {
 	k_INITIALIZE(m_pScene);
-	CudaRNG rng = g_SamplerData();
+	auto rng = g_SamplerData();
 	computePixel(pixel.x, pixel.y, rng, *I, false, m_sParameters.getValue(KEY_DrawingMode()), m_sParameters.getValue(KEY_MaxPathLength()));
 	NormalizedT<Ray> r, rX, rY;
 	g_SceneData.sampleSensorRay(r, rX, rY, Vec2f((float)pixel.x, (float)pixel.y), rng.randomFloat2());

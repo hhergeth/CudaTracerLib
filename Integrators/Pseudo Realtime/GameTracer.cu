@@ -15,7 +15,7 @@ __global__ void primaryKernelBlocked(int width, int height, Image g_Image, bool 
 									 Spectrum* lastDirectImage, Spectrum* nextDirectImage, Spectrum* lastIndirectImage, Spectrum* nextIndirectImage,
 									 Sensor lastSensor, int nIteration)
 {
-	CudaRNG rng = g_SamplerData();
+	auto rng = g_SamplerData();
 	int x = 2 * (blockIdx.x * blockDim.x + threadIdx.x), y = 2 * (blockIdx.y * blockDim.y + threadIdx.y);
 	if (x < width && y < height)
 	{
@@ -182,7 +182,7 @@ void GameTracer::DoRender(Image* I)
 void GameTracer::Debug(Image* I, const Vec2i& pixel)
 {
 	k_INITIALIZE(m_pScene);
-	CudaRNG rng = g_SamplerData();
+	auto rng = g_SamplerData();
 	NormalizedT<Ray> r, rX, rY;
 	g_SceneData.sampleSensorRay(r, rX, rY, Vec2f((float)pixel.x, (float)pixel.y), rng.randomFloat2());
 	g_SamplerData(rng);

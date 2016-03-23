@@ -11,7 +11,7 @@ CUDA_DEVICE uint3 g_EyeHitBoxMax;
 template<bool RECURSIVE> __global__ void k_GuessPass(int w, int h, float scx, float scy)
 {
 	unsigned int x = threadIdx.x + blockDim.x * blockIdx.x, y = threadIdx.y + blockDim.y * blockIdx.y;
-	CudaRNG rng = g_SamplerData();
+	auto rng = g_SamplerData();
 	if (x < w && y < h)
 	{
 		NormalizedT<Ray> r = g_SceneData.GenerateSensorRay(float(x * scx), float(y * scy));
@@ -84,7 +84,7 @@ CUDA_DEVICE unsigned int g_SuccRays;
 __global__ void estimateLightVisibility(int w, int h, float scx, float scy, int recursion_depth)
 {
 	unsigned int x = threadIdx.x + blockDim.x * blockIdx.x, y = threadIdx.y + blockDim.y * blockIdx.y;
-	CudaRNG rng = g_SamplerData();
+	auto rng = g_SamplerData();
 	if (x < w && y < h)
 	{
 		NormalizedT<Ray> r = g_SceneData.GenerateSensorRay(float(x * scx), float(y * scy));

@@ -4,7 +4,7 @@ namespace CudaTracerLib {
 
 CUDA_DEVICE VCMSurfMap g_CurrentMap, g_NextMap;
 
-CUDA_FUNC_IN void _VCM(const Vec2f& pixelPosition, BlockSampleImage& img, CudaRNG& rng, int w, int h, float a_Radius, int a_NumIteration, float nPhotons)
+CUDA_FUNC_IN void _VCM(const Vec2f& pixelPosition, BlockSampleImage& img, Sampler& rng, int w, int h, float a_Radius, int a_NumIteration, float nPhotons)
 {
 	float mLightSubPathCount = 1;
 	const float etaVCM = (PI * a_Radius * a_Radius) * w * h;
@@ -119,7 +119,7 @@ CUDA_FUNC_IN void _VCM(const Vec2f& pixelPosition, BlockSampleImage& img, CudaRN
 __global__ void pathKernel(unsigned int w, unsigned int h, int xoff, int yoff, BlockSampleImage img, float a_Radius, int a_NumIteration, float nPhotons)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x + xoff, y = blockIdx.y * blockDim.y + threadIdx.y + yoff;
-	CudaRNG rng = g_SamplerData();
+	auto rng = g_SamplerData();
 	if (x < w && y < h)
 		_VCM(Vec2f(x, y), img, rng, w, h, a_Radius, a_NumIteration, nPhotons);
 	g_SamplerData(rng);

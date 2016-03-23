@@ -9,7 +9,7 @@ CUDA_DEVICE SpatialSet<DirectionModel> g_dMap;
 
 __global__ void tracePhotons()
 {
-	CudaRNG rng = g_SamplerData();
+	auto rng = g_SamplerData();
 	TraceResult r2;
 	NormalizedT<Ray> r;
 	g_SceneData.sampleEmitterRay(r, rng.randomFloat2(), rng.randomFloat2());
@@ -122,7 +122,7 @@ void PmmTracer::StartNewTrace(Image* I)
 	sMap.SetSceneDimensions(box);
 	dMap.ResetBuffer();
 	dMap.SetSceneDimensions(box);
-	CudaRNG rng = g_SamplerData();
+	auto rng = g_SamplerData();
 	DirectionModel* models = new DirectionModel[dMap.NumEntries()];
 	for (unsigned int i = 0; i < dMap.NumEntries(); i++)
 		models[i].Initialze(rng);

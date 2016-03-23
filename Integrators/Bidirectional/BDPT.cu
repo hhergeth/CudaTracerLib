@@ -1,7 +1,4 @@
 #include "BDPT.h"
-#include <Kernel/TraceHelper.h>
-#include <time.h>
-#include <Kernel/TraceAlgorithms.h>
 #include "VCMHelper.h"
 
 namespace CudaTracerLib {
@@ -13,7 +10,7 @@ CUDA_FUNC_IN float pathWeight(int force_s, int force_t, int s, int t)
 	else return 1;
 }
 
-CUDA_FUNC_IN void BPT(const Vec2f& pixelPosition, BlockSampleImage& img, CudaRNG& rng, unsigned int w, unsigned int h,
+CUDA_FUNC_IN void BPT(const Vec2f& pixelPosition, BlockSampleImage& img, Sampler& rng, unsigned int w, unsigned int h,
 	bool use_mis, int force_s, int force_t, float LScale)
 {
 	float mLightSubPathCount = 1 * 1;
@@ -106,7 +103,7 @@ __global__ void pathKernel(unsigned int w, unsigned int h, int xoff, int yoff, B
 	bool use_mis, int force_s, int force_t, float LScale)
 {
 	Vec2i pixel = TracerBase::getPixelPos(xoff, yoff);
-	CudaRNG rng = g_SamplerData();
+	auto rng = g_SamplerData();
 	if (pixel.x < w && pixel.y < h)
 		BPT(Vec2f(pixel.x + rng.randomFloat(), pixel.y + rng.randomFloat()), img, rng, w, h, use_mis, force_s, force_t, LScale);
 	g_SamplerData(rng);
@@ -122,7 +119,7 @@ void BDPT::Debug(Image* I, const Vec2i& pixel)
 {
 	k_INITIALIZE(m_pScene);
 	//Li(*gI, g_RNGData(), pixel.x, pixel.y);
-	CudaRNG rng = g_SamplerData();
+	auto rng = g_SamplerData();
 	BlockSampleImage img = getDeviceBlockSampler();
 	BPT(Vec2f(pixel), img, rng, w, h, 
 		m_sParameters.getValue(KEY_UseMis()), m_sParameters.getValue(KEY_Force_s()), m_sParameters.getValue(KEY_Force_t()), m_sParameters.getValue(KEY_ResultMultiplier()));

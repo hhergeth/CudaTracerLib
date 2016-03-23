@@ -104,7 +104,7 @@ struct BPTVertex
 	}
 };
 
-CUDA_FUNC_IN void sampleEmitter(BPTSubPathState& v, CudaRNG& rng, float mMisVcWeightFactor)
+CUDA_FUNC_IN void sampleEmitter(BPTSubPathState& v, Sampler& rng, float mMisVcWeightFactor)
 {
 	PositionSamplingRecord pRec;
 	DirectionSamplingRecord dRec;
@@ -135,7 +135,7 @@ CUDA_FUNC_IN void sampleEmitter(BPTSubPathState& v, CudaRNG& rng, float mMisVcWe
 	v.dVM = v.dVC * mMisVcWeightFactor;
 }
 
-CUDA_FUNC_IN void sampleCamera(BPTSubPathState& v, CudaRNG& rng, const Vec2f& pixelPosition, float mLightSubPathCount)
+CUDA_FUNC_IN void sampleCamera(BPTSubPathState& v, Sampler& rng, const Vec2f& pixelPosition, float mLightSubPathCount)
 {
 	PositionSamplingRecord pRec;
 	DirectionSamplingRecord dRec;
@@ -154,7 +154,7 @@ CUDA_FUNC_IN void sampleCamera(BPTSubPathState& v, CudaRNG& rng, const Vec2f& pi
 
 }
 
-CUDA_FUNC_IN bool sampleScattering(BPTSubPathState& v, BSDFSamplingRecord& bRec, const Material& mat, CudaRNG& rng, float mMisVcWeightFactor, float mMisVmWeightFactor)
+CUDA_FUNC_IN bool sampleScattering(BPTSubPathState& v, BSDFSamplingRecord& bRec, const Material& mat, Sampler& rng, float mMisVcWeightFactor, float mMisVmWeightFactor)
 {
 	float bsdfDirPdfW;
 	Spectrum f = mat.bsdf.sample(bRec, bsdfDirPdfW, rng.randomFloat2());
@@ -193,7 +193,7 @@ CUDA_FUNC_IN bool sampleScattering(BPTSubPathState& v, BSDFSamplingRecord& bRec,
 	return true;
 }
 
-CUDA_FUNC_IN Spectrum gatherLight(const BPTSubPathState& cameraState, BSDFSamplingRecord& bRec, const TraceResult& r2, CudaRNG& rng, int subPathLength, bool use_mis)
+CUDA_FUNC_IN Spectrum gatherLight(const BPTSubPathState& cameraState, BSDFSamplingRecord& bRec, const TraceResult& r2, Sampler& rng, int subPathLength, bool use_mis)
 {
 	const Light* l = g_SceneData.getLight(r2);
 	float pdfLight = g_SceneData.pdfEmitterDiscrete(l);
@@ -227,7 +227,7 @@ template<bool TEST_VISIBILITY> CUDA_FUNC_IN bool V(const Vec3f& a, const Vec3f& 
 	else return CudaTracerLib::V(a, b, res);
 }
 
-template<bool TEST_VISIBILITY = true> CUDA_FUNC_IN void connectToCamera(const BPTSubPathState& lightState, BSDFSamplingRecord& bRec, const Material& mat, Image& g_Image, CudaRNG& rng, float mLightSubPathCount, float mMisVmWeightFactor, float scaleLight, bool use_mis)
+template<bool TEST_VISIBILITY = true> CUDA_FUNC_IN void connectToCamera(const BPTSubPathState& lightState, BSDFSamplingRecord& bRec, const Material& mat, Image& g_Image, Sampler& rng, float mLightSubPathCount, float mMisVmWeightFactor, float scaleLight, bool use_mis)
 {
 	DirectSamplingRecord dRec(bRec.dg.P, bRec.dg.sys.n);
 	Spectrum directFactor = g_SceneData.m_Camera.sampleDirect(dRec, rng.randomFloat2());
@@ -245,7 +245,7 @@ template<bool TEST_VISIBILITY = true> CUDA_FUNC_IN void connectToCamera(const BP
 		g_Image.Splat(dRec.uv.x, dRec.uv.y, contrib * scaleLight);
 }
 
-template<bool TEST_VISIBILITY = true> CUDA_FUNC_IN Spectrum connectToLight(const BPTSubPathState& cameraState, BSDFSamplingRecord& bRec, const Material& mat, CudaRNG& rng, float mMisVmWeightFactor, bool use_mis)
+template<bool TEST_VISIBILITY = true> CUDA_FUNC_IN Spectrum connectToLight(const BPTSubPathState& cameraState, BSDFSamplingRecord& bRec, const Material& mat, Sampler& rng, float mMisVmWeightFactor, bool use_mis)
 {
 	DirectSamplingRecord dRec(bRec.dg.P, bRec.dg.sys.n);
 	const Spectrum directFactor = g_SceneData.sampleEmitterDirect(dRec, rng.randomFloat2());
