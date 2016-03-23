@@ -560,6 +560,7 @@ bool parseImage(const std::string& a_InputFile, imgData& data)
 		if (((imageType == FIT_RGBAF) && (bpp == 128)) || ((imageType == FIT_RGBF) && (bpp == 96)))
 			type = Texture_DataType::vtRGBE;
 		data.Allocate(w, h, type);
+		const auto* palette = FreeImage_GetPalette(dib);
 		for (unsigned int y = 0; y < h; ++y)
 		{
 			for (unsigned int x = 0; x < w; ++x)
@@ -569,10 +570,12 @@ bool parseImage(const std::string& a_InputFile, imgData& data)
 				BYTE pixel3;
 				if (type == Texture_DataType::vtRGBE)
 					data.SetRGBE(SpectrumConverter::Float3ToRGBE(Vec3f(pixel->red, pixel->green, pixel->blue)), x, y);
-				else if (bpp == 8)
+				else if (bpp <= 8)
 				{
-					FreeImage_GetPixelIndex(dib, x, y, &pixel3);
-					data.SetRGBCOL(make_uchar4(pixel3, pixel3, pixel3, 255), x, y);
+					if (!FreeImage_GetPixelIndex(dib, x, y, &pixel3) || !palette)
+						throw std::runtime_error("Error while reading image!");
+					auto color = palette[pixel3];
+					data.SetRGBCOL(make_uchar4(color.rgbRed, color.rgbGreen, color.rgbBlue, 255), x, y);
 				}
 				else data.SetRGBCOL(make_uchar4(pixel2[FI_RGBA_RED], pixel2[FI_RGBA_GREEN], pixel2[FI_RGBA_BLUE], bpp == 32 ? pixel2[FI_RGBA_ALPHA] : 255), x, y);
 			}
