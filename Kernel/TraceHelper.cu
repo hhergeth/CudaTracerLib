@@ -170,21 +170,23 @@ struct IndependentSequenceGenerator
 {
 	template<int N_SEQUENCES, int SEQ_LEN> void fill(SequenceSamplerData<N_SEQUENCES, SEQ_LEN>& data, ISamplingSequenceGenerator* sampler, const unsigned int* passIdx)
 	{
+		static unsigned int global_pass_idx = 0;
+		auto pIdx = passIdx ? *passIdx : global_pass_idx++;
+		data.setPassIndex(pIdx);
+
 		static CudaRNG rng = CudaRNG();
-		if (sampler)
+		if (!sampler)
 		{
-			for (int i = 0; i < N_SEQUENCES; i++)
+			for (unsigned int i = 0; i < N_SEQUENCES; i++)
 			{
 				for (int j = 0; j < SEQ_LEN; j++)
 				{
 					data.dim1(i)[j] = rng.randomFloat();
-					data.dim2(i)[j] = rng.randomFloat2();
+					data.dim2(i)[j] = make_float2(rng.randomFloat(), rng.randomFloat());
 				}
 			}
 		}
 
-		static unsigned int global_pass_idx = 0;
-		data.setPassIndex(passIdx ? *passIdx : global_pass_idx++);
 	}
 	void fill(RandomSamplerData& data, ISamplingSequenceGenerator* sampler, const unsigned int* passIdx)
 	{
@@ -196,6 +198,7 @@ void UpdateKernel(DynamicScene* a_Scene, ISamplingSequenceGenerator* sampler, co
 	if (sampler)
 		sampler->Compute(g_SamplerDataHost);
 	IndependentSequenceGenerator().fill(g_SamplerDataHost, sampler, passIdx);
+	g_SamplerDataHost.CopyToDevice();
 
 	if (!a_Scene)
 		return;
