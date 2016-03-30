@@ -67,7 +67,9 @@ namespace CudaTracerLib {
 #define CTL_ASSERT(X) ((X) ? ((void)0) : fail("Assertion failed!\n%s:%d\n%s", __FILE__, __LINE__, #X))
 #endif
 #else
-#   define CTL_ASSERT(X) ((void)0)
+//evaluate the expression either way, it possibly has side effects
+	CUDA_FUNC_IN void noop() {}
+#   define CTL_ASSERT(X) ((X) ? noop() : noop())
 #endif
 
 //http://stackoverflow.com/questions/12778949/cuda-memory-alignment
