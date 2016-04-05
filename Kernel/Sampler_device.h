@@ -8,37 +8,16 @@
 
 namespace CudaTracerLib {
 
-template<typename T, int SEQUENCE_LENGTH> struct SequenceSamplerData_Sequence
+struct SequenceSampler;
+struct SequenceSamplerData
 {
-	T data[SEQUENCE_LENGTH];
-	CUDA_FUNC_IN SequenceSamplerData_Sequence() = default;
-	CUDA_FUNC_IN T& operator[](unsigned int i)
-	{
-		CTL_ASSERT(i < SEQUENCE_LENGTH);
-		return data[i];
-	}
-	CUDA_FUNC_IN const T& operator[](unsigned int i) const
-	{
-		CTL_ASSERT(i < SEQUENCE_LENGTH);
-		return data[i];
-	}
-};
-
-template<int N_SEQUENCES, int SEQUENCE_LENGTH> struct SequenceSampler;
-template<int N_SEQUENCES, int SEQUENCE_LENGTH> struct SequenceSamplerData
-{
-
-	typedef SequenceSampler<N_SEQUENCES, SEQUENCE_LENGTH> SamplerType;
-
-	enum { NUM_SEQUENCES = N_SEQUENCES, LEN_SEQUENCE = SEQUENCE_LENGTH };
-
-	template<typename T> using Sequence = SequenceSamplerData_Sequence<T, SEQUENCE_LENGTH>;
-
+	typedef SequenceSampler SamplerType;
 private:
-	Sequence<float>* m_d1DataDevice;
-	Sequence<float>* m_d1DataHost;
-	Sequence<float2>* m_d2DataDevice;
-	Sequence<float2>* m_d2DataHost;
+	float* m_d1DataDevice;
+	float* m_d1DataHost;
+	Vec2f* m_d2DataDevice;
+	Vec2f* m_d2DataHost;
+	unsigned int m_numSequences;
 	int m_num_sequences_per, m_num_sequences_per_sqrt;
 	int m_passIdx;
 public:
@@ -50,31 +29,31 @@ public:
 		delete[] m_d1DataHost; m_d1DataHost = 0;
 		delete[] m_d2DataHost; m_d2DataHost = 0;
 	}
-	void ConstructData()
+	void ConstructData(unsigned int N = 1 << 14)
 	{
-		CUDA_MALLOC(&m_d1DataDevice, N_SEQUENCES * sizeof(Sequence<float>));
-		CUDA_MALLOC(&m_d2DataDevice, N_SEQUENCES * sizeof(Sequence<float2>));
-		m_d1DataHost = new Sequence<float>[N_SEQUENCES];
-		m_d2DataHost = new Sequence<float2>[N_SEQUENCES];
-		std::cout << "Constrcuted " << __FUNCTION__ << "\n";
+		m_numSequences = N;
+		CUDA_MALLOC(&m_d1DataDevice, m_numSequences * sizeof(float));
+		CUDA_MALLOC(&m_d2DataDevice, m_numSequences * sizeof(Vec2f));
+		m_d1DataHost = new float[m_numSequences];
+		m_d2DataHost = new Vec2f[m_numSequences];
 	}
 	void CopyToDevice()
 	{
-		CUDA_MEMCPY_TO_DEVICE(m_d1DataDevice, m_d1DataHost, N_SEQUENCES * sizeof(Sequence<float>));
-		CUDA_MEMCPY_TO_DEVICE(m_d2DataDevice, m_d2DataHost, N_SEQUENCES * sizeof(Sequence<float2>));
+		CUDA_MEMCPY_TO_DEVICE(m_d1DataDevice, m_d1DataHost, m_numSequences * sizeof(float));
+		CUDA_MEMCPY_TO_DEVICE(m_d2DataDevice, m_d2DataHost, m_numSequences * sizeof(Vec2f));
 	}
-	CUDA_FUNC_IN Sequence<float>& dim1(unsigned int i)
+	CUDA_FUNC_IN float& dim1(unsigned int i)
 	{
-		CTL_ASSERT(i < N_SEQUENCES);
+		CTL_ASSERT(i < m_numSequences);
 #ifdef ISCUDA
 		return m_d1DataDevice[i];
 #else
 		return m_d1DataHost[i];
 #endif
 	}
-	CUDA_FUNC_IN Sequence<float2>& dim2(unsigned int i)
+	CUDA_FUNC_IN Vec2f& dim2(unsigned int i)
 	{
-		CTL_ASSERT(i < N_SEQUENCES);
+		CTL_ASSERT(i < m_numSequences);
 #ifdef ISCUDA
 		return m_d2DataDevice[i];
 #else
@@ -91,7 +70,7 @@ public:
 	}
 	CUDA_FUNC_IN void setNumSequences(int val)
 	{
-		m_num_sequences_per = max(1, val / N_SEQUENCES);
+		m_num_sequences_per = max(1u, val / m_numSequences);
 		m_num_sequences_per_sqrt = max(1, (int)math::sqrt((float)m_num_sequences_per));
 	}
 	CUDA_FUNC_IN void setPassIndex(unsigned int idx)
@@ -102,12 +81,12 @@ public:
 	{
 		return m_passIdx;
 	}
-
-	CUDA_FUNC_IN SamplerType operator()()
+	CUDA_FUNC_IN unsigned int getNumSequences() const
 	{
-		unsigned int idx = getGlobalIdx_2D_2D();
-		return operator()(idx);
+		return m_numSequences;
 	}
+
+	CUDA_FUNC_IN SamplerType operator()();
 	CUDA_FUNC_IN SamplerType operator()(unsigned int idx);
 	CUDA_FUNC_IN void operator()(const SamplerType& val)
 	{
@@ -119,10 +98,10 @@ public:
 	}
 };
 
-template<int N_SEQUENCES, int SEQUENCE_LENGTH> struct SequenceSampler
+struct SequenceSampler
 {
 private:
-	SequenceSamplerData<N_SEQUENCES, SEQUENCE_LENGTH>& data;
+	SequenceSamplerData& data;
 	unsigned int m_index;
 	CUDA_FUNC_IN static unsigned int wang_hash(unsigned int seed)
 	{
@@ -154,19 +133,19 @@ private:
 		//return Vec2f(fmodf(u, 1.0f), fmodf(v, 1.0f)) * 0.9999f;
 	}
 public:
-	CUDA_FUNC_IN SequenceSampler(unsigned int i, SequenceSamplerData<N_SEQUENCES, SEQUENCE_LENGTH>& dat)
+	CUDA_FUNC_IN SequenceSampler(unsigned int i, SequenceSamplerData& dat)
 		: m_index(i), data(dat)
 	{
 
 	}
 	CUDA_FUNC_IN float randomFloat()
 	{
-		float val = data.dim1(m_index++ % N_SEQUENCES)[0];
+		float val = data.dim1(m_index++ % data.getNumSequences());
 		return map(val) * 0.9999f;
 	}
 	CUDA_FUNC_IN Vec2f randomFloat2()
 	{
-		auto val = data.dim2(m_index++ % N_SEQUENCES)[0];
+		auto val = data.dim2(m_index++ % data.getNumSequences());
 		return map(Vec2f(val.x, val.y)) * 0.9999f;
 	}
 	CUDA_FUNC_IN void StartSequence(unsigned int idx)
@@ -175,7 +154,12 @@ public:
 	}
 };
 
-template<int N_SEQUENCES, int SEQUENCE_LENGTH> SequenceSampler<N_SEQUENCES, SEQUENCE_LENGTH> SequenceSamplerData<N_SEQUENCES, SEQUENCE_LENGTH>::operator()(unsigned int idx)
+SequenceSampler SequenceSamplerData::operator()()
+{
+	unsigned int idx = getGlobalIdx_2D_2D();
+	return operator()(idx);
+}
+SequenceSampler SequenceSamplerData::operator()(unsigned int idx)
 {
 	return SamplerType(idx, *this);
 }
@@ -273,8 +257,8 @@ public:
 	}
 };
 
-//typedef RandomSamplerData SamplerData;
-typedef SequenceSamplerData<1 << 22, 1> SamplerData;
+typedef RandomSamplerData SamplerData;
+//typedef SequenceSamplerData SamplerData;
 
 typedef SamplerData::SamplerType Sampler;
 
@@ -287,20 +271,10 @@ public:
 	}
 	virtual void Compute(float* sequence, unsigned int n) = 0;
 	virtual void Compute(Vec2f* sequence, unsigned int n) = 0;
-	template<int N_SEQUENCES, int SEQ_LEN> void Compute(SequenceSamplerData<N_SEQUENCES, SEQ_LEN>& data)
+	void Compute(SequenceSamplerData& data)
 	{
-		static float* data1 = new float[N_SEQUENCES];
-		static Vec2f* data2 = new Vec2f[N_SEQUENCES];
-		for (int i = 0; i < SEQ_LEN; i++)
-		{
-			Compute(data1, SEQ_LEN);
-			Compute(data2, SEQ_LEN);
-			for (int j = 0; j < N_SEQUENCES; j++)
-			{
-				data.dim1(j)[i] = data1[j];
-				data.dim2(j)[i] = data2[j];
-			}
-		}
+		Compute(&data.dim1(0), data.getNumSequences());
+		Compute(&data.dim2(0), data.getNumSequences());
 	}
 	void Compute(RandomSamplerData& data)
 	{

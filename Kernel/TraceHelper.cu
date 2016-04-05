@@ -168,7 +168,7 @@ bool traceRay(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result)
 //small helper class to fill the sampler data in case no sampler generator is passed
 struct IndependentSequenceGenerator
 {
-	template<int N_SEQUENCES, int SEQ_LEN> void fill(SequenceSamplerData<N_SEQUENCES, SEQ_LEN>& data, ISamplingSequenceGenerator* sampler, const unsigned int* passIdx)
+	void fill(SequenceSamplerData& data, ISamplingSequenceGenerator* sampler, const unsigned int* passIdx)
 	{
 		static unsigned int global_pass_idx = 0;
 		auto pIdx = passIdx ? *passIdx : global_pass_idx++;
@@ -177,13 +177,10 @@ struct IndependentSequenceGenerator
 		static CudaRNG rng = CudaRNG();
 		if (!sampler)
 		{
-			for (unsigned int i = 0; i < N_SEQUENCES; i++)
+			for (unsigned int i = 0; i < data.getNumSequences(); i++)
 			{
-				for (int j = 0; j < SEQ_LEN; j++)
-				{
-					data.dim1(i)[j] = rng.randomFloat();
-					data.dim2(i)[j] = make_float2(rng.randomFloat(), rng.randomFloat());
-				}
+				data.dim1(i) = rng.randomFloat();
+				data.dim2(i) = Vec2f(rng.randomFloat(), rng.randomFloat());
 			}
 		}
 
