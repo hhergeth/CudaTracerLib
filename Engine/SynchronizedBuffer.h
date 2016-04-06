@@ -27,6 +27,7 @@ public:
 	{
 		
 	}
+	virtual void Free() = 0;
 	CUDA_FUNC_IN bool isOnCPU() const
 	{
 		return (m_location & DataLocation::CPU) == DataLocation::CPU;
@@ -35,7 +36,7 @@ public:
 	{
 		return (m_location & DataLocation::GPU) == DataLocation::GPU;
 	}
-	virtual void Synchronize() const = 0;
+	virtual void Synchronize() = 0;
 	virtual void setOnCPU()
 	{
 		m_location = DataLocation::CPU;
@@ -58,10 +59,10 @@ public:
 		m_hostData = new T[m_length];
 		CUDA_MALLOC(&m_deviceData, m_length * sizeof(T));
 	}
-	virtual ~SynchronizedBuffer()
+	virtual void Free() override
 	{
 		if (m_hostData == 0 || m_deviceData == 0)
-			throw std::runtime_error("Invalid call to destructor!");
+			throw std::runtime_error("Invalid call to Free!");
 		delete[] m_hostData;
 		CUDA_FREE(m_deviceData);
 		m_length = 0;
@@ -84,29 +85,55 @@ public:
 	CUDA_FUNC_IN const T& operator[](unsigned int idx) const
 	{
 #ifdef ISCUDA
+		CTL_ASSERT(isOnGPU());
 		return m_deviceData[idx];
 #else
+		CTL_ASSERT(isOnCPU());
 		return m_hostData[idx];
 #endif
 	}
 	CUDA_FUNC_IN T& operator[](unsigned int idx)
 	{
 #ifdef ISCUDA
+		CTL_ASSERT(isOnGPU());
 		return m_deviceData[idx];
 #else
+		CTL_ASSERT(isOnCPU());
 		return m_hostData[idx];
 #endif
+	}
+	CUDA_FUNC_IN const T* getDevicePtr() const
+	{
+		return m_deviceData;
+	}
+	CUDA_FUNC_IN T* getDevicePtr()
+	{
+		return m_deviceData;
 	}
 	CUDA_FUNC_IN unsigned int getLength() const
 	{
 		return m_length;
 	}
-	virtual void Synchronize() const override
+	virtual void Synchronize() override
 	{
 		if (m_location == DataLocation::CPU)
 			CUDA_MEMCPY_TO_DEVICE(m_deviceData, m_hostData, m_length * sizeof(T));
 		else if (m_location == DataLocation::GPU)
 			CUDA_MEMCPY_TO_HOST(m_hostData, m_deviceData, m_length * sizeof(T));
+		m_location = DataLocation::Synchronized;
+	}
+	virtual void Memset(unsigned char val)
+	{
+		Platform::SetMemory(m_hostData, m_length * sizeof(T), val);
+		cudaMemset(m_deviceData, val, m_length * sizeof(T));
+		m_location = DataLocation::Synchronized;
+	}
+	virtual void Memset(const T& val)
+	{
+		for (unsigned int i = 0; i < m_length; i++)
+			m_hostData[i] = val;
+		m_location = DataLocation::CPU;
+		Synchronize();
 	}
 };
 
@@ -120,16 +147,11 @@ template<typename T> static void CreateOrResize(SynchronizedBuffer<T>*& buf, uns
 
 class ISynchronizedBufferParent : public ISynchronizedBuffer
 {
-	template<typename T> static void checkType(const SynchronizedBuffer<T>& arg)
-	{
-
-	}
-	template<typename T> static void checkType(const T& arg)
-	{
-		static_assert(false, "Type passed to ISynchronizedBufferParent is not derived from SynchronizedBuffer!");
-	}
-
 	std::vector<ISynchronizedBuffer*> m_buffers;
+	void iterateTypes()
+	{
+		
+	}
 	template<typename ARG, typename... ARGS> void iterateTypes(ARG& arg, ARGS&... args)
 	{
 		iterateTypes(arg);
@@ -137,7 +159,6 @@ class ISynchronizedBufferParent : public ISynchronizedBuffer
 	}
 	template<typename ARG> void iterateTypes(ARG& arg)
 	{
-		checkType(arg);
 		m_buffers.push_back(&arg);
 	}
 public:
@@ -145,10 +166,16 @@ public:
 	{
 		iterateTypes(args...);
 	}
-	virtual void Synchronize() const override
+	virtual void Free() override
+	{
+		for (auto buf : m_buffers)
+			buf->Free();
+	}
+	virtual void Synchronize() override
 	{
 		for (auto buf : m_buffers)
 			buf->Synchronize();
+		m_location = DataLocation::Synchronized;
 	}
 	virtual void setOnCPU() override
 	{
