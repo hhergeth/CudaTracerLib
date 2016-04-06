@@ -89,7 +89,7 @@ CTL_EXPORT void fail(const char* format, ...);
 CTL_EXPORT void __ThrowCudaErrors__(const char* file, int line, ...);
 #define ThrowCudaErrors(...) __ThrowCudaErrors__(__FILE__, __LINE__, ##__VA_ARGS__, -1)
 
-template<typename T> CTL_EXPORT CUDA_FUNC_IN void swapk(T& a, T& b)
+template<typename T> CUDA_FUNC_IN void swapk(T& a, T& b)
 {
 	T q = a;
 	a = b;
@@ -154,6 +154,41 @@ template<typename T> inline void ZeroMemoryCuda(T* cudaVar)
 		ThrowCudaErrors(cudaGetSymbolAddress(&tar, SYMBOL)); \
 		cudaMemcpy(&value, tar, sizeof(value), cudaMemcpyDeviceToHost); \
 	}
+
+template<typename T> struct CudaStaticWrapper
+{
+protected:
+	CUDA_ALIGN(256) unsigned char m_data[sizeof(T)];
+public:
+	CUDA_FUNC_IN CudaStaticWrapper()
+	{
+
+	}
+	CUDA_FUNC_IN operator const T& () const
+	{
+		return As();
+	}
+	CUDA_FUNC_IN operator T& ()
+	{
+		return As();
+	}
+	CUDA_FUNC_IN T* operator->()
+	{
+		return &As();
+	}
+	CUDA_FUNC_IN const T* operator->() const
+	{
+		return &As();
+	}
+	CUDA_FUNC_IN const T& As() const
+	{
+		return *(T*)m_data;
+	}
+	CUDA_FUNC_IN T& As()
+	{
+		return *(T*)m_data;
+	}
+};
 
 template<typename T> class e_Variable
 {
