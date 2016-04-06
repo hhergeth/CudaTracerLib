@@ -1,6 +1,5 @@
 #include <StdAfx.h>
 #include "CudaMemoryManager.h"
-#include <Kernel/Tracer.h>
 
 namespace CudaTracerLib {
 

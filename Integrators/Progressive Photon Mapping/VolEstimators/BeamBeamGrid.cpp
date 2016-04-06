@@ -83,7 +83,7 @@ void BeamBeamGrid::PrepareForRendering()
 	n = entries[n].nextIdx;
 	}
 	}*/
-	
+	return;
 	if (!m_sStorage.getNumStoredEntries()) return;
 
 	std::vector<SpatialLinkedMap<int>::linkedEntry> hostIndices;
