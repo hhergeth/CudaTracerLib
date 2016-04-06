@@ -3,13 +3,10 @@
 namespace CudaTracerLib {
 
 WavefrontVCM::WavefrontVCM(unsigned int a_NumLightRays)
-	: m_uNumLightRays(a_NumLightRays), m_sLightBufA(a_NumLightRays), m_sLightBufB(a_NumLightRays), m_sCamBufA(BLOCK_SAMPLER_BlockSize * BLOCK_SAMPLER_BlockSize), m_sCamBufB(BLOCK_SAMPLER_BlockSize * BLOCK_SAMPLER_BlockSize)
+	: m_uNumLightRays(a_NumLightRays), m_sLightBufA(a_NumLightRays), m_sLightBufB(a_NumLightRays), m_sCamBufA(BLOCK_SAMPLER_BlockSize * BLOCK_SAMPLER_BlockSize), m_sCamBufB(BLOCK_SAMPLER_BlockSize * BLOCK_SAMPLER_BlockSize),
+	  m_sPhotonMapsNext(Vec3u(200), a_NumLightRays * MAX_LIGHT_SUB_PATH_LENGTH)
 {
 	ThrowCudaErrors(CUDA_MALLOC(&m_pDeviceLightVertices, sizeof(BPTVertex) * MAX_LIGHT_SUB_PATH_LENGTH * a_NumLightRays));
-
-	int gridLength = 200;
-	int numPhotons = a_NumLightRays * MAX_LIGHT_SUB_PATH_LENGTH;
-	m_sPhotonMapsNext = VCMSurfMap(Vec3u(gridLength), numPhotons);
 }
 
 WavefrontVCM::~WavefrontVCM()
@@ -26,7 +23,7 @@ CUDA_CONST float mLightSubPathCount;
 
 CUDA_DEVICE k_WVCM_LightBuffer g_sLightBufA, g_sLightBufB;
 
-CUDA_DEVICE VCMSurfMap g_NextMap2;
+CUDA_DEVICE CudaStaticWrapper<VCMSurfMap> g_NextMap2;
 
 CUDA_DEVICE k_WVCM_CamBuffer g_sCamBufA, g_sCamBufB;
 
@@ -80,9 +77,9 @@ CUDA_GLOBAL void extendLighRays(unsigned int N, BPTVertex* g_pLightVertices, Ima
 			g_pLightVertices[vIdx * MAX_LIGHT_SUB_PATH_LENGTH + vOff] = v;
 
 			auto ph = k_MISPhoton(v.throughput, -ent.state.r.dir(), v.bRec.dg.sys.n, PhotonType::pt_Diffuse, v.dVC, v.dVCM, v.dVM);
-			Vec3u cell_idx = g_NextMap2.getHashGrid().Transform(v.bRec.dg.P);
-			ph.setPos(g_NextMap2.getHashGrid(), cell_idx, v.bRec.dg.P);
-			if (!g_NextMap2.store(cell_idx, ph))
+			Vec3u cell_idx = g_NextMap2->getHashGrid().Transform(v.bRec.dg.P);
+			ph.setPos(g_NextMap2->getHashGrid(), cell_idx, v.bRec.dg.P);
+			if (!g_NextMap2->store(cell_idx, ph))
 				printf("WVCM : not enough photon storage allocated!\n");
 
 			if (r2.getMat().bsdf.hasComponent(ESmooth))
@@ -140,6 +137,7 @@ void WavefrontVCM::DoRender(Image* I)
 	} while (srcBuf->getNumRays(0));
 
 	ThrowCudaErrors(cudaMemcpyFromSymbol(&m_sPhotonMapsNext, g_NextMap2, sizeof(m_sPhotonMapsNext)));
+	m_sPhotonMapsNext.setOnGPU();
 
 	Tracer<true, true>::DoRender(I);
 }

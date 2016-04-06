@@ -5,32 +5,39 @@
 #include <Engine/DynamicScene.h>
 #include <Engine/Node.h>
 #include <Engine/Mesh.h>
+#include <Engine/Material.h>
 
 namespace CudaTracerLib {
 
-PPPMTracer::PPPMTracer()
-	: m_pEntries(0), m_fLightVisibility(1), k_Intial(10),
-	m_fProbSurface(1), m_fProbVolume(1)
+unsigned int ComputePhotonBlocksPerPass()
 {
-	m_sParameters << KEY_Direct() << CreateSetBool(true)
+#ifdef NDEBUG
+	return 180;
+#else
+	return 1;
+#endif
+}
+
+PPPMTracer::PPPMTracer()
+	: m_adpBuffer(0), m_fLightVisibility(1), k_Intial(10),
+	m_fProbSurface(1), m_fProbVolume(1), m_uBlocksPerLaunch(ComputePhotonBlocksPerPass()),
+	m_sSurfaceMap(Vec3u(250), (ComputePhotonBlocksPerPass() + 2) * PPM_slots_per_block), m_sSurfaceMapCaustic(0)
+{
+	m_sParameters
+		<< KEY_Direct()			  << CreateSetBool(true)
 		<< KEY_PerPixelRadius()   << CreateSetBool(false)
 		<< KEY_FinalGathering()   << CreateSetBool(false)
-		<< KEY_AdaptiveAccProb()  << CreateSetBool(true)
+		<< KEY_AdaptiveAccProb() << CreateSetBool(false)
 		<< KEY_VolRadiusScale()   << CreateInterval(1.0f, 0.0f, FLT_MAX);
-#ifdef NDEBUG
-	m_uBlocksPerLaunch = 180;
-#else
-	m_uBlocksPerLaunch = 1;
-#endif
+
 	m_uTotalPhotonsEmitted = -1;
 	unsigned int numPhotons = (m_uBlocksPerLaunch + 2) * PPM_slots_per_block;
-	m_sSurfaceMap = SurfaceMapT(Vec3u(250), numPhotons);
 	if (m_sParameters.getValue(KEY_FinalGathering()))
-		m_sSurfaceMapCaustic = SurfaceMapT(Vec3u(250), numPhotons);
-	m_pVolumeEstimator = new PointStorage(100, numPhotons);
-	//m_pVolumeEstimator = new BeamGrid(100, numPhotons, 30, 2);
+		m_sSurfaceMapCaustic = new SurfaceMapT(Vec3u(250), numPhotons);
+	m_pVolumeEstimator = new PointStorage(150, numPhotons);
+	//m_pVolumeEstimator = new BeamGrid(150, numPhotons, 10, 2);
 	//m_pVolumeEstimator = new BeamBVHStorage(100);
-	//m_pVolumeEstimator = new BeamBeamGrid(10, 10000, 3000);
+	//m_pVolumeEstimator = new BeamBeamGrid(10, 10000, 1000);
 	if (m_sParameters.getValue(KEY_AdaptiveAccProb()))
 	{
 		size_t volLength, volCount;
@@ -42,7 +49,11 @@ PPPMTracer::PPPMTracer()
 PPPMTracer::~PPPMTracer()
 {
 	m_sSurfaceMap.Free();
-	CUDA_FREE(m_pEntries);
+	if (m_adpBuffer)
+	{
+		m_adpBuffer->Free();
+		delete m_adpBuffer;
+	}
 	delete m_pVolumeEstimator;
 }
 
@@ -60,7 +71,7 @@ void PPPMTracer::PrintStatus(std::vector<std::string>& a_Buf) const
 	a_Buf.push_back(format("Photons per pass : %d*100,000", m_sSurfaceMap.getNumEntries() / 100000));
 	a_Buf.push_back(format("%.2f%% Surf Photons", float(m_sSurfaceMap.getNumStoredEntries()) / m_sSurfaceMap.getNumEntries() * 100));
 	if (m_sParameters.getValue(KEY_FinalGathering()))
-		a_Buf.push_back(format("Caustic surf map : %.2f%%", float(m_sSurfaceMapCaustic.getNumStoredEntries()) / m_sSurfaceMapCaustic.getNumEntries() * 100));
+		a_Buf.push_back(format("Caustic surf map : %.2f%%", float(m_sSurfaceMapCaustic->getNumStoredEntries()) / m_sSurfaceMapCaustic->getNumEntries() * 100));
 	a_Buf.push_back("Volumeric Estimator : ");
 	m_pVolumeEstimator->PrintStatus(a_Buf);
 }
@@ -68,9 +79,7 @@ void PPPMTracer::PrintStatus(std::vector<std::string>& a_Buf) const
 void PPPMTracer::Resize(unsigned int _w, unsigned int _h)
 {
 	Tracer<true, true>::Resize(_w, _h);
-	if (m_pEntries)
-		CUDA_FREE(m_pEntries);
-	CUDA_MALLOC(&m_pEntries, sizeof(k_AdaptiveEntry) * _w * _h);
+	CreateOrResize(m_adpBuffer, _w * _h);
 }
 
 void PPPMTracer::DoRender(Image* I)
@@ -91,7 +100,7 @@ void PPPMTracer::DoRender(Image* I)
 void PPPMTracer::getRadiusAt(int x, int y, float& r, float& rd) const
 {
 	k_AdaptiveEntry e;
-	ThrowCudaErrors(cudaMemcpy(&e, m_pEntries + w * y + x, sizeof(e), cudaMemcpyDeviceToHost));
+	ThrowCudaErrors(cudaMemcpy(&e, m_adpBuffer->getDevicePtr() + w * y + x, sizeof(e), cudaMemcpyDeviceToHost));
 	r = e.compute_r((int)m_uPassesDone, (int)m_sSurfaceMap.getNumEntries(), (int)m_uTotalPhotonsEmitted);
 	rd = e.compute_rd(m_uPassesDone);
 }
@@ -133,7 +142,7 @@ void PPPMTracer::StartNewTrace(Image* I)
 	}
 	m_sSurfaceMap.SetSceneDimensions(m_sEyeBox);
 	if (m_sParameters.getValue(KEY_FinalGathering()))
-		m_sSurfaceMapCaustic.SetSceneDimensions(m_sEyeBox);
+		m_sSurfaceMapCaustic->SetSceneDimensions(m_sEyeBox);
 	m_pVolumeEstimator->StartNewRendering(volBox);
 
 	float r_scene = m_sEyeBox.Size().length() / 2;

@@ -4,8 +4,8 @@
 
 namespace CudaTracerLib {
 
-CUDA_DEVICE SpatialLinkedMap<SpatialEntry> g_sMap;
-CUDA_DEVICE SpatialSet<DirectionModel> g_dMap;
+CUDA_DEVICE CudaStaticWrapper<SpatialLinkedMap<SpatialEntry>> g_sMap;
+CUDA_DEVICE CudaStaticWrapper<SpatialSet<DirectionModel>> g_dMap;
 
 __global__ void tracePhotons()
 {
@@ -24,7 +24,7 @@ __global__ void tracePhotons()
 		if (f.isZero())
 			break;
 		Vec3f p = r(r2.m_fDist);
-		g_sMap.store(p, bRec.wi);
+		g_sMap->store(p, bRec.wi);
 		if (depth > 5)
 			if (rng.randomFloat() >= f.max())
 				break;
@@ -39,11 +39,11 @@ template<int max_SAMPLES> __global__ void updateCache(float ny)
 	Vec3u i = Vec3u(blockIdx.x * blockDim.x + threadIdx.x,
 		blockIdx.y * blockDim.y + threadIdx.y,
 		blockIdx.z * blockDim.z + threadIdx.z);
-	if (i.x < g_dMap.m_gridSize.x && i.y < g_dMap.m_gridSize.y && i.z < g_dMap.m_gridSize.z)
+	if (i.x < g_dMap->m_gridSize.x && i.y < g_dMap->m_gridSize.y && i.z < g_dMap->m_gridSize.z)
 	{
-		Vec3f mi = g_dMap.hashMap.InverseTransform(i), ma = g_dMap.hashMap.InverseTransform(i + Vec3u(1));
-		unsigned int idx = g_dMap.hashMap.Hash(i);
-		g_dMap(idx).Update<max_SAMPLES>(g_sMap, mi, ma, ny);
+		Vec3f mi = g_dMap->hashMap.InverseTransform(i), ma = g_dMap->hashMap.InverseTransform(i + Vec3u(1));
+		unsigned int idx = g_dMap->hashMap.Hash(i);
+		g_dMap->operator()(idx).Update<max_SAMPLES>(g_sMap, mi, ma, ny);
 	}
 }
 
@@ -58,7 +58,7 @@ __global__ void visualize(Image I, int w, int h, float scale)
 		if (r2.hasHit())
 		{
 			Vec3f p = r(r2.m_fDist);
-			num = g_dMap(p).numSamples;
+			num = g_dMap->operator()(p).numSamples;
 			//uint3 i = g_dMap.hashMap.Transform(p);
 			//float3 mi = g_dMap.hashMap.InverseTransform(i), ma = g_dMap.hashMap.InverseTransform(i + make_uint3(1));
 			//for(SpatialLinkedMap<SpatialEntry>::iterator it = g_sMap.begin(mi, ma); it != g_sMap.end(mi, ma); ++it)
@@ -94,7 +94,9 @@ void PmmTracer::DoRender(Image* I)
 		tracePhotons << < 10, 256 >> >();
 		cudaMemcpyFromSymbol(&sMap, g_sMap, sizeof(sMap));
 	}
+	sMap.setOnGPU();
 	cudaMemcpyToSymbol(g_dMap, &dMap, sizeof(dMap));
+	dMap.setOnGPU();
 	int l = 6;
 	auto L = dMap.m_gridSize / l + 1;
 	updateCache<16> << <dim3(L.x, L.y, L.z), dim3(l, l, l) >> >(ny(passIteration++));
@@ -107,7 +109,7 @@ void PmmTracer::DoRender(Image* I)
 	if (modelToShow)
 	{
 		DirectionModel model;
-		cudaMemcpy(&model, dMap.deviceData + *modelToShow, sizeof(model), cudaMemcpyDeviceToHost);
+		cudaMemcpy(&model, dMap.m_buffer.getDevicePtr() + *modelToShow, sizeof(model), cudaMemcpyDeviceToHost);
 		visualizePdf << <dim3(8, 8, 1), dim3(8, 8, 1) >> >(*I, rectWidth, rectWidth, w - rectWidth, h - rectWidth, model);
 	}
 
@@ -126,7 +128,7 @@ void PmmTracer::StartNewTrace(Image* I)
 	DirectionModel* models = new DirectionModel[dMap.NumEntries()];
 	for (unsigned int i = 0; i < dMap.NumEntries(); i++)
 		models[i].Initialze(rng);
-	cudaMemcpy(dMap.deviceData, models, dMap.NumEntries() * sizeof(DirectionModel), cudaMemcpyHostToDevice);
+	cudaMemcpy(dMap.m_buffer.getDevicePtr(), models, dMap.NumEntries() * sizeof(DirectionModel), cudaMemcpyHostToDevice);
 	delete[] models;
 	g_SamplerData(rng);
 }
@@ -158,7 +160,7 @@ void PmmTracer::DebugInternal(Image* I, const Vec2i& p)
 	unsigned int idx = dMap.hashMap.Hash(pa);
 	modelToShow = new unsigned int(idx);
 	DirectionModel model;
-	cudaMemcpy(&model, dMap.deviceData + idx, sizeof(model), cudaMemcpyDeviceToHost);
+	cudaMemcpy(&model, dMap.m_buffer.getDevicePtr() + idx, sizeof(model), cudaMemcpyDeviceToHost);
 	plotModel(model);
 }
 

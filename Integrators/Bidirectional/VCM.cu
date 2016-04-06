@@ -2,7 +2,7 @@
 
 namespace CudaTracerLib {
 
-CUDA_DEVICE VCMSurfMap g_CurrentMap, g_NextMap;
+CUDA_DEVICE CudaStaticWrapper<VCMSurfMap> g_CurrentMap, g_NextMap;
 
 CUDA_FUNC_IN void _VCM(const Vec2f& pixelPosition, BlockSampleImage& img, Sampler& rng, int w, int h, float a_Radius, int a_NumIteration, float nPhotons)
 {
@@ -43,9 +43,9 @@ CUDA_FUNC_IN void _VCM(const Vec2f& pixelPosition, BlockSampleImage& img, Sample
 
 #ifdef ISCUDA
 			auto ph = k_MISPhoton(v.throughput, -lightPathState.r.dir(), v.bRec.dg.sys.n, PhotonType::pt_Diffuse, v.dVC, v.dVCM, v.dVM);
-			Vec3u cell_idx = g_NextMap.getHashGrid().Transform(v.bRec.dg.P);
-			ph.setPos(g_NextMap.getHashGrid(), cell_idx, v.bRec.dg.P);
-			if (!g_NextMap.store(cell_idx, ph))
+			Vec3u cell_idx = g_NextMap->getHashGrid().Transform(v.bRec.dg.P);
+			ph.setPos(g_NextMap->getHashGrid(), cell_idx, v.bRec.dg.P);
+			if (!g_NextMap->store(cell_idx, ph))
 				printf("VCM : not enough photon storage allocated!\n");
 #endif
 		}
@@ -138,10 +138,11 @@ void VCM::DoRender(Image* I)
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_NextMap, &m_sPhotonMapsNext, sizeof(m_sPhotonMapsNext)));
 
 	Tracer<true, true>::DoRender(I);
+	m_sPhotonMapsCurrent.setOnGPU();
 	ThrowCudaErrors(cudaMemcpyFromSymbol(&m_sPhotonMapsNext, g_NextMap, sizeof(m_sPhotonMapsNext)));
 	ThrowCudaErrors(cudaMemcpyFromSymbol(&m_sPhotonMapsCurrent, g_CurrentMap, sizeof(m_sPhotonMapsCurrent)));
 
-	swapk(m_sPhotonMapsNext, m_sPhotonMapsCurrent);
+	std::swap(m_sPhotonMapsNext, m_sPhotonMapsCurrent);
 	m_uPhotonsEmitted += w * h;
 }
 
@@ -159,12 +160,11 @@ void VCM::StartNewTrace(Image* I)
 	m_sPhotonMapsNext.SetSceneDimensions(m_sEyeBox);
 }
 
+int gridLength = 250;
+int numPhotons = 1024 * 1024 * MAX_SUB_PATH_LENGTH;
 VCM::VCM()
+	: m_sPhotonMapsCurrent(Vec3u(gridLength), numPhotons), m_sPhotonMapsNext(Vec3u(gridLength), numPhotons)
 {
-	int gridLength = 250;
-	int numPhotons = 1024 * 1024 * MAX_SUB_PATH_LENGTH;
-	m_sPhotonMapsCurrent = VCMSurfMap(Vec3u(gridLength), numPhotons);
-	m_sPhotonMapsNext = VCMSurfMap(Vec3u(gridLength), numPhotons);
 }
 
 }

@@ -57,7 +57,6 @@ public:
 	float m_fCurrentRadiusVol;
 	AABB volBox;
 
-	BeamBVHStorage(){}
 	CTL_EXPORT BeamBVHStorage(unsigned int nBeams);
 	CTL_EXPORT virtual void Free();
 

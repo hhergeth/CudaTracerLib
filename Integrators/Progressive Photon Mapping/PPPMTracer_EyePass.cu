@@ -94,8 +94,8 @@ template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum BeamGrid::L_Volume(float NumEmit
 	return L_n;
 }
 
-CUDA_CONST SurfaceMapT g_SurfMap;
-CUDA_CONST SurfaceMapT g_SurfMapCaustic;
+CUDA_CONST CudaStaticWrapper<SurfaceMapT> g_SurfMap;
+CUDA_CONST CudaStaticWrapper<SurfaceMapT> g_SurfMapCaustic;
 CUDA_CONST unsigned int g_NumPhotonEmittedSurface2, g_NumPhotonEmittedVolume2;
 CUDA_CONST CUDA_ALIGN(16) unsigned char g_VolEstimator2[Dmax4(sizeof(PointStorage), sizeof(BeamGrid), sizeof(BeamBeamGrid), sizeof(BeamBVHStorage))];
 
@@ -158,7 +158,7 @@ template<bool USE_GLOBAL> Spectrum BeamBVHStorage::L_Volume(float NumEmitted, co
 
 template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const Vec3f& wi, float r, const Material& mat, SurfaceMapT* map = 0)
 {
-	if (!map) map = &g_SurfMap;
+	if (!map) map = &g_SurfMap.As();
 	Spectrum Lp = Spectrum(0.0f);
 	Vec3f a = r*(-bRec.dg.sys.t - bRec.dg.sys.s) + bRec.dg.P, b = r*(bRec.dg.sys.t - bRec.dg.sys.s) + bRec.dg.P, c = r*(-bRec.dg.sys.t + bRec.dg.sys.s) + bRec.dg.P, d = r*(bRec.dg.sys.t + bRec.dg.sys.s) + bRec.dg.P;
 #ifdef ISCUDA
@@ -188,7 +188,7 @@ template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& b
 
 template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_SurfaceFinalGathering(BSDFSamplingRecord& bRec, const Vec3f& wi, float rad, TraceResult& r2, Sampler& rng, bool DIRECT)
 {
-	Spectrum LCaustic = L_Surface<F_IS_GLOSSY>(bRec, wi, rad, r2.getMat(), &g_SurfMapCaustic);
+	Spectrum LCaustic = L_Surface<F_IS_GLOSSY>(bRec, wi, rad, r2.getMat(), &g_SurfMapCaustic.As());
 	Spectrum L(0.0f);
 	const int N = 3;
 	DifferentialGeometry dg;
@@ -213,10 +213,9 @@ template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_SurfaceFinalGathering(BSDFSam
 	return L / N + LCaustic;
 }
 
-CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED, const Material* mat, k_AdaptiveStruct& A, int x, int y,
+CUDA_ONLY_FUNC Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED, const Material* mat, k_AdaptiveStruct& A, int x, int y,
 	const Spectrum& importance, int iteration, BlockSampleImage& img)
 {
-#ifdef ISCUDA
 	//ent.rd = 1.9635f * math::sqrt(VAR_Lapl) * math::pow(iteration, -1.0f / 8.0f);
 	//ent.rd = math::clamp(ent.rd, A.r_min, A.r_max);
 
@@ -227,20 +226,21 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED
 	//ent.r = math::clamp(q, A.r_min, A.r_max);
 
 	//Adaptive Progressive Photon Mapping Implementation
-	float NJ = iteration * g_NumPhotonEmittedSurface2, scaleA = (NJ - 1) / NJ, scaleB = 1.0f / NJ;
-	float r = a_rSurfaceUNUSED, rd = a_rSurfaceUNUSED;
 	k_AdaptiveEntry ent = A(x, y);
+	float NJ = iteration * g_NumPhotonEmittedSurface2, scaleA = (NJ - 1) / NJ, scaleB = 1.0f / NJ;
+	float r  = iteration == 1 ? A.r_max / 10 : ent.compute_r(iteration - 1, g_NumPhotonEmittedSurface2, g_NumPhotonEmittedSurface2 * (iteration - 1)),
+		  rd = iteration == 1 ? A.r_max / 10 : ent.compute_rd(iteration - 1);
 	Vec3f ur = bRec.dg.sys.t * rd, vr = bRec.dg.sys.s * rd;
 	float r_max = max(2 * rd, r);
-	Vec3f a = r_max*(-bRec.dg.sys.t - bRec.dg.sys.s) + bRec.dg.P, b = r_max*(bRec.dg.sys.t - bRec.dg.sys.s) + bRec.dg.P,
+	Vec3f a = r_max*(-bRec.dg.sys.t - bRec.dg.sys.s) + bRec.dg.P, b = r_max*(bRec.dg.sys.t - bRec.dg.sys.s) + bRec.dg.P, 
 		  c = r_max*(-bRec.dg.sys.t + bRec.dg.sys.s) + bRec.dg.P, d = r_max*(bRec.dg.sys.t + bRec.dg.sys.s) + bRec.dg.P;
 	Spectrum Lp = 0.0f;
-
-	g_SurfMap.ForAll<200>(min(a, b, c, d), max(a, b, c, d), [&](const Vec3u& cell_idx, unsigned int p_idx, const PPPMPhoton& ph)
+#ifdef ISCUDA
+	g_SurfMap->ForAll(min(a, b, c, d), max(a, b, c, d), [&](const Vec3u& cell_idx, unsigned int p_idx, const PPPMPhoton& ph)
 	{
-		Vec3f ph_pos = ph.getPos(g_SurfMap.getHashGrid(), cell_idx);
+		Vec3f ph_pos = ph.getPos(g_SurfMap->getHashGrid(), cell_idx);
 		float dist2 = distanceSquared(ph_pos, bRec.dg.P);
-		//if (dot(ph.getNormal(), bRec.dg.sys.n) > 0.9f)
+		if (dot(ph.getNormal(), bRec.dg.sys.n) > 0.1f)
 		{
 			bRec.wo = bRec.dg.toLocal(ph.getWi());
 			Spectrum bsdfFactor = mat->bsdf.f(bRec);
@@ -251,8 +251,11 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED
 				  laplv = k_tr(rd, e_l + vr) + k_tr(rd, e_l - vr) - 2 * k_rd,
 				  lapl = psi / (rd * rd) * (laplu + laplv);
 			ent.DI = ent.DI * scaleA + lapl * scaleB;
-			ent.E_DI = ent.E_DI * scaleA + psi * scaleB;
-			ent.E_DI2 = ent.E_DI2 * scaleA + psi * psi * scaleB;
+			if(dist2 < rd * rd)
+			{
+				ent.E_DI = ent.E_DI * scaleA + psi * scaleB;
+				ent.E_DI2 = ent.E_DI2 * scaleA + psi * psi * scaleB;
+			}
 			if (dist2 < r * r)
 			{
 				float kri = k_tr<2>(r, math::sqrt(dist2));
@@ -263,6 +266,7 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED
 			}
 		}
 	});
+#endif
 	//if (x == 488 && y == 654)
 	//	printf("Var[Psi] = %5.5e, Var[Lapl] = %5.5e, E[pl] = %5.5e, E[I] = %5.5e, E[Psi] = %5.5e\n", VAR_Psi, VAR_Lapl, E_pl, E_I, ent.psi / NJ);
 
@@ -271,16 +275,13 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED
 	//float t = (ent.r - A.r_min) / (A.r_max - A.r_min);
 	//float t = math::abs(E_I) * 1e-3f / (g_SceneData.m_sBox.Size().length() / 2);
 	//float t = ent.DI * 100000000;
-	float t = ent.compute_r(iteration, g_NumPhotonEmittedSurface2, g_NumPhotonEmittedSurface2 * iteration) / (A.r_max * 1 - A.r_min);
-	//float t = ent.compute_rd(iteration) / (A.r_max - A.r_min) * 1000;
+	//float t = ent.compute_r(iteration, g_NumPhotonEmittedSurface2, g_NumPhotonEmittedSurface2 * iteration) / (A.r_max * 1 - A.r_min);
+	float t = ent.compute_rd(iteration) / (A.r_max - A.r_min);
 	qs.fromHSL(2.0f / 3.0f * (1 - math::clamp01(t)), 1, 0.5f);//0 -> 1 : Dark Blue -> Light Blue -> Green -> Yellow -> Red
 	img.Add(x, y, qs);
 
 	A(x, y) = ent;
 	return Lp;
-#else
-	return 0.0f;
-#endif
 }
 
 template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int h, float a_PassIndex, float a_rSurface, k_AdaptiveStruct a_AdpEntries, BlockSampleImage img, bool DIRECT, bool USE_PerPixelRadius, bool finalGathering)
@@ -400,7 +401,22 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 
 void PPPMTracer::DebugInternal(Image* I, const Vec2i& pixel)
 {
-	
+	m_sSurfaceMap.Synchronize();
+	if (m_sSurfaceMapCaustic)
+		m_sSurfaceMapCaustic->Synchronize();
+	m_pVolumeEstimator->Synchronize();
+	m_adpBuffer->Synchronize();
+
+	auto ray = g_SceneData.GenerateSensorRay(pixel.x, pixel.y);
+	auto res = traceRay(ray);
+	if (res.hasHit())
+	{
+		DifferentialGeometry dg;
+		BSDFSamplingRecord bRec(dg);
+		res.getBsdfSample(ray, bRec, ETransportMode::EImportance);
+		k_AdaptiveStruct A(r_min, r_max, &m_adpBuffer->operator[](0), w, m_uPassesDone);
+		//L_Surface(bRec, getCurrentRadius(2), &res.getMat(), A, pixel.x, pixel.y, Spectrum(1.0f), m_uPassesDone, m_pBlockSampler->getBlockImage());
+	}
 }
 
 void PPPMTracer::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
@@ -408,7 +424,8 @@ void PPPMTracer::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 	float radius2 = getCurrentRadius(2, true);
 
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_SurfMap, &m_sSurfaceMap, sizeof(m_sSurfaceMap)));
-	ThrowCudaErrors(cudaMemcpyToSymbol(g_SurfMapCaustic, &m_sSurfaceMapCaustic, sizeof(m_sSurfaceMapCaustic)));
+	if (m_sSurfaceMapCaustic)
+		ThrowCudaErrors(cudaMemcpyToSymbol(g_SurfMapCaustic, m_sSurfaceMapCaustic, sizeof(*m_sSurfaceMapCaustic)));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_NumPhotonEmittedSurface2, &m_uPhotonEmittedPassSurface, sizeof(m_uPhotonEmittedPassSurface)));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_NumPhotonEmittedVolume2, &m_uPhotonEmittedPassVolume, sizeof(m_uPhotonEmittedPassVolume)));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_VolEstimator2, m_pVolumeEstimator, m_pVolumeEstimator->getSize()));
@@ -416,7 +433,7 @@ void PPPMTracer::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 	bool perPixelRad = m_sParameters.getValue(KEY_PerPixelRadius());
 	bool finalGathering = m_sParameters.getValue(KEY_FinalGathering());
 
-	k_AdaptiveStruct A(r_min, r_max, m_pEntries, w, m_uPassesDone);
+	k_AdaptiveStruct A(r_min, r_max, m_adpBuffer->getDevicePtr(), w, m_uPassesDone);
 	Vec2i off = Vec2i(x, y);
 	BlockSampleImage img = m_pBlockSampler->getBlockImage();
 
@@ -430,6 +447,7 @@ void PPPMTracer::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 		k_EyePass<BeamBVHStorage> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, (float)m_uPassesDone, radius2, A, img, m_useDirectLighting, perPixelRad, finalGathering);
 
 	ThrowCudaErrors(cudaThreadSynchronize());
+	m_adpBuffer->setOnGPU();
 }
 
 CUDA_DEVICE int g_MaxRad, g_MinRad;
@@ -464,9 +482,9 @@ __global__ void k_PerPixelRadiusEst(int w, int h, float r_max, float r_1, k_Adap
 			Vec3f low = min(min(a, b), min(c, d)) + bRec.dg.P, high = max(max(a, b), max(c, d)) + bRec.dg.P;
 			int k_found = 0;
 #ifdef ISCUDA
-			g_SurfMap.ForAll(low, high, [&](const Vec3u& cell_idx, unsigned int p_idx, const PPPMPhoton& ph)
+			g_SurfMap->ForAll(low, high, [&](const Vec3u& cell_idx, unsigned int p_idx, const PPPMPhoton& ph)
 			{
-				float dist2 = distanceSquared(ph.getPos(g_SurfMap.getHashGrid(), cell_idx), bRec.dg.P);
+				float dist2 = distanceSquared(ph.getPos(g_SurfMap->getHashGrid(), cell_idx), bRec.dg.P);
 				if (dist2 < search_rad * search_rad && dot(ph.getNormal(), bRec.dg.sys.n) > 0.9f)
 					k_found++;
 			});
@@ -488,13 +506,12 @@ void PPPMTracer::doPerPixelRadiusEstimation()
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_MinRad, &a, sizeof(a)));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_SurfMap, &m_sSurfaceMap, sizeof(m_sSurfaceMap)));
 	int p = 32;
-	if (m_pEntries)
-		k_PerPixelRadiusEst << <dim3(w / p + 1, h / p + 1, 1), dim3(p, p, 1) >> >(w, h, r_max * 0.1f, m_fInitialRadiusSurf, k_AdaptiveStruct(r_min, r_max, m_pEntries, w, m_uPassesDone), k_Intial);
+	k_PerPixelRadiusEst << <dim3(w / p + 1, h / p + 1, 1), dim3(p, p, 1) >> >(w, h, r_max * 0.1f, m_fInitialRadiusSurf, k_AdaptiveStruct(r_min, r_max, m_adpBuffer->getDevicePtr(), w, m_uPassesDone), k_Intial);
 	ThrowCudaErrors(cudaMemcpyFromSymbol(&a, g_MinRad, sizeof(a)));
 	ThrowCudaErrors(cudaMemcpyFromSymbol(&b, g_MaxRad, sizeof(b)));
 	m_fIntitalRadMin = orderedIntToFloat(a);
 	m_fIntitalRadMax = orderedIntToFloat(b);
-	std::cout << "m_fIntitalRadMin = " << m_fIntitalRadMin << ", m_fIntitalRadMax = " << m_fIntitalRadMax << "\n";
+	m_adpBuffer->setOnGPU();
 }
 
 }

@@ -8,6 +8,13 @@ namespace CudaTracerLib {
 
 struct PointStorage : public IVolumeEstimator
 {
+protected:
+	template<typename... ARGS> PointStorage(unsigned int gridDim, unsigned int numPhotons, ARGS&... args)
+		: IVolumeEstimator(m_sStorage, args...), m_sStorage(Vec3u(gridDim), numPhotons)
+	{
+
+	}
+public:
 	struct volPhoton
 	{
 	private:
@@ -61,13 +68,8 @@ struct PointStorage : public IVolumeEstimator
 	SpatialLinkedMap<volPhoton> m_sStorage;
 	float m_fCurrentRadiusVol;
 
-	CUDA_FUNC_IN PointStorage()
-	{
-
-	}
-
 	PointStorage(unsigned int gridDim, unsigned int numPhotons)
-		: m_sStorage(Vec3u(gridDim), numPhotons)
+		: IVolumeEstimator(m_sStorage), m_sStorage(Vec3u(gridDim), numPhotons)
 	{
 
 	}

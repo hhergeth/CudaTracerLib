@@ -3,8 +3,8 @@
 
 namespace CudaTracerLib {
 
-CUDA_CONST decltype(BeamGrid::m_sStorage) g_PhotonStorage;
-CUDA_DEVICE decltype(BeamGrid::m_sBeamGridStorage) g_BeamGridStorage;
+CUDA_CONST CudaStaticWrapper<decltype(BeamGrid::m_sStorage)> g_PhotonStorage;
+CUDA_DEVICE CudaStaticWrapper<decltype(BeamGrid::m_sBeamGridStorage)> g_BeamGridStorage;
 
 __global__ void buildBeams(float r, Vec3u dimN, float nnSearch)
 {
@@ -12,23 +12,23 @@ __global__ void buildBeams(float r, Vec3u dimN, float nnSearch)
 	if (cell_idx.x < dimN.x && cell_idx.y < dimN.y && cell_idx.z < dimN.z)
 	{
 #ifdef ISCUDA
-		Vec3f cellCenter = g_PhotonStorage.getHashGrid().getCell(cell_idx).Center();
-		float r_search = r;// + g_PhotonStorage.getHashGrid().m_vCellSize.length() / 2;
+		Vec3f cellCenter = g_PhotonStorage->getHashGrid().getCell(cell_idx).Center();
+		float r_search = r;// + g_PhotonStorage->getHashGrid().m_vCellSize.length() / 2;
 		int N = 0;
-		g_PhotonStorage.ForAll(cellCenter - Vec3f(r_search), cellCenter + Vec3f(r_search), [&](const Vec3u& cell_idx, unsigned int pIdx, const PointStorage::volPhoton& ph)
+		g_PhotonStorage->ForAll(cellCenter - Vec3f(r_search), cellCenter + Vec3f(r_search), [&](const Vec3u& cell_idx, unsigned int pIdx, const PointStorage::volPhoton& ph)
 		{
-			if (distanceSquared(cellCenter, ph.getPos(g_PhotonStorage.getHashGrid(), cell_idx)) < r_search * r_search)
+			if (distanceSquared(cellCenter, ph.getPos(g_PhotonStorage->getHashGrid(), cell_idx)) < r_search * r_search)
 				N++;
 		});
 		float r_new = math::sqrt(nnSearch * r_search * r_search / max((float)N, 1.0f));
 
-		g_PhotonStorage.ForAllCellEntries(cell_idx, [&](unsigned int p_idx, PointStorage::volPhoton& ph)
+		g_PhotonStorage->ForAllCellEntries(cell_idx, [&](unsigned int p_idx, PointStorage::volPhoton& ph)
 		{
 			ph.setRad1(r_new);
-			Vec3f ph_pos = ph.getPos(g_PhotonStorage.getHashGrid(), cell_idx);
-			g_BeamGridStorage.ForAllCells(ph_pos - Vec3f(r_new), ph_pos + Vec3f(r_new), [&](const Vec3u& cell_idx_store)
+			Vec3f ph_pos = ph.getPos(g_PhotonStorage->getHashGrid(), cell_idx);
+			g_BeamGridStorage->ForAllCells(ph_pos - Vec3f(r_new), ph_pos + Vec3f(r_new), [&](const Vec3u& cell_idx_store)
 			{
-				g_BeamGridStorage.store(cell_idx_store, BeamGrid::entry(p_idx));
+				g_BeamGridStorage->store(cell_idx_store, BeamGrid::entry(p_idx));
 			});
 		});
 #endif

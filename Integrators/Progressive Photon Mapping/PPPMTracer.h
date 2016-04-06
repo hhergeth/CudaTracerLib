@@ -71,7 +71,7 @@ class PPPMTracer : public Tracer<true, true>, public IRadiusProvider
 {
 private:
 	SurfaceMapT m_sSurfaceMap;
-	SurfaceMapT m_sSurfaceMapCaustic;
+	SurfaceMapT* m_sSurfaceMapCaustic;
 	IVolumeEstimator* m_pVolumeEstimator;
 
 	float m_fLightVisibility;
@@ -83,7 +83,7 @@ private:
 	unsigned int m_uBlocksPerLaunch;
 
 	//adaptive data
-	k_AdaptiveEntry* m_pEntries;
+	SynchronizedBuffer<k_AdaptiveEntry>* m_adpBuffer;
 	float r_min, r_max;
 
 	unsigned int k_Intial;

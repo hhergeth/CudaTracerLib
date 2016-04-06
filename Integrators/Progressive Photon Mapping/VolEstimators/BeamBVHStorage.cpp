@@ -7,7 +7,7 @@
 namespace CudaTracerLib {
 
 BeamBVHStorage::BeamBVHStorage(unsigned int nBeams)
-	: m_uNumBeams(nBeams), m_uBeamIdx(0), m_uDeviceNumNodes(0), m_uNumDeviceRefs(0)
+	: IVolumeEstimator(), m_uNumBeams(nBeams), m_uBeamIdx(0), m_uDeviceNumNodes(0), m_uNumDeviceRefs(0)
 {
 	CUDA_MALLOC(&m_pDeviceBeams, m_uNumBeams * sizeof(Beam));
 	m_pHostBeams = new Beam[m_uNumBeams];

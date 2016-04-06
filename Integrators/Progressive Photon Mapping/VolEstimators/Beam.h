@@ -7,6 +7,7 @@
 #include <Base/Platform.h>
 #include <Engine/Grid.h>
 #include <Math/Compression.h>
+#include <Engine/SynchronizedBuffer.h>
 
 namespace CudaTracerLib {
 
@@ -134,12 +135,12 @@ public:
 	virtual float getCurrentRadius(float exp) const = 0;
 };
 
-class IVolumeEstimator
+class IVolumeEstimator : public ISynchronizedBufferParent
 {
 public:
-	virtual void Free()
+	template<typename... ARGS> IVolumeEstimator(ARGS&... args)
+		: ISynchronizedBufferParent(args...)
 	{
-
 	}
 
 	virtual void StartNewPass(const IRadiusProvider* radProvider, DynamicScene* scene) = 0;

@@ -40,13 +40,8 @@ struct BeamGrid : public PointStorage
 
 	float photonDensNum;
 
-	CUDA_FUNC_IN BeamGrid()
-	{
-
-	}
-
 	BeamGrid(unsigned int gridDim, unsigned int numPhotons, int N = 20, float nnSearch = 1)
-		: PointStorage(gridDim, numPhotons), photonDensNum(nnSearch), m_sBeamGridStorage(Vec3u(gridDim), gridDim * gridDim * gridDim * (1 + N))
+		: PointStorage(gridDim, numPhotons, m_sBeamGridStorage), photonDensNum(nnSearch), m_sBeamGridStorage(Vec3u(gridDim), gridDim * gridDim * gridDim * (1 + N))
 	{
 
 	}

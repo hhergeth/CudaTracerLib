@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Grid.h"
-#include <CudaMemoryManager.h>
+#include "SynchronizedBuffer.h"
 #include <Base/Timer.h>
 #ifdef __CUDACC__
 #pragma warning (disable : 4267) 
@@ -18,10 +18,10 @@ template<typename T, typename HASHER> class SpatialGrid
 protected:
 	HashGrid_Reg hashMap;
 public:
-	CUDA_FUNC_IN SpatialGrid()
+	virtual ~SpatialGrid()
 	{
-	}
 
+	}
 	CUDA_FUNC_IN const HashGrid_Reg& getHashGrid() const
 	{
 		return hashMap;
@@ -71,7 +71,7 @@ public:
 };
 
 //a mapping from R^3 -> T^n, ie. associating variable number of values with each point in the grid
-template<typename T> class SpatialLinkedMap : public SpatialGrid<T, SpatialLinkedMap<T>>
+template<typename T> class SpatialLinkedMap : public SpatialGrid<T, SpatialLinkedMap<T>>, public ISynchronizedBufferParent
 {
 typedef SpatialGrid<T, SpatialLinkedMap<T>> BaseType;
 public:
@@ -83,24 +83,15 @@ public:
 private:
 	unsigned int numData;
 	Vec3u m_gridSize;
-	linkedEntry* deviceData;
-	unsigned int* deviceMap;
 	unsigned int deviceDataIdx;
+	SynchronizedBuffer<linkedEntry> m_dataBuffer;
+	SynchronizedBuffer<unsigned int> m_mapBuffer;
 public:
-
-	CUDA_FUNC_IN SpatialLinkedMap(){}
 	SpatialLinkedMap(const Vec3u& gridSize, unsigned int numData)
-		: numData(numData), m_gridSize(gridSize)
+		: ISynchronizedBufferParent(m_dataBuffer, m_mapBuffer), numData(numData), m_gridSize(gridSize),
+		  m_dataBuffer(numData), m_mapBuffer(m_gridSize.x * m_gridSize.y * m_gridSize.z)
 	{
-		CUDA_MALLOC(&deviceData, sizeof(linkedEntry) * numData);
-		CUDA_MALLOC(&deviceMap, sizeof(unsigned int) * m_gridSize.x * m_gridSize.y * m_gridSize.z);
-		ThrowCudaErrors(cudaMemset(deviceData, 0xffffffff, sizeof(linkedEntry) * numData));
-	}
-
-	void Free()
-	{
-		CUDA_FREE(deviceData);
-		CUDA_FREE(deviceMap);
+		m_dataBuffer.Memset(0xff);
 	}
 
 	void SetSceneDimensions(const AABB& box)
@@ -111,7 +102,7 @@ public:
 	void ResetBuffer()
 	{
 		deviceDataIdx = 0;
-		ThrowCudaErrors(cudaMemset(deviceMap, 0xffffffff, sizeof(unsigned int) * m_gridSize.x * m_gridSize.y * m_gridSize.z));
+		m_mapBuffer.Memset((unsigned char)0xff);
 	}
 
 	CUDA_FUNC_IN unsigned int getNumEntries() const
@@ -131,72 +122,78 @@ public:
 		return deviceDataIdx >= numData;
 	}
 
-	CUDA_ONLY_FUNC void store(const Vec3u& p, const T& v, unsigned int data_idx)
+	CUDA_FUNC_IN void store(const Vec3u& p, const T& v, unsigned int data_idx)
 	{
 		unsigned int map_idx = BaseType::hashMap.Hash(p);
 #ifdef ISCUDA
-		unsigned int old_idx = atomicExch(deviceMap + map_idx, data_idx);
+		unsigned int old_idx = atomicExch(&m_mapBuffer[map_idx], data_idx);
 #else
-		unsigned int old_idx = Platform::Exchange(deviceMap + map_idx, data_idx);
+		unsigned int old_idx = Platform::Exchange(&m_mapBuffer[map_idx], data_idx);
 #endif
 		//copy actual data
-		deviceData[data_idx].value = v;
-		deviceData[data_idx].nextIdx = old_idx;
+		m_dataBuffer[data_idx].value = v;
+		m_dataBuffer[data_idx].nextIdx = old_idx;
 	}
 
-#ifdef __CUDACC__
-	CUDA_ONLY_FUNC bool store(const Vec3u& p, const T& v)
+	CUDA_FUNC_IN bool store(const Vec3u& p, const T& v)
 	{
 		//build linked list and spatial map
+#ifdef ISCUDA
 		unsigned int data_idx = atomicInc(&deviceDataIdx, (unsigned int)-1);
+#else
+		unsigned int data_idx = Platform::Increment(&deviceDataIdx);
+#endif	
 		if (data_idx >= numData)
 			return false;
 		unsigned int map_idx = BaseType::hashMap.Hash(p);
 #ifdef ISCUDA
-		unsigned int old_idx = atomicExch(deviceMap + map_idx, data_idx);
+		unsigned int old_idx = atomicExch(&m_mapBuffer[map_idx], data_idx);
 #else
-		unsigned int old_idx = Platform::Exchange(deviceMap + map_idx, data_idx);
+		unsigned int old_idx = Platform::Exchange(&m_mapBuffer[map_idx], data_idx);
 #endif
 		//copy actual data
-		deviceData[data_idx].value = v;
-		deviceData[data_idx].nextIdx = old_idx;
+		m_dataBuffer[data_idx].value = v;
+		m_dataBuffer[data_idx].nextIdx = old_idx;
 		return true;
 	}
 
-	CUDA_ONLY_FUNC bool store(const Vec3f& p, const T& v)
+	CUDA_FUNC_IN bool store(const Vec3f& p, const T& v)
 	{
 		return store(BaseType::hashMap.Transform(p), v);
 	}
 
-	CUDA_ONLY_FUNC unsigned int allocStorage(unsigned int n)
+	CUDA_FUNC_IN unsigned int allocStorage(unsigned int n)
 	{
+#ifdef ISCUDA
 		unsigned int idx = atomicAdd(&deviceDataIdx, n);
+#else
+		unsigned int idx = Platform::Add(&deviceDataIdx, n);
+#endif
 		return idx;
 	}
-#endif
 
 	template<unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX, typename CLB> CUDA_FUNC_IN void ForAllCellEntries(const Vec3u& p, const CLB& clb)
 	{
-		unsigned int i0 = BaseType::hashMap.Hash(p), i = deviceMap[i0], N = 0, lo = min(deviceDataIdx, numData);
+		unsigned int i0 = BaseType::hashMap.Hash(p), i = m_mapBuffer[i0], N = 0, lo = min(deviceDataIdx, numData);
 		while (i < lo && N++ < MAX_ENTRIES_PER_CELL)
 		{
-			clb(i, deviceData[i].value);
-			i = deviceData[i].nextIdx;
+			clb(i, m_dataBuffer[i].value);
+			i = m_dataBuffer[i].nextIdx;
 		}
 	}
 
 	CUDA_FUNC_IN const T& operator()(unsigned int idx) const
 	{
-		return deviceData[idx].value;
+		return m_dataBuffer[idx].value;
 	}
 
 	CUDA_FUNC_IN T& operator()(unsigned int idx)
 	{
-		return deviceData[idx].value;
+		return m_dataBuffer[idx].value;
 	}
 
-	linkedEntry* getDeviceData() { return deviceData; }
-	unsigned int* getDeviceGrid() { return deviceMap; }
+	linkedEntry* getDeviceData() { return m_dataBuffer.getDevicePtr(); }
+	unsigned int* getDeviceGrid() { return m_mapBuffer.getDevicePtr(); }
 };
 
 #ifdef __CUDACC__
@@ -241,51 +238,29 @@ template<typename T, int N_PER_THREAD, int N_MAX_PER_CELL> __global__ void build
 }
 #endif
 
-template<typename T> class SpatialFlatMap : public SpatialGrid<T, SpatialFlatMap<T>>
+template<typename T> class SpatialFlatMap : public SpatialGrid<T, SpatialFlatMap<T>>, public ISynchronizedBufferParent
 {
 typedef SpatialGrid<T, SpatialFlatMap<T>> BaseType;
 public:
 	Vec3u m_gridSize;
 	unsigned int numData, idxData;
-	T* deviceData, *deviceData2;
-	unsigned int* deviceGrid;
-	Vec2u* deviceList;
 	unsigned int* m_deviceIdxCounter;
-
-	T* hostData1, *hostData2;
-	Vec2u* hostList;
-	unsigned int* hostGrid;
-	CUDA_FUNC_IN SpatialFlatMap()
-	{
-
-	}
+	SynchronizedBuffer<T> m_buffer1, m_buffer2;
+	SynchronizedBuffer<unsigned int> m_gridBuffer;
+	SynchronizedBuffer<Vec2u> m_listBuffer;
 
 	SpatialFlatMap(const Vec3u& gridSize, unsigned int numData)
-		: numData(numData), m_gridSize(gridSize), idxData(0)
+		: ISynchronizedBufferParent(m_buffer1, m_buffer2, m_gridBuffer, m_listBuffer),
+		  numData(numData), m_gridSize(gridSize), idxData(0),
+		  m_buffer1(numData), m_buffer2(numData), m_gridBuffer(m_gridSize.x * m_gridSize.y * m_gridSize.z), m_listBuffer(numData)
 	{
-		CUDA_MALLOC(&deviceData, sizeof(T) * numData);
-		CUDA_MALLOC(&deviceData2, sizeof(T) * numData);
-		CUDA_MALLOC(&deviceGrid, sizeof(unsigned int) * m_gridSize.x * m_gridSize.y * m_gridSize.z);
-		CUDA_MALLOC(&deviceList, sizeof(Vec2u) * numData);
 		CUDA_MALLOC(&m_deviceIdxCounter, sizeof(unsigned int));
-
-		hostData1 = new T[numData];
-		hostData2 = new T[numData];
-		hostList = new Vec2u[numData];
-		hostGrid = new unsigned int[m_gridSize.x * m_gridSize.y * m_gridSize.z];
 	}
 
-	void Free()
+	virtual void Free() override
 	{
-		CUDA_FREE(deviceData);
-		CUDA_FREE(deviceData2);
-		CUDA_FREE(deviceGrid);
-		CUDA_FREE(deviceList);
 		CUDA_FREE(m_deviceIdxCounter);
-		delete[] hostData1;
-		delete[] hostData2;
-		delete[] hostList;
-		delete[] hostGrid;
+		ISynchronizedBufferParent::Free();
 	}
 
 	void SetSceneDimensions(const AABB& box)
@@ -304,41 +279,42 @@ public:
 
 		idxData = min(idxData, numData);
 		auto GP = m_gridSize.x * m_gridSize.y * m_gridSize.z;
-
+		
 #ifndef __CUDACC__
-		throw std::runtime_error("Use this from a cuda file please!");
-		/*ThrowCudaErrors(cudaMemcpy(hostData1, deviceData, sizeof(T) * idxData, cudaMemcpyDeviceToHost));
+		throw std::runtime_error("Use this from a cuda file please!"); 
+		/*
 		{
 			auto bl = Tt.StartBlock("sort");
-			thrust::sort(thrust::device_ptr<Vec2u>(deviceList), thrust::device_ptr<Vec2u>(deviceList + idxData), __interal_spatialMap__::order());
+			thrust::sort(thrust::device_ptr<Vec2u>(m_listBuffer.getDevicePtr()), thrust::device_ptr<Vec2u>(m_listBuffer.getDevicePtr() + idxData), __interal_spatialMap__::order());
+			m_listBuffer.Synchronize();
 		}
-		ThrowCudaErrors(cudaMemcpy(hostList, deviceList, sizeof(Vec2u) * idxData, cudaMemcpyDeviceToHost));
 		{
 			auto bl = Tt.StartBlock("reset");
-			for (unsigned int idx = 0; idx < GP; idx++)
-				hostGrid[idx] = UINT_MAX;
+			m_gridBuffer.Memset((unsigned char)0xff);
 		}
 		{
 			auto bl = Tt.StartBlock("build");
+			m_buffer1.Synchronize();
 			unsigned int i = 0;
 			while (i < idxData)
 			{
-				unsigned int cellHash = hostList[i].y;
-				hostGrid[cellHash] = i;
-				while (i < idxData && hostList[i].y == cellHash)
+				unsigned int cellHash = m_listBuffer[i].y;
+				m_gridBuffer[cellHash] = i;
+				while (i < idxData && m_listBuffer[i].y == cellHash)
 				{
-					hostData2[i] = hostData1[hostList[i].x];
+					m_buffer2[i] = m_buffer1[m_listBuffer[i].x];
 					i++;
 				}
-				hostData2[i - 1].setFlag();
+				m_buffer2[i - 1].setFlag();
 			}
+			m_gridBuffer.setOnCPU(); m_gridBuffer.Synchronize();
+			m_buffer2.setOnCPU(); m_buffer2.Synchronize();
 		}
-		ThrowCudaErrors(cudaMemcpy(deviceGrid, hostGrid, sizeof(unsigned int) * GP, cudaMemcpyHostToDevice));
-		ThrowCudaErrors(cudaMemcpy(deviceData, hostData2, sizeof(T) * idxData, cudaMemcpyHostToDevice));*/
+		*/
 #else
 		{
 			auto bl = Tt.StartBlock("sort");
-			thrust::sort(thrust::device_ptr<Vec2u>(deviceList), thrust::device_ptr<Vec2u>(deviceList + idxData), __interal_spatialMap__::order());
+			thrust::sort(thrust::device_ptr<Vec2u>(m_listBuffer.getDevicePtr()), thrust::device_ptr<Vec2u>(m_listBuffer.getDevicePtr() + idxData), __interal_spatialMap__::order());
 		}
 		{
 			auto bl = Tt.StartBlock("reset");
@@ -348,11 +324,12 @@ public:
 			auto bl = Tt.StartBlock("build");
 			const unsigned int N_THREAD = 10;
 			CudaSetToZero(m_deviceIdxCounter, sizeof(unsigned int));
-			__interal_spatialMap__::buildGrid<T, N_THREAD, 90> << <idxData / (32 * 6 * N_THREAD) + 1, dim3(32, 6) >> >(deviceData, deviceData2, idxData, deviceList, deviceGrid, m_deviceIdxCounter);
+			__interal_spatialMap__::buildGrid<T, N_THREAD, 90> << <idxData / (32 * 6 * N_THREAD) + 1, dim3(32, 6) >> >
+				(m_buffer1.getDevicePtr(), m_buffer2.getDevicePtr(), idxData, m_listBuffer.getDevicePtr(), m_gridBuffer.getDevicePtr(), m_deviceIdxCounter);
 			ThrowCudaErrors(cudaDeviceSynchronize());
-			swapk(deviceData, deviceData2);
 		}
 #endif
+		swapk(m_buffer1, m_buffer2);
 	}
 
 	unsigned int getNumEntries() const
@@ -377,8 +354,8 @@ public:
 		if (data_idx >= numData)
 			return false;
 		unsigned int map_idx = BaseType::hashMap.Hash(p);
-		deviceData[data_idx] = v;
-		deviceList[data_idx] = Vec2u(data_idx, map_idx);
+		m_buffer1[data_idx] = v;
+		m_listBuffer[data_idx] = Vec2u(data_idx, map_idx);
 		return true;
 	}
 #endif
@@ -390,7 +367,7 @@ public:
 
 	template<unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX, typename CLB> CUDA_FUNC_IN void ForAllCellEntries(const Vec3u& p, const CLB& clb)
 	{
-		unsigned int map_idx = deviceGrid[BaseType::hashMap.Hash(p)], i = 0;
+		unsigned int map_idx = m_gridBuffer[BaseType::hashMap.Hash(p)], i = 0;
 		while (map_idx < idxData && i++ < MAX_ENTRIES_PER_CELL)
 		{
 			T& val = operator()(map_idx);
@@ -401,32 +378,25 @@ public:
 
 	CUDA_FUNC_IN const T& operator()(unsigned int idx) const
 	{
-		return deviceData[idx];
+		return m_buffer1[idx];
 	}
 
 	CUDA_FUNC_IN T& operator()(unsigned int idx)
 	{
-		return deviceData[idx];
+		return m_buffer1[idx];
 	}
 };
 
 //a mapping from R^3 -> T, ie. associating one element with each point in the grid
-template<typename T> struct SpatialSet
+template<typename T> struct SpatialSet : public ISynchronizedBufferParent
 {
 	Vec3u m_gridSize;
-	T* deviceData;
 	HashGrid_Reg hashMap;
+	SynchronizedBuffer<T> m_buffer;
 public:
-	SpatialSet(){}
 	SpatialSet(const Vec3u& gridSize)
-		: m_gridSize(gridSize)
+		: ISynchronizedBufferParent(m_buffer), m_gridSize(gridSize), m_buffer(m_gridSize.x * m_gridSize.y * m_gridSize.z)
 	{
-		CUDA_MALLOC(&deviceData, sizeof(T) * m_gridSize.x * m_gridSize.y * m_gridSize.z);
-	}
-
-	void Free()
-	{
-		CUDA_FREE(deviceData);
 	}
 
 	void SetSceneDimensions(const AABB& box)
@@ -436,30 +406,30 @@ public:
 
 	void ResetBuffer()
 	{
-		ThrowCudaErrors(cudaMemset(deviceData, 0, sizeof(T) * m_gridSize.x * m_gridSize.y * m_gridSize.z));
+		m_buffer.Memset((unsigned char)0);
 	}
 
 	CUDA_FUNC_IN const T& operator()(const Vec3f& p) const
 	{
-		return deviceData[hashMap.Hash(p)].value;
+		return m_buffer[hashMap.Hash(p)].value;
 	}
 
 	CUDA_FUNC_IN T& operator()(const Vec3f& p)
 	{
-		return deviceData[hashMap.Hash(p)];
+		return m_buffer[hashMap.Hash(p)];
 	}
 
 	CUDA_FUNC_IN const T& operator()(unsigned int idx) const
 	{
-		return deviceData[idx];
+		return m_buffer[idx];
 	}
 
 	CUDA_FUNC_IN T& operator()(unsigned int idx)
 	{
-		return deviceData[idx];
+		return m_buffer[idx];
 	}
 
-	CUDA_FUNC_IN unsigned int NumEntries()
+	CUDA_FUNC_IN unsigned int NumEntries() const
 	{
 		return m_gridSize.x * m_gridSize.y * m_gridSize.z;
 	}
