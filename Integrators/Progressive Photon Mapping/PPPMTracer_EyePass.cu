@@ -78,7 +78,8 @@ template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum BeamGrid::L_Volume(float NumEmit
 			if (sphere_line_intersection(ph_pos, ph_rad2, r, t1, t2))
 			{
 				float Vs = 1.0f / (4.0f / 3.0f * PI * ph_rad2 * ph_rad1 * NumEmitted);
-				float p = vol.p(r((t1 + t2) / 2), r.dir(), ph.getWi(), rng);
+				PhaseFunctionSamplingRecord pRec(-r.dir(), ph.getWi());
+				float p = vol.p(r((t1 + t2) / 2), pRec);
 				auto o_t = vol.sigma_t(r((t1 + t2) / 2), r.dir());
 				auto ta = ((-o_t * t1).exp() - (-o_t * t2).exp()) / o_t;
 				//auto f_ta = (-vol.tau(r, tmin, t1)).exp(), f_tb = (-vol.tau(r, tmin, t2)).exp();
