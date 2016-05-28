@@ -94,6 +94,10 @@ void PPPMTracer::DoRender(Image* I)
 	{
 		auto timer = START_PERF_BLOCK("Camera Pass");
 		Tracer<true, true>::DoRender(I);
+		//DebugInternal(I, Vec2i(481, 240));
+		//DebugInternal(I, Vec2i(323, 309));
+		//DebugInternal(I, Vec2i(573, 508));
+		//std::cout << getCurrentRadius(2) << "\n";
 	}
 }
 

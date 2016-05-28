@@ -3,6 +3,7 @@
 #include <Kernel/TraceAlgorithms.h>
 #include <Math/half.h>
 #include <Engine/Light.h>
+#include <fstream>
 
 namespace CudaTracerLib {
 CUDA_FUNC_IN bool sphere_line_intersection(const Vec3f& p, float radSqr, const Ray& r, float& t_min, float& t_max)
@@ -414,10 +415,43 @@ void PPPMTracer::DebugInternal(Image* I, const Vec2i& pixel)
 	{
 		DifferentialGeometry dg;
 		BSDFSamplingRecord bRec(dg);
-		res.getBsdfSample(ray, bRec, ETransportMode::EImportance);
-		k_AdaptiveStruct A(r_min, r_max, &m_adpBuffer->operator[](0), w, m_uPassesDone);
+		//res.getBsdfSample(ray, bRec, ETransportMode::EImportance);
+		//k_AdaptiveStruct A(r_min, r_max, &m_adpBuffer->operator[](0), w, m_uPassesDone);
 		//L_Surface(bRec, getCurrentRadius(2), &res.getMat(), A, pixel.x, pixel.y, Spectrum(1.0f), m_uPassesDone, m_pBlockSampler->getBlockImage());
 	}
+
+	/*
+	//output some beam specific quantity in a simple csv format along the ray
+	float vol_2_rad = getCurrentRadius(2);
+	auto& buf = ((BeamGrid*)m_pVolumeEstimator)->m_sStorage;
+	std::vector<Vec2f> data;
+	for (size_t i = 0; i < min(buf.getNumStoredEntries(), buf.getNumEntries()); i++)
+	{
+		auto& val = buf(i);
+		auto ph_pos = val.getPos(((BeamGrid*)m_pVolumeEstimator)->m_sStorage.getHashGrid(), Vec3u());
+		float l1 = dot(ph_pos - ray.ori(), ray.dir());
+		float isectRad = distance(ph_pos, ray(l1));
+		if (l1 / res.m_fDist > 1 || l1 / res.m_fDist < 0 || isectRad >= 2 * vol_2_rad)
+			continue;
+		//float k = k_tr<2>(vol_2_rad, isectRad);
+		auto l = val.getL() / m_uPhotonEmittedPassVolume;
+		auto Tr = g_SceneData.evalTransmittance(ray.ori(), ray(l1));
+		PhaseFunctionSamplingRecord pRec(-ray.dir(), val.getWi());
+		float k = Spectrum(l * g_SceneData.m_sVolume.p(ray(l1), pRec) * Tr).getLuminance();
+		auto e_l = ray(l1) - ph_pos, ur = Vec3f(1, 0, 0)*vol_2_rad, vr = Vec3f(0, 1, 0)*vol_2_rad, wr = Vec3f(0, 0, 1)*vol_2_rad;
+		float k_rd = k_tr(vol_2_rad, e_l);
+		float laplu = k_tr(vol_2_rad, e_l + ur) + k_tr(vol_2_rad, e_l - ur) - 2 * k_rd,
+			laplv = k_tr(vol_2_rad, e_l + vr) + k_tr(vol_2_rad, e_l - vr) - 2 * k_rd,
+			laplw = k_tr(vol_2_rad, e_l + wr) + k_tr(vol_2_rad, e_l - wr) - 2 * k_rd;
+		//k = k / (vol_2_rad * vol_2_rad * vol_2_rad) * (laplu + laplv + laplw);
+		data.push_back(Vec2f(l1 / res.m_fDist, k));
+	}
+	std::ofstream myfile;
+	static int CC = 0;
+	myfile.open(format("vol-den-%d-%d-%d.txt", pixel.x, pixel.y, CC++));
+	for (auto& v : data)
+		myfile << v.x << ", " << v.y << "\n";
+	myfile.close();*/
 }
 
 void PPPMTracer::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
