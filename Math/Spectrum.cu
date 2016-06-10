@@ -767,6 +767,8 @@ SpectrumHelper::staticData* SpectrumHelper::getData()
 #endif
 }
 
+#pragma warning( push )
+#pragma warning( disable : 4838)
 # pragma warning( disable : 4305 )
 const float CIE_wavelengths[CIE_samples] = {
 	360, 361, 362, 363, 364, 365, 366, 367, 368, 369, 370, 371, 372, 373,
@@ -1432,4 +1434,5 @@ const float RGBIllum2SpecBlue_entries[RGB2Spec_samples] = {
 		1.6624255403475907e-01,   1.6997613960634927e-01,
 		1.5769743995852967e-01,   1.9069090525482305e-01 };
 
+#pragma warning( pop ) 
 }

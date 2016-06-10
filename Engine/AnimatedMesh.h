@@ -59,6 +59,13 @@ struct Animation
 
 struct e_KernelAnimatedMesh
 {
+	struct e_TmpVertex
+	{
+		Vec3f m_fPos;
+		NormalizedT<Vec3f> m_fNormal;
+		NormalizedT<Vec3f> m_fTangent;
+		NormalizedT<Vec3f> m_fBiTangent;
+	};
 	unsigned int m_uVertexCount;
 	unsigned int m_uJointCount;
 	unsigned int m_uAnimCount;
@@ -95,6 +102,8 @@ public:
 	{
 		return m_pAnimations[i].m_sName;
 	}
+private:
+	void launchKernels(void* a_DeviceTmp, AnimatedVertex* A, float4x4* m0, float4x4* m1, float a_lerp, uint3* triData, TriangleData* triData2);
 };
 
 }

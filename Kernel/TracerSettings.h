@@ -312,7 +312,7 @@ public:
 		~InitHelper()
 		{
 			if (state == 1)
-				throw std::runtime_error("Invalid initialization of collection, forgot to pass a parameter?");
+				fail("Invalid initialization of collection, forgot to pass a parameter?");//invalid syntax
 		}
 
 		TracerParameterCollection& operator<<(ITracerParameter* para)

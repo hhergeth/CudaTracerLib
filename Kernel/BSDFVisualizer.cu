@@ -1,4 +1,3 @@
-#include <Engine/Buffer.h>
 #include "BSDFVisualizer.h"
 #include <Kernel/TraceHelper.h>
 #include <time.h>
@@ -125,9 +124,10 @@ void BSDFVisualizer::Debug(Image* I, const Vec2i& p)
 	func(*m_Bsdf, m_wo, w, h, p.x, p.y, cosTheta);*/
 }
 
+//temporariliy disabled until CUDA fixes problems with boost interval
 void BSDFVisualizer::setSkydome(const char* compiledPath)
 {
-	if (m_pBuffer)
+	/*if (m_pBuffer)
 		delete m_pBuffer;
 	if (m_pBuffer2)
 		delete m_pBuffer2;
@@ -137,17 +137,17 @@ void BSDFVisualizer::setSkydome(const char* compiledPath)
 	BufferReference<MIPMap, KernelMIPMap> mip = m_pBuffer2->malloc(1);
 	m_pMipMap = new (mip.operator->())MIPMap(in.getFilePath(), in);
 	in.Close();
-	m_pLight = new InfiniteLight(m_pBuffer, mip, Spectrum(1.0f), new AABB(Vec3f(0), Vec3f(1)));
+	m_pLight = new InfiniteLight(m_pBuffer, mip, Spectrum(1.0f), new AABB(Vec3f(0), Vec3f(1)));*/
 }
 
 BSDFVisualizer::~BSDFVisualizer()
 {
-	if (m_pBuffer)
+	/*if (m_pBuffer)
 		delete m_pBuffer;
 	if (m_pBuffer2)
 		delete m_pBuffer2;
 	if (m_pLight)
-		delete m_pLight;
+		delete m_pLight;*/
 }
 
 }

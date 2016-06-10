@@ -135,7 +135,10 @@ public:
 	virtual ~BufferBase()
 	{
 		if (device == 0)
-			throw std::runtime_error("Trying to destruct buffer multiple times!");
+		{
+			std::cout << "Trying to destruct buffer multiple times!" << std::endl;
+			return;
+		}
 		for (auto it : *this)
 			(*it).~H();
 		free(host);

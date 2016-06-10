@@ -68,8 +68,8 @@ CUDA_FUNC_IN float copysignf(float a, float b)
 }
 CUDA_FUNC_IN void sincos(float f, float* a, float* b)
 {
-	*a = sin(f);
-	*b = cos(f);
+	*a = sinf(f);
+	*b = cosf(f);
 }
 #endif
 
@@ -101,7 +101,7 @@ public:
 
 	CUDA_FUNC_IN static float signum(float value)
 	{
-		return copysign(1.0f, value);
+		return copysignf(1.0f, value);
 	}
 
 	CUDA_FUNC_IN static int modulo(int a, int b)
@@ -112,7 +112,7 @@ public:
 
 	CUDA_FUNC_IN static float modulo(float a, float b)
 	{
-		float r = fmod(a, b);
+		float r = fmodf(a, b);
 		return (r < 0) ? r + b : r;
 	}
 
@@ -190,7 +190,7 @@ public:
 		return v + 1;
 	}
 
-	CUDA_FUNC_IN static float    sqrt(float a)         { return ::sqrt(a); }
+	CUDA_FUNC_IN static float    sqrt(float a)         { return ::sqrtf(a); }
 	CUDA_FUNC_IN static int    abs(int a)         { return (a >= 0) ? a : -a; }
 	CUDA_FUNC_IN static float    abs(float a)         { return ::fabsf(a); }
 	CUDA_FUNC_IN static float    asin(float a)         { return ::asinf(a); }
