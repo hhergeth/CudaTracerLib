@@ -318,7 +318,7 @@ public:
 		}
 		{
 			auto bl = Tt.StartBlock("reset");
-			ThrowCudaErrors(cudaMemset(deviceGrid, 0xffffffff, GP));
+			ThrowCudaErrors(cudaMemset(m_gridBuffer.getDevicePtr(), 0xffffffff, GP));
 		}
 		{
 			auto bl = Tt.StartBlock("build");
