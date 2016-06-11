@@ -14,6 +14,10 @@ namespace CudaTracerLib {
 
 struct BaseType
 {
+	virtual ~BaseType()
+	{
+		
+	}
 	virtual void Update()
 	{
 	}
