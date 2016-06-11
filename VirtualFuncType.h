@@ -6,25 +6,14 @@
 
 namespace CudaTracerLib {
 
-#define TYPE_FUNC(id) \
-	static CUDA_FUNC_IN unsigned int TYPE() \
-		{ \
-		return id; \
-		}
-
-struct BaseType
-{
-	virtual ~BaseType()
-	{
-		
-	}
-	virtual void Update()
-	{
-	}
-};
-
 namespace CTVirtualHelper
 {
+	//http://stackoverflow.com/a/107657/1715849
+	CUDA_FUNC_IN constexpr unsigned int uint32HashName(const char* name)
+	{
+		return name[0] != '\0' ? name[0] + uint32HashName(name + 1) * 101 : 0;
+	}
+
 	template<typename T, typename... REST> struct Unifier
 	{
 		enum { result = Dmax2(sizeof(T), Unifier<REST...>::result) };
@@ -80,6 +69,23 @@ namespace CTVirtualHelper
 		static_assert(contains< T, ARGS... >::value, "Type not in type list!");
 	}
 }
+
+#define TYPE_FUNC(id) \
+	CUDA_FUNC_IN static constexpr unsigned int TYPE() \
+	{ \
+		return id; \
+	}
+
+struct BaseType
+{
+	virtual ~BaseType()
+	{
+
+	}
+	virtual void Update()
+	{
+	}
+};
 
 #define CALLER(FUNC_NAME) \
 	private: \
