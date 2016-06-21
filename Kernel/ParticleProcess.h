@@ -78,10 +78,10 @@ template<bool PARTICIPATING_MEDIA = true, bool SUBSURFACE_SCATTERING = true, typ
 
 		if (distInMedium)
 		{
-			throughput *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
 			if (bssrdf != 0)
 				P.template handleMediumInteraction<true>(power * throughput, mRec, -r.dir(), r2);
 			else P.template handleMediumInteraction<false>(power * throughput, mRec, -r.dir(), r2);
+			throughput *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
 			PhaseFunctionSamplingRecord pfRec(-r.dir());
 			if (bssrdf)
 				throughput *= bssrdf->As()->Func.Sample(pfRec, rng.randomFloat2());
