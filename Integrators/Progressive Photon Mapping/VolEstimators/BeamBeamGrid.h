@@ -8,22 +8,22 @@ struct BeamBeamGrid : public IVolumeEstimator
 {
 	SpatialLinkedMap<int> m_sStorage;
 
-	Beam* m_pDeviceBeams;
+	SynchronizedBuffer<Beam> m_sBeamStorage;
+
 	unsigned int m_uBeamIdx;
-	unsigned int m_uBeamLength;
 
 	float m_fCurrentRadiusVol;
 
 	BeamBeamGrid(unsigned int gridDim, unsigned int numBeams, int N = 100)
-		: IVolumeEstimator(m_sStorage), m_sStorage(Vec3u(gridDim), gridDim * gridDim * gridDim * N), m_uBeamLength(numBeams)
+		: IVolumeEstimator(m_sStorage, m_sBeamStorage), m_sStorage(Vec3u(gridDim), gridDim * gridDim * gridDim * N), m_sBeamStorage(numBeams)
 	{
-		CUDA_MALLOC(&m_pDeviceBeams, sizeof(Beam) * m_uBeamLength);
+		
 	}
 
 	virtual void Free()
 	{
 		m_sStorage.Free();
-		CUDA_FREE(m_pDeviceBeams);
+		m_sBeamStorage.Free();
 	}
 
 	CTL_EXPORT virtual void StartNewPass(const IRadiusProvider* radProvider, DynamicScene* scene);
@@ -35,7 +35,7 @@ struct BeamBeamGrid : public IVolumeEstimator
 
 	CUDA_FUNC_IN bool isFullK() const
 	{
-		return m_uBeamIdx >= m_uBeamLength;
+		return m_uBeamIdx >= m_sBeamStorage.getLength();
 	}
 
 	virtual bool isFull() const
@@ -45,14 +45,14 @@ struct BeamBeamGrid : public IVolumeEstimator
 
 	virtual void getStatusInfo(size_t& length, size_t& count) const
 	{
-		length = m_uBeamLength;
+		length = m_sBeamStorage.getLength();
 		count = m_uBeamIdx;
 	}
 
 	virtual void PrintStatus(std::vector<std::string>& a_Buf) const
 	{
 		a_Buf.push_back(format("%.2f%% Beam grid indices", (float)m_sStorage.getNumStoredEntries() / m_sStorage.getNumEntries() * 100));
-		a_Buf.push_back(format("%.2f%% Beams", (float)m_uBeamIdx / m_uBeamLength * 100));
+		a_Buf.push_back(format("%.2f%% Beams", (float)m_uBeamIdx / m_sBeamStorage.getLength() * 100));
 	}
 
 	virtual size_t getSize() const

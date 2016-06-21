@@ -10,9 +10,9 @@ namespace CudaTracerLib {
 CUDA_ONLY_FUNC bool BeamBeamGrid::StoreBeam(const Beam& b)
 {
 	unsigned int beam_idx = atomicInc(&m_uBeamIdx, (unsigned int)-1);
-	if (beam_idx < m_uBeamLength)
+	if (beam_idx < m_sBeamStorage.getLength())
 	{
-		m_pDeviceBeams[beam_idx] = b;
+		m_sBeamStorage[beam_idx] = b;
 		bool storedAll = true;
 #ifdef ISCUDA
 		//const AABB objaabb = b.getAABB(m_fCurrentRadiusVol);

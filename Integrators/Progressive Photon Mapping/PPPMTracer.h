@@ -11,24 +11,25 @@ namespace CudaTracerLib {
 
 struct k_AdaptiveEntry
 {
-	float E_psi, E_psi2;
-	float DI, E_DI, E_DI2;
-	float pl;
+	float Sum_psi, Sum_psi2;
+	float DI, Sum_DI, Sum_DI2;
+	float Sum_pl;
 	float r_std;
 
-	CUDA_FUNC_IN float compute_rd(int iteration)
+	CUDA_FUNC_IN float compute_rd(int iteration, int J, int totalPhotons)
 	{
-		float VAR_Lapl = E_DI2 - E_DI * E_DI;
+		float VAR_Lapl = Sum_DI2 / totalPhotons - Sum_DI / totalPhotons * Sum_DI / totalPhotons;
 		return 1.9635f * math::sqrt(VAR_Lapl) * math::pow((float)iteration, -1.0f / 8.0f);
 	}
 
 	CUDA_FUNC_IN float compute_r(int iteration, int J, int totalPhotons)
 	{
-		float VAR_Psi = E_psi2 - E_psi * E_psi;
+		float VAR_Psi = Sum_psi2 / totalPhotons - Sum_psi / totalPhotons * Sum_psi / totalPhotons;
 		float k_2 = 10.0f * PI / 168.0f, k_22 = k_2 * k_2;
-		float E_pl = pl / totalPhotons;
-		float ta = (2.0f * math::sqrt(VAR_Psi)) / (PI * E_pl * k_22 * E_DI * E_DI) / J;
-		return math::pow(ta, 1.0f / 6.0f) * math::pow((float)iteration, -1.0f / 6.0f);
+		float E_pl = Sum_pl / totalPhotons;
+		float nom = (2.0f * math::sqrt(VAR_Psi)), denom = (PI * J * E_pl * k_22 * DI * DI * iteration);
+		if (nom == 0 || denom == 0) return getCurrentRadius(r_std, iteration, 2);
+		return math::pow(nom / denom, 1.0f / 6.0f);
 	}
 };
 
@@ -91,6 +92,7 @@ private:
 	float m_fIntitalRadMin, m_fIntitalRadMax;
 	bool m_useDirectLighting;
 	float m_fProbSurface, m_fProbVolume;
+	float m_debugScaleVal;
 public:
 
 	PARAMETER_KEY(bool, Direct)
@@ -116,6 +118,10 @@ public:
 	{
 		rMin = CudaTracerLib::getCurrentRadius(r_min, m_uPassesDone, 2);
 		rMax = CudaTracerLib::getCurrentRadius(r_max, m_uPassesDone, 2);
+	}
+	float& getDebugScaleVal()
+	{
+		return m_debugScaleVal;
 	}
 protected:
 	CTL_EXPORT virtual void DoRender(Image* I);

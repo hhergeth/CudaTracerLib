@@ -21,7 +21,8 @@ unsigned int ComputePhotonBlocksPerPass()
 PPPMTracer::PPPMTracer()
 	: m_adpBuffer(0), m_fLightVisibility(1), k_Intial(10),
 	m_fProbSurface(1), m_fProbVolume(1), m_uBlocksPerLaunch(ComputePhotonBlocksPerPass()),
-	m_sSurfaceMap(Vec3u(250), (ComputePhotonBlocksPerPass() + 2) * PPM_slots_per_block), m_sSurfaceMapCaustic(0)
+	m_sSurfaceMap(Vec3u(250), (ComputePhotonBlocksPerPass() + 2) * PPM_slots_per_block), m_sSurfaceMapCaustic(0),
+	m_debugScaleVal(1)
 {
 	m_sParameters
 		<< KEY_Direct()			  << CreateSetBool(true)
@@ -106,7 +107,7 @@ void PPPMTracer::getRadiusAt(int x, int y, float& r, float& rd) const
 	k_AdaptiveEntry e;
 	ThrowCudaErrors(cudaMemcpy(&e, m_adpBuffer->getDevicePtr() + w * y + x, sizeof(e), cudaMemcpyDeviceToHost));
 	r = e.compute_r((int)m_uPassesDone, (int)m_sSurfaceMap.getNumEntries(), (int)m_uTotalPhotonsEmitted);
-	rd = e.compute_rd(m_uPassesDone);
+	rd = e.compute_rd(m_uPassesDone, m_uPhotonEmittedPassSurface, m_uPhotonEmittedPassSurface * (m_uPassesDone - 1));
 }
 
 void PPPMTracer::StartNewTrace(Image* I)
