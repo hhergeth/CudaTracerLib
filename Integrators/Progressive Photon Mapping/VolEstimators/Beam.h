@@ -65,6 +65,7 @@ struct Beam
 		return AABB(minPt, maxPt);
 	}
 
+	//this does not(!) account for cone formed beams; this has to be handled afterwards
 	CUDA_FUNC_IN static bool testIntersectionBeamBeam(
 		const Vec3f& O1,
 		const Vec3f& d1,

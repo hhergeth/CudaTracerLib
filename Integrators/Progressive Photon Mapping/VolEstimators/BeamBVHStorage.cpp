@@ -89,7 +89,7 @@ void BeamBVHStorage::PrepareForRendering()
 	//shorten beams to create better bvh
 	auto data = m_pScene->getKernelSceneData(false);
 	const int gridSize = 10;
-	Vec3f invTargetSize = Vec3f(1.0f) / (volBox.Size() / gridSize);
+	Vec3f invTargetSize = Vec3f(1.0f) / (volBox.Size() / (float)gridSize);
 	m_sHostRefs.clear();
 	for (size_t i = 0; i < m_uBeamIdx; i++)
 	{

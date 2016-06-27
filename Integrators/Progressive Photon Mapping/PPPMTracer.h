@@ -109,10 +109,7 @@ public:
 	{
 		return getCurrentRadius(exp, false);
 	}
-	float getCurrentRadius(float exp, bool surf) const
-	{
-		return CudaTracerLib::getCurrentRadius(surf ? m_fInitialRadiusSurf : m_fInitialRadiusVol, m_uPassesDone, exp);
-	}
+	float getCurrentRadius(float exp, bool surf) const;
 	CTL_EXPORT void getRadiusAt(int x, int y, float& r, float& rd) const;
 	void getCurrentRMinRMax(float& rMin, float& rMax) const
 	{

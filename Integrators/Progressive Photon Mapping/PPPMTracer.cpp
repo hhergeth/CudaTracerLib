@@ -102,6 +102,10 @@ void PPPMTracer::DoRender(Image* I)
 	}
 }
 
+float PPPMTracer::getCurrentRadius(float exp, bool surf) const
+{
+	return CudaTracerLib::getCurrentRadius(surf ? m_fInitialRadiusSurf : m_fInitialRadiusVol, m_uPassesDone, exp);
+}
 void PPPMTracer::getRadiusAt(int x, int y, float& r, float& rd) const
 {
 	k_AdaptiveEntry e;
