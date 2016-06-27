@@ -18,13 +18,20 @@ CUDA_FUNC_IN float getCurrentRadius(float initial_r, unsigned int iteration, flo
 //smoothing kernel which integrates [-1, +1] to 1
 CUDA_FUNC_IN float k(float t)
 {
-	t = math::clamp01(t);
+	t = math::clamp01(math::abs(t));
 	return (1.0f + t * t * t * (-6.0f * t * t + 15.0f * t - 10.0f));
 }
 
 template<int D> CUDA_FUNC_IN float k_tr(float r, float t)
 {
-	return k(t / r) / (D == 1 ? r : (D == 2 ? r * r : (D == 3 ? r * r * r : math::pow(r, (float)D))));
+	float my = r * 2;
+	if (D == 2)
+		my = r * r * PI*2.0f / 7.0f;
+	else if (D == 3)
+		my = r * r * r * PI * 4.0f / 3.0f*0.4f;// 0.178571f;
+	static_assert(D <= 3, "Please provide a kernel volume for this dimension!");
+	//return 1.0f / my;//remove kernel normalization factors for uniform kernels
+	return k(t / r) / my;
 }
 
 template<typename VEC> CUDA_FUNC_IN float k_tr(float r, const VEC& t)
