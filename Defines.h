@@ -60,7 +60,7 @@ namespace CudaTracerLib {
 #define __func__ __FUNCTION__
 #endif
 
-#if _DEBUG
+#if !defined(CUDA_RELEASE_BUILD)
 #if __CUDACC__
 #define CTL_ASSERT(X) ((X) ? ((void)0) : printf("Assertion failed!\n%s:%d\n%s", __FILE__, __LINE__, #X))
 #else

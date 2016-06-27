@@ -11,7 +11,7 @@ namespace CudaTracerLib {
 
 unsigned int ComputePhotonBlocksPerPass()
 {
-#ifdef NDEBUG
+#ifdef CUDA_RELEASE_BUILD
 	return 180;
 #else
 	return 1;
@@ -113,14 +113,14 @@ void PPPMTracer::getRadiusAt(int x, int y, float& r, float& rd) const
 void PPPMTracer::StartNewTrace(Image* I)
 {
 	m_useDirectLighting = !m_pScene->getVolumes().hasElements() && m_sParameters.getValue(KEY_Direct());
-#ifndef _DEBUG
+#ifdef CUDA_RELEASE_BUILD
 	m_fLightVisibility = Tracer::GetLightVisibility(m_pScene, 1);
 #endif
 	m_useDirectLighting &= m_fLightVisibility > 0.5f;
 	//m_bDirect = 0;
 	Tracer<true, true>::StartNewTrace(I);
 	m_uTotalPhotonsEmitted = 0;
-#ifndef _DEBUG
+#ifdef CUDA_RELEASE_BUILD
 	AABB m_sEyeBox = GetEyeHitPointBox(m_pScene, true);
 #else
 	AABB m_sEyeBox = m_pScene->getSceneBox();

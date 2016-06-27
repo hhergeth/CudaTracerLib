@@ -5,10 +5,10 @@ namespace CudaTracerLib {
 
 struct SamplerpixelData;
 
-#ifdef _DEBUG
-#define BLOCK_FACTOR 2
-#else
+#ifdef CUDA_RELEASE_BUILD
 #define BLOCK_FACTOR 4
+#else
+#define BLOCK_FACTOR 2
 #endif
 
 //Please distinguish between the concept of cuda blocks and the actual blocks the sampler manages, the latter is formed of multiple cuda blocks 
