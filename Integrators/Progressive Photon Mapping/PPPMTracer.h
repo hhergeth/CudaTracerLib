@@ -18,13 +18,13 @@ struct k_AdaptiveEntry
 
 	CUDA_FUNC_IN float compute_rd(int iteration, int J, int totalPhotons)
 	{
-		float VAR_Lapl = Sum_DI2 / totalPhotons - Sum_DI / totalPhotons * Sum_DI / totalPhotons;
+		float VAR_Lapl = Sum_DI2 / iteration - math::sqr(Sum_DI / iteration);
 		return 1.9635f * math::sqrt(VAR_Lapl) * math::pow((float)iteration, -1.0f / 8.0f);
 	}
 
 	CUDA_FUNC_IN float compute_r(int iteration, int J, int totalPhotons)
 	{
-		float VAR_Psi = Sum_psi2 / totalPhotons - Sum_psi / totalPhotons * Sum_psi / totalPhotons;
+		float VAR_Psi = Sum_psi2 / totalPhotons - math::sqr(Sum_psi / totalPhotons);
 		float k_2 = 10.0f * PI / 168.0f, k_22 = k_2 * k_2;
 		float E_pl = Sum_pl / totalPhotons;
 		float nom = (2.0f * math::sqrt(VAR_Psi)), denom = (PI * J * E_pl * k_22 * DI * DI * iteration);

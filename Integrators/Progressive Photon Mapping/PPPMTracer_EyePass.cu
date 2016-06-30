@@ -235,45 +235,56 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED
 	//ent.r = math::clamp(q, A.r_min, A.r_max);
 
 	//Adaptive Progressive Photon Mapping Implementation
+	bool hasGlossy = mat->bsdf.hasComponent(EGlossy);
+	auto bsdf_diffuse = Spectrum(1);
+	if(!hasGlossy)
+	{
+		auto wi_l = bRec.wi;
+		bRec.wo = bRec.wi = NormalizedT<Vec3f>(0.0f, 0.0f, 1.0f);
+		bsdf_diffuse = mat->bsdf.f(bRec);
+		bRec.wi = wi_l;
+	}
 	k_AdaptiveEntry ent = A(x, y);
-	float NJ = iteration * numPhotonsEmittedSurf, scaleA = (NJ - 1) / NJ, scaleB = 1.0f / NJ;
+	float NJ = (float)(iteration * numPhotonsEmittedSurf), scaleA = (NJ - 1) / NJ, scaleB = 1.0f / NJ;
 	float r  = iteration == 1 ? A.r_max / 10 : ent.compute_r(iteration - 1, numPhotonsEmittedSurf, numPhotonsEmittedSurf * (iteration - 1)),
 		  rd = iteration == 1 ? A.r_max / 10 : ent.compute_rd(iteration - 1, numPhotonsEmittedSurf, numPhotonsEmittedSurf * (iteration - 1));
+	r = math::clamp(r, A.r_min, A.r_max*0.25f);
+	rd = math::clamp(rd, A.r_min, A.r_max*0.25f);
 	r = rd = a_rSurfaceUNUSED;
 	Vec3f ur = bRec.dg.sys.t * rd, vr = bRec.dg.sys.s * rd;
 	float r_max = max(2 * rd, r);
 	Vec3f a = r_max*(-bRec.dg.sys.t - bRec.dg.sys.s) + bRec.dg.P, b = r_max*(bRec.dg.sys.t - bRec.dg.sys.s) + bRec.dg.P, 
 		  c = r_max*(-bRec.dg.sys.t + bRec.dg.sys.s) + bRec.dg.P, d = r_max*(bRec.dg.sys.t + bRec.dg.sys.s) + bRec.dg.P;
 	Spectrum Lp = 0.0f;
-	surfMap.ForAll(min(a, b, c, d), max(a, b, c, d), [&](const Vec3u& cell_idx, unsigned int p_idx, const PPPMPhoton& ph)
+	surfMap.ForAll(min(a, b, c, d), max(a, b, c, d), [&](const Vec3u& cell_idx, unsigned int p_idx, const PPPMPhoton& ph)//CAP = DANGEROUS !!!
 	{
 		Vec3f ph_pos = ph.getPos(surfMap.getHashGrid(), cell_idx);
 		float dist2 = distanceSquared(ph_pos, bRec.dg.P);
 		if (dot(ph.getNormal(), bRec.dg.sys.n) > 0.1f)
 		{
 			bRec.wo = bRec.dg.toLocal(ph.getWi());
-			Spectrum bsdfFactor = mat->bsdf.f(bRec);
-			float psi = Spectrum(importance * bsdfFactor * ph.getL() / float(numPhotonsEmittedSurf)).getLuminance();//this 1/J has nothing to do with E[X], it is scaling for radiance distribution
+			auto bsdfFactor = hasGlossy ? mat->bsdf.f(bRec) : bsdf_diffuse;
+			float psi = Spectrum(importance * bsdfFactor * ph.getL()).getLuminance();
 			const Vec3f e_l = bRec.dg.P - ph_pos;
 			float k_rd = k_tr(rd, e_l);
 			float laplu = k_tr(rd, e_l + ur) + k_tr(rd, e_l - ur) - 2 * k_rd,
 				  laplv = k_tr(rd, e_l + vr) + k_tr(rd, e_l - vr) - 2 * k_rd,
-				  lapl = psi / (rd * rd) * (laplu );
+				  lapl = psi / (rd * rd) * (laplu + laplv);
 			ent.DI = ent.DI * scaleA + lapl * scaleB;
-
-			ent.Sum_DI += ent.DI;
-			ent.Sum_DI2 += ent.DI * ent.DI;
 
 			if (dist2 < r * r)
 			{
 				float kri = k_tr<2>(r, math::sqrt(dist2));
 				Lp += kri * ph.getL() / float(numPhotonsEmittedSurf) * bsdfFactor;
+				psi /= numPhotonsEmittedSurf;
 				ent.Sum_psi += psi;
 				ent.Sum_psi2 += psi * psi;
 				ent.Sum_pl += kri;
 			}
 		}
 	});
+	ent.Sum_DI += ent.DI;
+	ent.Sum_DI2 += ent.DI * ent.DI;
 
 	//if (x == 488 && y == 654)
 	//	printf("Var[Psi] = %5.5e, Var[Lapl] = %5.5e, E[pl] = %5.5e, E[I] = %5.5e, E[Psi] = %5.5e\n", VAR_Psi, VAR_Lapl, E_pl, E_I, ent.psi / NJ);
