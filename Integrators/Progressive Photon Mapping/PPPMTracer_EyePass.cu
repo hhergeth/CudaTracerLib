@@ -187,7 +187,12 @@ template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& b
 		}
 	});
 	if(!F_IS_GLOSSY)
-		Lp *= mat.bsdf.f(bRec) / Frame::cosTheta(bRec.wo);
+	{
+		auto wi_l = bRec.wi;
+		bRec.wo = bRec.wi = NormalizedT<Vec3f>(0.0f, 0.0f, 1.0f);
+		Lp *= mat.bsdf.f(bRec);
+		bRec.wi = wi_l;
+	}
 	return Lp / numPhotonsEmitted;
 }
 
@@ -198,9 +203,9 @@ template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_SurfaceFinalGathering(BSDFSam
 	const int N = 3;
 	DifferentialGeometry dg;
 	BSDFSamplingRecord bRec2(dg);//constantly reloading into bRec and using less registers has about the same performance
+	bRec.typeMask = EGlossy | EDiffuse;
 	for (int i = 0; i < N; i++)
 	{
-		bRec.typeMask = EGlossy | EDiffuse;
 		Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
 		NormalizedT<Ray> r(bRec.dg.P, bRec.getOutgoing());
 		TraceResult r3 = traceRay(r);
