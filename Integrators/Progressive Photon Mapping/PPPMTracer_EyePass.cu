@@ -8,14 +8,14 @@
 namespace CudaTracerLib {
 CUDA_FUNC_IN bool sphere_line_intersection(const Vec3f& p, float radSqr, const Ray& r, float& t_min, float& t_max)
 {
-	auto d = r.dir();
-	Vec3f oc = r.ori() - p;
-	float f = dot(d, oc);
-	float w = f * f - oc.lenSqr() + radSqr;
-	if (w < 0)
+	auto d = r.dir(), o = r.ori();
+	float a = lenSqr(d), b = 2 * dot(d, o - p), c = lenSqr(p) + lenSqr(o) - 2 * dot(p, o) - radSqr;
+	float disc = b * b - 4 * a* c;
+	if (disc < 0)
 		return false;
-	t_min = -f - math::sqrt(w);
-	t_max = -f + math::sqrt(w);
+	float q = math::sqrt(disc);
+	t_min = (-b - q) / (2 * a);
+	t_max = (-b + q) / (2 * a);
 	return true;
 }
 
@@ -67,26 +67,33 @@ template<bool USE_GLOBAL> Spectrum BeamGrid::L_Volume(float NumEmitted, const No
 			float ph_rad1 = ph.getRad1(), ph_rad2 = math::sqr(ph_rad1);
 			float l1 = dot(ph_pos - r.ori(), r.dir());
 			float isectRadSqr = distanceSquared(ph_pos, r(l1));
-			if (isectRadSqr < ph_rad2 && rayT <= l1 && l1 <= cellEndT)
+			/*if (isectRadSqr < ph_rad2 && rayT <= l1 && l1 <= cellEndT)
 			{
 				//transmittance from camera vertex along ray to query point
 				Spectrum tauToPhoton = (-Tau - vol.tau(r, rayT, l1)).exp();
 				PhaseFunctionSamplingRecord pRec(-r.dir(), ph.getWi());
 				float p = vol.p(ph_pos, pRec);
-				L_n += p * ph.getL() * tauToPhoton / (PI * NumEmitted * ph_rad2);
-			}
-			/*float t1, t2;
+				L_n += p * ph.getL() / NumEmitted * tauToPhoton * k_tr<2>(ph_rad1, math::sqrt(isectRadSqr));
+			}*/
+			float t1, t2;
 			if (sphere_line_intersection(ph_pos, ph_rad2, r, t1, t2))
 			{
-				float Vs = 1.0f / (4.0f / 3.0f * PI * ph_rad2 * ph_rad1 * NumEmitted);
-				PhaseFunctionSamplingRecord pRec(-r.dir(), ph.getWi());
-				float p = vol.p(r((t1 + t2) / 2), pRec);
-				auto o_t = vol.sigma_t(r((t1 + t2) / 2), r.dir());
-				auto ta = ((-o_t * t1).exp() - (-o_t * t2).exp()) / o_t;
-				//auto f_ta = (-vol.tau(r, tmin, t1)).exp(), f_tb = (-vol.tau(r, tmin, t2)).exp();
-				//auto ta = (t2 - t1) * (f_ta + 0.5f * (f_tb - f_ta));
-				L_n += p * ph.getL() * Vs * ta;
-			}*/
+				float t = (t1 + t2) / 2;
+				auto b = r(t);
+				float dist = distance(b, ph_pos);
+				auto o_s = vol.sigma_s(b, r.dir()), o_a = vol.sigma_a(b, r.dir()), o_t = Spectrum(o_s + o_a);
+				if (dist < ph_rad1 && rayT <= t && t <= cellEndT)
+				{
+					PhaseFunctionSamplingRecord pRec(-r.dir(), ph.getWi());
+					float p = vol.p(b, pRec);
+
+					//auto T1 = (-vol.tau(r, 0, t1)).exp(), T2 = (-vol.tau(r, 0, t2)).exp(),
+					//	 ta = (t2 - t1) * (T1 + 0.5 * (T2 - T1));
+					//L_n += p * ph.getL() / NumEmitted * k_tr<3>(ph_rad1, dist) * ta;
+					auto Tr_c = (-vol.tau(r, 0, t)).exp();
+					L_n += p * ph.getL() / NumEmitted * k_tr<3>(ph_rad1, dist) * Tr_c * (t2 - t1);
+				}
+			}
 		});
 		Tau += vol.tau(r, rayT, cellEndT);
 		float localDist = cellEndT - rayT;
@@ -101,7 +108,7 @@ CUDA_CONST CudaStaticWrapper<SurfaceMapT> g_SurfMapCaustic;
 CUDA_CONST unsigned int g_NumPhotonEmittedSurface2, g_NumPhotonEmittedVolume2;
 CUDA_CONST CUDA_ALIGN(16) unsigned char g_VolEstimator2[Dmax4(sizeof(PointStorage), sizeof(BeamGrid), sizeof(BeamBeamGrid), sizeof(BeamBVHStorage))];
 
-template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum beam_beam_L(const VolHelper<USE_GLOBAL>& vol, const Beam& B, const NormalizedT<Ray>& r, float radius, float beamIsectDist, float queryIsectDist, float beamBeamDistance, int m_uNumEmitted, float sinTheta, float tmin)
+template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum beam_beam_L(const VolHelper<USE_GLOBAL>& vol, const Beam& B, const NormalizedT<Ray>& r, float radius, float beamIsectDist, float queryIsectDist, float beamBeamDistance, float m_uNumEmitted, float sinTheta, float tmin)
 {
 	Spectrum photon_tau = vol.tau(Ray(B.getPos(), B.getDir()), 0, beamIsectDist);
 	Spectrum camera_tau = vol.tau(r, tmin, queryIsectDist);
@@ -109,7 +116,7 @@ template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum beam_beam_L(const VolHelper<USE_
 	PhaseFunctionSamplingRecord pRec(-r.dir(), B.getDir());
 	float p = vol.p(r(queryIsectDist), pRec);
 	//return B.getL() / float(m_uNumEmitted) * camera_sc * (-photon_tau).exp() * (-camera_tau).exp() * p * (1 - beamBeamDistance * beamBeamDistance / (radius * radius)) * 3 / (4 * radius*sinTheta);
-	return camera_sc * p * B.getL() / m_uNumEmitted * (-photon_tau).exp() * (-camera_tau).exp() / sinTheta * k_tr<1>(radius, beamBeamDistance);
+	return B.getL() / m_uNumEmitted * (-photon_tau).exp() * camera_sc * k_tr<1>(radius, beamBeamDistance) / sinTheta * (-camera_tau).exp();//(1.0f / (2 * radius))
 }
 
 template<bool USE_GLOBAL> Spectrum BeamBeamGrid::L_Volume(float NumEmitted, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr)
@@ -390,7 +397,7 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 			Spectrum Tr(1);
 			float tmin, tmax;
 			if (g_SceneData.m_sVolume.HasVolumes() && g_SceneData.m_sVolume.IntersectP(r, 0, r2.m_fDist, &tmin, &tmax))
-				L += throughput * ((VolEstimator*)g_VolEstimator2)->L_Volume(g_NumPhotonEmittedVolume2, r, tmin, tmax, VolHelper<true>(), Tr);
+				L += throughput * ((VolEstimator*)g_VolEstimator2)->L_Volume((float)g_NumPhotonEmittedVolume2, r, tmin, tmax, VolHelper<true>(), Tr);
 			L += Tr * throughput * g_SceneData.EvalEnvironment(r);
 		}
 		img.Add(screenPos.x, screenPos.y, L);
@@ -409,8 +416,18 @@ void PPPMTracer::DebugInternal(Image* I, const Vec2i& pixel)
 	auto ray = g_SceneData.GenerateSensorRay(pixel.x, pixel.y);
 	auto res = traceRay(ray);
 
-	Spectrum Tr;
-	((BeamBeamGrid*)m_pVolumeEstimator)->L_Volume(m_uPhotonEmittedPassVolume, ray, 0, res.m_fDist, VolHelper<true>(), Tr);
+	if (g_SceneData.m_sVolume.HasVolumes())
+	{
+		Spectrum Tr, L;
+		if (dynamic_cast<BeamGrid*>(m_pVolumeEstimator))
+			L = ((BeamGrid*)m_pVolumeEstimator)->L_Volume((float)m_uPhotonEmittedPassVolume, ray, 0.0f, res.m_fDist, VolHelper<true>(), Tr);
+		else if (dynamic_cast<PointStorage*>(m_pVolumeEstimator))
+			L = ((PointStorage*)m_pVolumeEstimator)->L_Volume((float)m_uPhotonEmittedPassVolume, ray, 0.0f, res.m_fDist, VolHelper<true>(), Tr);
+		else if (dynamic_cast<BeamBeamGrid*>(m_pVolumeEstimator))
+			L = ((BeamBeamGrid*)m_pVolumeEstimator)->L_Volume((float)m_uPhotonEmittedPassVolume, ray, 0.0f, res.m_fDist, VolHelper<true>(), Tr);
+		else if (dynamic_cast<BeamBVHStorage*>(m_pVolumeEstimator))
+			L = ((BeamBVHStorage*)m_pVolumeEstimator)->L_Volume((float)m_uPhotonEmittedPassVolume, ray, 0.0f, res.m_fDist, VolHelper<true>(), Tr);
+	}
 
 	if (res.hasHit())
 	{
