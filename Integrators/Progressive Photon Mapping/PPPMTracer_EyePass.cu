@@ -165,7 +165,7 @@ template<bool USE_GLOBAL> Spectrum BeamBVHStorage::L_Volume(float NumEmitted, co
 	return L_n;
 }
 
-template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const Vec3f& wi, float r, const Material& mat, unsigned int numPhotonsEmitted, SurfaceMapT* map = 0)
+template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const NormalizedT<Vec3f>& wi, float r, const Material& mat, unsigned int numPhotonsEmitted, SurfaceMapT* map = 0)
 {
 	if (!map) map = &g_SurfMap.As();
 	Spectrum Lp = Spectrum(0.0f);
@@ -196,7 +196,7 @@ template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& b
 	return Lp / numPhotonsEmitted;
 }
 
-template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_SurfaceFinalGathering(BSDFSamplingRecord& bRec, const Vec3f& wi, float rad, TraceResult& r2, Sampler& rng, bool DIRECT, unsigned int numPhotonsEmitted)
+template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_SurfaceFinalGathering(BSDFSamplingRecord& bRec, const NormalizedT<Vec3f>& wi, float rad, TraceResult& r2, Sampler& rng, bool DIRECT, unsigned int numPhotonsEmitted)
 {
 	Spectrum LCaustic = L_Surface<F_IS_GLOSSY>(bRec, wi, rad, r2.getMat(), numPhotonsEmitted, &g_SurfMapCaustic.As());
 	Spectrum L(0.0f);
@@ -223,7 +223,7 @@ template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_SurfaceFinalGathering(BSDFSam
 	return L / N + LCaustic;
 }
 
-CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED, const Material* mat, k_AdaptiveStruct& A, int x, int y, const Spectrum& importance, int iteration, BlockSampleImage& img, SurfaceMapT& surfMap, unsigned int numPhotonsEmittedSurf, float debugScaleVal)
+CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const NormalizedT<Vec3f>& wi, float a_rSurfaceUNUSED, const Material* mat, k_AdaptiveStruct& A, int x, int y, const Spectrum& importance, int iteration, BlockSampleImage& img, SurfaceMapT& surfMap, unsigned int numPhotonsEmittedSurf, float debugScaleVal)
 {
 	//ent.rd = 1.9635f * math::sqrt(VAR_Lapl) * math::pow(iteration, -1.0f / 8.0f);
 	//ent.rd = math::clamp(ent.rd, A.r_min, A.r_max);
@@ -259,7 +259,9 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED
 	{
 		Vec3f ph_pos = ph.getPos(surfMap.getHashGrid(), cell_idx);
 		float dist2 = distanceSquared(ph_pos, bRec.dg.P);
-		if (dot(ph.getNormal(), bRec.dg.sys.n) > 0.1f)
+		Vec3f photonNormal = ph.getNormal();
+		float wiDotGeoN = absdot(photonNormal, wi);
+		if (dist2 < r * r && dot(photonNormal, bRec.dg.sys.n) > 0.1f && wiDotGeoN > 1e-2f)
 		{
 			bRec.wo = bRec.dg.toLocal(ph.getWi());
 			auto bsdfFactor = hasGlossy ? mat->bsdf.f(bRec) : bsdf_diffuse;
@@ -307,7 +309,7 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, float a_rSurfaceUNUSED
 	return Lp;
 }
 
-template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int h, float a_PassIndex, float a_rSurface, k_AdaptiveStruct a_AdpEntries, BlockSampleImage img, bool DIRECT, bool USE_PerPixelRadius, bool finalGathering, float debugScaleVal)
+template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int h, float a_PassIndex, float a_rSurface, k_AdaptiveStruct a_AdpEntries, BlockSampleImage img, bool DIRECT, PPM_Radius_Type Radius_Type, bool finalGathering, float debugScaleVal)
 {
 	auto rng = g_SamplerData();
 	DifferentialGeometry dg;
@@ -384,14 +386,18 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 				hasGlossy = r2.getMat().bsdf.hasComponent(EGlossy);
 			if (hasSmooth)
 			{
-				float rad = math::clamp(getCurrentRadius(a_AdpEntries(pixel.x, pixel.y).r_std, a_PassIndex, 2), a_AdpEntries.r_min, a_AdpEntries.r_max);
-				float r_i = USE_PerPixelRadius ? rad : a_rSurface;
 				Spectrum l;
-				if (hasGlossy)
-					l = finalGathering ? L_SurfaceFinalGathering<true>(bRec, -r.dir(), r_i, r2, rng, DIRECT, g_NumPhotonEmittedSurface2) : L_Surface<true>(bRec, -r.dir(), r_i, r2.getMat(), g_NumPhotonEmittedSurface2);
-				else l = finalGathering ? L_SurfaceFinalGathering<false>(bRec, -r.dir(), r_i, r2, rng, DIRECT, g_NumPhotonEmittedSurface2) : L_Surface<false>(bRec, -r.dir(), r_i, r2.getMat(), g_NumPhotonEmittedSurface2);
-				L += throughput * (hasGlossy ? 0.5f : 1) * l;
-				//L += throughput * L_Surface(bRec, a_rSurface, &r2.getMat(), a_AdpEntries, pixel.x, pixel.y, throughput, a_PassIndex, img);
+				float rad = math::clamp(getCurrentRadius(a_AdpEntries(pixel.x, pixel.y).r_std, a_PassIndex, 2), a_AdpEntries.r_min, a_AdpEntries.r_max);
+				if (Radius_Type == PPM_Radius_Type::Adaptive)
+					l = throughput * L_Surface(bRec, -r.dir(), a_rSurface, &r2.getMat(), a_AdpEntries, pixel.x, pixel.y, throughput, a_PassIndex, img, g_SurfMap, g_NumPhotonEmittedSurface2, debugScaleVal);
+				else
+				{
+					float r_i = Radius_Type == PPM_Radius_Type::kNN ? rad : a_rSurface;
+					if (hasGlossy)
+						l = finalGathering ? L_SurfaceFinalGathering<true>(bRec, -r.dir(), r_i, r2, rng, DIRECT, g_NumPhotonEmittedSurface2) : L_Surface<true>(bRec, -r.dir(), r_i, r2.getMat(), g_NumPhotonEmittedSurface2);
+					else l = finalGathering ? L_SurfaceFinalGathering<false>(bRec, -r.dir(), r_i, r2, rng, DIRECT, g_NumPhotonEmittedSurface2) : L_Surface<false>(bRec, -r.dir(), r_i, r2.getMat(), g_NumPhotonEmittedSurface2);
+				}
+				L += throughput * (hasGlossy ? 0.5f : 1) * l;				
 				if (!hasSpecGlossy)
 					break;
 			}
@@ -502,7 +508,7 @@ void PPPMTracer::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_NumPhotonEmittedVolume2, &m_uPhotonEmittedPassVolume, sizeof(m_uPhotonEmittedPassVolume)));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_VolEstimator2, m_pVolumeEstimator, m_pVolumeEstimator->getSize()));
 
-	bool perPixelRad = m_sParameters.getValue(KEY_PerPixelRadius());
+	auto radiusType = m_sParameters.getValue(KEY_RadiiComputationType());
 	bool finalGathering = m_sParameters.getValue(KEY_FinalGathering());
 
 	k_AdaptiveStruct A(r_min, r_max, m_adpBuffer->getDevicePtr(), w, m_uPassesDone);
@@ -510,13 +516,13 @@ void PPPMTracer::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 	BlockSampleImage img = m_pBlockSampler->getBlockImage();
 
 	if (dynamic_cast<BeamGrid*>(m_pVolumeEstimator))
-		k_EyePass<BeamGrid> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, (float)m_uPassesDone, radius2, A, img, m_useDirectLighting, perPixelRad, finalGathering, m_debugScaleVal);
+		k_EyePass<BeamGrid> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, (float)m_uPassesDone, radius2, A, img, m_useDirectLighting, radiusType, finalGathering, m_debugScaleVal);
 	else if(dynamic_cast<PointStorage*>(m_pVolumeEstimator))
-		k_EyePass<PointStorage> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, (float)m_uPassesDone, radius2, A, img, m_useDirectLighting, perPixelRad, finalGathering, m_debugScaleVal);
+		k_EyePass<PointStorage> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, (float)m_uPassesDone, radius2, A, img, m_useDirectLighting, radiusType, finalGathering, m_debugScaleVal);
 	else if (dynamic_cast<BeamBeamGrid*>(m_pVolumeEstimator))
-		k_EyePass<BeamBeamGrid> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, (float)m_uPassesDone, radius2, A, img, m_useDirectLighting, perPixelRad, finalGathering, m_debugScaleVal);
+		k_EyePass<BeamBeamGrid> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, (float)m_uPassesDone, radius2, A, img, m_useDirectLighting, radiusType, finalGathering, m_debugScaleVal);
 	else if (dynamic_cast<BeamBVHStorage*>(m_pVolumeEstimator))
-		k_EyePass<BeamBVHStorage> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, (float)m_uPassesDone, radius2, A, img, m_useDirectLighting, perPixelRad, finalGathering, m_debugScaleVal);
+		k_EyePass<BeamBVHStorage> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, (float)m_uPassesDone, radius2, A, img, m_useDirectLighting, radiusType, finalGathering, m_debugScaleVal);
 
 	ThrowCudaErrors(cudaThreadSynchronize());
 	m_adpBuffer->setOnGPU();
@@ -538,6 +544,7 @@ __global__ void k_PerPixelRadiusEst(int w, int h, float r_max, float r_1, k_Adap
 		auto& e = adpt(x, y);
 		//adaptive progressive intit
 		e.Sum_psi = e.Sum_psi2 = e.Sum_E_DI = e.Sum_E_DI2 = e.Sum_pl = e.Sum_DI_qq = 0.0f;
+		e.r_std = r_1;
 
 		//initial per pixel rad estimate
 		auto rng = g_SamplerData();

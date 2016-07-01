@@ -70,6 +70,10 @@ enum
 
 typedef SpatialLinkedMap<PPPMPhoton> SurfaceMapT;
 
+#define PTDM(X) X(Constant) X(kNN) X(Adaptive)
+ENUMIZE(PPM_Radius_Type, PTDM)
+#undef PTDM
+
 class PPPMTracer : public Tracer<true, true>, public IRadiusProvider
 {
 private:
@@ -98,9 +102,9 @@ private:
 public:
 
 	PARAMETER_KEY(bool, Direct)
-	PARAMETER_KEY(bool, PerPixelRadius)
 	PARAMETER_KEY(bool, FinalGathering)
 	PARAMETER_KEY(bool, AdaptiveAccProb)
+	PARAMETER_KEY(PPM_Radius_Type, RadiiComputationType)
 	PARAMETER_KEY(float, VolRadiusScale)
 
 	CTL_EXPORT PPPMTracer();

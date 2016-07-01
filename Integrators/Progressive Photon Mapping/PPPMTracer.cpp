@@ -25,11 +25,11 @@ PPPMTracer::PPPMTracer()
 	m_debugScaleVal(1)
 {
 	m_sParameters
-		<< KEY_Direct()			  << CreateSetBool(true)
-		<< KEY_PerPixelRadius()   << CreateSetBool(false)
-		<< KEY_FinalGathering()   << CreateSetBool(false)
-		<< KEY_AdaptiveAccProb() << CreateSetBool(false)
-		<< KEY_VolRadiusScale()   << CreateInterval(1.0f, 0.0f, FLT_MAX);
+		<< KEY_Direct()					<< CreateSetBool(true)
+		<< KEY_FinalGathering()			<< CreateSetBool(false)
+		<< KEY_AdaptiveAccProb()		<< CreateSetBool(false)
+		<< KEY_RadiiComputationType()	<< PPM_Radius_Type::Adaptive
+		<< KEY_VolRadiusScale()			<< CreateInterval(1.0f, 0.0f, FLT_MAX);
 
 	m_uTotalPhotonsEmitted = -1;
 	unsigned int numPhotons = (m_uBlocksPerLaunch + 2) * PPM_slots_per_block;
@@ -122,10 +122,14 @@ std::map<std::string, pixel_variant> PPPMTracer::getPixelInfo(int x, int y) cons
 	res["S[psi]"] = pixel_variant(e.Sum_psi);
 	res["S[psi^2]"] = pixel_variant(e.Sum_psi2);
 	res["S[pl]"] = pixel_variant(e.Sum_pl);
-	res["r_std"] = pixel_variant(e.r_std);
-	res["r"] = pixel_variant(r);
+	auto r_k_nn = CudaTracerLib::getCurrentRadius(e.r_std, m_uPassesDone, 2), r_uni = getCurrentRadius(2, true);
+	res["r_knn"] = pixel_variant(r_k_nn);
+	res["r_uni"] = pixel_variant(r_uni);
+	res["r_adp"] = pixel_variant(r);
 	res["rd"] = pixel_variant(rd);
 
+	auto rT = m_sParameters.getValue(KEY_RadiiComputationType());
+	res["r"] = rT == PPM_Radius_Type::Constant ? r_uni : (rT == PPM_Radius_Type::kNN ? r_k_nn : r);
 	res["J"] = pixel_variant((int)m_uPhotonEmittedPassSurface);
 	res["N"] = pixel_variant((int)m_uPassesDone);
 
