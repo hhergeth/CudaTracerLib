@@ -6,6 +6,8 @@
 #include "VolEstimators/BeamBeamGrid.h"
 #include "VolEstimators/BeamBVHStorage.h"
 #include "VolEstimators/BeamGrid.h"
+#include <map>
+#include <boost/variant.hpp>
 
 namespace CudaTracerLib {
 
@@ -110,7 +112,6 @@ public:
 		return getCurrentRadius(exp, false);
 	}
 	float getCurrentRadius(float exp, bool surf) const;
-	CTL_EXPORT void getRadiusAt(int x, int y, float& r, float& rd) const;
 	void getCurrentRMinRMax(float& rMin, float& rMax) const
 	{
 		rMin = CudaTracerLib::getCurrentRadius(r_min, m_uPassesDone, 2);
@@ -120,6 +121,8 @@ public:
 	{
 		return m_debugScaleVal;
 	}
+
+	std::map<std::string, boost::variant<int, float>> getPixelInfo(int x, int y) const;
 protected:
 	CTL_EXPORT virtual void DoRender(Image* I);
 	CTL_EXPORT virtual void StartNewTrace(Image* I);

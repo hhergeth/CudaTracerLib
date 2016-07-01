@@ -106,12 +106,30 @@ float PPPMTracer::getCurrentRadius(float exp, bool surf) const
 {
 	return CudaTracerLib::getCurrentRadius(surf ? m_fInitialRadiusSurf : m_fInitialRadiusVol, m_uPassesDone, exp);
 }
-void PPPMTracer::getRadiusAt(int x, int y, float& r, float& rd) const
+
+typedef boost::variant<int, float> pixel_variant;
+std::map<std::string, pixel_variant> PPPMTracer::getPixelInfo(int x, int y) const
 {
 	k_AdaptiveEntry e;
 	ThrowCudaErrors(cudaMemcpy(&e, m_adpBuffer->getDevicePtr() + w * y + x, sizeof(e), cudaMemcpyDeviceToHost));
-	r = e.compute_r((int)m_uPassesDone, (int)m_sSurfaceMap.getNumEntries(), (int)m_uTotalPhotonsEmitted);
-	rd = e.compute_rd(m_uPassesDone, m_uPhotonEmittedPassSurface, m_uPhotonEmittedPassSurface * (m_uPassesDone - 1));
+	auto r = e.compute_r((int)m_uPassesDone, (int)m_sSurfaceMap.getNumEntries(), (int)m_uTotalPhotonsEmitted);
+	auto rd = e.compute_rd(m_uPassesDone, m_uPhotonEmittedPassSurface, m_uPhotonEmittedPassSurface * (m_uPassesDone - 1));
+
+	auto res = std::map<std::string, pixel_variant>();
+	res["S[DI]"] = pixel_variant(e.Sum_DI_qq);
+	res["S[E[DI]]"] = pixel_variant(e.Sum_E_DI);
+	res["S[E[DI]^2]"] = pixel_variant(e.Sum_E_DI2);
+	res["S[psi]"] = pixel_variant(e.Sum_psi);
+	res["S[psi^2]"] = pixel_variant(e.Sum_psi2);
+	res["S[pl]"] = pixel_variant(e.Sum_pl);
+	res["r_std"] = pixel_variant(e.r_std);
+	res["r"] = pixel_variant(r);
+	res["rd"] = pixel_variant(rd);
+
+	res["J"] = pixel_variant((int)m_uPhotonEmittedPassSurface);
+	res["N"] = pixel_variant((int)m_uPassesDone);
+
+	return res;
 }
 
 void PPPMTracer::StartNewTrace(Image* I)
