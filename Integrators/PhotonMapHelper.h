@@ -34,9 +34,9 @@ template<int D> CUDA_FUNC_IN float k_tr(float r, float t)
 	return k(t / r) / my;
 }
 
-template<typename VEC> CUDA_FUNC_IN float k_tr(float r, const VEC& t)
+template<int D, typename VEC> CUDA_FUNC_IN float k_tr(float r, const VEC& t)
 {
-	return k_tr<VEC::DIMENSION>(r, length(t));
+	return k_tr<D>(r, length(t));
 }
 
 enum PhotonType
