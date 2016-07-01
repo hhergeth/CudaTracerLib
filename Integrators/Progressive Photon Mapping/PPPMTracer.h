@@ -14,13 +14,13 @@ namespace CudaTracerLib {
 struct k_AdaptiveEntry
 {
 	float Sum_psi, Sum_psi2;
-	float DI, Sum_DI, Sum_DI2;
+	float Sum_DI_qq, Sum_E_DI, Sum_E_DI2;
 	float Sum_pl;
 	float r_std;
 
 	CUDA_FUNC_IN float compute_rd(int iteration, int J, int totalPhotons)
 	{
-		float VAR_Lapl = Sum_DI2 / iteration - math::sqr(Sum_DI / iteration);
+		float VAR_Lapl = Sum_E_DI2 / iteration - math::sqr(Sum_E_DI / iteration);
 		return 1.9635f * math::sqrt(VAR_Lapl) * math::pow((float)iteration, -1.0f / 8.0f);
 	}
 
@@ -29,7 +29,7 @@ struct k_AdaptiveEntry
 		float VAR_Psi = Sum_psi2 / totalPhotons - math::sqr(Sum_psi / totalPhotons);
 		float k_2 = 10.0f * PI / 168.0f, k_22 = k_2 * k_2;
 		float E_pl = Sum_pl / totalPhotons;
-		float nom = (2.0f * math::sqrt(VAR_Psi)), denom = (PI * J * E_pl * k_22 * DI * DI * iteration);
+		float nom = (2.0f * math::sqrt(VAR_Psi)), denom = (PI * J * E_pl * k_22 * math::sqr(Sum_DI_qq / totalPhotons) * iteration);
 		if (nom == 0 || denom == 0) return getCurrentRadius(r_std, iteration, 2);
 		return math::pow(nom / denom, 1.0f / 6.0f);
 	}
