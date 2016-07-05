@@ -249,19 +249,21 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const NormalizedT<Vec3
 		  rd = iteration <= 1 ? getCurrentRadius(ent.r_std, iteration, 2) : ent.compute_rd(iteration - 1, numPhotonsEmittedSurf, numPhotonsEmittedSurf * (iteration - 1));
 	r = math::clamp(r, A.r_min, A.r_max);
 	rd = math::clamp(rd, A.r_min, A.r_max);
+	rd = a_rSurfaceUNUSED;
 	//r = rd = a_rSurfaceUNUSED;
 	Vec3f ur = bRec.dg.sys.t * rd, vr = bRec.dg.sys.s * rd;
 	float r_max = max(2 * rd, r);
 	Vec3f a = r_max*(-bRec.dg.sys.t - bRec.dg.sys.s) + bRec.dg.P, b = r_max*(bRec.dg.sys.t - bRec.dg.sys.s) + bRec.dg.P, 
 		  c = r_max*(-bRec.dg.sys.t + bRec.dg.sys.s) + bRec.dg.P, d = r_max*(bRec.dg.sys.t + bRec.dg.sys.s) + bRec.dg.P;
 	Spectrum Lp = 0.0f;
+	float Sum_psi = 0, Sum_psi2 = 0, n_psi = 0, Sum_DI = 0;
 	surfMap.ForAll(min(a, b, c, d), max(a, b, c, d), [&](const Vec3u& cell_idx, unsigned int p_idx, const PPPMPhoton& ph)//CAP = DANGEROUS !!!
 	{
 		Vec3f ph_pos = ph.getPos(surfMap.getHashGrid(), cell_idx);
 		float dist2 = distanceSquared(ph_pos, bRec.dg.P);
 		Vec3f photonNormal = ph.getNormal();
 		float wiDotGeoN = absdot(photonNormal, wi);
-		if (dist2 < r * r && dot(photonNormal, bRec.dg.sys.n) > 0.1f && wiDotGeoN > 1e-2f)
+		if (dist2 < math::sqr(r_max) && dot(photonNormal, bRec.dg.sys.n) > 0.9f && wiDotGeoN > 1e-2f)
 		{
 			bRec.wo = bRec.dg.toLocal(ph.getWi());
 			auto bsdfFactor = hasGlossy ? mat->bsdf.f(bRec) : bsdf_diffuse;
@@ -271,21 +273,31 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const NormalizedT<Vec3
 			float laplu = k_tr<2>(rd, e_l + ur) + k_tr<2>(rd, e_l - ur) - 2 * k_rd,
 				  laplv = k_tr<2>(rd, e_l + vr) + k_tr<2>(rd, e_l - vr) - 2 * k_rd,
 				  lapl = psi / (rd * rd) * (laplu + laplv);
-			ent.Sum_DI_qq += lapl;
+			Sum_DI += lapl;
 
 			if (dist2 < r * r)
 			{
 				float kri = k_tr<2>(r, math::sqrt(dist2));
 				Lp += kri * ph.getL() / float(numPhotonsEmittedSurf) * bsdfFactor;
-				ent.Sum_psi += psi;
-				ent.Sum_psi2 += math::sqr(psi);
+				psi /= numPhotonsEmittedSurf;
+				Sum_psi += psi;
+				Sum_psi2 += math::sqr(psi);
 				ent.Sum_pl += kri;
+				n_psi++;
 			}
 		}
 	});
-	auto E_DI = ent.Sum_DI_qq / (numPhotonsEmittedSurf * iteration);
+	auto E_DI = Sum_DI / numPhotonsEmittedSurf;
+	ent.Sum_DI += E_DI;
+	//auto E_DI = ent.Sum_DI / (numPhotonsEmittedSurf * iteration);//TODO : Use the sequence of estimators not the average?
+	E_DI = ent.Sum_DI / iteration;
 	ent.Sum_E_DI += E_DI;
 	ent.Sum_E_DI2 += math::sqr(E_DI);
+	if(n_psi != 0)
+	{
+		ent.Sum_psi += Sum_psi / n_psi;
+		ent.Sum_psi2 += Sum_psi2 / n_psi;
+	}
 
 	//if (x == 488 && y == 654)
 	//	printf("Var[Psi] = %5.5e, Var[Lapl] = %5.5e, E[pl] = %5.5e, E[I] = %5.5e, E[Psi] = %5.5e\n", VAR_Psi, VAR_Lapl, E_pl, E_I, ent.psi / NJ);
@@ -301,8 +313,7 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const NormalizedT<Vec3
 	//float t = math::abs(ent.Sum_DI2 / NJ - math::sqr(ent.Sum_DI / NJ)) * debugScaleVal;
 	float t = math::abs(ent.DI) * debugScaleVal;
 	qs.fromHSL(2.0f / 3.0f * (1 - math::clamp01(t)), 1, 0.5f);//0 -> 1 : Dark Blue -> Light Blue -> Green -> Yellow -> Red
-	img.Add(x, y, qs);
-
+	//img.Add(x, y, qs);
 #ifdef ISCUDA
 	A(x, y) = ent;
 #endif
@@ -543,7 +554,7 @@ __global__ void k_PerPixelRadiusEst(int w, int h, float r_max, float r_1, k_Adap
 	{
 		auto& e = adpt(x, y);
 		//adaptive progressive intit
-		e.Sum_psi = e.Sum_psi2 = e.Sum_E_DI = e.Sum_E_DI2 = e.Sum_pl = e.Sum_DI_qq = 0.0f;
+		e.Sum_psi = e.Sum_psi2 = e.Sum_E_DI = e.Sum_E_DI2 = e.Sum_pl = e.Sum_DI = 0.0f;
 		e.r_std = r_1;
 
 		//initial per pixel rad estimate

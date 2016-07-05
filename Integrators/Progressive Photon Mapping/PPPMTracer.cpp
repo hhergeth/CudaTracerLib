@@ -116,7 +116,7 @@ std::map<std::string, pixel_variant> PPPMTracer::getPixelInfo(int x, int y) cons
 	auto rd = e.compute_rd(m_uPassesDone, m_uPhotonEmittedPassSurface, m_uPhotonEmittedPassSurface * (m_uPassesDone - 1));
 
 	auto res = std::map<std::string, pixel_variant>();
-	res["S[DI]"] = pixel_variant(e.Sum_DI_qq);
+	res["S[DI]"] = pixel_variant(e.Sum_DI);
 	res["S[E[DI]]"] = pixel_variant(e.Sum_E_DI);
 	res["S[E[DI]^2]"] = pixel_variant(e.Sum_E_DI2);
 	res["S[psi]"] = pixel_variant(e.Sum_psi);
