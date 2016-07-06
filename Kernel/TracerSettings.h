@@ -136,7 +136,7 @@ enum NAME { \
 }; \
 template<> struct EnumConverter<NAME> \
 { \
-  static std::string ToString(NAME val) \
+  static const std::string& ToString(NAME val) \
   { \
 	static std::string ARR[] = { A(MACROSTR) }; \
 	return ARR[(int)val];\
