@@ -61,6 +61,8 @@ PPPMTracer::~PPPMTracer()
 void PPPMTracer::PrintStatus(std::vector<std::string>& a_Buf) const
 {
 	a_Buf.push_back(GET_PERF_BLOCKS().ToString());
+	auto radPara = ((EnumTracerParameter<PPM_Radius_Type>*)m_sParameters.operator[](KEY_RadiiComputationType().name));
+	a_Buf.push_back("Radius Scheme : " + radPara->getStringValue());
 	double pC = math::floor((float)((double)m_uTotalPhotonsEmitted / 1000000.0));
 	a_Buf.push_back(format("Photons emitted : %d[Mil]", (int)pC));
 	double pCs = m_uTotalPhotonsEmitted / m_fAccRuntime / 1000000.0f;
@@ -69,7 +71,7 @@ void PPPMTracer::PrintStatus(std::vector<std::string>& a_Buf) const
 	a_Buf.push_back(format("Photons Surf/Sec lst : %f", (float)pCsLastSurf));
 	a_Buf.push_back(format("Photons Vol/Sec lst : %f", (float)pCsLastVol));
 	a_Buf.push_back(format("Light Visibility : %f", m_fLightVisibility));
-	a_Buf.push_back(format("Photons per pass : %d*100,000", m_sSurfaceMap.getNumEntries() / 100000));
+	a_Buf.push_back(format("Photons per pass : %d*100,000", m_uPhotonEmittedPassSurface / 100000));
 	a_Buf.push_back(format("%.2f%% Surf Photons", float(m_sSurfaceMap.getNumStoredEntries()) / m_sSurfaceMap.getNumEntries() * 100));
 	if (m_sParameters.getValue(KEY_FinalGathering()))
 		a_Buf.push_back(format("Caustic surf map : %.2f%%", float(m_sSurfaceMapCaustic->getNumStoredEntries()) / m_sSurfaceMapCaustic->getNumEntries() * 100));
