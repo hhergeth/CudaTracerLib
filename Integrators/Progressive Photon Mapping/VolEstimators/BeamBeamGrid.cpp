@@ -57,7 +57,7 @@ void BeamBeamGrid::PrepareForRendering()
 	m_sStorage.deviceMap = grid;
 	Ray r = g_SceneData.GenerateSensorRay(200, 200);
 	int n = 0;
-	TraverseGrid(r, m_sStorage.hashMap, 0, FLT_MAX, [&](float minT, float rayT, float maxT, float cellEndT, Vec3u& cell_pos, bool& cancelTraversal)
+	TraverseGridRay(r, m_sStorage.hashMap, 0, FLT_MAX, [&](float minT, float rayT, float maxT, float cellEndT, Vec3u& cell_pos, bool& cancelTraversal)
 	{
 	m_sStorage.ForAll(cell_pos, [&](unsigned int ABC, int beam_idx)
 	{

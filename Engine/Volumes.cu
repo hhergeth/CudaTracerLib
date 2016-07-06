@@ -135,7 +135,7 @@ Spectrum VolumeGrid::integrateDensity(const Ray& ray, float t0, float t1) const
 	rayL.dir() = normalize(rayL.dir());
 	float D_s = 0.0f, D_a = 0.0f;
 	Vec3f cell_size = Vec3f(1) / grid.dimF, dir = rayL.dir() / cell_size;
-	TraverseGrid(rayL, minTL, maxTL, [&](float minT, float rayT, float maxT, float cellEndT, Vec3u& cell_pos, bool& cancelTraversal)
+	TraverseGridRay(rayL, minTL, maxTL, AABB(Vec3f(0), Vec3f(1)), grid.dimF, [&](float minT, float rayT, float maxT, float cellEndT, Vec3u& cell_pos, bool& cancelTraversal)
 	{
 		float d_s, d_a;
 		if (singleGrid)
@@ -148,7 +148,7 @@ Spectrum VolumeGrid::integrateDensity(const Ray& ray, float t0, float t1) const
 		d_s /= 2; d_a /= 2;
 		D_s += d_s * (cellEndT - rayT);
 		D_a += d_a * (cellEndT - rayT);
-	}, AABB(Vec3f(0), Vec3f(1)), grid.dimF);
+	});
 	float Lcl_To_World = (t1 - t0) / (maxTL - minTL);
 	D_a *= Lcl_To_World;
 	D_s *= Lcl_To_World;
@@ -166,7 +166,7 @@ bool VolumeGrid::invertDensityIntegral(const Ray& ray, float t0, float t1, float
 	bool found = false;
 	densityAtMinT = sigma_t(ray(t0), NormalizedT<Vec3f>(rayL.dir())).average();
 	float Lcl_To_World = (t1 - t0) / (maxTL - minTL);
-	TraverseGrid(rayL, minTL, maxTL, [&](float minT, float rayT, float maxT, float cellEndT, Vec3u& cell_pos, bool& cancelTraversal)
+	TraverseGridRay(rayL, minTL, maxTL, AABB(Vec3f(0), Vec3f(1)), grid.dimF, [&](float minT, float rayT, float maxT, float cellEndT, Vec3u& cell_pos, bool& cancelTraversal)
 	{
 		float d_s, d_a;
 		if (singleGrid)
@@ -193,7 +193,7 @@ bool VolumeGrid::invertDensityIntegral(const Ray& ray, float t0, float t1, float
 		{
 			integratedDensity += D;
 		}
-	}, AABB(Vec3f(0), Vec3f(1)), grid.dimF);
+	});
 	return found;
 }
 
