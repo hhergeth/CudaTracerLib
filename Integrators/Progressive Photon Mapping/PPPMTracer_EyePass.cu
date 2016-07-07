@@ -6,24 +6,12 @@
 #include <fstream>
 
 namespace CudaTracerLib {
-CUDA_FUNC_IN bool sphere_line_intersection(const Vec3f& p, float radSqr, const Ray& r, float& t_min, float& t_max)
-{
-	auto d = r.dir(), o = r.ori();
-	float a = lenSqr(d), b = 2 * dot(d, o - p), c = lenSqr(p) + lenSqr(o) - 2 * dot(p, o) - radSqr;
-	float disc = b * b - 4 * a* c;
-	if (disc < 0)
-		return false;
-	float q = math::sqrt(disc);
-	t_min = (-b - q) / (2 * a);
-	t_max = (-b + q) / (2 * a);
-	return true;
-}
 
 template<bool USE_GLOBAL> Spectrum PointStorage::L_Volume(float NumEmitted, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr)
 {
 	Spectrum Tau = Spectrum(0.0f);
-	float Vs = 1.0f / (4.0f / 3.0f * PI * m_fCurrentRadiusVol * m_fCurrentRadiusVol * m_fCurrentRadiusVol * NumEmitted);
 	Spectrum L_n = Spectrum(0.0f);
+	float Vs = 1.0f / (4.0f / 3.0f * PI * m_fCurrentRadiusVol * m_fCurrentRadiusVol * m_fCurrentRadiusVol * NumEmitted);
 	float a, b;
 	if (!m_sStorage.getHashGrid().getAABB().Intersect(r, &a, &b))
 		return L_n;//that would be dumb
@@ -51,7 +39,43 @@ template<bool USE_GLOBAL> Spectrum PointStorage::L_Volume(float NumEmitted, cons
 		a += d;
 	}
 	Tr = (-Tau).exp();
-	return L_n;
+	/*TraverseGridBeam(r, tmin, tmax, m_sStorage,
+		[&](const Vec3u& cell_pos, float rayT, float cellEndT)
+	{
+		return m_fCurrentRadiusVol;
+	},
+		[&](const Vec3u& cell_idx, unsigned int element_idx, const volPhoton& element, float& distAlongRay)
+	{
+		//return CudaTracerLib::sqrDistanceToRay(r, element.getPos(m_sStorage.getHashGrid(), cell_idx), distAlongRay);
+		Vec2f t1t2 = Vec2f(0.0f);
+		sphere_line_intersection(element.getPos(m_sStorage.getHashGrid(), cell_idx), math::sqr(m_fCurrentRadiusVol), r, t1t2.x, t1t2.y);
+		distAlongRay = (t1t2.x + t1t2.y) / 2.0f;
+		return t1t2;
+	},
+		[&](float rayT, float cellEndT, float minT, float maxT, const Vec3u& cell_idx, unsigned int element_idx, const volPhoton& element, float distAlongRay, float distRay2)
+	{
+		if (distRay2 < math::sqr(m_fCurrentRadiusVol))
+		{
+			auto ph_pos = element.getPos(m_sStorage.getHashGrid(), cell_idx);
+			Spectrum tauToPhoton = (-vol.tau(r, tmin, distAlongRay)).exp();
+			PhaseFunctionSamplingRecord pRec(-r.dir(), element.getWi());
+			float p = vol.p(ph_pos, pRec);
+			L_n += p * element.getL() / NumEmitted * tauToPhoton * k_tr<2>(m_fCurrentRadiusVol, math::sqrt(distRay2));
+		}
+	}
+		[&](float rayT, float cellEndT, float minT, float maxT, const Vec3u& cell_idx, unsigned int element_idx, const volPhoton& element, float distAlongRay, const Vec2f& t1t2)
+	{
+		if (t1t2.x == 0.0f && t1t2.y == 0.0f)
+			return;
+		auto ph_pos = element.getPos(m_sStorage.getHashGrid(), cell_idx);
+		PhaseFunctionSamplingRecord pRec(-r.dir(), element.getWi());
+		float p = vol.p(ph_pos, pRec);
+		auto Tr_c = (-vol.tau(r, 0, distAlongRay)).exp();
+		L_n += p * element.getL() / NumEmitted * k_tr<3>(m_fCurrentRadiusVol, math::sqrt(distance(r(distAlongRay), ph_pos))) * Tr_c * (t1t2.y - t1t2.x);
+	}
+	);
+	Tr = (-vol.tau(r, tmin, tmax)).exp();
+	return L_n;*/
 }
 
 template<bool USE_GLOBAL> Spectrum BeamGrid::L_Volume(float NumEmitted, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr)
@@ -67,15 +91,15 @@ template<bool USE_GLOBAL> Spectrum BeamGrid::L_Volume(float NumEmitted, const No
 			float ph_rad1 = ph.getRad1(), ph_rad2 = math::sqr(ph_rad1);
 			float l1 = dot(ph_pos - r.ori(), r.dir());
 			float isectRadSqr = distanceSquared(ph_pos, r(l1));
-			/*if (isectRadSqr < ph_rad2 && rayT <= l1 && l1 <= cellEndT)
+			if (isectRadSqr < ph_rad2 && rayT <= l1 && l1 <= cellEndT)
 			{
 				//transmittance from camera vertex along ray to query point
 				Spectrum tauToPhoton = (-Tau - vol.tau(r, rayT, l1)).exp();
 				PhaseFunctionSamplingRecord pRec(-r.dir(), ph.getWi());
 				float p = vol.p(ph_pos, pRec);
 				L_n += p * ph.getL() / NumEmitted * tauToPhoton * k_tr<2>(ph_rad1, math::sqrt(isectRadSqr));
-			}*/
-			float t1, t2;
+			}
+			/*float t1, t2;
 			if (sphere_line_intersection(ph_pos, ph_rad2, r, t1, t2))
 			{
 				float t = (t1 + t2) / 2;
@@ -93,7 +117,7 @@ template<bool USE_GLOBAL> Spectrum BeamGrid::L_Volume(float NumEmitted, const No
 					auto Tr_c = (-vol.tau(r, 0, t)).exp();
 					L_n += p * ph.getL() / NumEmitted * k_tr<3>(ph_rad1, dist) * Tr_c * (t2 - t1);
 				}
-			}
+			}*/
 		});
 		Tau += vol.tau(r, rayT, cellEndT);
 		float localDist = cellEndT - rayT;
