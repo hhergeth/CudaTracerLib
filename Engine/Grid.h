@@ -110,7 +110,7 @@ template<bool REGULAR> struct HashGrid
 
 	CUDA_FUNC_IN Vec3f InverseTransform(const Vec3u& i) const
 	{
-		return Vec3f(i.x, i.y, i.z) * m_vCellSize + m_sBox.minV;
+		return Vec3f((float)i.x, (float)i.y, (float)i.z) * m_vCellSize + m_sBox.minV;
 	}
 
 	CUDA_FUNC_IN bool IsValidHash(const Vec3f& p) const
@@ -153,7 +153,7 @@ template<bool REGULAR> struct HashGrid
 
 	CUDA_FUNC_IN AABB getCell(const Vec3u& cell_idx) const
 	{
-		Vec3f f = m_sBox.minV + m_vCellSize * Vec3f(cell_idx.x, cell_idx.y, cell_idx.z);
+		Vec3f f = m_sBox.minV + m_vCellSize * Vec3f((float)cell_idx.x, (float)cell_idx.y, (float)cell_idx.z);
 		return AABB(f, f + m_vCellSize);
 	}
 };

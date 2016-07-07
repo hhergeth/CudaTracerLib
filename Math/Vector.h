@@ -44,7 +44,7 @@ public:
 
 	CUDA_FUNC_IN    bool            isZero(void) const                { const T* tp = getPtr(); for (int i = 0; i < L; i++) if (tp[i] != (T)0) return false; return true; }
 	CUDA_FUNC_IN    T               lenSqr(void) const                { const T* tp = getPtr(); T r = (T)0; for (int i = 0; i < L; i++) r += math::sqr(tp[i]); return r; }
-	CUDA_FUNC_IN    T               length(void) const                { return sqrt(lenSqr()); }
+	CUDA_FUNC_IN    T               length(void) const                { return math::sqrt(lenSqr()); }
 	CUDA_FUNC_IN    NormalizedT<S>  normalized() const;
 	CUDA_FUNC_IN    T               min(void) const                { const T* tp = getPtr(); T r = tp[0]; for (int i = 1; i < L; i++) r = CudaTracerLib::min(r, tp[i]); return r; }
 	CUDA_FUNC_IN    T               max(void) const                { const T* tp = getPtr(); T r = tp[0]; for (int i = 1; i < L; i++) r = CudaTracerLib::max(r, tp[i]); return r; }
