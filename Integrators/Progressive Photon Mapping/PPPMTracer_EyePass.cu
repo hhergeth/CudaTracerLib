@@ -11,8 +11,7 @@ template<bool USE_GLOBAL> Spectrum PointStorage::L_Volume(float NumEmitted, cons
 {
 	Spectrum Tau = Spectrum(0.0f);
 	Spectrum L_n = Spectrum(0.0f);
-	float Vs = 1.0f / (4.0f / 3.0f * PI * m_fCurrentRadiusVol * m_fCurrentRadiusVol * m_fCurrentRadiusVol * NumEmitted);
-	float a, b;
+	/*float a, b;
 	if (!m_sStorage.getHashGrid().getAABB().Intersect(r, &a, &b))
 		return L_n;//that would be dumb
 	float minT = a = math::clamp(a, tmin, tmax);
@@ -26,11 +25,12 @@ template<bool USE_GLOBAL> Spectrum PointStorage::L_Volume(float NumEmitted, cons
 		m_sStorage.ForAll(x - Vec3f(m_fCurrentRadiusVol), x + Vec3f(m_fCurrentRadiusVol), [&](const Vec3u& cell_idx, unsigned int p_idx, const volPhoton& ph)
 		{
 			Vec3f ph_pos = ph.getPos(m_sStorage.getHashGrid(), cell_idx);
-			if (distanceSquared(ph_pos, x) < m_fCurrentRadiusVol * m_fCurrentRadiusVol)
+			auto dist2 = distanceSquared(ph_pos, x);
+			if (dist2 < math::sqr(m_fCurrentRadiusVol))
 			{
 				PhaseFunctionSamplingRecord pRec(-r.dir(), ph.getWi());
 				float p = vol.p(x, pRec);
-				L_i += p * ph.getL() * Vs;
+				L_i += p * ph.getL() / NumEmitted * k_tr<3>(m_fCurrentRadiusVol, math::sqrt(dist2));
 			}
 		});
 		L_n += (-Tau - vol.tau(r, a, t)).exp() * L_i * d;
@@ -38,8 +38,8 @@ template<bool USE_GLOBAL> Spectrum PointStorage::L_Volume(float NumEmitted, cons
 		L_n += vol.Lve(x, -r.dir()) * d;
 		a += d;
 	}
-	Tr = (-Tau).exp();
-	/*TraverseGridBeam(r, tmin, tmax, m_sStorage,
+	Tr = (-Tau).exp(); return L_n;*/
+	TraverseGridBeam(r, tmin, tmax, m_sStorage,
 		[&](const Vec3u& cell_pos, float rayT, float cellEndT)
 	{
 		return m_fCurrentRadiusVol;
@@ -47,12 +47,12 @@ template<bool USE_GLOBAL> Spectrum PointStorage::L_Volume(float NumEmitted, cons
 		[&](const Vec3u& cell_idx, unsigned int element_idx, const volPhoton& element, float& distAlongRay)
 	{
 		//return CudaTracerLib::sqrDistanceToRay(r, element.getPos(m_sStorage.getHashGrid(), cell_idx), distAlongRay);
-		Vec2f t1t2 = Vec2f(0.0f);
-		sphere_line_intersection(element.getPos(m_sStorage.getHashGrid(), cell_idx), math::sqr(m_fCurrentRadiusVol), r, t1t2.x, t1t2.y);
-		distAlongRay = (t1t2.x + t1t2.y) / 2.0f;
+		Vec2f t1t2 = Vec2f(-1.0f);
+		if(sphere_line_intersection(element.getPos(m_sStorage.getHashGrid(), cell_idx), math::sqr(m_fCurrentRadiusVol), r, t1t2.x, t1t2.y))
+			distAlongRay = (t1t2.x + t1t2.y) / 2.0f;
 		return t1t2;
 	},
-		[&](float rayT, float cellEndT, float minT, float maxT, const Vec3u& cell_idx, unsigned int element_idx, const volPhoton& element, float distAlongRay, float distRay2)
+	/*	[&](float rayT, float cellEndT, float minT, float maxT, const Vec3u& cell_idx, unsigned int element_idx, const volPhoton& element, float distAlongRay, float distRay2)
 	{
 		if (distRay2 < math::sqr(m_fCurrentRadiusVol))
 		{
@@ -62,20 +62,19 @@ template<bool USE_GLOBAL> Spectrum PointStorage::L_Volume(float NumEmitted, cons
 			float p = vol.p(ph_pos, pRec);
 			L_n += p * element.getL() / NumEmitted * tauToPhoton * k_tr<2>(m_fCurrentRadiusVol, math::sqrt(distRay2));
 		}
-	}
+	}*/
 		[&](float rayT, float cellEndT, float minT, float maxT, const Vec3u& cell_idx, unsigned int element_idx, const volPhoton& element, float distAlongRay, const Vec2f& t1t2)
 	{
-		if (t1t2.x == 0.0f && t1t2.y == 0.0f)
-			return;
 		auto ph_pos = element.getPos(m_sStorage.getHashGrid(), cell_idx);
+		auto dist = distance(r(distAlongRay), ph_pos);
 		PhaseFunctionSamplingRecord pRec(-r.dir(), element.getWi());
 		float p = vol.p(ph_pos, pRec);
 		auto Tr_c = (-vol.tau(r, 0, distAlongRay)).exp();
-		L_n += p * element.getL() / NumEmitted * k_tr<3>(m_fCurrentRadiusVol, math::sqrt(distance(r(distAlongRay), ph_pos))) * Tr_c * (t1t2.y - t1t2.x);
+		L_n += p * element.getL() / NumEmitted * k_tr<3>(m_fCurrentRadiusVol, dist) * Tr_c * (t1t2.y - t1t2.x) / 2.0f;
 	}
 	);
 	Tr = (-vol.tau(r, tmin, tmax)).exp();
-	return L_n;*/
+	return L_n;
 }
 
 template<bool USE_GLOBAL> Spectrum BeamGrid::L_Volume(float NumEmitted, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr)
@@ -139,8 +138,7 @@ template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum beam_beam_L(const VolHelper<USE_
 	Spectrum camera_sc = vol.sigma_s(r(queryIsectDist), r.dir());
 	PhaseFunctionSamplingRecord pRec(-r.dir(), B.getDir());
 	float p = vol.p(r(queryIsectDist), pRec);
-	//return B.getL() / float(m_uNumEmitted) * camera_sc * (-photon_tau).exp() * (-camera_tau).exp() * p * (1 - beamBeamDistance * beamBeamDistance / (radius * radius)) * 3 / (4 * radius*sinTheta);
-	return B.getL() / m_uNumEmitted * (-photon_tau).exp() * camera_sc * k_tr<1>(radius, beamBeamDistance) / sinTheta * (-camera_tau).exp();//(1.0f / (2 * radius))
+	return B.getL() / m_uNumEmitted * (-photon_tau).exp() * camera_sc * k_tr<1>(radius, beamBeamDistance) / sinTheta * (-camera_tau).exp() * 0.5f;
 }
 
 template<bool USE_GLOBAL> Spectrum BeamBeamGrid::L_Volume(float NumEmitted, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr)
