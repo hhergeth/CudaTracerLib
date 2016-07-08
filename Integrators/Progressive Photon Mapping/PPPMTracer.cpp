@@ -153,7 +153,7 @@ void PPPMTracer::StartNewTrace(Image* I)
 #else
 	AABB m_sEyeBox = m_pScene->getSceneBox();
 #endif
-	float r = (m_sEyeBox.maxV - m_sEyeBox.minV).sum() / float(w);
+	float r = m_sEyeBox.Size().length() / float(w) * 5;
 	m_sEyeBox.minV -= Vec3f(r);
 	m_sEyeBox.maxV += Vec3f(r);
 	m_fInitialRadiusSurf = r;
@@ -180,7 +180,7 @@ void PPPMTracer::StartNewTrace(Image* I)
 
 	float r_scene = m_sEyeBox.Size().length() / 2;
 	r_min = 1e-6f * r_scene;
-	r_max = 1e-1f * r_scene;
+	r_max = 2e-2f * r_scene;
 }
 
 }
