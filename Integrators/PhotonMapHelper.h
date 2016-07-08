@@ -24,11 +24,11 @@ CUDA_FUNC_IN float k(float t)
 
 template<int D> CUDA_FUNC_IN float k_tr(float r, float t)
 {
-	float my = r * 2;
+	float my = r;
 	if (D == 2)
-		my = r * r * PI*2.0f / 7.0f;
+		my = r * r * PI * 2.0f / 7.0f;
 	else if (D == 3)
-		my = r * r * r * PI * 4.0f / 3.0f*0.4f;// 0.178571f;
+		my = r * r * r * PI * 5.0f / 21.0f;
 	static_assert(D <= 3, "Please provide a kernel volume for this dimension!");
 	//return 1.0f / my;//remove kernel normalization factors for uniform kernels
 	return k(t / r) / my;
