@@ -78,4 +78,11 @@ void BeamGrid::PrepareForRendering()
 	}*/
 }
 
+void BeamGrid::StartNewPass(const IRadiusProvider* radProvider, DynamicScene* scene)
+{
+	PointStorage::StartNewPass(radProvider, scene);
+	m_fCurrentRadiusVol = radProvider->getCurrentRadius(2);
+	m_sBeamGridStorage.ResetBuffer();
+}
+
 }

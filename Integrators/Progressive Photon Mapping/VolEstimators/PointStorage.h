@@ -79,11 +79,7 @@ public:
 		m_sStorage.Free();
 	}
 
-	virtual void StartNewPass(const IRadiusProvider* radProvider, DynamicScene* scene)
-	{
-		m_fCurrentRadiusVol = radProvider->getCurrentRadius(3);
-		m_sStorage.ResetBuffer();
-	}
+	virtual void StartNewPass(const IRadiusProvider* radProvider, DynamicScene* scene);
 
 	virtual void StartNewRendering(const AABB& box)
 	{
