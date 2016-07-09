@@ -8,6 +8,7 @@
 #include "VolEstimators/BeamGrid.h"
 #include <map>
 #include <boost/variant.hpp>
+#include <Engine/BlockLoclizedCudaBuffer.h>
 
 namespace CudaTracerLib {
 
@@ -41,20 +42,18 @@ struct k_AdaptiveStruct
 	float r_min;
 	float r_max;
 	int w;
-	CUDA_FUNC_IN k_AdaptiveStruct(){}
-	k_AdaptiveStruct(float rmin, float rmax, k_AdaptiveEntry* e, int w, int m_uPassesDone)
-		: w(w)
+	k_AdaptiveStruct(float rmin, float rmax, const BlockLoclizedCudaBuffer<k_AdaptiveEntry> entBuf, int w, int m_uPassesDone)
+		: w(w), E(entBuf)
 	{
-		E = e;
 		r_min = rmin * math::pow(float(m_uPassesDone), -1.0f / 6.0f);
 		r_max = rmax * math::pow(float(m_uPassesDone), -1.0f / 6.0f);
 	}
 	CUDA_FUNC_IN k_AdaptiveEntry& operator()(int x, int y)
 	{
-		return E[w * y + x];
+		return E(x, y);
 	}
 private:
-	k_AdaptiveEntry* E;
+	BlockLoclizedCudaBuffer<k_AdaptiveEntry> E;
 };
 
 enum
@@ -91,10 +90,9 @@ private:
 	unsigned int m_uBlocksPerLaunch;
 
 	//adaptive data
-	SynchronizedBuffer<k_AdaptiveEntry>* m_adpBuffer;
+	BlockLoclizedCudaBuffer<k_AdaptiveEntry>* m_pAdpBuffer;
 	float r_min, r_max;
 
-	unsigned int k_Intial;
 	//used when computing intial radius from density
 	float m_fIntitalRadMin, m_fIntitalRadMax;
 	bool m_useDirectLighting;
@@ -107,6 +105,7 @@ public:
 	PARAMETER_KEY(bool, AdaptiveAccProb)
 	PARAMETER_KEY(PPM_Radius_Type, RadiiComputationType)
 	PARAMETER_KEY(float, VolRadiusScale)
+	PARAMETER_KEY(float, kNN_Neighboor_Num)
 
 	CTL_EXPORT PPPMTracer();
 	CTL_EXPORT virtual ~PPPMTracer();

@@ -19,7 +19,7 @@ unsigned int ComputePhotonBlocksPerPass()
 }
 
 PPPMTracer::PPPMTracer()
-	: m_adpBuffer(0), m_fLightVisibility(1), k_Intial(10),
+	: m_pAdpBuffer(0), m_fLightVisibility(1), 
 	m_fProbSurface(1), m_fProbVolume(1), m_uBlocksPerLaunch(ComputePhotonBlocksPerPass()),
 	m_sSurfaceMap(Vec3u(250), (ComputePhotonBlocksPerPass() + 2) * PPM_slots_per_block), m_sSurfaceMapCaustic(0),
 	m_debugScaleVal(1)
@@ -28,8 +28,9 @@ PPPMTracer::PPPMTracer()
 		<< KEY_Direct()					<< CreateSetBool(true)
 		<< KEY_FinalGathering()			<< CreateSetBool(false)
 		<< KEY_AdaptiveAccProb()		<< CreateSetBool(false)
-		<< KEY_RadiiComputationType()	<< PPM_Radius_Type::Adaptive
-		<< KEY_VolRadiusScale()			<< CreateInterval(1.0f, 0.0f, FLT_MAX);
+		<< KEY_RadiiComputationType()	<< PPM_Radius_Type::kNN
+		<< KEY_VolRadiusScale()			<< CreateInterval(1.0f, 0.0f, FLT_MAX)
+		<< KEY_kNN_Neighboor_Num()		<< CreateInterval(10.0f, 0.0f, FLT_MAX);
 
 	m_uTotalPhotonsEmitted = -1;
 	unsigned int numPhotons = (m_uBlocksPerLaunch + 2) * PPM_slots_per_block;
@@ -50,10 +51,10 @@ PPPMTracer::PPPMTracer()
 PPPMTracer::~PPPMTracer()
 {
 	m_sSurfaceMap.Free();
-	if (m_adpBuffer)
+	if (m_pAdpBuffer)
 	{
-		m_adpBuffer->Free();
-		delete m_adpBuffer;
+		m_pAdpBuffer->Free();
+		delete m_pAdpBuffer;
 	}
 	delete m_pVolumeEstimator;
 }
@@ -82,7 +83,12 @@ void PPPMTracer::PrintStatus(std::vector<std::string>& a_Buf) const
 void PPPMTracer::Resize(unsigned int _w, unsigned int _h)
 {
 	Tracer<true, true>::Resize(_w, _h);
-	CreateOrResize(m_adpBuffer, _w * _h);
+	if(m_pAdpBuffer)
+	{
+		m_pAdpBuffer->Free();
+		delete m_pAdpBuffer;
+	}
+	m_pAdpBuffer = new BlockLoclizedCudaBuffer<k_AdaptiveEntry>(_w, _h);
 }
 
 void PPPMTracer::DoRender(Image* I)
@@ -112,8 +118,7 @@ float PPPMTracer::getCurrentRadius(float exp, bool surf) const
 typedef boost::variant<int, float> pixel_variant;
 std::map<std::string, pixel_variant> PPPMTracer::getPixelInfo(int x, int y) const
 {
-	k_AdaptiveEntry e;
-	ThrowCudaErrors(cudaMemcpy(&e, m_adpBuffer->getDevicePtr() + w * y + x, sizeof(e), cudaMemcpyDeviceToHost));
+	k_AdaptiveEntry e = m_pAdpBuffer->operator()(x, y);
 	auto r = e.compute_r((int)m_uPassesDone, (int)m_sSurfaceMap.getNumEntries(), (int)m_uTotalPhotonsEmitted);
 	auto rd = e.compute_rd(m_uPassesDone, m_uPhotonEmittedPassSurface, m_uPhotonEmittedPassSurface * (m_uPassesDone - 1));
 

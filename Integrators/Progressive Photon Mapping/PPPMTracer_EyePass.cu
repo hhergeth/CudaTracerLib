@@ -11,7 +11,7 @@ template<bool USE_GLOBAL> Spectrum PointStorage::L_Volume(float NumEmitted, cons
 {
 	Spectrum Tau = Spectrum(0.0f);
 	Spectrum L_n = Spectrum(0.0f);
-	/*float a, b;
+	float a, b;
 	if (!m_sStorage.getHashGrid().getAABB().Intersect(r, &a, &b))
 		return L_n;//that would be dumb
 	float minT = a = math::clamp(a, tmin, tmax);
@@ -38,42 +38,7 @@ template<bool USE_GLOBAL> Spectrum PointStorage::L_Volume(float NumEmitted, cons
 		L_n += vol.Lve(x, -r.dir()) * d;
 		a += d;
 	}
-	Tr = (-Tau).exp(); return L_n;*/
-	TraverseGridBeam(r, tmin, tmax, m_sStorage,
-		[&](const Vec3u& cell_pos, float rayT, float cellEndT)
-	{
-		return m_fCurrentRadiusVol;
-	},
-		[&](const Vec3u& cell_idx, unsigned int element_idx, const volPhoton& element, float& distAlongRay)
-	{
-		//return CudaTracerLib::sqrDistanceToRay(r, element.getPos(m_sStorage.getHashGrid(), cell_idx), distAlongRay);
-		Vec2f t1t2 = Vec2f(-1.0f);
-		if(sphere_line_intersection(element.getPos(m_sStorage.getHashGrid(), cell_idx), math::sqr(m_fCurrentRadiusVol), r, t1t2.x, t1t2.y))
-			distAlongRay = (t1t2.x + t1t2.y) / 2.0f;
-		return t1t2;
-	},
-	/*	[&](float rayT, float cellEndT, float minT, float maxT, const Vec3u& cell_idx, unsigned int element_idx, const volPhoton& element, float distAlongRay, float distRay2)
-	{
-		if (distRay2 < math::sqr(m_fCurrentRadiusVol))
-		{
-			auto ph_pos = element.getPos(m_sStorage.getHashGrid(), cell_idx);
-			Spectrum tauToPhoton = (-vol.tau(r, tmin, distAlongRay)).exp();
-			PhaseFunctionSamplingRecord pRec(-r.dir(), element.getWi());
-			float p = vol.p(ph_pos, pRec);
-			L_n += p * element.getL() / NumEmitted * tauToPhoton * k_tr<2>(m_fCurrentRadiusVol, math::sqrt(distRay2));
-		}
-	}*/
-		[&](float rayT, float cellEndT, float minT, float maxT, const Vec3u& cell_idx, unsigned int element_idx, const volPhoton& element, float distAlongRay, const Vec2f& t1t2)
-	{
-		auto ph_pos = element.getPos(m_sStorage.getHashGrid(), cell_idx);
-		auto dist = distance(r(distAlongRay), ph_pos);
-		PhaseFunctionSamplingRecord pRec(-r.dir(), element.getWi());
-		float p = vol.p(ph_pos, pRec);
-		auto Tr_c = (-vol.tau(r, 0, distAlongRay)).exp();
-		L_n += p * element.getL() / NumEmitted * k_tr<3>(m_fCurrentRadiusVol, dist) * Tr_c * (t1t2.y - t1t2.x) / 2.0f;
-	}
-	);
-	Tr = (-vol.tau(r, tmin, tmax)).exp();
+	Tr = (-Tau).exp();
 	return L_n;
 }
 
@@ -467,7 +432,6 @@ void PPPMTracer::DebugInternal(Image* I, const Vec2i& pixel)
 	if (m_sSurfaceMapCaustic)
 		m_sSurfaceMapCaustic->Synchronize();
 	m_pVolumeEstimator->Synchronize();
-	m_adpBuffer->Synchronize();
 
 	auto ray = g_SceneData.GenerateSensorRay(pixel.x, pixel.y);
 	auto res = traceRay(ray);
@@ -490,10 +454,9 @@ void PPPMTracer::DebugInternal(Image* I, const Vec2i& pixel)
 		DifferentialGeometry dg;
 		BSDFSamplingRecord bRec(dg);
 		res.getBsdfSample(ray, bRec, ETransportMode::EImportance);
-		k_AdaptiveStruct A(r_min, r_max, &m_adpBuffer->operator[](0), w, m_uPassesDone);
-		L_Surface(bRec, getCurrentRadius(2), &res.getMat(), A, pixel.x, pixel.y, Spectrum(1.0f), m_uPassesDone, m_pBlockSampler->getBlockImage(), m_sSurfaceMap, m_uPhotonEmittedPassSurface, m_debugScaleVal);
-		m_adpBuffer->setOnCPU();
-		m_adpBuffer->Synchronize();
+
+		k_AdaptiveStruct A(r_min, r_max, *m_pAdpBuffer, w, m_uPassesDone);
+		k_AdaptiveEntry ent = A(pixel.x, pixel.y);
 	}
 
 	/*
@@ -544,7 +507,9 @@ void PPPMTracer::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 	auto radiusType = m_sParameters.getValue(KEY_RadiiComputationType());
 	bool finalGathering = m_sParameters.getValue(KEY_FinalGathering());
 
-	k_AdaptiveStruct A(r_min, r_max, m_adpBuffer->getDevicePtr(), w, m_uPassesDone);
+	if(radiusType != PPM_Radius_Type::Constant)
+		m_pAdpBuffer->StartBlock(x, y);
+	k_AdaptiveStruct A(r_min, r_max, *m_pAdpBuffer, w, m_uPassesDone);
 	Vec2i off = Vec2i(x, y);
 	BlockSampleImage img = m_pBlockSampler->getBlockImage();
 
@@ -558,7 +523,8 @@ void PPPMTracer::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 		k_EyePass<BeamBVHStorage> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, (float)m_uPassesDone, radius2, A, img, m_useDirectLighting, radiusType, finalGathering, m_debugScaleVal);
 
 	ThrowCudaErrors(cudaThreadSynchronize());
-	m_adpBuffer->setOnGPU();
+	if (radiusType != PPM_Radius_Type::Constant)
+		m_pAdpBuffer->EndBlock();
 }
 
 CUDA_DEVICE int g_MaxRad, g_MinRad;
@@ -569,12 +535,12 @@ CUDA_FUNC_IN int floatToOrderedInt(float floatVal) {
 CUDA_FUNC_IN float orderedIntToFloat(int intVal) {
 	return int_as_float_((intVal >= 0) ? intVal : intVal ^ 0x7FFFFFFF);
 }
-__global__ void k_PerPixelRadiusEst(int w, int h, float r_max, float r_1, k_AdaptiveStruct adpt, int k_toFind)
+__global__ void k_PerPixelRadiusEst(Vec2i off, int w, int h, float r_max, float r_1, k_AdaptiveStruct adpt, int k_toFind)
 {
-	int x = blockIdx.x * blockDim.x + threadIdx.x, y = blockIdx.y * blockDim.y + threadIdx.y;
-	if (x < w && y < h)
+	Vec2i pixel = TracerBase::getPixelPos(off.x, off.y);
+	if (pixel.x < w && pixel.y < h)
 	{
-		auto& e = adpt(x, y);
+		auto& e = adpt(pixel.x, pixel.y);
 		//adaptive progressive intit
 		e.Sum_psi = e.Sum_psi2 = e.Sum_E_DI = e.Sum_E_DI2 = e.Sum_pl = e.Sum_DI = 0.0f;
 		e.r_std = r_1;
@@ -583,7 +549,7 @@ __global__ void k_PerPixelRadiusEst(int w, int h, float r_max, float r_1, k_Adap
 		auto rng = g_SamplerData();
 		DifferentialGeometry dg;
 		BSDFSamplingRecord bRec(dg);
-		NormalizedT<Ray> r = g_SceneData.GenerateSensorRay(x, y);
+		NormalizedT<Ray> r = g_SceneData.GenerateSensorRay(pixel.x, pixel.y);
 		TraceResult r2 = traceRay(r);
 		if (r2.hasHit())
 		{
@@ -617,13 +583,20 @@ void PPPMTracer::doPerPixelRadiusEstimation()
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_MaxRad, &b, sizeof(b)));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_MinRad, &a, sizeof(a)));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_SurfMap, &m_sSurfaceMap, sizeof(m_sSurfaceMap)));
-	int p = 32;
-	k_PerPixelRadiusEst << <dim3(w / p + 1, h / p + 1, 1), dim3(p, p, 1) >> >(w, h, r_max * 0.1f, m_fInitialRadiusSurf, k_AdaptiveStruct(r_min, r_max, m_adpBuffer->getDevicePtr(), w, m_uPassesDone), k_Intial);
+	float k_Intial = m_sParameters.getValue(KEY_kNN_Neighboor_Num());
+	
+	IterateAllBlocks(w, h, [&](int x, int y, int, int)
+	{
+		m_pAdpBuffer->StartBlock(x, y);
+		auto A = k_AdaptiveStruct(r_min, r_max, *m_pAdpBuffer, w, m_uPassesDone);//keeps a copy of m_pAdpBuffer!
+		k_PerPixelRadiusEst << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(Vec2i(x, y), w, h, r_max * 0.1f, m_fInitialRadiusSurf, A, k_Intial);
+		m_pAdpBuffer->EndBlock();
+	});
+
 	ThrowCudaErrors(cudaMemcpyFromSymbol(&a, g_MinRad, sizeof(a)));
 	ThrowCudaErrors(cudaMemcpyFromSymbol(&b, g_MaxRad, sizeof(b)));
 	m_fIntitalRadMin = orderedIntToFloat(a);
 	m_fIntitalRadMax = orderedIntToFloat(b);
-	m_adpBuffer->setOnGPU();
 }
 
 }

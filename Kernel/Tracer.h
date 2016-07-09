@@ -132,6 +132,18 @@ public:
 	{
 		UpdateSamplerData(n);
 	}
+	template<typename F> static void IterateAllBlocks(unsigned int w, unsigned int h, const F& clb)
+	{
+		int nx = (w + BLOCK_SAMPLER_BlockSize - 1) / BLOCK_SAMPLER_BlockSize, ny = (h + BLOCK_SAMPLER_BlockSize - 1) / BLOCK_SAMPLER_BlockSize;
+		for (int ix = 0; ix < nx; ix++)
+			for (int iy = 0; iy < ny; iy++)
+			{
+				int x = ix * BLOCK_SAMPLER_BlockSize, y = iy * BLOCK_SAMPLER_BlockSize;
+				int x2 = (ix + 1) * BLOCK_SAMPLER_BlockSize, y2 = (iy + 1) * BLOCK_SAMPLER_BlockSize;
+				int bw = min(int(w), x2) - x, bh = min(int(h), y2) - y;
+				clb(x, y, bw, bh);
+			}
+	}
 protected:
 	float m_fLastRuntime;
 	unsigned int m_uLastNumRaysTraced;
@@ -248,15 +260,10 @@ protected:
 		}
 		else
 		{
-			int nx = (I->getWidth() + BLOCK_SAMPLER_BlockSize - 1) / BLOCK_SAMPLER_BlockSize, ny = (I->getHeight() + BLOCK_SAMPLER_BlockSize - 1) / BLOCK_SAMPLER_BlockSize;
-			for (int ix = 0; ix < nx; ix++)
-				for (int iy = 0; iy < ny; iy++)
-				{
-					int x = ix * BLOCK_SAMPLER_BlockSize, y = iy * BLOCK_SAMPLER_BlockSize;
-					int x2 = (ix + 1) * BLOCK_SAMPLER_BlockSize, y2 = (iy + 1) * BLOCK_SAMPLER_BlockSize;
-					int bw = min(int(w), x2) - x, bh = min(int(h), y2) - y;
-					RenderBlock(I, x, y, bw, bh);
-				}
+			IterateAllBlocks(w, h, [&](int x, int y, int bw, int bh)
+			{
+				RenderBlock(I, x, y, bw, bh);
+			});
 		}
 	}
 	virtual void StartNewTrace(Image* I)
