@@ -84,7 +84,11 @@ namespace CudaTracerLib {
 #error "Please provide a definition for MY_ALIGN macro for your host compiler!"
 #endif
 
-CTL_EXPORT void fail(const char* format, ...);
+CTL_EXPORT void fail(const char* format);
+template<typename ... Args> void fail(const char* _format, Args ... args)
+{
+	fail(format(_format, args...).c_str());
+}
 
 CTL_EXPORT void __ThrowCudaErrors__(const char* file, int line, ...);
 #define ThrowCudaErrors(...) __ThrowCudaErrors__(__FILE__, __LINE__, ##__VA_ARGS__, -1)

@@ -12,14 +12,8 @@
 
 namespace CudaTracerLib {
 
-void fail(const char* format, ...)
+void fail(const char* err_str)
 {
-	va_list arglist;
-	va_start(arglist, format);
-	std::string err_str = vformat(format, arglist);
-	std::cout << err_str;
-	va_end(arglist);
-
 #ifdef ISWINDOWS
 	if (IsDebuggerPresent())
 		__debugbreak();

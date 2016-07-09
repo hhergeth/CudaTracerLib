@@ -2,7 +2,7 @@
 #include <stdexcept>
 #include <Defines.h>
 #include <string>
-#include <cstdarg>
+#include <memory>
 
 namespace CudaTracerLib {
 
@@ -26,15 +26,13 @@ public:
 
 #define ZERO_MEM(ref) Platform::SetMemory(&ref, sizeof(ref), 0)
 
-CTL_EXPORT std::string vformat(const char *fmt, va_list ap);
-
-inline std::string format(const char *fmt, ...)
+//code is from this great answer : http://stackoverflow.com/a/26221725/1715849
+template<typename ... Args> std::string format(const std::string& format, Args ... args)
 {
-	va_list ap;
-	va_start(ap, fmt);
-	std::string buf = vformat(fmt, ap);
-	va_end(ap);
-	return buf;
+	size_t size = snprintf(nullptr, 0, format.c_str(), args ...) + 1; // Extra space for '\0'
+	std::unique_ptr<char[]> buf(new char[size]);
+	snprintf(buf.get(), size, format.c_str(), args ...);
+	return std::string(buf.get(), buf.get() + size - 1); // We don't want the '\0' inside
 }
 
 }
