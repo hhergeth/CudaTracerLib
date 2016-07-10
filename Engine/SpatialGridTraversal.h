@@ -27,7 +27,7 @@ namespace CudaTracerLib {
 
 				grid.ForAllCellEntries(cell_idx, [&](unsigned int element_idx, const T& element)
 				{
-					float distAlongRay;
+					float distAlongRay = -1;
 					auto dist_data = clbDist(cell_idx, element_idx, element, distAlongRay);
 					if ((rayT <= distAlongRay || rayT <= minT * (1 + EPSILON)) && distAlongRay >= tmin  && distAlongRay <= tmax)//&& (distAlongRay < cellEndT || cellEndT >= maxT * (1.0f - EPSILON))
 					{
