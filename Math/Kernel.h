@@ -86,7 +86,7 @@ namespace CudaTracerLib {
 		template<int DIM> CUDA_FUNC_IN static float k(float t, float r)
 		{
 			const float vol = pow_int_compile<DIM>::pow(r);
-			const float norm_coeff = K::norm_factor<DIM>();
+			const float norm_coeff = K::template norm_factor<DIM>();
 			return K::k(math::clamp01(t / r)) / (norm_coeff * vol);
 		}
 

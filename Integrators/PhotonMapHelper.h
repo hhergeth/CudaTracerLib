@@ -5,6 +5,7 @@
 #include <Math/Compression.h>
 #include <Base/FileStream.h>
 #include <CudaMemoryManager.h>
+#include <Math/Kernel.h>
 
 namespace CudaTracerLib {
 
@@ -15,29 +16,7 @@ CUDA_FUNC_IN float getCurrentRadius(float initial_r, unsigned int iteration, flo
 	return initial_r * math::pow((float)iteration, (ALPHA - 1) / exp);
 }
 
-//smoothing kernel which integrates [-1, +1] to 1
-CUDA_FUNC_IN float k(float t)
-{
-	t = math::clamp01(math::abs(t));
-	return (1.0f + t * t * t * (-6.0f * t * t + 15.0f * t - 10.0f));
-}
-
-template<int D> CUDA_FUNC_IN float k_tr(float r, float t)
-{
-	float my = r;
-	if (D == 2)
-		my = r * r * PI * 2.0f / 7.0f;
-	else if (D == 3)
-		my = r * r * r * PI * 5.0f / 21.0f;
-	static_assert(D <= 3, "Please provide a kernel volume for this dimension!");
-	//return 1.0f / my;//remove kernel normalization factors for uniform kernels
-	return k(t / r) / my;
-}
-
-template<int D, typename VEC> CUDA_FUNC_IN float k_tr(float r, const VEC& t)
-{
-	return k_tr<D>(r, length(t));
-}
+typedef KernelWrapper<PerlinKernel> Kernel;
 
 enum PhotonType
 {

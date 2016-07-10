@@ -339,7 +339,7 @@ template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_Surface2(VCMSurfMap& g_Curren
 		{
 			bRec.wo = bRec.dg.toLocal(ph.getWi());
 			float cor_fac = math::abs(Frame::cosTheta(bRec.wi) / (wiDotGeoN * Frame::cosTheta(bRec.wo)));
-			float ke = k_tr<2>(r, math::sqrt(dist2));
+			float ke = Kernel::k<2>(math::sqrt(dist2), r);
 			Spectrum l = ph.getL();
 			if (F_IS_GLOSSY)
 				l *= mat->bsdf.f(bRec);
@@ -390,7 +390,7 @@ template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_Surface2(VCMSurfMap& g_Curren
 	const float wCamera = aCameraState.dVCM * mMisVcWeightFactor + aCameraState.dVM * cameraBsdfRevPdfW;
 	const float misWeight = 1.f / (wLight + 1.f + wCamera);
 
-	float ke = k_tr(a_rSurfaceUNUSED, math::sqrt(dist2));
+	float ke = Kernel::k<2>(math::sqrt(dist2), a_rSurfaceUNUSED);
 	Lp += (use_mis ? misWeight : 1.0f) * ke * l * bsdfFactor / Frame::cosTheta(bRec.wo);
 	}
 	i = e.getNext();

@@ -30,7 +30,7 @@ template<bool USE_GLOBAL> Spectrum PointStorage::L_Volume(float NumEmitted, cons
 			{
 				PhaseFunctionSamplingRecord pRec(-r.dir(), ph.getWi());
 				float p = vol.p(x, pRec);
-				L_i += p * ph.getL() / NumEmitted * k_tr<3>(m_fCurrentRadiusVol, math::sqrt(dist2));
+				L_i += p * ph.getL() / NumEmitted * Kernel::k<3>(math::sqrt(dist2), m_fCurrentRadiusVol);
 			}
 		});
 		L_n += (-Tau - vol.tau(r, a, t)).exp() * L_i * d;
@@ -61,7 +61,7 @@ template<bool USE_GLOBAL> Spectrum BeamGrid::L_Volume(float NumEmitted, const No
 				Spectrum tauToPhoton = (-Tau - vol.tau(r, rayT, l1)).exp();
 				PhaseFunctionSamplingRecord pRec(-r.dir(), ph.getWi());
 				float p = vol.p(ph_pos, pRec);
-				L_n += p * ph.getL() / NumEmitted * tauToPhoton * k_tr<2>(ph_rad1, math::sqrt(isectRadSqr));
+				L_n += p * ph.getL() / NumEmitted * tauToPhoton * Kernel::k<2>(math::sqrt(isectRadSqr), ph_rad1);
 			}
 			/*float t1, t2;
 			if (sphere_line_intersection(ph_pos, ph_rad2, r, t1, t2))
@@ -77,9 +77,9 @@ template<bool USE_GLOBAL> Spectrum BeamGrid::L_Volume(float NumEmitted, const No
 
 					//auto T1 = (-vol.tau(r, 0, t1)).exp(), T2 = (-vol.tau(r, 0, t2)).exp(),
 					//	 ta = (t2 - t1) * (T1 + 0.5 * (T2 - T1));
-					//L_n += p * ph.getL() / NumEmitted * k_tr<3>(ph_rad1, dist) * ta;
+					//L_n += p * ph.getL() / NumEmitted * Kernel::k<3>(dist, ph_rad1) * ta;
 					auto Tr_c = (-vol.tau(r, 0, t)).exp();
-					L_n += p * ph.getL() / NumEmitted * k_tr<3>(ph_rad1, dist) * Tr_c * (t2 - t1);
+					L_n += p * ph.getL() / NumEmitted * Kernel::k<3>(dist, ph_rad1) * Tr_c * (t2 - t1);
 				}
 			}*/
 		});
@@ -103,7 +103,7 @@ template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum beam_beam_L(const VolHelper<USE_
 	Spectrum camera_sc = vol.sigma_s(r(queryIsectDist), r.dir());
 	PhaseFunctionSamplingRecord pRec(-r.dir(), B.getDir());
 	float p = vol.p(r(queryIsectDist), pRec);
-	return B.getL() / m_uNumEmitted * (-photon_tau).exp() * camera_sc * k_tr<1>(radius, beamBeamDistance) / sinTheta * (-camera_tau).exp() * 0.5f;
+	return B.getL() / m_uNumEmitted * (-photon_tau).exp() * camera_sc * Kernel::k<1>(beamBeamDistance, radius) / sinTheta * (-camera_tau).exp() * 0.5f;//this is not correct; the phase function is missing and the 0.5 is arbirtary scaling
 }
 
 template<bool USE_GLOBAL> Spectrum BeamBeamGrid::L_Volume(float NumEmitted, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr)
@@ -166,7 +166,7 @@ template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& b
 		{
 			bRec.wo = bRec.dg.toLocal(ph.getWi());
 			float cor_fac = math::abs(Frame::cosTheta(bRec.wi) / (wiDotGeoN * Frame::cosTheta(bRec.wo)));
-			float ke = k_tr<2>(r, math::sqrt(dist2));
+			float ke = Kernel::k<2>(math::sqrt(dist2), r);
 			Spectrum l = ph.getL();
 			if(F_IS_GLOSSY)
 				l *= mat.bsdf.f(bRec) / Frame::cosTheta(bRec.wo);//bsdf.f returns f * cos(thetha)
@@ -256,15 +256,15 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const NormalizedT<Vec3
 			auto bsdfFactor = hasGlossy ? mat->bsdf.f(bRec) : bsdf_diffuse;
 			float psi = Spectrum(importance * bsdfFactor * ph.getL()).getLuminance();
 			const Vec3f e_l = bRec.dg.P - ph_pos;
-			float k_rd = k_tr<2>(rd, e_l);
-			float laplu = k_tr<2>(rd, e_l + ur) + k_tr<2>(rd, e_l - ur) - 2 * k_rd,
-				  laplv = k_tr<2>(rd, e_l + vr) + k_tr<2>(rd, e_l - vr) - 2 * k_rd,
+			float k_rd = Kernel::k<2>(e_l, rd);
+			float laplu = Kernel::k<2>(e_l + ur, rd) + Kernel::k<2>(e_l - ur, rd) - 2 * k_rd,
+				  laplv = Kernel::k<2>(e_l + vr, rd) + Kernel::k<2>(e_l - vr, rd) - 2 * k_rd,
 				  lapl = psi / (rd * rd) * (laplu + laplv);
 			Sum_DI += lapl;
 
 			if (dist2 < r * r)
 			{
-				float kri = k_tr<2>(r, math::sqrt(dist2));
+				float kri = Kernel::k<2>(math::sqrt(dist2), r);
 				Lp += kri * ph.getL() / float(numPhotonsEmittedSurf) * bsdfFactor;
 				psi /= numPhotonsEmittedSurf;
 				Sum_psi += psi;
