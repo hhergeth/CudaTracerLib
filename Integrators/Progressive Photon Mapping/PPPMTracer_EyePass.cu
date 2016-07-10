@@ -109,6 +109,38 @@ template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum beam_beam_L(const VolHelper<USE_
 template<bool USE_GLOBAL> Spectrum BeamBeamGrid::L_Volume(float NumEmitted, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr)
 {
 	Spectrum L_n = Spectrum(0.0f), Tau = Spectrum(0.0f);
+	struct BeamIntersectionData
+	{
+		float beamBeamDistance;
+		float sinTheta;
+		float beamIsectDist;
+		Beam B;
+	};
+
+	TraverseGridBeam(r, tmin, tmax, m_sStorage,
+		[&](const Vec3u& cell_pos, float rayT, float cellEndT)
+	{
+		return m_fCurrentRadiusVol;
+	},
+		[&](const Vec3u& cell_idx, unsigned int ref_element_idx, int beam_idx, float& distAlongRay)
+	{
+		BeamIntersectionData dat;
+		dat.B = this->m_sBeamStorage[beam_idx];
+		if(Beam::testIntersectionBeamBeam(r.ori(), r.dir(), tmin, tmax, dat.B.getPos(), dat.B.getDir(), 0, dat.B.t, math::sqr(m_fCurrentRadiusVol), dat.beamBeamDistance, dat.sinTheta, distAlongRay, dat.beamIsectDist))
+		{
+			auto hit_cell = m_sStorage.getHashGrid().Transform(r(distAlongRay));
+			if (hit_cell != cell_idx)
+				distAlongRay = -1;
+		}
+		else distAlongRay = -1;
+		return dat;
+	},
+		[&](float rayT, float cellEndT, float minT, float maxT, const Vec3u& cell_idx, unsigned int element_idx, int beam_idx, float distAlongRay, const BeamIntersectionData& dat)
+	{
+		L_n += beam_beam_L(vol, dat.B, r, m_fCurrentRadiusVol, dat.beamIsectDist, distAlongRay, dat.beamBeamDistance, NumEmitted, dat.sinTheta, tmin);
+	}
+	);
+
 	/*TraverseGridRay(r, m_sStorage.hashMap, tmin, tmax, [&](float minT, float rayT, float maxT, float cellEndT, const Vec3u& cell_pos, bool& cancelTraversal)
 	{
 		m_sStorage.ForAll(cell_pos, [&](unsigned int, int beam_idx)
@@ -125,14 +157,14 @@ template<bool USE_GLOBAL> Spectrum BeamBeamGrid::L_Volume(float NumEmitted, cons
 		L_n += vol.Lve(r(rayT + localDist / 2), -1.0f * r.direction) * localDist;
 	});
 	Tr = (-Tau).exp();*/
-	for (unsigned int i = 0; i < min(m_uBeamIdx, m_sBeamStorage.getLength()); i++)
+	/*for (unsigned int i = 0; i < min(m_uBeamIdx, m_sBeamStorage.getLength()); i++)
 	{
 		const Beam& B = m_sBeamStorage[i];
 		float beamBeamDistance, sinTheta, queryIsectDist, beamIsectDist;
 		if (Beam::testIntersectionBeamBeam(r.ori(), r.dir(), tmin, tmax, B.getPos(), B.getDir(), 0, B.t, math::sqr(m_fCurrentRadiusVol), beamBeamDistance, sinTheta, queryIsectDist, beamIsectDist))
 			L_n += beam_beam_L(vol, B, r, m_fCurrentRadiusVol, beamIsectDist, queryIsectDist, beamBeamDistance, NumEmitted, sinTheta, tmin);
 	}
-	Tr = (-vol.tau(r, tmin, tmax)).exp();
+	Tr = (-vol.tau(r, tmin, tmax)).exp();*/
 	return L_n;
 }
 

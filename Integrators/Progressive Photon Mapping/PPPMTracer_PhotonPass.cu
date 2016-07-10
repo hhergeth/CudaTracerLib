@@ -15,34 +15,10 @@ CUDA_ONLY_FUNC bool BeamBeamGrid::StoreBeam(const Beam& b)
 		m_sBeamStorage[beam_idx] = b;
 		bool storedAll = true;
 #ifdef ISCUDA
-		//const AABB objaabb = b.getAABB(m_fCurrentRadiusVol);
-		//const int maxAxis = b.getDir().abs().arg_max();
-		//const int chopCount = (int)(objaabb.Size()[maxAxis] * m_sStorage.getHashGrid().m_vInvSize[maxAxis]) + 1;
-		//const float invChopCount = 1.0f / (float)chopCount;
-
-		//for (int chop = 0; chop < chopCount; ++chop)
+		TraverseGridRay(Ray(b.pos, b.getDir()), m_sStorage.getHashGrid(), 0.0f, b.t, [&](float minT, float rayT, float maxT, float cellEndT, Vec3u& cell_pos, bool& cancelTraversal)
 		{
-			//AABB aabb = b.getSegmentAABB((chop)* invChopCount, (chop + 1) * invChopCount, m_fCurrentRadiusVol);
-
-			//m_sStorage.ForAllCells(aabb.minV, aabb.maxV, [&](const Vec3u& pos)
-			//{
-				/*bool found_duplicate = false;
-				m_sStorage.ForAll(pos, [&](unsigned int loc_idx, unsigned int b_idx)
-				{
-				if (found_duplicate) return;
-				if (beam_idx == b_idx)
-				found_duplicate = true;
-				});
-				if (!found_duplicate)*/
-				//storedAll &= m_sStorage.store(pos, beam_idx);
-			//});
-		}
-
-		//auto aabb = b.getAABB(m_fCurrentRadiusVol);
-		//m_sStorage.ForAllCells(aabb.minV, aabb.maxV, [&](const Vec3u& pos)
-		//{
-		//	storedAll &= m_sStorage.store(pos, beam_idx);
-		//});
+			storedAll &= m_sStorage.store(cell_pos, beam_idx);
+		});
 #endif
 		return storedAll;
 	}
