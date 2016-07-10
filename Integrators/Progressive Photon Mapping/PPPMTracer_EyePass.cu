@@ -4,6 +4,8 @@
 #include <Math/half.h>
 #include <Engine/Light.h>
 #include <fstream>
+#include <Windows.h>
+#include <Engine/SpatialGridTraversal.h>
 
 namespace CudaTracerLib {
 
@@ -141,22 +143,6 @@ template<bool USE_GLOBAL> Spectrum BeamBeamGrid::L_Volume(float NumEmitted, cons
 	}
 	);
 
-	/*TraverseGridRay(r, m_sStorage.hashMap, tmin, tmax, [&](float minT, float rayT, float maxT, float cellEndT, const Vec3u& cell_pos, bool& cancelTraversal)
-	{
-		m_sStorage.ForAll(cell_pos, [&](unsigned int, int beam_idx)
-		{
-			const Beam& B = m_pDeviceBeams[beam_idx];
-			float beamBeamDistance, sinTheta, queryIsectDist, beamIsectDist;
-			if (Beam::testIntersectionBeamBeam(r.origin, r.direction, tmin, tmax, B.pos, B.dir, 0, B.t, radius * radius, beamBeamDistance, sinTheta, queryIsectDist, beamIsectDist)
-				 && m_sStorage.hashMap.Transform(B.pos + B.dir * beamIsectDist) == cell_pos)
-				L_n += beam_beam_L(vol, rng, B, r, radius, beamIsectDist, queryIsectDist, beamBeamDistance, m_uNumEmitted, sinTheta, tmin);
-		});
-		float localDist = cellEndT - rayT;
-		Spectrum tauD = vol.tau(r, rayT, cellEndT);
-		Tau += tauD;
-		L_n += vol.Lve(r(rayT + localDist / 2), -1.0f * r.direction) * localDist;
-	});
-	Tr = (-Tau).exp();*/
 	/*for (unsigned int i = 0; i < min(m_uBeamIdx, m_sBeamStorage.getLength()); i++)
 	{
 		const Beam& B = m_sBeamStorage[i];
