@@ -94,7 +94,7 @@ void PPPMTracer::DoRender(Image* I)
 	//I->Clear();
 	{
 		auto timer = START_PERF_BLOCK("Photon Pass");
-		doPhotonPass();
+		doPhotonPass(I);
 	}
 	m_uTotalPhotonsEmitted += max(m_uPhotonEmittedPassSurface, m_uPhotonEmittedPassVolume);
 	setNumSequences();
@@ -106,6 +106,11 @@ void PPPMTracer::DoRender(Image* I)
 		//DebugInternal(I, Vec2i(573, 508));
 		//std::cout << getCurrentRadius(2) << "\n";
 	}
+}
+
+float PPPMTracer::getSplatScale()
+{
+	return 1.0f / m_uPassesDone * (float)(w * h) / m_uPhotonEmittedPassVolume;
 }
 
 float PPPMTracer::getCurrentRadius(float exp, bool surf) const

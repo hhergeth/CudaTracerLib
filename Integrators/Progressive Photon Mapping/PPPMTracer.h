@@ -131,8 +131,9 @@ protected:
 	CTL_EXPORT virtual void StartNewTrace(Image* I);
 	CTL_EXPORT virtual void RenderBlock(Image* I, int x, int y, int blockW, int blockH);
 	CTL_EXPORT virtual void DebugInternal(Image* I, const Vec2i& pixel);
+	virtual float getSplatScale();
 private:
-	CTL_EXPORT void doPhotonPass();
+	CTL_EXPORT void doPhotonPass(Image* I);
 	CTL_EXPORT void doPerPixelRadiusEstimation();
 };
 

@@ -47,6 +47,7 @@ CUDA_DEVICE CUDA_ALIGN(16) unsigned char g_VolEstimator[Dmax3(sizeof(PointStorag
 
 template<typename VolEstimator> struct PPPMPhotonParticleProcessHandler
 {
+	Image& img;
 	Sampler& rng;
 	bool wasStoredSurface;
 	bool wasStoredVolume;
@@ -55,8 +56,8 @@ template<typename VolEstimator> struct PPPMPhotonParticleProcessHandler
 	unsigned int* numStoredVolume;
 	int numSurfaceInteractions;
 
-	CUDA_FUNC_IN PPPMPhotonParticleProcessHandler(Sampler& r, unsigned int* nStoredSuface, unsigned int* nStoredVol)
-		: rng(r), wasStoredSurface(false), wasStoredVolume(false), delta(false), numStoredSurface(nStoredSuface), numStoredVolume(nStoredVol), numSurfaceInteractions(0)
+	CUDA_FUNC_IN PPPMPhotonParticleProcessHandler(Image& I, Sampler& r, unsigned int* nStoredSuface, unsigned int* nStoredVol)
+		: img(I), rng(r), wasStoredSurface(false), wasStoredVolume(false), delta(false), numStoredSurface(nStoredSuface), numStoredVolume(nStoredVol), numSurfaceInteractions(0)
 	{
 
 	}
@@ -118,10 +119,24 @@ template<typename VolEstimator> struct PPPMPhotonParticleProcessHandler
 #endif
 			wasStoredVolume = true;
 		}
+
+		//connection to camera as in particle tracing
+		/*if (!BSSRDF)
+		{
+			DirectSamplingRecord dRec(mRec.p, NormalizedT<Vec3f>(0.0f));
+			Spectrum value = weight * g_SceneData.sampleAttenuatedSensorDirect(dRec, rng.randomFloat2());
+			if (!value.isZero() && V(dRec.p, dRec.ref))
+			{
+				PhaseFunctionSamplingRecord pRec(wi, dRec.d);
+				value *= g_SceneData.m_sVolume.p(mRec.p, pRec);
+				if (!value.isZero())
+					img.Splat(dRec.uv.x, dRec.uv.y, value);
+			}
+		}*/
 	}
 };
 
-template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thread)
+template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thread, Image I)
 {
 	auto rng = g_SamplerData();
 	CUDA_SHARED unsigned int local_Counter;
@@ -139,7 +154,7 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 	while ((local_idx = atomicInc(&local_Counter, (unsigned int)-1)) < local_Todo && !g_SurfaceMap->isFull() && !((VolEstimator*)g_VolEstimator)->isFullK())
 	{
 		rng.StartSequence(blockIdx.x * local_Todo + local_idx);
-		auto process = PPPMPhotonParticleProcessHandler<VolEstimator>(rng, &numStoredSurface, &numStoredVolume);
+		auto process = PPPMPhotonParticleProcessHandler<VolEstimator>(I, rng, &numStoredSurface, &numStoredVolume);
 		ParticleProcess(PPM_MaxRecursion, PPM_MaxRecursion, rng, process);
 	}
 
@@ -153,7 +168,7 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 	g_SamplerData(rng);
 }
 
-void PPPMTracer::doPhotonPass()
+void PPPMTracer::doPhotonPass(Image* I)
 {
 	bool finalGathering = m_sParameters.getValue(KEY_FinalGathering());
 
@@ -177,11 +192,12 @@ void PPPMTracer::doPhotonPass()
 	while (!m_sSurfaceMap.isFull() && !m_pVolumeEstimator->isFull())
 	{
 		if (dynamic_cast<BeamGrid*>(m_pVolumeEstimator))
-			k_PhotonPass<BeamGrid> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >(PPM_Photons_Per_Thread);
+			k_PhotonPass<BeamGrid> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >(PPM_Photons_Per_Thread, *I);
 		else if(dynamic_cast<PointStorage*>(m_pVolumeEstimator))
-			k_PhotonPass<PointStorage> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >(PPM_Photons_Per_Thread);
+			k_PhotonPass<PointStorage> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >(PPM_Photons_Per_Thread, *I);
 		else if (dynamic_cast<BeamBeamGrid*>(m_pVolumeEstimator))
-			k_PhotonPass<BeamBeamGrid> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >(PPM_Photons_Per_Thread);
+			k_PhotonPass<BeamBeamGrid> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >(PPM_Photons_Per_Thread, *I);
+
 		ThrowCudaErrors(cudaMemcpyFromSymbol(&m_sSurfaceMap, g_SurfaceMap, sizeof(m_sSurfaceMap)));
 		if (finalGathering)
 			ThrowCudaErrors(cudaMemcpyFromSymbol(m_sSurfaceMapCaustic, g_SurfaceMapCaustic, sizeof(*m_sSurfaceMapCaustic)));
