@@ -9,33 +9,33 @@
 
 namespace CudaTracerLib {
 
-	struct ModelInitializer
+struct ModelInitializer
+{
+	float vals[NUM_VOL_MODEL_BINS];
+	float nums[NUM_VOL_MODEL_BINS];
+
+	CUDA_FUNC_IN ModelInitializer()
 	{
-		float vals[NUM_VOL_MODEL_BINS];
-		float nums[NUM_VOL_MODEL_BINS];
+		for (int i = 0; i < NUM_VOL_MODEL_BINS; i++)
+			vals[i] = nums[i] = 0.0f;
+	}
 
-		CUDA_FUNC_IN ModelInitializer()
-		{
-			for (int i = 0; i < NUM_VOL_MODEL_BINS; i++)
-				vals[i] = nums[i] = 0.0f;
-		}
+	CUDA_FUNC_IN void add(float t, float val)
+	{
+		int n = math::clamp((int)(t * NUM_VOL_MODEL_BINS), 0, NUM_VOL_MODEL_BINS - 1);
+		vals[n] += val;
+		++nums[n];
+	}
 
-		CUDA_FUNC_IN void add(float t, float val)
+	CUDA_FUNC_IN VolumeModel ToModel(float r_std) const
+	{
+		return VolumeModel([&](int i)
 		{
-			int n = (int)(t * NUM_VOL_MODEL_BINS);
-			vals[n] += val;
-			++nums[n];
-		}
-
-		CUDA_FUNC_IN VolumeModel ToModel(float r_std) const
-		{
-			return VolumeModel([&](int i)
-			{
-				float r = nums[i] ? vals[i] / nums[i] : r_std;
-				return APPM_QueryPointData<3, 3>(0, 0, DerivativeCollection<3>(), 0, 0, 0, r);
-			});
-		}
-	};
+			float r = nums[i] ? vals[i] / nums[i] : r_std;
+			return APPM_QueryPointData<3, 3>(0, 0, DerivativeCollection<3>(), 0, 0, 0, r);
+		});
+	}
+};
 
 template<bool USE_GLOBAL> Spectrum PointStorage::L_Volume(float NumEmitted, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, VolumeModel& model, PPM_Radius_Type radType, Spectrum& Tr)
 {
@@ -280,6 +280,7 @@ CUDA_CONST CudaStaticWrapper<SurfaceMapT> g_SurfMap;
 CUDA_CONST CudaStaticWrapper<SurfaceMapT> g_SurfMapCaustic;
 CUDA_CONST unsigned int g_NumPhotonEmittedSurface2, g_NumPhotonEmittedVolume2;
 CUDA_CONST CUDA_ALIGN(16) unsigned char g_VolEstimator2[Dmax3(sizeof(PointStorage), sizeof(BeamGrid), sizeof(BeamBeamGrid))];
+
 template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const NormalizedT<Vec3f>& wi, float r, const Material& mat, unsigned int numPhotonsEmitted, SurfaceMapT* map = 0)
 {
 	if (!map) map = &g_SurfMap.As();
