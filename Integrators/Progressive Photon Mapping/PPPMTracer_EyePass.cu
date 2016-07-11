@@ -566,8 +566,17 @@ void PPPMTracer::DebugInternal(Image* I, const Vec2i& pixel)
 	k_AdaptiveStruct A(r_min, r_max, *m_pAdpBuffer, w, m_uPassesDone);
 	auto pixelInfo = A(pixel.x, pixel.y);
 
-	if (g_SceneData.m_sVolume.HasVolumes())
+	float tmin, tmax;
+	if (g_SceneData.m_sVolume.HasVolumes() && g_SceneData.m_sVolume.IntersectP(ray, 0.0f, FLT_MAX, &tmin, &tmax))
 	{
+		float k_Intial = m_sParameters.getValue(KEY_kNN_Neighboor_Num());
+		if (dynamic_cast<BeamGrid*>(m_pVolumeEstimator))
+			((BeamGrid*)m_pVolumeEstimator)->Compute_kNN_radii(m_fInitialRadiusVol, k_Intial, ray, tmin, tmax, pixelInfo.m_volumeModel);
+		if (dynamic_cast<PointStorage*>(m_pVolumeEstimator))
+			((PointStorage*)m_pVolumeEstimator)->Compute_kNN_radii(m_fInitialRadiusVol, k_Intial, ray, tmin, tmax, pixelInfo.m_volumeModel);
+		if (dynamic_cast<BeamBeamGrid*>(m_pVolumeEstimator))
+			((BeamBeamGrid*)m_pVolumeEstimator)->Compute_kNN_radii(m_fInitialRadiusVol, k_Intial, ray, tmin, tmax, pixelInfo.m_volumeModel);
+
 		Spectrum Tr, L;
 		if (dynamic_cast<BeamGrid*>(m_pVolumeEstimator))
 			L = ((BeamGrid*)m_pVolumeEstimator)->L_Volume((float)m_uPhotonEmittedPassVolume, ray, 0.0f, res.m_fDist, VolHelper<true>(), pixelInfo.m_volumeModel, radiusType, Tr);
@@ -700,6 +709,30 @@ template<typename VolEstimator> __global__ void k_PerPixelRadiusEst(Vec2i off, i
 			{
 				((VolEstimator*)g_VolEstimator2)->Compute_kNN_radii(r_volume, k_toFind, r, tmin, tmax, pixleInfo.m_volumeModel);
 			}
+			//traverse on specular manifold until a subsurface scattering object is hit, if so compute kNN based volumetric radii
+			int depth = 0;
+			while(r2.hasHit() && depth++ < 3)
+			{
+				const VolumeRegion* vReg;
+				if (r2.getMat().GetBSSRDF(dg, &vReg))
+				{
+					Spectrum t_f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());//materials with subsurface scattering should use some (nearly) delta bsdf
+					bRec.wo.z *= -1.0f;
+					NormalizedT<Ray> rTrans = NormalizedT<Ray>(bRec.dg.P, bRec.getOutgoing());
+					TraceResult r3 = traceRay(rTrans);
+					((VolEstimator*)g_VolEstimator2)->Compute_kNN_radii(r_volume * 10, k_toFind, rTrans, 0.0f, r3.m_fDist, pixleInfo.m_volumeModel);
+
+					break;//only compute radii for first object
+				}
+				else
+				{
+					r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
+					r = NormalizedT<Ray>(bRec.dg.P, bRec.getOutgoing());
+					r2 = traceRay(r);
+				}
+			}
+
+			
 		}
 		atomicMin(&g_MinRad, floatToOrderedInt(pixleInfo.m_surfaceData.r_std));
 		atomicMax(&g_MaxRad, floatToOrderedInt(pixleInfo.m_surfaceData.r_std));
