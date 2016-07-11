@@ -43,7 +43,7 @@ static PPPMParameters g_ParametersHost;
 CUDA_DEVICE unsigned int g_NumPhotonEmittedSurface, g_NumPhotonEmittedVolume;
 CUDA_DEVICE CudaStaticWrapper<SurfaceMapT> g_SurfaceMap;
 CUDA_DEVICE CudaStaticWrapper<SurfaceMapT> g_SurfaceMapCaustic;
-CUDA_DEVICE CUDA_ALIGN(16) unsigned char g_VolEstimator[Dmax4(sizeof(PointStorage), sizeof(BeamGrid), sizeof(BeamBeamGrid), sizeof(BeamBVHStorage))];
+CUDA_DEVICE CUDA_ALIGN(16) unsigned char g_VolEstimator[Dmax3(sizeof(PointStorage), sizeof(BeamGrid), sizeof(BeamBeamGrid))];
 
 template<typename VolEstimator> struct PPPMPhotonParticleProcessHandler
 {
@@ -182,8 +182,6 @@ void PPPMTracer::doPhotonPass()
 			k_PhotonPass<PointStorage> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >(PPM_Photons_Per_Thread);
 		else if (dynamic_cast<BeamBeamGrid*>(m_pVolumeEstimator))
 			k_PhotonPass<BeamBeamGrid> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >(PPM_Photons_Per_Thread);
-		else if (dynamic_cast<BeamBVHStorage*>(m_pVolumeEstimator))
-			k_PhotonPass<BeamBVHStorage> << < m_uBlocksPerLaunch, dim3(PPM_BlockX, PPM_BlockY, 1) >> >(PPM_Photons_Per_Thread);
 		ThrowCudaErrors(cudaMemcpyFromSymbol(&m_sSurfaceMap, g_SurfaceMap, sizeof(m_sSurfaceMap)));
 		if (finalGathering)
 			ThrowCudaErrors(cudaMemcpyFromSymbol(m_sSurfaceMapCaustic, g_SurfaceMapCaustic, sizeof(*m_sSurfaceMapCaustic)));

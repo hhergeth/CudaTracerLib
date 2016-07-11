@@ -4,7 +4,6 @@
 #include "../PhotonMapHelper.h"
 #include <CudaMemoryManager.h>
 #include "VolEstimators/BeamBeamGrid.h"
-#include "VolEstimators/BeamBVHStorage.h"
 #include "VolEstimators/BeamGrid.h"
 #include <map>
 #include <boost/variant.hpp>

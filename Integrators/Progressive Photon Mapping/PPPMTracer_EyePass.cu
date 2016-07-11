@@ -95,8 +95,6 @@ template<bool USE_GLOBAL> Spectrum BeamGrid::L_Volume(float NumEmitted, const No
 
 CUDA_CONST CudaStaticWrapper<SurfaceMapT> g_SurfMap;
 CUDA_CONST CudaStaticWrapper<SurfaceMapT> g_SurfMapCaustic;
-CUDA_CONST unsigned int g_NumPhotonEmittedSurface2, g_NumPhotonEmittedVolume2;
-CUDA_CONST CUDA_ALIGN(16) unsigned char g_VolEstimator2[Dmax4(sizeof(PointStorage), sizeof(BeamGrid), sizeof(BeamBeamGrid), sizeof(BeamBVHStorage))];
 
 template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum beam_beam_L(const VolHelper<USE_GLOBAL>& vol, const Beam& B, const NormalizedT<Ray>& r, float radius, float beamIsectDist, float queryIsectDist, float beamBeamDistance, float m_uNumEmitted, float sinTheta, float tmin)
 {
@@ -170,6 +168,8 @@ template<bool USE_GLOBAL> Spectrum BeamBVHStorage::L_Volume(float NumEmitted, co
 	return L_n;
 }
 
+CUDA_CONST unsigned int g_NumPhotonEmittedSurface2, g_NumPhotonEmittedVolume2;
+CUDA_CONST CUDA_ALIGN(16) unsigned char g_VolEstimator2[Dmax3(sizeof(PointStorage), sizeof(BeamGrid), sizeof(BeamBeamGrid))];
 template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const NormalizedT<Vec3f>& wi, float r, const Material& mat, unsigned int numPhotonsEmitted, SurfaceMapT* map = 0)
 {
 	if (!map) map = &g_SurfMap.As();
@@ -463,8 +463,6 @@ void PPPMTracer::DebugInternal(Image* I, const Vec2i& pixel)
 			L = ((PointStorage*)m_pVolumeEstimator)->L_Volume((float)m_uPhotonEmittedPassVolume, ray, 0.0f, res.m_fDist, VolHelper<true>(), Tr);
 		else if (dynamic_cast<BeamBeamGrid*>(m_pVolumeEstimator))
 			L = ((BeamBeamGrid*)m_pVolumeEstimator)->L_Volume((float)m_uPhotonEmittedPassVolume, ray, 0.0f, res.m_fDist, VolHelper<true>(), Tr);
-		else if (dynamic_cast<BeamBVHStorage*>(m_pVolumeEstimator))
-			L = ((BeamBVHStorage*)m_pVolumeEstimator)->L_Volume((float)m_uPhotonEmittedPassVolume, ray, 0.0f, res.m_fDist, VolHelper<true>(), Tr);
 	}
 
 	if (res.hasHit())
@@ -537,8 +535,6 @@ void PPPMTracer::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 		k_EyePass<PointStorage> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, (float)m_uPassesDone, radius2, A, img, m_useDirectLighting, radiusType, finalGathering, m_debugScaleVal);
 	else if (dynamic_cast<BeamBeamGrid*>(m_pVolumeEstimator))
 		k_EyePass<BeamBeamGrid> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, (float)m_uPassesDone, radius2, A, img, m_useDirectLighting, radiusType, finalGathering, m_debugScaleVal);
-	else if (dynamic_cast<BeamBVHStorage*>(m_pVolumeEstimator))
-		k_EyePass<BeamBVHStorage> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, (float)m_uPassesDone, radius2, A, img, m_useDirectLighting, radiusType, finalGathering, m_debugScaleVal);
 
 	ThrowCudaErrors(cudaThreadSynchronize());
 	if (radiusType != PPM_Radius_Type::Constant)

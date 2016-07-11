@@ -37,8 +37,6 @@ PPPMTracer::PPPMTracer()
 	if (m_sParameters.getValue(KEY_FinalGathering()))
 		m_sSurfaceMapCaustic = new SurfaceMapT(Vec3u(250), numPhotons);
 	m_pVolumeEstimator = new PointStorage(150, numPhotons);
-	//m_pVolumeEstimator = new BeamGrid(150, numPhotons, 10, 2);
-	//m_pVolumeEstimator = new BeamBVHStorage(100);
 	//m_pVolumeEstimator = new BeamBeamGrid(10, 10000, 1000);
 	if (m_sParameters.getValue(KEY_AdaptiveAccProb()))
 	{
