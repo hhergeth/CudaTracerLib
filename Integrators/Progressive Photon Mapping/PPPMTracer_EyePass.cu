@@ -9,6 +9,34 @@
 
 namespace CudaTracerLib {
 
+	struct ModelInitializer
+	{
+		float vals[NUM_VOL_MODEL_BINS];
+		float nums[NUM_VOL_MODEL_BINS];
+
+		CUDA_FUNC_IN ModelInitializer()
+		{
+			for (int i = 0; i < NUM_VOL_MODEL_BINS; i++)
+				vals[i] = nums[i] = 0.0f;
+		}
+
+		CUDA_FUNC_IN void add(float t, float val)
+		{
+			int n = (int)(t * NUM_VOL_MODEL_BINS);
+			vals[n] += val;
+			++nums[n];
+		}
+
+		CUDA_FUNC_IN VolumeModel ToModel(float r_std) const
+		{
+			return VolumeModel([&](int i)
+			{
+				float r = nums[i] ? vals[i] / nums[i] : r_std;
+				return APPM_QueryPointData<3, 3>(0, 0, DerivativeCollection<3>(), 0, 0, 0, r);
+			});
+		}
+	};
+
 template<bool USE_GLOBAL> Spectrum PointStorage::L_Volume(float NumEmitted, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, VolumeModel& model, PPM_Radius_Type radType, Spectrum& Tr)
 {
 	Spectrum Tau = Spectrum(0.0f);
@@ -44,6 +72,36 @@ template<bool USE_GLOBAL> Spectrum PointStorage::L_Volume(float NumEmitted, cons
 	return L_n;
 }
 
+void PointStorage::Compute_kNN_radii(float rad, float kToFind, const NormalizedT<Ray>& r, float tmin, float tmax, VolumeModel& model)
+{
+	ModelInitializer mInit;
+	float a, b;
+	if (!m_sStorage.getHashGrid().getAABB().Intersect(r, &a, &b))
+		return;//that would be dumb
+	float minT = a = math::clamp(a, tmin, tmax);
+	b = math::clamp(b, tmin, tmax);
+	float d = 2.0f * rad;
+	while (a < b)
+	{
+		float t = a + d / 2.0f;
+		Vec3f x = r(t);
+		float density = 0;
+		m_sStorage.ForAll(x - Vec3f(rad), x + Vec3f(rad), [&](const Vec3u& cell_idx, unsigned int p_idx, const volPhoton& ph)
+		{
+			Vec3f ph_pos = ph.getPos(m_sStorage.getHashGrid(), cell_idx);
+			float dist2 = distanceSquared(ph_pos, x);
+			if (dist2 <= math::sqr(rad))
+				density += Kernel::k<3>(math::sqrt(dist2), rad);
+		});
+		auto t_m = model_t(t, tmin, tmax);
+		if(density > 0.0f)
+			mInit.add(t_m, math::pow(kToFind / (4.0f / 3.0f * PI * density), 1.0f / 3.0f));
+		a += d;
+	}
+	model = mInit.ToModel(rad);
+}
+
+template<bool USE_GLOBAL> Spectrum BeamGrid::L_Volume(float NumEmitted, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, VolumeModel& model, PPM_Radius_Type radType, Spectrum& Tr)
 {
 	Spectrum Tau = Spectrum(0.0f);
 	Spectrum L_n = Spectrum(0.0f);
@@ -92,8 +150,39 @@ template<bool USE_GLOBAL> Spectrum PointStorage::L_Volume(float NumEmitted, cons
 	return L_n;
 }
 
-CUDA_CONST CudaStaticWrapper<SurfaceMapT> g_SurfMap;
-CUDA_CONST CudaStaticWrapper<SurfaceMapT> g_SurfMapCaustic;
+void BeamGrid::Compute_kNN_radii(float rad, float kToFind, const NormalizedT<Ray>& r, float tmin, float tmax, VolumeModel& model)
+{
+	ModelInitializer mInit;
+	float density = 0;
+	TraverseGridBeamExt(r, tmin, tmax, m_sStorage,
+		[&](const Vec3u& cell_pos, float rayT, float cellEndT)
+	{
+		density = 0;
+		return rad;
+	},
+		[&](const Vec3u& cell_idx, unsigned int element_idx, const volPhoton& element, float& distAlongRay)
+	{
+		return CudaTracerLib::sqrDistanceToRay(r, element.getPos(m_sStorage.getHashGrid(), cell_idx), distAlongRay);
+	},
+		[&](float rayT, float cellEndT, float minT, float maxT, const Vec3u& cell_idx, unsigned int element_idx, const volPhoton& element, float distAlongRay, float distRay2)
+	{
+		if (distRay2 < math::sqr(m_fCurrentRadiusVol))
+		{
+			auto ph_pos = element.getPos(m_sStorage.getHashGrid(), cell_idx);
+			auto dist2 = distanceSquared(ph_pos, r(distAlongRay));
+			if (dist2 <= math::sqr(rad))
+				density += Kernel::k<3>(math::sqrt(dist2), rad);
+		}
+	},
+		[&](float rayT, float cellEndT, float minT, float maxT, const Vec3u& cell_idx)
+	{
+		auto t_m = model_t((rayT + cellEndT) / 2.0f, tmin, tmax);
+		if (density > 0.0f)
+			mInit.add(t_m, math::sqrt(kToFind / (PI * density)));
+	}
+	);
+	model = mInit.ToModel(rad);
+}
 
 template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum beam_beam_L(const VolHelper<USE_GLOBAL>& vol, const Beam& B, const NormalizedT<Ray>& r, float radius, float beamIsectDist, float queryIsectDist, float beamBeamDistance, float m_uNumEmitted, float sinTheta, float tmin)
 {
@@ -150,21 +239,45 @@ template<bool USE_GLOBAL> Spectrum BeamBeamGrid::L_Volume(float NumEmitted, cons
 	return L_n;
 }
 
+void BeamBeamGrid::Compute_kNN_radii(float rad, float kToFind, const NormalizedT<Ray>& r, float tmin, float tmax, VolumeModel& model)
 {
-	Spectrum L_n = Spectrum(0.0f);
-	iterateBeams(Ray(r(tmin), r.dir()), tmax - tmin, [&](unsigned int ref_idx)
+	ModelInitializer mInit;
+	float density = 0;
+	TraverseGridBeamExt(r, tmin, tmax, m_sStorage,
+		[&](const Vec3u& cell_pos, float rayT, float cellEndT)
 	{
-		const BeamRef& R = m_pDeviceRefs[ref_idx];
-		//unsigned int beam_idx = R.getIdx();
-		const Beam& B = R.beam;// this->m_pDeviceBeams[beam_idx];
-		float beamBeamDistance, sinTheta, queryIsectDist, beamIsectDist;
-		if (Beam::testIntersectionBeamBeam(r.ori(), r.dir(), tmin, tmax, B.getPos(), B.getDir(), R.t_min, R.t_max, math::sqr(m_fCurrentRadiusVol), beamBeamDistance, sinTheta, queryIsectDist, beamIsectDist))
-			L_n += beam_beam_L(vol, B, r, m_fCurrentRadiusVol, beamIsectDist, queryIsectDist, beamBeamDistance, NumEmitted, sinTheta, tmin);
-	});
-	Tr = (-vol.tau(r, tmin, tmax)).exp();
-	return L_n;
+		density = 0;
+		return rad;
+	},
+		[&](const Vec3u& cell_idx, unsigned int ref_element_idx, int beam_idx, float& distAlongRay)
+	{
+		BeamIntersectionData dat;
+		dat.B = this->m_sBeamStorage[beam_idx];
+		if (Beam::testIntersectionBeamBeam(r.ori(), r.dir(), tmin, tmax, dat.B.getPos(), dat.B.getDir(), 0, dat.B.t, math::sqr(rad), dat.beamBeamDistance, dat.sinTheta, distAlongRay, dat.beamIsectDist))
+		{
+			auto hit_cell = m_sStorage.getHashGrid().Transform(r(distAlongRay));
+			if (hit_cell != cell_idx)
+				distAlongRay = -1;
+		}
+		else distAlongRay = -1;
+		return dat;
+	},
+		[&](float rayT, float cellEndT, float minT, float maxT, const Vec3u& cell_idx, unsigned int element_idx, int beam_idx, float distAlongRay, const BeamIntersectionData& dat)
+	{
+		density += Kernel::k<3>(dat.beamBeamDistance, rad);
+	},
+		[&](float rayT, float cellEndT, float minT, float maxT, const Vec3u& cell_idx)
+	{
+		auto t_m = model_t((rayT + cellEndT) / 2.0f, tmin, tmax);
+		if (density > 0.0f)
+			mInit.add(t_m, kToFind / (2.0f * density));
+	}
+	);
+	model = mInit.ToModel(rad);
 }
 
+CUDA_CONST CudaStaticWrapper<SurfaceMapT> g_SurfMap;
+CUDA_CONST CudaStaticWrapper<SurfaceMapT> g_SurfMapCaustic;
 CUDA_CONST unsigned int g_NumPhotonEmittedSurface2, g_NumPhotonEmittedVolume2;
 CUDA_CONST CUDA_ALIGN(16) unsigned char g_VolEstimator2[Dmax3(sizeof(PointStorage), sizeof(BeamGrid), sizeof(BeamBeamGrid))];
 template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const NormalizedT<Vec3f>& wi, float r, const Material& mat, unsigned int numPhotonsEmitted, SurfaceMapT* map = 0)
@@ -464,6 +577,9 @@ void PPPMTracer::DebugInternal(Image* I, const Vec2i& pixel)
 			L = ((BeamBeamGrid*)m_pVolumeEstimator)->L_Volume((float)m_uPhotonEmittedPassVolume, ray, 0.0f, res.m_fDist, VolHelper<true>(), pixelInfo.m_volumeModel, radiusType, Tr);
 	}
 
+	static float Sum_lapl_N = 0;
+	static float Sum_lapl_N2 = 0;
+	static float sum_lapl = 0;
 	if (res.hasHit())
 	{
 		DifferentialGeometry dg;
@@ -577,6 +693,13 @@ template<typename VolEstimator> __global__ void k_PerPixelRadiusEst(Vec2i off, i
 			});
 #endif
 			pixleInfo.m_surfaceData.r_std = math::sqrt(k_toFind / (PI * density));
+
+			//compute volume query radii
+			float tmin, tmax;
+			if(g_SceneData.m_sVolume.HasVolumes() && g_SceneData.m_sVolume.IntersectP(r, 0.0f, FLT_MAX, &tmin, &tmax))
+			{
+				((VolEstimator*)g_VolEstimator2)->Compute_kNN_radii(r_volume, k_toFind, r, tmin, tmax, pixleInfo.m_volumeModel);
+			}
 		}
 		atomicMin(&g_MinRad, floatToOrderedInt(pixleInfo.m_surfaceData.r_std));
 		atomicMax(&g_MaxRad, floatToOrderedInt(pixleInfo.m_surfaceData.r_std));
