@@ -116,7 +116,7 @@ public:
 	{
 		m_sStorage.PrepareForUse();
 	}
-#ifdef __CUDACC__
+
 	CUDA_ONLY_FUNC bool StoreBeam(const Beam& b)
 	{
 		return false;
@@ -130,8 +130,8 @@ public:
 		return m_sStorage.store(cell_idx, volPhoton(pos, wi, phi, m_sStorage.getHashGrid(), cell_idx));
 	}
 
-	template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum L_Volume(float NumEmitted, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr);
-#endif
+	template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum L_Volume(float NumEmitted, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, VolumeModel& model, PPM_Radius_Type radType, Spectrum& Tr);
+
 };
 
 }

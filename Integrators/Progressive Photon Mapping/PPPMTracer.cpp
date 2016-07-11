@@ -86,7 +86,7 @@ void PPPMTracer::Resize(unsigned int _w, unsigned int _h)
 		m_pAdpBuffer->Free();
 		delete m_pAdpBuffer;
 	}
-	m_pAdpBuffer = new BlockLoclizedCudaBuffer<k_AdaptiveEntry>(_w, _h);
+	m_pAdpBuffer = new BlockLoclizedCudaBuffer<APPM_PixelData>(_w, _h);
 }
 
 void PPPMTracer::DoRender(Image* I)
@@ -121,12 +121,13 @@ float PPPMTracer::getCurrentRadius(float exp, bool surf) const
 typedef boost::variant<int, float> pixel_variant;
 std::map<std::string, pixel_variant> PPPMTracer::getPixelInfo(int x, int y) const
 {
-	k_AdaptiveEntry e = m_pAdpBuffer->operator()(x, y);
-	auto r = e.compute_r((int)m_uPassesDone, (int)m_sSurfaceMap.getNumEntries(), (int)m_uTotalPhotonsEmitted);
+	APPM_PixelData pixelInfo = m_pAdpBuffer->operator()(x, y);
+	auto e = pixelInfo.m_surfaceData;
+	auto r = e.compute_r<2>((int)m_uPassesDone, (int)m_sSurfaceMap.getNumEntries(), (int)m_uTotalPhotonsEmitted, [&](auto gr) {return Lapl(gr); });
 	auto rd = e.compute_rd(m_uPassesDone, m_uPhotonEmittedPassSurface, m_uPhotonEmittedPassSurface * (m_uPassesDone - 1));
 
 	auto res = std::map<std::string, pixel_variant>();
-	res["S[DI]"] = pixel_variant(e.Sum_DI);
+	res["S[DI]"] = pixel_variant(Lapl(e.Sum_DI));
 	res["S[E[DI]]"] = pixel_variant(e.Sum_E_DI);
 	res["S[E[DI]^2]"] = pixel_variant(e.Sum_E_DI2);
 	res["S[psi]"] = pixel_variant(e.Sum_psi);

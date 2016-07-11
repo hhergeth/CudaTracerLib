@@ -8,6 +8,7 @@
 #include <Engine/Grid.h>
 #include <Math/Compression.h>
 #include <Engine/SynchronizedBuffer.h>
+#include "../AdaptiveHelper.h"
 
 namespace CudaTracerLib {
 
