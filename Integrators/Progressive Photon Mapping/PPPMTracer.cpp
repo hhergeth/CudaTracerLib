@@ -110,7 +110,7 @@ void PPPMTracer::DoRender(Image* I)
 
 float PPPMTracer::getSplatScale()
 {
-	return 1.0f / m_uPassesDone * (float)(w * h) / m_uPhotonEmittedPassVolume;
+	return 1.0f / m_uPassesDone * (m_uPhotonEmittedPassVolume ? (float)(w * h) / m_uPhotonEmittedPassVolume : 1);
 }
 
 float PPPMTracer::getCurrentRadius(float exp, bool surf) const

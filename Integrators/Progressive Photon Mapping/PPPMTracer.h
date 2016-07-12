@@ -98,8 +98,8 @@ public:
 	}
 	void getPhotonsEmittedLastPass(float& nSurface, float& nVolume)
 	{
-		nSurface = m_uPhotonEmittedPassSurface;
-		nVolume = m_uPhotonEmittedPassVolume;
+		nSurface = (float)m_uPhotonEmittedPassSurface;
+		nVolume = (float)m_uPhotonEmittedPassVolume;
 	}
 
 	std::map<std::string, boost::variant<int, float>> getPixelInfo(int x, int y) const;
