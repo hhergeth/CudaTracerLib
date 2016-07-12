@@ -64,9 +64,9 @@ namespace CudaTracerLib {
 
 #if !defined(CUDA_RELEASE_BUILD)
 #if __CUDACC__
-#define CTL_ASSERT(X) ((X) ? ((void)0) : printf("Assertion failed!\n%s:%d\n%s", __FILE__, __LINE__, #X))
+#define CTL_ASSERT(X) ((X) ? ((void)0) : (void)printf("Assertion failed!\n%s:%d\n%s", __FILE__, __LINE__, #X))
 #else
-#define CTL_ASSERT(X) ((X) ? ((void)0) : throw std::runtime_error(format("Assertion failed!\n%s:%d\n%s", __FILE__, __LINE__, #X)))
+#define CTL_ASSERT(X) ((X) ? ((void)0) : (void)throw std::runtime_error(format("Assertion failed!\n%s:%d\n%s", __FILE__, __LINE__, #X)))
 #endif
 #else
 //evaluate the expression either way, it possibly has side effects
