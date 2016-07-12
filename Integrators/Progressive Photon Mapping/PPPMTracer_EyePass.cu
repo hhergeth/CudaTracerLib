@@ -452,6 +452,7 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 		r2.Init();
 		int depth = -1;
 		Spectrum L(0.0f);
+		bool deltaChain = true;
 		while (traceRay(r.dir(), r.ori(), &r2) && depth++ < 5)
 		{
 			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance);
@@ -509,34 +510,35 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 				//throughput = throughput * Tr;
 				break;
 			}
-			bool hasSmooth = r2.getMat().bsdf.hasComponent(ESmooth),
-				hasSpecGlossy = r2.getMat().bsdf.hasComponent(EDelta | EGlossy),
+			bool hasDiffuse = r2.getMat().bsdf.hasComponent(EDiffuse),
+				hasSpec = r2.getMat().bsdf.hasComponent(EDelta),
 				hasGlossy = r2.getMat().bsdf.hasComponent(EGlossy);
-			if (hasSmooth)
+			if (hasDiffuse)
 			{
-				Spectrum l;
-				float rad = math::clamp(getCurrentRadius(adp_ent.m_surfaceData.r_std, a_PassIndex, 2), a_AdpEntries.r_min, a_AdpEntries.r_max);
-				if (Radius_Type == PPM_Radius_Type::Adaptive)
-					l = throughput * L_Surface(bRec, -r.dir(), a_rSurface, &r2.getMat(), a_AdpEntries, pixel.x, pixel.y, throughput, a_PassIndex, img, g_SurfMap, g_NumPhotonEmittedSurface2, debugScaleVal);
+				Spectrum L_r;//reflected radiance computed by querying photon map
+				if (Radius_Type == PPM_Radius_Type::Adaptive && deltaChain)
+					L_r = L_Surface(bRec, -r.dir(), a_rSurface, &r2.getMat(), a_AdpEntries, pixel.x, pixel.y, throughput, a_PassIndex, img, g_SurfMap, g_NumPhotonEmittedSurface2, debugScaleVal);
 				else
 				{
+					float rad = math::clamp(getCurrentRadius(adp_ent.m_surfaceData.r_std, a_PassIndex, 2), a_AdpEntries.r_min, a_AdpEntries.r_max);
 					float r_i = Radius_Type == PPM_Radius_Type::kNN ? rad : a_rSurface;
 					if (hasGlossy)
-						l = finalGathering ? L_SurfaceFinalGathering<true>(bRec, -r.dir(), r_i, r2, rng, DIRECT, g_NumPhotonEmittedSurface2) : L_Surface<true>(bRec, -r.dir(), r_i, r2.getMat(), g_NumPhotonEmittedSurface2);
-					else l = finalGathering ? L_SurfaceFinalGathering<false>(bRec, -r.dir(), r_i, r2, rng, DIRECT, g_NumPhotonEmittedSurface2) : L_Surface<false>(bRec, -r.dir(), r_i, r2.getMat(), g_NumPhotonEmittedSurface2);
+						L_r = finalGathering ? L_SurfaceFinalGathering<true>(bRec, -r.dir(), r_i, r2, rng, DIRECT, g_NumPhotonEmittedSurface2) : L_Surface<true>(bRec, -r.dir(), r_i, r2.getMat(), g_NumPhotonEmittedSurface2);
+					else L_r = finalGathering ? L_SurfaceFinalGathering<false>(bRec, -r.dir(), r_i, r2, rng, DIRECT, g_NumPhotonEmittedSurface2) : L_Surface<false>(bRec, -r.dir(), r_i, r2.getMat(), g_NumPhotonEmittedSurface2);
 				}
-				L += throughput * (hasGlossy ? 0.5f : 1) * l;				
-				if (!hasSpecGlossy)
+				L += throughput * L_r;
+				if (!hasSpec && !hasGlossy)
 					break;
 			}
-			if (hasSpecGlossy)
+			if (hasSpec || hasGlossy)
 			{
 				bRec.sampledType = 0;
 				bRec.typeMask = EDelta | EGlossy;
 				Spectrum t_f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
 				if (!bRec.sampledType)
 					break;
-				throughput = throughput * t_f * (hasGlossy ? 0.5f : 1);
+				deltaChain &= (bRec.sampledType & EGlossy) == 0;
+				throughput = throughput * t_f;
 				r = NormalizedT<Ray>(bRec.dg.P, bRec.getOutgoing());
 				r2.Init();
 			}
@@ -759,11 +761,11 @@ void PPPMTracer::doPerPixelRadiusEstimation()
 		m_pAdpBuffer->StartBlock(x, y);
 		auto A = k_AdaptiveStruct(r_min, r_max, *m_pAdpBuffer, w, m_uPassesDone);//keeps a copy of m_pAdpBuffer!
 		if (dynamic_cast<BeamGrid*>(m_pVolumeEstimator))
-			k_PerPixelRadiusEst<BeamGrid> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(Vec2i(x, y), w, h, r_max * 0.1f, m_fInitialRadiusSurf, m_fInitialRadiusVol, m_uPhotonEmittedPassVolume, A, k_toFindSurf, k_toFindVol);
+			k_PerPixelRadiusEst<BeamGrid> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(Vec2i(x, y), w, h, r_max * 0.1f, m_fInitialRadiusSurf, m_fInitialRadiusVol, (float)m_uPhotonEmittedPassVolume, A, k_toFindSurf, k_toFindVol);
 		else if (dynamic_cast<PointStorage*>(m_pVolumeEstimator))
-			k_PerPixelRadiusEst<PointStorage> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(Vec2i(x, y), w, h, r_max * 0.1f, m_fInitialRadiusSurf, m_fInitialRadiusVol, m_uPhotonEmittedPassVolume, A, k_toFindSurf, k_toFindVol);
+			k_PerPixelRadiusEst<PointStorage> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(Vec2i(x, y), w, h, r_max * 0.1f, m_fInitialRadiusSurf, m_fInitialRadiusVol, (float)m_uPhotonEmittedPassVolume, A, k_toFindSurf, k_toFindVol);
 		else if (dynamic_cast<BeamBeamGrid*>(m_pVolumeEstimator))
-			k_PerPixelRadiusEst<BeamBeamGrid> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(Vec2i(x, y), w, h, r_max * 0.1f, m_fInitialRadiusSurf, m_fInitialRadiusVol, m_uPhotonEmittedPassVolume, A, k_toFindSurf, k_toFindVol);
+			k_PerPixelRadiusEst<BeamBeamGrid> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(Vec2i(x, y), w, h, r_max * 0.1f, m_fInitialRadiusSurf, m_fInitialRadiusVol, (float)m_uPhotonEmittedPassVolume, A, k_toFindSurf, k_toFindVol);
 		m_pAdpBuffer->EndBlock();
 	});
 
