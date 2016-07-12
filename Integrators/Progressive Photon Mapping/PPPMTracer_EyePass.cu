@@ -283,9 +283,10 @@ CUDA_CONST CudaStaticWrapper<SurfaceMapT> g_SurfMapCaustic;
 CUDA_CONST unsigned int g_NumPhotonEmittedSurface2, g_NumPhotonEmittedVolume2;
 CUDA_CONST CUDA_ALIGN(16) unsigned char g_VolEstimator2[Dmax3(sizeof(PointStorage), sizeof(BeamGrid), sizeof(BeamBeamGrid))];
 
-template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const NormalizedT<Vec3f>& wi, float r, const Material& mat, unsigned int numPhotonsEmitted, SurfaceMapT* map = 0)
+CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const NormalizedT<Vec3f>& wi, float r, const Material& mat, unsigned int numPhotonsEmitted, SurfaceMapT* map = 0)
 {
 	if (!map) map = &g_SurfMap.As();
+	bool hasGlossy = mat.bsdf.hasComponent(EGlossy);
 	Spectrum Lp = Spectrum(0.0f);
 	Vec3f a = r*(-bRec.dg.sys.t - bRec.dg.sys.s) + bRec.dg.P, b = r*(bRec.dg.sys.t - bRec.dg.sys.s) + bRec.dg.P, c = r*(-bRec.dg.sys.t + bRec.dg.sys.s) + bRec.dg.P, d = r*(bRec.dg.sys.t + bRec.dg.sys.s) + bRec.dg.P;
 	map->ForAll(min(a, b, c, d), max(a, b, c, d), [&](const Vec3u& cell_idx, unsigned int p_idx, const PPPMPhoton& ph)
@@ -299,12 +300,12 @@ template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& b
 			float cor_fac = math::abs(Frame::cosTheta(bRec.wi) / (wiDotGeoN * Frame::cosTheta(bRec.wo)));
 			float ke = Kernel::k<2>(math::sqrt(dist2), r);
 			Spectrum l = ph.getL();
-			if(F_IS_GLOSSY)
+			if(hasGlossy)
 				l *= mat.bsdf.f(bRec) / Frame::cosTheta(bRec.wo);//bsdf.f returns f * cos(thetha)
 			Lp += ke * l;// * cor_fac;
 		}
 	});
-	if(!F_IS_GLOSSY)
+	if(!hasGlossy)
 	{
 		auto wi_l = bRec.wi;
 		bRec.wo = bRec.wi = NormalizedT<Vec3f>(0.0f, 0.0f, 1.0f);
@@ -314,9 +315,9 @@ template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& b
 	return Lp / numPhotonsEmitted;
 }
 
-template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_SurfaceFinalGathering(BSDFSamplingRecord& bRec, const NormalizedT<Vec3f>& wi, float rad, TraceResult& r2, Sampler& rng, bool DIRECT, unsigned int numPhotonsEmitted)
+CUDA_FUNC_IN Spectrum L_SurfaceFinalGathering(BSDFSamplingRecord& bRec, const NormalizedT<Vec3f>& wi, float rad, TraceResult& r2, Sampler& rng, bool DIRECT, unsigned int numPhotonsEmitted)
 {
-	Spectrum LCaustic = L_Surface<F_IS_GLOSSY>(bRec, wi, rad, r2.getMat(), numPhotonsEmitted, &g_SurfMapCaustic.As());
+	Spectrum LCaustic = L_Surface(bRec, wi, rad, r2.getMat(), numPhotonsEmitted, &g_SurfMapCaustic.As());
 	Spectrum L(0.0f);
 	const int N = 3;
 	DifferentialGeometry dg;
@@ -330,11 +331,10 @@ template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_SurfaceFinalGathering(BSDFSam
 		if (r3.hasHit())
 		{
 			r3.getBsdfSample(r, bRec2, ETransportMode::ERadiance);
-			bool hasGlossy = r3.getMat().bsdf.hasComponent(EGlossy);
-			L += f * (hasGlossy ? L_Surface<true>(bRec2, -r.dir(), rad, r3.getMat(), numPhotonsEmitted) : L_Surface<false>(bRec2, -r.dir(), rad, r3.getMat(), numPhotonsEmitted));
+			L += f * L_Surface(bRec2, -r.dir(), rad, r3.getMat(), numPhotonsEmitted);
 			if (DIRECT)
 				L += f * UniformSampleOneLight(bRec2, r3.getMat(), rng);
-			else L += f * r3.Le(bRec2.dg.P, bRec2.dg.sys, -r.dir());
+			//do not account for emission because such photons will be in the specular photon map, hopefulyl with lower variance
 		}
 	}
 	bRec.typeMask = ETypeCombinations::EAll;
@@ -521,9 +521,8 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 				{
 					float rad = math::clamp(getCurrentRadius(adp_ent.m_surfaceData.r_std, a_PassIndex, 2), a_AdpEntries.r_min, a_AdpEntries.r_max);
 					float r_i = Radius_Type == PPM_Radius_Type::kNN ? rad : a_rSurface;
-					if (hasGlossy)
-						L_r = finalGathering ? L_SurfaceFinalGathering<true>(bRec, -r.dir(), r_i, r2, rng, DIRECT, g_NumPhotonEmittedSurface2) : L_Surface<true>(bRec, -r.dir(), r_i, r2.getMat(), g_NumPhotonEmittedSurface2);
-					else L_r = finalGathering ? L_SurfaceFinalGathering<false>(bRec, -r.dir(), r_i, r2, rng, DIRECT, g_NumPhotonEmittedSurface2) : L_Surface<false>(bRec, -r.dir(), r_i, r2.getMat(), g_NumPhotonEmittedSurface2);
+					L_r = finalGathering ? L_SurfaceFinalGathering(bRec, -r.dir(), r_i, r2, rng, DIRECT, g_NumPhotonEmittedSurface2) : 
+										   L_Surface(bRec, -r.dir(), r_i, r2.getMat(), g_NumPhotonEmittedSurface2);
 				}
 				L += throughput * L_r;
 				if (!hasSpec && !hasGlossy)
