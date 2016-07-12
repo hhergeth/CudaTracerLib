@@ -40,13 +40,14 @@ namespace CudaTracerLib {
 			CUDA_FREE(m_deviceData);
 		}
 		//x, y in pixels
-		virtual void StartBlock(int x, int y)
+		virtual void StartBlock(int x, int y, bool copyData = true)
 		{
 			current_block_x_pixels = x;
 			current_block_y_pixels = y;
 			if ((x % BLOCK_SIZE) != 0 || (y % BLOCK_SIZE) != 0)
 				throw std::runtime_error("Cannot copy intersection of multiple blocks!");
-			CUDA_MEMCPY_TO_DEVICE(m_deviceData, m_hostData + (y / BLOCK_SIZE) * m_width_blocks + (x / BLOCK_SIZE), sizeof(BlockData));
+			if(copyData)
+				CUDA_MEMCPY_TO_DEVICE(m_deviceData, m_hostData + (y / BLOCK_SIZE) * m_width_blocks + (x / BLOCK_SIZE), sizeof(BlockData));
 		}
 		virtual void EndBlock()
 		{

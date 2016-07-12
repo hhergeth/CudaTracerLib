@@ -643,8 +643,8 @@ void PPPMTracer::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 	auto radiusType = m_sParameters.getValue(KEY_RadiiComputationType());
 	bool finalGathering = m_sParameters.getValue(KEY_FinalGathering());
 
-	if(radiusType != PPM_Radius_Type::Constant)
-		m_pAdpBuffer->StartBlock(x, y);
+	//not starting the block will lead to (correct) warnings due to no a
+	m_pAdpBuffer->StartBlock(x, y, radiusType != PPM_Radius_Type::Constant);
 	k_AdaptiveStruct A(r_min, r_max, *m_pAdpBuffer, w, m_uPassesDone);
 	Vec2i off = Vec2i(x, y);
 	BlockSampleImage img = m_pBlockSampler->getBlockImage();
