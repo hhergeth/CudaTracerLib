@@ -76,7 +76,8 @@ public:
 	PARAMETER_KEY(bool, AdaptiveAccProb)
 	PARAMETER_KEY(PPM_Radius_Type, RadiiComputationType)
 	PARAMETER_KEY(float, VolRadiusScale)
-	PARAMETER_KEY(float, kNN_Neighboor_Num)
+	PARAMETER_KEY(float, kNN_Neighboor_Num_Surf)
+	PARAMETER_KEY(float, kNN_Neighboor_Num_Vol)
 
 	CTL_EXPORT PPPMTracer();
 	CTL_EXPORT virtual ~PPPMTracer();

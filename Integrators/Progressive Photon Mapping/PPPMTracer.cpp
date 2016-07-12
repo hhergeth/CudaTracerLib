@@ -30,7 +30,8 @@ PPPMTracer::PPPMTracer()
 		<< KEY_AdaptiveAccProb()		<< CreateSetBool(false)
 		<< KEY_RadiiComputationType()	<< PPM_Radius_Type::kNN
 		<< KEY_VolRadiusScale()			<< CreateInterval(1.0f, 0.0f, FLT_MAX)
-		<< KEY_kNN_Neighboor_Num()		<< CreateInterval(10.0f, 0.0f, FLT_MAX);
+		<< KEY_kNN_Neighboor_Num_Surf() << CreateInterval(10.0f, 0.0f, FLT_MAX)
+		<< KEY_kNN_Neighboor_Num_Vol()  << CreateInterval(1.0f, 0.0f, FLT_MAX);
 
 	m_uTotalPhotonsEmitted = -1;
 	unsigned int numPhotons = (m_uBlocksPerLaunch + 2) * PPM_slots_per_block;

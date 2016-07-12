@@ -74,7 +74,7 @@ template<bool USE_GLOBAL> Spectrum PointStorage::L_Volume(float NumEmitted, cons
 	return L_n;
 }
 
-void PointStorage::Compute_kNN_radii(float rad, float kToFind, const NormalizedT<Ray>& r, float tmin, float tmax, VolumeModel& model)
+void PointStorage::Compute_kNN_radii(float numEmitted, float rad, float kToFind, const NormalizedT<Ray>& r, float tmin, float tmax, VolumeModel& model)
 {
 	ModelInitializer mInit;
 	float a, b;
@@ -152,7 +152,7 @@ template<bool USE_GLOBAL> Spectrum BeamGrid::L_Volume(float NumEmitted, const No
 	return L_n;
 }
 
-void BeamGrid::Compute_kNN_radii(float rad, float kToFind, const NormalizedT<Ray>& r, float tmin, float tmax, VolumeModel& model)
+void BeamGrid::Compute_kNN_radii(float numEmitted, float rad, float kToFind, const NormalizedT<Ray>& r, float tmin, float tmax, VolumeModel& model)
 {
 	ModelInitializer mInit;
 	float density = 0;
@@ -241,7 +241,7 @@ template<bool USE_GLOBAL> Spectrum BeamBeamGrid::L_Volume(float NumEmitted, cons
 	return L_n;
 }
 
-void BeamBeamGrid::Compute_kNN_radii(float rad, float kToFind, const NormalizedT<Ray>& r, float tmin, float tmax, VolumeModel& model)
+void BeamBeamGrid::Compute_kNN_radii(float numEmitted, float rad, float kToFind, const NormalizedT<Ray>& r, float tmin, float tmax, VolumeModel& model)
 {
 	ModelInitializer mInit;
 	float density = 0;
@@ -572,13 +572,13 @@ void PPPMTracer::DebugInternal(Image* I, const Vec2i& pixel)
 	float tmin, tmax;
 	if (g_SceneData.m_sVolume.HasVolumes() && g_SceneData.m_sVolume.IntersectP(ray, 0.0f, FLT_MAX, &tmin, &tmax))
 	{
-		float k_Intial = m_sParameters.getValue(KEY_kNN_Neighboor_Num());
+		float k_Intial = m_sParameters.getValue(KEY_kNN_Neighboor_Num_Vol());
 		if (dynamic_cast<BeamGrid*>(m_pVolumeEstimator))
-			((BeamGrid*)m_pVolumeEstimator)->Compute_kNN_radii(m_fInitialRadiusVol, k_Intial, ray, tmin, tmax, pixelInfo.m_volumeModel);
+			((BeamGrid*)m_pVolumeEstimator)->Compute_kNN_radii((float)m_uPhotonEmittedPassVolume, m_fInitialRadiusVol, k_Intial, ray, tmin, tmax, pixelInfo.m_volumeModel);
 		if (dynamic_cast<PointStorage*>(m_pVolumeEstimator))
-			((PointStorage*)m_pVolumeEstimator)->Compute_kNN_radii(m_fInitialRadiusVol, k_Intial, ray, tmin, tmax, pixelInfo.m_volumeModel);
+			((PointStorage*)m_pVolumeEstimator)->Compute_kNN_radii((float)m_uPhotonEmittedPassVolume, m_fInitialRadiusVol, k_Intial, ray, tmin, tmax, pixelInfo.m_volumeModel);
 		if (dynamic_cast<BeamBeamGrid*>(m_pVolumeEstimator))
-			((BeamBeamGrid*)m_pVolumeEstimator)->Compute_kNN_radii(m_fInitialRadiusVol, k_Intial, ray, tmin, tmax, pixelInfo.m_volumeModel);
+			((BeamBeamGrid*)m_pVolumeEstimator)->Compute_kNN_radii((float)m_uPhotonEmittedPassVolume, m_fInitialRadiusVol, k_Intial, ray, tmin, tmax, pixelInfo.m_volumeModel);
 
 		Spectrum Tr, L;
 		if (dynamic_cast<BeamGrid*>(m_pVolumeEstimator))
@@ -671,7 +671,7 @@ CUDA_FUNC_IN int floatToOrderedInt(float floatVal) {
 CUDA_FUNC_IN float orderedIntToFloat(int intVal) {
 	return int_as_float_((intVal >= 0) ? intVal : intVal ^ 0x7FFFFFFF);
 }
-template<typename VolEstimator> __global__ void k_PerPixelRadiusEst(Vec2i off, int w, int h, float r_max, float r_surface, float r_volume, k_AdaptiveStruct adpt, float k_toFind)
+template<typename VolEstimator> __global__ void k_PerPixelRadiusEst(Vec2i off, int w, int h, float r_max, float r_surface, float r_volume, float numEmitted, k_AdaptiveStruct adpt, float k_toFindSurf, float k_toFindVol)
 {
 	Vec2i pixel = TracerBase::getPixelPos(off.x, off.y);
 	auto& pixleInfo = adpt(pixel.x, pixel.y);
@@ -704,14 +704,15 @@ template<typename VolEstimator> __global__ void k_PerPixelRadiusEst(Vec2i off, i
 					density += Kernel::k<2>(math::sqrt(dist2), search_rad_surf);
 			});
 #endif
-			pixleInfo.m_surfaceData.r_std = math::sqrt(k_toFind / (PI * density));
+			pixleInfo.m_surfaceData.r_std = math::sqrt(k_toFindSurf / (PI * density));
 
 			//compute volume query radii
 			float tmin, tmax;
 			if(g_SceneData.m_sVolume.HasVolumes() && g_SceneData.m_sVolume.IntersectP(r, 0.0f, FLT_MAX, &tmin, &tmax))
 			{
-				((VolEstimator*)g_VolEstimator2)->Compute_kNN_radii(r_volume, k_toFind, r, tmin, tmax, pixleInfo.m_volumeModel);
+				((VolEstimator*)g_VolEstimator2)->Compute_kNN_radii(numEmitted, r_volume, k_toFindVol, r, tmin, tmax, pixleInfo.m_volumeModel);
 			}
+
 			//traverse on specular manifold until a subsurface scattering object is hit, if so compute kNN based volumetric radii
 			int depth = 0;
 			while(r2.hasHit() && depth++ < 3)
@@ -723,7 +724,7 @@ template<typename VolEstimator> __global__ void k_PerPixelRadiusEst(Vec2i off, i
 					bRec.wo.z *= -1.0f;
 					NormalizedT<Ray> rTrans = NormalizedT<Ray>(bRec.dg.P, bRec.getOutgoing());
 					TraceResult r3 = traceRay(rTrans);
-					((VolEstimator*)g_VolEstimator2)->Compute_kNN_radii(r_volume * 10, k_toFind, rTrans, 0.0f, r3.m_fDist, pixleInfo.m_volumeModel);
+					((VolEstimator*)g_VolEstimator2)->Compute_kNN_radii(numEmitted, r_volume * 10, k_toFindVol, rTrans, 0.0f, r3.m_fDist, pixleInfo.m_volumeModel);
 
 					break;//only compute radii for first object
 				}
@@ -750,18 +751,19 @@ void PPPMTracer::doPerPixelRadiusEstimation()
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_MinRad, &a, sizeof(a)));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_SurfMap, &m_sSurfaceMap, sizeof(m_sSurfaceMap)));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_VolEstimator2, m_pVolumeEstimator, m_pVolumeEstimator->getSize()));
-	float k_Intial = m_sParameters.getValue(KEY_kNN_Neighboor_Num());
+	float k_toFindSurf = m_sParameters.getValue(KEY_kNN_Neighboor_Num_Surf()),
+		  k_toFindVol = m_sParameters.getValue(KEY_kNN_Neighboor_Num_Vol());
 	
 	IterateAllBlocks(w, h, [&](int x, int y, int, int)
 	{
 		m_pAdpBuffer->StartBlock(x, y);
 		auto A = k_AdaptiveStruct(r_min, r_max, *m_pAdpBuffer, w, m_uPassesDone);//keeps a copy of m_pAdpBuffer!
 		if (dynamic_cast<BeamGrid*>(m_pVolumeEstimator))
-			k_PerPixelRadiusEst<BeamGrid> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(Vec2i(x, y), w, h, r_max * 0.1f, m_fInitialRadiusSurf, m_fInitialRadiusVol, A, k_Intial);
+			k_PerPixelRadiusEst<BeamGrid> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(Vec2i(x, y), w, h, r_max * 0.1f, m_fInitialRadiusSurf, m_fInitialRadiusVol, m_uPhotonEmittedPassVolume, A, k_toFindSurf, k_toFindVol);
 		else if (dynamic_cast<PointStorage*>(m_pVolumeEstimator))
-			k_PerPixelRadiusEst<PointStorage> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(Vec2i(x, y), w, h, r_max * 0.1f, m_fInitialRadiusSurf, m_fInitialRadiusVol, A, k_Intial);
+			k_PerPixelRadiusEst<PointStorage> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(Vec2i(x, y), w, h, r_max * 0.1f, m_fInitialRadiusSurf, m_fInitialRadiusVol, m_uPhotonEmittedPassVolume, A, k_toFindSurf, k_toFindVol);
 		else if (dynamic_cast<BeamBeamGrid*>(m_pVolumeEstimator))
-			k_PerPixelRadiusEst<BeamBeamGrid> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(Vec2i(x, y), w, h, r_max * 0.1f, m_fInitialRadiusSurf, m_fInitialRadiusVol, A, k_Intial);
+			k_PerPixelRadiusEst<BeamBeamGrid> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(Vec2i(x, y), w, h, r_max * 0.1f, m_fInitialRadiusSurf, m_fInitialRadiusVol, m_uPhotonEmittedPassVolume, A, k_toFindSurf, k_toFindVol);
 		m_pAdpBuffer->EndBlock();
 	});
 
