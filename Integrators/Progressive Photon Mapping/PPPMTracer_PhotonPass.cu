@@ -57,7 +57,7 @@ template<typename VolEstimator> struct PPPMPhotonParticleProcessHandler
 	int numSurfaceInteractions;
 
 	CUDA_FUNC_IN PPPMPhotonParticleProcessHandler(Image& I, Sampler& r, unsigned int* nStoredSuface, unsigned int* nStoredVol)
-		: img(I), rng(r), wasStoredSurface(false), wasStoredVolume(false), delta(false), numStoredSurface(nStoredSuface), numStoredVolume(nStoredVol), numSurfaceInteractions(0)
+		: img(I), rng(r), wasStoredSurface(false), wasStoredVolume(false), delta(true), numStoredSurface(nStoredSuface), numStoredVolume(nStoredVol), numSurfaceInteractions(0)
 	{
 
 	}
@@ -92,7 +92,7 @@ template<typename VolEstimator> struct PPPMPhotonParticleProcessHandler
 				wasStoredSurface = true;
 			}
 		}
-		delta &= bRec.sampledType & ETypeCombinations::EDelta;
+		delta &= (bRec.sampledType & ETypeCombinations::EDelta) != 0;
 		numSurfaceInteractions++;
 	}
 

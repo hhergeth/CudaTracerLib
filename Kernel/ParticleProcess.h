@@ -98,8 +98,10 @@ template<bool PARTICIPATING_MEDIA = true, bool SUBSURFACE_SCATTERING = true, typ
 			auto wo = bssrdf ? -r.dir() : r.dir();
 			Spectrum f_i = power * throughput;
 			r2.getBsdfSample(wo, r(r2.m_fDist), bRec, ETransportMode::EImportance, &f_i);
+			Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());//do it before calling to handler to make the sampling type available to the handler
+			auto woSave = bRec.wo;
 			P.handleSurfaceInteraction(power * throughput, r, r2, bRec, !!bssrdf);
-			Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
+			bRec.wo = woSave;
 			if (SUBSURFACE_SCATTERING && !bssrdf && r2.getMat().GetBSSRDF(bRec.dg, &bssrdf))
 				bRec.wo.z *= -1.0f;
 			else
