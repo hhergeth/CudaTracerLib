@@ -2,6 +2,8 @@
 
 #include <malloc.h>
 #include <stdlib.h>
+#include <string>
+#include <memory>
 
 namespace CudaTracerLib {
 
@@ -64,13 +66,22 @@ namespace CudaTracerLib {
 #if __CUDACC__
 #define CTL_ASSERT(X) ((X) ? ((void)0) : printf("Assertion failed!\n%s:%d\n%s", __FILE__, __LINE__, #X))
 #else
-#define CTL_ASSERT(X) ((X) ? ((void)0) : fail("Assertion failed!\n%s:%d\n%s", __FILE__, __LINE__, #X))
+#define CTL_ASSERT(X) ((X) ? ((void)0) : throw std::runtime_error(format("Assertion failed!\n%s:%d\n%s", __FILE__, __LINE__, #X)))
 #endif
 #else
 //evaluate the expression either way, it possibly has side effects
 	CUDA_FUNC_IN void noop() {}
 #   define CTL_ASSERT(X) ((X) ? noop() : noop())
 #endif
+
+//code is from this great answer : http://stackoverflow.com/a/26221725/1715849
+template<typename ... Args> std::string format(const std::string& format, Args ... args)
+{
+	size_t size = snprintf(nullptr, 0, format.c_str(), args ...) + 1; // Extra space for '\0'
+	std::unique_ptr<char[]> buf(new char[size]);
+	snprintf(buf.get(), size, format.c_str(), args ...);
+	return std::string(buf.get(), buf.get() + size - 1); // We don't want the '\0' inside
+}
 
 //http://stackoverflow.com/questions/12778949/cuda-memory-alignment
 //credit to harrsim!
@@ -83,12 +94,6 @@ namespace CudaTracerLib {
 #else
 #error "Please provide a definition for MY_ALIGN macro for your host compiler!"
 #endif
-
-CTL_EXPORT void fail(const char* format);
-template<typename ... Args> void fail(const char* _format, Args ... args)
-{
-	fail(format(_format, args...).c_str());
-}
 
 CTL_EXPORT void __ThrowCudaErrors__(const char* file, int line, ...);
 #define ThrowCudaErrors(...) __ThrowCudaErrors__(__FILE__, __LINE__, ##__VA_ARGS__, -1)

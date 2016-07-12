@@ -4,23 +4,12 @@
 #include <stdexcept>
 #include <cuda_runtime.h>
 #include <iostream>
-#include <Base/Platform.h>
 
 #ifdef ISWINDOWS
 #include <Windows.h>
 #endif
 
 namespace CudaTracerLib {
-
-void fail(const char* err_str)
-{
-#ifdef ISWINDOWS
-	if (IsDebuggerPresent())
-		__debugbreak();
-#endif
-
-	throw std::runtime_error(err_str);
-}
 
 void __ThrowCudaErrors__(const char* file, int line, ...)
 {

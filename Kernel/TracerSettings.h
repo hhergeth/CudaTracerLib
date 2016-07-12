@@ -312,7 +312,7 @@ public:
 		~InitHelper()
 		{
 			if (state == 1)
-				fail("Invalid initialization of collection, forgot to pass a parameter?");//invalid syntax
+				printf("Invalid initialization of tracer settings collection, forgot to pass a parameter? \nLast name was %s.", lastName.c_str());//invalid syntax
 		}
 
 		TracerParameterCollection& operator<<(ITracerParameter* para)
