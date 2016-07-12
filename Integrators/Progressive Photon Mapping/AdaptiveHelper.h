@@ -82,7 +82,7 @@ template<int DIM_RD PP_COMMA int NUM_DERIV> struct APPM_QueryPointData
 	{
 		float VAR_Psi = Sum_psi2 / iteration - math::sqr(Sum_psi / iteration);
 		float k_2 = Kernel::alpha<DIM_R>(), k_22 = k_2 * k_2;
-		float E_pl = Sum_pl / totalPhotons;
+		float E_pl = Sum_pl / iteration;//Kaplanyan claims this should be 1 / (N * J)
 		float E_DI = clb(Sum_DI / (float)iteration);
 		float nom = (2.0f * math::sqrt(VAR_Psi)), denom = (KernelBase<1, 2, 3>::c_d<DIM_R>() * J * E_pl * k_22 * math::sqr(E_DI) * iteration);
 		if (nom <= 0 || denom <= 0) return -1.0f;

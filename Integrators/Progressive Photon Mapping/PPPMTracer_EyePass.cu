@@ -364,9 +364,9 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const NormalizedT<Vec3
 	}
 	auto ent = A(x, y).m_surfaceData;
 	float r = iteration <= 1 ? A.r_max / 5.0f : ent.compute_r<2>(iteration - 1, numPhotonsEmittedSurf, numPhotonsEmittedSurf * (iteration - 1), [](const DerivativeCollection<1>& gr) {return Lapl(gr); }),
-		  rd = iteration <= 1 ? A.r_max/5.0f : ent.compute_rd(iteration - 1, numPhotonsEmittedSurf, numPhotonsEmittedSurf * (iteration - 1));
-	r = math::clamp(r, A.r_min, A.r_max);
-	rd = math::clamp(rd, A.r_min, A.r_max);
+		  rd = iteration <= 1 ? a_rSurfaceUNUSED : ent.compute_rd(iteration - 1, numPhotonsEmittedSurf, numPhotonsEmittedSurf * (iteration - 1));
+	r = math::clamp(r != -1.0f ? r : a_rSurfaceUNUSED, A.r_min, A.r_max);
+	rd = math::clamp(rd != -1.0f ? rd : a_rSurfaceUNUSED, A.r_min, A.r_max);
 	rd = a_rSurfaceUNUSED;
 	//r = rd = a_rSurfaceUNUSED;
 	Vec3f ur = bRec.dg.sys.t * rd, vr = bRec.dg.sys.s * rd;
@@ -384,7 +384,7 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const NormalizedT<Vec3
 		if (dot(photonNormal, bRec.dg.sys.n) > LOOKUP_NORMAL_THRESH && wiDotGeoN > 1e-2f)
 		{
 			bRec.wo = bRec.dg.toLocal(ph.getWi());
-			auto bsdfFactor = hasGlossy ? mat->bsdf.f(bRec) : bsdf_diffuse;
+			auto bsdfFactor = hasGlossy ? mat->bsdf.f(bRec) / Frame::cosTheta(bRec.wo) : bsdf_diffuse;
 			float psi = Spectrum(importance * bsdfFactor * ph.getL()).getLuminance();
 			const Vec3f e_l = bRec.dg.P - ph_pos;
 			float k_rd = Kernel::k<2>(e_l, rd);
@@ -393,11 +393,10 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const NormalizedT<Vec3
 				  lapl = psi / (rd * rd) * (laplu + laplv);
 			Sum_DI += lapl;
 
-			if (dist2 < r * r)
+			if (dist2 < math::sqr(r))
 			{
 				float kri = Kernel::k<2>(math::sqrt(dist2), r);
 				Lp += kri * ph.getL() / float(numPhotonsEmittedSurf) * bsdfFactor;
-				psi /= numPhotonsEmittedSurf;
 				Sum_psi += psi;
 				Sum_psi2 += math::sqr(psi);
 				ent.Sum_pl += kri;
