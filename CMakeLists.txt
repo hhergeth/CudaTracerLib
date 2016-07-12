@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.0)
 project(CudaTracerLib)
 
-set (CMAKE_CXX_STANDARD 11)
+set (CMAKE_CXX_STANDARD 14)
 
 FIND_PACKAGE( Boost COMPONENTS system filesystem iostreams REQUIRED )
 INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIR} )
