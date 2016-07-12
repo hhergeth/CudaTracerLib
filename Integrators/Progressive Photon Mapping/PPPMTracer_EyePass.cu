@@ -7,6 +7,8 @@
 #include <Windows.h>
 #include <Engine/SpatialGridTraversal.h>
 
+#define LOOKUP_NORMAL_THRESH 0.5f
+
 namespace CudaTracerLib {
 
 struct ModelInitializer
@@ -291,7 +293,7 @@ template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& b
 		float dist2 = distanceSquared(ph.getPos(map->getHashGrid(), cell_idx), bRec.dg.P);
 		Vec3f photonNormal = ph.getNormal();
 		float wiDotGeoN = absdot(photonNormal, wi);
-		if (dist2 < r * r && dot(photonNormal, bRec.dg.sys.n) > 0.9f && wiDotGeoN > 1e-2f)
+		if (dist2 < r * r && dot(photonNormal, bRec.dg.sys.n) > LOOKUP_NORMAL_THRESH && wiDotGeoN > 1e-2f)
 		{
 			bRec.wo = bRec.dg.toLocal(ph.getWi());
 			float cor_fac = math::abs(Frame::cosTheta(bRec.wi) / (wiDotGeoN * Frame::cosTheta(bRec.wo)));
@@ -379,7 +381,7 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const NormalizedT<Vec3
 		float dist2 = distanceSquared(ph_pos, bRec.dg.P);
 		Vec3f photonNormal = ph.getNormal();
 		float wiDotGeoN = absdot(photonNormal, wi);
-		if (dist2 < math::sqr(r_max) && dot(photonNormal, bRec.dg.sys.n) > 0.9f && wiDotGeoN > 1e-2f)
+		if (dot(photonNormal, bRec.dg.sys.n) > LOOKUP_NORMAL_THRESH && wiDotGeoN > 1e-2f)
 		{
 			bRec.wo = bRec.dg.toLocal(ph.getWi());
 			auto bsdfFactor = hasGlossy ? mat->bsdf.f(bRec) : bsdf_diffuse;
