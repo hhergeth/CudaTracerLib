@@ -3,8 +3,6 @@
 #include <Kernel/TraceAlgorithms.h>
 #include <Math/half.h>
 #include <Engine/Light.h>
-#include <fstream>
-#include <Windows.h>
 #include <Engine/SpatialGridTraversal.h>
 
 #define LOOKUP_NORMAL_THRESH 0.5f
@@ -312,7 +310,7 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const NormalizedT<Vec3
 		Lp *= mat.bsdf.f(bRec);
 		bRec.wi = wi_l;
 	}
-	return Lp / numPhotonsEmitted;
+	return Lp / (float)numPhotonsEmitted;
 }
 
 CUDA_FUNC_IN Spectrum L_SurfaceFinalGathering(BSDFSamplingRecord& bRec, const NormalizedT<Vec3f>& wi, float rad, TraceResult& r2, Sampler& rng, bool DIRECT, unsigned int numPhotonsEmitted)
@@ -338,9 +336,12 @@ CUDA_FUNC_IN Spectrum L_SurfaceFinalGathering(BSDFSamplingRecord& bRec, const No
 		}
 	}
 	bRec.typeMask = ETypeCombinations::EAll;
-	return L / N + LCaustic;
+	return L / (float)N + LCaustic;
 }
 
+CUDA_DEVICE float g_Sum_Photons_Touched;
+CUDA_DEVICE float g_Sum_Photons_Touched2;
+CUDA_DEVICE unsigned int g_NumRadEstimates;
 CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const NormalizedT<Vec3f>& wi, float a_rSurfaceUNUSED, const Material* mat, k_AdaptiveStruct& A, int x, int y, const Spectrum& importance, int iteration, BlockSampleImage& img, SurfaceMapT& surfMap, unsigned int numPhotonsEmittedSurf, float debugScaleVal)
 {
 	//ent.rd = 1.9635f * math::sqrt(VAR_Lapl) * math::pow(iteration, -1.0f / 8.0f);
@@ -365,6 +366,7 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const NormalizedT<Vec3
 	auto ent = A(x, y).m_surfaceData;
 	float r = iteration <= 1 ? A.r_max / 5.0f : ent.compute_r<2>(iteration - 1, numPhotonsEmittedSurf, numPhotonsEmittedSurf * (iteration - 1), [](const DerivativeCollection<1>& gr) {return Lapl(gr); }),
 		  rd = iteration <= 1 ? a_rSurfaceUNUSED : ent.compute_rd(iteration - 1, numPhotonsEmittedSurf, numPhotonsEmittedSurf * (iteration - 1));
+
 	r = math::clamp(r != -1.0f ? r : a_rSurfaceUNUSED, A.r_min, A.r_max);
 	rd = math::clamp(rd != -1.0f ? rd : a_rSurfaceUNUSED, A.r_min, A.r_max);
 	rd = a_rSurfaceUNUSED;
@@ -373,8 +375,9 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const NormalizedT<Vec3
 	float r_max = max(2 * rd, r);
 	Vec3f a = r_max*(-bRec.dg.sys.t - bRec.dg.sys.s) + bRec.dg.P, b = r_max*(bRec.dg.sys.t - bRec.dg.sys.s) + bRec.dg.P, 
 		  c = r_max*(-bRec.dg.sys.t + bRec.dg.sys.s) + bRec.dg.P, d = r_max*(bRec.dg.sys.t + bRec.dg.sys.s) + bRec.dg.P;
+
 	Spectrum Lp = 0.0f;
-	float Sum_psi = 0, Sum_psi2 = 0, n_psi = 0, Sum_DI = 0;
+	float Sum_psi = 0, Sum_psi2 = 0, n_psi = 0, Sum_DI = 0, numPhotonsTouched = 0;
 	surfMap.ForAll(min(a, b, c, d), max(a, b, c, d), [&](const Vec3u& cell_idx, unsigned int p_idx, const PPPMPhoton& ph)//CAP = DANGEROUS !!!
 	{
 		Vec3f ph_pos = ph.getPos(surfMap.getHashGrid(), cell_idx);
@@ -383,6 +386,7 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const NormalizedT<Vec3
 		float wiDotGeoN = absdot(photonNormal, wi);
 		if (dot(photonNormal, bRec.dg.sys.n) > LOOKUP_NORMAL_THRESH && wiDotGeoN > 1e-2f)
 		{
+			numPhotonsTouched += dist2 <= math::sqr(r_max);
 			bRec.wo = bRec.dg.toLocal(ph.getWi());
 			auto bsdfFactor = hasGlossy ? mat->bsdf.f(bRec) / Frame::cosTheta(bRec.wo) : bsdf_diffuse;
 			float psi = Spectrum(importance * bsdfFactor * ph.getL()).getLuminance();
@@ -404,6 +408,11 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const NormalizedT<Vec3
 			}
 		}
 	});
+#ifdef ISCUDA
+	atomicAdd(&g_Sum_Photons_Touched, numPhotonsTouched);
+	atomicAdd(&g_Sum_Photons_Touched2, math::sqr(numPhotonsTouched));
+	atomicInc(&g_NumRadEstimates, 0xffffffff);
+#endif
 	ent.Sum_DI.df_di[0] += Sum_DI / numPhotonsEmittedSurf;
 	auto E_DI = Lapl(ent.Sum_DI) / (float)iteration;
 	ent.Sum_E_DI += E_DI;
@@ -414,21 +423,6 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const NormalizedT<Vec3
 		ent.Sum_psi2 += Sum_psi2 / n_psi;
 	}
 
-	//if (x == 488 && y == 654)
-	//	printf("Var[Psi] = %5.5e, Var[Lapl] = %5.5e, E[pl] = %5.5e, E[I] = %5.5e, E[Psi] = %5.5e\n", VAR_Psi, VAR_Lapl, E_pl, E_I, ent.psi / NJ);
-
-	Spectrum qs;
-	//float t = (ent.r - A.r_min) / (A.r_max - A.r_min);
-	//float t = math::abs(E_I) * 1e-3f / (g_SceneData.m_sBox.Size().length() / 2);
-	//float t = ent.DI * 100000000;
-	//float t = ent.compute_r(iteration, g_NumPhotonEmittedSurface2, g_NumPhotonEmittedSurface2 * iteration) / (A.r_max * 1 - A.r_min);
-	//float t = ent.compute_rd(iteration, numPhotonsEmittedSurf, numPhotonsEmittedSurf * (iteration - 1)) / (A.r_max - A.r_min);
-	//float t = (ent.Sum_psi2 / NJ - math::sqr(ent.Sum_psi / NJ)) * debugScaleVal;
-	//float t = ent.Sum_pl / NJ * debugScaleVal;
-	//float t = math::abs(ent.Sum_DI2 / NJ - math::sqr(ent.Sum_DI / NJ)) * debugScaleVal;
-	float t = math::abs(ent.DI) * debugScaleVal;
-	qs.fromHSL(2.0f / 3.0f * (1 - math::clamp01(t)), 1, 0.5f);//0 -> 1 : Dark Blue -> Light Blue -> Green -> Yellow -> Red
-	//img.Add(x, y, qs);
 #ifdef ISCUDA
 	A(x, y).m_surfaceData = ent;
 #endif
@@ -641,6 +635,9 @@ void PPPMTracer::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_NumPhotonEmittedSurface2, &m_uPhotonEmittedPassSurface, sizeof(m_uPhotonEmittedPassSurface)));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_NumPhotonEmittedVolume2, &m_uPhotonEmittedPassVolume, sizeof(m_uPhotonEmittedPassVolume)));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_VolEstimator2, m_pVolumeEstimator, m_pVolumeEstimator->getSize()));
+	ZeroSymbol(g_Sum_Photons_Touched);
+	ZeroSymbol(g_Sum_Photons_Touched2);
+	ZeroSymbol(g_NumRadEstimates);
 
 	auto radiusType = m_sParameters.getValue(KEY_RadiiComputationType());
 	bool finalGathering = m_sParameters.getValue(KEY_FinalGathering());
