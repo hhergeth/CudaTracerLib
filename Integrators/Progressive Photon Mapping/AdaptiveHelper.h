@@ -73,7 +73,7 @@ template<int DIM_RD PP_COMMA int NUM_DERIV> struct APPM_QueryPointData
 		float VAR_Lapl = Sum_E_DI2 / iteration - math::sqr(Sum_E_DI / iteration);
 		if (VAR_Lapl <= 0) return -1.0f;
 		const float alpha = Kernel::alpha<DIM_RD>(), alpha2 = alpha * alpha, beta = Kernel::beta<DIM_RD>();
-		const float L = extract_val<DIM_RD - 1>(3.0f / (8.0f * 1.77245f), 1.0f / (2.0f * PI), 15.0f / (32.0f * 5.56833f));//0 based indexing
+		const float L = extract_val<DIM_RD - 1>({3.0f / (8.0f * 1.77245f), 1.0f / (2.0f * PI), 15.0f / (32.0f * 5.56833f)});//0 based indexing
 		const float c = math::pow(DIM_RD * beta * 1.0f / alpha2 * 1.0f / L * 1.0f / iteration, 1.0f / (DIM_RD + 4));
 		return math::sqrt(VAR_Lapl) * c;
 	}

@@ -157,9 +157,9 @@ template<int N, typename... ARGS> CUDA_FUNC_IN static const typename __value_pac
 	return __value_pack_detail__::get_helper<N, ARGS...>::get(pack);
 }
 
-template<int N, typename... TYPES> static CUDA_FUNC_IN auto extract_val(TYPES... vals)
+template<int N, typename T> static CUDA_FUNC_IN T extract_val(std::initializer_list<T> l)
 {
-	return __value_pack_detail__::Extractor<N, TYPES...>::get(vals...);
+	return *(l.begin() + N);
 }
 
 //needed for template parameter lists as macro arguments
