@@ -3,8 +3,6 @@
 #include <Kernel/TraceAlgorithms.h>
 #include <Math/half.h>
 #include <Engine/Light.h>
-#include <fstream>
-#include <Windows.h>
 #include <Engine/SpatialGridTraversal.h>
 
 #define LOOKUP_NORMAL_THRESH 0.5f
@@ -426,8 +424,8 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const NormalizedT<Vec3
 	//float t = (ent.Sum_psi2 / NJ - math::sqr(ent.Sum_psi / NJ)) * debugScaleVal;
 	//float t = ent.Sum_pl / NJ * debugScaleVal;
 	//float t = math::abs(ent.Sum_DI2 / NJ - math::sqr(ent.Sum_DI / NJ)) * debugScaleVal;
-	float t = math::abs(ent.DI) * debugScaleVal;
-	qs.fromHSL(2.0f / 3.0f * (1 - math::clamp01(t)), 1, 0.5f);//0 -> 1 : Dark Blue -> Light Blue -> Green -> Yellow -> Red
+	//float t = math::abs(ent.DI) * debugScaleVal;
+	//qs.fromHSL(2.0f / 3.0f * (1 - math::clamp01(t)), 1, 0.5f);//0 -> 1 : Dark Blue -> Light Blue -> Green -> Yellow -> Red
 	//img.Add(x, y, qs);
 #ifdef ISCUDA
 	A(x, y).m_surfaceData = ent;
@@ -625,7 +623,7 @@ void PPPMTracer::DebugInternal(Image* I, const Vec2i& pixel)
 		Sum_lapl_N += lapl_N;
 		Sum_lapl_N2 += lapl_N * lapl_N;*/
 
-		L_Surface(bRec, -ray.dir(), getCurrentRadius(2), &res.getMat(), A, pixel.x, pixel.y, Spectrum(1.0f), m_uPassesDone, m_pBlockSampler->getBlockImage(), m_sSurfaceMap, m_uPhotonEmittedPassSurface, m_debugScaleVal);
+		//L_Surface(bRec, -ray.dir(), getCurrentRadius(2), &res.getMat(), A, pixel.x, pixel.y, Spectrum(1.0f), m_uPassesDone, m_pBlockSampler->getBlockImage(), m_sSurfaceMap, m_uPhotonEmittedPassSurface, m_debugScaleVal);
 		//m_adpBuffer->setOnCPU();
 		//m_adpBuffer->Synchronize();
 	}

@@ -111,7 +111,7 @@ struct Beam
 
 		oT2 = (oT1 + d1O1 - d1O2) / d1d2;
 		// Out of range on ray 2.
-		if (oT2 <= minT2 || oT2 >= maxT2 || isnan(oT2))
+		if (oT2 <= minT2 || oT2 >= maxT2 || math::IsNaN(oT2))
 			return false;
 
 		const float sinTheta = math::sqrt(sinThetaSqr);

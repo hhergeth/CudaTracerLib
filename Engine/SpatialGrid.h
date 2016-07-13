@@ -27,7 +27,7 @@ public:
 		return hashMap;
 	}
 
-	template<unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX, typename CLB> CUDA_FUNC_IN void ForAll(const Vec3u& min, const Vec3u& max, CLB& clb)
+	template<unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX, typename CLB> CUDA_FUNC_IN void ForAll(const Vec3u& min, const Vec3u& max, CLB clb)
 	{
 		ForAllCells(min, max, [&](const Vec3u& cell_idx)
 		{
@@ -39,17 +39,17 @@ public:
 		});
 	}
 
-	template<unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX, typename CLB> CUDA_FUNC_IN void ForAll(const Vec3f& p, CLB& clb)
+	template<unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX, typename CLB> CUDA_FUNC_IN void ForAll(const Vec3f& p, CLB clb)
 	{
 		((HASHER*)this)->ForAllCellEntries(hashMap.Transform(p), clb, MAX_ENTRIES_PER_CELL);
 	}
 
-	template<unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX, typename CLB> CUDA_FUNC_IN void ForAll(const Vec3f& min, const Vec3f& max, CLB& clb)
+	template<unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX, typename CLB> CUDA_FUNC_IN void ForAll(const Vec3f& min, const Vec3f& max, CLB clb)
 	{
 		ForAll<MAX_ENTRIES_PER_CELL>(hashMap.Transform(min), hashMap.Transform(max), clb);
 	}
 
-	template<typename CLB> CUDA_FUNC_IN void ForAllCells(const Vec3u& min_cell, const Vec3u& max_cell, CLB& clb)
+	template<typename CLB> CUDA_FUNC_IN void ForAllCells(const Vec3u& min_cell, const Vec3u& max_cell, CLB clb)
 	{
 		Vec3u a = min(min_cell, hashMap.m_gridDim - Vec3u(1)), b = min(max_cell, hashMap.m_gridDim - Vec3u(1));
 		for (unsigned int ax = a.x; ax <= b.x; ax++)
@@ -60,12 +60,12 @@ public:
 				}
 	}
 
-	template<typename CLB> CUDA_FUNC_IN void ForAllCells(const Vec3f& min, const Vec3f& max, CLB& clb)
+	template<typename CLB> CUDA_FUNC_IN void ForAllCells(const Vec3f& min, const Vec3f& max, CLB clb)
 	{
 		ForAllCells(hashMap.Transform(min), hashMap.Transform(max), clb);
 	}
 
-	template<typename CLB> CUDA_FUNC_IN void ForAllCells(CLB& clb)
+	template<typename CLB> CUDA_FUNC_IN void ForAllCells(CLB clb)
 	{
 		ForAllCells(Vec3u(0), hashMap.m_gridDim - Vec3u(1), clb);
 	}
@@ -173,7 +173,7 @@ public:
 		return idx;
 	}
 
-	template<typename CLB> CUDA_FUNC_IN void ForAllCellEntries(const Vec3u& p, CLB& clb, unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX)
+	template<typename CLB> CUDA_FUNC_IN void ForAllCellEntries(const Vec3u& p, CLB clb, unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX)
 	{
 		unsigned int i0 = BaseType::hashMap.Hash(p), i = m_mapBuffer[i0], N = 0, lo = min(deviceDataIdx, numData);
 		while (i < lo && N++ < MAX_ENTRIES_PER_CELL)
@@ -366,7 +366,7 @@ public:
 		return store(BaseType::hashMap.Transform(p), v);
 	}
 
-	template<typename CLB> CUDA_FUNC_IN void ForAllCellEntries(const Vec3u& p, CLB& clb, unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX)
+	template<typename CLB> CUDA_FUNC_IN void ForAllCellEntries(const Vec3u& p, CLB clb, unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX)
 	{
 		unsigned int map_idx = m_gridBuffer[BaseType::hashMap.Hash(p)], i = 0;
 		while (map_idx < idxData && i++ < MAX_ENTRIES_PER_CELL)

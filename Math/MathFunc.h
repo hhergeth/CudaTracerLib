@@ -20,10 +20,6 @@ namespace CudaTracerLib {
 #define RCPOVERFLOW   2.93873587705571876e-39f
 #define DeltaEpsilon 1e-3f
 
-#ifndef isnan
-#define isnan(x) (x != x)
-#endif
-
 CUDA_FUNC_IN float int_as_float_(int i)
 {
 #ifdef ISCUDA
@@ -87,6 +83,7 @@ FW_SPECIALIZE_MINMAX(template <class T>, T, const, (a < b) ? a : b, (a > b) ? a 
 class math
 {
 public:
+
 	CUDA_FUNC_IN static float safe_asin(float value) {
 		return asinf(min(1.0f, max(-1.0f, value)));
 	}
@@ -178,6 +175,12 @@ public:
 	CUDA_FUNC_IN static bool IsPowerOf2(int v)
 	{
 		return (v & (v - 1)) == 0;
+	}
+
+
+	CUDA_FUNC_IN static bool IsNaN(float value)
+	{
+		return value != value;
 	}
 
 	CUDA_FUNC_IN static unsigned int RoundUpPow2(unsigned int v)
