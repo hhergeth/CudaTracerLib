@@ -344,15 +344,6 @@ CUDA_DEVICE float g_Sum_Photons_Touched2;
 CUDA_DEVICE unsigned int g_NumRadEstimates;
 CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const NormalizedT<Vec3f>& wi, float a_rSurfaceUNUSED, const Material* mat, k_AdaptiveStruct& A, int x, int y, const Spectrum& importance, int iteration, BlockSampleImage& img, SurfaceMapT& surfMap, unsigned int numPhotonsEmittedSurf, float debugScaleVal)
 {
-	//ent.rd = 1.9635f * math::sqrt(VAR_Lapl) * math::pow(iteration, -1.0f / 8.0f);
-	//ent.rd = math::clamp(ent.rd, A.r_min, A.r_max);
-
-	//float k_2 = 10.0f * PI / 168.0f, k_22 = k_2 * k_2;
-	//float ta = (2.0f * math::sqrt(VAR_Psi)) / (PI * float(g_NumPhotonEmittedSurface2) * E_pl * k_22 * E_I * E_I);
-	//float q = math::pow(ta, 1.0f / 6.0f) * math::pow(iteration, -1.0f / 6.0f);
-	//float p = 1.9635f * math::sqrt(VAR_Lapl) * math::pow(iteration, -1.0f / 8.0f);
-	//ent.r = math::clamp(q, A.r_min, A.r_max);
-
 	//Adaptive Progressive Photon Mapping Implementation
 	bool hasGlossy = mat->bsdf.hasComponent(EGlossy);
 	auto bsdf_diffuse = Spectrum(1);
@@ -363,14 +354,15 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const NormalizedT<Vec3
 		bsdf_diffuse = mat->bsdf.f(bRec);
 		bRec.wi = wi_l;
 	}
+
 	auto ent = A(x, y).m_surfaceData;
 	float r = iteration <= 1 ? A.r_max / 5.0f : ent.compute_r<2>(iteration - 1, numPhotonsEmittedSurf, numPhotonsEmittedSurf * (iteration - 1), [](const DerivativeCollection<1>& gr) {return Lapl(gr); }),
 		  rd = iteration <= 1 ? a_rSurfaceUNUSED : ent.compute_rd(iteration - 1, numPhotonsEmittedSurf, numPhotonsEmittedSurf * (iteration - 1));
-
 	r = math::clamp(r != -1.0f ? r : a_rSurfaceUNUSED, A.r_min, A.r_max);
 	rd = math::clamp(rd != -1.0f ? rd : a_rSurfaceUNUSED, A.r_min, A.r_max);
 	rd = a_rSurfaceUNUSED;
 	//r = rd = a_rSurfaceUNUSED;
+
 	Vec3f ur = bRec.dg.sys.t * rd, vr = bRec.dg.sys.s * rd;
 	float r_max = max(2 * rd, r);
 	Vec3f a = r_max*(-bRec.dg.sys.t - bRec.dg.sys.s) + bRec.dg.P, b = r_max*(bRec.dg.sys.t - bRec.dg.sys.s) + bRec.dg.P, 
@@ -413,6 +405,7 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const NormalizedT<Vec3
 	atomicAdd(&g_Sum_Photons_Touched2, math::sqr(numPhotonsTouched));
 	atomicInc(&g_NumRadEstimates, 0xffffffff);
 #endif
+
 	ent.Sum_DI.df_di[0] += Sum_DI / numPhotonsEmittedSurf;
 	auto E_DI = Lapl(ent.Sum_DI) / (float)iteration;
 	ent.Sum_E_DI += E_DI;
@@ -619,7 +612,7 @@ void PPPMTracer::DebugInternal(Image* I, const Vec2i& pixel)
 		Sum_lapl_N += lapl_N;
 		Sum_lapl_N2 += lapl_N * lapl_N;*/
 
-		L_Surface(bRec, -ray.dir(), getCurrentRadius(2), &res.getMat(), A, pixel.x, pixel.y, Spectrum(1.0f), m_uPassesDone, m_pBlockSampler->getBlockImage(), m_sSurfaceMap, m_uPhotonEmittedPassSurface, m_debugScaleVal);
+		//L_Surface(bRec, -ray.dir(), getCurrentRadius(2), &res.getMat(), A, pixel.x, pixel.y, Spectrum(1.0f), m_uPassesDone, m_pBlockSampler->getBlockImage(), m_sSurfaceMap, m_uPhotonEmittedPassSurface, m_debugScaleVal);
 		//m_adpBuffer->setOnCPU();
 		//m_adpBuffer->Synchronize();
 	}

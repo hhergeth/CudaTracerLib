@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <cuda_runtime.h>
 #include <iostream>
+#include <stdarg.h>
 
 #ifdef ISWINDOWS
 #include <Windows.h>
