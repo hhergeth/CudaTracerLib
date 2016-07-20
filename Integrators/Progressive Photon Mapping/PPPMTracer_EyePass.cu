@@ -32,7 +32,7 @@ struct ModelInitializer
 		return VolumeModel([&](int i)
 		{
 			float r = nums[i] ? vals[i] / nums[i] : r_std;
-			return APPM_QueryPointData<3, 3>(0, 0, DerivativeCollection<3>(), 0, 0, 0, r);
+			return APPM_QueryPointData<3, 3>(VarAccumulator<double>(), DerivativeCollection<3>(), VarAccumulator<double>(), 0, r);
 		});
 	}
 };
@@ -355,16 +355,15 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const NormalizedT<Vec3
 		bRec.wi = wi_l;
 	}
 
+	float r_scene = g_SceneData.m_sBox.Size().length() / 2, r_min = r_scene * 1e-3f * math::pow(iteration, -1.0f / 8.0f), r_max = r_scene * 1e-2f * math::pow(iteration, -1.0f / 8.0f);
 	auto ent = A(x, y).m_surfaceData;
-	float r = iteration <= 1 ? A.r_max / 5.0f : ent.compute_r<2>(iteration - 1, numPhotonsEmittedSurf, numPhotonsEmittedSurf * (iteration - 1), [](const DerivativeCollection<1>& gr) {return Lapl(gr); }),
-		  rd = iteration <= 1 ? a_rSurfaceUNUSED : ent.compute_rd(iteration - 1, numPhotonsEmittedSurf, numPhotonsEmittedSurf * (iteration - 1));
+	float r = iteration <= 1 ? A.r_max : ent.compute_r<2>(iteration - 1, numPhotonsEmittedSurf, numPhotonsEmittedSurf * (iteration - 1), [](const auto& gr) {return Lapl(gr); }),
+		 rd = iteration <= 2 ? r_max : ent.compute_rd(iteration - 1, numPhotonsEmittedSurf, numPhotonsEmittedSurf * (iteration - 1));
 	r = math::clamp(r != -1.0f ? r : a_rSurfaceUNUSED, A.r_min, A.r_max);
-	rd = math::clamp(rd != -1.0f ? rd : a_rSurfaceUNUSED, A.r_min, A.r_max);
-	rd = a_rSurfaceUNUSED;
-	//r = rd = a_rSurfaceUNUSED;
+	rd = math::clamp(rd, r_min, r_max);
 
 	Vec3f ur = bRec.dg.sys.t * rd, vr = bRec.dg.sys.s * rd;
-	float r_max = max(2 * rd, r);
+	r_max = max(2 * rd, r);
 	Vec3f a = r_max*(-bRec.dg.sys.t - bRec.dg.sys.s) + bRec.dg.P, b = r_max*(bRec.dg.sys.t - bRec.dg.sys.s) + bRec.dg.P, 
 		  c = r_max*(-bRec.dg.sys.t + bRec.dg.sys.s) + bRec.dg.P, d = r_max*(bRec.dg.sys.t + bRec.dg.sys.s) + bRec.dg.P;
 
@@ -383,7 +382,7 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const NormalizedT<Vec3
 			auto bsdfFactor = hasGlossy ? mat->bsdf.f(bRec) / Frame::cosTheta(bRec.wo) : bsdf_diffuse;
 			float psi = Spectrum(importance * bsdfFactor * ph.getL()).getLuminance();
 			const Vec3f e_l = bRec.dg.P - ph_pos;
-			float k_rd = Kernel::k<2>(e_l, rd);
+			float k_rd =  Kernel::k<2>(e_l, rd);
 			float laplu = Kernel::k<2>(e_l + ur, rd) + Kernel::k<2>(e_l - ur, rd) - 2 * k_rd,
 				  laplv = Kernel::k<2>(e_l + vr, rd) + Kernel::k<2>(e_l - vr, rd) - 2 * k_rd,
 				  lapl = psi / (rd * rd) * (laplu + laplv);
@@ -393,8 +392,8 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const NormalizedT<Vec3
 			{
 				float kri = Kernel::k<2>(math::sqrt(dist2), r);
 				Lp += kri * ph.getL() / float(numPhotonsEmittedSurf) * bsdfFactor;
-				Sum_psi += psi;
-				Sum_psi2 += math::sqr(psi);
+				ent.psi += psi;
+				ent.num_psi++;
 				ent.Sum_pl += kri;
 				n_psi++;
 			}
@@ -406,15 +405,9 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const NormalizedT<Vec3
 	atomicInc(&g_NumRadEstimates, 0xffffffff);
 #endif
 
-	ent.Sum_DI.df_di[0] += Sum_DI / numPhotonsEmittedSurf;
-	auto E_DI = Lapl(ent.Sum_DI) / (float)iteration;
-	ent.Sum_E_DI += E_DI;
-	ent.Sum_E_DI2 += math::sqr(E_DI);
-	if(n_psi != 0)
-	{
-		ent.Sum_psi += Sum_psi / n_psi;
-		ent.Sum_psi2 += Sum_psi2 / n_psi;
-	}
+	ent.Sum_DI.df_di[0] += Sum_DI;
+	auto E_DI = Lapl(ent.Sum_DI) / (float)(iteration * numPhotonsEmittedSurf);
+	ent.E_DI += E_DI;
 
 #ifdef ISCUDA
 	A(x, y).m_surfaceData = ent;
@@ -694,7 +687,7 @@ template<typename VolEstimator> __global__ void k_PerPixelRadiusEst(Vec2i off, i
 					density += Kernel::k<2>(math::sqrt(dist2), search_rad_surf);
 			});
 #endif
-			pixleInfo.m_surfaceData.r_std = math::sqrt(k_toFindSurf / (PI * density));
+			pixleInfo.m_surfaceData.r_std = density != 0.0f ? math::sqrt(k_toFindSurf / (PI * density)) : r_surface;
 
 			//compute volume query radii
 			float tmin, tmax;

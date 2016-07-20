@@ -49,72 +49,73 @@ CUDA_FUNC_IN static float Lapl(const DerivativeCollection<3>& der, const Frame& 
 	return sum;
 }
 
-template<int DIM_RD PP_COMMA int NUM_DERIV> struct APPM_QueryPointData
+template<int DIM_RD, int NUM_DERIV> struct APPM_QueryPointData
 {
-	float Sum_psi, Sum_psi2;
+	VarAccumulator<double> psi;
 	DerivativeCollection<NUM_DERIV> Sum_DI;
-	float Sum_E_DI, Sum_E_DI2;
+	VarAccumulator<double> E_DI;
 	float Sum_pl;
 	float r_std;
+	float num_psi;
 
 	CUDA_FUNC_IN APPM_QueryPointData()
+		: Sum_pl(0), r_std(0), num_psi(0)
 	{
 
 	}
 
-	CUDA_FUNC_IN APPM_QueryPointData(float psi, float psi2, const DerivativeCollection<NUM_DERIV>& di, float di1, float di2, float pl, float r)
-		: Sum_psi(psi), Sum_psi2(psi2), Sum_DI(di), Sum_E_DI(di1), Sum_E_DI2(di2), Sum_pl(pl), r_std(r)
+	CUDA_FUNC_IN APPM_QueryPointData(const VarAccumulator<double>& psi, const DerivativeCollection<NUM_DERIV>& di, const VarAccumulator<double>& E_di, float pl, float r)
+		: psi(psi), Sum_DI(di), E_DI(E_di), Sum_pl(pl), r_std(r), num_psi(0)
 	{
 
 	}
 
 	CUDA_FUNC_IN float compute_rd(int iteration, int J, int totalPhotons)
 	{
-		float VAR_Lapl = Sum_E_DI2 / iteration - math::sqr(Sum_E_DI / iteration);
+		float VAR_Lapl = (float)E_DI.Var(iteration);
 		if (VAR_Lapl <= 0) return -1.0f;
 		const float alpha = Kernel::alpha<DIM_RD>(), alpha2 = alpha * alpha, beta = Kernel::beta<DIM_RD>();
 		const float L = extract_val<DIM_RD - 1>({3.0f / (8.0f * 1.77245f), 1.0f / (2.0f * PI), 15.0f / (32.0f * 5.56833f)});//0 based indexing
-		const float c = math::pow(DIM_RD * beta * 1.0f / alpha2 * 1.0f / L * 1.0f / iteration, 1.0f / (DIM_RD + 4));
+		const float c = math::pow(DIM_RD * beta * 1.0f / alpha2 * 1.0f / L * 1.0f / iteration, 1.0f / 8);//Kaplanyan argues not to use (DIM_RD + 4) because this is the shrinkage rate of r
 		return math::sqrt(VAR_Lapl) * c;
 	}
 
 	template<int DIM_R, typename F> CUDA_FUNC_IN float compute_r(int iteration, int J, int totalPhotons, const F& clb)
 	{
-		float VAR_Psi = Sum_psi2 / iteration - math::sqr(Sum_psi / iteration);
+		auto VAR_Psi = psi.Var(num_psi);
 		float k_2 = Kernel::alpha<DIM_R>(), k_22 = k_2 * k_2;
-		float E_pl = Sum_pl / iteration;//Kaplanyan claims this should be 1 / (N * J)
-		float E_DI = clb(Sum_DI / (float)iteration);
-		float nom = (2.0f * math::sqrt(VAR_Psi)), denom = (KernelBase<1, 2, 3>::c_d<DIM_R>() * J * E_pl * k_22 * math::sqr(E_DI) * iteration);
+		auto E_pl = (double)Sum_pl / totalPhotons;
+		auto E_DI = clb(Sum_DI / totalPhotons);
+		auto nom = (2 * VAR_Psi), denom = (KernelBase<1, 2, 3>::c_d<DIM_R>() * J * E_pl * k_22 * math::sqr(E_DI) * iteration);
 		if (nom <= 0 || denom <= 0) return -1.0f;
-		return math::pow(nom / denom, 1.0f / 6.0f);
+		return (float)pow(nom / denom, 1.0f / 6.0f);
 	}
 
 #define DCL_OP(OP) \
 	CUDA_FUNC_IN APPM_QueryPointData operator OP (const APPM_QueryPointData& rhs) const \
 	{ \
-		return APPM_QueryPointData(Sum_psi OP rhs.Sum_psi, Sum_psi2 OP rhs.Sum_psi2, Sum_DI OP rhs.Sum_DI, Sum_E_DI OP rhs.Sum_E_DI, Sum_E_DI2 OP rhs.Sum_E_DI2, Sum_pl OP rhs.Sum_pl, r_std OP rhs.r_std); \
+		return APPM_QueryPointData(psi OP rhs.psi, Sum_DI OP rhs.Sum_DI, E_DI OP rhs.E_DI, Sum_pl OP rhs.Sum_pl, r_std OP rhs.r_std); \
 	}
 
 	DCL_OP(+)
 	DCL_OP(-)
 	DCL_OP(*)
+#undef  DCL_OP
 
 	CUDA_FUNC_IN APPM_QueryPointData operator*(float f) const
 	{
-		return APPM_QueryPointData(Sum_psi * f, Sum_psi2 * f, Sum_DI * f, Sum_E_DI * f, Sum_E_DI2 * f, Sum_pl * f, r_std * f);
+		return APPM_QueryPointData(psi * f, Sum_DI * f, E_DI * f, Sum_pl * f, r_std * f);
 	}
 
 	CUDA_FUNC_IN static APPM_QueryPointData Zero()
 	{
-		return APPM_QueryPointData(0, 0, 0, 0, 0, 0, 0);
+		return APPM_QueryPointData(VarAccumulator<double>(), 0, VarAccumulator<double>(), 0, 0);
 	}
 
 	CUDA_FUNC_IN float Sum() const
 	{
-		return Sum_pl;//Sum_psi + Sum_psi2 + Sum_DI + Sum_E_DI + Sum_E_DI2 + 
+		return Sum_pl;
 	}
-
-#undef  DCL_OP
 };
 
 #define NUM_VOL_MODEL_BINS 8

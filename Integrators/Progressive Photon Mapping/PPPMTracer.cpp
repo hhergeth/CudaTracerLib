@@ -102,10 +102,6 @@ void PPPMTracer::DoRender(Image* I)
 	{
 		auto timer = START_PERF_BLOCK("Camera Pass");
 		Tracer<true, true>::DoRender(I);
-		//DebugInternal(I, Vec2i(481, 240));
-		//DebugInternal(I, Vec2i(323, 309));
-		//DebugInternal(I, Vec2i(573, 508));
-		//std::cout << getCurrentRadius(2) << "\n";
 	}
 }
 
@@ -124,15 +120,16 @@ std::map<std::string, pixel_variant> PPPMTracer::getPixelInfo(int x, int y) cons
 {
 	APPM_PixelData pixelInfo = m_pAdpBuffer->operator()(x, y);
 	auto e = pixelInfo.m_surfaceData;
-	auto r = e.compute_r<2>((int)m_uPassesDone, (int)m_sSurfaceMap.getNumEntries(), (int)m_uTotalPhotonsEmitted, [&](auto gr) {return Lapl(gr); });
+	auto r = e.compute_r<2>((int)m_uPassesDone, m_uPhotonEmittedPassSurface, (int)m_uTotalPhotonsEmitted, [&](auto gr) {return Lapl(gr); });
 	auto rd = e.compute_rd(m_uPassesDone, m_uPhotonEmittedPassSurface, m_uPhotonEmittedPassSurface * (m_uPassesDone - 1));
 
 	auto res = std::map<std::string, pixel_variant>();
 	res["S[DI]"] = pixel_variant(Lapl(e.Sum_DI));
-	res["S[E[DI]]"] = pixel_variant(e.Sum_E_DI);
-	res["S[E[DI]^2]"] = pixel_variant(e.Sum_E_DI2);
-	res["S[psi]"] = pixel_variant(e.Sum_psi);
-	res["S[psi^2]"] = pixel_variant(e.Sum_psi2);
+	res["S[E[DI]]"] = pixel_variant((float)e.E_DI.Sum_X);
+	res["S[E[DI]^2]"] = pixel_variant((float)e.E_DI.Sum_X2);
+	res["S[psi]"] = pixel_variant((float)e.psi.Sum_X);
+	res["S[psi^2]"] = pixel_variant((float)e.psi.Sum_X2);
+	res["num_psi"] = pixel_variant((float)e.num_psi);
 	res["S[pl]"] = pixel_variant(e.Sum_pl);
 	auto r_k_nn = CudaTracerLib::getCurrentRadius(e.r_std, m_uPassesDone, 2), r_uni = getCurrentRadius(2, true);
 	res["r_knn"] = pixel_variant(r_k_nn);
