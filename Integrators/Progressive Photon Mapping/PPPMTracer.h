@@ -33,10 +33,10 @@ private:
 
 enum
 {
-	PPM_Photons_Per_Thread = 12,
+	PPM_Photons_Per_Thread = 6,
 	PPM_BlockX = 32,
 	PPM_BlockY = 6,
-	PPM_MaxRecursion = 6,
+	PPM_MaxRecursion = 12,
 
 	PPM_photons_per_block = PPM_Photons_Per_Thread * PPM_BlockX * PPM_BlockY,
 	PPM_slots_per_thread = PPM_Photons_Per_Thread * PPM_MaxRecursion,
