@@ -12,23 +12,58 @@
 
 namespace CudaTracerLib {
 
+CUDA_DEVICE CUDA_HOST void ComputeMinMaxRadiusForScene(const AABB& box, float& rmin, float& rmax);
+
 struct k_AdaptiveStruct
 {
-	float r_min;
-	float r_max;
+private:
+	//stores the radii for dim 1,2,3 and the lapl reduction
+	float r_min[4];
+	float r_max[4];
 	int w;
-	k_AdaptiveStruct(float rmin, float rmax, const BlockLoclizedCudaBuffer<APPM_PixelData> entBuf, int w, int m_uPassesDone)
+	BlockLoclizedCudaBuffer<APPM_PixelData> E;
+public:
+	k_AdaptiveStruct(const AABB& box, const BlockLoclizedCudaBuffer<APPM_PixelData> entBuf, int w, int m_uPassesDone)
 		: w(w), E(entBuf)
 	{
-		r_min = rmin * math::pow(float(m_uPassesDone), -1.0f / 6.0f);
-		r_max = rmax * math::pow(float(m_uPassesDone), -1.0f / 6.0f);
+		float rmin, rmax;
+		ComputeMinMaxRadiusForScene(box, rmin, rmax);
+		for (int i = 5; i <= 8; i++)
+		{
+			auto N_i = math::pow(m_uPassesDone, -1.0f / i);
+			r_min[i - 5] = rmin * N_i;
+			r_max[i - 5] = rmax * N_i;
+		}
 	}
 	CUDA_FUNC_IN APPM_PixelData& operator()(int x, int y)
 	{
 		return E(x, y);
 	}
-private:
-	BlockLoclizedCudaBuffer<APPM_PixelData> E;
+	template<int DIM> CUDA_FUNC_IN float getMinRad() const
+	{
+		return r_min[DIM - 1];
+	}
+	template<int DIM> CUDA_FUNC_IN float getMaxRad() const
+	{
+		return r_max[DIM - 1];
+	}
+	CUDA_FUNC_IN float getMinRadDeriv() const
+	{
+		return r_min[3];
+	}
+	CUDA_FUNC_IN float getMaxRadDeriv() const
+	{
+		return r_max[3];
+	}
+
+	template<int DIM> CUDA_FUNC_IN float clampRadius(float rad) const
+	{
+		return math::clamp(rad, getMinRad<2>(), getMaxRad<2>());
+	}
+	CUDA_FUNC_IN float clampRadiusDeriv(float rad) const
+	{
+		return math::clamp(rad, getMinRadDeriv(), getMaxRadDeriv());
+	}
 };
 
 enum
@@ -62,10 +97,8 @@ private:
 
 	//adaptive data
 	BlockLoclizedCudaBuffer<APPM_PixelData>* m_pAdpBuffer;
-	float r_min, r_max;
 
 	//used when computing intial radius from density
-	float m_fIntitalRadMin, m_fIntitalRadMax;
 	bool m_useDirectLighting;
 	float m_fProbSurface, m_fProbVolume;
 	float m_debugScaleVal;
@@ -88,11 +121,7 @@ public:
 		return getCurrentRadius(exp, false);
 	}
 	float getCurrentRadius(float exp, bool surf) const;
-	void getCurrentRMinRMax(float& rMin, float& rMax) const
-	{
-		rMin = CudaTracerLib::getCurrentRadius(r_min, m_uPassesDone, 2);
-		rMax = CudaTracerLib::getCurrentRadius(r_max, m_uPassesDone, 2);
-	}
+	void getCurrentRMinRMax(float& rMin, float& rMax) const;
 	float& getDebugScaleVal()
 	{
 		return m_debugScaleVal;
@@ -117,6 +146,7 @@ protected:
 private:
 	CTL_EXPORT void doPhotonPass(Image* I);
 	CTL_EXPORT void doPerPixelRadiusEstimation();
+	CTL_EXPORT k_AdaptiveStruct getAdaptiveData();
 };
 
 }

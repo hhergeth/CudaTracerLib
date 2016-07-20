@@ -9,6 +9,13 @@
 
 namespace CudaTracerLib {
 
+void ComputeMinMaxRadiusForScene(const AABB& box, float& rmin, float& rmax)
+{
+	auto r_scene = box.Size().length() / 2;
+	rmin = r_scene * 1e-3f;
+	rmax = r_scene * 2e-2f;
+}
+
 unsigned int ComputePhotonBlocksPerPass()
 {
 #ifdef CUDA_RELEASE_BUILD
@@ -102,6 +109,18 @@ void PPPMTracer::DoRender(Image* I)
 	{
 		auto timer = START_PERF_BLOCK("Camera Pass");
 		Tracer<true, true>::DoRender(I);
+void PPPMTracer::getCurrentRMinRMax(float& rMin, float& rMax) const
+{
+	float rmin, rmax;
+	ComputeMinMaxRadiusForScene(m_pScene->getSceneBox(), rmin, rmax);
+	rMin = CudaTracerLib::getCurrentRadius(rmin, m_uPassesDone, 2);
+	rMax = CudaTracerLib::getCurrentRadius(rmax, m_uPassesDone, 2);
+}
+
+k_AdaptiveStruct PPPMTracer::getAdaptiveData()
+{
+	return k_AdaptiveStruct(m_pScene->getSceneBox(), *m_pAdpBuffer, w, m_uPassesDone);
+}
 	}
 }
 
@@ -184,10 +203,6 @@ void PPPMTracer::StartNewTrace(Image* I)
 	if (m_sParameters.getValue(KEY_FinalGathering()))
 		m_sSurfaceMapCaustic->SetSceneDimensions(m_sEyeBox);
 	m_pVolumeEstimator->StartNewRendering(volBox);
-
-	float r_scene = m_sEyeBox.Size().length() / 2;
-	r_min = 1e-6f * r_scene;
-	r_max = 2e-2f * r_scene;
 }
 
 }

@@ -355,15 +355,14 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const NormalizedT<Vec3
 		bRec.wi = wi_l;
 	}
 
-	float r_scene = g_SceneData.m_sBox.Size().length() / 2, r_min = r_scene * 1e-3f * math::pow(iteration, -1.0f / 8.0f), r_max = r_scene * 1e-2f * math::pow(iteration, -1.0f / 8.0f);
 	auto ent = A(x, y).m_surfaceData;
-	float r = iteration <= 1 ? A.r_max : ent.compute_r<2>(iteration - 1, numPhotonsEmittedSurf, numPhotonsEmittedSurf * (iteration - 1), [](const auto& gr) {return Lapl(gr); }),
-		 rd = iteration <= 2 ? r_max : ent.compute_rd(iteration - 1, numPhotonsEmittedSurf, numPhotonsEmittedSurf * (iteration - 1));
-	r = math::clamp(r != -1.0f ? r : a_rSurfaceUNUSED, A.r_min, A.r_max);
-	rd = math::clamp(rd, r_min, r_max);
+	float r = iteration <= 1 ? A.getMaxRad<2>() : ent.compute_r<2>(iteration - 1, numPhotonsEmittedSurf, numPhotonsEmittedSurf * (iteration - 1), [](const auto& gr) {return Lapl(gr); }),
+		 rd = iteration <= 2 ? A.getMaxRadDeriv() : ent.compute_rd(iteration - 1, numPhotonsEmittedSurf, numPhotonsEmittedSurf * (iteration - 1));
+	r = A.clampRadius<2>(r != -1.0f ? r : a_rSurfaceUNUSED);
+	rd = A.clampRadiusDeriv(rd);
 
 	Vec3f ur = bRec.dg.sys.t * rd, vr = bRec.dg.sys.s * rd;
-	r_max = max(2 * rd, r);
+	auto r_max = max(2 * rd, r);
 	Vec3f a = r_max*(-bRec.dg.sys.t - bRec.dg.sys.s) + bRec.dg.P, b = r_max*(bRec.dg.sys.t - bRec.dg.sys.s) + bRec.dg.P, 
 		  c = r_max*(-bRec.dg.sys.t + bRec.dg.sys.s) + bRec.dg.P, d = r_max*(bRec.dg.sys.t + bRec.dg.sys.s) + bRec.dg.P;
 
@@ -499,7 +498,7 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 					L_r = L_Surface(bRec, -r.dir(), a_rSurface, &r2.getMat(), a_AdpEntries, pixel.x, pixel.y, throughput, a_PassIndex, img, g_SurfMap, g_NumPhotonEmittedSurface2, debugScaleVal);
 				else
 				{
-					float rad = math::clamp(getCurrentRadius(adp_ent.m_surfaceData.r_std, a_PassIndex, 2), a_AdpEntries.r_min, a_AdpEntries.r_max);
+					float rad = a_AdpEntries.clampRadius<2>(getCurrentRadius(adp_ent.m_surfaceData.r_std, a_PassIndex, 2));
 					float r_i = Radius_Type == PPM_Radius_Type::kNN ? rad : a_rSurface;
 					L_r = finalGathering ? L_SurfaceFinalGathering(bRec, -r.dir(), r_i, r2, rng, DIRECT, g_NumPhotonEmittedSurface2) : 
 										   L_Surface(bRec, -r.dir(), r_i, r2.getMat(), g_NumPhotonEmittedSurface2);
@@ -630,7 +629,7 @@ void PPPMTracer::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 
 	//not starting the block will lead to (correct) warnings due to no a
 	m_pAdpBuffer->StartBlock(x, y, radiusType != PPM_Radius_Type::Constant);
-	k_AdaptiveStruct A(r_min, r_max, *m_pAdpBuffer, w, m_uPassesDone);
+	k_AdaptiveStruct A = getAdaptiveData();
 	Vec2i off = Vec2i(x, y);
 	BlockSampleImage img = m_pBlockSampler->getBlockImage();
 
@@ -646,15 +645,7 @@ void PPPMTracer::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 		m_pAdpBuffer->EndBlock();
 }
 
-CUDA_DEVICE int g_MaxRad, g_MinRad;
-CUDA_FUNC_IN int floatToOrderedInt(float floatVal) {
-	int intVal = float_as_int_(floatVal);
-	return (intVal >= 0) ? intVal : intVal ^ 0x7FFFFFFF;
-}
-CUDA_FUNC_IN float orderedIntToFloat(int intVal) {
-	return int_as_float_((intVal >= 0) ? intVal : intVal ^ 0x7FFFFFFF);
-}
-template<typename VolEstimator> __global__ void k_PerPixelRadiusEst(Vec2i off, int w, int h, float r_max, float r_surface, float r_volume, float numEmitted, k_AdaptiveStruct adpt, float k_toFindSurf, float k_toFindVol)
+template<typename VolEstimator> __global__ void k_PerPixelRadiusEst(Vec2i off, int w, int h, float r_surface, float r_volume, float numEmitted, k_AdaptiveStruct adpt, float k_toFindSurf, float k_toFindVol)
 {
 	Vec2i pixel = TracerBase::getPixelPos(off.x, off.y);
 	auto& pixleInfo = adpt(pixel.x, pixel.y);
@@ -721,17 +712,12 @@ template<typename VolEstimator> __global__ void k_PerPixelRadiusEst(Vec2i off, i
 
 			
 		}
-		atomicMin(&g_MinRad, floatToOrderedInt(pixleInfo.m_surfaceData.r_std));
-		atomicMax(&g_MaxRad, floatToOrderedInt(pixleInfo.m_surfaceData.r_std));
 		g_SamplerData(rng);
 	}
 }
 
 void PPPMTracer::doPerPixelRadiusEstimation()
 {
-	int a = floatToOrderedInt(FLT_MAX), b = floatToOrderedInt(0);
-	ThrowCudaErrors(cudaMemcpyToSymbol(g_MaxRad, &b, sizeof(b)));
-	ThrowCudaErrors(cudaMemcpyToSymbol(g_MinRad, &a, sizeof(a)));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_SurfMap, &m_sSurfaceMap, sizeof(m_sSurfaceMap)));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_VolEstimator2, m_pVolumeEstimator, m_pVolumeEstimator->getSize()));
 	float k_toFindSurf = m_sParameters.getValue(KEY_kNN_Neighboor_Num_Surf()),
@@ -740,20 +726,15 @@ void PPPMTracer::doPerPixelRadiusEstimation()
 	IterateAllBlocks(w, h, [&](int x, int y, int, int)
 	{
 		m_pAdpBuffer->StartBlock(x, y);
-		auto A = k_AdaptiveStruct(r_min, r_max, *m_pAdpBuffer, w, m_uPassesDone);//keeps a copy of m_pAdpBuffer!
+		auto A = getAdaptiveData();//keeps a copy of m_pAdpBuffer!
 		if (dynamic_cast<BeamGrid*>(m_pVolumeEstimator))
-			k_PerPixelRadiusEst<BeamGrid> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(Vec2i(x, y), w, h, r_max * 0.1f, m_fInitialRadiusSurf, m_fInitialRadiusVol, (float)m_uPhotonEmittedPassVolume, A, k_toFindSurf, k_toFindVol);
+			k_PerPixelRadiusEst<BeamGrid> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(Vec2i(x, y), w, h, m_fInitialRadiusSurf, m_fInitialRadiusVol, (float)m_uPhotonEmittedPassVolume, A, k_toFindSurf, k_toFindVol);
 		else if (dynamic_cast<PointStorage*>(m_pVolumeEstimator))
-			k_PerPixelRadiusEst<PointStorage> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(Vec2i(x, y), w, h, r_max * 0.1f, m_fInitialRadiusSurf, m_fInitialRadiusVol, (float)m_uPhotonEmittedPassVolume, A, k_toFindSurf, k_toFindVol);
+			k_PerPixelRadiusEst<PointStorage> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(Vec2i(x, y), w, h, m_fInitialRadiusSurf, m_fInitialRadiusVol, (float)m_uPhotonEmittedPassVolume, A, k_toFindSurf, k_toFindVol);
 		else if (dynamic_cast<BeamBeamGrid*>(m_pVolumeEstimator))
-			k_PerPixelRadiusEst<BeamBeamGrid> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(Vec2i(x, y), w, h, r_max * 0.1f, m_fInitialRadiusSurf, m_fInitialRadiusVol, (float)m_uPhotonEmittedPassVolume, A, k_toFindSurf, k_toFindVol);
+			k_PerPixelRadiusEst<BeamBeamGrid> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(Vec2i(x, y), w, h, m_fInitialRadiusSurf, m_fInitialRadiusVol, (float)m_uPhotonEmittedPassVolume, A, k_toFindSurf, k_toFindVol);
 		m_pAdpBuffer->EndBlock();
 	});
-
-	ThrowCudaErrors(cudaMemcpyFromSymbol(&a, g_MinRad, sizeof(a)));
-	ThrowCudaErrors(cudaMemcpyFromSymbol(&b, g_MaxRad, sizeof(b)));
-	m_fIntitalRadMin = orderedIntToFloat(a);
-	m_fIntitalRadMax = orderedIntToFloat(b);
 }
 
 }
