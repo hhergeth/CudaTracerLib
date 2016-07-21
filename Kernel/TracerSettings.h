@@ -75,7 +75,7 @@ public:
 	}
 	virtual bool isValid(const T& obj) const
 	{
-		return std::find(elements.begin(), elements.end(), obj) != elements.begin();
+		return std::find(elements.begin(), elements.end(), obj) != elements.end();
 	}
 };
 
@@ -155,7 +155,19 @@ template<> struct EnumConverter<NAME> \
   } \
 };
 
-template<typename T> class EnumTracerParameter : public TracerParameter<T>
+class IEnumTracerParameter
+{
+public:
+	virtual ~IEnumTracerParameter()
+	{
+		
+	}
+	virtual const std::string& getStringValue() const = 0;
+	virtual void setStringValue(const std::string& strVal) = 0;
+	virtual std::vector<std::string> getStringValues() const = 0;
+};
+
+template<typename T> class EnumTracerParameter : public TracerParameter<T>, public IEnumTracerParameter
 {
 	IParameterConstraint<T>* createConstraint() const
 	{
@@ -170,19 +182,22 @@ public:
 	{
 
 	}
+	virtual ~EnumTracerParameter()
+	{
+	}
 
-	const std::string& getStringValue() const
+	virtual const std::string& getStringValue() const
 	{
 		return EnumConverter<T>::ToString(TracerParameter<T>::getValue());
 	}
 
-	void setStringValue(const std::string& strVal)
+	virtual void setStringValue(const std::string& strVal)
 	{
 		T val = EnumConverter<T>::FromString(strVal);
 		TracerParameter<T>::setValue(val);
 	}
 
-	std::vector<std::string> getStringValues() const
+	virtual std::vector<std::string> getStringValues() const
 	{
 		std::vector<std::string> e;
 		EnumConverter<T>::enumerateEntries([&](T val, const std::string& strVal){ e.push_back(strVal); });
@@ -259,7 +274,7 @@ public:
 		for (auto& i : parameter)
 			delete i.second;
 	}
-	void iterate(std::function<void(const std::string&, ITracerParameter*)>& f) const
+	void iterate(const std::function<void(const std::string&, ITracerParameter*)>& f) const
 	{
 		for (auto& i : parameter)
 		{

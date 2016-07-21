@@ -17,7 +17,7 @@ public:
 		m_sParameters << KEY_UseMis() << CreateSetBool(true)
 					  << KEY_Force_s() << CreateInterval<int>(-1, -1, INT_MAX)
 					  << KEY_Force_t() << CreateInterval<int>(-1, -1, INT_MAX)
-					  << KEY_ResultMultiplier() << CreateParameter(1.0f);
+					  << KEY_ResultMultiplier() << CreateInterval(1.0f, -FLT_MAX, FLT_MAX);
 	}
 protected:
 	CTL_EXPORT virtual void RenderBlock(Image* I, int x, int y, int blockW, int blockH);
