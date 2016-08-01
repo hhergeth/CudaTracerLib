@@ -16,17 +16,17 @@ struct ParticleProcessHandler
 
 	}
 
-	CUDA_FUNC_IN void handleSurfaceInteraction(const Spectrum& weight, const TraceResult& res, BSDFSamplingRecord& bRec, const TraceResult& r2, bool lastBssrdf)
+	CUDA_FUNC_IN void handleSurfaceInteraction(const Spectrum& weight, float accum_pdf, const Spectrum& last_f, const TraceResult& res, BSDFSamplingRecord& bRec, const TraceResult& r2, bool lastBssrdf)
 	{
 
 	}
 
-	CUDA_FUNC_IN void handleMediumSampling(const Spectrum& weight, const NormalizedT<Ray>& r, const TraceResult& r2, const MediumSamplingRecord& mRec, bool sampleInMedium, const VolumeRegion* bssrdf)
+	CUDA_FUNC_IN void handleMediumSampling(const Spectrum& weight, float accum_pdf, const Spectrum& last_f, const NormalizedT<Ray>& r, const TraceResult& r2, const MediumSamplingRecord& mRec, bool sampleInMedium, const VolumeRegion* bssrdf)
 	{
 
 	}
 
-	CUDA_FUNC_IN void handleMediumInteraction(const Spectrum& weight, const MediumSamplingRecord& mRec, const NormalizedT<Vec3f>& wi, const TraceResult& r2, const VolumeRegion* bssrdf)
+	CUDA_FUNC_IN void handleMediumInteraction(const Spectrum& weight, float accum_pdf, const Spectrum& last_f, const MediumSamplingRecord& mRec, const NormalizedT<Vec3f>& wi, const TraceResult& r2, const VolumeRegion* bssrdf)
 	{
 
 	}
@@ -52,6 +52,8 @@ template<bool PARTICIPATING_MEDIA = true, bool SUBSURFACE_SCATTERING = true, typ
 	KernelAggregateVolume& V = g_SceneData.m_sVolume;
 	MediumSamplingRecord mRec;
 	const VolumeRegion* bssrdf = 0;
+	float accum_pdf = pRec.pdf * dRec.pdf;//the pdf of the complete path up to the current vertex
+	Spectrum last_f = 0.0f;
 
 	while (++depth < maxDepth && !throughput.isZero())
 	{
@@ -71,17 +73,21 @@ template<bool PARTICIPATING_MEDIA = true, bool SUBSURFACE_SCATTERING = true, typ
 
 		if (sampledDistance)
 		{
-			P.handleMediumSampling(power * throughput, r, r2, mRec, distInMedium, bssrdf);
+			P.handleMediumSampling(power * throughput, accum_pdf, last_f, r, r2, mRec, distInMedium, bssrdf);
 		}
 
 		if (distInMedium)
 		{
 			throughput *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
-			P.handleMediumInteraction(power * throughput, mRec, -r.dir(), r2, bssrdf);
+			accum_pdf *= mRec.pdfSuccess;
+			P.handleMediumInteraction(power * throughput, accum_pdf, last_f, mRec, -r.dir(), r2, bssrdf);
 			PhaseFunctionSamplingRecord pfRec(-r.dir());
+			float pdf;
 			if (bssrdf)
-				throughput *= bssrdf->As()->Func.Sample(pfRec, rng.randomFloat2());
-			else throughput *= V.Sample(mRec.p, pfRec, rng.randomFloat2());
+				last_f = bssrdf->As()->Func.Sample(pfRec, pdf, rng.randomFloat2());
+			else last_f = V.Sample(mRec.p, pfRec, pdf, rng.randomFloat2());
+			accum_pdf *= pdf;
+			throughput *= last_f;
 			r.dir() = pfRec.wo;
 			r.ori() = mRec.p;
 		}
@@ -90,20 +96,28 @@ template<bool PARTICIPATING_MEDIA = true, bool SUBSURFACE_SCATTERING = true, typ
 		else
 		{
 			if (sampledDistance)
+			{
 				throughput *= mRec.transmittance / mRec.pdfFailure;
+				accum_pdf *= mRec.pdfFailure;
+			}
 			auto wo = bssrdf ? -r.dir() : r.dir();
 			Spectrum f_i = power * throughput;
 			r2.getBsdfSample(wo, r(r2.m_fDist), bRec, ETransportMode::EImportance, &f_i);
-			Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());//do it before calling to handler to make the sampling type available to the handler
+			float pdf;
+			Spectrum f = r2.getMat().bsdf.sample(bRec, pdf, rng.randomFloat2());//do it before calling to handler to make the sampling type available to the handler
 			auto woSave = bRec.wo;
-			P.handleSurfaceInteraction(power * throughput, r, r2, bRec, !!bssrdf);
+			P.handleSurfaceInteraction(power * throughput, accum_pdf, last_f, r, r2, bRec, !!bssrdf);
+			last_f = f;
 			bRec.wo = woSave;
 			if (SUBSURFACE_SCATTERING && !bssrdf && r2.getMat().GetBSSRDF(bRec.dg, &bssrdf))
 				bRec.wo.z *= -1.0f;
 			else
 			{
 				if (!bssrdf)
+				{
 					throughput *= f;
+					accum_pdf *= pdf;
+				}
 				bssrdf = 0;
 			}
 			if (throughput.isZero())
@@ -115,6 +129,7 @@ template<bool PARTICIPATING_MEDIA = true, bool SUBSURFACE_SCATTERING = true, typ
 				if (rng.randomFloat() >= q)
 					break;
 				throughput /= q;
+				accum_pdf *= q;
 			}
 
 			r = NormalizedT<Ray>(bRec.dg.P, bRec.getOutgoing());
