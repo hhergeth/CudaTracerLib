@@ -21,12 +21,12 @@ struct ParticleProcessHandler
 
 	}
 
-	template<bool BSSRDF> CUDA_FUNC_IN void handleMediumSampling(const Spectrum& weight, const NormalizedT<Ray>& r, const TraceResult& r2, const MediumSamplingRecord& mRec, bool sampleInMedium)
+	CUDA_FUNC_IN void handleMediumSampling(const Spectrum& weight, const NormalizedT<Ray>& r, const TraceResult& r2, const MediumSamplingRecord& mRec, bool sampleInMedium, const VolumeRegion* bssrdf)
 	{
 
 	}
 
-	template<bool BSSRDF> CUDA_FUNC_IN void handleMediumInteraction(const Spectrum& weight, const MediumSamplingRecord& mRec, const NormalizedT<Vec3f>& wi, const TraceResult& r2)
+	CUDA_FUNC_IN void handleMediumInteraction(const Spectrum& weight, const MediumSamplingRecord& mRec, const NormalizedT<Vec3f>& wi, const TraceResult& r2, const VolumeRegion* bssrdf)
 	{
 
 	}
@@ -71,17 +71,13 @@ template<bool PARTICIPATING_MEDIA = true, bool SUBSURFACE_SCATTERING = true, typ
 
 		if (sampledDistance)
 		{
-			if (bssrdf != 0)
-				P.template handleMediumSampling<true>(power * throughput, r, r2, mRec, distInMedium);
-			else P.template handleMediumSampling<false>(power * throughput, r, r2, mRec, distInMedium);
+			P.handleMediumSampling(power * throughput, r, r2, mRec, distInMedium, bssrdf);
 		}
 
 		if (distInMedium)
 		{
 			throughput *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
-			if (bssrdf != 0)
-				P.template handleMediumInteraction<true>(power * throughput, mRec, -r.dir(), r2);
-			else P.template handleMediumInteraction<false>(power * throughput, mRec, -r.dir(), r2);
+			P.handleMediumInteraction(power * throughput, mRec, -r.dir(), r2, bssrdf);
 			PhaseFunctionSamplingRecord pfRec(-r.dir());
 			if (bssrdf)
 				throughput *= bssrdf->As()->Func.Sample(pfRec, rng.randomFloat2());

@@ -96,7 +96,7 @@ template<typename VolEstimator> struct PPPMPhotonParticleProcessHandler
 		numSurfaceInteractions++;
 	}
 
-	template<bool BSSRDF> CUDA_FUNC_IN void handleMediumSampling(const Spectrum& weight, const NormalizedT<Ray>& r, const TraceResult& r2, const MediumSamplingRecord& mRec, bool sampleInMedium)
+	CUDA_FUNC_IN void handleMediumSampling(const Spectrum& weight, const NormalizedT<Ray>& r, const TraceResult& r2, const MediumSamplingRecord& mRec, bool sampleInMedium, const VolumeRegion* bssrdf)
 	{
 		bool storeVol = rng.randomFloat() < g_Parameters.probVolume;
 		if (storeVol && ((VolEstimator*)g_VolEstimator)->StoreBeam(Beam(r.ori(), r.dir(), r2.m_fDist, weight)) && !wasStoredVolume)
@@ -108,7 +108,7 @@ template<typename VolEstimator> struct PPPMPhotonParticleProcessHandler
 		}
 	}
 
-	template<bool BSSRDF> CUDA_FUNC_IN void handleMediumInteraction(const Spectrum& weight, MediumSamplingRecord& mRec, const NormalizedT<Vec3f>& wi, const TraceResult& r2)
+	CUDA_FUNC_IN void handleMediumInteraction(const Spectrum& weight, MediumSamplingRecord& mRec, const NormalizedT<Vec3f>& wi, const TraceResult& r2, const VolumeRegion* bssrdf)
 	{
 		delta = false;
 		bool storeVol = rng.randomFloat() < g_Parameters.probVolume;
@@ -121,7 +121,7 @@ template<typename VolEstimator> struct PPPMPhotonParticleProcessHandler
 		}
 
 		//connection to camera as in particle tracing
-		/*if (!BSSRDF)
+		/*if (!bssrdf)
 		{
 			DirectSamplingRecord dRec(mRec.p, NormalizedT<Vec3f>(0.0f));
 			Spectrum value = weight * g_SceneData.sampleAttenuatedSensorDirect(dRec, rng.randomFloat2());
