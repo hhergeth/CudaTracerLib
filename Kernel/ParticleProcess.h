@@ -16,17 +16,17 @@ struct ParticleProcessHandler
 
 	}
 
-	CUDA_FUNC_IN void handleSurfaceInteraction(const Spectrum& weight, float accum_pdf, const Spectrum& last_f, const TraceResult& res, BSDFSamplingRecord& bRec, const TraceResult& r2, bool lastBssrdf)
+	CUDA_FUNC_IN void handleSurfaceInteraction(const Spectrum& weight, float accum_pdf, const Spectrum& f, float pdf, const TraceResult& res, BSDFSamplingRecord& bRec, const TraceResult& r2, bool lastBssrdf)
 	{
 
 	}
 
-	CUDA_FUNC_IN void handleMediumSampling(const Spectrum& weight, float accum_pdf, const Spectrum& last_f, const NormalizedT<Ray>& r, const TraceResult& r2, const MediumSamplingRecord& mRec, bool sampleInMedium, const VolumeRegion* bssrdf)
+	CUDA_FUNC_IN void handleMediumSampling(const Spectrum& weight, float accum_pdf, const NormalizedT<Ray>& r, const TraceResult& r2, const MediumSamplingRecord& mRec, bool sampleInMedium, const VolumeRegion* bssrdf)
 	{
 
 	}
 
-	CUDA_FUNC_IN void handleMediumInteraction(const Spectrum& weight, float accum_pdf, const Spectrum& last_f, const MediumSamplingRecord& mRec, const NormalizedT<Vec3f>& wi, const TraceResult& r2, const VolumeRegion* bssrdf)
+	CUDA_FUNC_IN void handleMediumInteraction(const Spectrum& weight, float accum_pdf, const Spectrum& f, float pdf, const MediumSamplingRecord& mRec, const NormalizedT<Vec3f>& wi, const TraceResult& r2, const VolumeRegion* bssrdf)
 	{
 
 	}
@@ -53,7 +53,6 @@ template<bool PARTICIPATING_MEDIA = true, bool SUBSURFACE_SCATTERING = true, typ
 	MediumSamplingRecord mRec;
 	const VolumeRegion* bssrdf = 0;
 	float accum_pdf = pRec.pdf * dRec.pdf;//the pdf of the complete path up to the current vertex
-	Spectrum last_f = 0.0f;
 
 	while (++depth < maxDepth && !throughput.isZero())
 	{
@@ -73,21 +72,22 @@ template<bool PARTICIPATING_MEDIA = true, bool SUBSURFACE_SCATTERING = true, typ
 
 		if (sampledDistance)
 		{
-			P.handleMediumSampling(power * throughput, accum_pdf, last_f, r, r2, mRec, distInMedium, bssrdf);
+			P.handleMediumSampling(power * throughput, accum_pdf, r, r2, mRec, distInMedium, bssrdf);
 		}
 
 		if (distInMedium)
 		{
 			throughput *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
 			accum_pdf *= mRec.pdfSuccess;
-			P.handleMediumInteraction(power * throughput, accum_pdf, last_f, mRec, -r.dir(), r2, bssrdf);
 			PhaseFunctionSamplingRecord pfRec(-r.dir());
 			float pdf;
+			Spectrum f;
 			if (bssrdf)
-				last_f = bssrdf->As()->Func.Sample(pfRec, pdf, rng.randomFloat2());
-			else last_f = V.Sample(mRec.p, pfRec, pdf, rng.randomFloat2());
+				f = bssrdf->As()->Func.Sample(pfRec, pdf, rng.randomFloat2());
+			else f = V.Sample(mRec.p, pfRec, pdf, rng.randomFloat2());
+			P.handleMediumInteraction(power * throughput, accum_pdf, f, pdf, mRec, -r.dir(), r2, bssrdf);
 			accum_pdf *= pdf;
-			throughput *= last_f;
+			throughput *= f;
 			r.dir() = pfRec.wo;
 			r.ori() = mRec.p;
 		}
@@ -106,8 +106,7 @@ template<bool PARTICIPATING_MEDIA = true, bool SUBSURFACE_SCATTERING = true, typ
 			float pdf;
 			Spectrum f = r2.getMat().bsdf.sample(bRec, pdf, rng.randomFloat2());//do it before calling to handler to make the sampling type available to the handler
 			auto woSave = bRec.wo;
-			P.handleSurfaceInteraction(power * throughput, accum_pdf, last_f, r, r2, bRec, !!bssrdf);
-			last_f = f;
+			P.handleSurfaceInteraction(power * throughput, accum_pdf, f, pdf, r, r2, bRec, !!bssrdf);
 			bRec.wo = woSave;
 			if (SUBSURFACE_SCATTERING && !bssrdf && r2.getMat().GetBSSRDF(bRec.dg, &bssrdf))
 				bRec.wo.z *= -1.0f;
