@@ -54,8 +54,8 @@ template<typename T> class SetParameterConstraint : public IParameterConstraint<
 {
 	std::vector<T> elements;
 public:
-	template<typename... Us> SetParameterConstraint(Us... il)
-		: elements(il...)
+	SetParameterConstraint(std::initializer_list<T> vals)
+		: elements(vals)
 	{
 
 	}
@@ -215,14 +215,14 @@ template<typename T> TracerParameter<T>* CreateInterval(const T& val, const T& m
 	return new TracerParameter<T>(val, new IntervalParameterConstraint<T>(min, max));
 }
 
-template<typename T, typename... Ts> TracerParameter<T>* CreateSet(const T& val, Ts&&... il)
+template<typename T> TracerParameter<T>* CreateSet(const T& val, std::initializer_list<T> vals)
 {
-	return new TracerParameter<T>(val, new SetParameterConstraint<T>(il...));
+	return new TracerParameter<T>(val, new SetParameterConstraint<T>(vals));
 }
 
 inline TracerParameter<bool>* CreateSetBool(bool val)
 {
-	return new TracerParameter<bool>(val, new SetParameterConstraint<bool>(true, false));
+	return new TracerParameter<bool>(val, new SetParameterConstraint<bool>({ true, false }));
 }
 
 //typically this would be the ideal place to use a type as key but sadly nvcc will produce tons of warnings for multichar litearls (CUDA 7.5)
