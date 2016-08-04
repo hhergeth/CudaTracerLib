@@ -23,14 +23,14 @@ private:
 	int w;
 	BlockLoclizedCudaBuffer<APPM_PixelData> E;
 public:
-	k_AdaptiveStruct(const AABB& box, const BlockLoclizedCudaBuffer<APPM_PixelData> entBuf, int w, int m_uPassesDone)
+	k_AdaptiveStruct(const AABB& box, const BlockLoclizedCudaBuffer<APPM_PixelData>& entBuf, int w, int m_uPassesDone)
 		: w(w), E(entBuf)
 	{
 		float rmin, rmax;
 		ComputeMinMaxRadiusForScene(box, rmin, rmax);
 		for (int i = 5; i <= 8; i++)
 		{
-			auto N_i = math::pow(m_uPassesDone, -1.0f / i);
+			auto N_i = math::pow((float)m_uPassesDone, -1.0f / i);
 			r_min[i - 5] = rmin * N_i;
 			r_max[i - 5] = rmax * N_i;
 		}
@@ -116,6 +116,11 @@ public:
 	CTL_EXPORT virtual ~PPPMTracer();
 	CTL_EXPORT virtual void Resize(unsigned int _w, unsigned int _h);
 	CTL_EXPORT virtual void PrintStatus(std::vector<std::string>& a_Buf) const;
+	void getStartRadii(float& radSurf, float& radVol) const
+	{
+		radSurf = m_fInitialRadiusSurf;
+		radVol = m_fInitialRadiusVol;
+	}
 	virtual float getCurrentRadius(float exp) const
 	{
 		return getCurrentRadius(exp, false);

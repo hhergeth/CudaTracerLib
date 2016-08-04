@@ -52,7 +52,7 @@ template<bool USE_GLOBAL> Spectrum PointStorage::L_Volume(float NumEmitted, unsi
 		float t = a + d / 2.0f;
 		Vec3f x = r(t);
 		Spectrum L_i(0.0f);
-		m_sStorage.ForAll(x - Vec3f(m_fCurrentRadiusVol), x + Vec3f(m_fCurrentRadiusVol), [&](const Vec3u& cell_idx, unsigned int p_idx, const volPhoton& ph)
+		m_sStorage.ForAll(x - Vec3f(m_fCurrentRadiusVol), x + Vec3f(m_fCurrentRadiusVol), [&](const Vec3u& cell_idx, unsigned int p_idx, const _VolumetricPhoton& ph)
 		{
 			Vec3f ph_pos = ph.getPos(m_sStorage.getHashGrid(), cell_idx);
 			auto dist2 = distanceSquared(ph_pos, x);
@@ -398,11 +398,11 @@ struct EyeSubPath
 		bRec.wi = wi_l;
 	}
 
-	auto ent = A(x, y).m_surfaceData;
-	float r = iteration <= 1 ? A.getMaxRad<2>() : ent.compute_r<2>(iteration - 1, numPhotonsEmittedSurf, numPhotonsEmittedSurf * (iteration - 1), [](const auto& gr) {return Lapl(gr); }),
+	auto ent = adp_data.m_surfaceData;
+	float r = iteration <= 1 ? A.getMaxRad<2>() : ent.compute_r<2>(iteration - 1, numPhotonsEmittedSurf, numPhotonsEmittedSurf * (iteration - 1)),
 		 rd = iteration <= 2 ? A.getMaxRadDeriv() : ent.compute_rd(iteration - 1, numPhotonsEmittedSurf, numPhotonsEmittedSurf * (iteration - 1));
 	r = A.clampRadius<2>(r != -1.0f ? r : a_rSurfaceUNUSED);
-	rd = A.clampRadiusDeriv(rd);
+	rd = A.clampRadiusDeriv(rd != -1.0f ? rd : a_rSurfaceUNUSED);
 
 	Vec3f ur = bRec.dg.sys.t * rd, vr = bRec.dg.sys.s * rd;
 	auto r_max = max(2 * rd, r);
@@ -467,6 +467,7 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 		Vec2f screenPos = Vec2f(pixel.x, pixel.y) + rng.randomFloat2();
 		NormalizedT<Ray> r, rX, rY;
 		Spectrum throughput = g_SceneData.sampleSensorRay(r, rX, rY, screenPos, rng.randomFloat2());
+
 		TraceResult r2;
 		r2.Init();
 		int depth = -1;
