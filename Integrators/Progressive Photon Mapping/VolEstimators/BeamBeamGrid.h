@@ -4,11 +4,125 @@
 
 namespace CudaTracerLib {
 
+struct Beam
+{
+	unsigned short dir;
+	RGBE phi;
+	float t;
+	Vec3f pos;
+
+	CUDA_FUNC_IN Beam() {}
+	CUDA_FUNC_IN Beam(const Vec3f& p, const NormalizedT<Vec3f>& d, float t, const Spectrum& ph)
+		: pos(p), dir(NormalizedFloat3ToUchar2(d)), t(t), phi(ph.toRGBE())
+	{
+
+	}
+
+	CUDA_FUNC_IN Vec3f getPos() const
+	{
+		return pos;
+	}
+	CUDA_FUNC_IN NormalizedT<Vec3f> getDir() const
+	{
+		return Uchar2ToNormalizedFloat3(dir);
+	}
+	CUDA_FUNC_IN Spectrum getL() const
+	{
+		Spectrum s;
+		s.fromRGBE(phi);
+		return s;
+	}
+
+	CUDA_FUNC_IN AABB getAABB(float r) const
+	{
+		const Vec3f beamStart = getPos();
+		const Vec3f beamEnd = beamStart + dir * t;
+		const Vec3f startMargins(r);
+		const Vec3f endMargins(r);
+		const Vec3f minPt = min(beamStart - startMargins, beamEnd - endMargins);
+		const Vec3f maxPt = max(beamStart + startMargins, beamEnd + endMargins);
+		return AABB(minPt, maxPt);
+	}
+
+	CUDA_FUNC_IN AABB getSegmentAABB(float splitMin, float splitMax, float r) const
+	{
+		splitMin *= t;
+		splitMax *= t;
+		const Vec3f P = getPos();
+		const Vec3f beamStart = P + dir * splitMin;
+		const Vec3f beamEnd = P + dir * splitMax;
+		const Vec3f startMargins(r);
+		const Vec3f endMargins(r);
+		const Vec3f minPt = min(beamStart - startMargins, beamEnd - endMargins);
+		const Vec3f maxPt = max(beamStart + startMargins, beamEnd + endMargins);
+		return AABB(minPt, maxPt);
+	}
+
+	//this does not(!) account for cone formed beams; this has to be handled afterwards
+	CUDA_FUNC_IN static bool testIntersectionBeamBeam(
+		const Vec3f& O1,
+		const Vec3f& d1,
+		const float minT1,
+		const float maxT1,
+		const Vec3f& O2,
+		const Vec3f& d2,
+		const float minT2,
+		const float maxT2,
+		const float maxDistSqr,
+		float& oDistance,
+		float& oSinTheta,
+		float& oT1,
+		float& oT2)
+	{
+		const Vec3f  d1d2c = cross(d1, d2);
+		const float sinThetaSqr = dot(d1d2c, d1d2c); // Square of the sine between the two lines (||cross(d1, d2)|| = sinTheta).
+
+		const float ad = dot((O2 - O1), d1d2c);
+
+		// Lines too far apart.
+		if (ad*ad >= maxDistSqr*sinThetaSqr)//multiply 1/l * 1/l to the rhs, l = sqrt(sinThetaSqr)
+			return false;
+
+		// Cosine between the two lines.
+		const float d1d2 = dot(d1, d2);
+		const float d1d2Sqr = d1d2*d1d2;
+		const float d1d2SqrMinus1 = d1d2Sqr - 1.0f;
+
+		// Parallel lines?
+		if (d1d2SqrMinus1 < 1e-5f && d1d2SqrMinus1 > -1e-5f)
+			return false;
+
+		const float d1O1 = dot(d1, O1);
+		const float d1O2 = dot(d1, O2);
+
+		oT1 = (d1O1 - d1O2 - d1d2 * (dot(d2, O1) - dot(d2, O2))) / d1d2SqrMinus1;
+
+		// Out of range on ray 1.
+		if (oT1 <= minT1 || oT1 >= maxT1)
+			return false;
+
+		oT2 = (oT1 + d1O1 - d1O2) / d1d2;
+		// Out of range on ray 2.
+		if (oT2 <= minT2 || oT2 >= maxT2 || math::IsNaN(oT2))
+			return false;
+
+		const float sinTheta = math::sqrt(sinThetaSqr);
+
+		oDistance = math::abs(ad) / sinTheta;
+
+		oSinTheta = sinTheta;
+
+		return true; // Found an intersection.
+	}
+};
+
+typedef Beam _Beam;
+
 struct BeamBeamGrid : public IVolumeEstimator
 {
 	SpatialLinkedMap<int> m_sStorage;
 
-	SynchronizedBuffer<Beam> m_sBeamStorage;
+	SynchronizedBuffer<_Beam> m_sBeamStorage;
 
 	unsigned int m_uBeamIdx;
 
@@ -26,6 +140,11 @@ struct BeamBeamGrid : public IVolumeEstimator
 		m_sBeamStorage.Free();
 	}
 
+	CUDA_FUNC_IN _Beam operator()(unsigned int idx)
+	{
+		return m_sBeamStorage.operator[](idx);
+	}
+
 	CTL_EXPORT virtual void StartNewPass(const IRadiusProvider* radProvider, DynamicScene* scene);
 
 	virtual void StartNewRendering(const AABB& box)
@@ -36,6 +155,11 @@ struct BeamBeamGrid : public IVolumeEstimator
 	CUDA_FUNC_IN bool isFullK() const
 	{
 		return m_uBeamIdx >= m_sBeamStorage.getLength();
+	}
+
+	CUDA_FUNC_IN unsigned int getNumEntries() const
+	{
+		return m_sBeamStorage.getLength();
 	}
 
 	virtual bool isFull() const
@@ -62,14 +186,30 @@ struct BeamBeamGrid : public IVolumeEstimator
 
 	CTL_EXPORT virtual void PrepareForRendering();
 
-	CUDA_ONLY_FUNC bool StoreBeam(const Beam& b);
-
-	CUDA_ONLY_FUNC bool StorePhoton(const Vec3f& pos, const Vec3f& wi, const Spectrum& phi)
+	template<typename BEAM> CUDA_ONLY_FUNC unsigned int StoreBeam(const BEAM& b)
 	{
-		return false;
+		unsigned int beam_idx = atomicInc(&m_uBeamIdx, (unsigned int)-1);
+		if (beam_idx < m_sBeamStorage.getLength())
+		{
+			m_sBeamStorage[beam_idx] = b;
+			bool storedAll = true;
+#ifdef ISCUDA
+			TraverseGridRay(Ray(b.pos, b.getDir()), m_sStorage.getHashGrid(), 0.0f, b.t, [&](float minT, float rayT, float maxT, float cellEndT, Vec3u& cell_pos, bool& cancelTraversal)
+			{
+				storedAll &= m_sStorage.Store(cell_pos, beam_idx) != 0xffffffff;
+			});
+#endif
+			return storedAll ? beam_idx : 0xffffffff;
+		}
+		else return 0xffffffff;
 	}
 
-	template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum L_Volume(float NumEmitted, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, VolumeModel& model, PPM_Radius_Type radType, Spectrum& Tr);
+	template<typename PHOTON> CUDA_ONLY_FUNC unsigned int StorePhoton(const PHOTON& ph, const Vec3f& pos)
+	{
+		return 0xffffffff;
+	}
+
+	template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum L_Volume(float NumEmitted, unsigned int numIteration, float kToFind, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, VolumeModel& model, PPM_Radius_Type radType, Spectrum& Tr);
 
 	CUDA_FUNC_IN void Compute_kNN_radii(float numEmitted, float rad, float kToFind, const NormalizedT<Ray>& r, float tmin, float tmax, VolumeModel& model);
 };

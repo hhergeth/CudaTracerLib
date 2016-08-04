@@ -6,6 +6,63 @@
 
 namespace CudaTracerLib {
 
+struct VolumetricPhoton
+{
+private:
+	unsigned int flag_type_pos_ll;
+	RGBE phi;
+	unsigned short wi;
+	half r;
+	Vec3f Pos;
+public:
+	CUDA_FUNC_IN VolumetricPhoton() {}
+	CUDA_FUNC_IN VolumetricPhoton(const Vec3f& p, const NormalizedT<Vec3f>& w, const Spectrum& ph)
+	{
+		Pos = p;
+		r = half(0.0f);
+		flag_type_pos_ll = 0;// EncodePos<4, decltype(flag_type_pos_ll)>(grid.getAABB(), p);
+
+		phi = ph.toRGBE();
+		wi = NormalizedFloat3ToUchar2(w);
+	}
+	CUDA_FUNC_IN Vec3f getPos(const HashGrid_Reg& grid, const Vec3u& cell_idx) const
+	{
+		return Pos;
+	}
+	CUDA_FUNC_IN Vec3f getPos()
+	{
+		return Pos;
+	}
+	CUDA_FUNC_IN NormalizedT<Vec3f> getWi() const
+	{
+		return Uchar2ToNormalizedFloat3(wi);
+	}
+	CUDA_FUNC_IN Spectrum getL() const
+	{
+		Spectrum s;
+		s.fromRGBE(phi);
+		return s;
+	}
+	CUDA_FUNC_IN float getRad1() const
+	{
+		return r.ToFloat();
+	}
+	CUDA_FUNC_IN void setRad1(float f)
+	{
+		r = half(f);
+	}
+	CUDA_FUNC_IN bool getFlag() const
+	{
+		return (flag_type_pos_ll & 1) != 0;
+	}
+	CUDA_FUNC_IN void setFlag()
+	{
+		flag_type_pos_ll |= 1;
+	}
+};
+
+typedef VolumetricPhoton _VolumetricPhoton;
+
 struct PointStorage : public IVolumeEstimator
 {
 protected:
@@ -15,57 +72,8 @@ protected:
 
 	}
 public:
-	struct volPhoton
-	{
-	private:
-		unsigned int flag_type_pos_ll;
-		RGBE phi;
-		unsigned short wi;
-		half r;
-		Vec3f Pos;
-	public:
-		CUDA_FUNC_IN volPhoton(){}
-		CUDA_FUNC_IN volPhoton(const Vec3f& p, const NormalizedT<Vec3f>& w, const Spectrum& ph, const HashGrid_Reg& grid, const Vec3u& cell_idx)
-		{
-			Pos = p;
-			r = half(0.0f);
-			flag_type_pos_ll = 0;// EncodePos<4, decltype(flag_type_pos_ll)>(grid.getAABB(), p);
-
-			phi = ph.toRGBE();
-			wi = NormalizedFloat3ToUchar2(w);
-		}
-		CUDA_FUNC_IN Vec3f getPos(const HashGrid_Reg& grid, const Vec3u& cell_idx) const
-		{
-			return Pos;// DecodePos<4>(grid.getAABB(), flag_type_pos_ll);
-		}
-		CUDA_FUNC_IN NormalizedT<Vec3f> getWi() const
-		{
-			return Uchar2ToNormalizedFloat3(wi);
-		}
-		CUDA_FUNC_IN Spectrum getL() const
-		{
-			Spectrum s;
-			s.fromRGBE(phi);
-			return s;
-		}
-		CUDA_FUNC_IN float getRad1() const
-		{
-			return r.ToFloat();
-		}
-		CUDA_FUNC_IN void setRad1(float f)
-		{
-			r = half(f);
-		}
-		CUDA_FUNC_IN bool getFlag() const
-		{
-			return (flag_type_pos_ll & 1) != 0;
-		}
-		CUDA_FUNC_IN void setFlag()
-		{
-			flag_type_pos_ll |= 1;
-		}
-	};
-	SpatialLinkedMap<volPhoton> m_sStorage;
+	SpatialLinkedMap<_VolumetricPhoton> m_sStorage;
+	
 	float m_fCurrentRadiusVol;
 
 	PointStorage(unsigned int gridDim, unsigned int numPhotons)
@@ -77,6 +85,11 @@ public:
 	virtual void Free()
 	{
 		m_sStorage.Free();
+	}
+
+	CUDA_FUNC_IN _VolumetricPhoton operator()(unsigned int idx)
+	{
+		return m_sStorage.operator()(idx);
 	}
 
 	virtual void StartNewPass(const IRadiusProvider* radProvider, DynamicScene* scene);
@@ -102,6 +115,11 @@ public:
 		count = m_sStorage.getNumStoredEntries();
 	}
 
+	CUDA_FUNC_IN unsigned int getNumEntries() const
+	{
+		return m_sStorage.getNumEntries();
+	}
+
 	virtual size_t getSize() const
 	{
 		return sizeof(*this);
@@ -117,20 +135,20 @@ public:
 		m_sStorage.PrepareForUse();
 	}
 
-	CUDA_ONLY_FUNC bool StoreBeam(const Beam& b)
+	template<typename BEAM> CUDA_ONLY_FUNC unsigned int StoreBeam(const BEAM& b)
 	{
-		return false;
+		return 0xffffffff;
 	}
 
-	CUDA_ONLY_FUNC bool StorePhoton(const Vec3f& pos, const NormalizedT<Vec3f>& wi, const Spectrum& phi)
+	template<typename PHOTON> CUDA_ONLY_FUNC unsigned int StorePhoton(const PHOTON& ph, const Vec3f& pos)
 	{
 		if(!m_sStorage.getHashGrid().getAABB().Contains(pos))
-			return false;
+			return 0xffffffff;
 		Vec3u cell_idx = m_sStorage.getHashGrid().Transform(pos);
-		return m_sStorage.store(cell_idx, volPhoton(pos, wi, phi, m_sStorage.getHashGrid(), cell_idx));
+		return m_sStorage.Store(cell_idx, ph);
 	}
 
-	template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum L_Volume(float NumEmitted, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, VolumeModel& model, PPM_Radius_Type radType, Spectrum& Tr);
+	template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum L_Volume(float NumEmitted, unsigned int numIteration, float kToFind, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, VolumeModel& model, PPM_Radius_Type radType, Spectrum& Tr);
 
 	CUDA_FUNC_IN void Compute_kNN_radii(float numEmitted, float rad, float kToFind, const NormalizedT<Ray>& r, float tmin, float tmax, VolumeModel& model);
 };

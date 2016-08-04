@@ -139,7 +139,7 @@ std::map<std::string, pixel_variant> PPPMTracer::getPixelInfo(int x, int y) cons
 {
 	APPM_PixelData pixelInfo = m_pAdpBuffer->operator()(x, y);
 	auto e = pixelInfo.m_surfaceData;
-	auto r = e.compute_r<2>((int)m_uPassesDone, m_uPhotonEmittedPassSurface, (int)m_uTotalPhotonsEmitted, [&](auto gr) {return Lapl(gr); });
+	auto r = e.compute_r<2>((int)m_uPassesDone, m_uPhotonEmittedPassSurface, (int)m_uTotalPhotonsEmitted);
 	auto rd = e.compute_rd(m_uPassesDone, m_uPhotonEmittedPassSurface, m_uPhotonEmittedPassSurface * (m_uPassesDone - 1));
 
 	auto res = std::map<std::string, pixel_variant>();
@@ -150,7 +150,9 @@ std::map<std::string, pixel_variant> PPPMTracer::getPixelInfo(int x, int y) cons
 	res["S[psi^2]"] = pixel_variant((float)e.psi.Sum_X2);
 	res["num_psi"] = pixel_variant((float)e.num_psi);
 	res["S[pl]"] = pixel_variant(e.Sum_pl);
-	auto r_k_nn = CudaTracerLib::getCurrentRadius(e.r_std, m_uPassesDone, 2), r_uni = getCurrentRadius(2, true);
+	auto a_AdpEntries = k_AdaptiveStruct(m_sSurfaceMap.getHashGrid().getAABB(), *m_pAdpBuffer, w, m_uPassesDone);
+	auto r_k_nn = density_to_rad<2>(m_sParameters.getValue(KEY_kNN_Neighboor_Num_Surf()), e.Sum_pl, a_AdpEntries.getMinRad<2>(), a_AdpEntries.getMaxRad<2>(), m_uPassesDone);
+	auto r_uni = getCurrentRadius(2, true);
 	res["r_knn"] = pixel_variant(r_k_nn);
 	res["r_uni"] = pixel_variant(r_uni);
 	res["r_adp"] = pixel_variant(r);

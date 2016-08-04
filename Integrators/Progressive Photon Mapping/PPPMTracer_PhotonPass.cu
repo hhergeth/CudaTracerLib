@@ -7,24 +7,6 @@
 
 namespace CudaTracerLib {
 
-CUDA_ONLY_FUNC bool BeamBeamGrid::StoreBeam(const Beam& b)
-{
-	unsigned int beam_idx = atomicInc(&m_uBeamIdx, (unsigned int)-1);
-	if (beam_idx < m_sBeamStorage.getLength())
-	{
-		m_sBeamStorage[beam_idx] = b;
-		bool storedAll = true;
-#ifdef ISCUDA
-		TraverseGridRay(Ray(b.pos, b.getDir()), m_sStorage.getHashGrid(), 0.0f, b.t, [&](float minT, float rayT, float maxT, float cellEndT, Vec3u& cell_pos, bool& cancelTraversal)
-		{
-			storedAll &= m_sStorage.store(cell_pos, beam_idx);
-		});
-#endif
-		return storedAll;
-	}
-	else return false;
-}
-
 struct PPPMParameters
 {
 	bool DIRECT;
@@ -131,15 +113,15 @@ template<typename VolEstimator> struct PPPMPhotonParticleProcessHandler
 		//connection to camera as in particle tracing
 		/*if (!bssrdf)
 		{
-			DirectSamplingRecord dRec(mRec.p, NormalizedT<Vec3f>(0.0f));
-			Spectrum value = weight * g_SceneData.sampleAttenuatedSensorDirect(dRec, rng.randomFloat2());
-			if (!value.isZero() && V(dRec.p, dRec.ref))
-			{
-				PhaseFunctionSamplingRecord pRec(wi, dRec.d);
-				value *= g_SceneData.m_sVolume.p(mRec.p, pRec);
-				if (!value.isZero())
-					img.Splat(dRec.uv.x, dRec.uv.y, value);
-			}
+		DirectSamplingRecord dRec(mRec.p, NormalizedT<Vec3f>(0.0f));
+		Spectrum value = weight * g_SceneData.sampleAttenuatedSensorDirect(dRec, rng.randomFloat2());
+		if (!value.isZero() && V(dRec.p, dRec.ref))
+		{
+		PhaseFunctionSamplingRecord pRec(wi, dRec.d);
+		value *= g_SceneData.m_sVolume.p(mRec.p, pRec);
+		if (!value.isZero())
+		img.Splat(dRec.uv.x, dRec.uv.y, value);
+		}
 		}*/
 	}
 };

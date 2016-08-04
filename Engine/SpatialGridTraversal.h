@@ -29,10 +29,10 @@ template<template<class> class Grid, typename T, typename F1, typename F2, typen
 			grid.ForAllCellEntries(cell_idx, [&](unsigned int element_idx, const T& element)
 			{
 				float distAlongRay = -1;
-				auto dist_data = clbDist(cell_idx, element_idx, element, distAlongRay);
+				auto dist_data = clbDist(cell_idx, element_idx, element, distAlongRay, rad);
 				if ((rayT <= distAlongRay || rayT <= minT * (1 + EPSILON)) && distAlongRay >= tmin  && distAlongRay <= tmax)//&& (distAlongRay < cellEndT || cellEndT >= maxT * (1.0f - EPSILON))
 				{
-					clbElement(rayT, cellEndT, minT, maxT, cell_idx, element_idx, element, distAlongRay, dist_data);
+					clbElement(rayT, cellEndT, minT, maxT, cell_idx, element_idx, element, distAlongRay, dist_data, rad);
 				}
 			});
 		});

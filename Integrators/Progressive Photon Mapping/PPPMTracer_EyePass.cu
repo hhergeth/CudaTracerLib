@@ -27,17 +27,17 @@ struct ModelInitializer
 		++nums[n];
 	}
 
-	CUDA_FUNC_IN VolumeModel ToModel(float r_std) const
+	CUDA_FUNC_IN VolumeModel ToModel() const
 	{
 		return VolumeModel([&](int i)
 		{
-			float r = nums[i] ? vals[i] / nums[i] : r_std;
-			return APPM_QueryPointData<3, 3>(VarAccumulator<double>(), DerivativeCollection<3>(), VarAccumulator<double>(), 0, r);
+			float rho = nums[i] ? vals[i] / nums[i] : 0.0f;
+			return APPM_QueryPointData<3, 3>(VarAccumulator<double>(), DerivativeCollection<3>(), VarAccumulator<double>(), rho);
 		});
 	}
 };
 
-template<bool USE_GLOBAL> Spectrum PointStorage::L_Volume(float NumEmitted, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, VolumeModel& model, PPM_Radius_Type radType, Spectrum& Tr)
+template<bool USE_GLOBAL> Spectrum PointStorage::L_Volume(float NumEmitted, unsigned int numIteration, float kToFind, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, VolumeModel& model, PPM_Radius_Type radType, Spectrum& Tr)
 {
 	Spectrum Tau = Spectrum(0.0f);
 	Spectrum L_n = Spectrum(0.0f);
@@ -86,7 +86,7 @@ void PointStorage::Compute_kNN_radii(float numEmitted, float rad, float kToFind,
 		float t = a + d / 2.0f;
 		Vec3f x = r(t);
 		float density = 0;
-		m_sStorage.ForAll(x - Vec3f(rad), x + Vec3f(rad), [&](const Vec3u& cell_idx, unsigned int p_idx, const volPhoton& ph)
+		m_sStorage.ForAll(x - Vec3f(rad), x + Vec3f(rad), [&](const Vec3u& cell_idx, unsigned int p_idx, const _VolumetricPhoton& ph)
 		{
 			Vec3f ph_pos = ph.getPos(m_sStorage.getHashGrid(), cell_idx);
 			float dist2 = distanceSquared(ph_pos, x);
@@ -95,13 +95,13 @@ void PointStorage::Compute_kNN_radii(float numEmitted, float rad, float kToFind,
 		});
 		auto t_m = model_t(t, tmin, tmax);
 		if(density > 0.0f)
-			mInit.add(t_m, math::pow(kToFind / (4.0f / 3.0f * PI * density), 1.0f / 3.0f));
+			mInit.add(t_m, density * 2 * rad);
 		a += d;
 	}
-	model = mInit.ToModel(rad);
+	model = mInit.ToModel();
 }
 
-template<bool USE_GLOBAL> Spectrum BeamGrid::L_Volume(float NumEmitted, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, VolumeModel& model, PPM_Radius_Type radType, Spectrum& Tr)
+template<bool USE_GLOBAL> Spectrum BeamGrid::L_Volume(float NumEmitted, unsigned int numIteration, float kToFind, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, VolumeModel& modelLast, PPM_Radius_Type radType, Spectrum& Tr)
 {
 	Spectrum Tau = Spectrum(0.0f);
 	Spectrum L_n = Spectrum(0.0f);
@@ -109,7 +109,7 @@ template<bool USE_GLOBAL> Spectrum BeamGrid::L_Volume(float NumEmitted, const No
 	{
 		m_sBeamGridStorage.ForAllCellEntries(cell_pos, [&](unsigned int, entry beam_idx)
 		{
-			const volPhoton& ph = m_sStorage(beam_idx.getIndex());
+			const auto& ph = m_sStorage(beam_idx.getIndex());
 			Vec3f ph_pos = ph.getPos(m_sStorage.getHashGrid(), cell_pos);
 			float ph_rad1 = ph.getRad1(), ph_rad2 = math::sqr(ph_rad1);
 			float l1 = dot(ph_pos - r.ori(), r.dir());
@@ -160,28 +160,28 @@ void BeamGrid::Compute_kNN_radii(float numEmitted, float rad, float kToFind, con
 		density = 0;
 		return rad;
 	},
-		[&](const Vec3u& cell_idx, unsigned int element_idx, const volPhoton& element, float& distAlongRay)
+		[&](const Vec3u& cell_idx, unsigned int element_idx, const _VolumetricPhoton& element, float& distAlongRay, float)
 	{
 		return CudaTracerLib::sqrDistanceToRay(r, element.getPos(m_sStorage.getHashGrid(), cell_idx), distAlongRay);
 	},
-		[&](float rayT, float cellEndT, float minT, float maxT, const Vec3u& cell_idx, unsigned int element_idx, const volPhoton& element, float distAlongRay, float distRay2)
+		[&](float rayT, float cellEndT, float minT, float maxT, const Vec3u& cell_idx, unsigned int element_idx, const _VolumetricPhoton& element, float distAlongRay, float distRay2, float)
 	{
-		if (distRay2 < math::sqr(m_fCurrentRadiusVol))
+		if (distRay2 < math::sqr(rad * rad))
 		{
 			auto ph_pos = element.getPos(m_sStorage.getHashGrid(), cell_idx);
 			auto dist2 = distanceSquared(ph_pos, r(distAlongRay));
 			if (dist2 <= math::sqr(rad))
-				density += Kernel::k<3>(math::sqrt(dist2), rad);
+				density += Kernel::k<2>(math::sqrt(dist2), rad);
 		}
 	},
 		[&](float rayT, float cellEndT, float minT, float maxT, const Vec3u& cell_idx)
 	{
 		auto t_m = model_t((rayT + cellEndT) / 2.0f, tmin, tmax);
 		if (density > 0.0f)
-			mInit.add(t_m, math::sqrt(kToFind / (PI * density)));
+			mInit.add(t_m, density);
 	}
 	);
-	model = mInit.ToModel(rad);
+	model = mInit.ToModel();
 }
 
 template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum beam_beam_L(const VolHelper<USE_GLOBAL>& vol, const Beam& B, const NormalizedT<Ray>& r, float radius, float beamIsectDist, float queryIsectDist, float beamBeamDistance, float m_uNumEmitted, float sinTheta, float tmin)
@@ -191,7 +191,7 @@ template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum beam_beam_L(const VolHelper<USE_
 	Spectrum camera_sc = vol.sigma_s(r(queryIsectDist), r.dir());
 	PhaseFunctionSamplingRecord pRec(-r.dir(), B.getDir());
 	float p = vol.p(r(queryIsectDist), pRec);
-	return B.getL() / m_uNumEmitted * (-photon_tau).exp() * camera_sc * Kernel::k<1>(beamBeamDistance, radius) / sinTheta * (-camera_tau).exp() * 0.5f;//this is not correct; the phase function is missing and the 0.5 is arbirtary scaling
+	return B.getL() / m_uNumEmitted * (-photon_tau).exp() * camera_sc * Kernel::k<1>(beamBeamDistance, radius) / sinTheta * (-camera_tau).exp();//this is not correct; the phase function is missing
 }
 
 struct BeamIntersectionData
@@ -199,9 +199,9 @@ struct BeamIntersectionData
 	float beamBeamDistance;
 	float sinTheta;
 	float beamIsectDist;
-	Beam B;
+	_Beam B;
 };
-template<bool USE_GLOBAL> Spectrum BeamBeamGrid::L_Volume(float NumEmitted, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, VolumeModel& model, PPM_Radius_Type radType, Spectrum& Tr)
+template<bool USE_GLOBAL> Spectrum BeamBeamGrid::L_Volume(float NumEmitted, unsigned int numIteration, float kToFind, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, VolumeModel& modelLast, PPM_Radius_Type radType, Spectrum& Tr)
 {
 	Spectrum L_n = Spectrum(0.0f), Tau = Spectrum(0.0f);
 	TraverseGridBeam(r, tmin, tmax, m_sStorage,
@@ -209,7 +209,7 @@ template<bool USE_GLOBAL> Spectrum BeamBeamGrid::L_Volume(float NumEmitted, cons
 	{
 		return m_fCurrentRadiusVol;
 	},
-		[&](const Vec3u& cell_idx, unsigned int ref_element_idx, int beam_idx, float& distAlongRay)
+		[&](const Vec3u& cell_idx, unsigned int ref_element_idx, int beam_idx, float& distAlongRay, float)
 	{
 		BeamIntersectionData dat;
 		dat.B = this->m_sBeamStorage[beam_idx];
@@ -222,7 +222,7 @@ template<bool USE_GLOBAL> Spectrum BeamBeamGrid::L_Volume(float NumEmitted, cons
 		else distAlongRay = -1;
 		return dat;
 	},
-		[&](float rayT, float cellEndT, float minT, float maxT, const Vec3u& cell_idx, unsigned int element_idx, int beam_idx, float distAlongRay, const BeamIntersectionData& dat)
+		[&](float rayT, float cellEndT, float minT, float maxT, const Vec3u& cell_idx, unsigned int element_idx, int beam_idx, float distAlongRay, const BeamIntersectionData& dat, float)
 	{
 		L_n += beam_beam_L(vol, dat.B, r, m_fCurrentRadiusVol, dat.beamIsectDist, distAlongRay, dat.beamBeamDistance, NumEmitted, dat.sinTheta, tmin);
 	}
@@ -249,7 +249,7 @@ void BeamBeamGrid::Compute_kNN_radii(float numEmitted, float rad, float kToFind,
 		density = 0;
 		return rad;
 	},
-		[&](const Vec3u& cell_idx, unsigned int ref_element_idx, int beam_idx, float& distAlongRay)
+		[&](const Vec3u& cell_idx, unsigned int ref_element_idx, int beam_idx, float& distAlongRay, float)
 	{
 		BeamIntersectionData dat;
 		dat.B = this->m_sBeamStorage[beam_idx];
@@ -262,7 +262,7 @@ void BeamBeamGrid::Compute_kNN_radii(float numEmitted, float rad, float kToFind,
 		else distAlongRay = -1;
 		return dat;
 	},
-		[&](float rayT, float cellEndT, float minT, float maxT, const Vec3u& cell_idx, unsigned int element_idx, int beam_idx, float distAlongRay, const BeamIntersectionData& dat)
+		[&](float rayT, float cellEndT, float minT, float maxT, const Vec3u& cell_idx, unsigned int element_idx, int beam_idx, float distAlongRay, const BeamIntersectionData& dat, float)
 	{
 		density += Kernel::k<3>(dat.beamBeamDistance, rad);
 	},
@@ -270,10 +270,10 @@ void BeamBeamGrid::Compute_kNN_radii(float numEmitted, float rad, float kToFind,
 	{
 		auto t_m = model_t((rayT + cellEndT) / 2.0f, tmin, tmax);
 		if (density > 0.0f)
-			mInit.add(t_m, kToFind / (2.0f * density));
+			mInit.add(t_m, density);
 	}
 	);
-	model = mInit.ToModel(rad);
+	model = mInit.ToModel();
 }
 
 CUDA_CONST CudaStaticWrapper<SurfaceMapT> g_SurfMap;
@@ -300,7 +300,7 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const NormalizedT<Vec3
 			Spectrum l = ph.getL();
 			if(hasGlossy)
 				l *= mat.bsdf.f(bRec) / Frame::cosTheta(bRec.wo);//bsdf.f returns f * cos(thetha)
-			Lp += ke * l;// * cor_fac;
+			Lp += ke * l;
 		}
 	});
 	if(!hasGlossy)
@@ -339,10 +339,52 @@ CUDA_FUNC_IN Spectrum L_SurfaceFinalGathering(BSDFSamplingRecord& bRec, const No
 	return L / (float)N + LCaustic;
 }
 
-CUDA_DEVICE float g_Sum_Photons_Touched;
-CUDA_DEVICE float g_Sum_Photons_Touched2;
-CUDA_DEVICE unsigned int g_NumRadEstimates;
-CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const NormalizedT<Vec3f>& wi, float a_rSurfaceUNUSED, const Material* mat, k_AdaptiveStruct& A, int x, int y, const Spectrum& importance, int iteration, BlockSampleImage& img, SurfaceMapT& surfMap, unsigned int numPhotonsEmittedSurf, float debugScaleVal)
+struct EyeSubPath
+{
+	Spectrum Wi_pdf;//Wi_pdf is W/pdf 
+	float pdf;
+	DifferentialGeometry dg;
+	BSDFSamplingRecord bRec;
+	const Material* mat;
+	Vec3f camera_pos;
+
+	CUDA_FUNC_IN EyeSubPath(const Vec3f& camera_p, const Spectrum& w, float pdf)
+		: bRec(dg), mat(0), camera_pos(camera_p), Wi_pdf(w), pdf(pdf)
+	{
+		
+	}
+
+	CUDA_FUNC_IN void set(const BSDFSamplingRecord& bRec, const Material& mat, const Spectrum f, float pdf)
+	{
+		this->bRec = bRec;
+		this->mat = &mat;
+		Wi_pdf *= f;
+		this->pdf *= pdf;
+	}
+
+	CUDA_FUNC_IN Spectrum Wi_inc(const Vec3f& x_next)
+	{
+		if(mat)
+		{
+			bRec.wo = dg.toLocal(normalize(x_next - dg.P));
+			return Wi_pdf * pdf * mat->bsdf.f(bRec, mat->bsdf.hasComponent(EDelta) ? EDiscrete : ESolidAngle) * g_SceneData.evalTransmittance(dg.P, x_next);
+		}
+		else
+		{
+			auto pRec = PositionSamplingRecord(camera_pos, NormalizedT<Vec3f>(0.0f), &g_SceneData.m_Camera, g_SceneData.m_Camera.As()->m_Type & EDeltaPosition ? EDiscrete : ESolidAngle);
+			auto w_pos = g_SceneData.m_Camera.evalPosition(pRec);
+			auto dRec = DirectionSamplingRecord(normalize(x_next - camera_pos), g_SceneData.m_Camera.As()->m_Type & EDeltaDirection ? EDiscrete : ESolidAngle);
+			auto w_dir = g_SceneData.m_Camera.evalDirection(dRec, pRec);
+			return w_pos * w_dir * g_SceneData.evalTransmittance(camera_pos, x_next);
+		}
+	}
+
+	CUDA_FUNC_IN Vec3f lastPos() const
+	{
+		return mat ? dg.P : camera_pos;
+	}
+};
+
 {
 	//Adaptive Progressive Photon Mapping Implementation
 	bool hasGlossy = mat->bsdf.hasComponent(EGlossy);
@@ -367,8 +409,8 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const NormalizedT<Vec3
 		  c = r_max*(-bRec.dg.sys.t + bRec.dg.sys.s) + bRec.dg.P, d = r_max*(bRec.dg.sys.t + bRec.dg.sys.s) + bRec.dg.P;
 
 	Spectrum Lp = 0.0f;
-	float Sum_psi = 0, Sum_psi2 = 0, n_psi = 0, Sum_DI = 0, numPhotonsTouched = 0;
-	surfMap.ForAll(min(a, b, c, d), max(a, b, c, d), [&](const Vec3u& cell_idx, unsigned int p_idx, const PPPMPhoton& ph)//CAP = DANGEROUS !!!
+	float Sum_DI = 0;
+	surfMap.ForAll(min(a, b, c, d), max(a, b, c, d), [&](const Vec3u& cell_idx, unsigned int p_idx, const PPPMPhoton& ph)
 	{
 		Vec3f ph_pos = ph.getPos(surfMap.getHashGrid(), cell_idx);
 		float dist2 = distanceSquared(ph_pos, bRec.dg.P);
@@ -376,45 +418,43 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const NormalizedT<Vec3
 		float wiDotGeoN = absdot(photonNormal, wi);
 		if (dot(photonNormal, bRec.dg.sys.n) > LOOKUP_NORMAL_THRESH && wiDotGeoN > 1e-2f)
 		{
-			numPhotonsTouched += dist2 <= math::sqr(r_max);
-			bRec.wo = bRec.dg.toLocal(ph.getWi());
+			bRec.wo = bRec.dg.toLocal(wi);
 			auto bsdfFactor = hasGlossy ? mat->bsdf.f(bRec) / Frame::cosTheta(bRec.wo) : bsdf_diffuse;
-			float psi = Spectrum(importance * bsdfFactor * ph.getL()).getLuminance();
-			const Vec3f e_l = bRec.dg.P - ph_pos;
-			float k_rd =  Kernel::k<2>(e_l, rd);
-			float laplu = Kernel::k<2>(e_l + ur, rd) + Kernel::k<2>(e_l - ur, rd) - 2 * k_rd,
-				  laplv = Kernel::k<2>(e_l + vr, rd) + Kernel::k<2>(e_l - vr, rd) - 2 * k_rd,
-				  lapl = psi / (rd * rd) * (laplu + laplv);
-			Sum_DI += lapl;
+
+			if(dist2 < math::sqr(rd * 2))
+			{
+				const Vec3f e_l = bRec.dg.P - ph_pos;
+				float psi_0_0 = Kernel::k<2>(e_l, rd)		;
+				float psi_u_neg = Kernel::k<2>(e_l - ur, rd);
+				float psi_u_pos = Kernel::k<2>(e_l + ur, rd);
+				float psi_v_neg = Kernel::k<2>(e_l - vr, rd);
+				float psi_v_pos = Kernel::k<2>(e_l + vr, rd);
+
+				float lapl = Spectrum(subPath.Wi_pdf * bsdfFactor * ph.getL()).getLuminance() / (rd * rd) * (psi_u_pos + psi_u_neg - 2.0f * psi_0_0 + psi_v_pos + psi_v_neg - 2.0f * psi_0_0);
+				Sum_DI += lapl;
+			}
 
 			if (dist2 < math::sqr(r))
 			{
 				float kri = Kernel::k<2>(math::sqrt(dist2), r);
 				Lp += kri * ph.getL() / float(numPhotonsEmittedSurf) * bsdfFactor;
-				ent.psi += psi;
+				ent.psi += Spectrum(subPath.Wi_pdf * subPath.pdf * bsdfFactor * ph.getL()).getLuminance();
 				ent.num_psi++;
 				ent.Sum_pl += kri;
-				n_psi++;
 			}
 		}
 	});
-#ifdef ISCUDA
-	atomicAdd(&g_Sum_Photons_Touched, numPhotonsTouched);
-	atomicAdd(&g_Sum_Photons_Touched2, math::sqr(numPhotonsTouched));
-	atomicInc(&g_NumRadEstimates, 0xffffffff);
-#endif
 
 	ent.Sum_DI.df_di[0] += Sum_DI;
 	auto E_DI = Lapl(ent.Sum_DI) / (float)(iteration * numPhotonsEmittedSurf);
 	ent.E_DI += E_DI;
 
-#ifdef ISCUDA
-	A(x, y).m_surfaceData = ent;
-#endif
+	adp_data.m_surfaceData = ent;
+
 	return Lp;
 }
 
-template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int h, float a_PassIndex, float a_rSurface, k_AdaptiveStruct a_AdpEntries, BlockSampleImage img, bool DIRECT, PPM_Radius_Type Radius_Type, bool finalGathering, float debugScaleVal)
+template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int h, unsigned int a_PassIndex, float a_rSurface, k_AdaptiveStruct a_AdpEntries, BlockSampleImage img, bool DIRECT, PPM_Radius_Type Radius_Type, bool finalGathering, float debugScaleVal, float k_toFindSurf, float k_toFindVol)
 {
 	auto rng = g_SamplerData();
 	DifferentialGeometry dg;
@@ -442,7 +482,7 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 				if (g_SceneData.m_sVolume.IntersectP(r, 0, r2.m_fDist, &tmin, &tmax))
 				{
 					Spectrum Tr(1.0f);
-					L += throughput * ((VolEstimator*)g_VolEstimator2)->L_Volume(g_NumPhotonEmittedVolume2, r, tmin, tmax, VolHelper<true>(), adp_ent.m_volumeModel, Radius_Type, Tr);
+					L += throughput * ((VolEstimator*)g_VolEstimator2)->L_Volume(g_NumPhotonEmittedVolume2, a_PassIndex, k_toFindVol, r, tmin, tmax, VolHelper<true>(), adp_ent.m_volumeModel, Radius_Type, Tr);
 					throughput = throughput * Tr;
 				}
 			}
@@ -466,7 +506,7 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 					if (g_SceneData.m_sVolume.HasVolumes() && g_SceneData.m_sVolume.IntersectP(Ray(bRec.dg.P, dRec.d), 0, dRec.dist, &tmin, &tmax))
 					{
 						Spectrum Tr;
-						Spectrum Li = ((VolEstimator*)g_VolEstimator2)->L_Volume(g_NumPhotonEmittedVolume2, NormalizedT<Ray>(bRec.dg.P, dRec.d), tmin, tmax, VolHelper<true>(), adp_ent.m_volumeModel, Radius_Type, Tr);
+						Spectrum Li = ((VolEstimator*)g_VolEstimator2)->L_Volume(g_NumPhotonEmittedVolume2, a_PassIndex, k_toFindVol, NormalizedT<Ray>(bRec.dg.P, dRec.d), tmin, tmax, VolHelper<true>(), adp_ent.m_volumeModel, Radius_Type, Tr);
 						value = value * Tr + Li;
 					}
 					L += throughput * bsdfVal * weight * value;
@@ -484,7 +524,7 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 				NormalizedT<Ray> rTrans = NormalizedT<Ray>(bRec.dg.P, bRec.getOutgoing());
 				TraceResult r3 = traceRay(rTrans);
 				Spectrum Tr;
-				L += throughput * ((VolEstimator*)g_VolEstimator2)->L_Volume(g_NumPhotonEmittedVolume2, rTrans, 0, r3.m_fDist, VolHelper<false>(bssrdf), adp_ent.m_volumeModel, Radius_Type, Tr);
+				L += throughput * ((VolEstimator*)g_VolEstimator2)->L_Volume(g_NumPhotonEmittedVolume2, a_PassIndex, k_toFindVol, rTrans, 0, r3.m_fDist, VolHelper<false>(bssrdf), adp_ent.m_volumeModel, Radius_Type, Tr);
 				//throughput = throughput * Tr;
 				break;
 			}
@@ -498,7 +538,7 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 					L_r = L_Surface(bRec, -r.dir(), a_rSurface, &r2.getMat(), a_AdpEntries, pixel.x, pixel.y, throughput, a_PassIndex, img, g_SurfMap, g_NumPhotonEmittedSurface2, debugScaleVal);
 				else
 				{
-					float rad = a_AdpEntries.clampRadius<2>(getCurrentRadius(adp_ent.m_surfaceData.r_std, a_PassIndex, 2));
+					float rad = density_to_rad<2>(k_toFindSurf, adp_ent.m_surfaceData.Sum_pl / a_PassIndex, a_AdpEntries.getMinRad<2>(), a_AdpEntries.getMaxRad<2>(), a_PassIndex);
 					float r_i = Radius_Type == PPM_Radius_Type::kNN ? rad : a_rSurface;
 					L_r = finalGathering ? L_SurfaceFinalGathering(bRec, -r.dir(), r_i, r2, rng, DIRECT, g_NumPhotonEmittedSurface2) : 
 										   L_Surface(bRec, -r.dir(), r_i, r2.getMat(), g_NumPhotonEmittedSurface2);
@@ -527,87 +567,13 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 			Spectrum Tr(1);
 			float tmin, tmax;
 			if (g_SceneData.m_sVolume.HasVolumes() && g_SceneData.m_sVolume.IntersectP(r, 0, r2.m_fDist, &tmin, &tmax))
-				L += throughput * ((VolEstimator*)g_VolEstimator2)->L_Volume((float)g_NumPhotonEmittedVolume2, r, tmin, tmax, VolHelper<true>(), adp_ent.m_volumeModel, Radius_Type, Tr);
+				L += throughput * ((VolEstimator*)g_VolEstimator2)->L_Volume((float)g_NumPhotonEmittedVolume2, a_PassIndex, k_toFindVol, r, tmin, tmax, VolHelper<true>(), adp_ent.m_volumeModel, Radius_Type, Tr);
 			L += Tr * throughput * g_SceneData.EvalEnvironment(r);
 		}
 		img.Add(screenPos.x, screenPos.y, L);
 	}
+	a_AdpEntries(pixel.x, pixel.y) = adp_ent;
 	g_SamplerData(rng);
-}
-
-void PPPMTracer::DebugInternal(Image* I, const Vec2i& pixel)
-{
-	m_sSurfaceMap.Synchronize();
-	if (m_sSurfaceMapCaustic)
-		m_sSurfaceMapCaustic->Synchronize();
-	m_pVolumeEstimator->Synchronize();
-
-	auto radiusType = m_sParameters.getValue(KEY_RadiiComputationType());
-	auto ray = g_SceneData.GenerateSensorRay(pixel.x, pixel.y);
-	auto res = traceRay(ray);
-	k_AdaptiveStruct A(r_min, r_max, *m_pAdpBuffer, w, m_uPassesDone);
-	auto pixelInfo = A(pixel.x, pixel.y);
-
-	float tmin, tmax;
-	if (g_SceneData.m_sVolume.HasVolumes() && g_SceneData.m_sVolume.IntersectP(ray, 0.0f, FLT_MAX, &tmin, &tmax))
-	{
-		float k_Intial = m_sParameters.getValue(KEY_kNN_Neighboor_Num_Vol());
-		if (dynamic_cast<BeamGrid*>(m_pVolumeEstimator))
-			((BeamGrid*)m_pVolumeEstimator)->Compute_kNN_radii((float)m_uPhotonEmittedPassVolume, m_fInitialRadiusVol, k_Intial, ray, tmin, tmax, pixelInfo.m_volumeModel);
-		if (dynamic_cast<PointStorage*>(m_pVolumeEstimator))
-			((PointStorage*)m_pVolumeEstimator)->Compute_kNN_radii((float)m_uPhotonEmittedPassVolume, m_fInitialRadiusVol, k_Intial, ray, tmin, tmax, pixelInfo.m_volumeModel);
-		if (dynamic_cast<BeamBeamGrid*>(m_pVolumeEstimator))
-			((BeamBeamGrid*)m_pVolumeEstimator)->Compute_kNN_radii((float)m_uPhotonEmittedPassVolume, m_fInitialRadiusVol, k_Intial, ray, tmin, tmax, pixelInfo.m_volumeModel);
-
-		Spectrum Tr, L;
-		if (dynamic_cast<BeamGrid*>(m_pVolumeEstimator))
-			L = ((BeamGrid*)m_pVolumeEstimator)->L_Volume((float)m_uPhotonEmittedPassVolume, ray, 0.0f, res.m_fDist, VolHelper<true>(), pixelInfo.m_volumeModel, radiusType, Tr);
-		else if (dynamic_cast<PointStorage*>(m_pVolumeEstimator))
-			L = ((PointStorage*)m_pVolumeEstimator)->L_Volume((float)m_uPhotonEmittedPassVolume, ray, 0.0f, res.m_fDist, VolHelper<true>(), pixelInfo.m_volumeModel, radiusType, Tr);
-		else if (dynamic_cast<BeamBeamGrid*>(m_pVolumeEstimator))
-			L = ((BeamBeamGrid*)m_pVolumeEstimator)->L_Volume((float)m_uPhotonEmittedPassVolume, ray, 0.0f, res.m_fDist, VolHelper<true>(), pixelInfo.m_volumeModel, radiusType, Tr);
-	}
-
-	static float Sum_lapl_N = 0;
-	static float Sum_lapl_N2 = 0;
-	static float sum_lapl = 0;
-	if (res.hasHit())
-	{
-		DifferentialGeometry dg;
-		BSDFSamplingRecord bRec(dg);
-		res.getBsdfSample(ray, bRec, ETransportMode::EImportance);
-
-		/*int iteration = m_uPassesDone;
-		float lapl_it_sum = 0;
-		auto rd = iteration <= 1 ? getCurrentRadius(2, true) : ent.compute_rd(iteration - 1, m_uPhotonEmittedPassSurface, m_uPhotonEmittedPassSurface * (iteration - 1));
-		rd = getCurrentRadius(2, true);
-		auto ur = bRec.dg.sys.t * rd, vr = bRec.dg.sys.s * rd;
-		m_sSurfaceMap.ForAll(Vec3u(0), Vec3u(m_sSurfaceMap.getHashGrid().m_gridDim), [&](const Vec3u& cell_idx, unsigned int e_idx, const PPPMPhoton& p)
-		{
-			Vec3f photonNormal = p.getNormal();
-			float wiDotGeoN = absdot(photonNormal, -ray.dir());
-			if (dot(p.getNormal(), bRec.dg.sys.n) < 0.9f && wiDotGeoN > 1e-2f)
-				return;
-			bRec.wo = bRec.dg.toLocal(p.getWi());
-			float psi = Spectrum(p.getL()).getLuminance();
-			auto ph_pos = p.getPos(m_sSurfaceMap.getHashGrid(), cell_idx);
-			const Vec3f e_l = bRec.dg.P - ph_pos;
-			float k_rd = Kernel::k<2>(e_l, rd);
-			float laplu = Kernel::k<2>(e_l + ur, rd) + Kernel::k<2>(e_l - ur, rd) - 2 * k_rd,
-				laplv = Kernel::k<2>(e_l + vr, rd) + Kernel::k<2>(e_l - vr, rd) - 2 * k_rd,
-				lapl = psi / (rd * rd) * (laplu + laplv);
-			lapl_it_sum += lapl;
-		});
-		float lapl_i = lapl_it_sum / m_uPhotonEmittedPassSurface;
-		sum_lapl += lapl_i;
-		float lapl_N = sum_lapl / iteration;
-		Sum_lapl_N += lapl_N;
-		Sum_lapl_N2 += lapl_N * lapl_N;*/
-
-		//L_Surface(bRec, -ray.dir(), getCurrentRadius(2), &res.getMat(), A, pixel.x, pixel.y, Spectrum(1.0f), m_uPassesDone, m_pBlockSampler->getBlockImage(), m_sSurfaceMap, m_uPhotonEmittedPassSurface, m_debugScaleVal);
-		//m_adpBuffer->setOnCPU();
-		//m_adpBuffer->Synchronize();
-	}
 }
 
 void PPPMTracer::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
@@ -620,12 +586,11 @@ void PPPMTracer::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_NumPhotonEmittedSurface2, &m_uPhotonEmittedPassSurface, sizeof(m_uPhotonEmittedPassSurface)));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_NumPhotonEmittedVolume2, &m_uPhotonEmittedPassVolume, sizeof(m_uPhotonEmittedPassVolume)));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_VolEstimator2, m_pVolumeEstimator, m_pVolumeEstimator->getSize()));
-	ZeroSymbol(g_Sum_Photons_Touched);
-	ZeroSymbol(g_Sum_Photons_Touched2);
-	ZeroSymbol(g_NumRadEstimates);
 
 	auto radiusType = m_sParameters.getValue(KEY_RadiiComputationType());
 	bool finalGathering = m_sParameters.getValue(KEY_FinalGathering());
+	float k_toFindSurf = m_sParameters.getValue(KEY_kNN_Neighboor_Num_Surf()),
+		  k_toFindVol = m_sParameters.getValue(KEY_kNN_Neighboor_Num_Vol());
 
 	//not starting the block will lead to (correct) warnings due to no a
 	m_pAdpBuffer->StartBlock(x, y, radiusType != PPM_Radius_Type::Constant);
@@ -634,18 +599,18 @@ void PPPMTracer::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 	BlockSampleImage img = m_pBlockSampler->getBlockImage();
 
 	if (dynamic_cast<BeamGrid*>(m_pVolumeEstimator))
-		k_EyePass<BeamGrid> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, (float)m_uPassesDone, radius2, A, img, m_useDirectLighting, radiusType, finalGathering, m_debugScaleVal);
+		k_EyePass<BeamGrid> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, m_uPassesDone, radius2, A, img, m_useDirectLighting, radiusType, finalGathering, m_debugScaleVal, k_toFindSurf, k_toFindVol);
 	else if(dynamic_cast<PointStorage*>(m_pVolumeEstimator))
-		k_EyePass<PointStorage> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, (float)m_uPassesDone, radius2, A, img, m_useDirectLighting, radiusType, finalGathering, m_debugScaleVal);
+		k_EyePass<PointStorage> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, m_uPassesDone, radius2, A, img, m_useDirectLighting, radiusType, finalGathering, m_debugScaleVal, k_toFindSurf, k_toFindVol);
 	else if (dynamic_cast<BeamBeamGrid*>(m_pVolumeEstimator))
-		k_EyePass<BeamBeamGrid> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, (float)m_uPassesDone, radius2, A, img, m_useDirectLighting, radiusType, finalGathering, m_debugScaleVal);
+		k_EyePass<BeamBeamGrid> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, m_uPassesDone, radius2, A, img, m_useDirectLighting, radiusType, finalGathering, m_debugScaleVal, k_toFindSurf, k_toFindVol);
 
 	ThrowCudaErrors(cudaThreadSynchronize());
 	if (radiusType != PPM_Radius_Type::Constant)
 		m_pAdpBuffer->EndBlock();
 }
 
-template<typename VolEstimator> __global__ void k_PerPixelRadiusEst(Vec2i off, int w, int h, float r_surface, float r_volume, float numEmitted, k_AdaptiveStruct adpt, float k_toFindSurf, float k_toFindVol)
+template<typename VolEstimator> __global__ void k_PerPixelRadiusEst(Vec2i off, int w, int h, float r_surface, float r_volume, float numEmitted, k_AdaptiveStruct adpt, float k_toFindSurf, float k_toFindVol, PPM_Radius_Type Radius_Type)
 {
 	Vec2i pixel = TracerBase::getPixelPos(off.x, off.y);
 	auto& pixleInfo = adpt(pixel.x, pixel.y);
@@ -655,6 +620,16 @@ template<typename VolEstimator> __global__ void k_PerPixelRadiusEst(Vec2i off, i
 
 		//adaptive progressive intit
 		pixleInfo.Initialize(r_surface, r.dir());
+
+		if (Radius_Type == PPM_Radius_Type::Adaptive)
+			return;
+
+		//compute volume query radii
+		float tmin, tmax;
+		if (g_SceneData.m_sVolume.HasVolumes() && g_SceneData.m_sVolume.IntersectP(r, 0.0f, FLT_MAX, &tmin, &tmax))
+		{
+			((VolEstimator*)g_VolEstimator2)->Compute_kNN_radii(numEmitted, r_volume, k_toFindVol, r, tmin, tmax, pixleInfo.m_volumeModel);
+		}
 
 		//initial per pixel rad estimate
 		auto rng = g_SamplerData();
@@ -673,19 +648,14 @@ template<typename VolEstimator> __global__ void k_PerPixelRadiusEst(Vec2i off, i
 #ifdef ISCUDA
 			g_SurfMap->ForAll(low, high, [&](const Vec3u& cell_idx, unsigned int p_idx, const PPPMPhoton& ph)
 			{
+				auto photonNormal = ph.getNormal();
+				float wiDotGeoN = absdot(photonNormal, -r.dir());
 				float dist2 = distanceSquared(ph.getPos(g_SurfMap->getHashGrid(), cell_idx), bRec.dg.P);
-				if (dist2 < search_rad_surf * search_rad_surf && dot(ph.getNormal(), bRec.dg.sys.n) > 0.9f)
+				if (dist2 < search_rad_surf * search_rad_surf && dot(photonNormal, bRec.dg.sys.n) > LOOKUP_NORMAL_THRESH && wiDotGeoN > 1e-2f)
 					density += Kernel::k<2>(math::sqrt(dist2), search_rad_surf);
 			});
 #endif
-			pixleInfo.m_surfaceData.r_std = density != 0.0f ? math::sqrt(k_toFindSurf / (PI * density)) : r_surface;
-
-			//compute volume query radii
-			float tmin, tmax;
-			if(g_SceneData.m_sVolume.HasVolumes() && g_SceneData.m_sVolume.IntersectP(r, 0.0f, FLT_MAX, &tmin, &tmax))
-			{
-				((VolEstimator*)g_VolEstimator2)->Compute_kNN_radii(numEmitted, r_volume, k_toFindVol, r, tmin, tmax, pixleInfo.m_volumeModel);
-			}
+			pixleInfo.m_surfaceData.Sum_pl = density;
 
 			//traverse on specular manifold until a subsurface scattering object is hit, if so compute kNN based volumetric radii
 			int depth = 0;
@@ -709,8 +679,6 @@ template<typename VolEstimator> __global__ void k_PerPixelRadiusEst(Vec2i off, i
 					r2 = traceRay(r);
 				}
 			}
-
-			
 		}
 		g_SamplerData(rng);
 	}
@@ -718,6 +686,7 @@ template<typename VolEstimator> __global__ void k_PerPixelRadiusEst(Vec2i off, i
 
 void PPPMTracer::doPerPixelRadiusEstimation()
 {
+	auto radiusType = m_sParameters.getValue(KEY_RadiiComputationType());
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_SurfMap, &m_sSurfaceMap, sizeof(m_sSurfaceMap)));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_VolEstimator2, m_pVolumeEstimator, m_pVolumeEstimator->getSize()));
 	float k_toFindSurf = m_sParameters.getValue(KEY_kNN_Neighboor_Num_Surf()),
@@ -728,13 +697,60 @@ void PPPMTracer::doPerPixelRadiusEstimation()
 		m_pAdpBuffer->StartBlock(x, y);
 		auto A = getAdaptiveData();//keeps a copy of m_pAdpBuffer!
 		if (dynamic_cast<BeamGrid*>(m_pVolumeEstimator))
-			k_PerPixelRadiusEst<BeamGrid> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(Vec2i(x, y), w, h, m_fInitialRadiusSurf, m_fInitialRadiusVol, (float)m_uPhotonEmittedPassVolume, A, k_toFindSurf, k_toFindVol);
+			k_PerPixelRadiusEst<BeamGrid> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(Vec2i(x, y), w, h, m_fInitialRadiusSurf, m_fInitialRadiusVol, (float)m_uPhotonEmittedPassVolume, A, k_toFindSurf, k_toFindVol, radiusType);
 		else if (dynamic_cast<PointStorage*>(m_pVolumeEstimator))
-			k_PerPixelRadiusEst<PointStorage> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(Vec2i(x, y), w, h, m_fInitialRadiusSurf, m_fInitialRadiusVol, (float)m_uPhotonEmittedPassVolume, A, k_toFindSurf, k_toFindVol);
+			k_PerPixelRadiusEst<PointStorage> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(Vec2i(x, y), w, h, m_fInitialRadiusSurf, m_fInitialRadiusVol, (float)m_uPhotonEmittedPassVolume, A, k_toFindSurf, k_toFindVol, radiusType);
 		else if (dynamic_cast<BeamBeamGrid*>(m_pVolumeEstimator))
-			k_PerPixelRadiusEst<BeamBeamGrid> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(Vec2i(x, y), w, h, m_fInitialRadiusSurf, m_fInitialRadiusVol, (float)m_uPhotonEmittedPassVolume, A, k_toFindSurf, k_toFindVol);
+			k_PerPixelRadiusEst<BeamBeamGrid> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(Vec2i(x, y), w, h, m_fInitialRadiusSurf, m_fInitialRadiusVol, (float)m_uPhotonEmittedPassVolume, A, k_toFindSurf, k_toFindVol, radiusType);
 		m_pAdpBuffer->EndBlock();
 	});
+}
+
+void PPPMTracer::DebugInternal(Image* I, const Vec2i& pixel)
+{
+	m_sSurfaceMap.Synchronize();
+	if (m_sSurfaceMapCaustic)
+		m_sSurfaceMapCaustic->Synchronize();
+	m_pVolumeEstimator->Synchronize();
+
+	auto radiusType = m_sParameters.getValue(KEY_RadiiComputationType());
+	float k_toFindSurf = m_sParameters.getValue(KEY_kNN_Neighboor_Num_Surf()),
+		k_toFindVol = m_sParameters.getValue(KEY_kNN_Neighboor_Num_Vol());
+	auto ray = g_SceneData.GenerateSensorRay(pixel.x, pixel.y);
+	auto res = traceRay(ray);
+	k_AdaptiveStruct A(m_sSurfaceMap.getHashGrid().getAABB(), *m_pAdpBuffer, w, m_uPassesDone);
+	auto pixelInfo = A(pixel.x, pixel.y);
+
+	float tmin, tmax;
+	if (g_SceneData.m_sVolume.HasVolumes() && g_SceneData.m_sVolume.IntersectP(ray, 0.0f, FLT_MAX, &tmin, &tmax))
+	{
+		//if (dynamic_cast<BeamGrid*>(m_pVolumeEstimator))
+		//	((BeamGrid*)m_pVolumeEstimator)->Compute_kNN_radii((float)m_uPhotonEmittedPassVolume, m_fInitialRadiusVol, k_toFindVol, ray, tmin, tmax, pixelInfo.m_volumeModel);
+		//if (dynamic_cast<PointStorage*>(m_pVolumeEstimator))
+		//	((PointStorage*)m_pVolumeEstimator)->Compute_kNN_radii((float)m_uPhotonEmittedPassVolume, m_fInitialRadiusVol, k_toFindVol, ray, tmin, tmax, pixelInfo.m_volumeModel);
+		//if (dynamic_cast<BeamBeamGrid*>(m_pVolumeEstimator))
+		//	((BeamBeamGrid*)m_pVolumeEstimator)->Compute_kNN_radii((float)m_uPhotonEmittedPassVolume, m_fInitialRadiusVol, k_toFindVol, ray, tmin, tmax, pixelInfo.m_volumeModel);
+
+		Spectrum Tr, L;
+		if (dynamic_cast<BeamGrid*>(m_pVolumeEstimator))
+			L = ((BeamGrid*)m_pVolumeEstimator)->L_Volume((float)m_uPhotonEmittedPassVolume, m_uPassesDone, k_toFindVol, ray, 0.0f, res.m_fDist, VolHelper<true>(), pixelInfo.m_volumeModel, radiusType, Tr);
+		else if (dynamic_cast<PointStorage*>(m_pVolumeEstimator))
+			L = ((PointStorage*)m_pVolumeEstimator)->L_Volume((float)m_uPhotonEmittedPassVolume, m_uPassesDone, k_toFindVol, ray, 0.0f, res.m_fDist, VolHelper<true>(), pixelInfo.m_volumeModel, radiusType, Tr);
+		else if (dynamic_cast<BeamBeamGrid*>(m_pVolumeEstimator))
+			L = ((BeamBeamGrid*)m_pVolumeEstimator)->L_Volume((float)m_uPhotonEmittedPassVolume, m_uPassesDone, k_toFindVol, ray, 0.0f, res.m_fDist, VolHelper<true>(), pixelInfo.m_volumeModel, radiusType, Tr);
+	}
+
+	if (res.hasHit())
+	{
+		DifferentialGeometry dg;
+		BSDFSamplingRecord bRec(dg);
+		res.getBsdfSample(ray, bRec, ETransportMode::EImportance);
+
+		L_Surface(bRec, -ray.dir(), getCurrentRadius(2), res.getMat(), m_uPhotonEmittedPassSurface, &m_sSurfaceMap);
+		//L_Surface(bRec, -ray.dir(), getCurrentRadius(2), &res.getMat(), A, pixel.x, pixel.y, Spectrum(1.0f), m_uPassesDone, m_pBlockSampler->getBlockImage(), m_sSurfaceMap, m_uPhotonEmittedPassSurface, m_debugScaleVal);
+		//m_adpBuffer->setOnCPU();
+		//m_adpBuffer->Synchronize();
+	}
 }
 
 }

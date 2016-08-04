@@ -15,14 +15,14 @@ __global__ void buildBeams(float r, Vec3u dimN, float nnSearch)
 		Vec3f cellCenter = g_PhotonStorage->getHashGrid().getCell(cell_idx).Center();
 		float r_search = r;// + g_PhotonStorage->getHashGrid().m_vCellSize.length() / 2;
 		int N = 0;
-		g_PhotonStorage->ForAll(cellCenter - Vec3f(r_search), cellCenter + Vec3f(r_search), [&](const Vec3u& cell_idx, unsigned int pIdx, const PointStorage::volPhoton& ph)
+		g_PhotonStorage->ForAll(cellCenter - Vec3f(r_search), cellCenter + Vec3f(r_search), [&](const Vec3u& cell_idx, unsigned int pIdx, const _VolumetricPhoton& ph)
 		{
 			if (distanceSquared(cellCenter, ph.getPos(g_PhotonStorage->getHashGrid(), cell_idx)) < r_search * r_search)
 				N++;
 		});
 		float r_new = math::sqrt(nnSearch * r_search * r_search / max((float)N, 1.0f));
 
-		g_PhotonStorage->ForAllCellEntries(cell_idx, [&](unsigned int p_idx, PointStorage::volPhoton& ph)
+		g_PhotonStorage->ForAllCellEntries(cell_idx, [&](unsigned int p_idx, _VolumetricPhoton& ph)
 		{
 			ph.setRad1(r_new);
 			Vec3f ph_pos = ph.getPos(g_PhotonStorage->getHashGrid(), cell_idx);
