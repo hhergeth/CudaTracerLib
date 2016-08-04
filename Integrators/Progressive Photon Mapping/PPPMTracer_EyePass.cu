@@ -316,6 +316,8 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const NormalizedT<Vec3
 CUDA_FUNC_IN Spectrum L_SurfaceFinalGathering(BSDFSamplingRecord& bRec, const NormalizedT<Vec3f>& wi, float rad, TraceResult& r2, Sampler& rng, bool DIRECT, unsigned int numPhotonsEmitted)
 {
 	Spectrum LCaustic = L_Surface(bRec, wi, rad, r2.getMat(), numPhotonsEmitted, &g_SurfMapCaustic.As());
+	if (!DIRECT)
+		LCaustic += UniformSampleOneLight(bRec, r2.getMat(), rng);//the direct light is not stored in the caustic map
 	Spectrum L(0.0f);
 	const int N = 3;
 	DifferentialGeometry dg;
@@ -329,10 +331,9 @@ CUDA_FUNC_IN Spectrum L_SurfaceFinalGathering(BSDFSamplingRecord& bRec, const No
 		if (r3.hasHit())
 		{
 			r3.getBsdfSample(r, bRec2, ETransportMode::ERadiance);
-			L += f * L_Surface(bRec2, -r.dir(), rad, r3.getMat(), numPhotonsEmitted);
-			if (DIRECT)
-				L += f * UniformSampleOneLight(bRec2, r3.getMat(), rng);
-			//do not account for emission because such photons will be in the specular photon map, hopefulyl with lower variance
+			L += f * (L_Surface(bRec2, -r.dir(), rad, r3.getMat(), numPhotonsEmitted) + L_Surface(bRec2, -r.dir(), rad, r3.getMat(), numPhotonsEmitted, &g_SurfMapCaustic.As()));
+			L += f * UniformSampleOneLight(bRec2, r3.getMat(), rng);
+			//do not account for emission because this was sampled before
 		}
 	}
 	bRec.typeMask = ETypeCombinations::EAll;
