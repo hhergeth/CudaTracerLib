@@ -58,6 +58,7 @@ public:
 	{
 		m_hostData = new T[m_length];
 		CUDA_MALLOC(&m_deviceData, m_length * sizeof(T));
+		CUDA_MEMCPY_TO_DEVICE(m_deviceData, m_hostData, m_length * sizeof(T));
 	}
 	virtual void Free() override
 	{
