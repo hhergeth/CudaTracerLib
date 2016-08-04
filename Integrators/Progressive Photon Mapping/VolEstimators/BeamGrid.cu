@@ -28,7 +28,7 @@ __global__ void buildBeams(float r, Vec3u dimN, float nnSearch)
 			Vec3f ph_pos = ph.getPos(g_PhotonStorage->getHashGrid(), cell_idx);
 			g_BeamGridStorage->ForAllCells(ph_pos - Vec3f(r_new), ph_pos + Vec3f(r_new), [&](const Vec3u& cell_idx_store)
 			{
-				g_BeamGridStorage->store(cell_idx_store, BeamGrid::entry(p_idx));
+				g_BeamGridStorage->Store(cell_idx_store, BeamGrid::entry(p_idx));
 			});
 		});
 #endif

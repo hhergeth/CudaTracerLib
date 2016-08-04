@@ -123,7 +123,7 @@ public:
 		return deviceDataIdx >= numData;
 	}
 
-	CUDA_FUNC_IN void store(const Vec3u& p, const T& v, unsigned int data_idx)
+	CUDA_FUNC_IN void Store(const Vec3u& p, const T& v, unsigned int data_idx)
 	{
 		unsigned int map_idx = BaseType::hashMap.Hash(p);
 #ifdef ISCUDA
@@ -136,7 +136,7 @@ public:
 		m_dataBuffer[data_idx].nextIdx = old_idx;
 	}
 
-	CUDA_FUNC_IN bool store(const Vec3u& p, const T& v)
+	CUDA_FUNC_IN unsigned int Store(const Vec3u& p, const T& v)
 	{
 		//build linked list and spatial map
 #ifdef ISCUDA
@@ -145,7 +145,7 @@ public:
 		unsigned int data_idx = Platform::Increment(&deviceDataIdx);
 #endif	
 		if (data_idx >= numData)
-			return false;
+			return 0xffffffff;
 		unsigned int map_idx = BaseType::hashMap.Hash(p);
 #ifdef ISCUDA
 		unsigned int old_idx = atomicExch(&m_mapBuffer[map_idx], data_idx);
@@ -155,15 +155,15 @@ public:
 		//copy actual data
 		m_dataBuffer[data_idx].value = v;
 		m_dataBuffer[data_idx].nextIdx = old_idx;
-		return true;
+		return data_idx;
 	}
 
-	CUDA_FUNC_IN bool store(const Vec3f& p, const T& v)
+	CUDA_FUNC_IN unsigned int Store(const Vec3f& p, const T& v)
 	{
-		return store(BaseType::hashMap.Transform(p), v);
+		return Store(BaseType::hashMap.Transform(p), v);
 	}
 
-	CUDA_FUNC_IN unsigned int allocStorage(unsigned int n)
+	CUDA_FUNC_IN unsigned int AllocStorage(unsigned int n)
 	{
 #ifdef ISCUDA
 		unsigned int idx = atomicAdd(&deviceDataIdx, n);
@@ -349,19 +349,19 @@ public:
 	}
 
 #ifdef __CUDACC__
-	CUDA_ONLY_FUNC bool store(const Vec3u& p, const T& v)
+	CUDA_ONLY_FUNC unsigned int Store(const Vec3u& p, const T& v)
 	{
 		unsigned int data_idx = atomicInc(&idxData, (unsigned int)-1);
 		if (data_idx >= numData)
-			return false;
+			return 0xffffffff;
 		unsigned int map_idx = BaseType::hashMap.Hash(p);
 		m_buffer1[data_idx] = v;
 		m_listBuffer[data_idx] = Vec2u(data_idx, map_idx);
-		return true;
+		return data_idx;
 	}
 #endif
 
-	CUDA_ONLY_FUNC bool store(const Vec3f& p, const T& v)
+	CUDA_ONLY_FUNC unsigned int Store(const Vec3f& p, const T& v)
 	{
 		return store(BaseType::hashMap.Transform(p), v);
 	}

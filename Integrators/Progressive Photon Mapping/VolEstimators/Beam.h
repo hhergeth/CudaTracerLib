@@ -1,14 +1,12 @@
 #pragma once
 #include <Defines.h>
-#include <Math/Vector.h>
-#include <Math/Spectrum.h>
+#include "../AdaptiveHelper.h"
 #include <Kernel/TraceHelper.h>
 #include <vector>
 #include <Base/Platform.h>
 #include <Engine/Grid.h>
 #include <Math/Compression.h>
 #include <Engine/SynchronizedBuffer.h>
-#include "../AdaptiveHelper.h"
 
 namespace CudaTracerLib {
 

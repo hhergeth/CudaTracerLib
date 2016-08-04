@@ -45,7 +45,7 @@ CUDA_FUNC_IN void _VCM(const Vec2f& pixelPosition, BlockSampleImage& img, Sample
 			auto ph = k_MISPhoton(v.throughput, -lightPathState.r.dir(), v.bRec.dg.sys.n, PhotonType::pt_Diffuse, v.dVC, v.dVCM, v.dVM);
 			Vec3u cell_idx = g_NextMap->getHashGrid().Transform(v.bRec.dg.P);
 			ph.setPos(g_NextMap->getHashGrid(), cell_idx, v.bRec.dg.P);
-			if (!g_NextMap->store(cell_idx, ph))
+			if (g_NextMap->Store(cell_idx, ph) == 0xffffffff)
 				printf("VCM : not enough photon storage allocated!\n");
 #endif
 		}

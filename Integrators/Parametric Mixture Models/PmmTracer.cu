@@ -24,7 +24,7 @@ __global__ void tracePhotons()
 		if (f.isZero())
 			break;
 		Vec3f p = r(r2.m_fDist);
-		g_sMap->store(p, bRec.wi);
+		g_sMap->Store(p, bRec.wi);
 		if (depth > 5)
 			if (rng.randomFloat() >= f.max())
 				break;

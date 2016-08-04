@@ -79,7 +79,7 @@ CUDA_GLOBAL void extendLighRays(unsigned int N, BPTVertex* g_pLightVertices, Ima
 			auto ph = k_MISPhoton(v.throughput, -ent.state.r.dir(), v.bRec.dg.sys.n, PhotonType::pt_Diffuse, v.dVC, v.dVCM, v.dVM);
 			Vec3u cell_idx = g_NextMap2->getHashGrid().Transform(v.bRec.dg.P);
 			ph.setPos(g_NextMap2->getHashGrid(), cell_idx, v.bRec.dg.P);
-			if (!g_NextMap2->store(cell_idx, ph))
+			if (g_NextMap2->Store(cell_idx, ph) == 0xffffffff)
 				printf("WVCM : not enough photon storage allocated!\n");
 
 			if (r2.getMat().bsdf.hasComponent(ESmooth))

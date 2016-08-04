@@ -51,20 +51,18 @@ template<typename VolEstimator> struct PPPMPhotonParticleProcessHandler
 	Sampler& rng;
 	bool wasStoredSurface;
 	bool wasStoredVolume;
-	bool delta;
 	unsigned int* numStoredSurface;
 	unsigned int* numStoredVolume;
 	int numSurfaceInteractions;
+	PrevPhotonIdx last_photon_idx;
 
 	CUDA_FUNC_IN PPPMPhotonParticleProcessHandler(Image& I, Sampler& r, unsigned int* nStoredSuface, unsigned int* nStoredVol)
-		: img(I), rng(r), wasStoredSurface(false), wasStoredVolume(false), delta(true), numStoredSurface(nStoredSuface), numStoredVolume(nStoredVol), numSurfaceInteractions(0)
+		: img(I), rng(r), wasStoredSurface(false), wasStoredVolume(false), numStoredSurface(nStoredSuface), numStoredVolume(nStoredVol), numSurfaceInteractions(0), last_photon_idx(0xffffffff, false)
 	{
-
 	}
 
 	CUDA_FUNC_IN void handleEmission(const Spectrum& weight, const PositionSamplingRecord& pRec)
 	{
-
 	}
 
 	CUDA_FUNC_IN void handleSurfaceInteraction(const Spectrum& weight, float accum_pdf, const Spectrum& f, float pdf, const NormalizedT<Ray>& r, const TraceResult& r2, BSDFSamplingRecord& bRec, bool lastBssrdf, bool lastDelta)
@@ -72,18 +70,20 @@ template<typename VolEstimator> struct PPPMPhotonParticleProcessHandler
 		auto wo = lastBssrdf ? r.dir() : -r.dir();
 		if (rng.randomFloat() < g_Parameters.probSurface && r2.getMat().bsdf.hasComponent(ESmooth) && dot(bRec.dg.sys.n, wo) > 0.0f)
 		{
-			auto ph = PPPMPhoton(weight, wo, bRec.dg.n, delta ? PhotonType::pt_Caustic : PhotonType::pt_Diffuse);
+			auto ph = PPPMPhoton(weight, wo, bRec.dg.sys.n, lastDelta ? PhotonType::pt_Caustic : PhotonType::pt_Diffuse);
 			Vec3u cell_idx = g_SurfaceMap->getHashGrid().Transform(bRec.dg.P);
 			ph.setPos(g_SurfaceMap->getHashGrid(), cell_idx, bRec.dg.P);
 			bool b = false;
+#ifdef ISCUDA
 			if ((g_Parameters.DIRECT && numSurfaceInteractions > 0) || !g_Parameters.DIRECT)
 			{
-#ifdef ISCUDA
-				b |= g_SurfaceMap->store(cell_idx, ph);
-				if (g_Parameters.finalGathering && delta)
-					b |= g_SurfaceMapCaustic->store(cell_idx, ph);
-#endif
+				auto idx = (g_Parameters.finalGathering && !lastDelta) || !g_Parameters.finalGathering ? g_SurfaceMap->Store(cell_idx, ph) : 0xffffffff;
+				b |= idx != 0xffffffff;
+				last_photon_idx = PrevPhotonIdx(idx, true);
+				if (g_Parameters.finalGathering && lastDelta)
+					b |= g_SurfaceMapCaustic->Store(cell_idx, ph) != 0xffffffff;
 			}
+#endif
 			if (b && !wasStoredSurface)
 			{
 #ifdef ISCUDA
@@ -92,32 +92,40 @@ template<typename VolEstimator> struct PPPMPhotonParticleProcessHandler
 				wasStoredSurface = true;
 			}
 		}
-		delta &= (bRec.sampledType & ETypeCombinations::EDelta) != 0;
 		numSurfaceInteractions++;
 	}
 
 	CUDA_FUNC_IN void handleMediumSampling(const Spectrum& weight, float accum_pdf, const NormalizedT<Ray>& r, const TraceResult& r2, const MediumSamplingRecord& mRec, bool sampleInMedium, const VolumeRegion* bssrdf, bool lastDelta)
 	{
-		bool storeVol = rng.randomFloat() < g_Parameters.probVolume;
-		if (storeVol && ((VolEstimator*)g_VolEstimator)->StoreBeam(Beam(r.ori(), r.dir(), r2.m_fDist, weight)) && !wasStoredVolume)
+		if(rng.randomFloat() < g_Parameters.probVolume)
 		{
+			auto ph = Beam(r.ori(), r.dir(), r2.m_fDist, weight);
+			auto idx = ((VolEstimator*)g_VolEstimator)->StoreBeam(ph);
+			last_photon_idx = PrevPhotonIdx(idx, false);
+			if(idx != 0xffffffff && !wasStoredVolume)
+			{
 #ifdef ISCUDA
-			atomicInc(numStoredVolume, UINT_MAX);
+				atomicInc(numStoredVolume, UINT_MAX);
 #endif
-			wasStoredVolume = true;
+				wasStoredVolume = true;
+			}
 		}
 	}
 
 	CUDA_FUNC_IN void handleMediumInteraction(const Spectrum& weight, float accum_pdf, const Spectrum& f, float pdf, MediumSamplingRecord& mRec, const NormalizedT<Vec3f>& wi, const TraceResult& r2, const VolumeRegion* bssrdf, bool lastDelta)
 	{
-		delta = false;
-		bool storeVol = rng.randomFloat() < g_Parameters.probVolume;
-		if (storeVol && ((VolEstimator*)g_VolEstimator)->StorePhoton(mRec.p, wi, weight) && !wasStoredVolume)
+		if (rng.randomFloat() < g_Parameters.probVolume)
 		{
+			auto ph = _VolumetricPhoton(mRec.p, wi, weight);
+			auto idx = ((VolEstimator*)g_VolEstimator)->StorePhoton(ph, mRec.p);
+			last_photon_idx = PrevPhotonIdx(idx, false);
+			if (idx != 0xffffffff && !wasStoredVolume)
+			{
 #ifdef ISCUDA
-			atomicInc(numStoredVolume, UINT_MAX);
+				atomicInc(numStoredVolume, UINT_MAX);
 #endif
-			wasStoredVolume = true;
+				wasStoredVolume = true;
+			}
 		}
 
 		//connection to camera as in particle tracing
