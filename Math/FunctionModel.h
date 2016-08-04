@@ -63,12 +63,14 @@ private:
 
 	bin bins[N_BINS];
 public:
+	typedef PACK_TYPE _PACK_TYPE;
 	CUDA_FUNC_IN MergingModel()
 	{
 		auto z = PACK_TYPE::Zero();
 		for (int i = 0; i < N_BINS; i++)
 			bins[i] = bin((float)(i + 1) / (float)(N_BINS), 0, z, z);
 	}
+
 	template<typename F> CUDA_FUNC_IN MergingModel(const F& clb)
 	{
 		for (int i = 0; i < N_BINS; i++)
@@ -77,25 +79,24 @@ public:
 			bins[i] = bin((float)(i + 1) / (float)(N_BINS), 1, z, z * z);
 		}
 	}
+
 	CUDA_FUNC_IN void Train(float t, const PACK_TYPE& v)
 	{
-		t = fminf(t, 1.0f);
-		int idx = 0;
-		while (idx < N_BINS && t > bins[idx].t_p)
-			idx++;
-		if (idx == N_BINS || bins[idx].t_p < t)
+		t = min(t, 1.0f);
+		int idx = findIdx(t);
+		if (idx == -1)
 			return;
 
 		bin left, right;
 		bins[idx].Split(idx == 0 ? 0 : bins[idx - 1].t_p, t, v, left, right);
 		auto best_merge = FindBestMerge(idx, v, left, right);
-		if (best_merge == -1)
+		//if (best_merge == -1)
 		{
 			++bins[idx].N;
 			bins[idx].s_x = bins[idx].s_x + v;
 			bins[idx].s_x2 = bins[idx].s_x2 + v * v;
 		}
-		else
+		/*else
 		{
 			if (idx < best_merge)
 			{
@@ -128,18 +129,71 @@ public:
 				auto tmp_bin = bin::Merge(bins[best_merge], bins[best_merge + 1]);
 				tmp_bin.Split(best_merge > 0 ? bins[best_merge - 1].t_p : 0, t, v, bins[best_merge], bins[best_merge + 1]);
 			}
-		}
+		}*/
 	}
 
-	CUDA_FUNC_IN PACK_TYPE Eval(float t)
+	CUDA_FUNC_IN PACK_TYPE Eval(float t) const
 	{
 		for (int i = 0; i < N_BINS; i++)
 			if (bins[i].t_p >= t)
 				return bins[i].eval(t);
 		return PACK_TYPE::Zero();
 	}
+
+	CUDA_FUNC_IN PACK_TYPE Average(float t_min, float t_max) const
+	{
+		float sum_w = 0;
+		PACK_TYPE sum_val = PACK_TYPE::Zero();
+		int start_i = findIdx(t_min), end_i = findIdx(t_max);
+		if (start_i == -1) return PACK_TYPE::Zero();
+		end_i = end_i == -1 ? N_BINS - 1 : end_i;
+		float t = t_min;
+		for (int i = start_i; i <= end_i; i++)
+		{
+			float t_i = bins[i].t_p;
+			float w = t_i < t_max ? t_i - t : t_max - t;
+			t = t_i;
+			sum_w += w;
+			sum_val = sum_val + bins[i].E_X() * w;
+		}
+		return sum_w != 0 ? sum_val * (1.0f / sum_w) : PACK_TYPE::Zero();
+	}
+
+	CUDA_FUNC_IN PACK_TYPE Average() const
+	{
+		PACK_TYPE sum = PACK_TYPE::Zero();
+		for (int i = 0; i < N_BINS; i++)
+			sum = sum + bins[i].E_X();
+		return sum * (1.0f / N_BINS);
+	}
+
+	template<typename F> CUDA_FUNC_IN void Iterate(const F& clb) const
+	{
+		for (int i = 0; i < N_BINS; i++)
+			clb(bins[i].E_X());
+	}
+
+	template<typename T, typename F> CUDA_FUNC_IN T Extremize(float t_min, float t_max, const T& init, const F& max_clb) const
+	{
+		int start_i = findIdx(t_min), end_i = findIdx(t_max);
+		if (start_i == -1) return init;
+		end_i = end_i == -1 ? N_BINS - 1 : end_i;
+		T max_el = init;
+		for (int i = start_i; i <= end_i; i++)
+			max_el = max_clb(max_el, bins[i].E_X());
+		return max_el;
+	}
 private:
-	CUDA_FUNC_IN int FindBestMerge(int idx, const PACK_TYPE& v, const bin& left, const bin& right)
+	CUDA_FUNC_IN int findIdx(float t) const
+	{
+		int idx = 0;
+		while (idx < N_BINS && t > bins[idx].t_p)
+			idx++;
+		if (idx == N_BINS || bins[idx].t_p < t)
+			return -1;
+		else return idx;
+	}
+	CUDA_FUNC_IN int FindBestMerge(int idx, const PACK_TYPE& v, const bin& left, const bin& right) const
 	{
 		int best_idx = -1;
 		float best_merge = FLT_MAX;
