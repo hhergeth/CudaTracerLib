@@ -8,7 +8,7 @@ void initbssrdf(VolumeRegion& reg)
 	const float a = 1e10f;
 	PhaseFunction func;
 	func.SetData(IsotropicPhaseFunction());
-	reg.SetData(HomogeneousVolumeDensity(func, (float4x4::Translate(Vec3f(0.5f)) % float4x4::Scale(Vec3f(0.5f / a))).inverse(), Spectrum(0.0f), Spectrum(0.0f), Spectrum(0.0f)));
+	reg.SetData(HomogeneousVolumeDensity(func, float4x4::Scale(Vec3f(2*a)) % float4x4::Translate(Vec3f(-0.5f)), Spectrum(0.0f), Spectrum(0.0f), Spectrum(0.0f)));
 	reg.As()->Update();
 }
 
