@@ -44,7 +44,7 @@ struct UniformKernel : public KernelBase<1, 2, 3>
 
 	template<int DIM> CUDA_FUNC_IN static float beta()
 	{
-		return extract_val<DIM - 1>({ 0.5f, 0.785398f, 1.0472 });
+		return extract_val<DIM - 1>({ 0.5f, 0.785398f, 1.0472f });
 	}
 
 	template<int DIM> CUDA_FUNC_IN static float norm_factor()
@@ -87,7 +87,7 @@ template<typename K> struct KernelWrapper : public K
 	{
 		const float vol = pow_int_compile<DIM>::pow(r);
 		const float norm_coeff = K::template norm_factor<DIM>();
-		return K::k(math::clamp01(t / r)) / (norm_coeff * vol);
+		return math::clamp01(K::k(math::clamp01(t / r)) / (norm_coeff * vol));
 	}
 
 	template<int DIM, typename VEC> CUDA_FUNC_IN static float k(const VEC& t, float r)
