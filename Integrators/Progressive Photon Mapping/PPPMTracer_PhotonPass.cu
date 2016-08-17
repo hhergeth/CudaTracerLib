@@ -42,7 +42,7 @@ template<typename VolEstimator> struct PPPMPhotonParticleProcessHandler
 		: img(I), rng(r), wasStoredSurface(false), wasStoredVolume(false), numStoredSurface(nStoredSuface), numStoredVolume(nStoredVol), numSurfaceInteractions(0), last_photon_idx(0xffffffff, false)
 	{
 	}
-
+	
 	CUDA_FUNC_IN void handleEmission(const Spectrum& weight, const PositionSamplingRecord& pRec)
 	{
 	}
@@ -52,7 +52,7 @@ template<typename VolEstimator> struct PPPMPhotonParticleProcessHandler
 		auto wo = lastBssrdf ? r.dir() : -r.dir();
 		if (rng.randomFloat() < g_Parameters.probSurface && r2.getMat().bsdf.hasComponent(ESmooth) && dot(bRec.dg.sys.n, wo) > 0.0f)
 		{
-			auto ph = PPPMPhoton(weight, wo, bRec.dg.sys.n, lastDelta ? PhotonType::pt_Caustic : PhotonType::pt_Diffuse);
+			auto ph = PPPMPhoton(weight, wo, bRec.dg.sys.n, accum_pdf);
 			Vec3u cell_idx = g_SurfaceMap->getHashGrid().Transform(bRec.dg.P);
 			ph.setPos(g_SurfaceMap->getHashGrid(), cell_idx, bRec.dg.P);
 			bool b = false;
@@ -98,7 +98,7 @@ template<typename VolEstimator> struct PPPMPhotonParticleProcessHandler
 	{
 		if (rng.randomFloat() < g_Parameters.probVolume)
 		{
-			auto ph = _VolumetricPhoton(mRec.p, wi, weight);
+			auto ph = _VolumetricPhoton(mRec.p, wi, weight, accum_pdf);
 			auto idx = ((VolEstimator*)g_VolEstimator)->StorePhoton(ph, mRec.p);
 			last_photon_idx = PrevPhotonIdx(idx, false);
 			if (idx != 0xffffffff && !wasStoredVolume)
