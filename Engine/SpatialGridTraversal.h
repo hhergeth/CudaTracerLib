@@ -21,16 +21,16 @@ template<template<class> class Grid, typename T, typename F1, typename F2, typen
 		grid.ForAllCells(idx_min_cell, idx_max_cell, [&](const Vec3u& cell_idx)
 		{
 			//check if cell was already visited
-			if (last_min.x <= cell_idx.x && cell_idx.x <= last_max.x &&
-				last_min.y <= cell_idx.y && cell_idx.y <= last_max.y &&
-				last_min.z <= cell_idx.z && cell_idx.z <= last_max.z)
-				return;
+			//if (last_min.x <= cell_idx.x && cell_idx.x <= last_max.x &&
+			//	last_min.y <= cell_idx.y && cell_idx.y <= last_max.y &&
+			//	last_min.z <= cell_idx.z && cell_idx.z <= last_max.z)
+			//	return;
 
 			grid.ForAllCellEntries(cell_idx, [&](unsigned int element_idx, const T& element)
 			{
 				float distAlongRay = -1;
 				auto dist_data = clbDist(cell_idx, element_idx, element, distAlongRay, rad);
-				if ((rayT <= distAlongRay || rayT <= minT * (1 + EPSILON)) && distAlongRay >= tmin  && distAlongRay <= tmax)//&& (distAlongRay < cellEndT || cellEndT >= maxT * (1.0f - EPSILON))
+				if ((rayT <= distAlongRay || rayT <= minT * (1 + EPSILON)) && distAlongRay >= tmin  && distAlongRay <= tmax && (distAlongRay < cellEndT || cellEndT >= maxT * (1.0f - EPSILON)))//
 				{
 					clbElement(rayT, cellEndT, minT, maxT, cell_idx, element_idx, element, distAlongRay, dist_data, rad);
 				}
