@@ -36,10 +36,9 @@ template<typename VolEstimator> struct PPPMPhotonParticleProcessHandler
 	unsigned int* numStoredSurface;
 	unsigned int* numStoredVolume;
 	int numSurfaceInteractions;
-	PrevPhotonIdx last_photon_idx;
 
 	CUDA_FUNC_IN PPPMPhotonParticleProcessHandler(Image& I, Sampler& r, unsigned int* nStoredSuface, unsigned int* nStoredVol)
-		: img(I), rng(r), wasStoredSurface(false), wasStoredVolume(false), numStoredSurface(nStoredSuface), numStoredVolume(nStoredVol), numSurfaceInteractions(0), last_photon_idx(0xffffffff, false)
+		: img(I), rng(r), wasStoredSurface(false), wasStoredVolume(false), numStoredSurface(nStoredSuface), numStoredVolume(nStoredVol), numSurfaceInteractions(0)
 	{
 	}
 	
@@ -52,7 +51,7 @@ template<typename VolEstimator> struct PPPMPhotonParticleProcessHandler
 		auto wo = lastBssrdf ? r.dir() : -r.dir();
 		if (rng.randomFloat() < g_Parameters.probSurface && r2.getMat().bsdf.hasComponent(ESmooth) && dot(bRec.dg.sys.n, wo) > 0.0f)
 		{
-			auto ph = PPPMPhoton(weight, wo, bRec.dg.sys.n, accum_pdf);
+			auto ph = PPPMPhoton(weight, wo, bRec.dg.sys.n);
 			Vec3u cell_idx = g_SurfaceMap->getHashGrid().Transform(bRec.dg.P);
 			ph.setPos(g_SurfaceMap->getHashGrid(), cell_idx, bRec.dg.P);
 			bool b = false;
@@ -61,7 +60,6 @@ template<typename VolEstimator> struct PPPMPhotonParticleProcessHandler
 			{
 				auto idx = (g_Parameters.finalGathering && !lastDelta) || !g_Parameters.finalGathering ? g_SurfaceMap->Store(cell_idx, ph) : 0xffffffff;
 				b |= idx != 0xffffffff;
-				last_photon_idx = PrevPhotonIdx(idx, true);
 				if (g_Parameters.finalGathering && lastDelta)
 					b |= g_SurfaceMapCaustic->Store(cell_idx, ph) != 0xffffffff;
 			}
@@ -83,7 +81,6 @@ template<typename VolEstimator> struct PPPMPhotonParticleProcessHandler
 		{
 			auto ph = Beam(r.ori(), r.dir(), r2.m_fDist, weight);
 			auto idx = ((VolEstimator*)g_VolEstimator)->StoreBeam(ph);
-			last_photon_idx = PrevPhotonIdx(idx, false);
 			if(idx != 0xffffffff && !wasStoredVolume)
 			{
 #ifdef ISCUDA
@@ -98,9 +95,8 @@ template<typename VolEstimator> struct PPPMPhotonParticleProcessHandler
 	{
 		if (rng.randomFloat() < g_Parameters.probVolume)
 		{
-			auto ph = _VolumetricPhoton(mRec.p, wi, weight, accum_pdf);
+			auto ph = _VolumetricPhoton(mRec.p, wi, weight);
 			auto idx = ((VolEstimator*)g_VolEstimator)->StorePhoton(ph, mRec.p);
-			last_photon_idx = PrevPhotonIdx(idx, false);
 			if (idx != 0xffffffff && !wasStoredVolume)
 			{
 #ifdef ISCUDA
@@ -160,12 +156,13 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 
 void PPPMTracer::doPhotonPass(Image* I)
 {
-	bool finalGathering = m_sParameters.getValue(KEY_FinalGathering());
+	bool finalGathering = m_sParameters.getValue(KEY_N_FG_Samples()) != 0;
 
 	m_sSurfaceMap.ResetBuffer();
 	if (finalGathering)
 		m_sSurfaceMapCaustic->ResetBuffer();
-	m_pVolumeEstimator->StartNewPass(this, m_pScene);
+	m_pVolumeEstimator->StartNewPassBase(m_uPassesDone);
+	m_pVolumeEstimator->StartNewPass(m_pScene);
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_SurfaceMap, &m_sSurfaceMap, sizeof(m_sSurfaceMap)));
 	if (finalGathering)
 		ThrowCudaErrors(cudaMemcpyToSymbol(g_SurfaceMapCaustic, m_sSurfaceMapCaustic, sizeof(*m_sSurfaceMapCaustic)));
@@ -204,8 +201,6 @@ void PPPMTracer::doPhotonPass(Image* I)
 	m_sSurfaceMap.PrepareForUse();
 	if (finalGathering)
 		m_sSurfaceMapCaustic->PrepareForUse();
-	if (m_uTotalPhotonsEmitted == 0)
-		doPerPixelRadiusEstimation();
 	size_t volLength, volCount;
 	m_pVolumeEstimator->getStatusInfo(volLength, volCount);
 	if (m_sParameters.getValue(KEY_AdaptiveAccProb()))

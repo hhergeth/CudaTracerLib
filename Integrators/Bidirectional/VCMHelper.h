@@ -12,7 +12,7 @@ struct k_MISPhoton : public PPPMPhoton
 	float dVC, dVCM, dVM;
 	CUDA_FUNC_IN k_MISPhoton(){}
 	CUDA_FUNC_IN k_MISPhoton(const Spectrum& l, const NormalizedT<Vec3f>& wi, const NormalizedT<Vec3f>& n, float dvc, float dvcm, float dvm)
-		: PPPMPhoton(l, wi, n, 0.0f), dVC(dvc), dVCM(dvcm), dVM(dvm)
+		: PPPMPhoton(l, wi, n), dVC(dvc), dVCM(dvcm), dVM(dvm)
 	{
 	}
 };

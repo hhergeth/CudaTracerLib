@@ -42,7 +42,7 @@ void BeamGrid::PrepareForRendering()
 	auto l2 = m_sStorage.getHashGrid().m_gridDim / l + Vec3u(1);
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_PhotonStorage, &m_sStorage, sizeof(m_sStorage)));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_BeamGridStorage, &m_sBeamGridStorage, sizeof(m_sBeamGridStorage)));
-	buildBeams << <dim3(l2.x, l2.y, l2.z), dim3(l, l, l) >> >(m_fCurrentRadiusVol, m_sStorage.getHashGrid().m_gridDim, photonDensNum);
+	buildBeams << <dim3(l2.x, l2.y, l2.z), dim3(l, l, l) >> >(getRadVol<2>(), m_sStorage.getHashGrid().m_gridDim, photonDensNum);
 	ThrowCudaErrors(cudaMemcpyFromSymbol(&m_sStorage, g_PhotonStorage, sizeof(m_sStorage)));
 	ThrowCudaErrors(cudaMemcpyFromSymbol(&m_sBeamGridStorage, g_BeamGridStorage, sizeof(m_sBeamGridStorage)));
 
@@ -78,10 +78,9 @@ void BeamGrid::PrepareForRendering()
 	}*/
 }
 
-void BeamGrid::StartNewPass(const IRadiusProvider* radProvider, DynamicScene* scene)
+void BeamGrid::StartNewPass(DynamicScene* scene)
 {
-	PointStorage::StartNewPass(radProvider, scene);
-	m_fCurrentRadiusVol = radProvider->getCurrentRadius(2);
+	PointStorage::StartNewPass(scene);
 	m_sBeamGridStorage.ResetBuffer();
 }
 

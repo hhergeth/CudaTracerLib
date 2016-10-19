@@ -6,15 +6,10 @@
 #include <Engine/Node.h>
 #include <Engine/Mesh.h>
 #include <Engine/Material.h>
+#include <iomanip>
+#include <Engine/SpatialGridTraversal.h>
 
 namespace CudaTracerLib {
-
-void ComputeMinMaxRadiusForScene(const AABB& box, float& rmin, float& rmax)
-{
-	auto r_scene = box.Size().length() / 2;
-	rmin = r_scene * 1e-3f;
-	rmax = r_scene * 2e-2f;
-}
 
 unsigned int ComputePhotonBlocksPerPass()
 {
@@ -26,25 +21,26 @@ unsigned int ComputePhotonBlocksPerPass()
 }
 
 PPPMTracer::PPPMTracer()
-	: m_pAdpBuffer(0), m_fLightVisibility(1), 
-	m_fProbSurface(1), m_fProbVolume(1), m_uBlocksPerLaunch(ComputePhotonBlocksPerPass()),
-	m_sSurfaceMap(Vec3u(250), (ComputePhotonBlocksPerPass() + 2) * PPM_slots_per_block), m_sSurfaceMapCaustic(0),
-	m_debugScaleVal(1)
+	: m_pPixelBuffer(0), m_fLightVisibility(1), 
+	m_fProbSurface(1), m_fProbVolume(1.0f), m_uBlocksPerLaunch(ComputePhotonBlocksPerPass()),
+	m_sSurfaceMap(Vec3u(250), (ComputePhotonBlocksPerPass() + 2) * PPM_slots_per_block), m_sSurfaceMapCaustic(0)
 {
 	m_sParameters
-		<< KEY_Direct()					<< CreateSetBool(true)
-		<< KEY_FinalGathering()			<< CreateSetBool(false)
-		<< KEY_AdaptiveAccProb()		<< CreateSetBool(false)
-		<< KEY_RadiiComputationType()	<< PPM_Radius_Type::kNN
-		<< KEY_VolRadiusScale()			<< CreateInterval(1.0f, 0.0f, FLT_MAX)
-		<< KEY_kNN_Neighboor_Num_Surf() << CreateInterval(10.0f, 0.0f, FLT_MAX)
-		<< KEY_kNN_Neighboor_Num_Vol()  << CreateInterval(1.0f, 0.0f, FLT_MAX);
+		<< KEY_Direct()						<< CreateSetBool(true)
+		<< KEY_N_FG_Samples()				<< CreateInterval(0, 0, INT_MAX)
+		<< KEY_AdaptiveAccProb()			<< CreateSetBool(false)
+		<< KEY_RadiiComputationTypeSurf()	<< PPM_Radius_Type::Constant
+		<< KEY_RadiiComputationTypeVol()	<< PPM_Radius_Type::Constant
+		<< KEY_VolRadiusScale()				<< CreateInterval(1.0f, 0.0f, FLT_MAX)
+		<< KEY_kNN_Neighboor_Num_Surf()		<< CreateInterval(50.0f, 0.0f, FLT_MAX)
+		<< KEY_kNN_Neighboor_Num_Vol()		<< CreateInterval(50.0f, 0.0f, FLT_MAX);
 
-	m_uTotalPhotonsEmitted = -1;
+	m_uTotalPhotonsEmittedSurface = m_uTotalPhotonsEmittedVolume = -1;
 	unsigned int numPhotons = (m_uBlocksPerLaunch + 2) * PPM_slots_per_block;
-	if (m_sParameters.getValue(KEY_FinalGathering()))
+	if (m_sParameters.getValue(KEY_N_FG_Samples()) != 0)
 		m_sSurfaceMapCaustic = new SurfaceMapT(Vec3u(250), numPhotons);
-	m_pVolumeEstimator = new PointStorage(150, numPhotons);
+	//m_pVolumeEstimator = new PointStorage(150, numPhotons);
+	m_pVolumeEstimator = new BeamGrid(150, numPhotons, 10, 2);
 	//m_pVolumeEstimator = new BeamBeamGrid(10, 10000, 1000);
 	if (m_sParameters.getValue(KEY_AdaptiveAccProb()))
 	{
@@ -57,10 +53,10 @@ PPPMTracer::PPPMTracer()
 PPPMTracer::~PPPMTracer()
 {
 	m_sSurfaceMap.Free();
-	if (m_pAdpBuffer)
+	if (m_pPixelBuffer)
 	{
-		m_pAdpBuffer->Free();
-		delete m_pAdpBuffer;
+		m_pPixelBuffer->Free();
+		delete m_pPixelBuffer;
 	}
 	delete m_pVolumeEstimator;
 }
@@ -68,11 +64,13 @@ PPPMTracer::~PPPMTracer()
 void PPPMTracer::PrintStatus(std::vector<std::string>& a_Buf) const
 {
 	a_Buf.push_back(GET_PERF_BLOCKS().ToString());
-	auto radPara = ((EnumTracerParameter<PPM_Radius_Type>*)m_sParameters.operator[](KEY_RadiiComputationType().name));
-	a_Buf.push_back("Radius Scheme : " + radPara->getStringValue());
-	double pC = math::floor((float)((double)m_uTotalPhotonsEmitted / 1000000.0));
+	auto radParaSurf = ((EnumTracerParameter<PPM_Radius_Type>*)m_sParameters.operator[](KEY_RadiiComputationTypeSurf().name));
+	a_Buf.push_back("Surf Radius Scheme : " + radParaSurf->getStringValue());
+	auto radParaVol = ((EnumTracerParameter<PPM_Radius_Type>*)m_sParameters.operator[](KEY_RadiiComputationTypeVol().name));
+	a_Buf.push_back("Vol Radius Scheme : " + radParaVol->getStringValue());
+	double pC = math::floor((float)((double)m_uTotalPhotonsEmittedSurface / 1000000.0));
 	a_Buf.push_back(format("Photons emitted : %d[Mil]", (int)pC));
-	double pCs = m_uTotalPhotonsEmitted / m_fAccRuntime / 1000000.0f;
+	double pCs = m_uTotalPhotonsEmittedSurface / m_fAccRuntime / 1000000.0f;
 	double pCsLastSurf = m_uPhotonEmittedPassSurface / m_fLastRuntime / 1000000.0f, pCsLastVol = m_uPhotonEmittedPassVolume / m_fLastRuntime / 1000000.0f;
 	a_Buf.push_back(format("Photons/Sec avg : %f", (float)pCs));
 	a_Buf.push_back(format("Photons Surf/Sec lst : %f", (float)pCsLastSurf));
@@ -80,7 +78,7 @@ void PPPMTracer::PrintStatus(std::vector<std::string>& a_Buf) const
 	a_Buf.push_back(format("Light Visibility : %f", m_fLightVisibility));
 	a_Buf.push_back(format("Photons per pass : %d*100,000", m_uPhotonEmittedPassSurface / 100000));
 	a_Buf.push_back(format("%.2f%% Surf Photons", float(m_sSurfaceMap.getNumStoredEntries()) / m_sSurfaceMap.getNumEntries() * 100));
-	if (m_sParameters.getValue(KEY_FinalGathering()))
+	if (m_sParameters.getValue(KEY_N_FG_Samples()) != 0)
 		a_Buf.push_back(format("Caustic surf map : %.2f%%", float(m_sSurfaceMapCaustic->getNumStoredEntries()) / m_sSurfaceMapCaustic->getNumEntries() * 100));
 	a_Buf.push_back("Volumeric Estimator : ");
 	m_pVolumeEstimator->PrintStatus(a_Buf);
@@ -89,12 +87,12 @@ void PPPMTracer::PrintStatus(std::vector<std::string>& a_Buf) const
 void PPPMTracer::Resize(unsigned int _w, unsigned int _h)
 {
 	Tracer<true, true>::Resize(_w, _h);
-	if(m_pAdpBuffer)
+	if(m_pPixelBuffer)
 	{
-		m_pAdpBuffer->Free();
-		delete m_pAdpBuffer;
+		m_pPixelBuffer->Free();
+		delete m_pPixelBuffer;
 	}
-	m_pAdpBuffer = new BlockLoclizedCudaBuffer<APPM_PixelData>(_w, _h);
+	m_pPixelBuffer = new SynchronizedBuffer<APPM_PixelData>(_w * _h);
 }
 
 void PPPMTracer::DoRender(Image* I)
@@ -104,22 +102,30 @@ void PPPMTracer::DoRender(Image* I)
 		auto timer = START_PERF_BLOCK("Photon Pass");
 		doPhotonPass(I);
 	}
-	m_uTotalPhotonsEmitted += max(m_uPhotonEmittedPassSurface, m_uPhotonEmittedPassVolume);
+	m_uTotalPhotonsEmittedSurface += m_uPhotonEmittedPassSurface;
+	m_uTotalPhotonsEmittedVolume += m_uPhotonEmittedPassVolume;
 	setNumSequences();
 	{
 		auto timer = START_PERF_BLOCK("Camera Pass");
 		Tracer<true, true>::DoRender(I);
-void PPPMTracer::getCurrentRMinRMax(float& rMin, float& rMax) const
-{
-	float rmin, rmax;
-	ComputeMinMaxRadiusForScene(m_pScene->getSceneBox(), rmin, rmax);
-	rMin = CudaTracerLib::getCurrentRadius(rmin, m_uPassesDone, 2);
-	rMax = CudaTracerLib::getCurrentRadius(rmax, m_uPassesDone, 2);
+	}
 }
 
-k_AdaptiveStruct PPPMTracer::getAdaptiveData()
+k_AdaptiveStruct PPPMTracer::getAdaptiveData() const
 {
-	return k_AdaptiveStruct(m_pScene->getSceneBox(), *m_pAdpBuffer, w, m_uPassesDone);
+	auto r_scene_surf = m_boxSurf.Size().length() / 2;
+	auto surf_min = r_scene_surf * 1e-5f, surf_max = r_scene_surf * 1e-1f;
+
+	auto r_scene_vol = m_boxVol.Size().length() / 2;
+	auto vol_min = r_scene_vol * 1e-5f, vol_max = r_scene_vol * 1e-1f;
+
+	float k_toFindSurf = m_sParameters.getValue(KEY_kNN_Neighboor_Num_Surf());// / (m_uTotalPhotonsEmittedSurface / m_uPassesDone);
+	float k_toFindVol = m_sParameters.getValue(KEY_kNN_Neighboor_Num_Vol());// / (m_uTotalPhotonsEmittedVolume / m_uPassesDone);
+
+	auto radiusTypeSurf = m_sParameters.getValue(KEY_RadiiComputationTypeSurf());
+	auto radiusTypeVol = m_sParameters.getValue(KEY_RadiiComputationTypeVol());
+
+	return k_AdaptiveStruct(m_fInitialRadiusSurf, m_fInitialRadiusVol, surf_min, surf_max, vol_min, vol_max, *m_pPixelBuffer, w, m_uPassesDone, m_uPhotonEmittedPassSurface, m_uPhotonEmittedPassVolume, k_toFindSurf, k_toFindVol, radiusTypeSurf, radiusTypeVol);
 }
 
 float PPPMTracer::getSplatScale()
@@ -127,37 +133,22 @@ float PPPMTracer::getSplatScale()
 	return 1.0f / m_uPassesDone * (m_uPhotonEmittedPassVolume ? (float)(w * h) / m_uPhotonEmittedPassVolume : 1);
 }
 
-float PPPMTracer::getCurrentRadius(float exp, bool surf) const
-{
-	return CudaTracerLib::getCurrentRadius(surf ? m_fInitialRadiusSurf : m_fInitialRadiusVol, m_uPassesDone, exp);
-}
-
 typedef boost::variant<int, float> pixel_variant;
 std::map<std::string, pixel_variant> PPPMTracer::getPixelInfo(int x, int y) const
 {
-	APPM_PixelData pixelInfo = m_pAdpBuffer->operator()(x, y);
-	auto e = pixelInfo.m_surfaceData;
-	auto r = e.compute_r<2>((int)m_uPassesDone, m_uPhotonEmittedPassSurface, (int)m_uTotalPhotonsEmitted);
-	auto rd = e.compute_rd(m_uPassesDone, m_uPhotonEmittedPassSurface, m_uPhotonEmittedPassSurface * (m_uPassesDone - 1));
-
+	m_pPixelBuffer->Synchronize();
+	auto pixelInfo = m_pPixelBuffer->operator[](y * w + x);
 	auto res = std::map<std::string, pixel_variant>();
-	res["E[DI]"] = pixel_variant(Lapl(e.E_Lapl));
-	res["VAR[E[DI]]"] = pixel_variant((float)e.VAR_E_Lapl.Var((float)m_uPassesDone));
-	res["VAR[psi]"] = pixel_variant((float)e.VAR_psi.Var(e.num_psi));
-	res["num_psi"] = pixel_variant((float)e.num_psi);
-	res["E[pl]"] = pixel_variant(e.E_pl);
-	auto a_AdpEntries = k_AdaptiveStruct(m_sSurfaceMap.getHashGrid().getAABB(), *m_pAdpBuffer, w, m_uPassesDone);
-	auto r_k_nn = density_to_rad<2>(m_sParameters.getValue(KEY_kNN_Neighboor_Num_Surf()), e.E_pl, a_AdpEntries.getMinRad<2>(), a_AdpEntries.getMaxRad<2>(), m_uPassesDone);
-	auto r_uni = getCurrentRadius(2, true);
-	res["r_knn"] = pixel_variant(r_k_nn);
-	res["r_uni"] = pixel_variant(r_uni);
-	res["r_adp"] = pixel_variant(r);
-	res["rd"] = pixel_variant(rd);
+	auto dat = getAdaptiveData();
 
-	auto rT = m_sParameters.getValue(KEY_RadiiComputationType());
-	res["r"] = rT == PPM_Radius_Type::Constant ? r_uni : (rT == PPM_Radius_Type::kNN ? r_k_nn : r);
-	res["J"] = pixel_variant((int)m_uPhotonEmittedPassSurface);
-	res["N"] = pixel_variant((int)m_uPassesDone);
+	res["pl_surf"] = pixelInfo.surf_density.computeDensityEstimate(m_uPassesDone, m_uTotalPhotonsEmittedSurface);
+	res["pl_vol"] = pixelInfo.vol_density.computeDensityEstimate(m_uPassesDone, m_uTotalPhotonsEmittedVolume);
+
+	res["RadiiComputationTypeSurf"] = m_sParameters.getValue(KEY_RadiiComputationTypeSurf());
+	res["RadiiComputationTypeVol"] = m_sParameters.getValue(KEY_RadiiComputationTypeVol());
+
+	res["r_surf_uni"] = dat.m_radSurf;
+	res["r_surf_kNN"] = dat.computekNNRadiusSurf(pixelInfo);
 
 	return res;
 }
@@ -171,19 +162,20 @@ void PPPMTracer::StartNewTrace(Image* I)
 	m_useDirectLighting &= m_fLightVisibility > 0.5f;
 	//m_bDirect = 0;
 	Tracer<true, true>::StartNewTrace(I);
-	m_uTotalPhotonsEmitted = 0;
+	m_pPixelBuffer->Memset(0);
+	m_uTotalPhotonsEmittedSurface = m_uTotalPhotonsEmittedVolume = 0;
 #ifdef CUDA_RELEASE_BUILD
-	AABB m_sEyeBox = GetEyeHitPointBox(m_pScene, true);
+	m_boxSurf = GetEyeHitPointBox(m_pScene, true);
 #else
-	AABB m_sEyeBox = m_pScene->getSceneBox();
+	m_boxSurf = m_pScene->getSceneBox();
 #endif
-	float rad = m_sEyeBox.Size().length() / 2.0f;
-	float r = min(rad / w, rad / h) * 5.0f;//3.5f
-	m_sEyeBox.minV -= Vec3f(r);
-	m_sEyeBox.maxV += Vec3f(r);
+	float rad = m_boxSurf.Size().length() / 2.0f;
+	float r = min(rad / w, rad / h) * 5.0f;
+	m_boxSurf.minV -= Vec3f(r);
+	m_boxSurf.maxV += Vec3f(r);
 	m_fInitialRadiusSurf = r;
 	m_fInitialRadiusVol = m_fInitialRadiusSurf * m_sParameters.getValue(KEY_VolRadiusScale());
-	AABB volBox = m_pScene->getKernelSceneData().m_sVolume.box;
+	m_boxVol = m_pScene->getKernelSceneData().m_sVolume.box;
 	for (auto it : m_pScene->getNodes())
 	{
 		StreamReference<Material> mats = m_pScene->getMaterials(it);
@@ -194,14 +186,15 @@ void PPPMTracer::StartNewTrace(Image* I)
 			ZERO_MEM(dg);
 			if (mats(j)->GetBSSRDF(dg, &bssrdf))
 			{
-				volBox = volBox.Extend(m_pScene->getNodeBox(it));
+				m_boxVol = m_boxVol.Extend(m_pScene->getNodeBox(it));
 			}
 		}
 	}
-	m_sSurfaceMap.SetSceneDimensions(m_sEyeBox);
-	if (m_sParameters.getValue(KEY_FinalGathering()))
-		m_sSurfaceMapCaustic->SetSceneDimensions(m_sEyeBox);
-	m_pVolumeEstimator->StartNewRendering(volBox);
+	m_sSurfaceMap.SetSceneDimensions(m_boxSurf);
+	if (m_sParameters.getValue(KEY_N_FG_Samples()) != 0)
+		m_sSurfaceMapCaustic->SetSceneDimensions(m_boxSurf);
+	m_pVolumeEstimator->StartNewRenderingBase(m_fInitialRadiusSurf, m_fInitialRadiusVol);
+	m_pVolumeEstimator->StartNewRendering(m_boxVol);
 }
 
 }

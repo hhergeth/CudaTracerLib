@@ -9,6 +9,10 @@
 
 namespace CudaTracerLib {
 
+#define PTDM(X) X(Constant) X(kNN)
+ENUMIZE(PPM_Radius_Type, PTDM)
+#undef PTDM
+
 #define ALPHA (2.0f / 3.0f)
 
 CUDA_FUNC_IN float getCurrentRadius(float initial_r, unsigned int iteration, float exp)
@@ -25,11 +29,9 @@ private:
 	unsigned short Wi;
 	unsigned short Nor;
 	unsigned int flag_pos;
-	float pdf;
 public:
 	CUDA_FUNC_IN PPPMPhoton(){}
-	CUDA_FUNC_IN PPPMPhoton(const Spectrum& l, const NormalizedT<Vec3f>& wi, const NormalizedT<Vec3f>& n, float pdf)
-		: pdf(pdf)
+	CUDA_FUNC_IN PPPMPhoton(const Spectrum& l, const NormalizedT<Vec3f>& wi, const NormalizedT<Vec3f>& n)
 	{
 		Nor = NormalizedFloat3ToUchar2(n);
 		L = (l).toRGBE();
@@ -68,10 +70,6 @@ public:
 	CUDA_FUNC_IN void setFlag()
 	{
 		flag_pos |= 0x80000000;
-	}
-	CUDA_FUNC_IN float getPdf() const
-	{
-		return pdf;
 	}
 };
 

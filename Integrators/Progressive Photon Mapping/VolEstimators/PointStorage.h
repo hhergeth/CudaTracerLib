@@ -14,11 +14,9 @@ private:
 	unsigned short wi;
 	half r;
 	Vec3f Pos;
-	float pdf;
 public:
 	CUDA_FUNC_IN VolumetricPhoton() {}
-	CUDA_FUNC_IN VolumetricPhoton(const Vec3f& p, const NormalizedT<Vec3f>& w, const Spectrum& ph, float pdf)
-		: pdf(pdf)
+	CUDA_FUNC_IN VolumetricPhoton(const Vec3f& p, const NormalizedT<Vec3f>& w, const Spectrum& ph)
 	{
 		Pos = p;
 		r = half(0.0f);
@@ -61,10 +59,6 @@ public:
 	{
 		flag_type_pos_ll |= 1;
 	}
-	CUDA_FUNC_IN float getPdf() const
-	{
-		return pdf;
-	}
 };
 
 typedef VolumetricPhoton _VolumetricPhoton;
@@ -79,8 +73,11 @@ protected:
 	}
 public:
 	SpatialLinkedMap<_VolumetricPhoton> m_sStorage;
-	
-	float m_fCurrentRadiusVol;
+
+	CUDA_FUNC_IN static constexpr int DIM()
+	{
+		return 3;
+	}
 
 	PointStorage(unsigned int gridDim, unsigned int numPhotons)
 		: IVolumeEstimator(m_sStorage), m_sStorage(Vec3u(gridDim), numPhotons)
@@ -98,7 +95,7 @@ public:
 		return m_sStorage.operator()(idx);
 	}
 
-	virtual void StartNewPass(const IRadiusProvider* radProvider, DynamicScene* scene);
+	virtual void StartNewPass(DynamicScene* scene);
 
 	virtual void StartNewRendering(const AABB& box)
 	{
@@ -154,9 +151,7 @@ public:
 		return m_sStorage.Store(cell_idx, ph);
 	}
 
-	template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum L_Volume(float NumEmitted, unsigned int numIteration, float kToFind, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, VolumeModel& model, PPM_Radius_Type radType, Spectrum& Tr);
-
-	CUDA_FUNC_IN void Compute_kNN_radii(float numEmitted, float rad, float kToFind, const NormalizedT<Ray>& r, float tmin, float tmax, VolumeModel& model);
+	template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum L_Volume(float rad, float NumEmitted, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr, float& pl_est);
 };
 
 }

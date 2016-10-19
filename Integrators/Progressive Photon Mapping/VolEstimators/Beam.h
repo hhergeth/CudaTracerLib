@@ -1,12 +1,16 @@
 #pragma once
 #include <Defines.h>
-#include "../AdaptiveHelper.h"
 #include <Kernel/TraceHelper.h>
 #include <vector>
 #include <Base/Platform.h>
 #include <Engine/Grid.h>
 #include <Math/Compression.h>
 #include <Engine/SynchronizedBuffer.h>
+#include <Math/FunctionModel.h>
+#include <Math/Frame.h>
+#include <Kernel/TracerSettings.h>
+#include "../../PhotonMapHelper.h"
+#include <Engine/Light.h>
 
 namespace CudaTracerLib {
 
@@ -17,21 +21,37 @@ inline unsigned int atomicInc(unsigned int* i, unsigned int j)
 }
 #endif
 
-class IRadiusProvider
-{
-public:
-	virtual float getCurrentRadius(float exp) const = 0;
-};
-
 class IVolumeEstimator : public ISynchronizedBufferParent
 {
+	float m_radInitialSurf, m_radInitialVol;
+	unsigned int m_numPass;
+protected:
+	float getRadSurf() const
+	{
+		return getCurrentRadius(m_radInitialSurf, m_numPass, 2.0f);
+	}
+	template<int DIM> float getRadVol() const
+	{
+		return getCurrentRadius(m_radInitialSurf, m_numPass, (float)DIM);
+	}
 public:
 	template<typename... ARGS> IVolumeEstimator(ARGS&... args)
 		: ISynchronizedBufferParent(args...)
 	{
 	}
 
-	virtual void StartNewPass(const IRadiusProvider* radProvider, DynamicScene* scene) = 0;
+	virtual void StartNewPassBase(unsigned int numPass)
+	{
+		m_numPass = numPass;
+	}
+
+	virtual void StartNewPass(DynamicScene* scene) = 0;
+
+	virtual void StartNewRenderingBase(float rad_SurfInitial, float rad_VolInitial)
+	{
+		m_radInitialSurf = rad_SurfInitial;
+		m_radInitialVol = rad_VolInitial;
+	}
 
 	virtual void StartNewRendering(const AABB& box) = 0;
 

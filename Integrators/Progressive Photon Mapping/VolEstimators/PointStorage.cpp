@@ -3,9 +3,8 @@
 
 namespace CudaTracerLib {
 
-	void PointStorage::StartNewPass(const IRadiusProvider* radProvider, DynamicScene* scene)
+	void PointStorage::StartNewPass(DynamicScene* scene)
 	{
-		m_fCurrentRadiusVol = radProvider->getCurrentRadius(3);
 		m_sStorage.ResetBuffer();
 	}
 

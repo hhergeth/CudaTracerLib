@@ -40,6 +40,11 @@ struct BeamGrid : public PointStorage
 
 	float photonDensNum;
 
+	CUDA_FUNC_IN static constexpr int DIM()
+	{
+		return 2;
+	}
+
 	BeamGrid(unsigned int gridDim, unsigned int numPhotons, int N = 20, float nnSearch = 1)
 		: PointStorage(gridDim, numPhotons, m_sBeamGridStorage), photonDensNum(nnSearch), m_sBeamGridStorage(Vec3u(gridDim), gridDim * gridDim * gridDim * (1 + N))
 	{
@@ -52,7 +57,7 @@ struct BeamGrid : public PointStorage
 		m_sBeamGridStorage.Free();
 	}
 
-	virtual void StartNewPass(const IRadiusProvider* radProvider, DynamicScene* scene);
+	virtual void StartNewPass(DynamicScene* scene);
 
 	virtual void StartNewRendering(const AABB& box)
 	{
@@ -73,9 +78,7 @@ struct BeamGrid : public PointStorage
 		a_Buf.push_back(format("%.2f%% Beam indices", (float)m_sBeamGridStorage.getNumStoredEntries() / m_sBeamGridStorage.getNumEntries() * 100));
 	}
 
-	template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum L_Volume(float NumEmitted, unsigned int numIteration, float kToFind, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, VolumeModel& model, PPM_Radius_Type radType, Spectrum& Tr);
-
-	CUDA_FUNC_IN void Compute_kNN_radii(float numEmitted, float rad, float kToFind, const NormalizedT<Ray>& r, float tmin, float tmax, VolumeModel& model);
+	template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum L_Volume(float rad, float NumEmitted, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr, float& pl_est);
 };
 
 }

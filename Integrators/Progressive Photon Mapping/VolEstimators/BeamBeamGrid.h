@@ -126,7 +126,10 @@ struct BeamBeamGrid : public IVolumeEstimator
 
 	unsigned int m_uBeamIdx;
 
-	float m_fCurrentRadiusVol;
+	CUDA_FUNC_IN static constexpr int DIM()
+	{
+		return 1;
+	}
 
 	BeamBeamGrid(unsigned int gridDim, unsigned int numBeams, int N = 100)
 		: IVolumeEstimator(m_sStorage, m_sBeamStorage), m_sStorage(Vec3u(gridDim), gridDim * gridDim * gridDim * N), m_sBeamStorage(numBeams)
@@ -145,7 +148,7 @@ struct BeamBeamGrid : public IVolumeEstimator
 		return m_sBeamStorage.operator[](idx);
 	}
 
-	CTL_EXPORT virtual void StartNewPass(const IRadiusProvider* radProvider, DynamicScene* scene);
+	CTL_EXPORT virtual void StartNewPass(DynamicScene* scene);
 
 	virtual void StartNewRendering(const AABB& box)
 	{
@@ -209,9 +212,7 @@ struct BeamBeamGrid : public IVolumeEstimator
 		return 0xffffffff;
 	}
 
-	template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum L_Volume(float NumEmitted, unsigned int numIteration, float kToFind, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, VolumeModel& model, PPM_Radius_Type radType, Spectrum& Tr);
-
-	CUDA_FUNC_IN void Compute_kNN_radii(float numEmitted, float rad, float kToFind, const NormalizedT<Ray>& r, float tmin, float tmax, VolumeModel& model);
+	template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum L_Volume(float rad, float NumEmitted, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr, float& pl_est);
 };
 
 }
