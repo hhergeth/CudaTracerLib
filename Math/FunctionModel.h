@@ -193,6 +193,18 @@ public:
 			max_el = max_clb(max_el, bins[i].E_X());
 		return max_el;
 	}
+
+	CUDA_FUNC_IN static MergingModel MergeModels(const MergingModel& lhs, float scale_left, MergingModel& rhs, float scale_right)
+	{
+		MergingModel r = lhs;
+		r.Scale(scale_left);
+		for (int i = 0; i < N_BINS; i++)
+		{
+			float t = (float)i / (N_BINS - 1);
+			r.Train(t, rhs.Eval(t) * scale_right);
+		}
+		return r;
+	}
 private:
 	CUDA_FUNC_IN int findIdx(float t) const
 	{
