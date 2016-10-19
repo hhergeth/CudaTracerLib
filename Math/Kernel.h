@@ -21,18 +21,18 @@ template<> struct pow_int_compile<0>
 	}
 };
 
+//the coefficient of the kernel volume
+template<int DIM> CUDA_FUNC_IN static float c_d()
+{
+	return extract_val<DIM - 1>({ 2.0f, PI, 4.0f / 3.0f * PI });
+}
+
 template<int... DIMS> struct KernelBase
 {
-	//the coefficient of the kernel volume
-	template<int DIM> CUDA_FUNC_IN static float c_d()
-	{
-		return extract_val<DIM - 1>({ 2.0f, PI, 4.0f / 3.0f * PI });
-	}
-
 	//notation according to Silverman 1986 page 85
 	//alpha = int_{-\infinity}^{\infinity}{t^2 K(t) \d{t}}
 	//beta = int_{-\infinity}^{\infinity}{K(t)^2 \d{t}}
-	//norm_factor = int_{-\infinity}^{\infinity}{K(t) \d{t}} / volume
+	//norm_factor = int_{-\infinity}^{\infinity}{K(t) \d{t}}
 };
 
 struct UniformKernel : public KernelBase<1, 2, 3>
@@ -49,7 +49,7 @@ struct UniformKernel : public KernelBase<1, 2, 3>
 
 	template<int DIM> CUDA_FUNC_IN static float norm_factor()
 	{
-		return extract_val<DIM - 1>({ 1.0f, 1.0f, 1.0f });
+		return extract_val<DIM - 1>({ 1.0f, PI, 4.0f / 3.0f * PI });
 	}
 
 	CUDA_FUNC_IN static float k(float t)
@@ -87,7 +87,7 @@ template<typename K> struct KernelWrapper : public K
 	{
 		const float vol = pow_int_compile<DIM>::pow(r);
 		const float norm_coeff = K::template norm_factor<DIM>();
-		return math::clamp01(K::k(math::clamp01(t / r)) / (norm_coeff * vol));
+		return math::clamp01(K::k(math::clamp01(t / r))) / (norm_coeff * vol);
 	}
 
 	template<int DIM, typename VEC> CUDA_FUNC_IN static float k(const VEC& t, float r)

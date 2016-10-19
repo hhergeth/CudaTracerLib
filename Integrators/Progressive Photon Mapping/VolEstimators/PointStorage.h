@@ -14,9 +14,11 @@ private:
 	unsigned short wi;
 	half r;
 	Vec3f Pos;
+	float pdf;
 public:
 	CUDA_FUNC_IN VolumetricPhoton() {}
-	CUDA_FUNC_IN VolumetricPhoton(const Vec3f& p, const NormalizedT<Vec3f>& w, const Spectrum& ph)
+	CUDA_FUNC_IN VolumetricPhoton(const Vec3f& p, const NormalizedT<Vec3f>& w, const Spectrum& ph, float pdf)
+		: pdf(pdf)
 	{
 		Pos = p;
 		r = half(0.0f);
@@ -58,6 +60,10 @@ public:
 	CUDA_FUNC_IN void setFlag()
 	{
 		flag_type_pos_ll |= 1;
+	}
+	CUDA_FUNC_IN float getPdf() const
+	{
+		return pdf;
 	}
 };
 

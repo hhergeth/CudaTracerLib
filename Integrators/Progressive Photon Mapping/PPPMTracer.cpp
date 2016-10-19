@@ -121,8 +121,6 @@ k_AdaptiveStruct PPPMTracer::getAdaptiveData()
 {
 	return k_AdaptiveStruct(m_pScene->getSceneBox(), *m_pAdpBuffer, w, m_uPassesDone);
 }
-	}
-}
 
 float PPPMTracer::getSplatScale()
 {
@@ -143,15 +141,13 @@ std::map<std::string, pixel_variant> PPPMTracer::getPixelInfo(int x, int y) cons
 	auto rd = e.compute_rd(m_uPassesDone, m_uPhotonEmittedPassSurface, m_uPhotonEmittedPassSurface * (m_uPassesDone - 1));
 
 	auto res = std::map<std::string, pixel_variant>();
-	res["S[DI]"] = pixel_variant(Lapl(e.Sum_DI));
-	res["S[E[DI]]"] = pixel_variant((float)e.E_DI.Sum_X);
-	res["S[E[DI]^2]"] = pixel_variant((float)e.E_DI.Sum_X2);
-	res["S[psi]"] = pixel_variant((float)e.psi.Sum_X);
-	res["S[psi^2]"] = pixel_variant((float)e.psi.Sum_X2);
+	res["E[DI]"] = pixel_variant(Lapl(e.E_Lapl));
+	res["VAR[E[DI]]"] = pixel_variant((float)e.VAR_E_Lapl.Var((float)m_uPassesDone));
+	res["VAR[psi]"] = pixel_variant((float)e.VAR_psi.Var(e.num_psi));
 	res["num_psi"] = pixel_variant((float)e.num_psi);
-	res["S[pl]"] = pixel_variant(e.Sum_pl);
+	res["E[pl]"] = pixel_variant(e.E_pl);
 	auto a_AdpEntries = k_AdaptiveStruct(m_sSurfaceMap.getHashGrid().getAABB(), *m_pAdpBuffer, w, m_uPassesDone);
-	auto r_k_nn = density_to_rad<2>(m_sParameters.getValue(KEY_kNN_Neighboor_Num_Surf()), e.Sum_pl, a_AdpEntries.getMinRad<2>(), a_AdpEntries.getMaxRad<2>(), m_uPassesDone);
+	auto r_k_nn = density_to_rad<2>(m_sParameters.getValue(KEY_kNN_Neighboor_Num_Surf()), e.E_pl, a_AdpEntries.getMinRad<2>(), a_AdpEntries.getMaxRad<2>(), m_uPassesDone);
 	auto r_uni = getCurrentRadius(2, true);
 	res["r_knn"] = pixel_variant(r_k_nn);
 	res["r_uni"] = pixel_variant(r_uni);
@@ -181,7 +177,8 @@ void PPPMTracer::StartNewTrace(Image* I)
 #else
 	AABB m_sEyeBox = m_pScene->getSceneBox();
 #endif
-	float r = m_sEyeBox.Size().length() / float(w) * 5;
+	float rad = m_sEyeBox.Size().length() / 2.0f;
+	float r = min(rad / w, rad / h) * 5.0f;//3.5f
 	m_sEyeBox.minV -= Vec3f(r);
 	m_sEyeBox.maxV += Vec3f(r);
 	m_fInitialRadiusSurf = r;
