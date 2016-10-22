@@ -212,7 +212,30 @@ struct BeamBeamGrid : public IVolumeEstimator
 		return 0xffffffff;
 	}
 
-	template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum L_Volume(float rad, float NumEmitted, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr, float& pl_est);
+	template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum L_Volume(float rad, float NumEmitted, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr, float& pl_est)
+	{
+		Spectrum L_n = Spectrum(0.0f), Tau = Spectrum(0.0f);
+		int nPhotons = 0;
+
+		for (unsigned int i = 0; i < min(m_uBeamIdx, m_sBeamStorage.getLength()); i++)
+		{
+			const Beam& B = m_sBeamStorage[i];
+			float beamBeamDistance, sinTheta, queryIsectDist, beamIsectDist;
+			if (Beam::testIntersectionBeamBeam(r.ori(), r.dir(), tmin, tmax, B.getPos(), B.getDir(), 0, B.t, math::sqr(rad), beamBeamDistance, sinTheta, queryIsectDist, beamIsectDist))
+			{
+				nPhotons++;
+				Spectrum photon_tau = vol.tau(Ray(B.getPos(), B.getDir()), 0, beamIsectDist);
+				Spectrum camera_tau = vol.tau(r, tmin, queryIsectDist);
+				Spectrum camera_sc = vol.sigma_s(r(queryIsectDist), r.dir());
+				PhaseFunctionSamplingRecord pRec(-r.dir(), B.getDir());
+				float p = vol.p(r(queryIsectDist), pRec);
+				L_n += B.getL() / NumEmitted * (-photon_tau).exp() * camera_sc * Kernel::k<1>(beamBeamDistance, rad) / sinTheta * (-camera_tau).exp();//this is not correct; the phase function is missing
+			}
+		}
+		Tr = (-vol.tau(r, tmin, tmax)).exp();
+		pl_est += nPhotons / (PI * rad * rad * (tmax - tmin));
+		return L_n;
+	}
 };
 
 }

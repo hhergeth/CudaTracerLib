@@ -151,7 +151,45 @@ public:
 		return m_sStorage.Store(cell_idx, ph);
 	}
 
-	template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum L_Volume(float rad, float NumEmitted, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr, float& pl_est);
+	template<bool USE_GLOBAL> CUDA_FUNC_IN Spectrum L_Volume(float rad, float NumEmitted, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr, float& pl_est)
+	{
+		Spectrum Tau = Spectrum(0.0f);
+		Spectrum L_n = Spectrum(0.0f);
+		float a, b;
+		if (!m_sStorage.getHashGrid().getAABB().Intersect(r, &a, &b))
+			return L_n;//that would be dumb
+		float minT = a = math::clamp(a, tmin, tmax);
+		b = math::clamp(b, tmin, tmax);
+		float d = 2.0f * rad;
+		float pl = 0, num_est;
+		while (a < b)
+		{
+			float t = a + d / 2.0f;
+			Vec3f x = r(t);
+			Spectrum L_i(0.0f);
+			m_sStorage.ForAll(x - Vec3f(rad), x + Vec3f(rad), [&](const Vec3u& cell_idx, unsigned int p_idx, const _VolumetricPhoton& ph)
+			{
+				Vec3f ph_pos = ph.getPos(m_sStorage.getHashGrid(), cell_idx);
+				auto dist2 = distanceSquared(ph_pos, x);
+				if (dist2 < math::sqr(rad))
+				{
+					PhaseFunctionSamplingRecord pRec(-r.dir(), ph.getWi());
+					float p = vol.p(x, pRec);
+					float k = Kernel::k<3>(math::sqrt(dist2), rad);
+					L_i += p * ph.getL() / NumEmitted * k;
+					pl += k;
+				}
+			});
+			L_n += (-Tau - vol.tau(r, a, t)).exp() * L_i * d;
+			Tau += vol.tau(r, a, a + d);
+			L_n += vol.Lve(x, -r.dir()) * d;
+			a += d;
+			num_est++;
+		}
+		Tr = (-Tau).exp();
+		pl_est += pl / num_est;
+		return L_n;
+	}
 };
 
 }
