@@ -1,6 +1,7 @@
 #pragma once
 #include <Defines.h>
 #include <tuple>
+
 namespace CudaTracerLib {
 
 //small variadic tuple style class for use with cuda
