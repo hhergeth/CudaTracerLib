@@ -221,7 +221,14 @@ void PPPMTracer::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 	Vec2i off = Vec2i(x, y);
 	BlockSampleImage img = m_pBlockSampler->getBlockImage();
 	
-	iterateTypes<BeamGrid, PointStorage, BeamBeamGrid>(m_pVolumeEstimator, [off,&A,&img, fg_samples,this](auto* X) {CudaTracerLib::k_EyePass<std::remove_pointer<decltype(X)>::type> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, this->w, this->h, A, img, this->m_useDirectLighting, fg_samples); });
+	//iterateTypes<BeamGrid, PointStorage, BeamBeamGrid>(m_pVolumeEstimator, [off,&A,&img, fg_samples,this](auto* X) {CudaTracerLib::k_EyePass<std::remove_pointer<decltype(X)>::type> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, this->w, this->h, A, img, this->m_useDirectLighting, fg_samples); });
+
+	if (dynamic_cast<BeamGrid*>(m_pVolumeEstimator))
+		k_EyePass<BeamGrid> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, A, img, m_useDirectLighting, fg_samples);
+	else if (dynamic_cast<PointStorage*>(m_pVolumeEstimator))
+		k_EyePass<PointStorage> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, A, img, m_useDirectLighting, fg_samples);
+	else if (dynamic_cast<BeamBeamGrid*>(m_pVolumeEstimator))
+		k_EyePass<BeamBeamGrid> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, w, h, A, img, m_useDirectLighting, fg_samples);
 
 	ThrowCudaErrors(cudaThreadSynchronize());
 	m_pPixelBuffer->setOnGPU();
