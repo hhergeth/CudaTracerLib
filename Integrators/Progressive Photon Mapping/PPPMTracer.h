@@ -26,18 +26,7 @@ enum
 typedef SpatialLinkedMap<PPPMPhoton> SurfaceMapT;
 typedef unsigned long long counter_t;
 
-template<int DIM> CUDA_FUNC float _density_to_rad_(float kToFind, float density)
-{
-	return math::pow(kToFind / (c_d<DIM>() * density), 1.0f / DIM);
-}
 
-//computes the radius from the density for the specified dimension after numIter iterations, the min max radii are specified at the specific iteration
-template<int DIM, bool SHRINK_RAD_ITER = true> CUDA_FUNC float density_to_rad(float kToFind, float density, float r_min, float r_max, unsigned int numIter)
-{
-	float r = math::IsNaN(density) || isinf(density) || density == 0.0f ? (r_min + r_max) / 2.0f : _density_to_rad_<DIM>(kToFind, density);
-	float r_it = SHRINK_RAD_ITER ? getCurrentRadius(r, numIter, DIM) : r;
-	return math::clamp(r_it, r_min, r_max);
-}
 
 struct APPM_PixelData
 {

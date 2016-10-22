@@ -23,9 +23,9 @@ inline unsigned int atomicInc(unsigned int* i, unsigned int j)
 
 class IVolumeEstimator : public ISynchronizedBufferParent
 {
+protected:
 	float m_radInitialSurf, m_radInitialVol;
 	unsigned int m_numPass;
-protected:
 	float getRadSurf() const
 	{
 		return getCurrentRadius(m_radInitialSurf, m_numPass, 2.0f);

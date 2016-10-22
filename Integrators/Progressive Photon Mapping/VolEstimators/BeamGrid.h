@@ -1,10 +1,13 @@
 #pragma once
 #include "PointStorage.h"
+#include <functional>
 
 namespace CudaTracerLib {
 
 struct BeamGrid : public PointStorage
 {
+	typedef std::function<float()> kNN_clb_t;
+
 	struct entry
 	{
 		int i;
@@ -38,17 +41,18 @@ struct BeamGrid : public PointStorage
 
 	SpatialLinkedMap<entry> m_sBeamGridStorage;
 
-	float photonDensNum;
+	kNN_clb_t m_kNNClb;
 
 	CUDA_FUNC_IN static constexpr int DIM()
 	{
 		return 2;
 	}
 
-	BeamGrid(unsigned int gridDim, unsigned int numPhotons, int N = 20, float nnSearch = 1)
-		: PointStorage(gridDim, numPhotons, m_sBeamGridStorage), photonDensNum(nnSearch), m_sBeamGridStorage(Vec3u(gridDim), gridDim * gridDim * gridDim * (1 + N))
+	BeamGrid(unsigned int gridDim, unsigned int numPhotons, kNN_clb_t clb, int N = 20)
+		: PointStorage(gridDim, numPhotons, m_sBeamGridStorage), m_kNNClb(clb), m_sBeamGridStorage(Vec3u(gridDim), gridDim * gridDim * gridDim * (1 + N))
 	{
-
+		if (!m_kNNClb)
+			throw std::runtime_error("Please provide a kNN callback!");
 	}
 
 	virtual void Free()

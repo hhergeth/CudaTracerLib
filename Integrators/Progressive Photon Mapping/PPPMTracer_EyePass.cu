@@ -4,6 +4,7 @@
 #include <Math/half.h>
 #include <Engine/Light.h>
 #include <Engine/SpatialGridTraversal.h>
+#include <Base/RuntimeTemplateHelper.h>
 
 #define LOOKUP_NORMAL_THRESH 0.5f
 
@@ -19,6 +20,7 @@ template<bool USE_GLOBAL> Spectrum PointStorage::L_Volume(float rad, float NumEm
 	float minT = a = math::clamp(a, tmin, tmax);
 	b = math::clamp(b, tmin, tmax);
 	float d = 2.0f * rad;
+	float pl = 0, num_est;
 	while (a < b)
 	{
 		float t = a + d / 2.0f;
@@ -32,16 +34,19 @@ template<bool USE_GLOBAL> Spectrum PointStorage::L_Volume(float rad, float NumEm
 			{
 				PhaseFunctionSamplingRecord pRec(-r.dir(), ph.getWi());
 				float p = vol.p(x, pRec);
-				L_i += p * ph.getL() / NumEmitted * Kernel::k<3>(math::sqrt(dist2), rad);
+				float k = Kernel::k<3>(math::sqrt(dist2), rad);
+				L_i += p * ph.getL() / NumEmitted * k;
+				pl += k;
 			}
 		});
 		L_n += (-Tau - vol.tau(r, a, t)).exp() * L_i * d;
 		Tau += vol.tau(r, a, a + d);
 		L_n += vol.Lve(x, -r.dir()) * d;
 		a += d;
+		num_est++;
 	}
 	Tr = (-Tau).exp();
-
+	pl_est += pl / num_est;
 	return L_n;
 }
 
@@ -66,7 +71,7 @@ template<bool USE_GLOBAL> Spectrum BeamGrid::L_Volume(float rad, float NumEmitte
 				float p = vol.p(ph_pos, pRec);
 				L_n += p * ph.getL() / NumEmitted * tauToPhoton * Kernel::k<2>(math::sqrt(isectRadSqr), ph_rad1);
 			}
-			float t1, t2;
+			/*float t1, t2;
 			if (sphere_line_intersection(ph_pos, ph_rad2, r, t1, t2))
 			{
 				float t = (t1 + t2) / 2;
@@ -84,7 +89,7 @@ template<bool USE_GLOBAL> Spectrum BeamGrid::L_Volume(float rad, float NumEmitte
 					auto Tr_c = (-vol.tau(r, 0, t)).exp();
 					L_n += p * ph.getL() / NumEmitted * Kernel::k<3>(dist, ph_rad1) * Tr_c * (t2 - t1);
 				}
-			}
+			}*/
 		});
 		Tau += vol.tau(r, rayT, cellEndT);
 		float localDist = cellEndT - rayT;
@@ -98,6 +103,7 @@ template<bool USE_GLOBAL> Spectrum BeamGrid::L_Volume(float rad, float NumEmitte
 template<bool USE_GLOBAL> Spectrum BeamBeamGrid::L_Volume(float rad, float NumEmitted, const NormalizedT<Ray>& r, float tmin, float tmax, const VolHelper<USE_GLOBAL>& vol, Spectrum& Tr, float& pl_est)
 {
 	Spectrum L_n = Spectrum(0.0f), Tau = Spectrum(0.0f);
+	int nPhotons = 0;
 
 	for (unsigned int i = 0; i < min(m_uBeamIdx, m_sBeamStorage.getLength()); i++)
 	{
@@ -105,18 +111,17 @@ template<bool USE_GLOBAL> Spectrum BeamBeamGrid::L_Volume(float rad, float NumEm
 		float beamBeamDistance, sinTheta, queryIsectDist, beamIsectDist;
 		if (Beam::testIntersectionBeamBeam(r.ori(), r.dir(), tmin, tmax, B.getPos(), B.getDir(), 0, B.t, math::sqr(rad), beamBeamDistance, sinTheta, queryIsectDist, beamIsectDist))
 		{
-			if(beamBeamDistance < rad)
-			{
-				Spectrum photon_tau = vol.tau(Ray(B.getPos(), B.getDir()), 0, beamIsectDist);
-				Spectrum camera_tau = vol.tau(r, tmin, queryIsectDist);
-				Spectrum camera_sc = vol.sigma_s(r(queryIsectDist), r.dir());
-				PhaseFunctionSamplingRecord pRec(-r.dir(), B.getDir());
-				float p = vol.p(r(queryIsectDist), pRec);
-				return B.getL() / NumEmitted * (-photon_tau).exp() * camera_sc * Kernel::k<1>(beamBeamDistance, rad) / sinTheta * (-camera_tau).exp();//this is not correct; the phase function is missing
-			}
+			nPhotons++;
+			Spectrum photon_tau = vol.tau(Ray(B.getPos(), B.getDir()), 0, beamIsectDist);
+			Spectrum camera_tau = vol.tau(r, tmin, queryIsectDist);
+			Spectrum camera_sc = vol.sigma_s(r(queryIsectDist), r.dir());
+			PhaseFunctionSamplingRecord pRec(-r.dir(), B.getDir());
+			float p = vol.p(r(queryIsectDist), pRec);
+			L_n += B.getL() / NumEmitted * (-photon_tau).exp() * camera_sc * Kernel::k<1>(beamBeamDistance, rad) / sinTheta * (-camera_tau).exp();//this is not correct; the phase function is missing
 		}
 	}
 	Tr = (-vol.tau(r, tmin, tmax)).exp();
+	pl_est += nPhotons / (PI * rad * rad * (tmax - tmin));
 	return L_n;
 }
 

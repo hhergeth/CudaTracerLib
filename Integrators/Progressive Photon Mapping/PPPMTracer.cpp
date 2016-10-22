@@ -33,14 +33,14 @@ PPPMTracer::PPPMTracer()
 		<< KEY_RadiiComputationTypeVol()	<< PPM_Radius_Type::Constant
 		<< KEY_VolRadiusScale()				<< CreateInterval(1.0f, 0.0f, FLT_MAX)
 		<< KEY_kNN_Neighboor_Num_Surf()		<< CreateInterval(50.0f, 0.0f, FLT_MAX)
-		<< KEY_kNN_Neighboor_Num_Vol()		<< CreateInterval(50.0f, 0.0f, FLT_MAX);
+		<< KEY_kNN_Neighboor_Num_Vol()		<< CreateInterval(1.0f, 0.0f, FLT_MAX);
 
 	m_uTotalPhotonsEmittedSurface = m_uTotalPhotonsEmittedVolume = -1;
 	unsigned int numPhotons = (m_uBlocksPerLaunch + 2) * PPM_slots_per_block;
 	if (m_sParameters.getValue(KEY_N_FG_Samples()) != 0)
 		m_sSurfaceMapCaustic = new SurfaceMapT(Vec3u(250), numPhotons);
 	//m_pVolumeEstimator = new PointStorage(150, numPhotons);
-	m_pVolumeEstimator = new BeamGrid(150, numPhotons, 10, 2);
+	m_pVolumeEstimator = new BeamGrid(150, numPhotons, [&] {return m_sParameters.getValue(KEY_kNN_Neighboor_Num_Vol()); }, 10);
 	//m_pVolumeEstimator = new BeamBeamGrid(10, 10000, 1000);
 	if (m_sParameters.getValue(KEY_AdaptiveAccProb()))
 	{
@@ -141,8 +141,8 @@ std::map<std::string, pixel_variant> PPPMTracer::getPixelInfo(int x, int y) cons
 	auto res = std::map<std::string, pixel_variant>();
 	auto dat = getAdaptiveData();
 
-	res["pl_surf"] = pixelInfo.surf_density.computeDensityEstimate(m_uPassesDone, m_uTotalPhotonsEmittedSurface);
-	res["pl_vol"] = pixelInfo.vol_density.computeDensityEstimate(m_uPassesDone, m_uTotalPhotonsEmittedVolume);
+	res["pl_surf"] = pixelInfo.surf_density.computeDensityEstimate(m_uTotalPhotonsEmittedSurface, m_uPassesDone);
+	res["pl_vol"] = pixelInfo.vol_density.computeDensityEstimate(m_uTotalPhotonsEmittedVolume, m_uPassesDone);
 
 	res["RadiiComputationTypeSurf"] = m_sParameters.getValue(KEY_RadiiComputationTypeSurf());
 	res["RadiiComputationTypeVol"] = m_sParameters.getValue(KEY_RadiiComputationTypeVol());
