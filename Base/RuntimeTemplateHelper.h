@@ -10,8 +10,10 @@ template<typename T, typename... Types> struct it
 {
 	template<typename X, typename F> static void f(const X* obj, F& clb)
 	{
-		it<T>::f(obj, clb);
-		it<Types...>::f(obj, clb);
+		auto* obj_t = dynamic_cast<const T*>(obj);
+		if (obj_t)
+			clb((T*)obj_t);
+		else it<Types...>::f(obj, clb);
 	}
 };
 
@@ -21,7 +23,7 @@ template<typename T> struct it<T>
 	{
 		auto* obj_t = dynamic_cast<const T*>(obj);
 		if (obj_t)
-			clb((const T*)obj_t);
+			clb((T*)obj_t);
 	}
 };
 }
