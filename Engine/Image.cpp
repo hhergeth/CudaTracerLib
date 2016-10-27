@@ -15,58 +15,21 @@
 
 namespace CudaTracerLib {
 
-Image::Image(int xRes, int yRes, unsigned int viewGLTexture)
-	: xResolution(xRes), yResolution(yRes), lastSplatVal(0), m_fOutScale(1)
-{
-	ownsTarget = false;
-	drawStyle = ImageDrawType::Normal;
-	setStdFilter();
-	CUDA_MALLOC(&cudaPixels, sizeof(Pixel) * xResolution * yResolution);
-	hostPixels = new Pixel[xResolution * yResolution];
-	outState = 1;
-	isMapped = 0;
-	ThrowCudaErrors(cudaGraphicsGLRegisterImage(&viewCudaResource, viewGLTexture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsSurfaceLoadStore));
-	//use this to clear the array
-	CUDA_MALLOC(&viewTarget, sizeof(RGBCOL) * xRes * yRes);
-	ownsTarget = true;
-	ThrowCudaErrors(cudaMemset(viewTarget, 0, sizeof(RGBCOL) * xRes * yRes));
-}
-
-#ifdef ISWINDOWS
-Image::Image(int xRes, int yRes, ID3D11Resource *pD3DResource)
-	: xResolution(xRes), yResolution(yRes), m_fOutScale(1), lastSplatVal(0)
-{
-	ownsTarget = false;
-	drawStyle = ImageDrawType::Normal;
-	setStdFilter();
-	CUDA_MALLOC(&cudaPixels, sizeof(Pixel) * xResolution * yResolution);
-	hostPixels = new Pixel[xResolution * yResolution];
-	outState = 1;
-	isMapped = 0;
-	ThrowCudaErrors(cudaGraphicsD3D11RegisterResource(&viewCudaResource, pD3DResource, cudaGraphicsRegisterFlagsSurfaceLoadStore));
-	//use this to clear the array
-	CUDA_MALLOC(&viewTarget, sizeof(RGBCOL) * xRes * yRes);
-	ownsTarget = true;
-	ThrowCudaErrors(cudaMemset(viewTarget, 0, sizeof(RGBCOL) * xRes * yRes));
-}
-#endif
-
 Image::Image(int xRes, int yRes, RGBCOL* target)
 	: xResolution(xRes), yResolution(yRes), m_fOutScale(1), lastSplatVal(0)
 {
 	ThrowCudaErrors();
-	drawStyle = ImageDrawType::Normal;
 	setStdFilter();
 	CUDA_MALLOC(&cudaPixels, sizeof(Pixel) * xResolution * yResolution);
 	hostPixels = new Pixel[xResolution * yResolution];
-	outState = 2;
-	isMapped = 0;
 	this->viewTarget = target;
+	ownsTarget = false;
 	if (!viewTarget)
 	{
 		CUDA_MALLOC(&viewTarget, sizeof(RGBCOL) * xRes * yRes);
 		ownsTarget = true;
 	}
+	CUDA_MALLOC(&m_filteredColorsDevice, sizeof(RGBE) * xRes * yRes);
 }
 
 void Image::Free()
@@ -76,8 +39,7 @@ void Image::Free()
 	CUDA_FREE(cudaPixels);
 	if (ownsTarget)
 		CUDA_FREE(viewTarget);
-	if (outState == 1)
-		ThrowCudaErrors(cudaGraphicsUnregisterResource(viewCudaResource));
+	CUDA_FREE(m_filteredColorsDevice);
 }
 
 void Image::copyToHost()
@@ -93,17 +55,7 @@ FIBITMAP* Image::toFreeImage()
 	if (yResolution > yDim || xResolution > xDim)
 		throw std::runtime_error("Image resolution too high!");
 
-	if (outState == 1)
-	{
-		ThrowCudaErrors(cudaGraphicsMapResources(1, &viewCudaResource));
-		ThrowCudaErrors(cudaGraphicsSubResourceGetMappedArray(&viewCudaArray, viewCudaResource, 0, 0));
-		ThrowCudaErrors(cudaMemcpyFromArray(colData, viewCudaArray, 0, 0, xResolution * yResolution * sizeof(RGBCOL), cudaMemcpyDeviceToHost));
-		ThrowCudaErrors(cudaGraphicsUnmapResources(1, &viewCudaResource));
-	}
-	else
-	{
-		ThrowCudaErrors(cudaMemcpy(colData, viewTarget, sizeof(RGBCOL) * xResolution * yResolution, cudaMemcpyDeviceToHost));
-	}
+	ThrowCudaErrors(cudaMemcpy(colData, viewTarget, sizeof(RGBCOL) * xResolution * yResolution, cudaMemcpyDeviceToHost));
 	FIBITMAP* bitmap = FreeImage_Allocate(xResolution, yResolution, 24, 0x000000ff, 0x0000ff00, 0x00ff0000);
 	BYTE* A = FreeImage_GetBits(bitmap);
 	unsigned int pitch = FreeImage_GetPitch(bitmap);
@@ -165,16 +117,6 @@ void Image::SaveToMemory(void** mem, size_t& size, const std::string& type)
 void Image::StartRendering()
 {
 	m_bDoUpdate = false;
-	if (outState == 1)
-	{
-		ThrowCudaErrors(cudaGraphicsMapResources(1, &viewCudaResource));
-		ThrowCudaErrors(cudaGraphicsSubResourceGetMappedArray(&viewCudaArray, viewCudaResource, 0, 0));
-		cudaResourceDesc viewCudaArrayResourceDesc;
-		viewCudaArrayResourceDesc.resType = cudaResourceTypeArray;
-		viewCudaArrayResourceDesc.res.array.array = viewCudaArray;
-		ThrowCudaErrors(cudaCreateSurfaceObject(&viewCudaSurfaceObject, &viewCudaArrayResourceDesc));
-		isMapped = 1;
-	}
 }
 
 void Image::DoUpdateDisplay(float splat)
@@ -188,12 +130,6 @@ void Image::EndRendering()
 	if (m_bDoUpdate)
 		InternalUpdateDisplay();
 	m_bDoUpdate = false;
-	if (outState == 1)
-	{
-		ThrowCudaErrors(cudaDestroySurfaceObject(viewCudaSurfaceObject));
-		ThrowCudaErrors(cudaGraphicsUnmapResources(1, &viewCudaResource));
-	}
-	isMapped = 0;
 }
 
 }

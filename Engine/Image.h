@@ -3,29 +3,15 @@
 #include "Filter.h"
 #include <Math/Spectrum.h>
 
-#ifdef ISWINDOWS
-struct ID3D11Resource;
-#endif
-
 struct FIBITMAP;
 
 namespace CudaTracerLib {
-
-enum ImageDrawType
-{
-	Normal,
-	HDR,
-};
 
 class Image
 {
 public:
 	CUDA_FUNC_IN Image(){}
 
-	CTL_EXPORT Image(int xRes, int yRes, unsigned int viewGLTexture);
-#ifdef ISWINDOWS
-	CTL_EXPORT Image(int xRes, int yRes, ID3D11Resource *pD3DResource);
-#endif
 	CTL_EXPORT Image(int xRes, int yRes, RGBCOL* target = 0);
 	CTL_EXPORT void Free();
 	CUDA_FUNC_IN void getExtent(unsigned int& xRes, unsigned int &yRes) const
@@ -84,10 +70,6 @@ public:
 	{
 		return filter;
 	}
-	ImageDrawType& accessDrawStyle()
-	{
-		return drawStyle;
-	}
 	CTL_EXPORT void DoUpdateDisplay(float splat);
 	RGBCOL* getCudaPixels(){ return viewTarget; }
 	CUDA_FUNC_IN Spectrum getPixel(int x, int y)
@@ -98,15 +80,17 @@ public:
 	{
 		return *getPixel(y * xResolution + x);
 	}
-	CTL_EXPORT void DrawSamplePlacement(int numPasses);
 	void disableUpdate()
 	{
 		m_bDoUpdate = false;
 	}
 	CTL_EXPORT void copyToHost();
 	CTL_EXPORT void SaveToMemory(void** mem, size_t& size, const std::string& type);
-	CTL_EXPORT static void ComputeDiff(const Image& A, const Image& B, Image& dest, float scale);
 	CTL_EXPORT void setOutputScale(float f){ m_fOutScale = f; }
+	RGBE* getFilteredColorsDevice() const
+	{
+		return m_filteredColorsDevice;
+	}
 private:
 	FIBITMAP* toFreeImage();
 	void InternalUpdateDisplay();
@@ -118,8 +102,8 @@ private:
 	Pixel *hostPixels;
 	bool usedHostPixels;
 	int xResolution, yResolution;
-	ImageDrawType drawStyle;
 	float lastSplatVal;
+	RGBE* m_filteredColorsDevice;
 	CUDA_FUNC_IN Pixel* getPixel(int i)
 	{
 #ifdef ISCUDA
@@ -129,14 +113,6 @@ private:
 		return hostPixels + i;
 #endif
 	}
-
-	//opengl
-	int outState;
-
-	cudaGraphicsResource_t viewCudaResource;
-	bool isMapped;
-	cudaArray_t viewCudaArray;
-	cudaSurfaceObject_t viewCudaSurfaceObject;
 
 	bool ownsTarget;
 	RGBCOL* viewTarget;
