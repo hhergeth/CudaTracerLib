@@ -144,6 +144,7 @@ public:
 				clb(x, y, bw, bh);
 			}
 	}
+	virtual float getSplatScale() const = 0;
 protected:
 	float m_fLastRuntime;
 	unsigned int m_uLastNumRaysTraced;
@@ -200,7 +201,6 @@ public:
 		k_setNumRaysTraced(0);
 		m_uPassesDone++;
 		DoRender(I);
-		I->DoUpdateDisplay(getSplatScale());
 		if (USE_BLOCKSAMPLER && m_sParameters.getValue(KEY_SamplerActive()))
 			m_pBlockSampler->AddPass();
 		ThrowCudaErrors(cudaEventRecord(stop, 0));
@@ -221,7 +221,12 @@ public:
 	{
 		return USE_BLOCKSAMPLER;
 	}
-
+	virtual float getSplatScale() const
+	{
+		if (PROGRESSIVE)
+			return 1.0f / float(m_uPassesDone);
+		else return 0;
+	}
 protected:
 	virtual void RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 	{
@@ -269,12 +274,6 @@ protected:
 	virtual void StartNewTrace(Image* I)
 	{
 
-	}
-	virtual float getSplatScale()
-	{
-		if (PROGRESSIVE)
-			return 1.0f / float(m_uPassesDone);
-		else return 0;
 	}
 };
 

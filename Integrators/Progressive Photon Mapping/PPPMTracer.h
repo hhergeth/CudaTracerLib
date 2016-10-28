@@ -202,11 +202,11 @@ public:
 		return m_pPixelBuffer->operator[](y * w + x);
 	}
 	CTL_EXPORT k_AdaptiveStruct getAdaptiveData() const;
+	virtual float getSplatScale() const;
 protected:
 	CTL_EXPORT virtual void DoRender(Image* I);
 	CTL_EXPORT virtual void StartNewTrace(Image* I);
 	CTL_EXPORT virtual void RenderBlock(Image* I, int x, int y, int blockW, int blockH);
-	virtual float getSplatScale();
 private:
 	CTL_EXPORT void doPhotonPass(Image* I);
 };

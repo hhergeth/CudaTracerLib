@@ -1,19 +1,39 @@
 #pragma once
 
-#include "Filter.h"
 #include <Math/Spectrum.h>
+#include <Engine/SynchronizedBuffer.h>
 
 struct FIBITMAP;
 
 namespace CudaTracerLib {
 
-class Image
+struct PixelData
+{
+	CUDA_FUNC_IN PixelData()
+	{
+		rgb[0] = rgb[1] = rgb[2] = 0;
+		rgbSplat[0] = rgbSplat[1] = rgbSplat[2] = 0;
+		weightSum = 0.0f;
+	}
+	float rgb[3];
+	float rgbSplat[3];
+	float weightSum;
+	CUDA_FUNC_IN Spectrum toSpectrum(float splatScale)
+	{
+		float weight = weightSum != 0 ? weightSum : 1;
+		Spectrum s, s2;
+		s.fromLinearRGB(rgb[0], rgb[1], rgb[2]);
+		s2.fromLinearRGB(rgbSplat[0], rgbSplat[1], rgbSplat[2]);
+		return (s / weight + s2 * splatScale);
+	}
+};
+
+class Image : public ISynchronizedBufferParent
 {
 public:
-	CUDA_FUNC_IN Image(){}
-
 	CTL_EXPORT Image(int xRes, int yRes, RGBCOL* target = 0);
 	CTL_EXPORT void Free();
+
 	CUDA_FUNC_IN void getExtent(unsigned int& xRes, unsigned int &yRes) const
 	{
 		xRes = xResolution;
@@ -27,95 +47,44 @@ public:
 	{
 		return yResolution;
 	}
+
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST void AddSample(float sx, float sy, const Spectrum &L);
-	CUDA_FUNC_IN void ClearSample(int sx, int sy)
-	{
-		*getPixel(sy * xResolution + sx) = Pixel();
-	}
-	void setStdFilter()
-	{
-		Filter flt;
-		flt.SetData(BoxFilter(1, 1));
-		setFilter(flt);
-	}
-	void setFilter(const Filter& filt)
-	{
-		filter = filt;
-	}
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST void ClearSample(int sx, int sy);
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST void SetSample(int sx, int sy, RGBCOL c);
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST void Splat(float sx, float sy, const Spectrum &L);
+
 	CTL_EXPORT void WriteDisplayImage(const std::string& fileName);
-	CTL_EXPORT void StartRendering();
-	CTL_EXPORT void EndRendering();
-	CTL_EXPORT void Clear();
-	struct Pixel {
-		CUDA_FUNC_IN Pixel() {
-			rgb[0] = rgb[1] = rgb[2] = 0;
-			rgbSplat[0] = rgbSplat[1] = rgbSplat[2] = 0;
-			weightSum = 0.0f;
-		}
-		float rgb[3];
-		float weightSum;
-		float rgbSplat[3];
-		CUDA_FUNC_IN Spectrum toSpectrum(float splatScale)
-		{
-			float weight = weightSum != 0 ? weightSum : 1;
-			Spectrum s, s2;
-			s.fromLinearRGB(rgb[0], rgb[1], rgb[2]);
-			s2.fromLinearRGB(rgbSplat[0], rgbSplat[1], rgbSplat[2]);
-			return (s / weight + s2 * splatScale);
-		}
-	};
-	Filter& accessFilter()
-	{
-		return filter;
-	}
-	CTL_EXPORT void DoUpdateDisplay(float splat);
-	RGBCOL* getCudaPixels(){ return viewTarget; }
-	CUDA_FUNC_IN Spectrum getPixel(int x, int y)
-	{
-		return getPixel(y * xResolution + x)->toSpectrum(lastSplatVal);
-	}
-	CUDA_FUNC_IN Pixel& accessPixel(int x, int y)
-	{
-		return *getPixel(y * xResolution + x);
-	}
-	void disableUpdate()
-	{
-		m_bDoUpdate = false;
-	}
-	CTL_EXPORT void copyToHost();
 	CTL_EXPORT void SaveToMemory(void** mem, size_t& size, const std::string& type);
-	CTL_EXPORT void setOutputScale(float f){ m_fOutScale = f; }
-	RGBE* getFilteredColorsDevice() const
+
+	CTL_EXPORT void Clear();
+
+	CUDA_FUNC_IN PixelData& getPixelData(int x, int y)
 	{
-		return m_filteredColorsDevice;
+		return m_pixelBuffer[idx(x, y)];
+	}
+	CUDA_FUNC_IN RGBE& getFilteredData(int x, int y)
+	{
+		return m_filteredColorsDevice[idx(x, y)];
+	}
+	CUDA_FUNC_IN RGBCOL& getProcessedData(int x, int y)
+	{
+		return m_viewTarget[idx(x, y)];
 	}
 private:
 	FIBITMAP* toFreeImage();
-	void InternalUpdateDisplay();
-
-	float m_fOutScale;
-	bool m_bDoUpdate;
-	Filter filter;
-	Pixel *cudaPixels;
-	Pixel *hostPixels;
-	bool usedHostPixels;
-	int xResolution, yResolution;
-	float lastSplatVal;
-	RGBE* m_filteredColorsDevice;
-	CUDA_FUNC_IN Pixel* getPixel(int i)
+	CUDA_FUNC_IN int idx(int x, int y) const
 	{
-#ifdef ISCUDA
-		return cudaPixels + i;
-#else
-		usedHostPixels = true;
-		return hostPixels + i;
-#endif
+		return y * xResolution + x;
 	}
 
+	int xResolution, yResolution;
+	//Stage 1, directly from the Integrator, this is either on the host or device
+	SynchronizedBuffer<PixelData> m_pixelBuffer;
+	//Stage 2, reconstructed from Stage 1 by a Filter, located on device
+	RGBE* m_filteredColorsDevice;
+	//Stage 3, applied some sort of color transform to Stage 2, located on device
 	bool ownsTarget;
-	RGBCOL* viewTarget;
+	RGBCOL* m_viewTarget;
 };
 
 }

@@ -15,7 +15,7 @@ enum
 CUDA_DEVICE DeviceDepthImage g_DepthImage2;
 CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_NextRayCounter2;
 
-CUDA_FUNC_IN void computePixel(int x, int y, Sampler& rng, Image g_Image, bool depthImage, PathTrace_DrawMode mode, int maxPathLength)
+CUDA_FUNC_IN void computePixel(int x, int y, Sampler& rng, Image& g_Image, bool depthImage, PathTrace_DrawMode mode, int maxPathLength)
 {
 	NormalizedT<Ray> r, rX, rY;
 	Spectrum imp = g_SceneData.m_Camera.sampleRayDifferential(r, rX, rY, Vec2f((float)x, (float)y), rng.randomFloat2());

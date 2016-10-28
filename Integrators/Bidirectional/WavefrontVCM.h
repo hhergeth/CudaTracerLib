@@ -30,6 +30,7 @@ class WavefrontVCM : public Tracer<true, true>
 public:
 	CTL_EXPORT WavefrontVCM(unsigned int a_NumLightRays = 1024 * 100);
 	CTL_EXPORT ~WavefrontVCM();
+	CTL_EXPORT virtual float getSplatScale() const;
 protected:
 	CTL_EXPORT virtual void DoRender(Image* I);
 	CTL_EXPORT virtual void StartNewTrace(Image* I);
@@ -52,7 +53,6 @@ private:
 	unsigned int m_uLightOff;
 	CTL_EXPORT void cppTest();
 protected:
-	CTL_EXPORT virtual float getSplatScale();
 };
 
 }

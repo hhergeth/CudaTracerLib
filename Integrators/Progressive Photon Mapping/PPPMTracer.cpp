@@ -128,7 +128,7 @@ k_AdaptiveStruct PPPMTracer::getAdaptiveData() const
 	return k_AdaptiveStruct(m_fInitialRadiusSurf, m_fInitialRadiusVol, surf_min, surf_max, vol_min, vol_max, *m_pPixelBuffer, w, m_uPassesDone, m_uPhotonEmittedPassSurface, m_uPhotonEmittedPassVolume, k_toFindSurf, k_toFindVol, radiusTypeSurf, radiusTypeVol);
 }
 
-float PPPMTracer::getSplatScale()
+float PPPMTracer::getSplatScale() const
 {
 	return 1.0f / m_uPassesDone * (m_uPhotonEmittedPassVolume ? (float)(w * h) / m_uPhotonEmittedPassVolume : 1);
 }

@@ -59,7 +59,7 @@ CUDA_ONLY_FUNC float w(int x1, int y1, int x2, int y2, int f, Image& img, Sample
 }
 CUDA_GLOBAL void nlmeans(int f, int r, Image I, SamplerpixelData* lumData)
 {
-	s_BlockStart = Vec2i(blockIdx.x * nlBlockSize - f - r, blockIdx.y * nlBlockSize - f - r);
+	/*s_BlockStart = Vec2i(blockIdx.x * nlBlockSize - f - r, blockIdx.y * nlBlockSize - f - r);
 
 	int x = blockIdx.x * blockDim.x + threadIdx.x, y = blockIdx.y * blockDim.y + threadIdx.y;
 	if (x >= I.getWidth() || y >= I.getHeight())
@@ -81,7 +81,7 @@ CUDA_GLOBAL void nlmeans(int f, int r, Image I, SamplerpixelData* lumData)
 	Spectrum srgb;
 	u_p.toSRGB(srgb[0], srgb[1], srgb[2]);
 
-	I.SetSample(x, y, srgb.toRGBCOL());
+	I.SetSample(x, y, srgb.toRGBCOL());*/
 }
 
 CUDA_FUNC_IN float weight(SamplerpixelData& f, bool update)
@@ -364,7 +364,6 @@ void BlockSampler::DrawVariance(bool blocks) const
 {
 	Colorizer col = Colorizer::FromData(m_pHostBlockData, totalNumBlocks());
 	drawPass << < dim3(img->getWidth() / 32 + 1, img->getHeight() / 32 + 1), dim3(32, 32) >> >(*img, m_pLumData, m_pDeviceBlockData, m_pDeviceContribPixels, col, blocks, numBlocksRow());
-	img->disableUpdate();
 }
 
 }

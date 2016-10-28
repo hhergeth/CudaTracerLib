@@ -4,47 +4,29 @@
 #include <iostream>
 #include <CudaMemoryManager.h>
 
-#ifdef ISWINDOWS
-#include <windows.h>
-#include <cuda_d3d11_interop.h>
-#endif
-#include <cuda_gl_interop.h>
-
 #define FREEIMAGE_LIB
 #include <FreeImage.h>
 
 namespace CudaTracerLib {
 
 Image::Image(int xRes, int yRes, RGBCOL* target)
-	: xResolution(xRes), yResolution(yRes), m_fOutScale(1), lastSplatVal(0)
+	: xResolution(xRes), yResolution(yRes), ISynchronizedBufferParent(m_pixelBuffer), m_pixelBuffer(xRes * yRes)
 {
-	ThrowCudaErrors();
-	setStdFilter();
-	CUDA_MALLOC(&cudaPixels, sizeof(Pixel) * xResolution * yResolution);
-	hostPixels = new Pixel[xResolution * yResolution];
-	this->viewTarget = target;
+	CUDA_MALLOC(&m_filteredColorsDevice, sizeof(RGBE) * xRes * yRes);
+	m_viewTarget = target;
 	ownsTarget = false;
-	if (!viewTarget)
+	if (!m_viewTarget)
 	{
-		CUDA_MALLOC(&viewTarget, sizeof(RGBCOL) * xRes * yRes);
+		CUDA_MALLOC(&m_viewTarget, sizeof(RGBCOL) * xRes * yRes);
 		ownsTarget = true;
 	}
-	CUDA_MALLOC(&m_filteredColorsDevice, sizeof(RGBE) * xRes * yRes);
 }
 
 void Image::Free()
 {
-	ThrowCudaErrors();
-	delete hostPixels;
-	CUDA_FREE(cudaPixels);
-	if (ownsTarget)
-		CUDA_FREE(viewTarget);
 	CUDA_FREE(m_filteredColorsDevice);
-}
-
-void Image::copyToHost()
-{
-	ThrowCudaErrors(cudaMemcpy(hostPixels, cudaPixels, sizeof(Pixel) * xResolution * yResolution, cudaMemcpyDeviceToHost));
+	if (ownsTarget)
+		CUDA_FREE(m_viewTarget);
 }
 
 FIBITMAP* Image::toFreeImage()
@@ -55,7 +37,7 @@ FIBITMAP* Image::toFreeImage()
 	if (yResolution > yDim || xResolution > xDim)
 		throw std::runtime_error("Image resolution too high!");
 
-	ThrowCudaErrors(cudaMemcpy(colData, viewTarget, sizeof(RGBCOL) * xResolution * yResolution, cudaMemcpyDeviceToHost));
+	ThrowCudaErrors(cudaMemcpy(colData, m_viewTarget, sizeof(RGBCOL) * xResolution * yResolution, cudaMemcpyDeviceToHost));
 	FIBITMAP* bitmap = FreeImage_Allocate(xResolution, yResolution, 24, 0x000000ff, 0x0000ff00, 0x00ff0000);
 	BYTE* A = FreeImage_GetBits(bitmap);
 	unsigned int pitch = FreeImage_GetPitch(bitmap);
@@ -112,24 +94,6 @@ void Image::SaveToMemory(void** mem, size_t& size, const std::string& type)
 		throw std::runtime_error("SaveToMemory::FreeImage_ReadMemory");
 	FreeImage_CloseMemory(str);
 	FreeImage_Unload(bitmap);
-}
-
-void Image::StartRendering()
-{
-	m_bDoUpdate = false;
-}
-
-void Image::DoUpdateDisplay(float splat)
-{
-	m_bDoUpdate = true;
-	lastSplatVal = splat;
-}
-
-void Image::EndRendering()
-{
-	if (m_bDoUpdate)
-		InternalUpdateDisplay();
-	m_bDoUpdate = false;
 }
 
 }

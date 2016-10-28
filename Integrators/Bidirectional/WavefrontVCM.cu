@@ -303,7 +303,7 @@ void WavefrontVCM::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 	m_uLightOff += blockW * blockH;
 }
 
-float WavefrontVCM::getSplatScale()
+float WavefrontVCM::getSplatScale() const
 {
 	return Tracer<true, true>::getSplatScale() * (w * h) / m_uNumLightRays;
 }
