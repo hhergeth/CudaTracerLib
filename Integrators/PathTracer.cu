@@ -145,7 +145,7 @@ void PathTracer::DebugInternal(Image* I, const Vec2i& p)
 	g_SamplerData(rng);
 }
 
-template<bool DIRECT, bool REGU> __global__ void pathKernel2(unsigned int w, unsigned int h, unsigned int xoff, unsigned int yoff, BlockSampleImage img, float m)
+template<bool DIRECT, bool REGU> __global__ void pathKernel2(unsigned int w, unsigned int h, unsigned int xoff, unsigned int yoff, Image img, float m)
 {
 	Vec2i pixel = TracerBase::getPixelPos(xoff, yoff);
 	auto rng = g_SamplerData();
@@ -155,7 +155,7 @@ template<bool DIRECT, bool REGU> __global__ void pathKernel2(unsigned int w, uns
 		Vec2f pX = Vec2f(pixel.x, pixel.y) + rng.randomFloat2();
 		Spectrum imp = g_SceneData.sampleSensorRay(r, rX, rY, pX, rng.randomFloat2());
 		Spectrum col = imp * (REGU ? PathTraceRegularization<DIRECT>(r, rX, rY, rng, m) : PathTrace<DIRECT>(r, rX, rY, rng));
-		img.Add(pX.x, pX.y, col);
+		img.AddSample(pX.x, pX.y, col);
 	}
 	g_SamplerData(rng);
 }
@@ -170,14 +170,14 @@ void PathTracer::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 	if (m_sParameters.getValue(KEY_Regularization()))
 	{
 		if (m_sParameters.getValue(KEY_Direct()))
-			pathKernel2<true, true> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> > (w, h, x, y, m_pBlockSampler->getBlockImage(), radius2);
-		else pathKernel2<false, true> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> > (w, h, x, y, m_pBlockSampler->getBlockImage(), radius2);
+			pathKernel2<true, true> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> > (w, h, x, y, *I, radius2);
+		else pathKernel2<false, true> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> > (w, h, x, y, *I, radius2);
 	}
 	else
 	{
 		if (m_sParameters.getValue(KEY_Direct()))
-			pathKernel2<true, false> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> > (w, h, x, y, m_pBlockSampler->getBlockImage(), radius2);
-		else pathKernel2<false, false> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> > (w, h, x, y, m_pBlockSampler->getBlockImage(), radius2);
+			pathKernel2<true, false> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> > (w, h, x, y, *I, radius2);
+		else pathKernel2<false, false> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> > (w, h, x, y, *I, radius2);
 	}
 }
 

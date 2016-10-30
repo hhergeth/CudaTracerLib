@@ -13,7 +13,7 @@ struct EmptyRayData
 
 typedef RayBuffer<EmptyRayData, 2> FastTracerBuffer;
 
-class FastTracer : public Tracer<false, false>, public IDepthTracer
+class FastTracer : public Tracer<false>, public IDepthTracer
 {
 public:
 	FastTracer()
@@ -26,7 +26,7 @@ public:
 	}
 	virtual void Resize(unsigned int w, unsigned int h)
 	{
-		Tracer<false, false>::Resize(w, h);
+		Tracer<false>::Resize(w, h);
 		if (bufA)
 			delete bufA;
 		bufA = new FastTracerBuffer(w * h);

@@ -4,7 +4,7 @@
 
 namespace CudaTracerLib {
 
-class BDPT : public Tracer<true, true>
+class BDPT : public Tracer<true>
 {
 public:
 	PARAMETER_KEY(bool, UseMis)

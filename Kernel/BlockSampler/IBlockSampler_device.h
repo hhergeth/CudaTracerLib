@@ -3,8 +3,6 @@
 
 namespace CudaTracerLib {
 
-struct SamplerpixelData;
-
 #ifdef CUDA_RELEASE_BUILD
 #define BLOCK_FACTOR 4
 #else
@@ -22,32 +20,5 @@ struct SamplerpixelData;
 
 //a launch configuration for a cuda kernel which implements the block sampler "interface"
 #define BLOCK_SAMPLER_LAUNCH_CONFIG BLOCK_SAMPLER_NumBlocks,BLOCK_SAMPLER_ThreadsPerBlock
-
-struct BlockSampleImage
-{
-	Image img;
-	SamplerpixelData* m_pLumData;
-	unsigned int w, h;
-
-	BlockSampleImage(Image* img, SamplerpixelData* lumData)
-		: img(*img), m_pLumData(lumData)
-	{
-		img->getExtent(w, h);
-	}
-
-	CUDA_DEVICE CUDA_HOST void Add(float x, float y, const Spectrum& c);
-};
-
-class IBlockSampler
-{
-public:
-	virtual ~IBlockSampler();
-	virtual void Free() = 0;
-	virtual void AddPass() = 0;
-	virtual void Clear() = 0;
-	virtual unsigned int NumBlocks() const = 0;
-	virtual void getBlockCoords(unsigned int idx, unsigned int& x, unsigned int& y, unsigned int& w, unsigned int& h, bool ignoreData = false) const = 0;
-	virtual BlockSampleImage getBlockImage() const = 0;
-};
 
 }

@@ -86,7 +86,7 @@ void PPPMTracer::PrintStatus(std::vector<std::string>& a_Buf) const
 
 void PPPMTracer::Resize(unsigned int _w, unsigned int _h)
 {
-	Tracer<true, true>::Resize(_w, _h);
+	Tracer<true>::Resize(_w, _h);
 	if(m_pPixelBuffer)
 	{
 		m_pPixelBuffer->Free();
@@ -107,7 +107,7 @@ void PPPMTracer::DoRender(Image* I)
 	setNumSequences();
 	{
 		auto timer = START_PERF_BLOCK("Camera Pass");
-		Tracer<true, true>::DoRender(I);
+		Tracer<true>::DoRender(I);
 	}
 }
 
@@ -161,7 +161,7 @@ void PPPMTracer::StartNewTrace(Image* I)
 #endif
 	m_useDirectLighting &= m_fLightVisibility > 0.5f;
 	//m_bDirect = 0;
-	Tracer<true, true>::StartNewTrace(I);
+	Tracer<true>::StartNewTrace(I);
 	m_pPixelBuffer->Memset(0);
 	m_uTotalPhotonsEmittedSurface = m_uTotalPhotonsEmittedVolume = 0;
 #ifdef CUDA_RELEASE_BUILD

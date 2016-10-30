@@ -4,6 +4,7 @@
 #include <Base/FileStream.h>
 #include <CudaMemoryManager.h>
 #include <Engine/MIPMap.h>
+#include <Engine/DynamicScene.h>
 
 namespace CudaTracerLib {
 
@@ -261,7 +262,5 @@ PrimTracer::PrimTracer()
 	r = cudaMemcpy2D(mimMap.m_pDeviceData, pitch, mimMap.m_pHostData, mimMap.m_uWidth * 8, mimMap.m_uWidth, mimMap.m_uHeight, cudaMemcpyHostToDevice);
 	ThrowCudaErrors(r);*/
 }
-
-
 
 }

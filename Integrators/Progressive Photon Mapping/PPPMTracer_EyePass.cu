@@ -77,7 +77,7 @@ CUDA_FUNC_IN Spectrum L_SurfaceFinalGathering(int N_FG_Samples, BSDFSamplingReco
 	return L / (float)N_FG_Samples + LCaustic;
 }
 
-template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int h, k_AdaptiveStruct a_AdpEntries, BlockSampleImage img, bool DIRECT, int N_FG_Samples)
+template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int h, k_AdaptiveStruct a_AdpEntries, Image img, bool DIRECT, int N_FG_Samples)
 {
 	auto rng = g_SamplerData();
 	DifferentialGeometry dg;
@@ -199,7 +199,7 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 			L += Tr * throughput * g_SceneData.EvalEnvironment(r);
 		}
 
-		img.Add(screenPos.x, screenPos.y, L);
+		img.AddSample(screenPos.x, screenPos.y, L);
 		adp_ent.vol_density.addSample(vol_dens_est_it / numVolEstimates);
 		a_AdpEntries(pixel.x, pixel.y) = adp_ent;
 	}
@@ -219,7 +219,7 @@ void PPPMTracer::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 		
 	k_AdaptiveStruct A = getAdaptiveData();
 	Vec2i off = Vec2i(x, y);
-	BlockSampleImage img = m_pBlockSampler->getBlockImage();
+	auto img = *I;
 	
 	//iterateTypes<BeamGrid, PointStorage, BeamBeamGrid>(m_pVolumeEstimator, [off,&A,&img, fg_samples,this](auto* X) {CudaTracerLib::k_EyePass<std::remove_pointer<decltype(X)>::type> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, this->w, this->h, A, img, this->m_useDirectLighting, fg_samples); });
 

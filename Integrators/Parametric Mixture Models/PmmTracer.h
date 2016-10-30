@@ -13,7 +13,7 @@ struct DirectionModel;
 
 //Incomplete implementation of "On-line Learning of Parametric Mixture Models for Light Transport Simulation"
 
-class PmmTracer : public Tracer<false, true>
+class PmmTracer : public Tracer<true>
 {
 public:
 	CTL_EXPORT PmmTracer();

@@ -4,7 +4,7 @@
 
 namespace CudaTracerLib {
 
-class GameTracer : public Tracer<false, false>, public IDepthTracer
+class GameTracer : public Tracer<false>, public IDepthTracer
 {
 	Spectrum* m_pDeviceLastDirectImage1, *m_pDeviceLastDirectImage2;
 	Spectrum* m_pDeviceLastIndirectImage1, *m_pDeviceLastIndirectImage2;

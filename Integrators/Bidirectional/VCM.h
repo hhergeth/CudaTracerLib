@@ -6,7 +6,7 @@
 
 namespace CudaTracerLib {
 
-class VCM : public Tracer<true, true>
+class VCM : public Tracer<true>
 {
 public:
 	CTL_EXPORT VCM();

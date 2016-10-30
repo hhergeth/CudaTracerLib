@@ -8,7 +8,7 @@ namespace CudaTracerLib {
 ENUMIZE(PathTrace_DrawMode, PTDM)
 #undef PTDM
 
-class PrimTracer : public Tracer<false, false>, public IDepthTracer
+class PrimTracer : public Tracer<false>, public IDepthTracer
 {
 public:
 

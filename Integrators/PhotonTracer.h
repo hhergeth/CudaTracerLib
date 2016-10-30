@@ -4,7 +4,7 @@
 
 namespace CudaTracerLib {
 
-class PhotonTracer : public Tracer<false, true>
+class PhotonTracer : public Tracer<true>
 {
 public:
 	PARAMETER_KEY(bool, CorrectDifferentials)

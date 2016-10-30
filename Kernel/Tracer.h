@@ -1,14 +1,15 @@
 #pragma once
 
 #include "TraceHelper.h"
-#include "BlockSampler_device.h"
+#include "BlockSampler/IBlockSampler_device.h"
+#include "BlockSampler/IBlockSampler.h"
+#include <Engine/Image.h>
 #include <Engine/Material.h>
 #include "TracerSettings.h"
 
 namespace CudaTracerLib {
 
 class DynamicScene;
-class BlockSampler;
 
 struct DeviceDepthImage
 {
@@ -28,7 +29,7 @@ struct DeviceDepthImage
 
 class IDepthTracer
 {
-	template<bool A, bool B> friend class Tracer;
+	template<bool B> friend class Tracer;
 	bool hasImage;
 	DeviceDepthImage img;
 protected:
@@ -64,7 +65,6 @@ public:
 	CTL_EXPORT static TraceResult TraceSingleRay(Ray r, DynamicScene* s);
 	CTL_EXPORT static void RenderDepth(DeviceDepthImage dImg, DynamicScene* s);
 
-	PARAMETER_KEY(bool, SamplerActive)
 	PARAMETER_KEY(SamplingSequenceGeneratorTypes, SamplingSequenceType)
 
 	CUDA_DEVICE static Vec2i getPixelPos(unsigned int xoff, unsigned int yoff)
@@ -97,7 +97,6 @@ public:
 
 	}
 	virtual bool isMultiPass() const = 0;
-	virtual bool usesBlockSampler() const = 0;
 	virtual unsigned int getNumPassesDone() const
 	{
 		return m_uPassesDone;
@@ -118,11 +117,6 @@ public:
 	{
 		return m_fAccRuntime;
 	}
-	virtual IBlockSampler* getBlockSampler() const
-	{
-		return m_pBlockSampler;
-	}
-	CTL_EXPORT BlockSampleImage getDeviceBlockSampler() const;
 	TracerParameterCollection& getParameters() { return m_sParameters; }
 	virtual void setNumSequences() const
 	{
@@ -132,19 +126,9 @@ public:
 	{
 		UpdateSamplerData(n);
 	}
-	template<typename F> static void IterateAllBlocks(unsigned int w, unsigned int h, const F& clb)
-	{
-		int nx = (w + BLOCK_SAMPLER_BlockSize - 1) / BLOCK_SAMPLER_BlockSize, ny = (h + BLOCK_SAMPLER_BlockSize - 1) / BLOCK_SAMPLER_BlockSize;
-		for (int ix = 0; ix < nx; ix++)
-			for (int iy = 0; iy < ny; iy++)
-			{
-				int x = ix * BLOCK_SAMPLER_BlockSize, y = iy * BLOCK_SAMPLER_BlockSize;
-				int x2 = (ix + 1) * BLOCK_SAMPLER_BlockSize, y2 = (iy + 1) * BLOCK_SAMPLER_BlockSize;
-				int bw = min(int(w), x2) - x, bh = min(int(h), y2) - y;
-				clb(x, y, bw, bh);
-			}
-	}
 	virtual float getSplatScale() const = 0;
+	virtual IBlockSampler* getBlockSampler() { return m_pBlockSampler; }
+	virtual void setBlockSampler(IBlockSampler* b) { m_pBlockSampler = b; }
 protected:
 	float m_fLastRuntime;
 	unsigned int m_uLastNumRaysTraced;
@@ -157,34 +141,29 @@ protected:
 	IBlockSampler* m_pBlockSampler;
 	TracerParameterCollection m_sParameters;
 	ISamplingSequenceGenerator* m_pSamplingSequenceGenerator;
-	CTL_EXPORT void allocateBlockSampler(Image* I);
 	virtual void DebugInternal(Image* I, const Vec2i& pixel)
 	{
 		
 	}
 };
 
-template<bool USE_BLOCKSAMPLER, bool PROGRESSIVE> class Tracer : public TracerBase
+template<bool PROGRESSIVE> class Tracer : public TracerBase
 {
 public:
 	virtual void Resize(unsigned int _w, unsigned int _h)
 	{
 		w = _w;
 		h = _h;
-		if (USE_BLOCKSAMPLER)
+		if (PROGRESSIVE)
 		{
-			if (m_pBlockSampler)
-			{
-				m_pBlockSampler->Free();
-				delete m_pBlockSampler;
-			}
-			m_pBlockSampler = 0;
+			auto oldSampler = m_pBlockSampler;
+			m_pBlockSampler = oldSampler->CreateForSize(_w, _h);
+			oldSampler->Free();
+			delete oldSampler;
 		}
 	}
 	virtual void DoPass(Image* I, bool a_NewTrace)
 	{
-		if (USE_BLOCKSAMPLER && !m_pBlockSampler)
-			allocateBlockSampler(I);
 		ThrowCudaErrors(cudaEventRecord(start, 0));
 		if (a_NewTrace || !PROGRESSIVE)
 		{
@@ -192,8 +171,8 @@ public:
 			m_uAccNumRaysTraced = 0;
 			m_fAccRuntime = 0;
 			I->Clear();
-			if (USE_BLOCKSAMPLER)
-				m_pBlockSampler->Clear();
+			if (PROGRESSIVE)
+				m_pBlockSampler->StartNewRendering(m_pScene, I);
 			StartNewTrace(I);
 		}
 		UpdateSamplingSequenceGenerator(m_sParameters.getValue(KEY_SamplingSequenceType()), m_pSamplingSequenceGenerator);
@@ -201,8 +180,8 @@ public:
 		k_setNumRaysTraced(0);
 		m_uPassesDone++;
 		DoRender(I);
-		if (USE_BLOCKSAMPLER && m_sParameters.getValue(KEY_SamplerActive()))
-			m_pBlockSampler->AddPass();
+		if (PROGRESSIVE)
+			m_pBlockSampler->AddPass(I, this);
 		ThrowCudaErrors(cudaEventRecord(stop, 0));
 		ThrowCudaErrors(cudaEventSynchronize(stop));
 		if (start != stop)
@@ -216,10 +195,6 @@ public:
 	virtual bool isMultiPass() const
 	{
 		return PROGRESSIVE;
-	}
-	virtual bool usesBlockSampler() const
-	{
-		return USE_BLOCKSAMPLER;
 	}
 	virtual float getSplatScale() const
 	{
@@ -253,23 +228,10 @@ protected:
 		BBBB
 
 		*/
-		if (USE_BLOCKSAMPLER && m_sParameters.getValue(KEY_SamplerActive()))
+		m_pBlockSampler->IterateBlocks([&](unsigned int block_idx, int x, int y, int bw, int bh)
 		{
-			unsigned int nBlocks = m_pBlockSampler->NumBlocks();
-			for (unsigned int idx = 0; idx < nBlocks; idx++)
-			{
-				unsigned int x, y, bw, bh;
-				m_pBlockSampler->getBlockCoords(idx, x, y, bw, bh);
-				RenderBlock(I, x, y, bw, bh);
-			}
-		}
-		else
-		{
-			IterateAllBlocks(w, h, [&](int x, int y, int bw, int bh)
-			{
-				RenderBlock(I, x, y, bw, bh);
-			});
-		}
+			RenderBlock(I, x, y, bw, bh);
+		});
 	}
 	virtual void StartNewTrace(Image* I)
 	{

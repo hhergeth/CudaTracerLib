@@ -10,7 +10,7 @@ CUDA_FUNC_IN float pathWeight(int force_s, int force_t, int s, int t)
 	else return 1;
 }
 
-CUDA_FUNC_IN void BPT(const Vec2f& pixelPosition, BlockSampleImage& img, Sampler& rng, unsigned int w, unsigned int h,
+CUDA_FUNC_IN void BPT(const Vec2f& pixelPosition, Image& img, Sampler& rng, unsigned int w, unsigned int h,
 	bool use_mis, int force_s, int force_t, float LScale)
 {
 	float mLightSubPathCount = 1 * 1;
@@ -49,7 +49,7 @@ CUDA_FUNC_IN void BPT(const Vec2f& pixelPosition, BlockSampleImage& img, Sampler
 
 		//connect to camera
 		if (r2.getMat().bsdf.hasComponent(ESmooth))
-			connectToCamera(lightPathState, v.bRec, r2.getMat(), img.img, rng, mLightSubPathCount, mMisVmWeightFactor, LScale * pathWeight(force_s, force_t, emitterPathLength, 1), use_mis);
+			connectToCamera(lightPathState, v.bRec, r2.getMat(), img, rng, mLightSubPathCount, mMisVmWeightFactor, LScale * pathWeight(force_s, force_t, emitterPathLength, 1), use_mis);
 
 		if (!sampleScattering(lightPathState, v.bRec, r2.getMat(), rng, mMisVcWeightFactor, mMisVmWeightFactor))
 			break;
@@ -96,10 +96,10 @@ CUDA_FUNC_IN void BPT(const Vec2f& pixelPosition, BlockSampleImage& img, Sampler
 			break;
 	}
 
-	img.Add(pixelPosition.x, pixelPosition.y, acc * LScale);
+	img.AddSample(pixelPosition.x, pixelPosition.y, acc * LScale);
 }
 
-__global__ void pathKernel(unsigned int w, unsigned int h, int xoff, int yoff, BlockSampleImage img,
+__global__ void pathKernel(unsigned int w, unsigned int h, int xoff, int yoff, Image img,
 	bool use_mis, int force_s, int force_t, float LScale)
 {
 	Vec2i pixel = TracerBase::getPixelPos(xoff, yoff);
@@ -111,7 +111,7 @@ __global__ void pathKernel(unsigned int w, unsigned int h, int xoff, int yoff, B
 
 void BDPT::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 {
-	pathKernel << < BLOCK_SAMPLER_LAUNCH_CONFIG >> >(w, h, x, y, getDeviceBlockSampler(), 
+	pathKernel << < BLOCK_SAMPLER_LAUNCH_CONFIG >> >(w, h, x, y, *I, 
 													m_sParameters.getValue(KEY_UseMis()), m_sParameters.getValue(KEY_Force_s()), m_sParameters.getValue(KEY_Force_t()), m_sParameters.getValue(KEY_ResultMultiplier()));
 }
 
@@ -119,8 +119,7 @@ void BDPT::DebugInternal(Image* I, const Vec2i& pixel)
 {
 	//Li(*gI, g_RNGData(), pixel.x, pixel.y);
 	auto rng = g_SamplerData();
-	BlockSampleImage img = getDeviceBlockSampler();
-	BPT(Vec2f(pixel), img, rng, w, h, 
+	BPT(Vec2f(pixel), *I, rng, w, h, 
 		m_sParameters.getValue(KEY_UseMis()), m_sParameters.getValue(KEY_Force_s()), m_sParameters.getValue(KEY_Force_t()), m_sParameters.getValue(KEY_ResultMultiplier()));
 	g_SamplerData(rng);
 }

@@ -19,7 +19,7 @@ struct WavefrontPTRayData
 
 typedef RayBuffer<WavefrontPTRayData, 2> WavefrontPathTracerBuffer;
 
-class WavefrontPathTracer : public Tracer<false, true>, public IDepthTracer
+class WavefrontPathTracer : public Tracer<true>, public IDepthTracer
 {
 public:
 	PARAMETER_KEY(bool, Direct)
@@ -37,7 +37,7 @@ public:
 	}
 	virtual void Resize(unsigned int w, unsigned int h)
 	{
-		Tracer<false, true>::Resize(w, h);
+		Tracer<true>::Resize(w, h);
 		if (bufA)
 		{
 			bufA->Free(); delete bufA;

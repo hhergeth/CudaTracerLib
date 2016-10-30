@@ -26,8 +26,6 @@ enum
 typedef SpatialLinkedMap<PPPMPhoton> SurfaceMapT;
 typedef unsigned long long counter_t;
 
-
-
 struct APPM_PixelData
 {
 	//recursive density estimator
@@ -148,7 +146,7 @@ public:
 	}
 };
 
-class PPPMTracer : public Tracer<true, true>
+class PPPMTracer : public Tracer<true>
 {
 private:
 	SurfaceMapT m_sSurfaceMap;

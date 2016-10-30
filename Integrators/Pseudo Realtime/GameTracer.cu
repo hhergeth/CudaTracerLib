@@ -207,7 +207,7 @@ void GameTracer::Resize(unsigned int w, unsigned int h)
 	cudaMemset(m_pDeviceLastIndirectImage2, 0, _w * _h * sizeof(Spectrum));
 	Platform::SetMemory(&lastSensor, sizeof(lastSensor));
 	iterations = 0;
-	Tracer<false, false>::Resize(w, h);
+	Tracer<false>::Resize(w, h);
 }
 
 }

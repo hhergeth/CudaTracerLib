@@ -4,7 +4,7 @@
 
 namespace CudaTracerLib {
 
-class PathTracer : public Tracer<true, true>
+class PathTracer : public Tracer<true>
 {
 public:
 	PARAMETER_KEY(bool, Direct)

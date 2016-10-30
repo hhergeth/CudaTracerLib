@@ -4,7 +4,7 @@ namespace CudaTracerLib {
 
 CUDA_DEVICE CudaStaticWrapper<VCMSurfMap> g_CurrentMap, g_NextMap;
 
-CUDA_FUNC_IN void _VCM(const Vec2f& pixelPosition, BlockSampleImage& img, Sampler& rng, int w, int h, float a_Radius, int a_NumIteration, float nPhotons)
+CUDA_FUNC_IN void _VCM(const Vec2f& pixelPosition, Image& img, Sampler& rng, int w, int h, float a_Radius, int a_NumIteration, float nPhotons)
 {
 	float mLightSubPathCount = 1;
 	const float etaVCM = (PI * a_Radius * a_Radius) * w * h;
@@ -52,7 +52,7 @@ CUDA_FUNC_IN void _VCM(const Vec2f& pixelPosition, BlockSampleImage& img, Sample
 
 		//connect to camera
 		if (r2.getMat().bsdf.hasComponent(ESmooth))
-			connectToCamera(lightPathState, v.bRec, r2.getMat(), img.img, rng, mLightSubPathCount, mMisVmWeightFactor, 1, true);
+			connectToCamera(lightPathState, v.bRec, r2.getMat(), img, rng, mLightSubPathCount, mMisVmWeightFactor, 1, true);
 
 		if (!sampleScattering(lightPathState, v.bRec, r2.getMat(), rng, mMisVcWeightFactor, mMisVmWeightFactor))
 			break;
@@ -113,10 +113,10 @@ CUDA_FUNC_IN void _VCM(const Vec2f& pixelPosition, BlockSampleImage& img, Sample
 			break;
 	}
 
-	img.Add(pixelPosition.x, pixelPosition.y, acc);
+	img.AddSample(pixelPosition.x, pixelPosition.y, acc);
 }
 
-__global__ void pathKernel(unsigned int w, unsigned int h, int xoff, int yoff, BlockSampleImage img, float a_Radius, int a_NumIteration, float nPhotons)
+__global__ void pathKernel(unsigned int w, unsigned int h, int xoff, int yoff, Image img, float a_Radius, int a_NumIteration, float nPhotons)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x + xoff, y = blockIdx.y * blockDim.y + threadIdx.y + yoff;
 	auto rng = g_SamplerData();
@@ -128,7 +128,7 @@ __global__ void pathKernel(unsigned int w, unsigned int h, int xoff, int yoff, B
 void VCM::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 {
 	float radius = getCurrentRadius(2);
-	pathKernel << < BLOCK_SAMPLER_LAUNCH_CONFIG >> >(w, h, x, y, m_pBlockSampler->getBlockImage(), radius, m_uPassesDone, (float)(w * h));
+	pathKernel << < BLOCK_SAMPLER_LAUNCH_CONFIG >> >(w, h, x, y, *I, radius, m_uPassesDone, (float)(w * h));
 }
 
 void VCM::DoRender(Image* I)
@@ -137,7 +137,7 @@ void VCM::DoRender(Image* I)
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_CurrentMap, &m_sPhotonMapsCurrent, sizeof(m_sPhotonMapsCurrent)));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_NextMap, &m_sPhotonMapsNext, sizeof(m_sPhotonMapsNext)));
 
-	Tracer<true, true>::DoRender(I);
+	Tracer<true>::DoRender(I);
 	m_sPhotonMapsCurrent.setOnGPU();
 	ThrowCudaErrors(cudaMemcpyFromSymbol(&m_sPhotonMapsNext, g_NextMap, sizeof(m_sPhotonMapsNext)));
 	ThrowCudaErrors(cudaMemcpyFromSymbol(&m_sPhotonMapsCurrent, g_CurrentMap, sizeof(m_sPhotonMapsCurrent)));
@@ -148,7 +148,7 @@ void VCM::DoRender(Image* I)
 
 void VCM::StartNewTrace(Image* I)
 {
-	Tracer<true, true>::StartNewTrace(I);
+	Tracer<true>::StartNewTrace(I);
 	m_uPhotonsEmitted = 0;
 	AABB m_sEyeBox = GetEyeHitPointBox(m_pScene, true);
 	m_sEyeBox = m_sEyeBox.Extend(0.1f);

@@ -139,12 +139,12 @@ void WavefrontVCM::DoRender(Image* I)
 	ThrowCudaErrors(cudaMemcpyFromSymbol(&m_sPhotonMapsNext, g_NextMap2, sizeof(m_sPhotonMapsNext)));
 	m_sPhotonMapsNext.setOnGPU();
 
-	Tracer<true, true>::DoRender(I);
+	Tracer<true>::DoRender(I);
 }
 
 void WavefrontVCM::StartNewTrace(Image* I)
 {
-	Tracer<true, true>::StartNewTrace(I);
+	Tracer<true>::StartNewTrace(I);
 	m_uPhotonsEmitted = 0;
 	AABB m_sEyeBox = GetEyeHitPointBox(m_pScene, true);
 	m_sEyeBox = m_sEyeBox.Extend(0.1f);
@@ -305,7 +305,7 @@ void WavefrontVCM::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 
 float WavefrontVCM::getSplatScale() const
 {
-	return Tracer<true, true>::getSplatScale() * (w * h) / m_uNumLightRays;
+	return Tracer<true>::getSplatScale() * (w * h) / m_uNumLightRays;
 }
 
 }
