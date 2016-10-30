@@ -2,6 +2,7 @@
 
 #include <CudaMemoryManager.h>
 #include <vector>
+#include <cstring>
 
 namespace CudaTracerLib {
 
