@@ -70,8 +70,8 @@ namespace CudaTracerLib {
 				for (unsigned int i = 0; i < num_rows_to_copy; i++)
 				{
 					auto x = block_i * BLOCK_SIZE, y = block_j * BLOCK_SIZE + i;
-					auto *linBuf = linearBuffer + y * m_original_width_pixels + x,
-						*blockBuf = m_hostData[block_idx].data + i * BLOCK_SIZE;
+					auto* linBuf = linearBuffer + y * m_original_width_pixels + x;
+					auto* blockBuf = m_hostData[block_idx].data + i * BLOCK_SIZE;
 					memcpy(copyTo ? linBuf : blockBuf, copyTo ? blockBuf : linBuf, num_pixels_to_copy * sizeof(T));
 				}
 			}

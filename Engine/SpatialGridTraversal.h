@@ -15,8 +15,8 @@ template<template<class> class Grid, typename T, typename F1, typename F2, typen
 		auto rad = clbRad(cell_pos, rayT, cellEndT);
 		auto a = r(rayT), b = r(cellEndT);
 		auto search_box = AABB(min(a, b) - Vec3f(rad), max(a, b) + Vec3f(rad));
-		auto idx_min_cell = grid.getHashGrid().Transform(search_box.minV),
-			idx_max_cell = grid.getHashGrid().Transform(search_box.maxV);
+		auto idx_min_cell = grid.getHashGrid().Transform(search_box.minV);
+		auto idx_max_cell = grid.getHashGrid().Transform(search_box.maxV);
 
 		grid.ForAllCells(idx_min_cell, idx_max_cell, [&](const Vec3u& cell_idx)
 		{
