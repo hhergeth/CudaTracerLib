@@ -56,12 +56,19 @@ public:
 	SynchronizedBuffer(unsigned int length)
 		: m_length(length)
 	{
-		m_hostData = new T[m_length];
-		CUDA_MALLOC(&m_deviceData, m_length * sizeof(T));
-		CUDA_MEMCPY_TO_DEVICE(m_deviceData, m_hostData, m_length * sizeof(T));
+		if (m_length != 0)
+		{
+			m_hostData = new T[m_length];
+			CUDA_MALLOC(&m_deviceData, m_length * sizeof(T));
+			CUDA_MEMCPY_TO_DEVICE(m_deviceData, m_hostData, m_length * sizeof(T));
+		}
+		else m_hostData = m_deviceData = 0;
 	}
 	virtual void Free() override
 	{
+		if (m_length == 0)
+			return;//nothing to free since nothing was allocated
+
 		if (m_hostData == 0 || m_deviceData == 0)
 			throw std::runtime_error("Invalid call to Free!");
 		delete[] m_hostData;
@@ -75,11 +82,15 @@ public:
 		CUDA_FREE(m_deviceData);
 		CUDA_MALLOC(&m_deviceData, newLength * sizeof(T));
 		auto l = Dmin2(newLength, m_length);
-		CUDA_MEMCPY_TO_DEVICE(m_deviceData, m_hostData, l * sizeof(T));
+		if(l != 0)
+			CUDA_MEMCPY_TO_DEVICE(m_deviceData, m_hostData, l * sizeof(T));
 		m_location = DataLocation::Synchronized;
-		T* newHostData = new T[newLength];
-		memcpy(newHostData, m_hostData, l * sizeof(T));
-		delete[] m_hostData;
+		T* newHostData = newLength != 0 ? new T[newLength] : 0;
+		if (l != 0)//only copy and free if there was something allocated before
+		{
+			memcpy(newHostData, m_hostData, l * sizeof(T));
+			delete[] m_hostData;
+		}
 		m_hostData = newHostData;
 		m_length = newLength;
 	}
