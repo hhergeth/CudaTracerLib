@@ -85,4 +85,85 @@ void Image::Clear()
 	ThrowCudaErrors(cudaMemset(m_viewTarget, 0, sizeof(RGBCOL) * xResolution * yResolution));
 }
 
+CUDA_DEVICE int g_minLum;
+CUDA_DEVICE int g_maxLum;
+CUDA_DEVICE float g_avgLum;
+CUDA_DEVICE float g_avgLogLum;
+CUDA_DEVICE Spectrum g_avgColor;
+CUDA_GLOBAL void computeLuminanceInfo(Image img)
+{
+	CUDA_SHARED int s_minLum;
+	CUDA_SHARED int s_maxLum;
+	CUDA_SHARED float s_avgLum;
+	CUDA_SHARED float s_avgLogLum;
+	CUDA_SHARED Spectrum s_avgColor;
+
+	int x = blockIdx.x * blockDim.x + threadIdx.x, y = blockIdx.y * blockDim.y + threadIdx.y;
+	if (x < img.getWidth() && y < img.getHeight())
+	{
+		s_maxLum = s_avgLum = s_avgLogLum = 0;
+		s_minLum = INT_MAX;
+		__syncthreads();
+		Spectrum L_w;
+		L_w.fromRGBE(img.getFilteredData(x, y));
+		float Y = L_w.getLuminance();
+		auto iY = floatToOrderedInt(Y);
+
+		atomicMin(&s_minLum, iY);
+		atomicMax(&s_maxLum, iY);
+		atomicAdd(&s_avgLum, Y);
+		atomicAdd(&s_avgLogLum, math::log(2.3e-5f + Y));
+		for (int i = 0; i < SPECTRUM_SAMPLES; i++)
+			atomicAdd(&s_avgColor[i], L_w[i]);
+	}
+
+	__syncthreads();
+	if (!threadIdx.x && !threadIdx.y)
+	{
+		atomicMin(&g_minLum, s_minLum);
+		atomicMax(&g_maxLum, s_maxLum);
+		atomicAdd(&g_avgLum, s_avgLum);
+		atomicAdd(&g_avgLogLum, s_avgLogLum);
+		for (int i = 0; i < SPECTRUM_SAMPLES; i++)
+			atomicAdd(&g_avgColor[i], s_avgColor[i]);
+	}
+}
+
+void Image::ComputeLuminanceInfo(Spectrum& avgColor, float& minLum, float& maxLum, float& avgLum, float& avgLogLum)
+{
+	//host side implementation for correctness checking
+	/*RGBE* hostData = (RGBE*)&m_pixelBuffer[0];
+	cudaMemcpy(hostData, m_filteredColorsDevice, xResolution * yResolution * sizeof(RGBE), cudaMemcpyDeviceToHost);
+	minLum = FLT_MAX; maxLum = avgLum = avgLogLum = 0;
+	for(auto x = 0u; x < xResolution; x++)
+		for (auto y = 0u; y < yResolution; y++)
+		{
+			Spectrum L_w;
+			L_w.fromRGBE(hostData[y * xResolution + x]);
+			float Y = L_w.getLuminance();
+
+			minLum = min(minLum, Y);
+			maxLum = max(maxLum, Y);
+			avgLum += Y;
+			avgLogLum += math::log(2.3e-5f + Y);
+		}
+	avgLum /= xResolution * yResolution;
+	avgLogLum /= xResolution * yResolution;
+	setOnGPU();
+	Synchronize();
+	return;*/
+
+	const int block = 32;
+	int iMinLum = INT_MAX, iMaxLum;
+	ZeroSymbol(g_maxLum) ZeroSymbol(g_avgLum) ZeroSymbol(g_avgLogLum) CopyToSymbol(g_minLum, iMinLum) ZeroSymbol(g_avgColor)
+	computeLuminanceInfo << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(*this);
+
+	CopyFromSymbol(iMinLum, g_minLum) CopyFromSymbol(iMaxLum, g_maxLum) CopyFromSymbol(avgLum, g_avgLum) CopyFromSymbol(avgLogLum, g_avgLogLum) CopyFromSymbol(avgColor, g_avgColor)
+	minLum = orderedIntToFloat(iMinLum);
+	maxLum = orderedIntToFloat(iMaxLum);
+	avgLum /= xResolution * yResolution;
+	avgLogLum /= xResolution * yResolution;
+	avgColor /= xResolution * yResolution;
+}
+
 }

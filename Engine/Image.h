@@ -58,6 +58,9 @@ public:
 
 	CTL_EXPORT void Clear();
 
+	//compute the maximum, minimum, average luminance and log average luminance of the filtered data
+	CTL_EXPORT void ComputeLuminanceInfo(Spectrum& avgColor, float& minLum, float& maxLum, float& avgLum, float& avgLogLum);
+
 	CUDA_FUNC_IN PixelData& getPixelData(int x, int y)
 	{
 		return m_pixelBuffer[idx(x, y)];

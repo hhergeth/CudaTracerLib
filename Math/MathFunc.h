@@ -69,6 +69,18 @@ CUDA_FUNC_IN void sincos(float f, float* a, float* b)
 }
 #endif
 
+//http://stackoverflow.com/a/31010352/1715849
+CUDA_FUNC_IN int floatToOrderedInt(float floatVal)
+{
+	int intVal = float_as_int_(floatVal);
+	return (intVal >= 0) ? intVal : intVal ^ 0x7FFFFFFF;
+}
+
+CUDA_FUNC_IN float orderedIntToFloat(int intVal)
+{
+	return int_as_float_((intVal >= 0) ? intVal : intVal ^ 0x7FFFFFFF);
+}
+
 #define FW_SPECIALIZE_MINMAX(TEMPLATE, T, K, MIN, MAX) \
 	TEMPLATE CUDA_FUNC_IN T min(K T& a, K T& b) { return MIN; } \
 	TEMPLATE CUDA_FUNC_IN T max(K T& a, K T& b) { return MAX; } \
