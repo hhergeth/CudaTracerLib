@@ -74,7 +74,7 @@ public:
 		return m_viewTarget[idx(x, y)];
 	}
 private:
-	FIBITMAP* toFreeImage();
+	FIBITMAP* toFreeImage(bool HDR);
 	CUDA_FUNC_IN int idx(int x, int y) const
 	{
 		return y * xResolution + x;

@@ -29,16 +29,17 @@ void Image::Free()
 		CUDA_FREE(m_viewTarget);
 }
 
-FIBITMAP* Image::toFreeImage()
+FIBITMAP* Image::toFreeImage(bool HDR)
 {
+	//static copy from GPU buffer, TODO guard against multithreaded
 	static const int xDim = 4096;
 	static const int yDim = 4096;
 	static RGBCOL colData[xDim * yDim];
 	if (yResolution > yDim || xResolution > xDim)
 		throw std::runtime_error("Image resolution too high!");
 
-	ThrowCudaErrors(cudaMemcpy(colData, m_viewTarget, sizeof(RGBCOL) * xResolution * yResolution, cudaMemcpyDeviceToHost));
-	FIBITMAP* bitmap = FreeImage_Allocate(xResolution, yResolution, 24, 0x000000ff, 0x0000ff00, 0x00ff0000);
+	ThrowCudaErrors(cudaMemcpy(colData, HDR ? m_filteredColorsDevice : m_viewTarget, (HDR ? sizeof(RGBE) : sizeof(RGBCOL)) * xResolution * yResolution, cudaMemcpyDeviceToHost));
+	FIBITMAP* bitmap = HDR ? FreeImage_AllocateT(FIT_RGBF, xResolution, yResolution)						   : FreeImage_Allocate(xResolution, yResolution, 24, 0x000000ff, 0x0000ff00, 0x00ff0000);
 	BYTE* A = FreeImage_GetBits(bitmap);
 	unsigned int pitch = FreeImage_GetPitch(bitmap);
 	int off = 0;
@@ -47,15 +48,19 @@ FIBITMAP* Image::toFreeImage()
 		for (int x = 0; x < xResolution; x++)
 		{
 			int i = (yResolution - 1 - y) * xResolution + x;
-			Spectrum rgb = Spectrum(colData[i].z, colData[i].y, colData[i].x) / 255;
-			//Spectrum srgb;
-			//rgb.toSRGB(srgb[0], srgb[1], srgb[2]);
-			//RGBCOL p = srgb.toRGBCOL();
-			RGBCOL p = make_uchar4(colData[i].z, colData[i].y, colData[i].x, 255);
-			//RGBCOL p = Spectrum(rgb.pow(1.0f / 2.2f)).toRGBCOL();
-			A[off + x * 3 + 0] = p.x;
-			A[off + x * 3 + 1] = p.y;
-			A[off + x * 3 + 2] = p.z;
+			if (HDR)
+			{
+				Vec3f* p = (Vec3f*)(A + off + x * sizeof(Vec3f));
+				Spectrum s;
+				s.fromRGBE(*((RGBE*)colData + i));
+				s.toLinearRGB(p->x, p->y, p->z);
+			}
+			else
+			{
+				A[off + x * 3 + 0] = colData[i].z;
+				A[off + x * 3 + 1] = colData[i].y;
+				A[off + x * 3 + 2] = colData[i].x;
+			}
 		}
 		off += pitch;
 	}
@@ -64,8 +69,8 @@ FIBITMAP* Image::toFreeImage()
 
 void Image::WriteDisplayImage(const std::string& fileName)
 {
-	FIBITMAP* bitmap = toFreeImage();
 	FREE_IMAGE_FORMAT ff = FreeImage_GetFIFFromFilename(fileName.c_str());
+	FIBITMAP* bitmap = toFreeImage(ff == FREE_IMAGE_FORMAT::FIF_HDR || ff == FREE_IMAGE_FORMAT::FIF_EXR);
 	int flags = ff == FREE_IMAGE_FORMAT::FIF_JPEG ? JPEG_QUALITYSUPERB : 0;
 	if (!FreeImage_Save(ff, bitmap, fileName.c_str(), flags))
 		throw std::runtime_error("Failed saving Screenshot!");
@@ -74,7 +79,7 @@ void Image::WriteDisplayImage(const std::string& fileName)
 
 void Image::SaveToMemory(void** mem, size_t& size, const std::string& type)
 {
-	FIBITMAP* bitmap = toFreeImage();
+	FIBITMAP* bitmap = toFreeImage(false);
 	FREE_IMAGE_FORMAT ff = FreeImage_GetFIFFromFilename(type.c_str());
 	FIMEMORY* str = FreeImage_OpenMemory();
 	int flags = ff == FREE_IMAGE_FORMAT::FIF_JPEG ? JPEG_QUALITYSUPERB : 0;
