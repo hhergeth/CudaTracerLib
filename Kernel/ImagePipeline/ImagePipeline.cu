@@ -75,7 +75,7 @@ void applyImagePipeline(ImagePipelineInfo info, Image& img, ImageSamplesFilter* 
 	{
 		copySamplesToFiltered << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(img, xResolution, yResolution, info.splatScale);
 		useAllProcesses(info, img, postProcesses);
-		//applyGammaCorrectureToOutput << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(img, xResolution, yResolution);
+		applyGammaCorrectureToOutput << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(img, xResolution, yResolution);
 	}
 	else if(postProcesses.size() == 0) //only use filter, copy to output
 	{
@@ -86,7 +86,7 @@ void applyImagePipeline(ImagePipelineInfo info, Image& img, ImageSamplesFilter* 
 	{
 		useFilter(info, img, filter);
 		useAllProcesses(info, img, postProcesses);
-		//applyGammaCorrectureToOutput << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(img, xResolution, yResolution);
+		applyGammaCorrectureToOutput << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(img, xResolution, yResolution);
 	}
 
 	ThrowCudaErrors(cudaThreadSynchronize());

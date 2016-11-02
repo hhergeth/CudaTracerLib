@@ -15,7 +15,7 @@ public:
 	float m_key, m_burn;
 public:
 	ToneMapPostProcess()
-		: m_key(0.28f), m_burn(0)
+		: m_key(0.18f), m_burn(0)
 	{
 
 	}
