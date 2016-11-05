@@ -176,11 +176,16 @@ public:
 	}
 
 	/// Return the average over all wavelengths
-	CUDA_FUNC_IN Scalar average() const {
+	CUDA_FUNC_IN Scalar avg() const {
+		return sum() * (1.0f / N);
+	}
+
+	/// Return the sum over all wavelengths
+	CUDA_FUNC_IN Scalar sum() const {
 		Scalar result = 0.0f;
 		for (int i = 0; i < N; i++)
 			result += s[i];
-		return result * (1.0f / N);
+		return result;
 	}
 
 	/// Component-wise square root

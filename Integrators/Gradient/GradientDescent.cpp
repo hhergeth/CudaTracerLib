@@ -125,10 +125,10 @@ template<int N> struct diff_helper
 		{
 			const int k = N - 1, n = 3 + 2 * (k - 1);
 			float* a = (float*)alloca(sizeof(float) * n);
-			a[0] = P.I().average(); a[1] = PathVertex::G(P.vertices[0], P.vertices[1]); a[2] = P.L_e().average();
+			a[0] = P.I().avg(); a[1] = PathVertex::G(P.vertices[0], P.vertices[1]); a[2] = P.L_e().avg();
 			for (int j = 1; j < k; j++)
 			{
-				a[3 + 2 * (j - 1) + 0] = ((SurfacePathVertex*)P.vertices[j])->hasSampledDelta ? 1.0f : P.f_i(j).average();
+				a[3 + 2 * (j - 1) + 0] = ((SurfacePathVertex*)P.vertices[j])->hasSampledDelta ? 1.0f : P.f_i(j).avg();
 				a[3 + 2 * (j - 1) + 1] = PathVertex::G(P.vertices[j], P.vertices[j + 1]);
 			}
 			float lhs = 1, rhs = 1;

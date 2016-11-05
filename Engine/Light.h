@@ -317,7 +317,7 @@ struct InfiniteLight : public LightBase//, public e_DerivedTypeHelper<5>
 		m_SceneRadius = m_pSceneBox->Size().length() / 1.5f;
 		float surfaceArea = 4 * PI * m_SceneRadius * m_SceneRadius;
 		m_invSurfaceArea = 1 / surfaceArea;
-		m_power = (surfaceArea * m_scale / m_normalization).average();
+		m_power = (surfaceArea * m_scale / m_normalization).avg();
 	}
 
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sampleRay(NormalizedT<Ray> &ray, const Vec2f &spatialSample, const Vec2f &directionalSample) const;
