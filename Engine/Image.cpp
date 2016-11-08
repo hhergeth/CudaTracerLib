@@ -31,15 +31,11 @@ void Image::Free()
 
 FIBITMAP* Image::toFreeImage(bool HDR)
 {
-	//static copy from GPU buffer, TODO guard against multithreaded
-	static const int xDim = 4096;
-	static const int yDim = 4096;
-	static RGBCOL colData[xDim * yDim];
-	if (yResolution > yDim || xResolution > xDim)
-		throw std::runtime_error("Image resolution too high!");
+	RGBCOL* colData = new RGBCOL[xResolution * yResolution];
 
 	ThrowCudaErrors(cudaMemcpy(colData, HDR ? m_filteredColorsDevice : m_viewTarget, (HDR ? sizeof(RGBE) : sizeof(RGBCOL)) * xResolution * yResolution, cudaMemcpyDeviceToHost));
-	FIBITMAP* bitmap = HDR ? FreeImage_AllocateT(FIT_RGBF, xResolution, yResolution)						   : FreeImage_Allocate(xResolution, yResolution, 24, 0x000000ff, 0x0000ff00, 0x00ff0000);
+	FIBITMAP* bitmap = HDR ? FreeImage_AllocateT(FIT_RGBF, xResolution, yResolution)
+						   : FreeImage_Allocate(xResolution, yResolution, 24, 0x000000ff, 0x0000ff00, 0x00ff0000);
 	BYTE* A = FreeImage_GetBits(bitmap);
 	unsigned int pitch = FreeImage_GetPitch(bitmap);
 	int off = 0;
@@ -64,6 +60,7 @@ FIBITMAP* Image::toFreeImage(bool HDR)
 		}
 		off += pitch;
 	}
+	delete[] colData;
 	return bitmap;
 }
 
