@@ -27,10 +27,10 @@ template<typename T, int M, int N> CUDA_FUNC_IN qMatrix<T, 1, N> dnorm2_dx(const
 CUDA_FUNC_IN qMatrix<float, 3, 4> A(const Frame& i, const Frame& j)
 {
 	qMatrix<float, 3, 4> a;
-	a.col(0, Q(-i.s));
-	a.col(1, Q(-i.t));
-	a.col(2, Q(j.s));
-	a.col(3, Q(j.t));
+	a.col(0) = Q(-i.s);
+	a.col(1) = Q(-i.t);
+	a.col(2) = Q(j.s);
+	a.col(3) = Q(j.t);
 	return a;
 }
 
@@ -43,7 +43,7 @@ CUDA_FUNC_IN qMatrix<float, 1, 6> dfi_diffuse_du123_v123(const Vec3f& x_prev, co
 	qMatrix<float, 3, 4> p2 = 1.0f / d * a;
 	qMatrix<float, 1, 4> dot = ddot_dx_const(p1 + p2, Q(f_i.n));
 	qMatrix<float, 1, 6> C = qMatrix<float, 1, 6>::Zero();
-	C.submat<0, 2, 0, 5>(dot);
+	C.template submat<0, 2, 0, 5>() = dot;
 	return tau / PI * C;
 	/*float coeff = tau / (PI * distanceSquared(x_next, x_i));
 	qMatrix<float, 3, 1> n = Q(f_i.n), v = Q(x_next - x_i);

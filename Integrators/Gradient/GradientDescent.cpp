@@ -100,7 +100,7 @@ qMatrix<float, 1, 6> dfi_du123_v123(const Path& P, size_t i)
 	return CudaTracerLib::dfi_diffuse_du123_v123(P.vertices[i - 1]->getPos(), P.vertices[i]->getPos(), P.vertices[i + 1]->getPos(), P.vertices[i - 1]->getSys(), P.vertices[i]->getSys(), P.vertices[i + 1]->getSys(), 1);
 }
 
-template<typename MAT, int L> inline void set(MAT& M, const qMatrix<float, 1, L>& v, int i, int j)
+template<typename MAT, int L, typename S> inline void set(MAT& M, const qMatrix<float, 1, L, S>& v, int i, int j)
 {
 	for (int k = 0; k < L; k++)
 	{
