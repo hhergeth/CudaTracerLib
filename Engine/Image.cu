@@ -163,7 +163,7 @@ void Image::ComputeLuminanceInfo(Spectrum& avgColor, float& minLum, float& maxLu
 	maxLum = orderedIntToFloat(iMaxLum);
 	avgLum /= xResolution * yResolution;
 	avgLogLum /= xResolution * yResolution;
-	avgColor /= xResolution * yResolution;
+	avgColor /= (float)xResolution * yResolution;
 	avgLogLum = math::exp(avgLogLum);
 }
 

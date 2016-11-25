@@ -63,8 +63,8 @@ bool HomogeneousVolumeDensity::sampleDistance(const Ray& ray, float minT, float 
 	}
 
 	Spectrum t = (-sig_t * sampledDistance).exp();
-	mRec.pdfFailure = t.average();
-	mRec.pdfSuccess = (sig_t * t).average();
+	mRec.pdfFailure = t.avg();
+	mRec.pdfSuccess = (sig_t * t).avg();
 	mRec.transmittance = (sig_t * (-sampledDistance)).exp();
 	mRec.pdfSuccessRev = mRec.pdfSuccess = mRec.pdfSuccess * m_mediumSamplingWeight;
 	mRec.pdfFailure = m_mediumSamplingWeight * mRec.pdfFailure + (1 - m_mediumSamplingWeight);
@@ -164,7 +164,7 @@ bool VolumeGrid::invertDensityIntegral(const Ray& ray, float t0, float t1, float
 	float minTL = t0 * Td, maxTL = t1 * Td;
 	rayL.dir() = normalize(rayL.dir());
 	bool found = false;
-	densityAtMinT = sigma_t(ray(t0), NormalizedT<Vec3f>(rayL.dir())).average();
+	densityAtMinT = sigma_t(ray(t0), NormalizedT<Vec3f>(rayL.dir())).avg();
 	float Lcl_To_World = (t1 - t0) / (maxTL - minTL);
 	TraverseGridRay(rayL, minTL, maxTL, AABB(Vec3f(0), Vec3f(1)), grid.dimF, [&](float minT, float rayT, float maxT, float cellEndT, Vec3u& cell_pos, bool& cancelTraversal)
 	{
@@ -177,8 +177,8 @@ bool VolumeGrid::invertDensityIntegral(const Ray& ray, float t0, float t1, float
 			d_a = gridA.sampleTrilinear(gridA.dimF * rayL(rayT)) + gridA.sampleTrilinear(gridA.dimF * rayL(cellEndT));
 		}
 		d_s /= 2; d_a /= 2;
-		d_s = Spectrum(sigSMin + (sigSMax - sigSMin) * d_s).average();
-		d_a = Spectrum(sigAMin + (sigAMax - sigAMin) * d_s).average();
+		d_s = Spectrum(sigSMin + (sigSMax - sigSMin) * d_s).avg();
+		d_a = Spectrum(sigAMin + (sigAMax - sigAMin) * d_s).avg();
 
 		float D = (d_s + d_a) * (cellEndT - rayT) * Lcl_To_World;
 		if (integratedDensity + D >= desiredDensity)
@@ -294,7 +294,7 @@ float KernelAggregateVolume::p(const Vec3f& p, const PhaseFunctionSamplingRecord
 	for(unsigned int i = 0; i < m_uVolumeCount; i++)
 		if (m_pVolumes[i].WorldBound().Contains(p))
 		{
-			float wt = m_pVolumes[i].sigma_s(p, pRec.wo).average();
+			float wt = m_pVolumes[i].sigma_s(p, pRec.wo).avg();
 			sumWt += wt;
 			ph += wt * m_pVolumes[i].As()->Func.Evaluate(pRec);
 		}

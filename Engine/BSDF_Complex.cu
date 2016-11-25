@@ -165,7 +165,7 @@ Spectrum roughcoating::sample(BSDFSamplingRecord &bRec, float &_pdf, const Vec2f
 	Vec2f sample = _sample;
 
 	/* Evaluate the roughness texture */
-	float alpha = m_alpha.Evaluate(bRec.dg).average();
+	float alpha = m_alpha.Evaluate(bRec.dg).avg();
 	float alphaT = m_distribution.transformRoughness(alpha);
 
 	float probSpecular;
@@ -226,7 +226,7 @@ Spectrum roughcoating::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 	bool hasSpecular = (bRec.typeMask & EGlossyReflection) != 0 && measure == ESolidAngle;
 
 	/* Evaluate the roughness texture */
-	float alpha = m_alpha.Evaluate(bRec.dg).average();
+	float alpha = m_alpha.Evaluate(bRec.dg).avg();
 	float alphaT = m_distribution.transformRoughness(alpha);
 
 	Spectrum result(0.0f);
@@ -287,7 +287,7 @@ float roughcoating::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 	const auto H = NormalizedT<Vec3f>(normalize(bRec.wo + bRec.wi) * math::signum(Frame::cosTheta(bRec.wo)));
 
 	/* Evaluate the roughness texture */
-	float alpha = m_alpha.Evaluate(bRec.dg).average();
+	float alpha = m_alpha.Evaluate(bRec.dg).avg();
 	float alphaT = m_distribution.transformRoughness(alpha);
 
 	float probNested, probSpecular;
@@ -338,7 +338,7 @@ float roughcoating::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 Spectrum blend::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &_sample) const
 {
 	float weights[2];
-	weights[1] = math::clamp(this->weight.Evaluate(bRec.dg).average(), 0.0f, 1.0f);
+	weights[1] = math::clamp(this->weight.Evaluate(bRec.dg).avg(), 0.0f, 1.0f);
 	weights[0] = 1.0f - weights[1];
 
 	Vec2f sample = _sample;
@@ -367,13 +367,13 @@ Spectrum blend::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &_sampl
 
 Spectrum blend::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 {
-	float weight = math::clamp(this->weight.Evaluate(bRec.dg).average(), 0.0f, 1.0f);
+	float weight = math::clamp(this->weight.Evaluate(bRec.dg).avg(), 0.0f, 1.0f);
 	return bsdfs[0].f(bRec, measure) * (1 - weight) + bsdfs[1].f(bRec, measure) * weight;
 }
 
 float blend::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 {
-	float weight = math::clamp(this->weight.Evaluate(bRec.dg).average(), 0.0f, 1.0f);
+	float weight = math::clamp(this->weight.Evaluate(bRec.dg).avg(), 0.0f, 1.0f);
 	return bsdfs[0].pdf(bRec, measure) * (1 - weight) + bsdfs[1].pdf(bRec, measure) * weight;
 }
 

@@ -67,7 +67,7 @@ CUDA_FUNC_IN void parallaxOcclusion(Vec2f& texCoord, KernelMIPMap* tex, const Ve
 	while (StepIndex < nNumSteps)
 	{
 		TexCurrentOffset -= TexOffsetPerStep;
-		CurrHeight = tex->Sample(TexCurrentOffset).average();
+		CurrHeight = tex->Sample(TexCurrentOffset).avg();
 		CurrentBound -= StepSize;
 		if (CurrHeight > CurrentBound)
 		{
@@ -140,19 +140,19 @@ CUDA_FUNC_IN Spectrum sample_fast(const Texture& tex, const Vec2f& bary, const V
 {
 	Spectrum val;
 	if (tex.Is<ConstantTexture>())
-		val = tex.As<ConstantTexture>()->val.average();
+		val = tex.As<ConstantTexture>()->val.avg();
 	else if (tex.Is<WireframeTexture>())
-		val = tex.As<WireframeTexture>()->Evaluate(bary).average();
+		val = tex.As<WireframeTexture>()->Evaluate(bary).avg();
 	else
 	{
 		if (tex.Is<ImageTexture>())
 			val = tex.As<ImageTexture>()->tex->SampleAlpha(tex.As<ImageTexture>()->mapping.TransformPoint(uv));
 		else if (tex.Is<BilerpTexture>())
-			val = tex.As<BilerpTexture>()->Evaluate(uv).average();
+			val = tex.As<BilerpTexture>()->Evaluate(uv).avg();
 		else if (tex.Is<CheckerboardTexture>())
-			val = tex.As<CheckerboardTexture>()->Evaluate(uv).average();
+			val = tex.As<CheckerboardTexture>()->Evaluate(uv).avg();
 		else if (tex.Is<UVTexture>())
-			val = tex.As<UVTexture>()->Evaluate(uv).average();
+			val = tex.As<UVTexture>()->Evaluate(uv).avg();
 	}
 	return val;
 }

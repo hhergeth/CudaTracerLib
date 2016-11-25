@@ -379,7 +379,7 @@ void MIPMap::CreateSphericalSkydomeTexture(const std::string& front, const std::
 CUDA_FUNC_IN float sample(imgData& img, const Vec3f& p)
 {
 	Vec2f q = clamp01(p.getXY()) * Vec2f((float)img.w(), (float)img.h());
-	return img.Load((int)q.x, (int)q.y).average();
+	return img.Load((int)q.x, (int)q.y).avg();
 }
 template<int SEARCH_STEPS> CUDA_FUNC_IN bool text_cords_next_intersection(imgData& img, const Vec3f& pos, const Vec3f& dir, float& height, Vec2f& kw)
 {
@@ -404,7 +404,7 @@ template<int SEARCH_STEPS, int LOOKUP_WIDTH> __global__ void generateRelaxedCone
 	int x = blockIdx.x * blockDim.x + threadIdx.x, y = blockIdx.y * blockDim.y + threadIdx.y;
 	if (x < img.w() && y < img.h())
 	{
-		float src_texel_depth = img.Load(x, y).average();
+		float src_texel_depth = img.Load(x, y).avg();
 		float* radius_cone = coneData + (y * img.w() + x);
 		const float MAX_CONE_RATIO = ((float)LOOKUP_WIDTH / (float)max(img.w(), img.h())) / (1 - src_texel_depth);
 		*radius_cone = MAX_CONE_RATIO;
@@ -414,7 +414,7 @@ template<int SEARCH_STEPS, int LOOKUP_WIDTH> __global__ void generateRelaxedCone
 		for (int ti = xmin; ti <= xmax; ti++)
 			for (int tj = ymin; tj <= ymax; tj++)
 			{
-				float tj_depth = img.Load(ti, tj).average();
+				float tj_depth = img.Load(ti, tj).avg();
 				if ((ti == x && tj == y) || tj_depth <= src_texel_depth)
 					continue;
 				Vec3f dst = Vec3f(float(ti) / img.w(), float(tj) / img.h(), tj_depth);
@@ -448,7 +448,7 @@ template<int SEARCH_STEPS> __global__ void generateRelaxedConeMap(imgData img, f
 			if (current_depth <= ray_pos.z)
 				ray_pos += step_fwd;
 		}
-		float src_texel_depth = img.Load(x, y).average();
+		float src_texel_depth = img.Load(x, y).avg();
 		float cone_ratio = (ray_pos.z >= src_texel_depth) ? 1.0 : length(ray_pos.getXY() - src.getXY()) / (src_texel_depth - ray_pos.z);
 		float best_ratio = coneData[y * img.w() + x];
 		if (cone_ratio > best_ratio)
@@ -517,7 +517,7 @@ void MIPMap::CreateRelaxedConeMap(const std::string& a_InputFile, FileOutputStre
 			float xs = float(i) / data.w() * oldw, ys = float(j) / data.h() * oldh;
 			Spectrum s;
 			s.fromRGBCOL(hostData[(int)ys * (int)oldw + (int)xs]);
-			float d = s.average();
+			float d = s.avg();
 			float c = hostConeData[j * data.w() + i];
 			imgData[j * data.w() + i] = make_float2(d, c);
 		}

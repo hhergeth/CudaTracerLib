@@ -93,7 +93,7 @@ Spectrum roughdiffuse::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 		the match is not as good anymore */
 	const float conversionFactor = 1 / math::sqrt((float) 2);
 
-	float sigma = m_alpha.Evaluate(bRec.dg).average() * conversionFactor;
+	float sigma = m_alpha.Evaluate(bRec.dg).avg() * conversionFactor;
 
 	const float sigma2 = sigma*sigma;
 
@@ -415,9 +415,9 @@ float roughdielectric::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) con
 
 	/* Evaluate the roughness */
 	float alphaU = m_distribution.transformRoughness(
-				m_alphaU.Evaluate(bRec.dg).average()),
+				m_alphaU.Evaluate(bRec.dg).avg()),
 			alphaV = m_distribution.transformRoughness(
-				m_alphaV.Evaluate(bRec.dg).average());
+				m_alphaV.Evaluate(bRec.dg).avg());
 
 #if ENLARGE_LOBE_TRICK == 1
 	Float factor = (1.2f - 0.2f * std::sqrt(
@@ -471,9 +471,9 @@ Spectrum roughdielectric::f(const BSDFSamplingRecord &bRec, EMeasure measure) co
 
 	/* Evaluate the roughness */
 	float alphaU = m_distribution.transformRoughness(
-				m_alphaU.Evaluate(bRec.dg).average()),
+				m_alphaU.Evaluate(bRec.dg).avg()),
 		  alphaV = m_distribution.transformRoughness(
-				m_alphaV.Evaluate(bRec.dg).average());
+				m_alphaV.Evaluate(bRec.dg).avg());
 
 	/* Evaluate the microsurface normal distribution */
 	const float D = m_distribution.eval(H, alphaU, alphaV);
@@ -525,9 +525,9 @@ Spectrum roughdielectric::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec
 
 	/* Evaluate the roughness */
 	float alphaU = m_distribution.transformRoughness(
-		m_alphaU.Evaluate(bRec.dg).average()),
+		m_alphaU.Evaluate(bRec.dg).avg()),
 		alphaV = m_distribution.transformRoughness(
-		m_alphaV.Evaluate(bRec.dg).average());
+		m_alphaV.Evaluate(bRec.dg).avg());
 
 #if ENLARGE_LOBE_TRICK == 1
 	Float factor = (1.2f - 0.2f * std::sqrt(
@@ -675,9 +675,9 @@ Spectrum roughconductor::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2
 
 	/* Evaluate the roughness */
 	float alphaU = m_distribution.transformRoughness(
-				m_alphaU.Evaluate(bRec.dg).average()),
+				m_alphaU.Evaluate(bRec.dg).avg()),
 		  alphaV = m_distribution.transformRoughness(
-				m_alphaV.Evaluate(bRec.dg).average());
+				m_alphaV.Evaluate(bRec.dg).avg());
 
 	/* Sample M, the microsurface normal */
 	const auto m = m_distribution.sample(sample,
@@ -722,8 +722,8 @@ Spectrum roughconductor::f(const BSDFSamplingRecord &bRec, EMeasure measure) con
 	NormalizedT<Vec3f> H = normalize(bRec.wo + bRec.wi);
 
 	/* Evaluate the roughness */
-	float alphaU = m_distribution.transformRoughness(m_alphaU.Evaluate(bRec.dg).average()),
-		  alphaV = m_distribution.transformRoughness(m_alphaV.Evaluate(bRec.dg).average());
+	float alphaU = m_distribution.transformRoughness(m_alphaU.Evaluate(bRec.dg).avg()),
+		  alphaV = m_distribution.transformRoughness(m_alphaV.Evaluate(bRec.dg).avg());
 
 	/* Evaluate the microsurface normal distribution */
 	const float D = m_distribution.eval(H, alphaU, alphaV);
@@ -754,8 +754,8 @@ float roughconductor::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) cons
 	NormalizedT<Vec3f> H = normalize(bRec.wo + bRec.wi);
 
 	/* Evaluate the roughness */
-	float alphaU = m_distribution.transformRoughness(m_alphaU.Evaluate(bRec.dg).average()),
-			alphaV = m_distribution.transformRoughness(m_alphaV.Evaluate(bRec.dg).average());
+	float alphaU = m_distribution.transformRoughness(m_alphaU.Evaluate(bRec.dg).avg()),
+			alphaV = m_distribution.transformRoughness(m_alphaV.Evaluate(bRec.dg).avg());
 
 	return m_distribution.pdf(H, alphaU, alphaV) / (4 * absdot(bRec.wo, H));
 }
@@ -898,7 +898,7 @@ Spectrum roughplastic::sample(BSDFSamplingRecord &bRec, float &_pdf, const Vec2f
 	Vec2f sample = _sample;
 
 	/* Evaluate the roughness texture */
-	float alpha = m_alpha.Evaluate(bRec.dg).average();
+	float alpha = m_alpha.Evaluate(bRec.dg).avg();
 	float alphaT = m_distribution.transformRoughness(alpha);
 
 	float probSpecular;
@@ -954,7 +954,7 @@ Spectrum roughplastic::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 			return Spectrum(0.0f);
 
 	/* Evaluate the roughness texture */
-	float alpha = m_alpha.Evaluate(bRec.dg).average();
+	float alpha = m_alpha.Evaluate(bRec.dg).avg();
 	float alphaT = m_distribution.transformRoughness(alpha);
 
 	Spectrum result(0.0f);
@@ -1011,7 +1011,7 @@ float roughplastic::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 		return 0.0f;
 
 	/* Evaluate the roughness texture */
-	float alpha = m_alpha.Evaluate(bRec.dg).average();
+	float alpha = m_alpha.Evaluate(bRec.dg).avg();
 	float alphaT = m_distribution.transformRoughness(alpha);
 
 	/* Calculate the reflection half-vector */
@@ -1072,7 +1072,7 @@ Spectrum phong::sample(BSDFSamplingRecord &bRec, float &_pdf, const Vec2f& _samp
 
 	if (choseSpecular) {
 		NormalizedT<Vec3f> R = Frame::reflect(bRec.wi);
-		float exponent = m_exponent.Evaluate(bRec.dg).average();
+		float exponent = m_exponent.Evaluate(bRec.dg).avg();
 
 		/* Sample from a Phong lobe centered around (0, 0, 1) */
 		float sinAlpha = math::sqrt(1-math::pow(sample.y, 2/(exponent + 1)));
@@ -1116,7 +1116,7 @@ Spectrum phong::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 	Spectrum result = 0.0f;
 	if (hasSpecular) {
 		float alpha    = dot(bRec.wo, Frame::reflect(bRec.wi)),
-			exponent = m_exponent.Evaluate(bRec.dg).average();
+			exponent = m_exponent.Evaluate(bRec.dg).avg();
 
 		if (alpha > 0.0f) {
 			result += m_specularReflectance.Evaluate(bRec.dg) *
@@ -1146,7 +1146,7 @@ float phong::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 
 	if (hasSpecular) {
 		float alpha    = dot(bRec.wo, Frame::reflect(bRec.wi)),
-			exponent = m_exponent.Evaluate(bRec.dg).average();
+			exponent = m_exponent.Evaluate(bRec.dg).avg();
 		if (alpha > 0)
 			specProb = math::pow(alpha, exponent) *
 				(exponent + 1.0f) / (2.0f * PI);
@@ -1186,8 +1186,8 @@ Spectrum ward::sample(BSDFSamplingRecord &bRec, float &_pdf, const Vec2f &_sampl
 	}
 
 	if (choseSpecular) {
-		float alphaU = m_alphaU.Evaluate(bRec.dg).average();
-		float alphaV = m_alphaV.Evaluate(bRec.dg).average();
+		float alphaU = m_alphaU.Evaluate(bRec.dg).avg();
+		float alphaV = m_alphaV.Evaluate(bRec.dg).avg();
 			
 		float phiH = std::atan(alphaV/alphaU
 			* std::tan(2.0f * PI * sample.y));
@@ -1234,8 +1234,8 @@ Spectrum ward::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 	Spectrum result = Spectrum(0.0f);
 	if (hasSpecular) {
 		Vec3f H = bRec.wi+bRec.wo;
-		float alphaU = m_alphaU.Evaluate(bRec.dg).average();
-		float alphaV = m_alphaV.Evaluate(bRec.dg).average();
+		float alphaU = m_alphaU.Evaluate(bRec.dg).avg();
+		float alphaV = m_alphaV.Evaluate(bRec.dg).avg();
 		float factor1 = 0.0f;
 		switch (m_modelVariant) {
 			case EWard:
@@ -1280,8 +1280,8 @@ float ward::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 	float diffuseProb = 0.0f, specProb = 0.0f;
 
 	if (hasSpecular) {
-		float alphaU = m_alphaU.Evaluate(bRec.dg).average();
-		float alphaV = m_alphaV.Evaluate(bRec.dg).average();
+		float alphaU = m_alphaU.Evaluate(bRec.dg).avg();
+		float alphaV = m_alphaV.Evaluate(bRec.dg).avg();
 		NormalizedT<Vec3f> H = normalize(bRec.wi + bRec.wo);
 		float factor1 = 1.0f / (4.0f * PI * alphaU * alphaV *
 			dot(H, bRec.wi) * math::pow(Frame::cosTheta(H), 3));
@@ -1317,7 +1317,7 @@ Spectrum hk::sample(BSDFSamplingRecord &bRec, float &_pdf, const Vec2f &_sample)
 
 	/* Probability for a specular transmission is approximated by the average (per wavelength)
 		* probability of a photon exiting without a scattering event or an math::absorption event */
-	float probSpecularTransmission = ((-1.0f * tauD/math::abs(Frame::cosTheta(bRec.wi))).exp()).average();
+	float probSpecularTransmission = ((-1.0f * tauD/math::abs(Frame::cosTheta(bRec.wi))).exp()).avg();
 
 	bool choseSpecularTransmission = hasSpecularTransmission;
 
@@ -1447,7 +1447,7 @@ float hk::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 				sigmaT = sigmaA + sigmaS,
 				tauD = sigmaT * m_thickness;
 
-	float probSpecularTransmission = ((-1.0f * tauD/math::abs(Frame::cosTheta(bRec.wi))).exp()).average();
+	float probSpecularTransmission = ((-1.0f * tauD/math::abs(Frame::cosTheta(bRec.wi))).exp()).avg();
 
 	if (measure == EDiscrete) {
 		/* Return the attenuated light if requested */

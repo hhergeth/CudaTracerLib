@@ -17,7 +17,7 @@ CUDA_FUNC_IN Spectrum evalFilter(const Filter& filter, PixelData* P, float splat
 	{
 		for (int x = x0; x <= x1; ++x)
 		{
-			float filterWt = filter.Evaluate(math::abs(x - _x), math::abs(y - _y));
+			float filterWt = filter.Evaluate((float)math::abs(x - _x), (float)math::abs(y - _y));
 			acc += P[y * w + x].toSpectrum(splatScale) * filterWt;
 			accFilter += filterWt;
 		}
