@@ -39,8 +39,8 @@ PPPMTracer::PPPMTracer()
 	unsigned int numPhotons = (m_uBlocksPerLaunch + 2) * PPM_slots_per_block;
 	if (m_sParameters.getValue(KEY_N_FG_Samples()) != 0)
 		m_sSurfaceMapCaustic = new SurfaceMapT(Vec3u(250), numPhotons);
-	//m_pVolumeEstimator = new PointStorage(150, numPhotons);
-	m_pVolumeEstimator = new BeamGrid(150, numPhotons, [&] {return m_sParameters.getValue(KEY_kNN_Neighboor_Num_Vol()); }, 10);
+	m_pVolumeEstimator = new PointStorage(150, numPhotons);
+	//m_pVolumeEstimator = new BeamGrid(150, numPhotons, [&] {return m_sParameters.getValue(KEY_kNN_Neighboor_Num_Vol()); }, 10);
 	//m_pVolumeEstimator = new BeamBeamGrid(10, 10000, 1000);
 	if (m_sParameters.getValue(KEY_AdaptiveAccProb()))
 	{
@@ -53,6 +53,11 @@ PPPMTracer::PPPMTracer()
 PPPMTracer::~PPPMTracer()
 {
 	m_sSurfaceMap.Free();
+	if (m_sSurfaceMapCaustic)
+	{
+		m_sSurfaceMapCaustic->Free();
+		delete m_sSurfaceMapCaustic;
+	}
 	if (m_pPixelBuffer)
 	{
 		m_pPixelBuffer->Free();
@@ -192,7 +197,11 @@ void PPPMTracer::StartNewTrace(Image* I)
 	}
 	m_sSurfaceMap.SetSceneDimensions(m_boxSurf);
 	if (m_sParameters.getValue(KEY_N_FG_Samples()) != 0)
+	{
+		if(!m_sSurfaceMapCaustic)
+			m_sSurfaceMapCaustic = new SurfaceMapT(Vec3u(250), m_sSurfaceMap.getNumEntries());
 		m_sSurfaceMapCaustic->SetSceneDimensions(m_boxSurf);
+	}
 	m_pVolumeEstimator->StartNewRenderingBase(m_fInitialRadiusSurf, m_fInitialRadiusVol);
 	m_pVolumeEstimator->StartNewRendering(m_boxVol);
 }
