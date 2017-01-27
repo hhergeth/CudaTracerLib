@@ -9,6 +9,7 @@ namespace CudaTracerLib {
 class DynamicScene;
 class TracerBase;
 
+//args = flattened_idx, x, y, bw, bh
 using iterate_blocks_clb_t = std::function<void(unsigned int, int, int, int, int)>;
 
 class IBlockSampler

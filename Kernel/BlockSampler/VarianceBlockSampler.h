@@ -16,39 +16,52 @@ public:
 	{
 		//the average variance of the pixel estimator (single channel luminance) for a block
 		float BLOCK_VAR_I;
+		unsigned int NUM_PIXELS_VAR;
+
 		float BLOCK_E_I;
-		unsigned int NUM_PIXELS;
+		float BLOCK_E_I2;
+		unsigned int NUM_PIXELS_E;
 
 		CUDA_FUNC_IN float getWeight()
 		{
-			return BLOCK_VAR_I / (BLOCK_E_I * NUM_PIXELS);
+			const float lambda = 0.5f;
+
+			float E_I = BLOCK_E_I / NUM_PIXELS_E;
+
+			//average standard deviation of pixel estimators
+			float I_std_dev = math::sqrt(BLOCK_VAR_I / NUM_PIXELS_VAR);
+			float w1 = I_std_dev / E_I;//normalized std dev
+
+			//variance of pixel colors in block
+			float I_var = BLOCK_E_I2 / NUM_PIXELS_E - math::sqr(E_I);
+			float w2 = math::sqrt(I_var) / E_I;//normalized variance
+
+			return lambda * w1 + (1 - lambda) * w2;
 		}
 	};
 	struct PixelInfo
 	{
-		//the first moment of the sequence of estimators
-		Vec3f E_I_N;
-		//the second moment of...
-		Vec3f E_I2_N;
+		float SUM_I_N;
+		float SUM_E_I;
+		float SUM_E_I2;
 
-		CUDA_FUNC_IN void updateMoments(const Spectrum& s)
+		CUDA_FUNC_IN void updateMoments(const Spectrum& s, unsigned int N)
 		{
-			Vec3f rgb;
-			s.toLinearRGB(rgb.x, rgb.y, rgb.z);
-			E_I_N += rgb;
-			E_I2_N += math::sqr(rgb);
+			float f = s.getLuminance();
+			SUM_I_N += f;
+			float E_I = SUM_I_N / (N + 1);
+			SUM_E_I += E_I;
+			SUM_E_I2 += math::sqr(E_I);
 		}
 
-		CUDA_FUNC_IN Vec3f getExpectedValue(unsigned int N) const
+		CUDA_FUNC_IN float getExpectedValue(unsigned int N) const
 		{
-			float f = 1.0f / N;
-			return E_I_N * f;
+			return SUM_I_N / N;
 		}
 
-		CUDA_FUNC_IN Vec3f getVariance(unsigned int N) const
+		CUDA_FUNC_IN float getVariance(unsigned int N) const
 		{
-			float f = 1.0f / N;
-			return E_I2_N * f - math::sqr(E_I_N * f);
+			return SUM_E_I2 / N - math::sqr(SUM_E_I / N);
 		}
 	};
 private:

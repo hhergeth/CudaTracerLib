@@ -11,21 +11,25 @@ CUDA_GLOBAL void updateInfo(VarianceBlockSampler::TmpBlockInfo* a_pTmpBlockInfoD
 
 	if (x < img.getWidth() && y < img.getHeight())
 	{
-		auto I_N = img.getPixelData(x, y).toSpectrum(splatScale);
-		
-		auto& pInfo = a_pPixelInfoDevice[y * img.getWidth() + x];
-		pInfo.updateMoments(I_N);
-
 		auto num_passes_block = a_pPersBlockInfoDevice[bIdx].passesDone;
-		auto var = pInfo.getVariance(num_passes_block).sum();
-		auto e = pInfo.getExpectedValue(num_passes_block).sum();
-		if (var < 0 || math::IsNaN(var))
-			return;
+
+		auto I_N = img.getPixelData(x, y).toSpectrum(splatScale);
+
+		auto& pInfo = a_pPixelInfoDevice[y * img.getWidth() + x];
+		pInfo.updateMoments(I_N, num_passes_block);
+
+		auto var = pInfo.getVariance(num_passes_block);
+		auto e = pInfo.getExpectedValue(num_passes_block);
 
 		auto& bInfo = a_pTmpBlockInfoDevice[bIdx];
-		atomicAdd(&bInfo.BLOCK_VAR_I, var);
-		atomicInc(&bInfo.NUM_PIXELS, 0xffffffff);
+		if (var >= 0 && !math::IsNaN(var))
+		{
+			atomicAdd(&bInfo.BLOCK_VAR_I, var);
+			atomicInc(&bInfo.NUM_PIXELS_VAR, 0xffffffff);
+		}
 		atomicAdd(&bInfo.BLOCK_E_I, e);
+		atomicAdd(&bInfo.BLOCK_E_I2, e * e);
+		atomicInc(&bInfo.NUM_PIXELS_E, 0xffffffff);
 	}
 }
 
@@ -50,7 +54,7 @@ void VarianceBlockSampler::AddPass(Image* img, TracerBase* tracer)
 
 	std::sort(std::begin(m_indices), std::end(m_indices), [&](int i1, int i2)
 	{
-		return m_blockInfo[i1].getWeight() * m_userWeights[i1] > m_blockInfo[i2].getWeight() * m_userWeights[i2];
+		return m_blockInfo[i1].getWeight() * math::sqr(m_userWeights[i1]) > m_blockInfo[i2].getWeight() * math::sqr(m_userWeights[i2]);
 	});
 
 	IUserPreferenceSampler::AddPass(img, tracer);
@@ -62,7 +66,7 @@ void VarianceBlockSampler::IterateBlocks(iterate_blocks_clb_t clb)
 		IterateAllBlocksUniform(clb);
 	else
 	{
-		for (int i = 0; i < getNumTotalBlocks() / 2; i++)
+		for (int i = 0; i < getNumTotalBlocks() / 4; i++)
 		{
 			auto flattened_idx = m_indices[i];
 			int block_x, block_y, x, y, bw, bh;
@@ -71,6 +75,18 @@ void VarianceBlockSampler::IterateBlocks(iterate_blocks_clb_t clb)
 			getBlockRect(block_x, block_y, x, y, bw, bh);
 
 			clb(flattened_idx, x, y, bw, bh);
+		}
+
+		int num_deterministic = 2;
+		int start_deterministic = m_uPassesDone % num_deterministic;//deterministically sample the same number of blocks every n passes
+		for (int i = start_deterministic; i < getNumTotalBlocks(); i += num_deterministic)
+		{
+			int block_x, block_y, x, y, bw, bh;
+			getIdxComponents(i, block_x, block_y);
+
+			getBlockRect(block_x, block_y, x, y, bw, bh);
+
+			clb(i, x, y, bw, bh);
 		}
 	}
 }
