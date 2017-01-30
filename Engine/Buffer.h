@@ -117,6 +117,25 @@ protected:
 		return res;
 	}
 
+	template<bool CALL_F, typename CLB> void __UpdateInvalidated_internal(const CLB& f)
+	{
+		for (range_set_t::iterator it = m_uInvalidated->begin(); it != m_uInvalidated->end(); ++it)
+		{
+			if (CALL_F || m_bUpdateElement)
+			{
+				for (size_t i = it->lower(); i < it->upper(); i++)
+				{
+					if (CALL_F)
+						f(BufferBase<H, D>::operator()(i, 1));
+					if (m_bUpdateElement)
+						updateElement(i);
+				}
+			}
+			copyRange(it->lower(), it->upper() - it->lower());
+		}
+		m_uInvalidated->clear();
+	}
+
 public:
 
 	typedef BufferIterator<H, D> iterator;
@@ -260,22 +279,12 @@ public:
 			}
 		};
 		f _f;
-		UpdateInvalidated(_f);
+		__UpdateInvalidated_internal<false>(_f);
 	}
 
 	template<typename CLB> void UpdateInvalidated(const CLB& f)
 	{
-		for (range_set_t::iterator it = m_uInvalidated->begin(); it != m_uInvalidated->end(); ++it)
-		{
-			for (size_t i = it->lower(); i < it->upper(); i++)
-			{
-				f(BufferBase<H, D>::operator()(i, 1));
-				if (m_bUpdateElement)
-					updateElement(i);
-			}
-			copyRange(it->lower(), it->upper() - it->lower());
-		}
-		m_uInvalidated->clear();
+		__UpdateInvalidated_internal<true>(f);
 	}
 
 	void CopyFromDevice(BufferReference<H, D> ref)
