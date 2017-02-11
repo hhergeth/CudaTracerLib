@@ -29,7 +29,6 @@ void ToneMapPostProcess::Apply(Image& img, int numPasses)
 	float logAvgLuminance, minLum, maxLuminance, Lav;
 	img.ComputeLuminanceInfo(Cav, minLum, maxLuminance, Lav, logAvgLuminance);
 
-	
 	float scale = m_key / logAvgLuminance,
 		  Lwhite = maxLuminance * scale;
 	auto burn = min(1.0f, max(1e-8f, 1.0f - m_burn));

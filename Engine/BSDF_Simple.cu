@@ -893,7 +893,7 @@ Spectrum roughplastic::sample(BSDFSamplingRecord &bRec, float &_pdf, const Vec2f
 
 	if (Frame::cosTheta(bRec.wi) <= 0 || (!hasSpecular && !hasDiffuse))
 		return Spectrum(0.0f);
-	
+
 	bool choseSpecular = hasSpecular;
 	Vec2f sample = _sample;
 
@@ -1160,7 +1160,7 @@ float phong::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 	else if (hasSpecular)
 		return specProb;
 	else
-		return 0.0f;		
+		return 0.0f;
 }
 
 Spectrum ward::sample(BSDFSamplingRecord &bRec, float &_pdf, const Vec2f &_sample) const
@@ -1188,14 +1188,14 @@ Spectrum ward::sample(BSDFSamplingRecord &bRec, float &_pdf, const Vec2f &_sampl
 	if (choseSpecular) {
 		float alphaU = m_alphaU.Evaluate(bRec.dg).avg();
 		float alphaV = m_alphaV.Evaluate(bRec.dg).avg();
-			
+
 		float phiH = std::atan(alphaV/alphaU
 			* std::tan(2.0f * PI * sample.y));
 		if (sample.y > 0.5f)
 			phiH += PI;
 		float cosPhiH = cosf(phiH);
 		float sinPhiH = math::safe_sqrt(1.0f-cosPhiH*cosPhiH);
-			
+
 		float thetaH = atan(math::safe_sqrt(
 			-logf(sample.x) / (
 				(cosPhiH*cosPhiH) / (alphaU*alphaU) +

@@ -11,7 +11,7 @@ CUDA_DEVICE DeviceDepthImage g_DepthImageGT;
 #define INDIRECT_SCALE 1
 
 #define BLOCK_SIZE 16
-__global__ void primaryKernelBlocked(int width, int height, Image g_Image, bool depthImage, 
+__global__ void primaryKernelBlocked(int width, int height, Image g_Image, bool depthImage,
 									 Spectrum* lastDirectImage, Spectrum* nextDirectImage, Spectrum* lastIndirectImage, Spectrum* nextIndirectImage,
 									 Sensor lastSensor, int nIteration)
 {
@@ -70,7 +70,7 @@ __global__ void primaryKernelBlocked(int width, int height, Image g_Image, bool 
 			DirectSamplingRecord dRec(bRec.dg.P, bRec.dg.sys.n);
 			Spectrum value = light->sampleDirect(dRec, sample) / pdf;
 			if (!value.isZero() && !g_SceneData.Occluded(Ray(dRec.ref, dRec.d), 0, dRec.dist))
-			{ 
+			{
 				direct_sampling_succes++;
 				direct_sampling_point += dRec.p;
 				Est_Ld += value * Transmittance(Ray(dRec.ref, dRec.d), 0, dRec.dist);
@@ -172,7 +172,7 @@ void GameTracer::DoRender(Image* I)
 {
 	if (hasDepthBuffer())
 		CopyToSymbol(g_DepthImageGT, getDeviceDepthBuffer());
-	primaryKernelBlocked << <dim3(w / (2 * BLOCK_SIZE) + 1, h / (2 * BLOCK_SIZE) + 1, 1), dim3(BLOCK_SIZE, BLOCK_SIZE, 1) >> >(w, h, *I, hasDepthBuffer(), 
+	primaryKernelBlocked << <dim3(w / (2 * BLOCK_SIZE) + 1, h / (2 * BLOCK_SIZE) + 1, 1), dim3(BLOCK_SIZE, BLOCK_SIZE, 1) >> >(w, h, *I, hasDepthBuffer(),
 		m_pDeviceLastDirectImage1, m_pDeviceLastDirectImage2, m_pDeviceLastIndirectImage1, m_pDeviceLastIndirectImage2, lastSensor, iterations++);
 	lastSensor = g_SceneData.m_Camera;
 	swapk(m_pDeviceLastDirectImage1, m_pDeviceLastDirectImage2);

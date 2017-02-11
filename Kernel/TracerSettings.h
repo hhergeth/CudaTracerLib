@@ -16,7 +16,7 @@ class IBaseParameterConstraint
 public:
 	virtual  ~IBaseParameterConstraint()
 	{
-		
+
 	}
 	virtual std::string Serialize() const = 0;
 };
@@ -160,7 +160,7 @@ class IEnumTracerParameter
 public:
 	virtual ~IEnumTracerParameter()
 	{
-		
+
 	}
 	virtual const std::string& getStringValue() const = 0;
 	virtual void setStringValue(const std::string& strVal) = 0;

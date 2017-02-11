@@ -48,7 +48,7 @@ struct HGPhaseFunction : public BasePhaseFunction//, public e_DerivedTypeHelper<
 	HGPhaseFunction()
 		: BasePhaseFunction(EPhaseFunctionType::pEAngleDependence), m_g(0)
 	{
-		
+
 	}
 
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST float Evaluate(const PhaseFunctionSamplingRecord &pRec) const;

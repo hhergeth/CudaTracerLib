@@ -16,7 +16,7 @@ struct AnimatedVertex
 	unsigned long long m_cBoneIndices;
 	unsigned long long m_fBoneWeights;
 	AnimatedVertex()
-		: m_fVertexPos(0.0f), m_fNormal(0.0f), m_fTangent(0.0f), m_fBitangent(0.0f), 
+		: m_fVertexPos(0.0f), m_fNormal(0.0f), m_fTangent(0.0f), m_fBitangent(0.0f),
 		  m_cBoneIndices(0), m_fBoneWeights(0)
 	{
 	}
@@ -44,7 +44,7 @@ struct Animation
 	Animation()
 		: m_uFrameRate(0)
 	{
-		
+
 	}
 
 	Animation(unsigned int fps, const char* name, std::vector<AnimationFrame>& frames)

@@ -13,7 +13,7 @@ public:
 
 	virtual ~IBVHBuilderCallback()
 	{
-		
+
 	}
 
 	///reports the number of inner/leaf nodes to the clb to allocate enough storage

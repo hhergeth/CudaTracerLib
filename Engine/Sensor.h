@@ -108,7 +108,7 @@ struct SphericalSensor : public SensorBase//, public e_DerivedTypeHelper<1>
 	SphericalSensor()
 		: SensorBase(EDeltaPosition | EDirectionSampleMapsToPixels)
 	{
-		
+
 	}
 
 	SphericalSensor(int w, int h)
@@ -196,7 +196,7 @@ public:
 	PerspectiveSensor()
 		: SensorBase(EDeltaPosition | EPerspectiveSensor | EOnSurface | EDirectionSampleMapsToPixels | EProjectiveCamera)
 	{
-		
+
 	}
 	///_fov in degrees
 	PerspectiveSensor(int w, int h, float _fov)
@@ -252,7 +252,7 @@ public:
 	{
 		if (dRec.measure != ESolidAngle)
 			return 0.0f;
-		
+
 		return importance(toWorld.TransformDirectionTranspose(dRec.d));
 	}
 
@@ -278,7 +278,7 @@ public:
 	ThinLensSensor()
 		: SensorBase(ENeedsApertureSample | EPerspectiveSensor | EOnSurface | EDirectionSampleMapsToPixels | EProjectiveCamera)
 	{
-		
+
 	}
 	///_fov in degrees
 	ThinLensSensor(int w, int h, float _fov, float a, float dist)
@@ -371,7 +371,7 @@ public:
 	OrthographicSensor()
 		: SensorBase(EDeltaDirection | EOrthographicSensor | EPositionSampleMapsToPixels | EProjectiveCamera)
 	{
-		
+
 	}
 
 	OrthographicSensor(int w, int h, float sx = 1, float sy = 1)
@@ -453,7 +453,7 @@ public:
 	TelecentricSensor()
 		: SensorBase(ENeedsApertureSample | EOrthographicSensor | EPositionSampleMapsToPixels | EProjectiveCamera)
 	{
-		
+
 	}
 
 	TelecentricSensor(int w, int h, float a, float dist, float sx = 1, float sy = 1)

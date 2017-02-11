@@ -40,7 +40,7 @@ struct PointLight : public LightBase//, public e_DerivedTypeHelper<1>
 	PointLight()
 		: LightBase(EDeltaPosition)
 	{
-		
+
 	}
 
 	PointLight(Vec3f p, Spectrum L, float r = 0)
@@ -104,7 +104,7 @@ struct DiffuseLight : public LightBase//, public e_DerivedTypeHelper<2>
 	DiffuseLight()
 		: LightBase(EOnSurface)
 	{
-		
+
 	}
 
 	DiffuseLight(const Spectrum& L, ShapeSet& s, unsigned int nodeIdx)
@@ -152,7 +152,7 @@ struct DistantLight : public LightBase//, public e_DerivedTypeHelper<3>
 	DistantLight()
 		: LightBase(EDeltaDirection)
 	{
-		
+
 	}
 
 	///r is the radius of the scene's bounding sphere
@@ -235,7 +235,7 @@ struct SpotLight : public LightBase//, public e_DerivedTypeHelper<4>
 	SpotLight()
 		: LightBase(EDeltaPosition)
 	{
-		
+
 	}
 
 	CTL_EXPORT SpotLight(Vec3f p, Vec3f t, Spectrum L, float width, float fall);

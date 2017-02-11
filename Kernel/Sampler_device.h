@@ -170,11 +170,11 @@ struct RandomSampler : public CudaRNG
 	CUDA_FUNC_IN RandomSampler(unsigned int seed)
 		: CudaRNG(seed)
 	{
-		
+
 	}
 	CUDA_FUNC_IN void StartSequence(unsigned int idx)
 	{
-		
+
 	}
 };
 
@@ -207,11 +207,11 @@ public:
 	}
 	void CopyToDevice()
 	{
-		
+
 	}
 	CUDA_FUNC_IN void setNumSequences(int val)
 	{
-		
+
 	}
 	CUDA_FUNC_IN RandomSampler& getSampler(unsigned int idx)
 	{
@@ -278,7 +278,7 @@ public:
 	}
 	void Compute(RandomSamplerData& data)
 	{
-		
+
 	}
 };
 

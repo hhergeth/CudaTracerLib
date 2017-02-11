@@ -18,7 +18,7 @@ struct PPPMParameters
 CUDA_CONST PPPMParameters g_ParametersDevice;
 static PPPMParameters g_ParametersHost;
 #ifdef ISCUDA
-#define g_Parameters g_ParametersDevice	
+#define g_Parameters g_ParametersDevice
 #else
 #define g_Parameters g_ParametersHost
 #endif
@@ -41,7 +41,7 @@ template<typename VolEstimator> struct PPPMPhotonParticleProcessHandler
 		: img(I), rng(r), wasStoredSurface(false), wasStoredVolume(false), numStoredSurface(nStoredSuface), numStoredVolume(nStoredVol), numSurfaceInteractions(0)
 	{
 	}
-	
+
 	CUDA_FUNC_IN void handleEmission(const Spectrum& weight, const PositionSamplingRecord& pRec)
 	{
 	}

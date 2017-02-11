@@ -15,7 +15,7 @@ public:
 		: m_pDeviceLastDirectImage1(0), m_pDeviceLastDirectImage2(0),
 		  m_pDeviceLastIndirectImage1(0), m_pDeviceLastIndirectImage2(0), iterations(0)
 	{
-		
+
 	}
 	CTL_EXPORT virtual void Resize(unsigned int _w, unsigned int _h);
 protected:

@@ -281,7 +281,7 @@ struct SpatialEntry
 	Vec3f wi;
 	CUDA_FUNC_IN SpatialEntry()
 	{
-		
+
 	}
 	CUDA_FUNC_IN SpatialEntry(const Vec3f& wi)
 		: wi(wi)

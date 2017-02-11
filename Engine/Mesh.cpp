@@ -123,16 +123,16 @@ SceneInitData Mesh::ParseBinary(const std::string& a_InputFile)
 	unsigned int m_uTriangleCount;
 	a_In >> m_uTriangleCount;
 	PRINT(m_uTriangleCount, TriangleData)
-		unsigned int m_uMaterialCount;
+	unsigned int m_uMaterialCount;
 	a_In >> m_uMaterialCount;
 	PRINT(m_uMaterialCount, Material)
-		unsigned long long m_uNodeSize;
+	unsigned long long m_uNodeSize;
 	a_In >> m_uNodeSize;
 	PRINT(m_uNodeSize, BVHNodeData)
-		unsigned long long m_uIntSize;
+	unsigned long long m_uIntSize;
 	a_In >> m_uIntSize;
 	PRINT(m_uIntSize, TriIntersectorData)
-		unsigned long long m_uIndicesSize;
+	unsigned long long m_uIndicesSize;
 	a_In >> m_uIndicesSize;
 	PRINT(m_uIndicesSize, TriIntersectorData2)
 #undef PRINT
@@ -148,8 +148,8 @@ void Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2
 	if (!Le.isZero())
 		lights.push_back(MeshPartLight(mat.Name, Le));
 	Vec3f p[3];
-	auto* n = (NormalizedT<Vec3f>*)alloca(sizeof(NormalizedT<Vec3f>) * 3), 
-		* ta = (NormalizedT<Vec3f>*)alloca(sizeof(NormalizedT<Vec3f>) * 3), 
+	auto* n = (NormalizedT<Vec3f>*)alloca(sizeof(NormalizedT<Vec3f>) * 3),
+		* ta = (NormalizedT<Vec3f>*)alloca(sizeof(NormalizedT<Vec3f>) * 3),
 		* bi = (NormalizedT<Vec3f>*)alloca(sizeof(NormalizedT<Vec3f>) * 3);
 	Vec2f t[3];
 	t[0] = t[1] = t[2] = Vec2f(0.0f);

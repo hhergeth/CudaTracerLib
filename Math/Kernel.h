@@ -4,7 +4,7 @@
 #include <Base/ValuePack.h>
 
 namespace CudaTracerLib {
-	
+
 template<int DIM> struct pow_int_compile
 {
 	CUDA_FUNC_IN static float pow(float f)

@@ -113,7 +113,7 @@ public:
 		float sinThetaDiv2 = (float)sin((radians / 2.0f));
 
 		Quaternion ret;
-		// now calculate the components of the quaternion	
+		// now calculate the components of the quaternion
 		ret.val.x = axis.x * sinThetaDiv2;
 		ret.val.y = axis.y * sinThetaDiv2;
 		ret.val.z = axis.z * sinThetaDiv2;

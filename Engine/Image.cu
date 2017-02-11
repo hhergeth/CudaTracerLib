@@ -7,7 +7,7 @@ namespace CudaTracerLib {
 
 template<typename F> CUDA_FUNC_IN void splat(Image* img, float sx, float sy, int x, int y, int xResolution, int yResolution, const Spectrum& L, F add)
 {
-	add(img->getPixelData(x, y), L); 
+	add(img->getPixelData(x, y), L);
 
 	/*float g = sx - x, f = sy - y;
 	add(img->getPixelData(x, y), L * (1 - f) * (1 - g));

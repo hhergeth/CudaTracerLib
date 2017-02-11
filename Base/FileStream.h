@@ -19,7 +19,7 @@ protected:
 	IInStream()
 		: m_uFileSize(0)
 	{
-		
+
 	}
 public:
 	virtual ~IInStream()

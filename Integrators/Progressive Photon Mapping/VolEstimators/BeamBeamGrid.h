@@ -134,7 +134,7 @@ struct BeamBeamGrid : public IVolumeEstimator
 	BeamBeamGrid(unsigned int gridDim, unsigned int numBeams, int N = 100)
 		: IVolumeEstimator(m_sStorage, m_sBeamStorage), m_sStorage(Vec3u(gridDim), gridDim * gridDim * gridDim * N), m_sBeamStorage(numBeams)
 	{
-		
+
 	}
 
 	virtual void Free()

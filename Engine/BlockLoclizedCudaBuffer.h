@@ -3,7 +3,7 @@
 #include <Defines.h>
 
 namespace CudaTracerLib {
-	
+
 	template<typename T, int BLOCK_SIZE = BLOCK_SAMPLER_BlockSize> class BlockLoclizedCudaBuffer
 	{
 		//this is a grid based storage layout; grids are stored row first; pixels in grid also
@@ -51,7 +51,7 @@ namespace CudaTracerLib {
 		}
 		virtual void EndBlock()
 		{
-			if ((current_block_x_pixels % BLOCK_SIZE) != 0 || (current_block_y_pixels % BLOCK_SIZE) != 0 || 
+			if ((current_block_x_pixels % BLOCK_SIZE) != 0 || (current_block_y_pixels % BLOCK_SIZE) != 0 ||
 				 current_block_x_pixels < 0 || current_block_y_pixels < 0)
 				throw std::runtime_error("Cannot copy intersection of multiple blocks!");
 			CUDA_MEMCPY_TO_HOST(m_hostData + (current_block_y_pixels / BLOCK_SIZE) * m_width_blocks + (current_block_x_pixels / BLOCK_SIZE), m_deviceData, sizeof(BlockData));

@@ -71,7 +71,7 @@ struct k_AdaptiveStruct
 	float kToFindSurf, kToFindVol;
 
 	counter_t numPhotonsSurf, numPhotonsVol;
-	
+
 	unsigned int w, numIter;
 	SynchronizedBuffer<APPM_PixelData> E;
 public:

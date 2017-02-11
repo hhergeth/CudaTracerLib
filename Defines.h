@@ -54,7 +54,7 @@ namespace CudaTracerLib {
 #define CUDA_VIRTUAL virtual
 #endif
 
-#ifdef __CUDA_ARCH__  
+#ifdef __CUDA_ARCH__
 #define ISCUDA
 #endif
 

@@ -3,7 +3,7 @@
 #include "MathFunc.h"
 
 namespace CudaTracerLib {
-	
+
 template<int N_BINS, typename PACK_TYPE> class MergingModel
 {
 private:
@@ -63,7 +63,7 @@ private:
 
 	bin bins[N_BINS];
 public:
-	
+
 	typedef PACK_TYPE _PACK_TYPE;
 	CUDA_FUNC_IN MergingModel()
 	{

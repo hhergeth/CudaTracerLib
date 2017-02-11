@@ -62,7 +62,7 @@ template<> struct NormalizedT<Ray> : public Ray
 {
 	CUDA_FUNC_IN NormalizedT()
 	{
-		
+
 	}
 
 	CUDA_FUNC_IN explicit NormalizedT(const Ray& v)

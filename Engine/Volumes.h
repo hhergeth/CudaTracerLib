@@ -33,7 +33,7 @@ struct BaseVolumeRegion : public BaseType//, public BaseTypeHelper<5001046>
 	BaseVolumeRegion(const PhaseFunction& pFunc, const float4x4& vToW)
 		: Func(pFunc), VolumeToWorld(vToW)
 	{
-		
+
 	}
 
 	virtual void Update()
@@ -58,7 +58,7 @@ struct HomogeneousVolumeDensity : public BaseVolumeRegion//, public e_DerivedTyp
 	HomogeneousVolumeDensity()
 		: BaseVolumeRegion(CreateAggregate<PhaseFunction>(IsotropicPhaseFunction()), float4x4::Identity()), sig_a(0.0f), sig_s(0.0f), le(0.0f)
 	{
-		
+
 	}
 
 	HomogeneousVolumeDensity(const PhaseFunction& func, const float4x4& ToWorld, const float sa, const float ss, float e)
@@ -104,7 +104,7 @@ struct DenseVolGridBaseType
 	DenseVolGridBaseType()
 		: data(0, 0)
 	{
-		
+
 	}
 	CTL_EXPORT DenseVolGridBaseType(Stream<char>* a_Buffer, Vec3u dim, size_t sizePerElement, size_t alignment);
 	CTL_EXPORT void InvalidateDeviceData(Stream<char>* a_Buffer);
@@ -122,7 +122,7 @@ public:
 	DenseVolGrid()
 		: dim(0), dimF(0)
 	{
-		
+
 	}
 	DenseVolGrid(Stream<char>* a_Buffer, Vec3u dim)
 		: DenseVolGridBaseType(a_Buffer, dim, sizeof(T), std::alignment_of<T>::value), dim(dim)

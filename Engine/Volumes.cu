@@ -82,14 +82,14 @@ VolumeGrid::VolumeGrid()
 }
 
 VolumeGrid::VolumeGrid(const PhaseFunction& func, const float4x4& ToWorld, Stream<char>* a_Buffer, Vec3u dim)
-	: BaseVolumeRegion(func, ToWorld), sigAMin(0.0f), sigSMin(0.0f), leMin(0.0f), sigAMax(0.0f), sigSMax(0.0f), leMax(0.0f), 
+	: BaseVolumeRegion(func, ToWorld), sigAMin(0.0f), sigSMin(0.0f), leMin(0.0f), sigAMax(0.0f), sigSMax(0.0f), leMax(0.0f),
 	  grid(a_Buffer, dim), singleGrid(true)
 {
 	VolumeGrid::Update();
 }
 
 VolumeGrid::VolumeGrid(const PhaseFunction& func, const float4x4& ToWorld, Stream<char>* a_Buffer, Vec3u dimA, Vec3u dimS, Vec3u dimL)
-	: BaseVolumeRegion(func, ToWorld), sigAMin(0.0f), sigSMin(0.0f), leMin(0.0f), sigAMax(0.0f), sigSMax(0.0f), leMax(0.0f), 
+	: BaseVolumeRegion(func, ToWorld), sigAMin(0.0f), sigSMin(0.0f), leMin(0.0f), sigAMax(0.0f), sigSMax(0.0f), leMax(0.0f),
 	  gridA(a_Buffer, dimA), gridS(a_Buffer, dimS), gridL(a_Buffer, dimL), singleGrid(false)
 {
 	VolumeGrid::Update();

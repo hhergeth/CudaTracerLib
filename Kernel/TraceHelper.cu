@@ -216,7 +216,7 @@ void UpdateKernel(DynamicScene* a_Scene, ISamplingSequenceGenerator* sampler, co
 	ThrowCudaErrors(cudaBindTexture(&offset, &t_TriDataA, a_Data.m_sTriData.Data, &cdi2, a_Data.m_sTriData.UsedCount * sizeof(TriangleData)));
 	ThrowCudaErrors(cudaBindTexture(&offset, &t_TriDataB, a_Data.m_sTriData.Data, &cdh4, a_Data.m_sTriData.UsedCount * sizeof(TriangleData)));
 #endif
-	
+
 	unsigned int b = 0;
 	void* symAdd = 0;
 	ThrowCudaErrors(cudaGetSymbolAddress(&symAdd, g_RayTracedCounterDevice));
@@ -682,8 +682,8 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 					//	goto outerlabel;//jump AFTER store cause we will do that later
 					//}
 				}
-				
-				// Another leaf was postponed => process it as well.		
+
+				// Another leaf was postponed => process it as well.
 				leafAddr = nodeAddr;
 				if (nodeAddr < 0)
 				{

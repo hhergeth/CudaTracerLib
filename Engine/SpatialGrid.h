@@ -4,7 +4,7 @@
 #include "SynchronizedBuffer.h"
 #include <Base/Timer.h>
 #ifdef __CUDACC__
-#pragma warning (disable : 4267) 
+#pragma warning (disable : 4267)
 #include <thrust/device_ptr.h>
 #include <thrust/sort.h>
 #include <thrust/device_vector.h>
@@ -143,7 +143,7 @@ public:
 		unsigned int data_idx = atomicInc(&deviceDataIdx, (unsigned int)-1);
 #else
 		unsigned int data_idx = Platform::Increment(&deviceDataIdx);
-#endif	
+#endif
 		if (data_idx >= numData)
 			return 0xffffffff;
 		unsigned int map_idx = BaseType::hashMap.Hash(p);
@@ -280,9 +280,9 @@ public:
 
 		idxData = min(idxData, numData);
 		auto GP = m_gridSize.x * m_gridSize.y * m_gridSize.z;
-		
+
 #ifndef __CUDACC__
-		throw std::runtime_error("Use this from a cuda file please!"); 
+		throw std::runtime_error("Use this from a cuda file please!");
 		/*
 		{
 			auto bl = Tt.StartBlock("sort");

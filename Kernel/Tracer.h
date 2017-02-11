@@ -41,7 +41,7 @@ protected:
 public:
 	virtual ~IDepthTracer()
 	{
-		
+
 	}
 	virtual void setDepthBuffer(const DeviceDepthImage& img)
 	{
@@ -143,7 +143,7 @@ protected:
 	ISamplingSequenceGenerator* m_pSamplingSequenceGenerator;
 	virtual void DebugInternal(Image* I, const Vec2i& pixel)
 	{
-		
+
 	}
 };
 

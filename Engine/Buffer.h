@@ -23,7 +23,7 @@ namespace CudaTracerLib {
 
 namespace __buffer_internal__
 {
-	
+
 }
 
 template<typename H, typename D> class BufferIterator;

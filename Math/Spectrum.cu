@@ -8,7 +8,7 @@ namespace CudaTracerLib {
 
 #ifdef DEBUG
 	#define Integrate_Steps 100
-#else 
+#else
 	#define Integrate_Steps 10000
 #endif
 
@@ -424,7 +424,7 @@ float Spectrum::SampleWavelength(Spectrum& res, float& res_pdf, float sample) co
 	auto* cie_dat = SpectrumHelper::getData();
 
 	float x, y, z;
-	toXYZ(x, y, z);	
+	toXYZ(x, y, z);
 
 	float cdfA = 0;
 	Spectrum acc(0.0f);
@@ -755,7 +755,7 @@ void SpectrumHelper::StaticInitialize()
 
 void SpectrumHelper::StaticDeinitialize()
 {
-	
+
 }
 
 SpectrumHelper::staticData* SpectrumHelper::getData()
@@ -1434,5 +1434,5 @@ const float RGBIllum2SpecBlue_entries[RGB2Spec_samples] = {
 		1.6624255403475907e-01,   1.6997613960634927e-01,
 		1.5769743995852967e-01,   1.9069090525482305e-01 };
 
-#pragma warning( pop ) 
+#pragma warning( pop )
 }

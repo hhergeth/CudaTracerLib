@@ -32,7 +32,7 @@ struct BoxFilter : public FilterBase//, public e_DerivedTypeHelper<1>
 	BoxFilter()
 		: FilterBase(1, 1)
 	{
-		
+
 	}
 
 	BoxFilter(float xw, float yw)
@@ -89,7 +89,7 @@ struct MitchellFilter : public FilterBase//, public e_DerivedTypeHelper<3>
 	MitchellFilter()
 		: FilterBase(2, 2), B(1.0f / 3.0f), C(1.0f / 3.0f)
 	{
-		
+
 	}
 
 	MitchellFilter(float b, float c, float xw, float yw)
@@ -123,7 +123,7 @@ struct LanczosSincFilter : public FilterBase//, public e_DerivedTypeHelper<4>
 	LanczosSincFilter()
 		: FilterBase(6, 6), tau(3)
 	{
-		
+
 	}
 
 	LanczosSincFilter(float xw, float yw, float t)
@@ -155,7 +155,7 @@ struct TriangleFilter : public FilterBase//, public e_DerivedTypeHelper<5>
 	TriangleFilter()
 		: FilterBase(2, 2)
 	{
-		
+
 	}
 
 	TriangleFilter(float xw, float yw)

@@ -17,7 +17,7 @@ void BeamBeamGrid::StartNewPass(DynamicScene* scene)
 
 void BeamBeamGrid::PrepareForRendering()
 {
-	
+
 }
 
 }

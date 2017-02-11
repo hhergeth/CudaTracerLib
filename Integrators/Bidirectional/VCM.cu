@@ -95,7 +95,7 @@ CUDA_FUNC_IN void _VCM(const Vec2f& pixelPosition, Image& img, Sampler& rng, int
 				BPTVertex lv = lightPath[emitterVertexIdx];
 				acc += cameraState.throughput * lv.throughput * connectVertices(lv, cameraState, bRec, r2.getMat(), mMisVcWeightFactor, mMisVmWeightFactor, true);
 			}
-			
+
 			//scale by 2 to account for no merging in the first iteration
 #ifdef ISCUDA
 			if(a_NumIteration > 1)

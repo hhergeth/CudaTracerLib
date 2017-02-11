@@ -141,7 +141,7 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 					L += throughput * bsdfVal * weight * value;
 				}
 				bRec.typeMask = EAll;
-				
+
 				//L += throughput * UniformSampleOneLight(bRec, r2.getMat(), rng);
 			}
 			L += throughput * r2.Le(bRec.dg.P, bRec.dg.sys, -r.dir());//either it's the first bounce or it's a specular reflection
@@ -216,11 +216,11 @@ void PPPMTracer::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_VolEstimator2, m_pVolumeEstimator, m_pVolumeEstimator->getSize()));
 
 	int fg_samples = m_sParameters.getValue(KEY_N_FG_Samples());
-		
+
 	k_AdaptiveStruct A = getAdaptiveData();
 	Vec2i off = Vec2i(x, y);
 	auto img = *I;
-	
+
 	//iterateTypes<BeamGrid, PointStorage, BeamBeamGrid>(m_pVolumeEstimator, [off,&A,&img, fg_samples,this](auto* X) {CudaTracerLib::k_EyePass<std::remove_pointer<decltype(X)>::type> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> >(off, this->w, this->h, A, img, this->m_useDirectLighting, fg_samples); });
 
 	if (dynamic_cast<BeamGrid*>(m_pVolumeEstimator))

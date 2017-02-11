@@ -21,7 +21,7 @@ unsigned int ComputePhotonBlocksPerPass()
 }
 
 PPPMTracer::PPPMTracer()
-	: m_pPixelBuffer(0), m_fLightVisibility(1), 
+	: m_pPixelBuffer(0), m_fLightVisibility(1),
 	m_fProbSurface(1), m_fProbVolume(1.0f), m_uBlocksPerLaunch(ComputePhotonBlocksPerPass()),
 	m_sSurfaceMap(Vec3u(250), (ComputePhotonBlocksPerPass() + 2) * PPM_slots_per_block), m_sSurfaceMapCaustic(0)
 {

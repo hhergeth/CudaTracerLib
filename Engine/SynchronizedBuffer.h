@@ -22,11 +22,11 @@ public:
 	ISynchronizedBuffer()
 		: m_location(DataLocation::Synchronized)
 	{
-		
+
 	}
 	virtual ~ISynchronizedBuffer()
 	{
-		
+
 	}
 	virtual void Free() = 0;
 	CUDA_FUNC_IN bool isOnCPU() const
@@ -163,7 +163,7 @@ class ISynchronizedBufferParent : public ISynchronizedBuffer
 	std::vector<ISynchronizedBuffer*> m_buffers;
 	void iterateTypes()
 	{
-		
+
 	}
 	template<typename ARG, typename... ARGS> void iterateTypes(ARG& arg, ARGS&... args)
 	{

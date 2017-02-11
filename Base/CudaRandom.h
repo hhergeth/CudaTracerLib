@@ -296,7 +296,7 @@ struct CudaRNG : public Curand_GENERATOR
 	CUDA_FUNC_IN explicit CudaRNG(unsigned int seed)
 		: Curand_GENERATOR(seed)
 	{
-		
+
 	}
 	CUDA_FUNC_IN void Initialize(unsigned int a_Index)
 	{
