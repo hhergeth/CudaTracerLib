@@ -4,17 +4,6 @@ namespace CudaTracerLib {
 
 void TriIntersectorData::setData(const Vec3f& a, const Vec3f& b, const Vec3f& c)
 {
-	//if(absdot(normalize(cross(a - c, b - c)), make_float3(1, 0, 0)) < 0.05f)
-	/*{
-	float l = length((a + b + c) / 3.0f - a) / 200.0f;
-	//e += make_float3(0,0.02f,-0.02f);
-	//p *= 1.02f;
-	//q *= 1.02f;
-	p = p + make_float3(l, -l, l);
-	q = q + make_float3(-l, l, -l);
-	e = -p - q;
-	e = e + make_float3(0,l,-l)/200.0f;
-	}*/
 	float4x4 m;
 	m.col(0, Vec4f(a - c, 0));
 	m.col(1, Vec4f(b - c, 0));
@@ -26,15 +15,6 @@ void TriIntersectorData::setData(const Vec3f& a, const Vec3f& b, const Vec3f& c)
 	this->c = m.row(1);
 	Vec3f v1, v2, v3;
 	getData(v1, v2, v3);
-	//*(float2*)t2 = make_float2(m[0].x, m[0].y);
-	//*(half2*)(((int*)t2) + 2) = half2(m[0].z, m[0].w);
-	//this->b = make_float4(m[1].x, m[1].y, m[1].z, m[1].w);
-	//if(this->a.x == -0.0f)
-	//	this->a.x = 0.0f;
-	//this->a = make_float4(m[2].y, m[2].z, -m[2].w, m[0].y);
-	//this->b = make_float4(m[0].z, m[0].w, m[1].y, m[1].z);
-	//t2->c = m[1].w;
-	//t2->setXs(m[2].x, m[0].x, m[1].x);
 }
 
 void TriIntersectorData::getData(Vec3f& v0, Vec3f& v1, Vec3f& v2) const

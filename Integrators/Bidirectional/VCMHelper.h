@@ -359,44 +359,6 @@ template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_Surface2(VCMSurfMap& g_Curren
 #else
 	return 1.0f;
 #endif
-
-	/*Spectrum Lp = Spectrum(0.0f);
-	const float r2 = a_rSurfaceUNUSED * a_rSurfaceUNUSED;
-	Frame sys = bRec.dg.sys;
-	sys.t *= a_rSurfaceUNUSED;
-	sys.s *= a_rSurfaceUNUSED;
-	sys.n *= a_rSurfaceUNUSED;
-	Vec3f a = -1.0f * sys.t - sys.s, b = sys.t - sys.s, c = -1.0f * sys.t + sys.s, d = sys.t + sys.s;
-	Vec3f low = min(min(a, b), min(c, d)) + bRec.dg.P, high = max(max(a, b), max(c, d)) + bRec.dg.P;
-	uint3 lo = map.m_sSurfaceMap.m_sHash.Transform(low), hi = map.m_sSurfaceMap.m_sHash.Transform(high);
-	for (unsigned int a = lo.x; a <= hi.x; a++)
-	for (unsigned int b = lo.y; b <= hi.y; b++)
-	for (unsigned int c = lo.z; c <= hi.z; c++)
-	{
-	unsigned int i0 = map.m_sSurfaceMap.m_sHash.Hash(Vec3u(a, b, c)), i = map.m_sSurfaceMap.m_pDeviceHashGrid[i0], count = 0;
-	while (i != UINT_MAX && i != 0xffffff && count++ < 100)
-	{
-	k_MISPhoton e = map.m_pPhotons[i];
-	Vec3f n = e.getNormal(), wi = e.getWi(), P = e.getPos(map.m_sSurfaceMap.m_sHash, Vec3u(a, b, c));
-	Spectrum l = e.getL();
-	float dist2 = distanceSquared(P, bRec.dg.P);
-	if (dist2 < r2 && dot(n, bRec.dg.sys.n) > 0.8f)
-	{
-	bRec.wo = bRec.dg.toLocal(wi);
-	const float cameraBsdfDirPdfW = pdf(*mat, bRec);
-	Spectrum bsdfFactor = mat->bsdf.f(bRec);
-	const float cameraBsdfRevPdfW = revPdf(*mat, bRec);
-	const float wLight = e.dVCM * mMisVcWeightFactor + e.dVM * cameraBsdfDirPdfW;
-	const float wCamera = aCameraState.dVCM * mMisVcWeightFactor + aCameraState.dVM * cameraBsdfRevPdfW;
-	const float misWeight = 1.f / (wLight + 1.f + wCamera);
-
-	float ke = Kernel::k<2>(math::sqrt(dist2), a_rSurfaceUNUSED);
-	Lp += (use_mis ? misWeight : 1.0f) * ke * l * bsdfFactor / Frame::cosTheta(bRec.wo);
-	}
-	i = e.getNext();
-	}
-	}
-	return Lp / float(map.m_uPhotonNumEmitted);*/
 }
 
 }

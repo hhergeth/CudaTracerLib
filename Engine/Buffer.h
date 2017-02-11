@@ -380,12 +380,6 @@ public:
 
 	BufferIterator<H, D>& operator++()
 	{
-		/*idx++;
-		auto it = buf.m_uDeallocated->find(idx);
-		if(it != buf.m_uDeallocated->end())
-		{
-		idx = it->upper();
-		}*/
 		if (next_interval != buf.m_uDeallocated->end() && idx + 1 == next_interval->lower())
 		{
 			idx = next_interval->upper();
