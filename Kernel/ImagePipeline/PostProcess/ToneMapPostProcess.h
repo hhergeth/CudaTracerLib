@@ -27,7 +27,7 @@ public:
 	{
 
 	}
-	virtual void Apply(Image& img, int numPasses);
+	virtual void Apply(Image& img, int numPasses, const PixelVarianceBuffer& varBuffer);
 };
 
 }

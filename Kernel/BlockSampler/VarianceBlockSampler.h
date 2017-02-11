@@ -39,35 +39,9 @@ public:
 			return lambda * w1 + (1 - lambda) * w2;
 		}
 	};
-	struct PixelInfo
-	{
-		float SUM_I_N;
-		float SUM_E_I;
-		float SUM_E_I2;
-
-		CUDA_FUNC_IN void updateMoments(const Spectrum& s, unsigned int N)
-		{
-			float f = s.getLuminance();
-			SUM_I_N += f;
-			float E_I = SUM_I_N / (N + 1);
-			SUM_E_I += E_I;
-			SUM_E_I2 += math::sqr(E_I);
-		}
-
-		CUDA_FUNC_IN float getExpectedValue(unsigned int N) const
-		{
-			return SUM_I_N / N;
-		}
-
-		CUDA_FUNC_IN float getVariance(unsigned int N) const
-		{
-			return SUM_E_I2 / N - math::sqr(SUM_E_I / N);
-		}
-	};
 private:
 	std::vector<int> m_indices;
 	SynchronizedBuffer<TmpBlockInfo> m_blockInfo;
-	PixelInfo* m_pPixelInfoDevice;
 	unsigned int m_uPassesDone;
 public:
 	VarianceBlockSampler(unsigned int w, unsigned int h)
@@ -76,15 +50,11 @@ public:
 		int n(0);
 		m_indices.resize(getNumTotalBlocks());
 		std::generate(std::begin(m_indices), std::end(m_indices), [&] { return n++; });
-
-		CUDA_MALLOC(&m_pPixelInfoDevice, sizeof(PixelInfo) * w * h);
 	}
 
 	virtual void Free()
 	{
 		m_blockInfo.Free();
-		if(xResolution * yResolution != 0)
-			CUDA_FREE(m_pPixelInfoDevice);
 	}
 
 	virtual IBlockSampler* CreateForSize(unsigned int w, unsigned int h)
@@ -94,7 +64,7 @@ public:
 
 	virtual void StartNewRendering(DynamicScene* a_Scene, Image* img);
 
-	virtual void AddPass(Image* img, TracerBase* tracer);
+	virtual void AddPass(Image* img, TracerBase* tracer, const PixelVarianceBuffer& varBuffer);
 
 	virtual void IterateBlocks(iterate_blocks_clb_t clb);
 };

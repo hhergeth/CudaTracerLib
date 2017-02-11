@@ -3,6 +3,7 @@
 #include <functional>
 #include <vector>
 #include <algorithm>
+#include <Kernel/PixelVarianceBuffer.h>
 
 namespace CudaTracerLib {
 
@@ -50,7 +51,7 @@ public:
 		m_sBlockInfo.Memset(BlockInfo());
 	}
 
-	virtual void AddPass(Image* img, TracerBase* tracer)
+	virtual void AddPass(Image* img, TracerBase* tracer, const PixelVarianceBuffer& varBuffer)
 	{
 		IterateBlocks([&](unsigned int f_idx, int bx, int by, int bw, int bh)
 		{

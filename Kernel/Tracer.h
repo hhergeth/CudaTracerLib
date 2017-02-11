@@ -6,6 +6,7 @@
 #include <Engine/Image.h>
 #include <Engine/Material.h>
 #include "TracerSettings.h"
+#include <Kernel/PixelVarianceBuffer.h>
 
 namespace CudaTracerLib {
 
@@ -84,7 +85,15 @@ public:
 	{
 		m_pScene = a_Scene;
 	}
-	virtual void Resize(unsigned int _w, unsigned int _h) = 0;
+	virtual void Resize(unsigned int _w, unsigned int _h)
+	{
+		if (m_pPixelVarianceBuffer)
+		{
+			m_pPixelVarianceBuffer->Free();
+			delete m_pPixelVarianceBuffer;
+		}
+		m_pPixelVarianceBuffer = new PixelVarianceBuffer(_w, _h);
+	}
 	virtual void DoPass(Image* I, bool a_NewTrace) = 0;
 	virtual void Debug(Image* I, const Vec2i& pixel)
 	{
@@ -129,6 +138,10 @@ public:
 	virtual float getSplatScale() const = 0;
 	virtual IBlockSampler* getBlockSampler() { return m_pBlockSampler; }
 	virtual void setBlockSampler(IBlockSampler* b) { m_pBlockSampler = b; }
+	virtual const PixelVarianceBuffer& getPixelVarianceBuffer() const
+	{
+		return *m_pPixelVarianceBuffer;
+	}
 protected:
 	float m_fLastRuntime;
 	unsigned int m_uLastNumRaysTraced;
@@ -138,6 +151,7 @@ protected:
 	unsigned int w, h;
 	DynamicScene* m_pScene;
 	cudaEvent_t start, stop;
+	PixelVarianceBuffer* m_pPixelVarianceBuffer;
 	IBlockSampler* m_pBlockSampler;
 	TracerParameterCollection m_sParameters;
 	ISamplingSequenceGenerator* m_pSamplingSequenceGenerator;
@@ -161,6 +175,7 @@ public:
 			oldSampler->Free();
 			delete oldSampler;
 		}
+		TracerBase::Resize(_w, _h);
 	}
 	virtual void DoPass(Image* I, bool a_NewTrace)
 	{
@@ -172,7 +187,10 @@ public:
 			m_fAccRuntime = 0;
 			I->Clear();
 			if (PROGRESSIVE)
+			{
 				m_pBlockSampler->StartNewRendering(m_pScene, I);
+				m_pPixelVarianceBuffer->Clear();
+			}
 			StartNewTrace(I);
 		}
 		UpdateSamplingSequenceGenerator(m_sParameters.getValue(KEY_SamplingSequenceType()), m_pSamplingSequenceGenerator);
@@ -181,7 +199,10 @@ public:
 		m_uPassesDone++;
 		DoRender(I);
 		if (PROGRESSIVE)
-			m_pBlockSampler->AddPass(I, this);
+		{
+			m_pBlockSampler->AddPass(I, this, *m_pPixelVarianceBuffer);
+			m_pPixelVarianceBuffer->AddPass(*I, getSplatScale());
+		}
 		ThrowCudaErrors(cudaEventRecord(stop, 0));
 		ThrowCudaErrors(cudaEventSynchronize(stop));
 		if (start != stop)

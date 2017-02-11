@@ -23,7 +23,7 @@ CUDA_GLOBAL void Reinhard05Kernel(Image img, float scale, float invWp2)
 	}
 }
 
-void ToneMapPostProcess::Apply(Image& img, int numPasses)
+void ToneMapPostProcess::Apply(Image& img, int numPasses, const PixelVarianceBuffer& varBuffer)
 {
 	Spectrum Cav;
 	float logAvgLuminance, minLum, maxLuminance, Lav;

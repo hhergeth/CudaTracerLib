@@ -23,7 +23,7 @@ public:
 	{
 
 	}
-	virtual void Apply(Image& img, int numPasses, float splatScale);
+	virtual void Apply(Image& img, int numPasses, float splatScale, const PixelVarianceBuffer& varBuffer);
 	const Filter& getFilter() const
 	{
 		return m_filter;

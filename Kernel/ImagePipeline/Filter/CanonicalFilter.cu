@@ -35,7 +35,7 @@ CUDA_GLOBAL void rtm_Copy(Image img, int w, int h, float splatScale, Filter filt
 	}
 }
 
-void CanonicalFilter::Apply(Image& img, int numPasses, float splatScale)
+void CanonicalFilter::Apply(Image& img, int numPasses, float splatScale, const PixelVarianceBuffer& varBuffer)
 {
 	int block = 32, xResolution = img.getWidth(), yResolution = img.getHeight();
 	rtm_Copy << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(img, (int)xResolution, (int)yResolution, splatScale, m_filter);

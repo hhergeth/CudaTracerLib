@@ -4,19 +4,6 @@
 namespace CudaTracerLib
 {
 
-void useFilter(ImagePipelineInfo info, Image& img, ImageSamplesFilter* filter)
-{
-	filter->Apply(img, info.numPasses, info.splatScale);
-}
-
-void useAllProcesses(ImagePipelineInfo info, Image& img, const std::vector<PostProcess*>& postProcesses)
-{
-	for (auto& pP : postProcesses)
-	{
-		pP->Apply(img, info.numPasses);
-	}
-}
-
 CUDA_FUNC_IN RGBCOL gammaCorrecture(const Spectrum& c)
 {
 	Spectrum c2;
@@ -64,39 +51,36 @@ CUDA_GLOBAL void applyGammaCorrectureToOutput(Image img, int w, int h)
 	}
 }
 
-void applyImagePipeline(ImagePipelineInfo info, Image& img, ImageSamplesFilter* filter, const std::vector<PostProcess*>& postProcesses)
+void applyImagePipeline(const TracerBase& tracer, Image& img, ImageSamplesFilter* filter, PostProcess* process)
 {
+	auto numPasses = tracer.getNumPassesDone();
+	auto splatScale = tracer.getSplatScale();
+	auto pixelVarianceBuffer = tracer.getPixelVarianceBuffer();
+
 	int block = 32, xResolution = img.getWidth(), yResolution = img.getHeight();
-	if (!filter && postProcesses.size() == 0) //copy directly to output
+	if (!filter && !process) //copy directly to output
 	{
-		copySamplesToOutput << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(img, xResolution, yResolution, info.splatScale);
+		copySamplesToOutput << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(img, xResolution, yResolution, splatScale);
 	}
 	else if(!filter) //copy to filtered data (Stage 2)
 	{
-		copySamplesToFiltered << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(img, xResolution, yResolution, info.splatScale);
-		useAllProcesses(info, img, postProcesses);
+		copySamplesToFiltered << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(img, xResolution, yResolution, splatScale);
+		process->Apply(img, numPasses, pixelVarianceBuffer);
 		applyGammaCorrectureToOutput << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(img, xResolution, yResolution);
 	}
-	else if(postProcesses.size() == 0) //only use filter, copy to output
+	else if(!process) //only use filter, copy to output
 	{
-		useFilter(info, img, filter);
+		filter->Apply(img, numPasses, splatScale, pixelVarianceBuffer);
 		copyFilteredToOutput << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(img, xResolution, yResolution);
 	}
 	else //use both
 	{
-		useFilter(info, img, filter);
-		useAllProcesses(info, img, postProcesses);
+		filter->Apply(img, numPasses, splatScale, pixelVarianceBuffer);
+		process->Apply(img, numPasses, pixelVarianceBuffer);
 		applyGammaCorrectureToOutput << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(img, xResolution, yResolution);
 	}
 
 	ThrowCudaErrors(cudaThreadSynchronize());
-}
-
-ImagePipelineInfo constructImagePipelineInfo(const TracerBase& tracer)
-{
-	ImagePipelineInfo info = { tracer.getNumPassesDone() , tracer.getSplatScale()};
-
-	return info;
 }
 
 }

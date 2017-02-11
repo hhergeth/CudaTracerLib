@@ -6,34 +6,27 @@
 #include "PostProcess/PostProcess.h"
 #include <Engine/Filter.h>
 #include "Filter/CanonicalFilter.h"
+#include <Engine/SynchronizedBuffer.h>
 
 namespace CudaTracerLib
 {
 
-struct ImagePipelineInfo
-{
-	unsigned int numPasses;
-	float splatScale;
-};
-
 class TracerBase;
-ImagePipelineInfo constructImagePipelineInfo(const TracerBase& tracer);
 
 //generic pipeline
-void applyImagePipeline(ImagePipelineInfo info, Image& img, ImageSamplesFilter* filter, const std::vector<PostProcess*>& postProcesses);
+void applyImagePipeline(const TracerBase& tracer, Image& img, ImageSamplesFilter* filter, PostProcess* postProcess);
 
-//pipeline which doesn't use postprocesses
-inline void applyImagePipeline(ImagePipelineInfo info, Image& img, ImageSamplesFilter* filter)
+//pipeline which doesn't use a PostProcess
+inline void applyImagePipeline(TracerBase& tracer, Image& img, ImageSamplesFilter* filter)
 {
-	static std::vector<PostProcess*> emptyProcesses;
-	applyImagePipeline(info, img, filter, emptyProcesses);
+	applyImagePipeline(tracer, img, filter, 0);
 }
 
 //pipeline which only uses one of the canonical filters
-inline void applyImagePipeline(ImagePipelineInfo info, Image& img, const Filter& F)
+inline void applyImagePipeline(TracerBase& tracer, Image& img, const Filter& F)
 {
 	CanonicalFilter f(F);
-	applyImagePipeline(info, img, &f);
+	applyImagePipeline(tracer, img, &f);
 }
 
 }

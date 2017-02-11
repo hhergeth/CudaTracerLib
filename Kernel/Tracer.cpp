@@ -8,7 +8,7 @@
 namespace CudaTracerLib {
 
 TracerBase::TracerBase()
-	: m_pScene(0), m_pBlockSampler(new VarianceBlockSampler(0, 0)), m_pSamplingSequenceGenerator(0)
+	: m_pScene(0), m_pBlockSampler(new VarianceBlockSampler(0, 0)), m_pSamplingSequenceGenerator(0), m_pPixelVarianceBuffer(0)
 {
 	ThrowCudaErrors(cudaEventCreate(&start));
 	ThrowCudaErrors(cudaEventCreate(&stop));
@@ -27,6 +27,13 @@ TracerBase::~TracerBase()
 	start = stop = 0;
 	if (m_pBlockSampler)
 		delete m_pBlockSampler;
+	if (m_pPixelVarianceBuffer)
+	{
+		m_pPixelVarianceBuffer->Free();
+		delete m_pPixelVarianceBuffer;
+	}
+	m_pBlockSampler = 0;
+	m_pPixelVarianceBuffer = 0;
 }
 
 void UpdateSamplingSequenceGenerator(SamplingSequenceGeneratorTypes type, ISamplingSequenceGenerator*& gen)

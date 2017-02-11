@@ -4,7 +4,7 @@
 namespace CudaTracerLib
 {
 
-CUDA_GLOBAL void updateInfo(VarianceBlockSampler::TmpBlockInfo* a_pTmpBlockInfoDevice, IBlockSampler::BlockInfo* a_pPersBlockInfoDevice, VarianceBlockSampler::PixelInfo* a_pPixelInfoDevice, Image img, float splatScale, unsigned int numTotalBlocksX)
+CUDA_GLOBAL void updateInfo(VarianceBlockSampler::TmpBlockInfo* a_pTmpBlockInfoDevice, IBlockSampler::BlockInfo* a_pPersBlockInfoDevice, const PixelVarianceBuffer varBuffer, Image img, float splatScale, unsigned int numTotalBlocksX)
 {
 	unsigned int x = threadIdx.x + blockDim.x * blockIdx.x, y = threadIdx.y + blockDim.y * blockIdx.y;
 	unsigned int b_x = x / BLOCK_SAMPLER_BlockSize, b_y = y / BLOCK_SAMPLER_BlockSize, bIdx = b_y * numTotalBlocksX + b_x;
@@ -15,11 +15,9 @@ CUDA_GLOBAL void updateInfo(VarianceBlockSampler::TmpBlockInfo* a_pTmpBlockInfoD
 
 		auto I_N = img.getPixelData(x, y).toSpectrum(splatScale);
 
-		auto& pInfo = a_pPixelInfoDevice[y * img.getWidth() + x];
-		pInfo.updateMoments(I_N, num_passes_block);
-
-		auto var = pInfo.getVariance(num_passes_block);
-		auto e = pInfo.getExpectedValue(num_passes_block);
+		auto pInfo = varBuffer(x, y);
+		auto var = pInfo.I.Var(num_passes_block);
+		auto e = pInfo.I.E(num_passes_block);
 
 		auto& bInfo = a_pTmpBlockInfoDevice[bIdx];
 		if (var >= 0 && !math::IsNaN(var))
@@ -36,11 +34,10 @@ CUDA_GLOBAL void updateInfo(VarianceBlockSampler::TmpBlockInfo* a_pTmpBlockInfoD
 void VarianceBlockSampler::StartNewRendering(DynamicScene* a_Scene, Image* img)
 {
 	IUserPreferenceSampler::StartNewRendering(a_Scene, img);
-	cudaMemset(m_pPixelInfoDevice, 0, sizeof(PixelInfo) * xResolution * yResolution);
 	m_uPassesDone = 0;
 }
 
-void VarianceBlockSampler::AddPass(Image* img, TracerBase* tracer)
+void VarianceBlockSampler::AddPass(Image* img, TracerBase* tracer, const PixelVarianceBuffer& varBuffer)
 {
 	m_uPassesDone++;
 
@@ -48,7 +45,7 @@ void VarianceBlockSampler::AddPass(Image* img, TracerBase* tracer)
 	int nx = (img->getWidth() + cBlock - 1) / cBlock, ny = (img->getHeight() + cBlock - 1) / cBlock;
 
 	m_blockInfo.Memset(0);
-	updateInfo << <dim3(nx, ny), dim3(cBlock, cBlock) >> > (m_blockInfo.getDevicePtr(), m_sBlockInfo.getDevicePtr(), m_pPixelInfoDevice, *img, tracer->getSplatScale(), getTotalBlocksXDim());
+	updateInfo << <dim3(nx, ny), dim3(cBlock, cBlock) >> > (m_blockInfo.getDevicePtr(), m_sBlockInfo.getDevicePtr(), varBuffer, *img, tracer->getSplatScale(), getTotalBlocksXDim());
 	m_blockInfo.setOnGPU();
 	m_blockInfo.Synchronize();
 
@@ -57,7 +54,7 @@ void VarianceBlockSampler::AddPass(Image* img, TracerBase* tracer)
 		return m_blockInfo[i1].getWeight() * math::sqr(m_userWeights[i1]) > m_blockInfo[i2].getWeight() * math::sqr(m_userWeights[i2]);
 	});
 
-	IUserPreferenceSampler::AddPass(img, tracer);
+	IUserPreferenceSampler::AddPass(img, tracer, varBuffer);
 }
 
 void VarianceBlockSampler::IterateBlocks(iterate_blocks_clb_t clb)
