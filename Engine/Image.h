@@ -18,7 +18,7 @@ struct PixelData
 	float rgb[3];
 	float rgbSplat[3];
 	float weightSum;
-	CUDA_FUNC_IN Spectrum toSpectrum(float splatScale)
+	CUDA_FUNC_IN Spectrum toSpectrum(float splatScale) const
 	{
 		float weight = weightSum != 0 ? weightSum : 1;
 		Spectrum s, s2;

@@ -30,11 +30,6 @@ public:
 		return new UniformBlockSampler(w, h);
 	}
 
-	virtual void AddPass(Image* img, TracerBase* tracer)
-	{
-		IUserPreferenceSampler::AddPass(img, tracer);
-	}
-
 	float getPerBlocksToDraw() const
 	{
 		return m_perBlocksToDraw;
