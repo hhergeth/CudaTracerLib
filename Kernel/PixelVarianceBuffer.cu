@@ -9,7 +9,7 @@ CUDA_GLOBAL void updateVarianceBuffer(PixelVarianceInfo* data, Image img, unsign
 	unsigned int x = threadIdx.x + blockDim.x * blockIdx.x, y = threadIdx.y + blockDim.y * blockIdx.y;
 	if (x < img.getWidth() && y < img.getHeight())
 	{
-		data[y * img.getWidth() + x].updateMoments(img.getPixelData(x, y), numPasses, splatScale);
+		data[y * img.getWidth() + x].updateMoments(img.getPixelData(x, y), splatScale);
 	}
 }
 

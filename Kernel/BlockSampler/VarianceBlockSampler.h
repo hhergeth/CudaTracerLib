@@ -22,19 +22,34 @@ public:
 		float BLOCK_E_I2;
 		unsigned int NUM_PIXELS_E;
 
-		CUDA_FUNC_IN float getWeight()
+		CUDA_FUNC_IN float get_w1()
 		{
-			const float lambda = 0.5f;
-
-			float E_I = BLOCK_E_I / NUM_PIXELS_E;
-
+			if (NUM_PIXELS_VAR == 0)
+				return 0.0f;
 			//average standard deviation of pixel estimators
 			float I_std_dev = math::sqrt(BLOCK_VAR_I / NUM_PIXELS_VAR);
-			float w1 = I_std_dev / E_I;//normalized std dev
+			return I_std_dev;
+		}
 
+		CUDA_FUNC_IN float get_w2()
+		{
+			if (NUM_PIXELS_E == 0)
+				return 0.0f;
 			//variance of pixel colors in block
-			float I_var = BLOCK_E_I2 / NUM_PIXELS_E - math::sqr(E_I);
-			float w2 = math::sqrt(I_var) / E_I;//normalized variance
+			float E_I = BLOCK_E_I / NUM_PIXELS_E;
+			float I_std_dev = math::sqrt(BLOCK_E_I2 / NUM_PIXELS_E - math::sqr(E_I));
+			return I_std_dev;
+		}
+
+		CUDA_FUNC_IN float getWeight(float min_block, float max_block, float min_est, float max_est)
+		{
+			const float lambda = 0.75f;
+
+			float I_std_dev = get_w1();
+			float w1 = (I_std_dev - min_est) / (max_est - min_est);//normalized std dev
+
+			float I_var = get_w1();
+			float w2 = (math::sqrt(I_var) - min_block) / (max_block - min_block);//normalized variance
 
 			return lambda * w1 + (1 - lambda) * w2;
 		}

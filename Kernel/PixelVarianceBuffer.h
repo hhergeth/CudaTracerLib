@@ -12,8 +12,9 @@ struct PixelVarianceInfo
 	VarAccumulator<float> I;
 	//variance of the estimator progressing over iterations
 	VarAccumulator<float> E_I;
+	float numSamples;
 
-	CUDA_FUNC_IN void updateMoments(const PixelData& pixel, float numPasses, float splatScale)
+	CUDA_FUNC_IN void updateMoments(const PixelData& pixel, float splatScale)
 	{
 		Spectrum s, s2;
 		s.fromLinearRGB(pixel.rgb[0], pixel.rgb[1], pixel.rgb[2]);
@@ -22,12 +23,14 @@ struct PixelVarianceInfo
 		float SUM_after = pixel_color.getLuminance();
 
 		//update moments of the estimator iterations
-		float estimator_value = SUM_after - I.E(numPasses);
-		I += estimator_value;
+		float estimator_value = SUM_after - I.Sum_X;
+		I += math::clamp01(estimator_value);
 
 		//update moments of the progressing estimator
-		float E_N = pixel.toSpectrum(splatScale).getLuminance();
+		float E_N = math::clamp01(pixel.toSpectrum(splatScale).getLuminance());
 		E_I += E_N;
+
+		numSamples++;
 	}
 };
 

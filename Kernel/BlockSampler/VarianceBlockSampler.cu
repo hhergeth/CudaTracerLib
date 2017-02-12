@@ -16,8 +16,8 @@ CUDA_GLOBAL void updateInfo(VarianceBlockSampler::TmpBlockInfo* a_pTmpBlockInfoD
 		auto I_N = img.getPixelData(x, y).toSpectrum(splatScale);
 
 		auto pInfo = varBuffer(x, y);
-		auto var = pInfo.I.Var(num_passes_block);
-		auto e = pInfo.I.E(num_passes_block);
+		auto var = pInfo.I.Var(pInfo.numSamples);
+		auto e = pInfo.I.E(pInfo.numSamples);
 
 		auto& bInfo = a_pTmpBlockInfoDevice[bIdx];
 		if (var >= 0 && !math::IsNaN(var))
@@ -49,9 +49,20 @@ void VarianceBlockSampler::AddPass(Image* img, TracerBase* tracer, const PixelVa
 	m_blockInfo.setOnGPU();
 	m_blockInfo.Synchronize();
 
+	float min_block = FLT_MAX, max_block = -FLT_MAX;
+	float min_est = FLT_MAX, max_est = -FLT_MAX;
+	for (unsigned int i = 0; i < m_blockInfo.getLength(); i++)
+	{
+		auto& b = m_blockInfo[i];
+		float est_var = b.get_w1();
+		float block_var = b.get_w2();
+		min_block = min(min_block, block_var); max_block = max(max_block, block_var);
+		min_est = min(min_est, est_var); max_est = max(max_est, est_var);
+	}
+
 	std::sort(std::begin(m_indices), std::end(m_indices), [&](int i1, int i2)
 	{
-		return m_blockInfo[i1].getWeight() * math::sqr(m_userWeights[i1]) > m_blockInfo[i2].getWeight() * math::sqr(m_userWeights[i2]);
+		return m_blockInfo[i1].getWeight(min_block, max_block, min_est, max_est) * math::sqr(m_userWeights[i1]) > m_blockInfo[i2].getWeight(min_block, max_block, min_est, max_est) * math::sqr(m_userWeights[i2]);
 	});
 
 	IUserPreferenceSampler::AddPass(img, tracer, varBuffer);
