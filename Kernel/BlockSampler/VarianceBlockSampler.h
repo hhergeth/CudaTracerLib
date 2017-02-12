@@ -81,7 +81,7 @@ public:
 
 	virtual void AddPass(Image* img, TracerBase* tracer, const PixelVarianceBuffer& varBuffer);
 
-	virtual void IterateBlocks(iterate_blocks_clb_t clb);
+	virtual void IterateBlocks(iterate_blocks_clb_t clb)  const;
 };
 
 }

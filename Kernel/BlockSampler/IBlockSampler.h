@@ -61,7 +61,7 @@ public:
 		m_sBlockInfo.Synchronize();
 	}
 
-	virtual void IterateBlocks(iterate_blocks_clb_t clb) = 0;
+	virtual void IterateBlocks(iterate_blocks_clb_t clb) const = 0;
 
 	int getNumTotalBlocks() const
 	{

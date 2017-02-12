@@ -12,9 +12,10 @@ class UniformBlockSampler : public IUserPreferenceSampler
 {
 	std::vector<int> m_indices;
 	float m_perBlocksToDraw;
+	bool m_nonZero;
 public:
 	UniformBlockSampler(unsigned int w, unsigned int h)
-		: IUserPreferenceSampler(w, h), m_perBlocksToDraw(1)
+		: IUserPreferenceSampler(w, h), m_perBlocksToDraw(1), m_nonZero(false)
 	{
 		int n(0);
 		m_indices.resize(getNumTotalBlocks());
@@ -40,19 +41,23 @@ public:
 		m_perBlocksToDraw = f;
 	}
 
-	virtual void IterateBlocks(iterate_blocks_clb_t clb)
+	virtual void AddPass(Image* img, TracerBase* tracer, const PixelVarianceBuffer& varBuffer)
 	{
-		bool hasNonZero = false;
-		std::sort(std::begin(m_indices), std::end(m_indices), [&](int i1, int i2) { hasNonZero |= m_userWeights[i1] != 1 || m_userWeights[i2] != 1; return m_userWeights[i1] > m_userWeights[i2]; });
+		IUserPreferenceSampler::AddPass(img, tracer, varBuffer);
 
-		if (hasNonZero)
+		std::sort(std::begin(m_indices), std::end(m_indices), [&](int i1, int i2) { m_nonZero |= m_userWeights[i1] != 1 || m_userWeights[i2] != 1; return m_userWeights[i1] > m_userWeights[i2]; });
+	}
+
+	virtual void IterateBlocks(iterate_blocks_clb_t clb) const
+	{
+		if (m_nonZero)
 		{
 			unsigned int idx = 0, N = (unsigned int)(m_indices.size() * min(m_perBlocksToDraw, 1.0f));
 			while (idx < N)
 			{
 				auto flattened_idx = m_indices[idx];
 
-				//do not draw any draws which the user deselects
+				//do not draw any blocks which the user deselects
 				if (m_userWeights[flattened_idx] <= 0)
 					break;
 

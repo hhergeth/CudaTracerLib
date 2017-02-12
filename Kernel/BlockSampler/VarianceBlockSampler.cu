@@ -68,7 +68,7 @@ void VarianceBlockSampler::AddPass(Image* img, TracerBase* tracer, const PixelVa
 	IUserPreferenceSampler::AddPass(img, tracer, varBuffer);
 }
 
-void VarianceBlockSampler::IterateBlocks(iterate_blocks_clb_t clb)
+void VarianceBlockSampler::IterateBlocks(iterate_blocks_clb_t clb) const
 {
 	if(m_uPassesDone < 10)
 		IterateAllBlocksUniform(clb);
