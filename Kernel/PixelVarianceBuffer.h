@@ -12,9 +12,8 @@ struct PixelVarianceInfo
 	VarAccumulator<float> I;
 	//variance of the estimator progressing over iterations
 	VarAccumulator<float> E_I;
-	float numSamples;
 
-	CUDA_FUNC_IN void updateMoments(const PixelData& pixel, float splatScale)
+	CUDA_FUNC_IN void updateMoments(const PixelData& pixel, float splatScale, float samplerPerformed)
 	{
 		Spectrum s, s2;
 		s.fromLinearRGB(pixel.rgb[0], pixel.rgb[1], pixel.rgb[2]);
@@ -23,18 +22,18 @@ struct PixelVarianceInfo
 		float SUM_after = pixel_color.getLuminance();
 
 		//update moments of the estimator iterations
-		float estimator_value = SUM_after - I.Sum_X;
-		I += math::clamp01(estimator_value);
+		float estimator_value = math::clamp01((SUM_after - I.Sum_X) / samplerPerformed);
+		I.Sum_X  += samplerPerformed * estimator_value;
+		I.Sum_X2 += samplerPerformed * math::sqr(estimator_value);
 
 		//update moments of the progressing estimator
 		float E_N = math::clamp01(pixel.toSpectrum(splatScale).getLuminance());
-		E_I += E_N;
-
-		numSamples++;
+		E_I.Sum_X  += samplerPerformed * E_N;
+		E_I.Sum_X2 += samplerPerformed * math::sqr(E_N);
 	}
 };
 
-
+class IBlockSampler;
 class PixelVarianceBuffer
 {
 	SynchronizedBuffer<PixelVarianceInfo> m_pixelBuffer;
@@ -57,7 +56,7 @@ public:
 		m_pixelBuffer.Memset(0);
 	}
 
-	void AddPass(Image& img, float splatScale);
+	void AddPass(Image& img, float splatScale, const IBlockSampler* blockSampler);
 
 	CUDA_FUNC_IN PixelVarianceInfo& operator()(unsigned int x, unsigned int y)
 	{

@@ -43,13 +43,13 @@ public:
 
 		CUDA_FUNC_IN float getWeight(float min_block, float max_block, float min_est, float max_est)
 		{
-			const float lambda = 0.75f;
+			const float lambda = 0.85f;
 
 			float I_std_dev = get_w1();
 			float w1 = (I_std_dev - min_est) / (max_est - min_est);//normalized std dev
 
-			float I_var = get_w1();
-			float w2 = (math::sqrt(I_var) - min_block) / (max_block - min_block);//normalized variance
+			float I_var = get_w2();
+			float w2 = (I_var - min_block) / (max_block - min_block);//normalized variance
 
 			return lambda * w1 + (1 - lambda) * w2;
 		}

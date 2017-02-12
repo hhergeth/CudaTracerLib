@@ -200,8 +200,8 @@ public:
 		DoRender(I);
 		if (PROGRESSIVE)
 		{
+			m_pPixelVarianceBuffer->AddPass(*I, getSplatScale(), m_pBlockSampler);
 			m_pBlockSampler->AddPass(I, this, *m_pPixelVarianceBuffer);
-			m_pPixelVarianceBuffer->AddPass(*I, getSplatScale());
 		}
 		ThrowCudaErrors(cudaEventRecord(stop, 0));
 		ThrowCudaErrors(cudaEventSynchronize(stop));
