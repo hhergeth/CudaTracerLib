@@ -189,6 +189,14 @@ public:
 	{
 		return &As();
 	}
+	CUDA_FUNC_IN T& operator*()
+	{
+		return As();
+	}
+	CUDA_FUNC_IN const T& operator*() const
+	{
+		return As();
+	}
 	CUDA_FUNC_IN const T& As() const
 	{
 		return *(T*)m_data;

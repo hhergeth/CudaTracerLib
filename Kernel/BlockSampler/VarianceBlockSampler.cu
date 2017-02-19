@@ -59,7 +59,7 @@ void VarianceBlockSampler::AddPass(Image* img, TracerBase* tracer, const PixelVa
 	int nx = (img->getWidth() + cBlock - 1) / cBlock, ny = (img->getHeight() + cBlock - 1) / cBlock;
 
 	m_blockInfo.Memset(0);
-	updateInfo << <dim3(nx, ny), dim3(cBlock, cBlock) >> > (m_blockInfo.getDevicePtr(), m_sBlockInfo.getDevicePtr(), varBuffer, *img, tracer->getSplatScale(), getTotalBlocksXDim(), m_uPassesDone);
+	updateInfo << <dim3(nx, ny), dim3(cBlock, cBlock) >> > (m_blockInfo.getDevicePtr(), m_sBlockInfo.getDevicePtr(), varBuffer, *img, tracer->getSplatScale(), getTotalBlocksXDim(), (float)m_uPassesDone);
 	m_blockInfo.setOnGPU();
 	m_blockInfo.Synchronize();
 
