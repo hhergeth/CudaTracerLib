@@ -165,7 +165,7 @@ bool traceRay(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result)
 
 void UpdateKernel(DynamicScene* a_Scene, ISamplingSequenceGenerator& sampler)
 {
-	sampler.Compute(g_SamplerDataHost);
+	GenerateNewRandomSequences(sampler);
 
 	if (!a_Scene)
 		return;

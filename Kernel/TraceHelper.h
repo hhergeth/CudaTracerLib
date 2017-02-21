@@ -41,6 +41,10 @@ CTL_EXPORT void DeinitializeKernel();
 
 CTL_EXPORT void UpdateKernel(DynamicScene* a_Scene, ISamplingSequenceGenerator& sampler);
 CTL_EXPORT void UpdateSamplerData(unsigned int num_sequences, unsigned int sequence_length);
+inline void GenerateNewRandomSequences(ISamplingSequenceGenerator& sampler)
+{
+	sampler.Compute(g_SamplerDataHost);
+}
 
 CTL_EXPORT unsigned int k_getNumRaysTraced();
 CTL_EXPORT void k_setNumRaysTraced(unsigned int i);

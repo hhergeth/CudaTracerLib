@@ -105,6 +105,11 @@ public:
 		d2_idx++;
 		return Vec2f(math::frac(sum.x), math::frac(sum.y));
 	}
+	CUDA_FUNC_IN void skip(unsigned int off)
+	{
+		d1_idx += off;
+		d2_idx += off;
+	}
 };
 
 SequenceSampler SequenceSamplerData::operator()(unsigned int idx)
@@ -119,6 +124,10 @@ struct RandomSampler : public CudaRNG
 		: CudaRNG(seed)
 	{
 
+	}
+	CUDA_FUNC_IN void skip(unsigned int off)
+	{
+		//not necessary
 	}
 };
 

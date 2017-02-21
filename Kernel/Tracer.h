@@ -161,6 +161,7 @@ protected:
 
 	}
 	virtual void setCorrectSamplingSequenceGenerator();
+	virtual void generateNewRandomSequences();
 };
 
 template<bool PROGRESSIVE> class Tracer : public TracerBase

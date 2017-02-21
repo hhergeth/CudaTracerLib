@@ -37,6 +37,11 @@ TracerBase::~TracerBase()
 	m_pPixelVarianceBuffer = 0;
 }
 
+void TracerBase::generateNewRandomSequences()
+{
+	GenerateNewRandomSequences(*m_pSamplingSequenceGenerator);
+}
+
 void TracerBase::setCorrectSamplingSequenceGenerator()
 {
 	auto new_type = m_sParameters.getValue(KEY_SamplingSequenceType());

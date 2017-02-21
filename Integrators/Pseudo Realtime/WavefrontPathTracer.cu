@@ -53,15 +53,6 @@ __global__ void pathCreateKernelWPT(unsigned int w, unsigned int h)
 	} while (true);
 }
 
-
-CUDA_ONLY_FUNC Vec2f stratifiedSample(const Vec2f& f, int pass)
-{
-	return f;
-	//int i = pass % 64;
-	//int x = i % 8, y = i / 8;
-	//return Vec2f(x, y) / 8.0f + f / 8.0f;
-}
-
 template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(unsigned int N, Image I, int pathDepth, int iterationIdx, int maxPathDepth, bool depthImage)
 {
 	int rayidx;
@@ -86,6 +77,7 @@ template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(unsigned int N, 
 				break;
 		}
 		auto rng = g_SamplerData(rayidx);
+		rng.skip(iterationIdx + 2);//plus the camera sample
 
 		auto dat = g_IntersectorWPT(rayidx);
 		if (NEXT_EVENT_EST && pathDepth > 0 && dat.dIdx != UINT_MAX)
