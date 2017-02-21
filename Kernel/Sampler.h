@@ -5,19 +5,39 @@
 
 namespace CudaTracerLib {
 
-class StratifiedSequenceGenerator : public ISamplingSequenceGenerator
+class IndependantSamplingSequenceGenerator : public ISamplingSequenceGenerator
+{
+	CudaRNG rng;
+public:
+	IndependantSamplingSequenceGenerator()
+		: rng(1237543)
+	{
+	}
+	virtual void Compute1D(float* sequence, unsigned int sequence_idx, unsigned int sequence_length)
+	{
+		for (unsigned int i = 0; i < sequence_length; i++)
+			sequence[i] = rng.randomFloat();
+	}
+	virtual void Compute2D(Vec2f* sequence, unsigned int sequence_idx, unsigned int sequence_length)
+	{
+		for (unsigned int i = 0; i < sequence_length; i++)
+			sequence[i] = rng.randomFloat2();
+	}
+};
+
+class StratifiedSamplingSequenceGenerator : public ISamplingSequenceGenerator
 {
 	const int n_strata;
 public:
-	StratifiedSequenceGenerator(int n_strata = 10)
+	StratifiedSamplingSequenceGenerator(int n_strata = 10)
 		: n_strata(n_strata)
 	{
 	}
-	virtual void Compute(float* sequence, unsigned int n)
+	virtual void Compute1D(float* sequence, unsigned int sequence_idx, unsigned int sequence_length)
 	{
 
 	}
-	virtual void Compute(Vec2f* sequence, unsigned int n)
+	virtual void Compute2D(Vec2f* sequence, unsigned int sequence_idx, unsigned int sequence_length)
 	{
 
 	}

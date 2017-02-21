@@ -47,7 +47,8 @@ Path ConnectPaths(const std::vector<PathVertex*>& cameraPath, const std::vector<
 
 void ConstructPath(const Vec2i& pixel, Path& P, int s, int t)
 {
-	auto rng = g_SamplerData();
+	auto pixel_idx = pixel.y * 4096 + pixel.x;
+	auto rng = g_SamplerData(pixel_idx);
 	int maxSubPathLength = 6;
 
 	std::vector<PathVertex*> sensorPath, emitterPath;
@@ -77,7 +78,7 @@ void ConstructPath(const Vec2i& pixel, Path& P, int s, int t)
 
 	P = ConnectPaths(sensorPath, emitterPath, s, t);
 
-	g_SamplerData(rng);
+	g_SamplerData(rng, pixel_idx);
 }
 
 qMatrix<float, 1, 4> dG_du12_v12(const Path& P, size_t i)

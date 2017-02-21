@@ -56,7 +56,6 @@ public:
 #define SSGT(X) X(Independent) X(Stratified) X(LowDiscrepency) X(Sobol)
 ENUMIZE(SamplingSequenceGeneratorTypes, SSGT)
 #undef SSGT
-void UpdateSamplingSequenceGenerator(SamplingSequenceGeneratorTypes type, ISamplingSequenceGenerator*& gen);
 
 class TracerBase
 {
@@ -79,6 +78,17 @@ public:
 #endif
 	}
 
+	CUDA_DEVICE static unsigned int getPixelIndex(unsigned int xoff, unsigned int yoff, unsigned int w, unsigned int h)
+	{
+#ifdef ISCUDA
+		unsigned int x = xoff + blockIdx.x * BLOCK_SAMPLER_ThreadsPerBlock.x + threadIdx.x;
+		unsigned int y = yoff + blockIdx.y * BLOCK_SAMPLER_ThreadsPerBlock.y + threadIdx.y;
+		return y * w + x;
+#else
+		return yoff * w + xoff;
+#endif
+	}
+
 	CTL_EXPORT TracerBase();
 	CTL_EXPORT virtual ~TracerBase();
 	virtual void InitializeScene(DynamicScene* a_Scene)
@@ -97,8 +107,7 @@ public:
 	virtual void DoPass(Image* I, bool a_NewTrace) = 0;
 	virtual void Debug(Image* I, const Vec2i& pixel)
 	{
-		UpdateKernel(m_pScene, m_pSamplingSequenceGenerator, &m_uPassesDone);
-		UpdateSamplerData(1);
+		UpdateKernel(m_pScene, *m_pSamplingSequenceGenerator);
 		DebugInternal(I, pixel);
 	}
 	virtual void PrintStatus(std::vector<std::string>& a_Buf) const
@@ -127,14 +136,6 @@ public:
 		return m_fAccRuntime;
 	}
 	TracerParameterCollection& getParameters() { return m_sParameters; }
-	virtual void setNumSequences() const
-	{
-		setNumSequences(w * h);
-	}
-	virtual void setNumSequences(unsigned int n) const
-	{
-		UpdateSamplerData(n);
-	}
 	virtual float getSplatScale() const = 0;
 	virtual IBlockSampler* getBlockSampler() { return m_pBlockSampler; }
 	virtual void setBlockSampler(IBlockSampler* b) { m_pBlockSampler = b; }
@@ -159,6 +160,7 @@ protected:
 	{
 
 	}
+	virtual void setCorrectSamplingSequenceGenerator();
 };
 
 template<bool PROGRESSIVE> class Tracer : public TracerBase
@@ -193,8 +195,8 @@ public:
 			}
 			StartNewTrace(I);
 		}
-		UpdateSamplingSequenceGenerator(m_sParameters.getValue(KEY_SamplingSequenceType()), m_pSamplingSequenceGenerator);
-		UpdateKernel(m_pScene, m_pSamplingSequenceGenerator, &m_uPassesDone);
+		setCorrectSamplingSequenceGenerator();
+		UpdateKernel(m_pScene, *m_pSamplingSequenceGenerator);
 		k_setNumRaysTraced(0);
 		m_uPassesDone++;
 		DoRender(I);

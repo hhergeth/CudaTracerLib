@@ -179,7 +179,6 @@ CUDA_FUNC_IN Spectrum traceTerrain(Ray& r, CudaRNG& rng)
 
 __global__ void primaryKernel(int width, int height, Image g_Image, bool depthImage, PathTrace_DrawMode mode, int maxPathLength)
 {
-	auto rng = g_SamplerData();
 	int rayidx;
 	int N = width * height;
 	__shared__ volatile int nextRayArray[MaxBlockHeight];
@@ -202,11 +201,11 @@ __global__ void primaryKernel(int width, int height, Image g_Image, bool depthIm
 			if (rayidx >= N)
 				break;
 		}
+		auto rng = g_SamplerData(rayidx);
 		int x = rayidx % width, y = rayidx / width;
-		rng.StartSequence(rayidx);
 		computePixel(x, y, rng, g_Image, depthImage, mode, maxPathLength);
+		g_SamplerData(rng, rayidx);
 	} while (true);
-	g_SamplerData(rng);
 }
 
 //static KernelMIPMap mimMap;
@@ -234,7 +233,7 @@ void PrimTracer::DoRender(Image* I)
 
 void PrimTracer::DebugInternal(class Image* I, const Vec2i& pixel)
 {
-	auto rng = g_SamplerData();
+	auto rng = g_SamplerData(pixel.y * I->getWidth() + pixel.x);
 	computePixel(pixel.x, pixel.y, rng, *I, false, m_sParameters.getValue(KEY_DrawingMode()), m_sParameters.getValue(KEY_MaxPathLength()));
 	NormalizedT<Ray> r, rX, rY;
 	g_SceneData.sampleSensorRay(r, rX, rY, Vec2f((float)pixel.x, (float)pixel.y), rng.randomFloat2());

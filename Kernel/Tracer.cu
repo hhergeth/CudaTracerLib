@@ -3,15 +3,18 @@
 #include "TraceAlgorithms.h"
 #include <Engine/DynamicScene.h>
 #include <Engine/Light.h>
+#include "Sampler.h"
 
 namespace CudaTracerLib {
+
+static IndependantSamplingSequenceGenerator g_randomSampler;
 
 CUDA_DEVICE uint3 g_EyeHitBoxMin;
 CUDA_DEVICE uint3 g_EyeHitBoxMax;
 template<bool RECURSIVE> __global__ void k_GuessPass(int w, int h, float scx, float scy)
 {
 	unsigned int x = threadIdx.x + blockDim.x * blockIdx.x, y = threadIdx.y + blockDim.y * blockIdx.y;
-	auto rng = g_SamplerData();
+	auto rng = g_SamplerData(y * w + x);
 	if (x < w && y < h)
 	{
 		NormalizedT<Ray> r = g_SceneData.GenerateSensorRay(float(x * scx), float(y * scy));
@@ -38,7 +41,7 @@ template<bool RECURSIVE> __global__ void k_GuessPass(int w, int h, float scx, fl
 				break;
 		}
 	}
-	g_SamplerData(rng);
+	g_SamplerData(rng, y * w + x);
 }
 
 AABB TracerBase::GetEyeHitPointBox(DynamicScene* m_pScene, bool recursive)
@@ -46,7 +49,7 @@ AABB TracerBase::GetEyeHitPointBox(DynamicScene* m_pScene, bool recursive)
 	Vec3u ma = Vec3u(0), mi = Vec3u(UINT_MAX);
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_EyeHitBoxMin, &mi, 12));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_EyeHitBoxMax, &ma, 12));
-	UpdateKernel(m_pScene);
+	UpdateKernel(m_pScene, g_randomSampler);
 	int qw = 128, qh = 128, p0 = 16;
 	float a = (float)m_pScene->getCamera()->As()->m_resolution.x / qw, b = (float)m_pScene->getCamera()->As()->m_resolution.y / qh;
 	if (recursive)
@@ -74,7 +77,7 @@ CUDA_GLOBAL void traceKernel(Ray r)
 
 TraceResult TracerBase::TraceSingleRay(Ray r, DynamicScene* s)
 {
-	UpdateKernel(s);
+	UpdateKernel(s, g_randomSampler);
 	return traceRay(r);
 }
 
@@ -84,7 +87,7 @@ CUDA_DEVICE unsigned int g_SuccRays;
 __global__ void estimateLightVisibility(int w, int h, float scx, float scy, int recursion_depth)
 {
 	unsigned int x = threadIdx.x + blockDim.x * blockIdx.x, y = threadIdx.y + blockDim.y * blockIdx.y;
-	auto rng = g_SamplerData();
+	auto rng = g_SamplerData(y * w + x);
 	if (x < w && y < h)
 	{
 		NormalizedT<Ray> r = g_SceneData.GenerateSensorRay(float(x * scx), float(y * scy));
@@ -111,7 +114,7 @@ __global__ void estimateLightVisibility(int w, int h, float scx, float scy, int 
 		atomicAdd(&g_ShotRays, N);
 		atomicAdd(&g_SuccRays, S);
 	}
-	g_SamplerData(rng);
+	g_SamplerData(rng, y * w + x);
 }
 
 float TracerBase::GetLightVisibility(DynamicScene* s, int recursion_depth)
@@ -119,7 +122,7 @@ float TracerBase::GetLightVisibility(DynamicScene* s, int recursion_depth)
 	unsigned int zero = 0;
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_ShotRays, &zero, sizeof(unsigned int)));
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_SuccRays, &zero, sizeof(unsigned int)));
-	UpdateKernel(s);
+	UpdateKernel(s, g_randomSampler);
 
 	int qw = 128, qh = 128, p0 = 16;
 	float a = (float)s->getCamera()->As()->m_resolution.x / qw, b = (float)s->getCamera()->As()->m_resolution.y / qh;
@@ -144,7 +147,7 @@ __global__ void depthKernel(DeviceDepthImage dImg)
 
 void TracerBase::RenderDepth(DeviceDepthImage dImg, DynamicScene* s)
 {
-	UpdateKernel(s);
+	UpdateKernel(s, g_randomSampler);
 	depthKernel << <dim3(dImg.w / 16 + 1, dImg.h / 16 + 1), dim3(16, 16) >> >(dImg);
 	ThrowCudaErrors(cudaDeviceSynchronize());
 }

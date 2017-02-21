@@ -20,13 +20,11 @@ enum
 
 KernelDynamicScene g_SceneDataDevice;
 unsigned int g_RayTracedCounterDevice;
-SamplerData g_SamplerDataDevice;
-unsigned int g_PassIndexDevice;
+CudaStaticWrapper<SamplerData> g_SamplerDataDevice;
 
 KernelDynamicScene g_SceneDataHost;
 unsigned int g_RayTracedCounterHost;
-SamplerData g_SamplerDataHost;
-unsigned int g_PassIndexHost = 0;
+CudaStaticWrapper<SamplerData> g_SamplerDataHost;
 
 texture<float4, 1>		t_nodesA;
 texture<float4, 1>		t_tris;
@@ -165,37 +163,9 @@ bool traceRay(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result)
 	return g_SceneData.doAlphaMapping ? __traceRay_internal__<true>(dir, ori, a_Result) : __traceRay_internal__<false>(dir, ori, a_Result);
 }
 
-//small helper class to fill the sampler data in case no sampler generator is passed
-struct IndependentSequenceGenerator
+void UpdateKernel(DynamicScene* a_Scene, ISamplingSequenceGenerator& sampler)
 {
-	void fill(SequenceSamplerData& data, ISamplingSequenceGenerator* sampler, const unsigned int* passIdx)
-	{
-		static unsigned int global_pass_idx = 0;
-		auto pIdx = passIdx ? *passIdx : global_pass_idx++;
-		data.setPassIndex(pIdx);
-
-		static CudaRNG rng = CudaRNG();
-		if (!sampler)
-		{
-			for (unsigned int i = 0; i < data.getNumSequences(); i++)
-			{
-				data.dim1(i) = rng.randomFloat();
-				data.dim2(i) = Vec2f(rng.randomFloat(), rng.randomFloat());
-			}
-		}
-
-	}
-	void fill(RandomSamplerData& data, ISamplingSequenceGenerator* sampler, const unsigned int* passIdx)
-	{
-		//nothing to do
-	}
-};
-void UpdateKernel(DynamicScene* a_Scene, ISamplingSequenceGenerator* sampler, const unsigned int* passIdx)
-{
-	if (sampler)
-		sampler->Compute(g_SamplerDataHost);
-	IndependentSequenceGenerator().fill(g_SamplerDataHost, sampler, passIdx);
-	g_SamplerDataHost.CopyToDevice();
+	sampler.Compute(g_SamplerDataHost);
 
 	if (!a_Scene)
 		return;
@@ -225,17 +195,34 @@ void UpdateKernel(DynamicScene* a_Scene, ISamplingSequenceGenerator* sampler, co
 	ThrowCudaErrors(cudaGetSymbolAddress(&symAdd, g_SceneDataDevice));
 	if (symAdd)
 		ThrowCudaErrors(cudaMemcpyToSymbol(g_SceneDataDevice, &a_Data, sizeof(a_Data)));
-	auto res = g_SceneDataHost.m_Camera.As()->m_resolution;
-	auto numSeq = (unsigned int)(res.x * res.y);
-	UpdateSamplerData(numSeq < 4096 * 4096 ? numSeq : 1u);
 
 	g_SceneDataHost = a_Scene->getKernelSceneData(false);
 	g_RayTracedCounterHost = 0;
 }
 
-void UpdateSamplerData(unsigned int numSequences)
+void UpdateSamplerData(unsigned int num_sequences, unsigned int sequence_length)
 {
-	g_SamplerDataHost.setNumSequences(numSequences);
+	struct helper
+	{
+		static bool is_changed(const RandomSamplerData& data, unsigned int num_sequences, unsigned int sequence_length)
+		{
+			return data.getNumSequences() != num_sequences;
+		}
+
+		static bool is_changed(const SequenceSamplerData& data, unsigned int num_sequences, unsigned int sequence_length)
+		{
+			return data.getSequenceLength() != sequence_length || data.getNumSequences() != num_sequences;
+		}
+	};
+
+	if (!helper::is_changed(g_SamplerData, num_sequences, sequence_length))
+		return;
+
+	//create the buffer obj
+	g_SamplerDataHost->Free();
+	new(g_SamplerDataHost.operator->()) SamplerData(num_sequences, sequence_length);
+
+	//copy obj to device
 	void* symAdd;
 	ThrowCudaErrors(cudaGetSymbolAddress(&symAdd, g_SamplerDataDevice));
 	if (symAdd)
@@ -244,13 +231,13 @@ void UpdateSamplerData(unsigned int numSequences)
 
 void InitializeKernel()
 {
-	g_SamplerDataHost = SamplerData();
-	g_SamplerDataHost.ConstructData();
+	new(g_SamplerDataHost.operator->()) SamplerData(1, 1);
+	UpdateSamplerData(1 << 14, 30);
 }
 
 void DeinitializeKernel()
 {
-	g_SamplerDataHost.Free();
+	g_SamplerDataHost->Free();
 }
 
 void fillDG(const Vec2f& bary, unsigned int triIdx, unsigned int nodeIdx, DifferentialGeometry& dg)

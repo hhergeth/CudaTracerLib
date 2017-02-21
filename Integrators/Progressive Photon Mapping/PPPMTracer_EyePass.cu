@@ -79,12 +79,13 @@ CUDA_FUNC_IN Spectrum L_SurfaceFinalGathering(int N_FG_Samples, BSDFSamplingReco
 
 template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int h, k_AdaptiveStruct a_AdpEntries, Image img, bool DIRECT, int N_FG_Samples)
 {
-	auto rng = g_SamplerData();
 	DifferentialGeometry dg;
 	BSDFSamplingRecord bRec(dg);
 	Vec2i pixel = TracerBase::getPixelPos(off.x, off.y);
+	auto pixel_idx = TracerBase::getPixelIndex(off.x, off.y, w, h);
 	if (pixel.x < w && pixel.y < h)
 	{
+		auto rng = g_SamplerData(pixel_idx);
 		auto adp_ent = a_AdpEntries(pixel.x, pixel.y);
 		float rad_surf = a_AdpEntries.getRadiusSurf(adp_ent), rad_vol = a_AdpEntries.getRadiusVol<VolEstimator::DIM()>(adp_ent);
 		float vol_dens_est_it = 0;
@@ -202,8 +203,8 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 		img.AddSample(screenPos.x, screenPos.y, L);
 		adp_ent.vol_density.addSample(vol_dens_est_it / numVolEstimates);
 		a_AdpEntries(pixel.x, pixel.y) = adp_ent;
+		g_SamplerData(rng, pixel_idx);
 	}
-	g_SamplerData(rng);
 }
 
 void PPPMTracer::RenderBlock(Image* I, int x, int y, int blockW, int blockH)

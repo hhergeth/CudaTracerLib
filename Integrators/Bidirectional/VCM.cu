@@ -118,11 +118,12 @@ CUDA_FUNC_IN void _VCM(const Vec2f& pixelPosition, Image& img, Sampler& rng, int
 
 __global__ void pathKernel(unsigned int w, unsigned int h, int xoff, int yoff, Image img, float a_Radius, int a_NumIteration, float nPhotons)
 {
-	int x = blockIdx.x * blockDim.x + threadIdx.x + xoff, y = blockIdx.y * blockDim.y + threadIdx.y + yoff;
-	auto rng = g_SamplerData();
-	if (x < w && y < h)
-		_VCM(Vec2f(x, y), img, rng, w, h, a_Radius, a_NumIteration, nPhotons);
-	g_SamplerData(rng);
+	Vec2i pixel = TracerBase::getPixelPos(xoff, yoff);
+	auto pixel_idx = TracerBase::getPixelIndex(xoff, yoff, w, h);
+	auto rng = g_SamplerData(pixel_idx);
+	if (pixel.x < w && pixel.y < h)
+		_VCM(pixel, img, rng, w, h, a_Radius, a_NumIteration, nPhotons);
+	g_SamplerData(rng, pixel_idx);
 }
 
 void VCM::RenderBlock(Image* I, int x, int y, int blockW, int blockH)

@@ -22,7 +22,7 @@ template<bool CORRECT_DIFFERENTIALS> struct PhotonTracerParticleProcessHandler
 	CUDA_FUNC_IN PhotonTracerParticleProcessHandler(Image& I, Sampler& r)
 		: g_Image(I), rng(r)
 	{
-		
+
 	}
 
 	CUDA_FUNC_IN void handleEmission(const Spectrum& weight, const PositionSamplingRecord& pRec)
@@ -69,7 +69,7 @@ template<bool CORRECT_DIFFERENTIALS> struct PhotonTracerParticleProcessHandler
 
 	CUDA_FUNC_IN void handleMediumSampling(const Spectrum& weight, float accum_pdf, const NormalizedT<Ray>& r, const TraceResult& r2, const MediumSamplingRecord& mRec, bool sampleInMedium, const VolumeRegion* bssrdf, bool lastDelta)
 	{
-		
+
 	}
 
 	CUDA_FUNC_IN void handleMediumInteraction(const Spectrum& weight, float accum_pdf, const Spectrum& f, float pdf, const MediumSamplingRecord& mRec, const NormalizedT<Vec3f>& wi, const TraceResult& r2, const VolumeRegion* bssrdf, bool lastDelta)
@@ -91,8 +91,6 @@ template<bool CORRECT_DIFFERENTIALS> struct PhotonTracerParticleProcessHandler
 
 template<bool CORRECT_DIFFERENTIALS> __global__ void pathKernel(unsigned int N, Image g_Image)
 {
-	auto rng = g_SamplerData();
-	auto process = PhotonTracerParticleProcessHandler<CORRECT_DIFFERENTIALS>(g_Image, rng);
 	__shared__ volatile int nextRayArray[MaxBlockHeight];
 	volatile int& rayBase = nextRayArray[threadIdx.y], i = 0;
 	do
@@ -104,10 +102,11 @@ template<bool CORRECT_DIFFERENTIALS> __global__ void pathKernel(unsigned int N, 
 		if (rayidx >= N)
 			break;
 
-		rng.StartSequence(rayidx);
+		auto rng = g_SamplerData(rayidx);
+		auto process = PhotonTracerParticleProcessHandler<CORRECT_DIFFERENTIALS>(g_Image, rng);
 		ParticleProcess(12, 7, rng, process);
+		g_SamplerData(rng, rayidx);
 	} while (true);
-	g_SamplerData(rng);
 }
 
 void PhotonTracer::DoRender(Image* I)
@@ -122,11 +121,11 @@ void PhotonTracer::DoRender(Image* I)
 
 void PhotonTracer::DebugInternal(Image* I, const Vec2i& pixel)
 {
-	auto rng = g_SamplerData();
+	auto rng = g_SamplerData(123);
 	auto process = PhotonTracerParticleProcessHandler<false>(*I, rng);
 	for (int i = 0; i < 1000; i++)
 		ParticleProcess(12, 7, rng, process);
-	g_SamplerData(rng);
+	g_SamplerData(rng, 123);
 }
 
 }

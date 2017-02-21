@@ -109,7 +109,7 @@ void PPPMTracer::DoRender(Image* I)
 	}
 	m_uTotalPhotonsEmittedSurface += m_uPhotonEmittedPassSurface;
 	m_uTotalPhotonsEmittedVolume += m_uPhotonEmittedPassVolume;
-	setNumSequences();
+	m_pSamplingSequenceGenerator->Compute(*g_SamplerDataHost);
 	{
 		auto timer = START_PERF_BLOCK("Camera Pass");
 		Tracer<true>::DoRender(I);

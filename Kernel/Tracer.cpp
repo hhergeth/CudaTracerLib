@@ -4,6 +4,7 @@
 #include "Sampler.h"
 #include "BlockSampler/UniformBlockSampler.h"
 #include "BlockSampler/VarianceBlockSampler.h"
+#include "Sampler.h"
 
 namespace CudaTracerLib {
 
@@ -36,9 +37,19 @@ TracerBase::~TracerBase()
 	m_pPixelVarianceBuffer = 0;
 }
 
-void UpdateSamplingSequenceGenerator(SamplingSequenceGeneratorTypes type, ISamplingSequenceGenerator*& gen)
+void TracerBase::setCorrectSamplingSequenceGenerator()
 {
+	auto new_type = m_sParameters.getValue(KEY_SamplingSequenceType());
+	ISamplingSequenceGenerator* new_gen = 0;
 
+	if (new_type == SamplingSequenceGeneratorTypes::Independent && dynamic_cast<IndependantSamplingSequenceGenerator*>(m_pSamplingSequenceGenerator) == 0)
+		new_gen = new IndependantSamplingSequenceGenerator();
+
+	if (new_gen)
+	{
+		delete m_pSamplingSequenceGenerator;
+		m_pSamplingSequenceGenerator = new_gen;
+	}
 }
 
 }

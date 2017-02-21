@@ -124,7 +124,6 @@ template<typename VolEstimator> struct PPPMPhotonParticleProcessHandler
 
 template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thread, Image I)
 {
-	auto rng = g_SamplerData();
 	CUDA_SHARED unsigned int local_Counter;
 	local_Counter = 0;
 	unsigned int local_Todo = photons_per_thread * blockDim.x * blockDim.y;
@@ -139,9 +138,11 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 	unsigned int local_idx;
 	while ((local_idx = atomicInc(&local_Counter, (unsigned int)-1)) < local_Todo && !g_SurfaceMap->isFull() && !((VolEstimator*)g_VolEstimator)->isFullK())
 	{
-		rng.StartSequence(blockIdx.x * local_Todo + local_idx);
+		auto photon_idx = blockIdx.x * local_Todo + local_idx;
+		auto rng = g_SamplerData(photon_idx);
 		auto process = PPPMPhotonParticleProcessHandler<VolEstimator>(I, rng, &numStoredSurface, &numStoredVolume);
 		ParticleProcess(PPM_MaxRecursion, PPM_MaxRecursion, rng, process);
+		g_SamplerData(rng, photon_idx);
 	}
 
 	__syncthreads();
@@ -150,8 +151,6 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 		atomicAdd(&g_NumPhotonEmittedSurface, numStoredSurface);
 		atomicAdd(&g_NumPhotonEmittedVolume, numStoredVolume);
 	}
-
-	g_SamplerData(rng);
 }
 
 void PPPMTracer::doPhotonPass(Image* I)
@@ -173,8 +172,6 @@ void PPPMTracer::doPhotonPass(Image* I)
 	PPPMParameters para = g_ParametersHost = { m_useDirectLighting, finalGathering, m_fProbSurface, m_fProbVolume, m_uPassesDone };
 	para.DIRECT = g_ParametersHost.DIRECT;
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_ParametersDevice, &para, sizeof(para)));
-
-	setNumSequences(m_uBlocksPerLaunch * PPM_BlockX * PPM_BlockY * PPM_Photons_Per_Thread);
 
 	while (!m_sSurfaceMap.isFull() && !m_pVolumeEstimator->isFull())
 	{
