@@ -51,9 +51,6 @@ public:
 	}
 
 	CUDA_FUNC_IN SamplerType operator()(unsigned int idx);
-	CUDA_FUNC_IN void operator()(const SamplerType& val, unsigned int idx)
-	{
-	}
 };
 
 struct SequenceSampler
@@ -117,14 +114,17 @@ SequenceSampler SequenceSamplerData::operator()(unsigned int idx)
 	return SamplerType(idx, *this);
 }
 
+struct RandomSamplerData;
 struct RandomSampler : public CudaRNG
 {
-	CUDA_FUNC_IN RandomSampler() = default;
-	CUDA_FUNC_IN RandomSampler(unsigned int seed)
-		: CudaRNG(seed)
+	RandomSamplerData& data;
+	unsigned int idx;
+	CUDA_FUNC_IN RandomSampler(CudaRNG& rng, RandomSamplerData& data, unsigned int idx)
+		: CudaRNG(rng), data(data), idx(idx)
 	{
 
 	}
+	CUDA_FUNC_IN ~RandomSampler();
 	CUDA_FUNC_IN void skip(unsigned int off)
 	{
 		//not necessary
@@ -135,15 +135,13 @@ struct RandomSamplerData : ISynchronizedBufferParent
 {
 	typedef RandomSampler SamplerType;
 private:
-	SynchronizedBuffer<RandomSampler> m_samplerBuffer;
+	SynchronizedBuffer<CudaRNG> m_samplerBuffer;
 public:
 	RandomSamplerData(unsigned int num_sequences, unsigned int sequence_length)
 		: m_samplerBuffer(num_sequences)
 	{
 		for (unsigned int i = 0; i < m_samplerBuffer.getLength(); i++)
-		{
-			m_samplerBuffer[i] = RandomSampler(i);
-		}
+			m_samplerBuffer[i] = CudaRNG(i);
 		m_samplerBuffer.setOnCPU();
 		m_samplerBuffer.Synchronize();
 	}
@@ -153,17 +151,24 @@ public:
 		return m_samplerBuffer.getLength();
 	}
 
-	CUDA_FUNC_IN RandomSampler operator()(unsigned int idx) const
+	CUDA_FUNC_IN RandomSampler operator()(unsigned int idx)
 	{
 		unsigned int i = idx % m_samplerBuffer.getLength();
-		return m_samplerBuffer[i];
+		return RandomSampler(m_samplerBuffer[i], *this, i);
 	}
-	CUDA_FUNC_IN void operator()(const RandomSampler& val, unsigned int idx)
+private:
+	friend RandomSampler;
+	CUDA_FUNC_IN void operator()(const RandomSampler& val)
 	{
-		if (idx < m_samplerBuffer.getLength())
-			m_samplerBuffer[idx] = val;
+		if (val.idx < m_samplerBuffer.getLength())
+			m_samplerBuffer[val.idx] = (CudaRNG)val;
 	}
 };
+
+RandomSampler::~RandomSampler()
+{
+	data(*this);
+}
 
 //typedef RandomSamplerData SamplerData;
 typedef SequenceSamplerData SamplerData;

@@ -142,14 +142,12 @@ void PathTracer::DebugInternal(Image* I, const Vec2i& p)
 	NormalizedT<Ray> r, rX, rY;
 	Spectrum throughput = g_SceneData.sampleSensorRay(r, rX, rY, Vec2f((float)p.x, (float)p.y), rng.randomFloat2());
 	PathTrace<true>(r, rX, rY, rng);
-	g_SamplerData(rng, p.y * I->getWidth() + p.x);
 }
 
 template<bool DIRECT, bool REGU> __global__ void pathKernel2(unsigned int w, unsigned int h, unsigned int xoff, unsigned int yoff, Image img, float m)
 {
 	Vec2i pixel = TracerBase::getPixelPos(xoff, yoff);
-	auto pixel_idx = TracerBase::getPixelIndex(xoff, yoff, w, h);
-	auto rng = g_SamplerData(pixel_idx);
+	auto rng = g_SamplerData(TracerBase::getPixelIndex(xoff, yoff, w, h));
 	if (pixel.x < w && pixel.y < h)
 	{
 		NormalizedT<Ray> r, rX, rY;
@@ -158,7 +156,6 @@ template<bool DIRECT, bool REGU> __global__ void pathKernel2(unsigned int w, uns
 		Spectrum col = imp * (REGU ? PathTraceRegularization<DIRECT>(r, rX, rY, rng, m) : PathTrace<DIRECT>(r, rX, rY, rng));
 		img.AddSample(pX.x, pX.y, col);
 	}
-	g_SamplerData(rng, pixel_idx);
 }
 
 void PathTracer::RenderBlock(Image* I, int x, int y, int blockW, int blockH)

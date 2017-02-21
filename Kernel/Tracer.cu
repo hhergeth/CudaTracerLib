@@ -41,7 +41,6 @@ template<bool RECURSIVE> __global__ void k_GuessPass(int w, int h, float scx, fl
 				break;
 		}
 	}
-	g_SamplerData(rng, y * w + x);
 }
 
 AABB TracerBase::GetEyeHitPointBox(DynamicScene* m_pScene, bool recursive)
@@ -114,7 +113,6 @@ __global__ void estimateLightVisibility(int w, int h, float scx, float scy, int 
 		atomicAdd(&g_ShotRays, N);
 		atomicAdd(&g_SuccRays, S);
 	}
-	g_SamplerData(rng, y * w + x);
 }
 
 float TracerBase::GetLightVisibility(DynamicScene* s, int recursion_depth)

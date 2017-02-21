@@ -51,7 +51,6 @@ __global__ void primaryKernelBlocked(int width, int height, Image g_Image, bool 
 		if (!primary_rays_hit)
 		{
 			nextDirectImage[y / 2 * width / 2 + x / 2] = nextIndirectImage[y / 2 * width / 2 + x / 2] = Spectrum(0.0f);
-			g_SamplerData(rng, y * width + x);
 			return;
 		}
 		primary_Le /= primary_rays_hit;
@@ -165,7 +164,6 @@ __global__ void primaryKernelBlocked(int width, int height, Image g_Image, bool 
 				g_Image.AddSample(x2, y2, L);
 		}
 	}
-	g_SamplerData(rng, y * width + x);
 }
 
 void GameTracer::DoRender(Image* I)
@@ -184,7 +182,6 @@ void GameTracer::DebugInternal(Image* I, const Vec2i& pixel)
 	auto rng = g_SamplerData(pixel.y * I->getWidth() + pixel.x);
 	NormalizedT<Ray> r, rX, rY;
 	g_SceneData.sampleSensorRay(r, rX, rY, Vec2f((float)pixel.x, (float)pixel.y), rng.randomFloat2());
-	g_SamplerData(rng, pixel.y * I->getWidth() + pixel.x);
 }
 
 void GameTracer::Resize(unsigned int w, unsigned int h)

@@ -9,8 +9,7 @@ CUDA_DEVICE CudaStaticWrapper<SpatialSet<DirectionModel>> g_dMap;
 
 __global__ void tracePhotons()
 {
-	auto photon_idx = getGlobalIdx_2D_2D();
-	auto rng = g_SamplerData(photon_idx);
+	auto rng = g_SamplerData(getGlobalIdx_2D_2D());
 	TraceResult r2;
 	NormalizedT<Ray> r;
 	g_SceneData.sampleEmitterRay(r, rng.randomFloat2(), rng.randomFloat2());
@@ -32,7 +31,6 @@ __global__ void tracePhotons()
 		r = NormalizedT<Ray>(p, bRec.getOutgoing());
 		r2.Init();
 	}
-	g_SamplerData(rng, photon_idx);
 }
 
 template<int max_SAMPLES> __global__ void updateCache(float ny)
@@ -94,6 +92,7 @@ void PmmTracer::DoRender(Image* I)
 	{
 		tracePhotons << < 10, 256 >> >();
 		cudaMemcpyFromSymbol(&sMap, g_sMap, sizeof(sMap));
+		generateNewRandomSequences();
 	}
 	sMap.setOnGPU();
 	cudaMemcpyToSymbol(g_dMap, &dMap, sizeof(dMap));
@@ -131,7 +130,6 @@ void PmmTracer::StartNewTrace(Image* I)
 		models[i].Initialze(rng);
 	cudaMemcpy(dMap.m_buffer.getDevicePtr(), models, dMap.NumEntries() * sizeof(DirectionModel), cudaMemcpyHostToDevice);
 	delete[] models;
-	g_SamplerData(rng, 0);
 }
 
 void PmmTracer::DebugInternal(Image* I, const Vec2i& p)

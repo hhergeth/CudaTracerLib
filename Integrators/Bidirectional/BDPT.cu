@@ -103,11 +103,9 @@ __global__ void pathKernel(unsigned int w, unsigned int h, int xoff, int yoff, I
 	bool use_mis, int force_s, int force_t, float LScale)
 {
 	Vec2i pixel = TracerBase::getPixelPos(xoff, yoff);
-	auto pixel_idx = TracerBase::getPixelIndex(xoff, yoff, w, h);
-	auto rng = g_SamplerData(pixel_idx);
+	auto rng = g_SamplerData(TracerBase::getPixelIndex(xoff, yoff, w, h));
 	if (pixel.x < w && pixel.y < h)
 		BPT(Vec2f(pixel.x + rng.randomFloat(), pixel.y + rng.randomFloat()), img, rng, w, h, use_mis, force_s, force_t, LScale);
-	g_SamplerData(rng, pixel_idx);
 }
 
 void BDPT::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
@@ -118,11 +116,9 @@ void BDPT::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 
 void BDPT::DebugInternal(Image* I, const Vec2i& pixel)
 {
-	auto pixel_idx = pixel.y * I->getWidth() + pixel.x;
-	auto rng = g_SamplerData(pixel_idx);
+	auto rng = g_SamplerData(pixel.y * I->getWidth() + pixel.x);
 	BPT(Vec2f(pixel), *I, rng, w, h,
 		m_sParameters.getValue(KEY_UseMis()), m_sParameters.getValue(KEY_Force_s()), m_sParameters.getValue(KEY_Force_t()), m_sParameters.getValue(KEY_ResultMultiplier()));
-	g_SamplerData(rng, pixel_idx);
 }
 
 }

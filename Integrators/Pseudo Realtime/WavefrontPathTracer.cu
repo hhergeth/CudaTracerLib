@@ -40,7 +40,6 @@ __global__ void pathCreateKernelWPT(unsigned int w, unsigned int h)
 		NormalizedT<Ray> r;
 		auto rng = g_SamplerData(rayidx);
 		Spectrum W = g_SceneData.sampleSensorRay(r, Vec2f(x, y), rng.randomFloat2());
-		g_SamplerData(rng, rayidx);
 		traversalRay& ray = g_IntersectorWPT(rayidx, 0);
 		ray.a = Vec4f(r.ori(), 0.0f);
 		ray.b = Vec4f(r.dir(), FLT_MAX);
@@ -145,7 +144,6 @@ template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(unsigned int N, 
 		labelAdd:
 			I.AddSample(dat.x.ToFloat(), dat.y.ToFloat(), dat.L);
 		}
-		g_SamplerData(rng, rayidx);
 	} while (true);
 }
 

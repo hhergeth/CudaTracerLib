@@ -204,7 +204,6 @@ __global__ void primaryKernel(int width, int height, Image g_Image, bool depthIm
 		auto rng = g_SamplerData(rayidx);
 		int x = rayidx % width, y = rayidx / width;
 		computePixel(x, y, rng, g_Image, depthImage, mode, maxPathLength);
-		g_SamplerData(rng, rayidx);
 	} while (true);
 }
 

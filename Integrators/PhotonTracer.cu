@@ -105,7 +105,6 @@ template<bool CORRECT_DIFFERENTIALS> __global__ void pathKernel(unsigned int N, 
 		auto rng = g_SamplerData(rayidx);
 		auto process = PhotonTracerParticleProcessHandler<CORRECT_DIFFERENTIALS>(g_Image, rng);
 		ParticleProcess(12, 7, rng, process);
-		g_SamplerData(rng, rayidx);
 	} while (true);
 }
 
@@ -125,7 +124,6 @@ void PhotonTracer::DebugInternal(Image* I, const Vec2i& pixel)
 	auto process = PhotonTracerParticleProcessHandler<false>(*I, rng);
 	for (int i = 0; i < 1000; i++)
 		ParticleProcess(12, 7, rng, process);
-	g_SamplerData(rng, 123);
 }
 
 }

@@ -142,7 +142,6 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 		auto rng = g_SamplerData(photon_idx);
 		auto process = PPPMPhotonParticleProcessHandler<VolEstimator>(I, rng, &numStoredSurface, &numStoredVolume);
 		ParticleProcess(PPM_MaxRecursion, PPM_MaxRecursion, rng, process);
-		g_SamplerData(rng, photon_idx);
 	}
 
 	__syncthreads();
