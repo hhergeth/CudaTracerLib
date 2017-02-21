@@ -418,8 +418,8 @@ Spectrum InfiniteLight::evalDirection(const DirectionSamplingRecord &dRec, const
 void InfiniteLight::internalSampleDirection(Vec2f sample, Vec3f &d, Spectrum &value, float &pdf) const
 {
 	float qpdf;
-	unsigned int	row = MonteCarlo::sampleReuse(m_cdfRows.operator->(), (unsigned int)m_size.y, sample.y, qpdf),
-		col = MonteCarlo::sampleReuse(m_cdfCols.operator->() + row * (unsigned int)(m_size.x + 1), (unsigned int)m_size.x, sample.x, qpdf);
+	unsigned int row = MonteCarlo::sampleReuse(m_cdfRows.operator->(), (unsigned int)m_size.y, sample.y, qpdf),
+				 col = MonteCarlo::sampleReuse(m_cdfCols.operator->() + row * (unsigned int)(m_size.x + 1), (unsigned int)m_size.x, sample.x, qpdf);
 
 	/* Using the remaining bits of precision to shift the sample by an offset
 		drawn from a tent function. This effectively creates a sampling strategy
