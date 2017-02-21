@@ -25,13 +25,13 @@ Spectrum KernelMIPMap::Texel(unsigned int level, const Vec2f& a_UV) const
 		return Spectrum(0.0f);
 	else
 	{
-		unsigned int x = (unsigned int)l.x, y = (unsigned int)l.y;
+		int w_level = m_uWidth >> level, h_level = m_uHeight >> level;
+		int x = math::clamp((int)l.x, 0, w_level - 1), y = math::clamp((int)l.y, 0, h_level - 1);
 		void* data;
-		int i = max(0, ((int)m_uWidth >> (int)level));
 #ifdef ISCUDA
-		data = m_pDeviceData + (m_sOffsets[level] + y * i + x);
+		data = m_pDeviceData + (m_sOffsets[level] + y * w_level + x);
 #else
-		data = m_pHostData + (m_sOffsets[level] + y * i + x);
+		data = m_pHostData + (m_sOffsets[level] + y * w_level + x);
 #endif
 		Spectrum s;
 		if (m_uType == vtRGBE)
@@ -156,11 +156,13 @@ Spectrum KernelMIPMap::Sample(float width, int x, int y) const
 {
 	float l = m_uLevels - 1 + math::log2(max((float)width, 1e-8f));
 	int level = (int)math::clamp(l, 0.0f, float(m_uLevels - 1));
+	int w_level = m_uWidth >> level, h_level = m_uHeight >> level;
+	x = math::clamp(x, 0, w_level - 1); y = math::clamp(y, 0, h_level - 1);
 	void* data;
 #ifdef ISCUDA
-	data = m_pDeviceData + (m_sOffsets[level] + y * (m_uWidth >> level) + x);
+	data = m_pDeviceData + (m_sOffsets[level] + y * w_level + x);
 #else
-	data = m_pHostData + (m_sOffsets[level] + y * (m_uWidth >> level) + x);
+	data = m_pHostData + (m_sOffsets[level] + y * w_level + x);
 #endif
 	Spectrum s;
 	if (m_uType == vtRGBE)
