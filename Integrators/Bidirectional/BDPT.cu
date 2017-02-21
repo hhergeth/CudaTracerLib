@@ -64,7 +64,7 @@ CUDA_FUNC_IN void BPT(const Vec2f& pixelPosition, Image& img, Sampler& rng, unsi
 		if (!r2.hasHit())
 		{
 			//sample environment map
-
+			acc += pathWeight(force_s, force_t, 0, camPathLength) * cameraState.throughput * gatherEnvironmentMap(cameraState, camPathLength, use_mis);
 			break;
 		}
 
@@ -111,8 +111,8 @@ __global__ void pathKernel(unsigned int w, unsigned int h, int xoff, int yoff, I
 
 void BDPT::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 {
-	pathKernel << < BLOCK_SAMPLER_LAUNCH_CONFIG >> >(w, h, x, y, *I, 
-													m_sParameters.getValue(KEY_UseMis()), m_sParameters.getValue(KEY_Force_s()), m_sParameters.getValue(KEY_Force_t()), m_sParameters.getValue(KEY_ResultMultiplier()));
+	pathKernel << < BLOCK_SAMPLER_LAUNCH_CONFIG >> >(w, h, x, y, *I,
+													 m_sParameters.getValue(KEY_UseMis()), m_sParameters.getValue(KEY_Force_s()), m_sParameters.getValue(KEY_Force_t()), m_sParameters.getValue(KEY_ResultMultiplier()));
 }
 
 void BDPT::DebugInternal(Image* I, const Vec2i& pixel)

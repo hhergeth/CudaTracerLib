@@ -220,6 +220,36 @@ CUDA_FUNC_IN Spectrum gatherLight(const BPTSubPathState& cameraState, BSDFSampli
 	return misWeight * L;
 }
 
+CUDA_FUNC_IN Spectrum gatherEnvironmentMap(const BPTSubPathState& cameraState, int subPathLength, bool use_mis)
+{
+	const Light* l = g_SceneData.getEnvironmentMap();
+	if (l == 0)
+		return Spectrum(0.0f);
+	float pdfLight = g_SceneData.pdfEmitterDiscrete(l);
+
+	PositionSamplingRecord pRec(cameraState.r.ori(), NormalizedT<Vec3f>(0.0f, 0.0f, 0.0f), 0);
+	float directPdfA = l->pdfPosition(pRec);
+	DirectionSamplingRecord dRec(-cameraState.r.dir());
+	float emissionPdfW = l->pdfDirection(dRec, pRec) * directPdfA;
+	Spectrum L = l->eval(cameraState.r.ori(), Frame(), -cameraState.r.dir());
+
+	if (L.isZero())
+		return Spectrum(0.0f);
+
+	if (subPathLength == 1)
+		return L;
+
+	directPdfA *= pdfLight;
+	emissionPdfW *= pdfLight;
+
+	const float wCamera = Mis(directPdfA) * cameraState.dVCM +
+		Mis(emissionPdfW) * cameraState.dVC;
+
+	const float misWeight = use_mis ? 1.f / (1.f + wCamera) : 1;
+
+	return misWeight * L;
+}
+
 template<bool TEST_VISIBILITY> CUDA_FUNC_IN bool V(const Vec3f& a, const Vec3f& b, TraceResult* res = 0)
 {
 	if (!TEST_VISIBILITY)

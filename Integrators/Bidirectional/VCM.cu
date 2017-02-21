@@ -67,7 +67,7 @@ CUDA_FUNC_IN void _VCM(const Vec2f& pixelPosition, Image& img, Sampler& rng, int
 		if (!r2.hasHit())
 		{
 			//sample environment map
-
+			acc += cameraState.throughput * gatherEnvironmentMap(cameraState, camPathLength, true);
 			break;
 		}
 
