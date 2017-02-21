@@ -84,15 +84,14 @@ Spectrum KernelDynamicScene::evalTransmittance(const Vec3f& p1, const Vec3f& p2)
 
 Spectrum KernelDynamicScene::sampleEmitterDirect(DirectSamplingRecord &dRec, const Vec2f &_sample) const
 {
+	dRec.pdf = 0;
+	dRec.object = 0;
+
 	Vec2f sample = _sample;
 	float emPdf;
 	const Light *emitter = sampleEmitter(emPdf, sample);
 	if (emitter == 0)
-	{
-		dRec.pdf = 0;
-		dRec.object = 0;
 		return 0.0f;
-	}
 	Spectrum value = emitter->sampleDirect(dRec, sample);
 	if (dRec.pdf != 0)
 	{
@@ -101,10 +100,7 @@ Spectrum KernelDynamicScene::sampleEmitterDirect(DirectSamplingRecord &dRec, con
 		dRec.object = emitter;
 		return value;
 	}
-	else
-	{
-		return Spectrum(0.0f);
-	}
+	else return Spectrum(0.0f);
 }
 
 Spectrum KernelDynamicScene::sampleAttenuatedEmitterDirect(DirectSamplingRecord &dRec, const Vec2f &_sample) const
