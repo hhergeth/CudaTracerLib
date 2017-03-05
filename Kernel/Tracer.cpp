@@ -26,6 +26,11 @@ TracerBase::~TracerBase()
 	ThrowCudaErrors(cudaEventDestroy(start));
 	ThrowCudaErrors(cudaEventDestroy(stop));
 	start = stop = 0;
+	if (m_pSamplingSequenceGenerator)
+	{
+		delete m_pSamplingSequenceGenerator;
+		m_pSamplingSequenceGenerator = 0;
+	}
 	if (m_pBlockSampler)
 		delete m_pBlockSampler;
 	if (m_pPixelVarianceBuffer)
@@ -42,19 +47,23 @@ void TracerBase::generateNewRandomSequences()
 	GenerateNewRandomSequences(*m_pSamplingSequenceGenerator);
 }
 
+template<typename T> struct check_type
+{
+	void operator()(ISamplingSequenceGenerator*& gen, SamplingSequenceGeneratorTypes new_type, SamplingSequenceGeneratorTypes T_type)
+	{
+		if (dynamic_cast<SamplingSequenceGeneratorHost<T>*>(gen) == 0 && new_type == T_type)
+		{
+			delete gen;
+			gen = new SamplingSequenceGeneratorHost<T>();
+		}
+	}
+};
 void TracerBase::setCorrectSamplingSequenceGenerator()
 {
 	auto new_type = m_sParameters.getValue(KEY_SamplingSequenceType());
-	ISamplingSequenceGenerator* new_gen = 0;
 
-	if (new_type == SamplingSequenceGeneratorTypes::Independent && dynamic_cast<IndependantSamplingSequenceGenerator*>(m_pSamplingSequenceGenerator) == 0)
-		new_gen = new IndependantSamplingSequenceGenerator();
-
-	if (new_gen)
-	{
-		delete m_pSamplingSequenceGenerator;
-		m_pSamplingSequenceGenerator = new_gen;
-	}
+	check_type<IndependantSamplingSequenceGenerator>()(m_pSamplingSequenceGenerator, new_type, Independent);
+	check_type<StratifiedSamplingSequenceGenerator>()(m_pSamplingSequenceGenerator, new_type, Stratified);
 }
 
 }

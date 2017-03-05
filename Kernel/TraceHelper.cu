@@ -232,7 +232,12 @@ void UpdateSamplerData(unsigned int num_sequences, unsigned int sequence_length)
 void InitializeKernel()
 {
 	new(g_SamplerDataHost.operator->()) SamplerData(1, 1);
-	UpdateSamplerData(1 << 14, 30);
+	UpdateSamplerData(1 << 12, 30);
+}
+
+void GenerateNewRandomSequences(ISamplingSequenceGenerator& sampler)
+{
+	sampler.Compute(g_SamplerDataHost);
 }
 
 void DeinitializeKernel()

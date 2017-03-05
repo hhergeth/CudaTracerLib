@@ -175,36 +175,4 @@ typedef SequenceSamplerData SamplerData;
 
 typedef SamplerData::SamplerType Sampler;
 
-class ISamplingSequenceGenerator
-{
-public:
-	virtual ~ISamplingSequenceGenerator()
-	{
-
-	}
-	virtual void Compute1D(float* sequence, unsigned int sequence_idx, unsigned int sequence_length) = 0;
-	virtual void Compute2D(Vec2f* sequence, unsigned int sequence_idx, unsigned int sequence_length) = 0;
-	void Compute(SequenceSamplerData& data)
-	{
-		float* sequence_1d = (float*)alloca(sizeof(float) * data.getSequenceLength());
-		Vec2f* sequence_2d = (Vec2f*)alloca(sizeof(Vec2f) * data.getSequenceLength());
-		for (unsigned int sequence_idx = 0; sequence_idx < data.getNumSequences(); sequence_idx++)
-		{
-			Compute1D(sequence_1d, sequence_idx, data.getSequenceLength());
-			Compute2D(sequence_2d, sequence_idx, data.getSequenceLength());
-			for (unsigned int i = 0; i < data.getSequenceLength(); i++)
-			{
-				data.getSequenceElement1(sequence_idx, i) = sequence_1d[i];
-				data.getSequenceElement2(sequence_idx, i) = sequence_2d[i];
-			}
-		}
-		data.setOnCPU();
-		data.Synchronize();
-	}
-	virtual void Compute(RandomSamplerData& data)
-	{
-
-	}
-};
-
 }
