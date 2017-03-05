@@ -9,6 +9,8 @@
 #include <Engine/Node.h>
 #include <Engine/DynamicScene.h>
 #include "BVHTracer.h"
+#include <Base/Timer.h>
+#include "Sampler.h"
 
 namespace CudaTracerLib {
 
@@ -25,6 +27,8 @@ CudaStaticWrapper<SamplerData> g_SamplerDataDevice;
 KernelDynamicScene g_SceneDataHost;
 unsigned int g_RayTracedCounterHost;
 CudaStaticWrapper<SamplerData> g_SamplerDataHost;
+
+SamplingSequenceGeneratorHost<IndependantSamplingSequenceGenerator> g_SamplingSequenceGenerator;
 
 texture<float4, 1>		t_nodesA;
 texture<float4, 1>		t_tris;
@@ -200,6 +204,11 @@ void UpdateKernel(DynamicScene* a_Scene, ISamplingSequenceGenerator& sampler)
 	g_RayTracedCounterHost = 0;
 }
 
+void UpdateKernel(DynamicScene* a_Scene)
+{
+	UpdateKernel(a_Scene, g_SamplingSequenceGenerator);
+}
+
 void UpdateSamplerData(unsigned int num_sequences, unsigned int sequence_length)
 {
 	struct helper
@@ -238,6 +247,11 @@ void InitializeKernel()
 void GenerateNewRandomSequences(ISamplingSequenceGenerator& sampler)
 {
 	sampler.Compute(g_SamplerDataHost);
+}
+
+void GenerateNewRandomSequences()
+{
+	GenerateNewRandomSequences(g_SamplingSequenceGenerator);
 }
 
 void DeinitializeKernel()

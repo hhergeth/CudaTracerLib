@@ -42,8 +42,12 @@ CTL_EXPORT void InitializeKernel();
 CTL_EXPORT void DeinitializeKernel();
 
 CTL_EXPORT void UpdateKernel(DynamicScene* a_Scene, ISamplingSequenceGenerator& sampler);
-CTL_EXPORT void UpdateSamplerData(unsigned int num_sequences, unsigned int sequence_length);
+//uses static SamplingSequenceGenerator
+CTL_EXPORT void UpdateKernel(DynamicScene* a_Scene);
+
 CTL_EXPORT void GenerateNewRandomSequences(ISamplingSequenceGenerator& sampler);
+//uses static SamplingSequenceGenerator, no guarantees about type
+CTL_EXPORT void GenerateNewRandomSequences();
 
 CTL_EXPORT unsigned int k_getNumRaysTraced();
 CTL_EXPORT void k_setNumRaysTraced(unsigned int i);
