@@ -66,7 +66,7 @@ struct BeamGrid : public PointStorage
 	virtual void StartNewRendering(const AABB& box)
 	{
 		PointStorage::StartNewRendering(box);
-		m_sBeamGridStorage.SetSceneDimensions(box);
+		m_sBeamGridStorage.SetGridDimensions(box);
 	}
 
 	virtual size_t getSize() const

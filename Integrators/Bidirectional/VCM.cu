@@ -155,8 +155,8 @@ void VCM::StartNewTrace(Image* I)
 	m_sEyeBox.minV -= Vec3f(r);
 	m_sEyeBox.maxV += Vec3f(r);
 	m_fInitialRadius = r;
-	m_sPhotonMapsCurrent.SetSceneDimensions(m_sEyeBox);
-	m_sPhotonMapsNext.SetSceneDimensions(m_sEyeBox);
+	m_sPhotonMapsCurrent.SetGridDimensions(m_sEyeBox);
+	m_sPhotonMapsNext.SetGridDimensions(m_sEyeBox);
 }
 
 int gridLength = 250;

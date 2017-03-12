@@ -150,7 +150,7 @@ void WavefrontVCM::StartNewTrace(Image* I)
 	m_sEyeBox.minV -= Vec3f(r);
 	m_sEyeBox.maxV += Vec3f(r);
 	m_fInitialRadius = r;
-	m_sPhotonMapsNext.SetSceneDimensions(m_sEyeBox);
+	m_sPhotonMapsNext.SetGridDimensions(m_sEyeBox);
 }
 
 CUDA_GLOBAL void createCameraRays(int xoff, int yoff, int blockW, int blockH, int w, int h)

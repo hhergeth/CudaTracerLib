@@ -194,12 +194,12 @@ void PPPMTracer::StartNewTrace(Image* I)
 			}
 		}
 	}
-	m_sSurfaceMap.SetSceneDimensions(m_boxSurf);
+	m_sSurfaceMap.SetGridDimensions(m_boxSurf);
 	if (m_sParameters.getValue(KEY_N_FG_Samples()) != 0)
 	{
 		if(!m_sSurfaceMapCaustic)
 			m_sSurfaceMapCaustic = new SurfaceMapT(Vec3u(250), m_sSurfaceMap.getNumEntries());
-		m_sSurfaceMapCaustic->SetSceneDimensions(m_boxSurf);
+		m_sSurfaceMapCaustic->SetGridDimensions(m_boxSurf);
 	}
 	m_pVolumeEstimator->StartNewRenderingBase(m_fInitialRadiusSurf, m_fInitialRadiusVol);
 	m_pVolumeEstimator->StartNewRendering(m_boxVol);

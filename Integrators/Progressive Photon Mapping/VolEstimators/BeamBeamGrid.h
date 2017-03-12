@@ -152,7 +152,7 @@ struct BeamBeamGrid : public IVolumeEstimator
 
 	virtual void StartNewRendering(const AABB& box)
 	{
-		m_sStorage.SetSceneDimensions(box);
+		m_sStorage.SetGridDimensions(box);
 	}
 
 	CUDA_FUNC_IN bool isFullK() const

@@ -95,7 +95,7 @@ public:
 		m_dataBuffer.Memset(0xff);
 	}
 
-	void SetSceneDimensions(const AABB& box)
+	void SetGridDimensions(const AABB& box)
 	{
 		BaseType::hashMap = HashGrid_Reg(box, m_gridSize);
 	}
@@ -264,7 +264,7 @@ public:
 		ISynchronizedBufferParent::Free();
 	}
 
-	void SetSceneDimensions(const AABB& box)
+	void SetGridDimensions(const AABB& box)
 	{
 		BaseType::hashMap = HashGrid_Reg(box, m_gridSize);
 	}
@@ -400,7 +400,7 @@ public:
 	{
 	}
 
-	void SetSceneDimensions(const AABB& box)
+	void SetGridDimensions(const AABB& box)
 	{
 		hashMap = HashGrid_Reg(box, m_gridSize);
 	}

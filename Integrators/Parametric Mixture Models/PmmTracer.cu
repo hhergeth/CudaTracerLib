@@ -121,9 +121,9 @@ void PmmTracer::StartNewTrace(Image* I)
 	passIteration = 1;
 	AABB box = this->GetEyeHitPointBox(m_pScene, true);
 	//AABB box = m_pScene->getBox(m_pScene->getNodes());
-	sMap.SetSceneDimensions(box);
+	sMap.SetGridDimensions(box);
 	dMap.ResetBuffer();
-	dMap.SetSceneDimensions(box);
+	dMap.SetGridDimensions(box);
 	auto rng = g_SamplerData(0);
 	DirectionModel* models = new DirectionModel[dMap.NumEntries()];
 	for (unsigned int i = 0; i < dMap.NumEntries(); i++)
