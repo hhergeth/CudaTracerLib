@@ -407,7 +407,7 @@ Vec3f float4x4::TransformDirection(const Vec3f& d) const
 	return f.getXYZ();
 }
 
-//The 3x3 rotational part is assumed to be orthogonal, the homogenous part must equal zero
+//The 3x3 rotational part is assumed to be orthogonal, the homogeneous part must equal zero
 struct OrthogonalAffineMap : public float4x4
 {
 	CUDA_FUNC_IN OrthogonalAffineMap()

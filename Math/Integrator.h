@@ -46,7 +46,7 @@ public:
 
 	}
 
-	template<typename Integrand> CUDA_FUNC_IN float integrate(const Integrand &f, float a, float b, size_t *_evals = NULL) const
+	template<typename Integrand> CUDA_FUNC_IN float integrate(Integrand f, float a, float b, size_t *_evals = NULL) const
 	{
 		float factor = 1;
 		size_t evals = 0;
@@ -65,7 +65,7 @@ public:
 		return result;
 	}
 private:
-	template<typename Integrand> CUDA_FUNC_IN float adaptiveGaussLobattoStep(const Integrand& f, float a, float b, float fa, float fb, float acc, size_t &evals) const
+	template<typename Integrand> CUDA_FUNC_IN float adaptiveGaussLobattoStep(Integrand f, float a, float b, float fa, float fb, float acc, size_t &evals) const
 	{
 		const float h = (b - a) / 2;
 		const float m = (a + b) / 2;
@@ -104,7 +104,7 @@ private:
 		}
 	}
 
-	template<typename Integrand> CUDA_FUNC_IN float calculateAbsTolerance(const Integrand& f, float a, float b, size_t &evals) const
+	template<typename Integrand> CUDA_FUNC_IN float calculateAbsTolerance(Integrand f, float a, float b, size_t &evals) const
 	{
 		const float m = (a + b) / 2;
 		const float h = (b - a) / 2;
