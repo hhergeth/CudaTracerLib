@@ -86,7 +86,7 @@ struct BeamGrid : public PointStorage
 	{
 		Spectrum Tau = Spectrum(0.0f);
 		Spectrum L_n = Spectrum(0.0f);
-		TraverseGridRay(r, m_sStorage.getHashGrid(), tmin, tmax, [&](float minT, float rayT, float maxT, float cellEndT, const Vec3u& cell_pos, bool& cancelTraversal)
+		TraverseGridRay(r, tmin, tmax, m_sStorage.getHashGrid(), [&](float minT, float rayT, float maxT, float cellEndT, const Vec3u& cell_pos, bool& cancelTraversal)
 		{
 			m_sBeamGridStorage.ForAllCellEntries(cell_pos, [&](unsigned int, entry beam_idx)
 			{

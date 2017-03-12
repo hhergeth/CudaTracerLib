@@ -1,6 +1,7 @@
 #pragma once
 #include "Beam.h"
 #include <Engine/SpatialGrid.h>
+#include <Engine/SpatialGridTraversal.h>
 
 namespace CudaTracerLib {
 
@@ -197,7 +198,7 @@ struct BeamBeamGrid : public IVolumeEstimator
 			m_sBeamStorage[beam_idx] = b;
 			bool storedAll = true;
 #ifdef ISCUDA
-			TraverseGridRay(Ray(b.pos, b.getDir()), m_sStorage.getHashGrid(), 0.0f, b.t, [&](float minT, float rayT, float maxT, float cellEndT, Vec3u& cell_pos, bool& cancelTraversal)
+			TraverseGridRay(Ray(b.pos, b.getDir()), 0.0f, b.t, m_sStorage.getHashGrid(), [&](float minT, float rayT, float maxT, float cellEndT, Vec3u& cell_pos, bool& cancelTraversal)
 			{
 				storedAll &= m_sStorage.Store(cell_pos, beam_idx) != 0xffffffff;
 			});

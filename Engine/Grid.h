@@ -161,48 +161,4 @@ template<bool REGULAR> struct HashGrid
 typedef HashGrid<true> HashGrid_Reg;
 typedef HashGrid<false> HashGrid_Irreg;
 
-template<typename V, typename T> CUDA_FUNC_IN V sign(T f)
-{
-	return f > T(0) ? V(1) : (f < T(0) ? V(-1) : V(0));
-}
-template<typename F> CUDA_FUNC_IN void TraverseGridRay(const Ray& r, float tmin, float tmax, const AABB& box, const Vec3f& gridSize, const F& clb)
-{
-	/*
-	pbrt grid accellerator copy! (slightly streamlined for SIMD)
-	*/
-	Vec3f m_vCellSize = box.Size() / gridSize;
-	float rayT, maxT;
-	if (!box.Intersect(r, &rayT, &maxT))
-		return;
-	float minT = rayT = math::clamp(rayT, tmin, tmax);
-	maxT = math::clamp(maxT, tmin, tmax);
-	Vec3f q = (r(rayT) - box.minV) / m_vCellSize;
-	Vec3u Pos = (clamp(q, Vec3f(0.0f), gridSize - Vec3f(1))).floor_u();
-	Vec3i Step(sign<int>(r.dir().x), sign<int>(r.dir().y), sign<int>(r.dir().z));
-	Vec3f inv_d = r.dir();
-	const float ooeps = math::exp2(-40.0f);
-	inv_d.x = 1.0f / (math::abs(r.dir().x) > ooeps ? r.dir().x : copysignf(ooeps, r.dir().x));
-	inv_d.y = 1.0f / (math::abs(r.dir().y) > ooeps ? r.dir().y : copysignf(ooeps, r.dir().y));
-	inv_d.z = 1.0f / (math::abs(r.dir().z) > ooeps ? r.dir().z : copysignf(ooeps, r.dir().z));
-	Vec3f NextCrossingT = Vec3f(rayT) + (box.minV + (Vec3f(Pos) + max(Vec3f(0.0f), sign(r.dir()))) * m_vCellSize - r(rayT)) * inv_d,
-		DeltaT = abs(m_vCellSize * inv_d);
-	bool cancelTraversal = false;
-	for (; !cancelTraversal;)
-	{
-		int bits = ((NextCrossingT[0] < NextCrossingT[1]) << 2) + ((NextCrossingT[0] < NextCrossingT[2]) << 1) + ((NextCrossingT[1] < NextCrossingT[2]));	
-		int stepAxis = (0x00000a66 >> bits * 2) & 3;//cmpToAxis[bits]; //const int cmpToAxis[8] = { 2, 1, 2, 1, 2, 2, 0, 0 };
-		clb(minT, rayT, maxT, min(NextCrossingT[stepAxis], maxT), Pos, cancelTraversal);
-		Pos[stepAxis] += Step[stepAxis];
-		if (Pos[stepAxis] >= gridSize[stepAxis] || maxT < NextCrossingT[stepAxis])
-			break;
-		rayT = NextCrossingT[stepAxis];
-		NextCrossingT[stepAxis] += DeltaT[stepAxis];
-	}
-}
-
-template<typename F> CUDA_FUNC_IN void TraverseGridRay(const Ray& r, const HashGrid_Reg& grid, float tmin, float tmax, const F& clb)
-{
-	return TraverseGridRay(r, tmin, tmax, grid.m_sBox, Vec3f(grid.m_gridDim), clb);
-}
-
 }

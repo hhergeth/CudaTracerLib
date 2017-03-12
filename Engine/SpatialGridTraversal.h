@@ -6,8 +6,51 @@
 
 namespace CudaTracerLib {
 
-template<template<class> class Grid, typename T, typename F1, typename F2, typename F3, typename F4> CUDA_FUNC_IN void TraverseGridBeamExt(const Ray& r, float tmin, float tmax, Grid<T>& grid, const F1& clbRad, const F2& clbDist, 
-																																		const F3& clbElement, const F4& clbEndCell)
+template<typename F> CUDA_FUNC_IN void TraverseGridRay(const Ray& r, float tmin, float tmax, const AABB& box, const Vec3f& gridSize, const F& clb)
+{
+	/*
+	pbrt grid accellerator copy! (slightly streamlined for SIMD)
+	*/
+
+	auto _sign = [](float f) { return f > 0.0f ? 1 : (f < 0.0f ? -1 : 0); };
+
+	Vec3f m_vCellSize = box.Size() / gridSize;
+	float rayT, maxT;
+	if (!box.Intersect(r, &rayT, &maxT))
+		return;
+	float minT = rayT = math::clamp(rayT, tmin, tmax);
+	maxT = math::clamp(maxT, tmin, tmax);
+	Vec3f q = (r(rayT) - box.minV) / m_vCellSize;
+	Vec3u Pos = (clamp(q, Vec3f(0.0f), gridSize - Vec3f(1))).floor_u();
+	Vec3i Step(_sign(r.dir().x), _sign(r.dir().y), _sign(r.dir().z));
+	Vec3f inv_d = r.dir();
+	const float ooeps = math::exp2(-40.0f);
+	inv_d.x = 1.0f / (math::abs(r.dir().x) > ooeps ? r.dir().x : copysignf(ooeps, r.dir().x));
+	inv_d.y = 1.0f / (math::abs(r.dir().y) > ooeps ? r.dir().y : copysignf(ooeps, r.dir().y));
+	inv_d.z = 1.0f / (math::abs(r.dir().z) > ooeps ? r.dir().z : copysignf(ooeps, r.dir().z));
+	Vec3f NextCrossingT = Vec3f(rayT) + (box.minV + (Vec3f(Pos) + max(Vec3f(0.0f), sign(r.dir()))) * m_vCellSize - r(rayT)) * inv_d,
+		  DeltaT = abs(m_vCellSize * inv_d);
+	bool cancelTraversal = false;
+	for (; !cancelTraversal;)
+	{
+		int bits = ((NextCrossingT[0] < NextCrossingT[1]) << 2) + ((NextCrossingT[0] < NextCrossingT[2]) << 1) + ((NextCrossingT[1] < NextCrossingT[2]));
+		int stepAxis = (0x00000a66 >> bits * 2) & 3;//cmpToAxis[bits]; //const int cmpToAxis[8] = { 2, 1, 2, 1, 2, 2, 0, 0 };
+		clb(minT, rayT, maxT, min(NextCrossingT[stepAxis], maxT), Pos, cancelTraversal);
+		Pos[stepAxis] += Step[stepAxis];
+		if (Pos[stepAxis] >= gridSize[stepAxis] || maxT < NextCrossingT[stepAxis])
+			break;
+		rayT = NextCrossingT[stepAxis];
+		NextCrossingT[stepAxis] += DeltaT[stepAxis];
+	}
+}
+
+template<typename F> CUDA_FUNC_IN void TraverseGridRay(const Ray& r, float tmin, float tmax, const HashGrid_Reg& grid, const F& clb)
+{
+	return TraverseGridRay(r, tmin, tmax, grid.m_sBox, Vec3f(grid.m_gridDim), clb);
+}
+
+template<template<class> class Grid, typename T, typename F1, typename F2, typename F3, typename F4> CUDA_FUNC_IN void TraverseGridBeamExt(const Ray& r, float tmin, float tmax, Grid<T>& grid, const F1& clbRad, const F2& clbDist,
+																																		   const F3& clbElement, const F4& clbEndCell)
 {
 	auto last_min = Vec3u(0xffffffff), last_max = Vec3u(0xffffffff);
 	TraverseGridRay(r, tmin, tmax, grid.getHashGrid().getAABB(), Vec3f(grid.getHashGrid().m_gridDim), [&](float minT, float rayT, float maxT, float cellEndT, const Vec3u& cell_pos, bool& cancelTraversal)
@@ -30,7 +73,7 @@ template<template<class> class Grid, typename T, typename F1, typename F2, typen
 			{
 				float distAlongRay = -1;
 				auto dist_data = clbDist(cell_idx, element_idx, element, distAlongRay, rad);
-				if ((rayT <= distAlongRay || rayT <= minT * (1 + EPSILON)) && distAlongRay >= tmin  && distAlongRay <= tmax && (distAlongRay < cellEndT || cellEndT >= maxT * (1.0f - EPSILON)))//
+				if ((rayT <= distAlongRay || rayT <= minT * (1 + EPSILON)) && distAlongRay >= tmin  && distAlongRay <= tmax && (distAlongRay < cellEndT || cellEndT >= maxT * (1.0f - EPSILON)))
 				{
 					clbElement(rayT, cellEndT, minT, maxT, cell_idx, element_idx, element, distAlongRay, dist_data, rad);
 				}
