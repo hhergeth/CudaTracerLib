@@ -39,17 +39,17 @@ struct UniformKernel : public KernelBase<1, 2, 3>
 {
 	template<int DIM> CUDA_FUNC_IN static float alpha()
 	{
-		return extract_val<DIM - 1>({ 1.0f / 3.0f, 0.785398f, 1.25664f });
+		return extract_val<DIM - 1>({ 2.0f / 3.0f, 1.0f / 2.0f * PI, 4.0f / 5.0f * PI });
 	}
 
 	template<int DIM> CUDA_FUNC_IN static float beta()
 	{
-		return extract_val<DIM - 1>({ 0.5f, 0.785398f, 1.0472f });
+		return c_d<DIM>();
 	}
 
 	template<int DIM> CUDA_FUNC_IN static float norm_factor()
 	{
-		return extract_val<DIM - 1>({ 1.0f, PI, 4.0f / 3.0f * PI });
+		return c_d<DIM>();
 	}
 
 	CUDA_FUNC_IN static float k(float t)
@@ -72,7 +72,7 @@ struct PerlinKernel : public KernelBase<1, 2, 3>
 
 	template<int DIM> CUDA_FUNC_IN static float norm_factor()
 	{
-		return extract_val<DIM - 1>({ 1.0f, 2.0f / 7.0f * PI, 2.0f / 3.0f * PI });
+		return extract_val<DIM - 1>({ 1.0f, 2.0f / 7.0f * PI, 5.0f / 21.0f * PI });
 	}
 
 	CUDA_FUNC_IN static float k(float t)
@@ -81,18 +81,28 @@ struct PerlinKernel : public KernelBase<1, 2, 3>
 	}
 };
 
-template<typename K> struct KernelWrapper : public K
+template<typename K> struct KernelWrapper
 {
 	template<int DIM> CUDA_FUNC_IN static float k(float t, float r)
 	{
 		const float vol = pow_int_compile<DIM>::pow(r);
 		const float norm_coeff = K::template norm_factor<DIM>();
-		return math::clamp01(K::k(math::clamp01(t / r))) / (norm_coeff * vol);
+		return K::k(math::clamp01(t / r)) / (norm_coeff * vol);
 	}
 
 	template<int DIM, typename VEC> CUDA_FUNC_IN static float k(const VEC& t, float r)
 	{
 		return k<DIM>(length(t), r);
+	}
+
+	template<int DIM> CUDA_FUNC_IN static float alpha()
+	{
+		return K::template alpha<DIM>() / K::template norm_factor<DIM>();
+	}
+
+	template<int DIM> CUDA_FUNC_IN static float beta()
+	{
+		return K::template beta<DIM>() / math::sqr(K::template norm_factor<DIM>());
 	}
 };
 
