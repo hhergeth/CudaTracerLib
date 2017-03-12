@@ -33,29 +33,28 @@ CUDA_FUNC_IN void computePixel(int x, int y, Sampler& rng, Image& g_Image, bool 
 			L = Spectrum(DeviceDepthImage::NormalizeDepthD3D(prim_res.m_fDist));
 		else
 		{
-			DifferentialGeometry dg;
-			BSDFSamplingRecord bRec(dg);
+			BSDFSamplingRecord bRec;
 			prim_res.getBsdfSample(r, bRec, ETransportMode::ERadiance);
-			dg.computePartials(r, rX, rY);
+			bRec.dg.computePartials(r, rX, rY);
 
 			if (mode == PathTrace_DrawMode::v_absdot_n_geo)
-				L = Spectrum(absdot(-r.dir(), dg.n));
+				L = Spectrum(absdot(-r.dir(), bRec.dg.n));
 			else if (mode == PathTrace_DrawMode::v_dot_n_geo)
-				L = Spectrum(dot(-r.dir(), dg.n));
+				L = Spectrum(dot(-r.dir(), bRec.dg.n));
 			else if (mode == PathTrace_DrawMode::v_dot_n_shade)
-				L = Spectrum(dot(-r.dir(), dg.sys.n));
+				L = Spectrum(dot(-r.dir(), bRec.dg.sys.n));
 			else if (mode == PathTrace_DrawMode::n_geo_colored || mode == PathTrace_DrawMode::n_shade_colored)
 			{
 				Vec3f n = ((mode == PathTrace_DrawMode::n_geo_colored ? bRec.dg.n : bRec.dg.sys.n) + Vec3f(1)) / 2;
 				L = Spectrum(n.x, n.y, n.z);
 			}
 			else if (mode == PathTrace_DrawMode::uv)
-				L = Spectrum(dg.uv[0].x, dg.uv[0].y, 0);
+				L = Spectrum(bRec.dg.uv[0].x, bRec.dg.uv[0].y, 0);
 			else if (mode == PathTrace_DrawMode::bary_coords)
-				L = Spectrum(dg.bary.x, dg.bary.y, 0);
+				L = Spectrum(bRec.dg.bary.x, bRec.dg.bary.y, 0);
 			else
 			{
-				Spectrum Le = prim_res.Le(dg.P, bRec.dg.sys, -r.dir());
+				Spectrum Le = prim_res.Le(bRec.dg.P, bRec.dg.sys, -r.dir());
 				Spectrum f = prim_res.getMat().bsdf.sample(bRec, rng.randomFloat2());
 				through = Transmittance(r, 0, prim_res.m_fDist);
 				bool isDelta = prim_res.getMat().bsdf.hasComponent(EDelta);
@@ -71,7 +70,7 @@ CUDA_FUNC_IN void computePixel(int x, int y, Sampler& rng, Image& g_Image, bool 
 					int depth = 0;
 					do
 					{
-						r = NormalizedT<Ray>(dg.P, bRec.getOutgoing());
+						r = NormalizedT<Ray>(bRec.dg.P, bRec.getOutgoing());
 						prim_res = traceRay(r);
 						through *= Transmittance(r, 0, prim_res.m_fDist);
 						if (prim_res.hasHit())
@@ -85,7 +84,7 @@ CUDA_FUNC_IN void computePixel(int x, int y, Sampler& rng, Image& g_Image, bool 
 
 					if (prim_res.hasHit() && prim_res.getMat().bsdf.hasComponent(ESmooth))
 					{
-						Le = prim_res.Le(dg.P, bRec.dg.sys, -r.dir());
+						Le = prim_res.Le(bRec.dg.P, bRec.dg.sys, -r.dir());
 						if (mode == PathTrace_DrawMode::first_non_delta_Le)
 							L = Le;
 						else if (mode == PathTrace_DrawMode::first_non_delta_f)

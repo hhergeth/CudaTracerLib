@@ -68,8 +68,7 @@ CUDA_FUNC_IN void BPT(const Vec2f& pixelPosition, Image& img, Sampler& rng, unsi
 			break;
 		}
 
-		DifferentialGeometry dg;
-		BSDFSamplingRecord bRec(dg);
+		BSDFSamplingRecord bRec;
 		r2.getBsdfSample(cameraState.r, bRec, ETransportMode::ERadiance);
 
 		cameraState.dVCM *= r2.m_fDist * r2.m_fDist;

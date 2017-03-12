@@ -19,8 +19,7 @@ __global__ void primaryKernelBlocked(int width, int height, Image g_Image, bool 
 	auto rng = g_SamplerData(y * width + x);
 	if (x < width && y < height)
 	{
-		DifferentialGeometry dg;
-		BSDFSamplingRecord bRec(dg);
+		BSDFSamplingRecord bRec;
 		NormalizedT<Ray> primaryRay;
 		TraceResult primaryRes;
 
@@ -41,8 +40,8 @@ __global__ void primaryKernelBlocked(int width, int height, Image g_Image, bool 
 				primaryRes = r2_i;
 				primary_rays_hit++;
 				primaryRes.getBsdfSample(primaryRay, bRec, ETransportMode::ERadiance);
-				uv_sets[i] = dg.uv[0];
-				primary_Le += primaryRes.Le(dg.P, bRec.dg.sys, -primaryRay.dir());
+				uv_sets[i] = bRec.dg.uv[0];
+				primary_Le += primaryRes.Le(bRec.dg.P, bRec.dg.sys, -primaryRay.dir());
 			}
 			else primary_f[i] = g_SceneData.EvalEnvironment(primaryRay);
 			if (depthImage && x2 < width && y2 < height)
@@ -86,12 +85,11 @@ __global__ void primaryKernelBlocked(int width, int height, Image g_Image, bool 
 		for (int i = 0; i < N_i; i++)
 		{
 			primaryRes.getMat().bsdf.sample(bRec, rng.randomFloat2());
-			NormalizedT<Ray> indirect_ray = NormalizedT<Ray>(dg.P, bRec.getOutgoing());
+			NormalizedT<Ray> indirect_ray = NormalizedT<Ray>(bRec.dg.P, bRec.getOutgoing());
 			auto indirect_res = traceRay(indirect_ray);
 			if (indirect_res.hasHit())
 			{
-				DifferentialGeometry indirect_dg;
-				BSDFSamplingRecord indirect_bRec(indirect_dg);
+				BSDFSamplingRecord indirect_bRec;
 				indirect_res.getBsdfSample(indirect_ray, indirect_bRec, ETransportMode::ERadiance);
 				float pdf;
 				Vec2f sample = rng.randomFloat2();
@@ -105,7 +103,7 @@ __global__ void primaryKernelBlocked(int width, int height, Image g_Image, bool 
 					Spectrum indirect_f = indirect_res.getMat().bsdf.f(indirect_bRec);
 					for (int j = 0; j < 4; j++)
 					{
-						dg.uv[0] = uv_sets[j];
+						bRec.dg.uv[0] = uv_sets[j];
 						//not neccessary to set wo, still beeing set from sampling(different uv though...)
 						Est_Li[j] += primaryRes.getMat().bsdf.f(bRec) * indirect_f * value / float(N_i);
 					}
@@ -124,7 +122,7 @@ __global__ void primaryKernelBlocked(int width, int height, Image g_Image, bool 
 
 		if (nIteration > 2)
 		{
-			DirectSamplingRecord dRec(dg.P, NormalizedT<Vec3f>(0.0f));
+			DirectSamplingRecord dRec(bRec.dg.P, NormalizedT<Vec3f>(0.0f));
 			lastSensor.sampleDirect(dRec, Vec2f(0, 0));
 			if (dRec.pdf)
 			{
@@ -154,8 +152,8 @@ __global__ void primaryKernelBlocked(int width, int height, Image g_Image, bool 
 			Spectrum direct(0.0f);
 			if (direct_sampling_succes)
 			{
-				dg.uv[0] = uv_sets[i];
-				bRec.wo = normalize(bRec.dg.sys.toLocal(direct_sampling_point - dg.P));
+				bRec.dg.uv[0] = uv_sets[i];
+				bRec.wo = normalize(bRec.dg.sys.toLocal(direct_sampling_point - bRec.dg.P));
 				direct = Est_Ld * primaryRes.getMat().bsdf.f(bRec);
 			}
 			Spectrum L = primary_f[i] * (primary_Le + direct) + Est_Li[i] * INDIRECT_SCALE;

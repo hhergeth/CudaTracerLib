@@ -68,7 +68,6 @@ struct BPTSubPathState
 struct BPTVertex
 {
 	const Material* mat;
-	DifferentialGeometry dg;
 	BSDFSamplingRecord bRec;
 	Spectrum throughput;
 	int subPathLength;
@@ -76,32 +75,6 @@ struct BPTVertex
 	float dVCM;
 	float dVC;
 	float dVM;
-
-	CUDA_FUNC_IN BPTVertex()
-		: bRec(dg)
-	{
-
-	}
-
-	CUDA_FUNC_IN BPTVertex& operator=(const BPTVertex& other)
-	{
-		mat = other.mat;
-		throughput = other.throughput;
-		subPathLength = other.subPathLength;
-		dVCM = other.dVCM;
-		dVC = other.dVC;
-		dVM = other.dVM;
-
-		dg = other.dg;
-		bRec.eta = other.bRec.eta;
-		bRec.mode = other.bRec.mode;
-		bRec.sampledType = other.bRec.sampledType;
-		bRec.typeMask = other.bRec.typeMask;
-		bRec.wi = other.bRec.wi;
-		bRec.wo = other.bRec.wo;
-
-		return *this;
-	}
 };
 
 CUDA_FUNC_IN void sampleEmitter(BPTSubPathState& v, Sampler& rng, float mMisVcWeightFactor)
@@ -315,8 +288,8 @@ template<bool TEST_VISIBILITY = true> CUDA_FUNC_IN Spectrum connectToLight(const
 
 template<bool TEST_VISIBILITY = true> CUDA_FUNC_IN Spectrum connectVertices(BPTVertex& emitterVertex, const BPTSubPathState& cameraState, BSDFSamplingRecord& bRec, const Material& mat, float mMisVcWeightFactor, float mMisVmWeightFactor, bool use_mis)
 {
-	const float dist2 = distanceSquared(emitterVertex.dg.P, bRec.dg.P);
-	auto direction = normalize(emitterVertex.dg.P - bRec.dg.P);
+	const float dist2 = distanceSquared(emitterVertex.bRec.dg.P, bRec.dg.P);
+	auto direction = normalize(emitterVertex.bRec.dg.P - bRec.dg.P);
 
 	bRec.wo = bRec.dg.toLocal(direction);
 	const Spectrum cameraBsdf = mat.bsdf.f(bRec);
@@ -348,7 +321,7 @@ template<bool TEST_VISIBILITY = true> CUDA_FUNC_IN Spectrum connectVertices(BPTV
 
 	const float geometryTerm = 1.0f / dist2;
 	const Spectrum contrib = (misWeight * geometryTerm) * cameraBsdf * emitterBsdf;
-	if (!contrib.isZero() && V<TEST_VISIBILITY>(bRec.dg.P, emitterVertex.dg.P))
+	if (!contrib.isZero() && V<TEST_VISIBILITY>(bRec.dg.P, emitterVertex.bRec.dg.P))
 		return contrib;
 	return Spectrum(0.0f);
 }

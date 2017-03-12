@@ -98,8 +98,7 @@ template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(unsigned int N, 
 			NormalizedT<Ray> r(ray.a.getXYZ(), normalize(ray.b.getXYZ()));
 			TraceResult r2;
 			res.toResult(&r2, g_SceneData);
-			DifferentialGeometry dg;
-			BSDFSamplingRecord bRec(dg);
+			BSDFSamplingRecord bRec;
 			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance);
 			if (pathDepth == 0 || dat.dIdx == UINT_MAX)
 				dat.L += r2.Le(bRec.dg.P, bRec.dg.sys, -r.dir()) * dat.throughput;

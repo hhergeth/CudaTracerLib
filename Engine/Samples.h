@@ -2,13 +2,13 @@
 
 #include <Math/Vector.h>
 #include <Math/Spectrum.h>
+#include "DifferentialGeometry.h"
 
 //Implementation and interface copied from Mitsuba.
 
 namespace CudaTracerLib {
 
 struct CudaRNG;
-struct DifferentialGeometry;
 
 enum EMeasure {
 	/// Invalid measure
@@ -166,7 +166,7 @@ struct PhaseFunctionSamplingRecord
 
 struct BSDFSamplingRecord
 {
-	DifferentialGeometry& dg;
+	DifferentialGeometry dg;
 	/// Normalized incident direction in local coordinates
 	NormalizedT<Vec3f> wi;
 	/// Normalized outgoing direction in local coordinates
@@ -178,9 +178,8 @@ struct BSDFSamplingRecord
 	unsigned int sampledType;
 	Spectrum f_i;
 
-	CUDA_FUNC_IN BSDFSamplingRecord(DifferentialGeometry& dg) : dg(dg), f_i(0.0f) {}
+	CUDA_FUNC_IN BSDFSamplingRecord() : f_i(0.0f) {}
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST NormalizedT<Vec3f> getOutgoing() const;
-	CTL_EXPORT CUDA_DEVICE CUDA_HOST BSDFSamplingRecord& operator=(const BSDFSamplingRecord& other);
 };
 
 }

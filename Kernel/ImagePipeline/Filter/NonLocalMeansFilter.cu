@@ -148,12 +148,11 @@ CUDA_GLOBAL void initializeFeatureBuffer(NonLocalMeansFilter::FeatureData* devic
 		auto res = traceRay(ray);
 		if (res.hasHit())
 		{
-			DifferentialGeometry dg;
-			BSDFSamplingRecord bRec(dg);
+			BSDFSamplingRecord bRec;
 			res.getBsdfSample(ray, bRec, ETransportMode::ERadiance);
 
 			fDat.m_depth = res.m_fDist;
-			fDat.m_normal = NormalizedFloat3ToUchar2(dg.n);
+			fDat.m_normal = NormalizedFloat3ToUchar2(bRec.dg.n);
 			fDat.m_albedo = res.getMat().bsdf.f(bRec).toRGBCOL();
 		}
 		else fDat.m_depth = half(FLT_MAX);

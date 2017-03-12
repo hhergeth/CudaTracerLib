@@ -13,8 +13,7 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(NormalizedT<Ray>& r, const
 	Spectrum cf = Spectrum(1.0f);  // accumulated reflectance
 	int depth = 0;
 	bool specularBounce = false;
-	DifferentialGeometry dg;
-	BSDFSamplingRecord bRec(dg);
+	BSDFSamplingRecord bRec;
 	KernelAggregateVolume& V = g_SceneData.m_sVolume;
 	MediumSamplingRecord mRec;
 	TraceResult r2;
@@ -55,7 +54,7 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(NormalizedT<Ray>& r, const
 				cf *= mRec.transmittance / mRec.pdfFailure;
 			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance);
 			if (depth == 1)
-				dg.computePartials(r, rX, rY);
+				bRec.dg.computePartials(r, rX, rY);
 			if (!DIRECT || (depth == 1 || specularBounce))
 				cl += cf * r2.Le(bRec.dg.P, bRec.dg.sys, -r.dir());
 			Spectrum f = r2.getMat().bsdf.sample(bRec, rnd.randomFloat2());
@@ -63,7 +62,7 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(NormalizedT<Ray>& r, const
 				cl += cf * UniformSampleOneLight(bRec, r2.getMat(), rnd, true);
 			specularBounce = (bRec.sampledType & EDelta) != 0;
 			cf = cf * f;
-			r = NormalizedT<Ray>(dg.P, bRec.getOutgoing());
+			r = NormalizedT<Ray>(bRec.dg.P, bRec.getOutgoing());
 		}
 		if (depth > 5)
 		{
@@ -85,14 +84,13 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTraceRegularization(NormalizedT<
 	Spectrum cf = Spectrum(1.0f);  // accumulated reflectance
 	int depth = 0;
 	bool specularBounce = false;
-	DifferentialGeometry dg;
-	BSDFSamplingRecord bRec(dg);
+	BSDFSamplingRecord bRec;
 	//bool hadDelta = false;
 	while (traceRay(r.dir(), r.ori(), &r2) && depth++ < 7)
 	{
 		r2.getBsdfSample(r, bRec, ETransportMode::ERadiance);// return (Spectrum(bRec.map.sys.n) + Spectrum(1)) / 2.0f; //return bRec.map.sys.n;
 		if (depth == 1)
-			dg.computePartials(r, rX, rY);
+			bRec.dg.computePartials(r, rX, rY);
 		if (!DIRECT || (depth == 1 || specularBounce))
 			cl += cf * r2.Le(bRec.dg.P, bRec.dg.sys, -r.dir());
 		Spectrum f = r2.getMat().bsdf.sample(bRec, rnd.randomFloat2());
@@ -125,7 +123,7 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTraceRegularization(NormalizedT<
 			else break;
 		}
 		cf = cf * f;
-		r = NormalizedT<Ray>(dg.P, bRec.getOutgoing());
+		r = NormalizedT<Ray>(bRec.dg.P, bRec.getOutgoing());
 		r2.Init();
 	}
 	//return hadDelta ? Spectrum(1, 0, 0) : Spectrum(0.0f);

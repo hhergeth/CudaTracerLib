@@ -16,8 +16,7 @@ __global__ void tracePhotons()
 	int depth = 0;
 	while ((r2 = traceRay(r)).hasHit() && depth++ < 7)
 	{
-		DifferentialGeometry dg;
-		BSDFSamplingRecord bRec(dg);
+		BSDFSamplingRecord bRec;
 		Spectrum fi = 1.0f;
 		r2.getBsdfSample(r, bRec, ETransportMode::EImportance, &fi);
 		Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());

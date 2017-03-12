@@ -56,8 +56,7 @@ CUDA_FUNC_IN Spectrum L_SurfaceFinalGathering(int N_FG_Samples, BSDFSamplingReco
 	if (!DIRECT)
 		LCaustic += UniformSampleOneLight(bRec, r2.getMat(), rng);//the direct light is not stored in the caustic map
 	Spectrum L(0.0f);
-	DifferentialGeometry dg;
-	BSDFSamplingRecord bRec2(dg);//constantly reloading into bRec and using less registers has about the same performance
+	BSDFSamplingRecord bRec2;//constantly reloading into bRec and using less registers has about the same performance
 	bRec.typeMask = EGlossy | EDiffuse;
 	for (int i = 0; i < N_FG_Samples; i++)
 	{
@@ -79,8 +78,7 @@ CUDA_FUNC_IN Spectrum L_SurfaceFinalGathering(int N_FG_Samples, BSDFSamplingReco
 
 template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int h, k_AdaptiveStruct a_AdpEntries, Image img, bool DIRECT, int N_FG_Samples)
 {
-	DifferentialGeometry dg;
-	BSDFSamplingRecord bRec(dg);
+	BSDFSamplingRecord bRec;
 	Vec2i pixel = TracerBase::getPixelPos(off.x, off.y);
 	if (pixel.x < w && pixel.y < h)
 	{
@@ -102,7 +100,7 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 		{
 			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance);
 			if (depth == 0)
-				dg.computePartials(r, rX, rY);
+				bRec.dg.computePartials(r, rX, rY);
 			if (g_SceneData.m_sVolume.HasVolumes())
 			{
 				float tmin, tmax;

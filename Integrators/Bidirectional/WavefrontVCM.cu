@@ -174,8 +174,7 @@ CUDA_GLOBAL void createCameraRays(int xoff, int yoff, int blockW, int blockH, in
 
 CUDA_GLOBAL void performPPMEstimate(unsigned int N, float a_Radius, float nPhotons)
 {
-	DifferentialGeometry dg;
-	BSDFSamplingRecord bRec(dg);
+	BSDFSamplingRecord bRec;
 	unsigned int idx = blockIdx.x * blockDim.x * blockDim.y + threadIdx.y * blockDim.x + threadIdx.x;
 	auto rng = g_SamplerData(idx);
 	if (idx < N)
@@ -205,8 +204,7 @@ CUDA_GLOBAL void performPPMEstimate(unsigned int N, float a_Radius, float nPhoto
 
 CUDA_GLOBAL void extendCameraRays(unsigned int N, Image I, int iteration, bool lastIteration, float a_Radius, unsigned int lightOff, unsigned int numLightPaths, BPTVertex* g_pLightVertices)
 {
-	DifferentialGeometry dg;
-	BSDFSamplingRecord bRec(dg);
+	BSDFSamplingRecord bRec;
 	unsigned int idx = blockIdx.x * blockDim.x * blockDim.y + threadIdx.y * blockDim.x + threadIdx.x;
 	auto rng = g_SamplerData(idx);
 	if (idx < N)
@@ -238,20 +236,13 @@ CUDA_GLOBAL void extendCameraRays(unsigned int N, Image I, int iteration, bool l
 				{
 					BPTVertex& v = g_pLightVertices[vOff + i];
 					BPTVertex lv;
-					lv.dg = v.dg;
+					lv.bRec = v.bRec;
 					lv.dVC = v.dVC;
 					lv.dVM = v.dVM;
 					lv.dVCM = v.dVCM;
 					lv.mat = v.mat;
 					lv.subPathLength = v.subPathLength;
 					lv.throughput = v.throughput;
-					lv.bRec = BSDFSamplingRecord(lv.dg);
-					lv.bRec.eta = v.bRec.eta;
-					lv.bRec.mode = v.bRec.mode;
-					lv.bRec.sampledType = v.bRec.sampledType;
-					lv.bRec.typeMask = v.bRec.typeMask;
-					lv.bRec.wi = v.bRec.wi;
-					lv.bRec.wo = v.bRec.wo;
 					ent.acc += ent.state.throughput * lv.throughput * connectVertices(lv, ent.state, bRec, r2.getMat(), mMisVcWeightFactor, mMisVmWeightFactor, true);
 					i++;
 				}

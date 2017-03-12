@@ -74,7 +74,7 @@ public:
 
 	virtual Spectrum eval(const PathVertex* prev, const PathVertex* next)
 	{
-		BSDFSamplingRecord bRec(dg);
+		BSDFSamplingRecord bRec;
 		bRec.eta = 1.0f;
 		bRec.sampledType = 0;
 		bRec.typeMask = ETypeCombinations::EAll;

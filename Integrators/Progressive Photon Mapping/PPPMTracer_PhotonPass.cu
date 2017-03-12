@@ -128,8 +128,7 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 	local_Counter = 0;
 	unsigned int local_Todo = photons_per_thread * blockDim.x * blockDim.y;
 
-	DifferentialGeometry dg;
-	BSDFSamplingRecord bRec(dg);
+	BSDFSamplingRecord bRec;
 	CUDA_SHARED unsigned int numStoredSurface;
 	CUDA_SHARED unsigned int numStoredVolume;
 	numStoredSurface = 0; numStoredVolume = 0;

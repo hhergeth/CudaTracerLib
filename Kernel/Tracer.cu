@@ -21,12 +21,11 @@ template<bool RECURSIVE> __global__ void k_GuessPass(int w, int h, float scx, fl
 		int d = -1;
 		while (traceRay(r.dir(), r.ori(), &r2) && ++d < 5)
 		{
-			DifferentialGeometry dg;
-			BSDFSamplingRecord bRec(dg);
+			BSDFSamplingRecord bRec;
 			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance);
 			r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
-			r = NormalizedT<Ray>(dg.P, bRec.getOutgoing());
-			Vec3f per = math::clamp01((dg.P - g_SceneData.m_sBox.minV) / (g_SceneData.m_sBox.maxV - g_SceneData.m_sBox.minV)) * float(UINT_MAX);
+			r = NormalizedT<Ray>(bRec.dg.P, bRec.getOutgoing());
+			Vec3f per = math::clamp01((bRec.dg.P - g_SceneData.m_sBox.minV) / (g_SceneData.m_sBox.maxV - g_SceneData.m_sBox.minV)) * float(UINT_MAX);
 			Vec3u q = Vec3u((unsigned int)per.x, (unsigned int)per.y, (unsigned int)per.z);
 			atomicMin(&g_EyeHitBoxMin.x, q.x);
 			atomicMin(&g_EyeHitBoxMin.y, q.y);
@@ -94,19 +93,18 @@ __global__ void estimateLightVisibility(int w, int h, float scx, float scy, int 
 		unsigned int N = 0, S = 0;
 		while (traceRay(r.dir(), r.ori(), &r2) && ++d < recursion_depth)
 		{
-			DifferentialGeometry dg;
-			BSDFSamplingRecord bRec(dg);
+			BSDFSamplingRecord bRec;
 			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance);
 
 			for (int i = 0; i < g_SceneData.m_numLights; i++, N++)
 			{
 				PositionSamplingRecord pRec;
 				g_SceneData.getLight(i)->samplePosition(pRec, rng.randomFloat2());
-				S += V(pRec.p, dg.P);
+				S += V(pRec.p, bRec.dg.P);
 			}
 
 			r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
-			r = NormalizedT<Ray>(dg.P, bRec.getOutgoing());
+			r = NormalizedT<Ray>(bRec.dg.P, bRec.getOutgoing());
 		}
 		atomicAdd(&g_ShotRays, N);
 		atomicAdd(&g_SuccRays, S);

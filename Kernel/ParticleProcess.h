@@ -46,8 +46,7 @@ template<bool PARTICIPATING_MEDIA = true, bool SUBSURFACE_SCATTERING = true, typ
 
 	NormalizedT<Ray> r(pRec.p, dRec.d);
 	int depth = -1;
-	DifferentialGeometry dg;
-	BSDFSamplingRecord bRec(dg);
+	BSDFSamplingRecord bRec;
 
 	KernelAggregateVolume& V = g_SceneData.m_sVolume;
 	MediumSamplingRecord mRec;
