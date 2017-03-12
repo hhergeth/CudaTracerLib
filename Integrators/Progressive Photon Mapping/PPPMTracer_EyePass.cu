@@ -20,8 +20,8 @@ CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const NormalizedT<Vec3
 	if (!map) map = &g_SurfMap.As();
 	bool hasGlossy = mat.bsdf.hasComponent(EGlossy);
 	Spectrum Lp = Spectrum(0.0f);
-	Vec3f a = r*(-bRec.dg.sys.t - bRec.dg.sys.s) + bRec.dg.P, b = r*(bRec.dg.sys.t - bRec.dg.sys.s) + bRec.dg.P, c = r*(-bRec.dg.sys.t + bRec.dg.sys.s) + bRec.dg.P, d = r*(bRec.dg.sys.t + bRec.dg.sys.s) + bRec.dg.P;
-	map->ForAll(min(a, b, c, d), max(a, b, c, d), [&](const Vec3u& cell_idx, unsigned int p_idx, const PPPMPhoton& ph)
+	auto surface_region = bRec.dg.ComputeOnSurfaceDiskBounds(r);
+	map->ForAll(surface_region.minV, surface_region.maxV, [&](const Vec3u& cell_idx, unsigned int p_idx, const PPPMPhoton& ph)
 	{
 		float dist2 = distanceSquared(ph.getPos(map->getHashGrid(), cell_idx), bRec.dg.P);
 		Vec3f photonNormal = ph.getNormal();

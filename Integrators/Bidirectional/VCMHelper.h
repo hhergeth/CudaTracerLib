@@ -358,9 +358,9 @@ typedef SpatialLinkedMap<k_MISPhoton> VCMSurfMap;
 template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_Surface2(VCMSurfMap& g_CurrentMap, BPTSubPathState& aCameraState, BSDFSamplingRecord& bRec, float r, const Material* mat, float mMisVcWeightFactor, float nPhotons, bool use_mis)
 {
 	Spectrum Lp = Spectrum(0.0f);
-	Vec3f a = r*(-bRec.dg.sys.t - bRec.dg.sys.s) + bRec.dg.P, b = r*(bRec.dg.sys.t - bRec.dg.sys.s) + bRec.dg.P, c = r*(-bRec.dg.sys.t + bRec.dg.sys.s) + bRec.dg.P, d = r*(bRec.dg.sys.t + bRec.dg.sys.s) + bRec.dg.P;
+	auto surface_region = bRec.dg.ComputeOnSurfaceDiskBounds(r);
 #ifdef ISCUDA
-	g_CurrentMap.ForAll<200>(min(a, b, c, d), max(a, b, c, d), [&](const Vec3u& cell_idx, unsigned int p_idx, const k_MISPhoton& ph)
+	g_CurrentMap.ForAll<200>(surface_region.minV, surface_region.maxV, [&](const Vec3u& cell_idx, unsigned int p_idx, const k_MISPhoton& ph)
 	{
 		float dist2 = distanceSquared(ph.getPos(g_CurrentMap.getHashGrid(), cell_idx), bRec.dg.P);
 		Vec3f photonNormal = ph.getNormal();

@@ -2,6 +2,7 @@
 
 #include <Math/Vector.h>
 #include <Math/Frame.h>
+#include <Math/AABB.h>
 
 namespace CudaTracerLib {
 
@@ -32,6 +33,12 @@ struct DifferentialGeometry
 	CUDA_FUNC_IN NormalizedT<Vec3f> toLocal(const NormalizedT<Vec3f>& v) const
 	{
 		return sys.toLocal(v);
+	}
+
+	CUDA_FUNC_IN AABB ComputeOnSurfaceDiskBounds(float rad) const
+	{
+		Vec3f a = rad*(-sys.t - sys.s) + P, b = rad*(sys.t - sys.s) + P, c = rad*(-sys.t + sys.s) + P, d = rad*(sys.t + sys.s) + P;
+		return AABB(min(a, b, c, d), max(a, b, c, d));
 	}
 };
 
