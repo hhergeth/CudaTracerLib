@@ -163,6 +163,31 @@ public:
 		return Store(BaseType::hashMap.Transform(p), v);
 	}
 
+	//this is not threadsafe
+	template<typename F> void RemoveIf(const Vec3u& p, F predicate)
+	{
+		unsigned int map_idx = BaseType::hashMap.Hash(p);
+		if (map_idx >= numData)
+			return;
+
+		while (m_mapBuffer[map_idx] != 0xffffffff && predicate(m_dataBuffer[m_mapBuffer[map_idx]]))
+		{
+			m_mapBuffer[map_idx] = m_dataBuffer[m_mapBuffer[map_idx]].nextIdx;
+		}
+
+		if (m_mapBuffer[map_idx] == 0xffffffff)
+			return;
+
+		auto list_idx = m_dataBuffer[m_mapBuffer[map_idx]];
+		while (list_idx != 0xffffffff)
+		{
+			auto next_list_idx = m_dataBuffer[list_idx].nextIdx;
+			if (predicate(m_dataBuffer[next_list_idx]))
+				m_dataBuffer[list_idx].nextIdx = m_dataBuffer[next_list_idx].nextIdx;
+			list_idx = m_dataBuffer[list_idx].nextIdx;
+		}
+	}
+
 	CUDA_FUNC_IN unsigned int AllocStorage(unsigned int n)
 	{
 #ifdef ISCUDA
