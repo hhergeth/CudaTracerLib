@@ -2,7 +2,7 @@
 
 #include <map>
 #include <string>
-#include "SynchronizedBuffer.h"
+#include <Engine/SynchronizedBuffer.h>
 #include <Math/Vector.h>
 #include <Math/Spectrum.h>
 
@@ -13,9 +13,9 @@ class Image;
 class IDebugDrawer
 {
 public:
-	virtual void DrawLine(const Vec3f& p1, const Vec3f& p2, const Spectrum& col) const = 0;
-	virtual void DrawEllipsisOnSurface(const Vec3f& p1, const NormalizedT<Vec3f>& t1, const NormalizedT<Vec3f>& t2, float l1, float l2) const = 0;
-	virtual void DrawEllipsoidOnSurface(const Vec3f& p1, const NormalizedT<Vec3f>& t1, const NormalizedT<Vec3f>& t2, const NormalizedT<Vec3f>& n, float l1, float l2, float l3) const = 0;
+	virtual void DrawLine(const Vec3f& p1, const Vec3f& p2, const Spectrum& col = Spectrum(1, 0, 0)) const = 0;
+	virtual void DrawEllipseOnSurface(const Vec3f& p1, const NormalizedT<Vec3f>& t1, const NormalizedT<Vec3f>& t2, float l1, float l2, const Spectrum& col = Spectrum(1, 0, 0)) const = 0;
+	virtual void DrawEllipsoidOnSurface(const Vec3f& p1, const NormalizedT<Vec3f>& t1, const NormalizedT<Vec3f>& t2, const NormalizedT<Vec3f>& n, float l1, float l2, float l3, const Spectrum& col = Spectrum(1, 0, 0)) const = 0;
 };
 
 class IPixelDebugVisualizer
@@ -34,7 +34,7 @@ public:
 	}
 	virtual void Free() = 0;
 	virtual void Visualize(Image& img) = 0;
-	virtual void VisualizePixel(const IDebugDrawer& drawer) = 0;
+	virtual void VisualizePixel(unsigned int x, unsigned int y, const IDebugDrawer& drawer) = 0;
 	virtual void Resize(unsigned int w, unsigned int h) = 0;
 	virtual const std::string& getName() const
 	{
@@ -96,75 +96,6 @@ public:
 
 template<typename T> class PixelDebugVisualizer : public PixelDebugVisualizerBase<T>
 {
-};
-
-template<> class PixelDebugVisualizer<float> : public PixelDebugVisualizerBase<float>
-{
-public:
-	//linear normalization from [a,b] -> [0, 1]
-	bool m_normalize;
-	enum class VisualizePixelType
-	{
-		Circle,
-		//visualizes the value as scaled normal
-		Normal,
-	};
-	VisualizePixelType m_pixelType;
-public:
-	PixelDebugVisualizer(const std::string& name)
-		: PixelDebugVisualizerBase(name), m_normalize(true), m_pixelType(VisualizePixelType::Circle)
-	{
-
-	}
-
-	virtual void Visualize(Image& img);
-	virtual void VisualizePixel(const IDebugDrawer& drawer);
-};
-
-template<> class PixelDebugVisualizer<Vec2f> : public PixelDebugVisualizerBase<Vec2f>
-{
-public:
-	//linear normalization from [-1,1] -> [0, 1]
-	bool m_normalize;
-	enum class VisualizePixelType
-	{
-		Ellipse,
-		//visualizes the value as element of the tangent plane
-		OnSurface,
-	};
-	VisualizePixelType m_pixelType;
-public:
-	PixelDebugVisualizer(const std::string& name)
-		: PixelDebugVisualizerBase(name), m_normalize(false), m_pixelType(VisualizePixelType::Ellipse)
-	{
-
-	}
-
-	virtual void Visualize(Image& img);
-	virtual void VisualizePixel(const IDebugDrawer& drawer);
-};
-
-template<> class PixelDebugVisualizer<Vec3f> : public PixelDebugVisualizerBase<Vec3f>
-{
-public:
-	//linear normalization from [-1,1] -> [0, 1]
-	bool m_normalize;
-	enum class VisualizePixelType
-	{
-		Elipsoid,
-		//visualizes the value as element of the orthonormal surface base
-		OnSurface,
-	};
-	VisualizePixelType m_pixelType;
-public:
-	PixelDebugVisualizer(const std::string& name)
-		: PixelDebugVisualizerBase(name), m_normalize(false), m_pixelType(VisualizePixelType::Elipsoid)
-	{
-
-	}
-
-	virtual void Visualize(Image& img);
-	virtual void VisualizePixel(const IDebugDrawer& drawer);
 };
 
 class PixelDebugVisualizerManager
