@@ -68,11 +68,12 @@ public:
 class IPixelDebugVisualizer
 {
 protected:
+	unsigned int m_width, m_height;
 	std::string m_name;
 	IPixelDebugVisualizer(const std::string& name)
 		: m_name(name)
 	{
-
+		m_width = m_height = std::numeric_limits<unsigned int>::max();
 	}
 public:
 	virtual ~IPixelDebugVisualizer()
@@ -82,7 +83,11 @@ public:
 	virtual void Free() = 0;
 	virtual void Visualize(Image& img) = 0;
 	virtual void VisualizePixel(unsigned int x, unsigned int y, const IDebugDrawer& drawer) = 0;
-	virtual void Resize(unsigned int w, unsigned int h) = 0;
+	virtual void Resize(unsigned int w, unsigned int h)
+	{
+		m_width = w;
+		m_height = h;
+	}
 	virtual const std::string& getName() const
 	{
 		return m_name;
@@ -100,7 +105,6 @@ template<typename T> class PixelDebugVisualizerBase : public IPixelDebugVisualiz
 {
 protected:
 	float m_uniform_scale;
-	unsigned int m_width;
 	SynchronizedBuffer<T> m_buffer;
 	PixelDebugVisualizerBase(const std::string& name)
 		: IPixelDebugVisualizer(name), ISynchronizedBufferParent(m_buffer), m_buffer(1), m_uniform_scale(1)
@@ -116,8 +120,8 @@ public:
 
 	virtual void Resize(unsigned int w, unsigned int h)
 	{
-		m_width = w;
 		m_buffer.Resize(w * h);
+		IPixelDebugVisualizer::Resize(w, h);
 	}
 
 	CUDA_FUNC_IN T& operator()(unsigned int x, unsigned int y)
