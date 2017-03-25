@@ -13,6 +13,10 @@ public:
 		Ellipse,
 		//visualizes the value as element of the tangent plane
 		OnSurface,
+		//assumes v = (theta, r) and visualizes that in the tangent plane
+		PolarCoordinates,
+		//assumes v = (theta, phi) and visualizes that in the 2-sphere with unit radius
+		SphericalCoordinates,
 	};
 	VisualizePixelType m_pixelType;
 public:

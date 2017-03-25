@@ -14,8 +14,18 @@ class IDebugDrawer
 {
 public:
 	virtual void DrawLine(const Vec3f& p1, const Vec3f& p2, const Spectrum& col = Spectrum(1, 0, 0)) const = 0;
-	virtual void DrawEllipseOnSurface(const Vec3f& p1, const NormalizedT<Vec3f>& t1, const NormalizedT<Vec3f>& t2, float l1, float l2, const Spectrum& col = Spectrum(1, 0, 0)) const = 0;
-	virtual void DrawEllipsoidOnSurface(const Vec3f& p1, const NormalizedT<Vec3f>& t1, const NormalizedT<Vec3f>& t2, const NormalizedT<Vec3f>& n, float l1, float l2, float l3, const Spectrum& col = Spectrum(1, 0, 0)) const = 0;
+	virtual void DrawEllipse(const Vec3f& p, const NormalizedT<Vec3f>& t1, const NormalizedT<Vec3f>& t2, float l1, float l2, const Spectrum& col = Spectrum(1, 0, 0)) const
+	{
+
+	}
+	virtual void DrawEllipsoid(const Vec3f& p, const NormalizedT<Vec3f>& t1, const NormalizedT<Vec3f>& t2, const NormalizedT<Vec3f>& n, float l1, float l2, float l3, const Spectrum& col = Spectrum(1, 0, 0)) const
+	{
+
+	}
+	virtual void DrawCone(const Vec3f& p, const NormalizedT<Vec3f>& d, float theta, float length, const Spectrum& col = Spectrum(1, 0, 0)) const
+	{
+
+	}
 };
 
 class IPixelDebugVisualizer

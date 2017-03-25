@@ -1,6 +1,8 @@
 #include "Vec3fPixelDebugVisualizer.h"
 #include <Engine/Image.h>
 #include "PixelDebugVisualizerHelpers.h"
+#include <Kernel/TraceHelper.h>
+#include <Math/Sampling.h>
 
 namespace CudaTracerLib {
 
@@ -28,7 +30,33 @@ void PixelDebugVisualizer<Vec3f>::Visualize(Image& img)
 
 void PixelDebugVisualizer<Vec3f>::VisualizePixel(unsigned int x, unsigned int y, const IDebugDrawer& drawer)
 {
+	auto prim_ray = g_SceneData.GenerateSensorRay(x, y);
+	auto res = traceRay(prim_ray);
+	if (!res.hasHit())
+		return;
 
+	DifferentialGeometry dg;
+	res.fillDG(dg);
+
+	auto v = getScaledValue(x, y);
+
+	if (m_pixelType == VisualizePixelType::Vector)
+	{
+		drawer.DrawLine(dg.P, dg.P + v);
+	}
+	else if (m_pixelType == VisualizePixelType::OnSurface)
+	{
+		drawer.DrawLine(dg.P, dg.P + dg.sys.toWorld(v));
+	}
+	else if (m_pixelType == VisualizePixelType::Ellipsoid)
+	{
+		drawer.DrawEllipsoid(dg.P, dg.sys.s, dg.sys.t, dg.sys.n, v.x, v.y, v.z);
+	}
+	else if (m_pixelType == VisualizePixelType::SphericalCoordinates_World || m_pixelType == VisualizePixelType::SphericalCoordinates_Local)
+	{
+		auto dir = MonteCarlo::SphericalDirection(v.x, v.y);
+		drawer.DrawLine(dg.P, dg.P + (m_pixelType == VisualizePixelType::SphericalCoordinates_World ? dir : dg.sys.toWorld(dir)) * v.z);
+	}
 }
 
 }

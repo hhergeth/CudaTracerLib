@@ -87,11 +87,15 @@ void PixelDebugVisualizer<float>::VisualizePixel(unsigned int x, unsigned int y,
 
 	if (m_pixelType == VisualizePixelType::Normal)
 	{
-		drawer.DrawLine(dg.P, dg.P + dg.sys.n * v);
+		drawer.DrawLine(dg.P, dg.P + dg.sys.toWorld(Vec3f(0.0f, 0.0f, v)));
 	}
 	else if (m_pixelType == VisualizePixelType::Circle)
 	{
-		drawer.DrawEllipseOnSurface(dg.P, dg.sys.t, dg.sys.s, v, v);
+		drawer.DrawEllipse(dg.P, dg.sys.t, dg.sys.s, v, v);
+	}
+	else if (m_pixelType == VisualizePixelType::NormalCone)
+	{
+		drawer.DrawCone(dg.P, dg.sys.n, math::clamp(v, 0.0f, 2.0f * PI), m_coneScale);
 	}
 }
 

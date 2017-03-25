@@ -13,11 +13,14 @@ public:
 		Circle,
 		//visualizes the value as scaled normal
 		Normal,
+		//uses the value as angle of a cone and m_coneScale as the length
+		NormalCone,
 	};
 	VisualizePixelType m_pixelType;
+	float m_coneScale;
 public:
 	PixelDebugVisualizer(const std::string& name)
-		: PixelDebugVisualizerBase(name), m_normalize(true), m_pixelType(VisualizePixelType::Circle)
+		: PixelDebugVisualizerBase(name), m_normalize(true), m_pixelType(VisualizePixelType::Circle), m_coneScale(1)
 	{
 
 	}
