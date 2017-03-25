@@ -7,6 +7,7 @@
 #include <Engine/Material.h>
 #include "TracerSettings.h"
 #include <Kernel/PixelVarianceBuffer.h>
+#include "PixelDebugVisualizers/PixelDebugVisualizer.h"
 
 namespace CudaTracerLib {
 
@@ -97,12 +98,15 @@ public:
 	}
 	virtual void Resize(unsigned int _w, unsigned int _h)
 	{
+		w = _w;
+		h = _h;
 		if (m_pPixelVarianceBuffer)
 		{
 			m_pPixelVarianceBuffer->Free();
 			delete m_pPixelVarianceBuffer;
 		}
 		m_pPixelVarianceBuffer = new PixelVarianceBuffer(_w, _h);
+		m_debugVisualizerManager.Resize(_w, _h);
 	}
 	virtual void DoPass(Image* I, bool a_NewTrace) = 0;
 	virtual void Debug(Image* I, const Vec2i& pixel)
@@ -156,6 +160,8 @@ protected:
 	IBlockSampler* m_pBlockSampler;
 	TracerParameterCollection m_sParameters;
 	ISamplingSequenceGenerator* m_pSamplingSequenceGenerator;
+	PixelDebugVisualizerManager m_debugVisualizerManager;
+
 	virtual void DebugInternal(Image* I, const Vec2i& pixel)
 	{
 
@@ -169,8 +175,6 @@ template<bool PROGRESSIVE> class Tracer : public TracerBase
 public:
 	virtual void Resize(unsigned int _w, unsigned int _h)
 	{
-		w = _w;
-		h = _h;
 		if (PROGRESSIVE)
 		{
 			auto oldSampler = m_pBlockSampler;
@@ -183,6 +187,7 @@ public:
 	virtual void DoPass(Image* I, bool a_NewTrace)
 	{
 		ThrowCudaErrors(cudaEventRecord(start, 0));
+		m_debugVisualizerManager.ClearAll();
 		if (a_NewTrace || !PROGRESSIVE)
 		{
 			m_uPassesDone = 0;

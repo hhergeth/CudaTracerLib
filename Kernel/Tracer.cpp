@@ -40,6 +40,7 @@ TracerBase::~TracerBase()
 	}
 	m_pBlockSampler = 0;
 	m_pPixelVarianceBuffer = 0;
+	m_debugVisualizerManager.Free();
 }
 
 void TracerBase::generateNewRandomSequences()
