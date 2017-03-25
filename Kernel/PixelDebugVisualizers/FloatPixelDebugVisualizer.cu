@@ -39,6 +39,7 @@ void PixelDebugVisualizer<float>::VisualizePixel(unsigned int x, unsigned int y,
 		return;
 
 	DifferentialGeometry dg;
+	dg.P = prim_ray(res.m_fDist);
 	res.fillDG(dg);
 
 	auto v = getScaledValue(x, y);
