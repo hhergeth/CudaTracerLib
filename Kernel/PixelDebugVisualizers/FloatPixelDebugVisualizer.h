@@ -6,8 +6,6 @@ namespace CudaTracerLib {
 template<> class PixelDebugVisualizer<float> : public PixelDebugVisualizerBase<float>
 {
 public:
-	//linear normalization from [a,b] -> [0, 1]
-	bool m_normalize;
 	enum class VisualizePixelType
 	{
 		Circle,
@@ -20,7 +18,7 @@ public:
 	float m_coneScale;
 public:
 	PixelDebugVisualizer(const std::string& name)
-		: PixelDebugVisualizerBase(name), m_normalize(true), m_pixelType(VisualizePixelType::Circle), m_coneScale(1)
+		: PixelDebugVisualizerBase(name), m_pixelType(VisualizePixelType::Circle), m_coneScale(1)
 	{
 
 	}

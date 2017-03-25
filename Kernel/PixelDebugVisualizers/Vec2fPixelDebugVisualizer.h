@@ -6,8 +6,6 @@ namespace CudaTracerLib {
 template<> class PixelDebugVisualizer<Vec2f> : public PixelDebugVisualizerBase<Vec2f>
 {
 public:
-	//linear normalization from [-1,1] -> [0, 1]
-	bool m_normalize;
 	enum class VisualizePixelType
 	{
 		Ellipse,
@@ -21,7 +19,7 @@ public:
 	VisualizePixelType m_pixelType;
 public:
 	PixelDebugVisualizer(const std::string& name)
-		: PixelDebugVisualizerBase(name), m_normalize(false), m_pixelType(VisualizePixelType::Ellipse)
+		: PixelDebugVisualizerBase(name), m_pixelType(VisualizePixelType::Ellipse)
 	{
 
 	}

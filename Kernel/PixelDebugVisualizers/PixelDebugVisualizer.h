@@ -33,7 +33,7 @@ public:
 			DrawLine(p_1, p_2, col);
 		}
 
-		//draw coordinate axis
+		//draw axes
 		DrawLine(p + t1 * l1, p - t1 * l1, col);
 		DrawLine(p + t2 * l2, p - t2 * l2, col);
 	}
@@ -109,10 +109,27 @@ protected:
 	PixelDebugVisualizerBase(const std::string& name)
 		: IPixelDebugVisualizer(name), ISynchronizedBufferParent(m_buffer), m_buffer(1), m_uniform_scale(1)
 	{
-
 	}
 
 public:
+	enum class NormalizationType
+	{
+		None,
+		Adaptive,
+		Range,
+	};
+	struct NormalizationData
+	{
+		NormalizationType type;
+		T min, max;
+
+		NormalizationData()
+		{
+			type = NormalizationType::None;
+		}
+	};
+	NormalizationData m_normalizationData;
+
 	virtual void Free()
 	{
 		m_buffer.Free();
