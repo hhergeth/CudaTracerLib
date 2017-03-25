@@ -5,6 +5,7 @@
 #include <Engine/SynchronizedBuffer.h>
 #include <Math/Vector.h>
 #include <Math/Spectrum.h>
+#include <Math/Frame.h>
 
 namespace CudaTracerLib {
 
@@ -16,15 +17,51 @@ public:
 	virtual void DrawLine(const Vec3f& p1, const Vec3f& p2, const Spectrum& col = Spectrum(1, 0, 0)) const = 0;
 	virtual void DrawEllipse(const Vec3f& p, const NormalizedT<Vec3f>& t1, const NormalizedT<Vec3f>& t2, float l1, float l2, const Spectrum& col = Spectrum(1, 0, 0)) const
 	{
+		//draw ellipse
+		const int N = 32;
 
+		float C = 2.0f * PI * math::sqrt((l1 * l1 + l2 * l2) / 2.0f);
+		for (int i = 0; i < N; i++)
+		{
+			float t_1 = (i) / float(N - 1) * C, t_2 = (i + 1) / float(N - 1) * C;
+			Vec2f c_1(l1 * math::cos(t_1), l2 * math::sin(t_1)),
+				  c_2(l1 * math::cos(t_2), l2 * math::sin(t_2));
+
+			auto p_1 = p + c_1.x * t1 + c_1.y * t2,
+				 p_2 = p + c_2.x * t1 + c_2.y * t2;
+
+			DrawLine(p_1, p_2, col);
+		}
+
+		//draw coordinate axis
+		DrawLine(p + t1 * l1, p - t1 * l1, col);
+		DrawLine(p + t2 * l2, p - t2 * l2, col);
 	}
-	virtual void DrawEllipsoid(const Vec3f& p, const NormalizedT<Vec3f>& t1, const NormalizedT<Vec3f>& t2, const NormalizedT<Vec3f>& n, float l1, float l2, float l3, const Spectrum& col = Spectrum(1, 0, 0)) const
+	virtual void DrawEllipsoid(const Vec3f& p, const NormalizedT<Vec3f>& t1, const NormalizedT<Vec3f>& t2, const NormalizedT<Vec3f>& t3, float l1, float l2, float l3, const Spectrum& col = Spectrum(1, 0, 0)) const
 	{
-
+		DrawEllipse(p, t1, t2, l1, l2, col);
+		DrawEllipse(p, t1, t3, l1, l3, col);
+		DrawEllipse(p, t2, t3, l2, l3, col);
 	}
 	virtual void DrawCone(const Vec3f& p, const NormalizedT<Vec3f>& d, float theta, float length, const Spectrum& col = Spectrum(1, 0, 0)) const
 	{
+		const int N = 32;
 
+		auto c = p + d * length;
+		float rad = length * math::tan(theta / 2.0f);
+		Frame sys(d);
+		for (int i = 0; i < N; i++)
+		{
+			float t_1 = (i) / float(N - 1) * rad, t_2 = (i + 1) / float(N - 1) * rad;
+			Vec2f c_1(rad * math::cos(t_1), rad * math::sin(t_1)),
+				  c_2(rad * math::cos(t_2), rad * math::sin(t_2));
+
+			auto p_1 = c + sys.toWorld(Vec3f(c_1.x, c_1.y, 0.0f)),
+				 p_2 = c + sys.toWorld(Vec3f(c_2.x, c_2.y, 0.0f));
+
+			DrawLine(p_1, p_2, col);
+			DrawLine(p, p_1);
+		}
 	}
 };
 
