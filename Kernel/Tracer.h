@@ -147,6 +147,10 @@ public:
 	{
 		return *m_pPixelVarianceBuffer;
 	}
+	virtual const PixelDebugVisualizerManager& getDebugVisualizerManger() const
+	{
+		return m_debugVisualizerManager;
+	}
 protected:
 	float m_fLastRuntime;
 	unsigned int m_uLastNumRaysTraced;
@@ -187,7 +191,8 @@ public:
 	virtual void DoPass(Image* I, bool a_NewTrace)
 	{
 		ThrowCudaErrors(cudaEventRecord(start, 0));
-		m_debugVisualizerManager.ClearAll();
+		// do not clear because of block samplers
+		//m_debugVisualizerManager.ClearAll();
 		if (a_NewTrace || !PROGRESSIVE)
 		{
 			m_uPassesDone = 0;
@@ -211,6 +216,7 @@ public:
 			m_pPixelVarianceBuffer->AddPass(*I, getSplatScale(), m_pBlockSampler);
 			m_pBlockSampler->AddPass(I, this, *m_pPixelVarianceBuffer);
 		}
+		m_debugVisualizerManager.CopyFromGPU();
 		ThrowCudaErrors(cudaEventRecord(stop, 0));
 		ThrowCudaErrors(cudaEventSynchronize(stop));
 		if (start != stop)

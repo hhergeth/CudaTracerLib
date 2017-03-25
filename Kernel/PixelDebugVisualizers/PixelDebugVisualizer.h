@@ -84,6 +84,7 @@ public:
 	virtual void Clear() = 0;
 	virtual void Visualize(Image& img) = 0;
 	virtual void VisualizePixel(unsigned int x, unsigned int y, const IDebugDrawer& drawer) = 0;
+	virtual void CopyFromGPU() = 0;
 	virtual void Resize(unsigned int w, unsigned int h)
 	{
 		m_width = w;
@@ -147,6 +148,12 @@ public:
 		m_buffer.Memset((unsigned char)0);
 	}
 
+	virtual void CopyFromGPU()
+	{
+		m_buffer.setOnGPU();
+		m_buffer.Synchronize();
+	}
+
 	CUDA_FUNC_IN T& operator()(unsigned int x, unsigned int y)
 	{
 		return m_buffer[y * m_width + x];
@@ -180,14 +187,25 @@ public:
 	template<typename T> PixelDebugVisualizer<T>& findOrCreate(const std::string& name)
 	{
 		auto it = m_visualizers.find(name);
-		auto* ptr = dynamic_cast<PixelDebugVisualizer<T>*>(it->second);
-		if (it != m_visualizers.end() && ptr)
-			return *ptr;
+		if (it != m_visualizers.end())
+		{
+			auto* ptr = dynamic_cast<PixelDebugVisualizer<T>*>(it->second);
+			if (it != m_visualizers.end() && ptr)
+				return *ptr;
+		}
 
-		ptr = new PixelDebugVisualizer<T>(name);
+		auto* ptr = new PixelDebugVisualizer<T>(name);
 		ptr->Resize(m_width, m_height);
 		m_visualizers[name] = ptr;
-		return ptr;
+		return *ptr;
+	}
+
+	template<typename F> void iterateAllVisualizers(F clb) const
+	{
+		for (auto ent : m_visualizers)
+		{
+			clb(ent.second);
+		}
 	}
 
 	void Resize(unsigned int w, unsigned int h)
@@ -209,6 +227,16 @@ public:
 		for (auto ent : m_visualizers)
 			ent.second->Clear();
 	}
+
+	void CopyFromGPU()
+	{
+		for (auto ent : m_visualizers)
+			ent.second->CopyFromGPU();
+	}
 };
 
 }
+
+#include "FloatPixelDebugVisualizer.h"
+#include "Vec2fPixelDebugVisualizer.h"
+#include "Vec3fPixelDebugVisualizer.h"
