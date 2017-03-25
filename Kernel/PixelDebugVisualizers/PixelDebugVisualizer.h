@@ -81,6 +81,7 @@ public:
 
 	}
 	virtual void Free() = 0;
+	virtual void Clear() = 0;
 	virtual void Visualize(Image& img) = 0;
 	virtual void VisualizePixel(unsigned int x, unsigned int y, const IDebugDrawer& drawer) = 0;
 	virtual void Resize(unsigned int w, unsigned int h)
@@ -141,6 +142,11 @@ public:
 		IPixelDebugVisualizer::Resize(w, h);
 	}
 
+	virtual void Clear()
+	{
+		m_buffer.Memset((unsigned char)0);
+	}
+
 	CUDA_FUNC_IN T& operator()(unsigned int x, unsigned int y)
 	{
 		return m_buffer[y * m_width + x];
@@ -196,6 +202,12 @@ public:
 	{
 		for (auto ent : m_visualizers)
 			delete ent.second;
+	}
+
+	void ClearAll()
+	{
+		for (auto ent : m_visualizers)
+			ent.second->Clear();
 	}
 };
 
