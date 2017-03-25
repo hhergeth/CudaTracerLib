@@ -17,7 +17,7 @@ template <typename T, int N> struct TSpectrum
 {
 public:
 	typedef T          Scalar;
-	const static int dim = N;
+	enum { DIMENSION = N };
 
 	CUDA_FUNC_IN TSpectrum() { }
 
