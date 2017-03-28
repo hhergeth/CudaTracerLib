@@ -109,7 +109,7 @@ public:
 	{
 		auto j = (pass_idx + sequence_idx) % (n_strata * n_strata);
 		auto x = j % n_strata, y = j / n_strata;
-		auto sample = (Vec2f((float)x, (float)y) + rng.randomFloat2()) / n_strata;
+		auto sample = (Vec2f((float)x, (float)y) + rng.randomFloat2()) / (float)n_strata;
 		sequence[0] = Vec2f(math::frac(sample.x), math::frac(sample.y));
 
 		for (unsigned int i = 1u; i < sequence_length; i++)

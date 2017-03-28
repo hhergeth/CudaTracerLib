@@ -30,6 +30,7 @@ Spectrum HomogeneousVolumeDensity::tau(const Ray &ray, float minT, float maxT) c
 
 bool HomogeneousVolumeDensity::sampleDistance(const Ray& ray, float minT, float maxT, float rand, MediumSamplingRecord& mRec) const
 {
+	//use balance heuristic
 	float m_mediumSamplingWeight = -1;
 	Spectrum sig_t = sig_a + sig_s, albedo = sig_s / sig_t;
 	for (int i = 0; i < SPECTRUM_SAMPLES; i++)
@@ -37,15 +38,21 @@ bool HomogeneousVolumeDensity::sampleDistance(const Ray& ray, float minT, float 
 			m_mediumSamplingWeight = albedo[i];
 	if (m_mediumSamplingWeight > 0)
 		m_mediumSamplingWeight = max(m_mediumSamplingWeight, 0.5f);
+
+	//sample distance for random channel
 	float sampledDistance = FLT_MAX;
-	unsigned int channel;
-	MonteCarlo::sampleReuse(SPECTRUM_SAMPLES, rand, channel);
 	if (rand < m_mediumSamplingWeight)
 	{
 		rand /= m_mediumSamplingWeight;
+
+		unsigned int channel;
+		MonteCarlo::sampleReuse(SPECTRUM_SAMPLES, rand, channel);
+
 		float samplingDensity = sig_t[channel];
-		sampledDistance = -logf(1 - rand) / samplingDensity;
+		sampledDistance = -math::log(1 - rand) / samplingDensity;
 	}
+
+	//fill info for sampled point
 	bool success = true;
 	if (sampledDistance < maxT - minT)
 	{
@@ -62,13 +69,15 @@ bool HomogeneousVolumeDensity::sampleDistance(const Ray& ray, float minT, float 
 		success = false;
 	}
 
-	Spectrum t = (-sig_t * sampledDistance).exp();
-	mRec.pdfFailure = t.avg();
-	mRec.pdfSuccess = (sig_t * t).avg();
+	//compute probabilities
+	Spectrum tmp = (-sig_t * sampledDistance).exp();
+	mRec.pdfFailure = tmp.avg();
+	mRec.pdfSuccess = (sig_t * tmp).avg();
+
 	mRec.transmittance = (sig_t * (-sampledDistance)).exp();
 	mRec.pdfSuccessRev = mRec.pdfSuccess = mRec.pdfSuccess * m_mediumSamplingWeight;
 	mRec.pdfFailure = m_mediumSamplingWeight * mRec.pdfFailure + (1 - m_mediumSamplingWeight);
-	if (mRec.transmittance.max() < 1e-10f)
+	if (mRec.transmittance.max() < 1e-8f)
 		mRec.transmittance = Spectrum(0.0f);
 
 	return success;
@@ -301,14 +310,6 @@ float KernelAggregateVolume::p(const Vec3f& p, const PhaseFunctionSamplingRecord
 	return sumWt != 0 ? ph / sumWt : 0.0f;
 }
 
-//http://stackoverflow.com/questions/7669057/find-nth-set-bit-in-an-int
-CUDA_FUNC_IN int ffsn(unsigned int v, int n) {
-	for (int i = 0; i<n - 1; i++) {
-		v &= v - 1; // remove the least significant bit
-	}
-	return v & ~(v - 1); // extract the least significant bit
-}
-
 bool KernelAggregateVolume::sampleDistance(const Ray& ray, float minT, float maxT, float sample, MediumSamplingRecord& mRec) const
 {
 	float vol_sample_pdf = 0;
@@ -323,6 +324,14 @@ bool KernelAggregateVolume::sampleDistance(const Ray& ray, float minT, float max
 	else return false;
 }
 
+//http://stackoverflow.com/questions/7669057/find-nth-set-bit-in-an-int
+CUDA_FUNC_IN int ffsn(unsigned int v, int n) {
+	for (int i = 0; i<n - 1; i++) {
+		v &= v - 1; // remove the least significant bit
+	}
+	return v & ~(v - 1); // extract the least significant bit
+}
+
 const VolumeRegion* KernelAggregateVolume::sampleVolume(const Ray& ray, float minT, float maxT, float& sample, float& pdf) const
 {
 	if (m_uVolumeCount == 0)
@@ -330,16 +339,23 @@ const VolumeRegion* KernelAggregateVolume::sampleVolume(const Ray& ray, float mi
 	else if (m_uVolumeCount == 1)
 		return m_pVolumes[0].WorldBound().Intersect<true>(ray, &minT, &maxT) ? m_pVolumes : 0;
 
+	//find all intersecting volumes
 	unsigned int n = 0;
 	unsigned int flag = 0;
 	for (unsigned int i = 0; i < m_uVolumeCount; i++)
-		if (m_pVolumes[i].WorldBound().Intersect<true>(ray, &minT, &maxT))//the pointers will only be set in case true is returned
+	{
+		float a = minT, b = maxT;
+		if (m_pVolumes[i].WorldBound().Intersect<true>(ray, &a, &b))
 		{
 			n++;
 			flag |= 1 << i;
 		}
+	}
+
 	if (!n)
 		return 0;
+
+	//randomly (uniform) choose one
 	unsigned int nth;
 	MonteCarlo::sampleReuse(n, sample, nth);
 	int i = ffsn(flag, nth);

@@ -3,6 +3,8 @@
 #include <vector>
 #include <Math/Kernel.h>
 
+namespace CudaTracerLib {
+
 template<int DIM> struct DensityEstimator
 {
 	std::vector<size_t> data;
@@ -42,3 +44,5 @@ template<int DIM> struct DensityEstimator
 		std::cout << std::endl;
 	}
 };
+
+}
