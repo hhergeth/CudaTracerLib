@@ -67,12 +67,12 @@ public:
 
 	template<unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX, typename CLB> CUDA_FUNC_IN void ForAll(const Vec3f& p, CLB clb)
 	{
-		((HASHER*)this)->ForAllCellEntries(BaseType::hashMap.Transform(p), clb, MAX_ENTRIES_PER_CELL);
+		((HASHER*)this)->ForAllCellEntries(BaseType::getHashGrid().Transform(p), clb, MAX_ENTRIES_PER_CELL);
 	}
 
 	template<unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX, typename CLB> CUDA_FUNC_IN void ForAll(const Vec3f& min, const Vec3f& max, CLB clb)
 	{
-		ForAll<MAX_ENTRIES_PER_CELL>(BaseType::hashMap.Transform(min), BaseType::hashMap.Transform(max), clb);
+		ForAll<MAX_ENTRIES_PER_CELL>(BaseType::getHashGrid().Transform(min), BaseType::getHashGrid().Transform(max), clb);
 	}
 };
 
@@ -447,22 +447,22 @@ public:
 
 	CUDA_FUNC_IN const T& operator()(const Vec3f& p) const
 	{
-		return m_buffer[hashMap.Hash(p)].value;
+		return m_buffer[BaseType::getHashGrid().Hash(p)].value;
 	}
 
 	CUDA_FUNC_IN T& operator()(const Vec3f& p)
 	{
-		return m_buffer[hashMap.Hash(p)];
+		return m_buffer[BaseType::getHashGrid().Hash(p)];
 	}
 
 	CUDA_FUNC_IN const T& operator()(const Vec3u& p) const
 	{
-		return m_buffer[hashMap.Hash(p)].value;
+		return m_buffer[BaseType::getHashGrid().Hash(p)].value;
 	}
 
 	CUDA_FUNC_IN T& operator()(const Vec3u& p)
 	{
-		return m_buffer[hashMap.Hash(p)];
+		return m_buffer[BaseType::getHashGrid().Hash(p)];
 	}
 
 	CUDA_FUNC_IN const T& operator()(unsigned int idx) const
