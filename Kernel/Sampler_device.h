@@ -58,7 +58,7 @@ struct SequenceSampler
 private:
 	template<unsigned k> struct SequenceCombinerK
 	{
-		template<typename F> static CUDA_FUNC_IN void compute_coordinates_from_index(unsigned int flattened_idx, unsigned int length, F& clb)
+		template<typename F> static CUDA_FUNC_IN void compute_coordinates_from_index(unsigned int flattened_idx, unsigned int length, F clb)
 		{
 			for (unsigned int i = 0; i < k; i++)
 			{
@@ -67,7 +67,7 @@ private:
 			}
 		}
 
-		template<typename T, typename F> static CUDA_FUNC_IN T compute_sequences_sum(unsigned int random_idx, unsigned int num_sequences, F& el_clb)
+		template<typename T, typename F> static CUDA_FUNC_IN T compute_sequences_sum(unsigned int random_idx, unsigned int num_sequences, F el_clb)
 		{
 			T val = T(0);
 			compute_coordinates_from_index(random_idx, num_sequences, [&](unsigned int coord_i)
