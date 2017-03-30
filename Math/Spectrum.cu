@@ -679,7 +679,7 @@ void SpectrumHelper::staticData::init()
 {
 	float stepSize = SPECTRUM_RANGE / (float) SPECTRUM_SAMPLES;
 	for (int i=0; i<SPECTRUM_SAMPLES + 1; i++) {
-		float value = SPECTRUM_min_WAVELENGTH + stepSize * i;
+		float value = SPECTRUM_MIN_WAVELENGTH + stepSize * i;
 		m_wavelengths[i] = value;
 	}
 

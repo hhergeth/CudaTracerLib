@@ -8,10 +8,10 @@ namespace CudaTracerLib {
 
 #define SPECTRUM_SAMPLES 3
 
-#define SPECTRUM_min_WAVELENGTH   360
-#define SPECTRUM_max_WAVELENGTH   830
+#define SPECTRUM_MIN_WAVELENGTH   360
+#define SPECTRUM_MAX_WAVELENGTH   830
 #define SPECTRUM_RANGE                \
-	(SPECTRUM_max_WAVELENGTH-SPECTRUM_min_WAVELENGTH)
+	(SPECTRUM_MAX_WAVELENGTH-SPECTRUM_MIN_WAVELENGTH)
 
 template <typename T, int N> struct TSpectrum
 {
@@ -19,7 +19,7 @@ public:
 	typedef T          Scalar;
 	enum { DIMENSION = N };
 
-	CUDA_FUNC_IN TSpectrum() { }
+	CUDA_FUNC_IN TSpectrum() = default;
 
 	CUDA_FUNC_IN TSpectrum(Scalar v) {
 		for (int i = 0; i < N; i++)
@@ -331,7 +331,7 @@ public:
 		EIlluminant
 	};
 
-	CUDA_FUNC_IN Spectrum() { }
+	CUDA_FUNC_IN Spectrum() = default;
 
 	CUDA_FUNC_IN Spectrum(float r, float g, float b)
 	{
@@ -379,7 +379,7 @@ public:
 #if SPECTRUM_SAMPLES == 3
 		return 0.0f;
 #else
-		int index = Floor2Int((lambda - SPECTRUM_min_WAVELENGTH) *
+		int index = Floor2Int((lambda - SPECTRUM_MIN_WAVELENGTH) *
 			((float) SPECTRUM_SAMPLES / (float) SPECTRUM_RANGE));
 
 		if (index < 0 || index >= SPECTRUM_SAMPLES)
