@@ -13,40 +13,18 @@
 
 namespace CudaTracerLib {
 
-template<typename T, typename HASHER> class SpatialGrid
+template<typename T, typename HASHER> class SpatialGridBase
 {
 protected:
 	HashGrid_Reg hashMap;
 public:
-	virtual ~SpatialGrid()
+	virtual ~SpatialGridBase()
 	{
 
 	}
 	CUDA_FUNC_IN const HashGrid_Reg& getHashGrid() const
 	{
 		return hashMap;
-	}
-
-	template<unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX, typename CLB> CUDA_FUNC_IN void ForAll(const Vec3u& min, const Vec3u& max, CLB clb)
-	{
-		ForAllCells(min, max, [&](const Vec3u& cell_idx)
-		{
-			auto lam1 = [&](unsigned int e_idx, T& val)
-			{
-				clb(cell_idx, e_idx, val);
-			};
-			((HASHER*)this)->ForAllCellEntries(cell_idx, lam1, MAX_ENTRIES_PER_CELL);
-		});
-	}
-
-	template<unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX, typename CLB> CUDA_FUNC_IN void ForAll(const Vec3f& p, CLB clb)
-	{
-		((HASHER*)this)->ForAllCellEntries(hashMap.Transform(p), clb, MAX_ENTRIES_PER_CELL);
-	}
-
-	template<unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX, typename CLB> CUDA_FUNC_IN void ForAll(const Vec3f& min, const Vec3f& max, CLB clb)
-	{
-		ForAll<MAX_ENTRIES_PER_CELL>(hashMap.Transform(min), hashMap.Transform(max), clb);
 	}
 
 	template<typename CLB> CUDA_FUNC_IN void ForAllCells(const Vec3u& min_cell, const Vec3u& max_cell, CLB clb)
@@ -68,6 +46,32 @@ public:
 	template<typename CLB> CUDA_FUNC_IN void ForAllCells(CLB clb)
 	{
 		ForAllCells(Vec3u(0), hashMap.m_gridDim - Vec3u(1), clb);
+	}
+};
+
+template<typename T, typename HASHER> class SpatialGrid : public SpatialGridBase<T, HASHER>
+{
+public:
+	template<unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX, typename CLB> CUDA_FUNC_IN void ForAll(const Vec3u& min, const Vec3u& max, CLB clb)
+	{
+		ForAllCells(min, max, [&](const Vec3u& cell_idx)
+		{
+			auto lam1 = [&](unsigned int e_idx, T& val)
+			{
+				clb(cell_idx, e_idx, val);
+			};
+			((HASHER*)this)->ForAllCellEntries(cell_idx, lam1, MAX_ENTRIES_PER_CELL);
+		});
+	}
+
+	template<unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX, typename CLB> CUDA_FUNC_IN void ForAll(const Vec3f& p, CLB clb)
+	{
+		((HASHER*)this)->ForAllCellEntries(hashMap.Transform(p), clb, MAX_ENTRIES_PER_CELL);
+	}
+
+	template<unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX, typename CLB> CUDA_FUNC_IN void ForAll(const Vec3f& min, const Vec3f& max, CLB clb)
+	{
+		ForAll<MAX_ENTRIES_PER_CELL>(hashMap.Transform(min), hashMap.Transform(max), clb);
 	}
 };
 
@@ -414,10 +418,10 @@ public:
 };
 
 //a mapping from R^3 -> T, ie. associating one element with each point in the grid
-template<typename T> struct SpatialSet : public ISynchronizedBufferParent
+template<typename T> struct SpatialSet : public SpatialGridBase<T, SpatialSet<T>>, public ISynchronizedBufferParent
 {
+	typedef SpatialGridBase<T, SpatialSet<T>> BaseType;
 	Vec3u m_gridSize;
-	HashGrid_Reg hashMap;
 	SynchronizedBuffer<T> m_buffer;
 public:
 	SpatialSet(const Vec3u& gridSize)
@@ -427,12 +431,17 @@ public:
 
 	void SetGridDimensions(const AABB& box)
 	{
-		hashMap = HashGrid_Reg(box, m_gridSize);
+		BaseType::hashMap = HashGrid_Reg(box, m_gridSize);
 	}
 
 	void ResetBuffer()
 	{
 		m_buffer.Memset((unsigned char)0);
+	}
+
+	CUDA_FUNC_IN unsigned int getNumCells() const
+	{
+		return m_gridSize.x * m_gridSize.y * m_gridSize.z;
 	}
 
 	CUDA_FUNC_IN const T& operator()(const Vec3f& p) const
@@ -445,6 +454,16 @@ public:
 		return m_buffer[hashMap.Hash(p)];
 	}
 
+	CUDA_FUNC_IN const T& operator()(const Vec3u& p) const
+	{
+		return m_buffer[hashMap.Hash(p)].value;
+	}
+
+	CUDA_FUNC_IN T& operator()(const Vec3u& p)
+	{
+		return m_buffer[hashMap.Hash(p)];
+	}
+
 	CUDA_FUNC_IN const T& operator()(unsigned int idx) const
 	{
 		return m_buffer[idx];
@@ -453,11 +472,6 @@ public:
 	CUDA_FUNC_IN T& operator()(unsigned int idx)
 	{
 		return m_buffer[idx];
-	}
-
-	CUDA_FUNC_IN unsigned int NumEntries() const
-	{
-		return m_gridSize.x * m_gridSize.y * m_gridSize.z;
 	}
 };
 

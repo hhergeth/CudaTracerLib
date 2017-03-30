@@ -39,8 +39,8 @@ template<int max_SAMPLES> __global__ void updateCache(float ny)
 		blockIdx.z * blockDim.z + threadIdx.z);
 	if (i.x < g_dMap->m_gridSize.x && i.y < g_dMap->m_gridSize.y && i.z < g_dMap->m_gridSize.z)
 	{
-		Vec3f mi = g_dMap->hashMap.InverseTransform(i), ma = g_dMap->hashMap.InverseTransform(i + Vec3u(1));
-		unsigned int idx = g_dMap->hashMap.Hash(i);
+		Vec3f mi = g_dMap->getHashGrid().InverseTransform(i), ma = g_dMap->getHashGrid().InverseTransform(i + Vec3u(1));
+		unsigned int idx = g_dMap->getHashGrid().Hash(i);
 		g_dMap->operator()(idx).Update<max_SAMPLES>(g_sMap, mi, ma, ny);
 	}
 }
@@ -124,10 +124,10 @@ void PmmTracer::StartNewTrace(Image* I)
 	dMap.ResetBuffer();
 	dMap.SetGridDimensions(box);
 	auto rng = g_SamplerData(0);
-	DirectionModel* models = new DirectionModel[dMap.NumEntries()];
-	for (unsigned int i = 0; i < dMap.NumEntries(); i++)
+	DirectionModel* models = new DirectionModel[dMap.getNumCells()];
+	for (unsigned int i = 0; i < dMap.getNumCells(); i++)
 		models[i].Initialze(rng);
-	cudaMemcpy(dMap.m_buffer.getDevicePtr(), models, dMap.NumEntries() * sizeof(DirectionModel), cudaMemcpyHostToDevice);
+	cudaMemcpy(dMap.m_buffer.getDevicePtr(), models, dMap.getNumCells() * sizeof(DirectionModel), cudaMemcpyHostToDevice);
 	delete[] models;
 }
 
@@ -155,7 +155,7 @@ void PmmTracer::DebugInternal(Image* I, const Vec2i& p)
 		return;
 	}
 	Vec3f pa = r(r2.m_fDist);
-	unsigned int idx = dMap.hashMap.Hash(pa);
+	unsigned int idx = dMap.getHashGrid().Hash(pa);
 	modelToShow = new unsigned int(idx);
 	DirectionModel model;
 	cudaMemcpy(&model, dMap.m_buffer.getDevicePtr() + idx, sizeof(model), cudaMemcpyDeviceToHost);
