@@ -31,14 +31,20 @@ template<typename ARG, typename F, typename T> void Launch(Image& img, PixelDebu
 template<int N, typename T> struct generic_normalize_float_op
 {
 private:
-	template<typename T> CUDA_DEVICE float extractComponent(int I, const T& vec)
+	template<typename VEC_T> struct extractComponent
 	{
-		return vec[I];
-	}
-	template<> CUDA_DEVICE float extractComponent(int I, const float& f)
+		CUDA_FUNC_IN float operator()(int I, const VEC_T& vec)
+		{
+			return vec[I];
+		}
+	};
+	template<> struct extractComponent<float>
 	{
-		return f;
-	}
+		CUDA_FUNC_IN float operator()(int I, float f)
+		{
+			return f;
+		}
+	};
 public:
 	CUDA_DEVICE void operator()(unsigned int x, unsigned int y, Image& img, PixelDebugVisualizer<T>& buffer, int* min_max_buf)
 	{
@@ -56,7 +62,7 @@ public:
 
 		for (int i = 0; i < N; i++)
 		{
-			auto component_int_val = floatToOrderedInt(extractComponent(i, val));
+			auto component_int_val = floatToOrderedInt(extractComponent<T>()(i, val));
 			atomicMin(&s_min[i], component_int_val);
 			atomicMax(&s_max[i], component_int_val);
 		}
