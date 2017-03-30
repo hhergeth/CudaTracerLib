@@ -30,21 +30,6 @@ public:
 			f.m_normal = 0;
 			return f;
 		}
-
-		CUDA_FUNC_IN static float w_aux(const FeatureData& lhs, const FeatureData& rhs)
-		{
-			auto d_f_i = [](auto a, auto b)
-			{
-				return math::sqr(a - b).sum();
-			};
-
-			Spectrum sa, sb;
-			sa.fromRGBCOL(lhs.m_albedo); sb.fromRGBCOL(rhs.m_albedo);
-			float r = math::exp(-d_f_i(sa, sb));
-			//r *= math::exp(-d_f_i(Uchar2ToNormalizedFloat3(lhs.m_normal), Uchar2ToNormalizedFloat3(lhs.m_normal)));
-			r = math::exp(-d_f_i(Vec2f(lhs.m_depth.ToFloat(), 0), Vec2f(rhs.m_depth.ToFloat(), 0))*500);
-			return r;
-		}
 	};
 private:
 	RGBE* m_cachedImg;
