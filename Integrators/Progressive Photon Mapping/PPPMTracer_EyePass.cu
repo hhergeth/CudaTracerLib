@@ -11,7 +11,7 @@ namespace CudaTracerLib {
 CUDA_CONST CudaStaticWrapper<SurfaceMapT> g_SurfMap;
 CUDA_CONST CudaStaticWrapper<SurfaceMapT> g_SurfMapCaustic;
 CUDA_CONST unsigned int g_NumPhotonEmittedSurface2, g_NumPhotonEmittedVolume2;
-CUDA_CONST CUDA_ALIGN(16) unsigned char g_VolEstimator2[Dmax3(sizeof(PointStorage), sizeof(BeamGrid), sizeof(BeamBeamGrid))];
+CUDA_CONST CUDA_ALIGN(16) unsigned char g_VolEstimator2[DMAX3(sizeof(PointStorage), sizeof(BeamGrid), sizeof(BeamBeamGrid))];
 
 CUDA_FUNC_IN Spectrum L_SurfaceFinalGathering(int N_FG_Samples, BSDFSamplingRecord& bRec, const NormalizedT<Vec3f>& wi, float rad, TraceResult& r2, Sampler& rng, bool DIRECT, unsigned int numPhotonsEmitted, float& pl_est)
 {

@@ -213,7 +213,7 @@ void Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2
 	for (size_t ti = 0; ti < numTriangles; ti++)
 	{
 		TriangleData tri;
-		for (unsigned int uvIdx = 0; uvIdx < Dmin2(nUV_Sets, NUM_UV_SETS); uvIdx++)
+		for (unsigned int uvIdx = 0; uvIdx < DMIN2(nUV_Sets, NUM_UV_SETS); uvIdx++)
 		{
 			for (int j = 0; j < 3; j++)
 			{

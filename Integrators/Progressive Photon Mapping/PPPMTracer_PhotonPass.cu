@@ -25,7 +25,7 @@ static PPPMParameters g_ParametersHost;
 CUDA_DEVICE unsigned int g_NumPhotonEmittedSurface, g_NumPhotonEmittedVolume;
 CUDA_DEVICE CudaStaticWrapper<SurfaceMapT> g_SurfaceMap;
 CUDA_DEVICE CudaStaticWrapper<SurfaceMapT> g_SurfaceMapCaustic;
-CUDA_DEVICE CUDA_ALIGN(16) unsigned char g_VolEstimator[Dmax3(sizeof(PointStorage), sizeof(BeamGrid), sizeof(BeamBeamGrid))];
+CUDA_DEVICE CUDA_ALIGN(16) unsigned char g_VolEstimator[DMAX3(sizeof(PointStorage), sizeof(BeamGrid), sizeof(BeamBeamGrid))];
 
 template<typename VolEstimator> struct PPPMPhotonParticleProcessHandler
 {

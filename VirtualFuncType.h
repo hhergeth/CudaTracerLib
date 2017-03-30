@@ -16,7 +16,7 @@ namespace CTVirtualHelper
 
 	template<typename T, typename... REST> struct Unifier
 	{
-		enum { result = Dmax2(sizeof(T), Unifier<REST...>::result) };
+		enum { result = DMAX2(sizeof(T), Unifier<REST...>::result) };
 	};
 
 	template<typename T> struct Unifier<T>

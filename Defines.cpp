@@ -43,7 +43,7 @@ void CudaSetToZero(void* dest, size_t length)
 	{
 		if (zeroBuf)
 			free(zeroBuf);
-		zeroBufLength = RND_16(Dmax2(length, zeroBufLength));
+		zeroBufLength = RND_16(DMAX2(length, zeroBufLength));
 		zeroBuf = malloc(zeroBufLength);
 		for (int i = 0; i < zeroBufLength / 8; i++)
 			*((unsigned long long*)zeroBuf + i) = 0;

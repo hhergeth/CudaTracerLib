@@ -82,7 +82,7 @@ public:
 		Synchronize();
 		CUDA_FREE(m_deviceData);
 		CUDA_MALLOC(&m_deviceData, newLength * sizeof(T));
-		auto l = Dmin2(newLength, m_length);
+		auto l = DMIN2(newLength, m_length);
 		if(l != 0)
 			CUDA_MEMCPY_TO_DEVICE(m_deviceData, m_hostData, l * sizeof(T));
 		m_location = DataLocation::Synchronized;
