@@ -6,8 +6,6 @@
 #include <Engine/SpatialGridTraversal.h>
 #include <Base/RuntimeTemplateHelper.h>
 
-#define LOOKUP_NORMAL_THRESH 0.5f
-
 namespace CudaTracerLib {
 
 CUDA_CONST CudaStaticWrapper<SurfaceMapT> g_SurfMap;
@@ -15,44 +13,9 @@ CUDA_CONST CudaStaticWrapper<SurfaceMapT> g_SurfMapCaustic;
 CUDA_CONST unsigned int g_NumPhotonEmittedSurface2, g_NumPhotonEmittedVolume2;
 CUDA_CONST CUDA_ALIGN(16) unsigned char g_VolEstimator2[Dmax3(sizeof(PointStorage), sizeof(BeamGrid), sizeof(BeamBeamGrid))];
 
-CUDA_FUNC_IN Spectrum L_Surface(BSDFSamplingRecord& bRec, const NormalizedT<Vec3f>& wi, float r, const Material& mat, unsigned int numPhotonsEmitted, float& pl_est, SurfaceMapT* map = 0)
-{
-	if (!map) map = &g_SurfMap.As();
-	bool hasGlossy = mat.bsdf.hasComponent(EGlossy);
-	Spectrum Lp = Spectrum(0.0f);
-	auto surface_region = bRec.dg.ComputeOnSurfaceDiskBounds(r);
-	map->ForAll(surface_region.minV, surface_region.maxV, [&](const Vec3u& cell_idx, unsigned int p_idx, const PPPMPhoton& ph)
-	{
-		float dist2 = distanceSquared(ph.getPos(map->getHashGrid(), cell_idx), bRec.dg.P);
-		Vec3f photonNormal = ph.getNormal();
-		float wiDotGeoN = absdot(photonNormal, wi);
-		if (dist2 < r * r && dot(photonNormal, bRec.dg.sys.n) > LOOKUP_NORMAL_THRESH && wiDotGeoN > 1e-2f)
-		{
-			bRec.wo = bRec.dg.toLocal(ph.getWi());
-			float cor_fac = math::abs(Frame::cosTheta(bRec.wi) / (wiDotGeoN * Frame::cosTheta(bRec.wo)));
-			float ke = Kernel::k<2>(math::sqrt(dist2), r);
-			Spectrum l = ph.getL();
-			if(hasGlossy)
-				l *= mat.bsdf.f(bRec) / Frame::cosTheta(bRec.wo);//bsdf.f returns f * cos(thetha)
-			Lp += ke * l;
-			pl_est += ke;
-		}
-	});
-
-	if(!hasGlossy)
-	{
-		auto wi_l = bRec.wi;
-		bRec.wo = bRec.wi = NormalizedT<Vec3f>(0.0f, 0.0f, 1.0f);
-		Lp *= mat.bsdf.f(bRec);
-		bRec.wi = wi_l;
-	}
-
-	return Lp / (float)numPhotonsEmitted;
-}
-
 CUDA_FUNC_IN Spectrum L_SurfaceFinalGathering(int N_FG_Samples, BSDFSamplingRecord& bRec, const NormalizedT<Vec3f>& wi, float rad, TraceResult& r2, Sampler& rng, bool DIRECT, unsigned int numPhotonsEmitted, float& pl_est)
 {
-	Spectrum LCaustic = L_Surface(bRec, wi, rad, r2.getMat(), numPhotonsEmitted, pl_est, &g_SurfMapCaustic.As());
+	Spectrum LCaustic = g_SurfMapCaustic->estimateRadiance(bRec, wi, rad, r2.getMat(), numPhotonsEmitted, pl_est);
 	if (!DIRECT)
 		LCaustic += UniformSampleOneLight(bRec, r2.getMat(), rng);//the direct light is not stored in the caustic map
 	Spectrum L(0.0f);
@@ -67,7 +30,7 @@ CUDA_FUNC_IN Spectrum L_SurfaceFinalGathering(int N_FG_Samples, BSDFSamplingReco
 		{
 			r3.getBsdfSample(r, bRec2, ETransportMode::ERadiance);
 			float _;
-			L += f * L_Surface(bRec2, -r.dir(), rad, r3.getMat(), numPhotonsEmitted, _) + L_Surface(bRec2, -r.dir(), rad, r3.getMat(), numPhotonsEmitted, _, &g_SurfMapCaustic.As());
+			L += f * (g_SurfMap->estimateRadiance(bRec2, -r.dir(), rad, r3.getMat(), numPhotonsEmitted, _) + g_SurfMapCaustic->estimateRadiance(bRec2, -r.dir(), rad, r3.getMat(), numPhotonsEmitted, _));
 			L += f * UniformSampleOneLight(bRec2, r3.getMat(), rng);
 			//do not account for emission because this was sampled before
 		}
@@ -165,7 +128,7 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 				Spectrum L_r;//reflected radiance computed by querying photon map
 				float pl_est_it = 0;
 				L_r = N_FG_Samples != 0 ? L_SurfaceFinalGathering(N_FG_Samples, bRec, -r.dir(), rad_surf, r2, rng, DIRECT, g_NumPhotonEmittedSurface2, pl_est_it) :
-										  L_Surface(bRec, -r.dir(), rad_surf, r2.getMat(), g_NumPhotonEmittedSurface2, pl_est_it);
+										  g_SurfMap->estimateRadiance(bRec, -r.dir(), rad_surf, r2.getMat(), g_NumPhotonEmittedSurface2, pl_est_it);
 				adp_ent.surf_density.addSample(pl_est_it);
 				L += throughput * L_r;
 				if (!hasSpec && !hasGlossy)

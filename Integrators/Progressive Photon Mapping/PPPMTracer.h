@@ -8,6 +8,7 @@
 #include <map>
 #include <boost/variant.hpp>
 #include <Engine/BlockLoclizedCudaBuffer.h>
+#include "SurfEstimators/EntryEstimator.h"
 
 namespace CudaTracerLib {
 
@@ -23,7 +24,7 @@ enum
 	PPM_slots_per_block = PPM_photons_per_block * PPM_MaxRecursion,
 };
 
-typedef SpatialLinkedMap<PPPMPhoton> SurfaceMapT;
+typedef EntryEstimator SurfaceMapT;
 typedef unsigned long long counter_t;
 
 struct APPM_PixelData

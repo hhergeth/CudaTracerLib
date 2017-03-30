@@ -102,7 +102,6 @@ void PPPMTracer::Resize(unsigned int _w, unsigned int _h)
 
 void PPPMTracer::DoRender(Image* I)
 {
-	//I->Clear();
 	{
 		auto timer = START_PERF_BLOCK("Photon Pass");
 		doPhotonPass(I);

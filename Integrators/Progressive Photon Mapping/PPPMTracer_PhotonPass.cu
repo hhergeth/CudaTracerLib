@@ -52,16 +52,14 @@ template<typename VolEstimator> struct PPPMPhotonParticleProcessHandler
 		if (rng.randomFloat() < g_Parameters.probSurface && r2.getMat().bsdf.hasComponent(ESmooth) && dot(bRec.dg.sys.n, wo) > 0.0f)
 		{
 			auto ph = PPPMPhoton(weight, wo, bRec.dg.sys.n);
-			Vec3u cell_idx = g_SurfaceMap->getHashGrid().Transform(bRec.dg.P);
-			ph.setPos(g_SurfaceMap->getHashGrid(), cell_idx, bRec.dg.P);
 			bool b = false;
 #ifdef ISCUDA
 			if ((g_Parameters.DIRECT && numSurfaceInteractions > 0) || !g_Parameters.DIRECT)
 			{
-				auto idx = (g_Parameters.finalGathering && !lastDelta) || !g_Parameters.finalGathering ? g_SurfaceMap->Store(cell_idx, ph) : 0xffffffff;
+				auto idx = (g_Parameters.finalGathering && !lastDelta) || !g_Parameters.finalGathering ? g_SurfaceMap->storePhoton(ph, bRec.dg.P) : 0xffffffff;
 				b |= idx != 0xffffffff;
 				if (g_Parameters.finalGathering && lastDelta)
-					b |= g_SurfaceMapCaustic->Store(cell_idx, ph) != 0xffffffff;
+					b |= g_SurfaceMapCaustic->storePhoton(ph, bRec.dg.P) != 0xffffffff;
 			}
 #endif
 			if (b && !wasStoredSurface)
