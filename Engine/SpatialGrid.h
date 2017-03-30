@@ -55,7 +55,7 @@ template<typename T, typename HASHER> class SpatialGrid : public SpatialGridBase
 public:
 	template<unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX, typename CLB> CUDA_FUNC_IN void ForAll(const Vec3u& min, const Vec3u& max, CLB clb)
 	{
-		ForAllCells(min, max, [&](const Vec3u& cell_idx)
+		((HASHER*)this)->ForAllCells(min, max, [&](const Vec3u& cell_idx)
 		{
 			auto lam1 = [&](unsigned int e_idx, T& val)
 			{
