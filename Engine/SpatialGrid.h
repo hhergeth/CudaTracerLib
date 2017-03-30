@@ -51,6 +51,7 @@ public:
 
 template<typename T, typename HASHER> class SpatialGrid : public SpatialGridBase<T, HASHER>
 {
+	typedef SpatialGridBase<T, HASHER> BaseType;
 public:
 	template<unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX, typename CLB> CUDA_FUNC_IN void ForAll(const Vec3u& min, const Vec3u& max, CLB clb)
 	{
@@ -66,12 +67,12 @@ public:
 
 	template<unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX, typename CLB> CUDA_FUNC_IN void ForAll(const Vec3f& p, CLB clb)
 	{
-		((HASHER*)this)->ForAllCellEntries(hashMap.Transform(p), clb, MAX_ENTRIES_PER_CELL);
+		((HASHER*)this)->ForAllCellEntries(BaseType::hashMap.Transform(p), clb, MAX_ENTRIES_PER_CELL);
 	}
 
 	template<unsigned int MAX_ENTRIES_PER_CELL = UINT_MAX, typename CLB> CUDA_FUNC_IN void ForAll(const Vec3f& min, const Vec3f& max, CLB clb)
 	{
-		ForAll<MAX_ENTRIES_PER_CELL>(hashMap.Transform(min), hashMap.Transform(max), clb);
+		ForAll<MAX_ENTRIES_PER_CELL>(BaseType::hashMap.Transform(min), BaseType::hashMap.Transform(max), clb);
 	}
 };
 
