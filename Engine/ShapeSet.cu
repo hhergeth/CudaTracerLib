@@ -5,7 +5,7 @@
 #include "TriangleData.h"
 #include <Kernel/TraceHelper.h>
 #include <Math/Warp.h>
-#include <Math/Sampling.h>
+#include <Math/MonteCarlo.h>
 
 namespace CudaTracerLib {
 

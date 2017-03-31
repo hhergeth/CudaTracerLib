@@ -2,7 +2,7 @@
 #include "MIPMap.h"
 #include <Math/AlgebraHelper.h>
 #include <Math/Warp.h>
-#include <Math/Sampling.h>
+#include <Math/MonteCarlo.h>
 
 namespace CudaTracerLib {
 

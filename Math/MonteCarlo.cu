@@ -1,4 +1,4 @@
-#include "Sampling.h"
+#include "MonteCarlo.h"
 #include <Base/CudaRandom.h>
 #include <Base/STL.h>
 

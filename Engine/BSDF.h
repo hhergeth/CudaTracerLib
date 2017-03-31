@@ -6,7 +6,7 @@
 #include "Engine/Samples.h"
 #include "Engine/PhaseFunction.h"
 #include "MicrofacetDistribution.h"
-#include <Math/Sampling.h>
+#include <Math/MonteCarlo.h>
 #include <Math/Warp.h>
 #include <Math/FresnelHelper.h>
 #include <VirtualFuncType.h>

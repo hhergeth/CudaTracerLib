@@ -2,7 +2,7 @@
 #include <Base/CudaRandom.h>
 #include "Samples.h"
 #include "SpatialGridTraversal.h"
-#include <Math/Sampling.h>
+#include <Math/MonteCarlo.h>
 
 namespace CudaTracerLib {
 

@@ -1,7 +1,7 @@
 #include <stdafx.h>
 #include "Light.h"
 #include "MIPMap.h"
-#include <Math/Sampling.h>
+#include <Math/MonteCarlo.h>
 #include <Math/Warp.h>
 #include <Engine/Buffer.h>
 

@@ -4,7 +4,7 @@
 #include <Base/CudaRandom.h>
 #include "Samples.h"
 #include "Grid.h"
-#include <Math/Sampling.h>
+#include <Math/MonteCarlo.h>
 
 namespace CudaTracerLib {
 
