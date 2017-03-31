@@ -1,6 +1,6 @@
 #pragma once
 #include "Beam.h"
-#include <Engine/SpatialGrid.h>
+#include <Engine/SpatialStructures/SpatialGrid.h>
 #include <Math/half.h>
 #include <Math/Compression.h>
 

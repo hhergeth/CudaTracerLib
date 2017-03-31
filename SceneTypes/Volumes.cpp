@@ -1,9 +1,9 @@
 #include <stdafx.h>
 #include "Volumes.h"
-#include <Engine/Buffer.h>
+#include <Base/Buffer.h>
 #include <Base/CudaRandom.h>
 #include "Samples.h"
-#include "Grid.h"
+#include <Engine/SpatialStructures/Grid.h>
 #include <Math/MonteCarlo.h>
 
 namespace CudaTracerLib {

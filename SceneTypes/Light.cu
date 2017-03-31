@@ -1,5 +1,5 @@
 #include "Light.h"
-#include "MIPMap.h"
+#include <Engine/MIPMap.h>
 #include <Math/AlgebraHelper.h>
 #include <Math/Warp.h>
 #include <Math/MonteCarlo.h>

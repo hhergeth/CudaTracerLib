@@ -1,9 +1,9 @@
 #include <StdAfx.h>
 #include "Node.h"
-#include "Mesh.h"
-#include "Buffer.h"
-#include "Material.h"
-#include "TriIntersectorData.h"
+#include <Engine/Mesh.h>
+#include <Base/Buffer.h>
+#include <Engine/Material.h>
+#include <Engine/TriIntersectorData.h>
 
 namespace CudaTracerLib {
 

@@ -1,5 +1,5 @@
 #include "Samples.h"
-#include "DifferentialGeometry.h"
+#include <Engine/DifferentialGeometry.h>
 
 namespace CudaTracerLib {
 

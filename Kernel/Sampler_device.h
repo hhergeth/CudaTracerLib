@@ -2,8 +2,8 @@
 
 #include <Math/Vector.h>
 #include <Base/CudaRandom.h>
-#include <CudaMemoryManager.h>
-#include <Engine/SynchronizedBuffer.h>
+#include <Base/CudaMemoryManager.h>
+#include <Base/SynchronizedBuffer.h>
 
 namespace CudaTracerLib {
 

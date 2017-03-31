@@ -1,6 +1,6 @@
 #include <StdAfx.h>
 #include "ShapeSet.h"
-#include "Buffer.h"
+#include <Base/Buffer.h>
 #include "TriIntersectorData.h"
 #include "TriangleData.h"
 

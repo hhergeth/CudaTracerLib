@@ -1,6 +1,6 @@
 #pragma once
 
-#include <CudaMemoryManager.h>
+#include <Base/CudaMemoryManager.h>
 #include <vector>
 #include <cstring>
 

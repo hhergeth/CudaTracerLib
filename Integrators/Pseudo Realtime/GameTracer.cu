@@ -1,8 +1,8 @@
 #include "GameTracer.h"
 #include <Kernel/TraceHelper.h>
 #include <Kernel/TraceAlgorithms.h>
-#include <CudaMemoryManager.h>
-#include <Engine/Light.h>
+#include <Base/CudaMemoryManager.h>
+#include <SceneTypes/Light.h>
 
 namespace CudaTracerLib {
 

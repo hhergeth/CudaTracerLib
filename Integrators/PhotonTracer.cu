@@ -1,8 +1,8 @@
 #include "PhotonTracer.h"
 #include <Kernel/TraceHelper.h>
 #include <Kernel/TraceAlgorithms.h>
-#include <Engine/Light.h>
-#include <Engine/Sensor.h>
+#include <SceneTypes/Light.h>
+#include <SceneTypes/Sensor.h>
 #include <Kernel/ParticleProcess.h>
 
 namespace CudaTracerLib {

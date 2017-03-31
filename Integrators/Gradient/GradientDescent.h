@@ -2,9 +2,9 @@
 #include <StdAfx.h>
 #include <Kernel/TraceHelper.h>
 #include <Kernel/TraceAlgorithms.h>
-#include <Engine/Light.h>
-#include <Engine/Sensor.h>
-#include <Engine/Samples.h>
+#include <SceneTypes/Light.h>
+#include <SceneTypes/Sensor.h>
+#include <SceneTypes/Samples.h>
 #include <Engine/DifferentialGeometry.h>
 #include <Engine/Material.h>
 

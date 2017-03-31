@@ -2,7 +2,7 @@
 #include "MIPMap.h"
 #include "MIPMapHelper.h"
 #include <Base/FileStream.h>
-#include <CudaMemoryManager.h>
+#include <Base/CudaMemoryManager.h>
 
 namespace CudaTracerLib {
 

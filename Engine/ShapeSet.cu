@@ -1,6 +1,5 @@
 #include "ShapeSet.h"
 #include <Math/AlgebraHelper.h>
-#include "Samples.h"
 #include "TriIntersectorData.h"
 #include "TriangleData.h"
 #include <Kernel/TraceHelper.h>

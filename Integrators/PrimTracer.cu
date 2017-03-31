@@ -2,7 +2,7 @@
 #include <Kernel/TraceHelper.h>
 #include <Kernel/TraceAlgorithms.h>
 #include <Base/FileStream.h>
-#include <CudaMemoryManager.h>
+#include <Base/CudaMemoryManager.h>
 #include <Engine/MIPMap.h>
 #include <Engine/DynamicScene.h>
 

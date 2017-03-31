@@ -1,10 +1,10 @@
 #include "StdAfx.h"
-#include "Buffer.h"
+#include <Base/Buffer.h>
 #include "SceneBVH.h"
 #include "Mesh.h"
-#include "Node.h"
-#include "SceneBuilder/SplitBVHBuilder.hpp"
-#include "BVHRebuilder.h"
+#include <SceneTypes/Node.h>
+#include "SpatialStructures/SplitBVHBuilder.hpp"
+#include "SpatialStructures/BVHRebuilder.h"
 
 namespace CudaTracerLib {
 

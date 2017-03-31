@@ -6,11 +6,11 @@
 #include "TriangleData.h"
 #include "Material.h"
 #include "TriIntersectorData.h"
-#include "Node.h"
+#include <SceneTypes/Node.h>
 #include "MIPMap.h"
 #include "SceneBVH.h"
-#include "Light.h"
-#include "Buffer.h"
+#include <SceneTypes/Light.h>
+#include <Base/Buffer.h>
 #include<iomanip>
 
 #include <algorithm>

@@ -1,13 +1,13 @@
 #include <StdAfx.h>
-#include <Engine/Buffer.h>
+#include <Base/Buffer.h>
 #include "PPPMTracer.h"
 #include <Base/Timer.h>
 #include <Engine/DynamicScene.h>
-#include <Engine/Node.h>
+#include <SceneTypes/Node.h>
 #include <Engine/Mesh.h>
 #include <Engine/Material.h>
 #include <iomanip>
-#include <Engine/SpatialGridTraversal.h>
+#include <Engine/SpatialStructures/SpatialGridTraversal.h>
 
 namespace CudaTracerLib {
 

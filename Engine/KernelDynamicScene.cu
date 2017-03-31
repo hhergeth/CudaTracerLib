@@ -1,6 +1,6 @@
 #include "KernelDynamicScene.h"
 #include <Kernel/TraceHelper.h>
-#include "Light.h"
+#include <SceneTypes/Light.h>
 #include <Base/STL.h>
 
 namespace CudaTracerLib {

@@ -1,8 +1,8 @@
 #pragma once
 
 #include "../../PhotonMapHelper.h"
-#include <Engine/SpatialGrid.h>
-#include <Engine/Samples.h>
+#include <Engine/SpatialStructures/SpatialGrid.h>
+#include <SceneTypes/Samples.h>
 
 namespace CudaTracerLib {
 

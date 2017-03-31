@@ -3,10 +3,10 @@
 #include <Math/Vector.h>
 #include <Math/Spectrum.h>
 #include <Math/AABB.h>
-#include "Buffer_device.h"
+#include <Base/Buffer_device.h>
 #include "SceneBVH_device.h"
-#include "Volumes.h"
-#include "Sensor.h"
+#include <SceneTypes/Volumes.h>
+#include <SceneTypes/Sensor.h>
 
 namespace CudaTracerLib {
 

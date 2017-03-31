@@ -3,7 +3,7 @@
 #include <map>
 #include <string>
 #include <limits>
-#include <Engine/SynchronizedBuffer.h>
+#include <Base/SynchronizedBuffer.h>
 #include <Math/Vector.h>
 #include <Math/Spectrum.h>
 #include <Math/Frame.h>

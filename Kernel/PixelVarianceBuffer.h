@@ -1,6 +1,6 @@
 #pragma once
 #include <Engine/Image.h>
-#include <Engine/SynchronizedBuffer.h>
+#include <Base/SynchronizedBuffer.h>
 #include <Math/VarAccumulator.h>
 
 namespace CudaTracerLib

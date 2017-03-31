@@ -2,10 +2,10 @@
 
 #include <Kernel/Tracer.h>
 #include "../PhotonMapHelper.h"
-#include <CudaMemoryManager.h>
+#include <Base/CudaMemoryManager.h>
 #include "VolEstimators/BeamBeamGrid.h"
 #include "VolEstimators/BeamGrid.h"
-#include <Engine/BlockLoclizedCudaBuffer.h>
+#include <Base/BlockLoclizedCudaBuffer.h>
 #include "SurfEstimators/EntryEstimator.h"
 
 namespace CudaTracerLib {

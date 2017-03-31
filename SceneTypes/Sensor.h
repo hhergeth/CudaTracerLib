@@ -6,7 +6,7 @@
 #include <Math/AABB.h>
 #include "Samples.h"
 #include "AbstractEmitter.h"
-#include <VirtualFuncType.h>
+#include <Base/VirtualFuncType.h>
 
 namespace CudaTracerLib {
 

@@ -1,8 +1,8 @@
 #include "TraceAlgorithms.h"
 #include "TraceHelper.h"
-#include <Engine/Samples.h>
+#include <SceneTypes/Samples.h>
 #include <Engine/Material.h>
-#include <Engine/Light.h>
+#include <SceneTypes/Light.h>
 
 namespace CudaTracerLib {
 

@@ -2,10 +2,10 @@
 
 #include <Math/float4x4.h>
 #include <Math/Spectrum.h>
-#include "MIPMap_device.h"
-#include "DifferentialGeometry.h"
+#include <Engine/MIPMap_device.h>
+#include <Engine/DifferentialGeometry.h>
 #include <Base/FixedString.h>
-#include <VirtualFuncType.h>
+#include <Base/VirtualFuncType.h>
 
 //Implementation and interface designed after PBRT.
 

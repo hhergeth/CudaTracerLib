@@ -1,7 +1,7 @@
 #pragma once
 
-#include "BSDF.h"
-#include "Volumes.h"
+#include <SceneTypes/BSDF.h>
+#include <SceneTypes/Volumes.h>
 
 namespace CudaTracerLib {
 

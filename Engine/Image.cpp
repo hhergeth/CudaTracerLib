@@ -2,7 +2,7 @@
 #include "Image.h"
 #include <stdexcept>
 #include <iostream>
-#include <CudaMemoryManager.h>
+#include <Base/CudaMemoryManager.h>
 
 #define FREEIMAGE_LIB
 #include <FreeImage.h>

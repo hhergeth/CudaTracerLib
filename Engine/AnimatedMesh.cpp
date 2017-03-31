@@ -1,12 +1,12 @@
 #include "StdAfx.h"
 #include "AnimatedMesh.h"
-#include "Buffer.h"
+#include <Base/Buffer.h>
 #include <Math/Vector.h>
 #include <Base/FileStream.h>
 #include "TriangleData.h"
 #include "Material.h"
 #include "TriIntersectorData.h"
-#include "BVHRebuilder.h"
+#include "SpatialStructures/BVHRebuilder.h"
 
 namespace CudaTracerLib {
 

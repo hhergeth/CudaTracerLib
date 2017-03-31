@@ -1,9 +1,9 @@
 #include "TraceResult.h"
 #include <Engine/TriangleData.h>
-#include <Engine/Node.h>
+#include <SceneTypes/Node.h>
 #include "TraceHelper.h"
-#include <Engine/Light.h>
-#include <Engine/Samples.h>
+#include <SceneTypes/Light.h>
+#include <SceneTypes/Samples.h>
 #include <Engine/Material.h>
 
 namespace CudaTracerLib {

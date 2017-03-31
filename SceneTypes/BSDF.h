@@ -2,14 +2,14 @@
 
 //Implementation and interface copied from Mitsuba.
 #include <vector>
-#include "Engine/Texture.h"
-#include "Engine/Samples.h"
-#include "Engine/PhaseFunction.h"
-#include "MicrofacetDistribution.h"
+#include "Texture.h"
+#include "Samples.h"
+#include "PhaseFunction.h"
+#include <Engine/MicrofacetDistribution.h>
 #include <Math/MonteCarlo.h>
 #include <Math/Warp.h>
 #include <Math/FresnelHelper.h>
-#include <VirtualFuncType.h>
+#include <Base/VirtualFuncType.h>
 #include "Dispersion.h"
 
 namespace CudaTracerLib

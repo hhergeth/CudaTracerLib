@@ -2,7 +2,7 @@
 #include <type_traits>
 #include <memory>
 #include <string.h>
-#include <Base/Platform.h>
+#include "Platform.h"
 
 namespace CudaTracerLib {
 

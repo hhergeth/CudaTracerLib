@@ -2,7 +2,7 @@
 #include "TraceHelper.h"
 #include "TraceAlgorithms.h"
 #include <Engine/DynamicScene.h>
-#include <Engine/Light.h>
+#include <SceneTypes/Light.h>
 #include "Sampler.h"
 
 namespace CudaTracerLib {

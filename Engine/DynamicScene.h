@@ -5,11 +5,11 @@
 #include <Math/Spectrum.h>
 #include <Math/AABB.h>
 #include "KernelDynamicScene.h"
-#include "MeshCompiler.h"
+#include "MeshLoader/MeshCompiler.h"
 #include "SceneInitData.h"
 #include "ShapeSet.h"
 #include <functional>
-#include "Light.h"
+#include <SceneTypes/Light.h>
 
 namespace CudaTracerLib {
 

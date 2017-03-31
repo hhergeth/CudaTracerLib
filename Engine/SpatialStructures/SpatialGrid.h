@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Grid.h"
-#include "SynchronizedBuffer.h"
+#include <Base/SynchronizedBuffer.h>
 #include <Base/Timer.h>
 #ifdef __CUDACC__
 #pragma warning (disable : 4267)

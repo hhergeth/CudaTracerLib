@@ -1,8 +1,8 @@
 #include <StdAfx.h>
-#include "Buffer.h"
+#include <Base/Buffer.h>
 #include "BVHRebuilder.h"
-#include "SceneBuilder/SplitBVHBuilder.hpp"
-#include "Mesh.h"
+#include <Engine/SpatialStructures/SplitBVHBuilder.hpp>
+#include <Engine/Mesh.h>
 #include <algorithm>
 
 namespace CudaTracerLib {

@@ -2,7 +2,7 @@
 
 #include <Kernel/TraceHelper.h>
 #include <Base/CudaRandom.h>
-#include <Engine/Light.h>
+#include <SceneTypes/Light.h>
 
 namespace CudaTracerLib {
 

@@ -1,6 +1,6 @@
 #include "BSDF.h"
 #include <Base/CudaRandom.h>
-#include "RoughTransmittance.h"
+#include <Engine/RoughTransmittance.h>
 
 namespace CudaTracerLib {
 

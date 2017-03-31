@@ -1,7 +1,7 @@
 #include "PathTracer.h"
 #include <Kernel/TraceHelper.h>
 #include <Kernel/TraceAlgorithms.h>
-#include <Engine/Light.h>
+#include <SceneTypes/Light.h>
 
 namespace CudaTracerLib {
 

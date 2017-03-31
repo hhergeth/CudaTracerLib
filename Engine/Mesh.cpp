@@ -1,10 +1,10 @@
 #include "StdAfx.h"
 #include "Mesh.h"
-#include "SceneBuilder/TangentSpaceHelper.h"
-#include "Volumes.h"
-#include "Light.h"
-#include "SceneBuilder/BVHBuilderHelper.h"
-#include "Buffer.h"
+#include "MeshLoader/TangentSpaceHelper.h"
+#include <SceneTypes/Volumes.h>
+#include <SceneTypes/Light.h>
+#include "MeshLoader/BVHBuilderHelper.h"
+#include <Base/Buffer.h>
 #include <Base/FileStream.h>
 #include "SceneInitData.h"
 #include "TriangleData.h"

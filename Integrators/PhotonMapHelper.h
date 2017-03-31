@@ -1,10 +1,10 @@
 #pragma once
 
 #include <Kernel/Tracer.h>
-#include <Engine/Grid.h>
+#include <Engine/SpatialStructures/Grid.h>
 #include <Math/Compression.h>
 #include <Base/FileStream.h>
-#include <CudaMemoryManager.h>
+#include <Base/CudaMemoryManager.h>
 #include <Math/Kernel.h>
 
 namespace CudaTracerLib {

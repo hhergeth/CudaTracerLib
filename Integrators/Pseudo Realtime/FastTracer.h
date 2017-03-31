@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Kernel/Tracer.h>
-#include <CudaMemoryManager.h>
+#include <Base/CudaMemoryManager.h>
 #include <Kernel/RayBuffer.h>
 
 namespace CudaTracerLib {

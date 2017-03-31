@@ -3,7 +3,7 @@
 #include <Math/float4x4.h>
 #include <Math/AABB.h>
 #include "SceneBVH_device.h"
-#include "Buffer_device.h"
+#include <Base/Buffer_device.h>
 
 namespace CudaTracerLib {
 

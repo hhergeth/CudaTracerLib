@@ -3,7 +3,7 @@
 #include "IBlockSampler_device.h"
 #include "IBlockSampler.h"
 #include <Engine/Image.h>
-#include <Engine/SynchronizedBuffer.h>
+#include <Base/SynchronizedBuffer.h>
 #include <algorithm>
 
 namespace CudaTracerLib

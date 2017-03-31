@@ -8,7 +8,7 @@
 #include <Math/Spectrum.h>
 #include <Math/AABB.h>
 #include "FixedString.h"
-#include <Engine/Buffer_device.h>
+#include <Base/Buffer_device.h>
 
 namespace CudaTracerLib {
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <VirtualFuncType.h>
+#include <Base/VirtualFuncType.h>
 #include <Math/Vector.h>
 
 //Implementation and interface copied from Mitsuba as well as PBRT.

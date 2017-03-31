@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Kernel/Tracer.h>
-#include <Engine/SpatialGrid.h>
+#include <Engine/SpatialStructures/SpatialGrid.h>
 #include "PmmHelper.h"
 
 namespace CudaTracerLib {

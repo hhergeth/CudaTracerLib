@@ -16,8 +16,8 @@
 
 #include "Buffer_device.h"
 #include <Base/Platform.h>
-#include <CudaMemoryManager.h>
-#include <VirtualFuncType.h>
+#include <Base/CudaMemoryManager.h>
+#include <Base/VirtualFuncType.h>
 
 namespace CudaTracerLib {
 

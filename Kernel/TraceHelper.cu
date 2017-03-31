@@ -6,9 +6,9 @@
 #include <Engine/TriangleData.h>
 #include <Engine/Material.h>
 #include <Engine/TriIntersectorData.h>
-#include <Engine/Node.h>
+#include <SceneTypes/Node.h>
 #include <Engine/DynamicScene.h>
-#include "BVHTracer.h"
+#include <Engine/SpatialStructures/BVHTraversal.h>
 #include <Base/Timer.h>
 #include "Sampler.h"
 

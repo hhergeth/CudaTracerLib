@@ -4,9 +4,9 @@
 #include <Engine/Image.h>
 #include "Filter/Filter.h"
 #include "PostProcess/PostProcess.h"
-#include <Engine/Filter.h>
+#include <SceneTypes/Filter.h>
 #include "Filter/CanonicalFilter.h"
-#include <Engine/SynchronizedBuffer.h>
+#include <Base/SynchronizedBuffer.h>
 
 namespace CudaTracerLib
 {

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Filter.h"
-#include <Engine/Filter.h>
+#include <SceneTypes/Filter.h>
 #include <Math/half.h>
 #include <Math/Compression.h>
 

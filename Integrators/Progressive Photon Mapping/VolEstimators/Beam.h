@@ -3,14 +3,14 @@
 #include <Kernel/TraceHelper.h>
 #include <vector>
 #include <Base/Platform.h>
-#include <Engine/Grid.h>
+#include <Engine/SpatialStructures/Grid.h>
 #include <Math/Compression.h>
-#include <Engine/SynchronizedBuffer.h>
+#include <Base/SynchronizedBuffer.h>
 #include <Math/FunctionModel.h>
 #include <Math/Frame.h>
 #include <Kernel/TracerSettings.h>
 #include "../../PhotonMapHelper.h"
-#include <Engine/Light.h>
+#include <SceneTypes/Light.h>
 
 namespace CudaTracerLib {
 

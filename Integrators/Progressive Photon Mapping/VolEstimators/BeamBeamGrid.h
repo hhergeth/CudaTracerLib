@@ -1,7 +1,7 @@
 #pragma once
 #include "Beam.h"
-#include <Engine/SpatialGrid.h>
-#include <Engine/SpatialGridTraversal.h>
+#include <Engine/SpatialStructures/SpatialGrid.h>
+#include <Engine/SpatialStructures/SpatialGridTraversal.h>
 
 namespace CudaTracerLib {
 

@@ -5,7 +5,7 @@
 #include <vector>
 #include <stdlib.h>
 #include "cuda_runtime.h"
-#include <Base/Platform.h>
+#include "Platform.h"
 
 namespace CudaTracerLib {
 

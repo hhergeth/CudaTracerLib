@@ -2,7 +2,7 @@
 
 #include <Math/Ray.h>
 #include <Math/AABB.h>
-#include <Engine/SpatialGrid.h>
+#include <Engine/SpatialStructures/SpatialGrid.h>
 
 namespace CudaTracerLib {
 

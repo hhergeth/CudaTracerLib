@@ -3,7 +3,7 @@
 #include <Math/Vector.h>
 #include <Math/Spectrum.h>
 #include <Math/AABB.h>
-#include "Buffer_device.h"
+#include <Base/Buffer_device.h>
 #include <Base/FixedString.h>
 #include <vector>
 

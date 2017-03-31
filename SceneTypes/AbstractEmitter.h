@@ -1,6 +1,6 @@
 #pragma once
 
-#include <VirtualFuncType.h>
+#include <Base/VirtualFuncType.h>
 
 namespace CudaTracerLib {
 

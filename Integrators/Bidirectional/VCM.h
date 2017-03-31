@@ -2,7 +2,7 @@
 
 #include <Kernel/Tracer.h>
 #include "VCMHelper.h"
-#include <Engine/SpatialGrid.h>
+#include <Engine/SpatialStructures/SpatialGrid.h>
 
 namespace CudaTracerLib {
 

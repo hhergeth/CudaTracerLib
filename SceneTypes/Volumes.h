@@ -2,8 +2,8 @@
 #include <Defines.h>
 #include <Math/AABB.h>
 #include "PhaseFunction.h"
-#include <VirtualFuncType.h>
-#include <CudaMemoryManager.h>
+#include <Base/VirtualFuncType.h>
+#include <Base/CudaMemoryManager.h>
 #include <Math/Spectrum.h>
 
 //Implementation and interface copied from Mitsuba as well as PBRT.

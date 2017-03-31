@@ -2,7 +2,7 @@
 
 #include <Math/Vector.h>
 #include <Math/Spectrum.h>
-#include "DifferentialGeometry.h"
+#include <Engine/DifferentialGeometry.h>
 
 //Implementation and interface copied from Mitsuba.
 

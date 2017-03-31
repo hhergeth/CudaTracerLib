@@ -1,6 +1,6 @@
 #include <StdAfx.h>
 #include "Core.h"
-#include <CudaMemoryManager.h>
+#include <Base/CudaMemoryManager.h>
 #include "RoughTransmittance.h"
 #include <Kernel/Tracer.h>
 #include <ctime>

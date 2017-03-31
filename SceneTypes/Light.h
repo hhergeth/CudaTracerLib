@@ -1,10 +1,10 @@
 #pragma once
 
-#include "ShapeSet.h"
-#include "MIPMap_device.h"
+#include <Engine/ShapeSet.h>
+#include <Engine/MIPMap_device.h>
 #include "AbstractEmitter.h"
 #include "Samples.h"
-#include <VirtualFuncType.h>
+#include <Base/VirtualFuncType.h>
 #include "Texture.h"
 
 //Implementation and interface copied from Mitsuba.

@@ -2,8 +2,8 @@
 #include <Kernel/TraceHelper.h>
 #include <Kernel/TraceAlgorithms.h>
 #include <Math/half.h>
-#include <Engine/Light.h>
-#include <Engine/SpatialGridTraversal.h>
+#include <SceneTypes/Light.h>
+#include <Engine/SpatialStructures/SpatialGridTraversal.h>
 #include <Base/RuntimeTemplateHelper.h>
 
 namespace CudaTracerLib {

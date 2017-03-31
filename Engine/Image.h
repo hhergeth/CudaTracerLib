@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Math/Spectrum.h>
-#include <Engine/SynchronizedBuffer.h>
+#include <Base/SynchronizedBuffer.h>
 
 struct FIBITMAP;
 
