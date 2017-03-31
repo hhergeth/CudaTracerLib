@@ -276,9 +276,9 @@ public:
 	}
 };
 
-CTL_EXPORT void TracePath(NormalizedT<Ray> r, std::vector<PathVertex*>& p, int N2, ETransportMode mode, CudaRNG& rng);
+CTL_EXPORT void TracePath(NormalizedT<Ray> r, std::vector<PathVertex*>& p, int N2, ETransportMode mode, Sampler& rng);
 
-CTL_EXPORT Path ConnectPaths(const std::vector<PathVertex*>& cameraPath, const std::vector<PathVertex*>& emitterPath);
+CTL_EXPORT Path ConnectPaths(const std::vector<PathVertex*>& cameraPath, const std::vector<PathVertex*>& emitterPath, int s, int t);
 
 CTL_EXPORT void ConstructPath(const Vec2i& pixel, Path& P, int s, int t);
 
