@@ -1,7 +1,8 @@
 #include "Light.h"
 #include "MIPMap.h"
-#include <Math/Sampling.h>
+#include <Math/AlgebraHelper.h>
 #include <Math/Warp.h>
+#include <Math/Sampling.h>
 
 namespace CudaTracerLib {
 
@@ -92,7 +93,7 @@ Spectrum DiffuseLight::sampleDirect(DirectSamplingRecord &dRec, const Vec2f &_sa
 		const NormalizedT<Vec3f> n = normalize(cross(p1 - p0, p2 - p0));
 		float lambda = dot(p0, n) - dot(dRec.ref, n);// := (p_0 * n - p * n) / (n * n)
 		dRec.p = dRec.ref + lambda * n;
-		bool inTriangle = MonteCarlo::Barycentric(dRec.p, p0, p1, p2, dRec.uv.x, dRec.uv.y);
+		bool inTriangle = AlgebraHelper::Barycentric(dRec.p, p0, p1, p2, dRec.uv.x, dRec.uv.y);
 		if (!inTriangle)
 		{
 			dRec.pdf = 0.0f;

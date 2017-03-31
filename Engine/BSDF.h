@@ -8,6 +8,7 @@
 #include "MicrofacetDistribution.h"
 #include <Math/Sampling.h>
 #include <Math/Warp.h>
+#include <Math/FresnelHelper.h>
 #include <VirtualFuncType.h>
 #include "Dispersion.h"
 

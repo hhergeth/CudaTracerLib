@@ -2,7 +2,7 @@
 #include <Engine/Image.h>
 #include "PixelDebugVisualizerHelpers.h"
 #include <Kernel/TraceHelper.h>
-#include <Math/Sampling.h>
+#include <Math/Warp.h>
 
 namespace CudaTracerLib {
 
@@ -60,7 +60,7 @@ void PixelDebugVisualizer<Vec2f>::VisualizePixel(unsigned int x, unsigned int y,
 	}
 	else if (m_pixelType == VisualizePixelType::SphericalCoordinates)
 	{
-		auto dir = MonteCarlo::SphericalDirection(v.x, v.y);
+		auto dir = Warp::SphericalDirection(v.x, v.y);
 		drawer.DrawLine(dg.P, dg.P + dg.sys.toWorld(dir));
 	}
 }

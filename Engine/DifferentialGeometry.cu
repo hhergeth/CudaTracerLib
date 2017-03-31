@@ -1,5 +1,5 @@
 #include "DifferentialGeometry.h"
-#include <Math/Sampling.h>
+#include <Math/AlgebraHelper.h>
 #include <Math/Ray.h>
 
 //Implementation copied from Mitsuba.
@@ -66,7 +66,7 @@ void DifferentialGeometry::computePartials(const Ray& r, const Ray& rx, const Ra
 	By[0] = pyA[axes[0]] - pA[axes[0]];
 	By[1] = pyA[axes[1]] - pA[axes[1]];
 
-	if (MonteCarlo::solveLinearSystem2x2(A, Bx, x))
+	if (AlgebraHelper::solveLinearSystem2x2(A, Bx, x))
 	{
 		dudx = x[0];
 		dvdx = x[1];
@@ -77,7 +77,7 @@ void DifferentialGeometry::computePartials(const Ray& r, const Ray& rx, const Ra
 		dvdx = 0;
 	}
 
-	if (MonteCarlo::solveLinearSystem2x2(A, By, x))
+	if (AlgebraHelper::solveLinearSystem2x2(A, By, x))
 	{
 		dudy = x[0];
 		dvdy = x[1];

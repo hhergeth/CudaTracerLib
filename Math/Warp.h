@@ -8,24 +8,23 @@
 
 namespace CudaTracerLib {
 
-CUDA_FUNC_IN float intervalToTent(float sample)
-{
-	float sign;
-
-	if (sample < 0.5f) {
-		sign = 1;
-		sample *= 2;
-	}
-	else {
-		sign = -1;
-		sample = 2 * (sample - 0.5f);
-	}
-
-	return sign * (1 - math::sqrt(sample));
-}
-
 class Warp
 {
+	CUDA_FUNC_IN static float intervalToTent(float sample)
+	{
+		float sign;
+
+		if (sample < 0.5f) {
+			sign = 1;
+			sample *= 2;
+		}
+		else {
+			sign = -1;
+			sample = 2 * (sample - 0.5f);
+		}
+
+		return sign * (1 - math::sqrt(sample));
+	}
 public:
 	CUDA_FUNC_IN static NormalizedT<Vec3f> squareToUniformSphere(const Vec2f &sample)
 	{
@@ -192,6 +191,31 @@ public:
 		}
 
 		return b + factor * (1 - math::sqrt(sample));
+	}
+
+	CUDA_FUNC_IN static NormalizedT<Vec3f> SphericalDirection(float theta, float phi)
+	{
+		float sinTheta, cosTheta, sinPhi, cosPhi;
+
+		sincos(theta, &sinTheta, &cosTheta);
+		sincos(phi, &sinPhi, &cosPhi);
+
+		return NormalizedT<Vec3f>(
+			sinTheta * cosPhi,
+			sinTheta * sinPhi,
+			cosTheta
+			);
+	}
+
+	CUDA_FUNC_IN static Vec2f toSphericalCoordinates(const NormalizedT<Vec3f> &v)
+	{
+		Vec2f result = Vec2f(
+			acos(v.z),
+			atan2(v.y, v.x)
+		);
+		if (result.y < 0)
+			result.y += 2 * PI;
+		return result;
 	}
 };
 

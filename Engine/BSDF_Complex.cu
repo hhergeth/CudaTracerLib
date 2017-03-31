@@ -86,7 +86,7 @@ Spectrum coating::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 	if (measure == EDiscrete && sampleSpecular &&
 		math::abs(dot(Frame::reflect(bRec.wi), bRec.wo) - 1) < DeltaEpsilon) {
 		return m_specularReflectance.Evaluate(bRec.dg) *
-			MonteCarlo::fresnelDielectricExt(math::abs(Frame::cosTheta(bRec.wi)), m_eta);
+			FresnelHelper::fresnelDielectricExt(math::abs(Frame::cosTheta(bRec.wi)), m_eta);
 	}
 	else if (sampleNested) {
 		float R12, R21;
@@ -190,7 +190,7 @@ Spectrum roughcoating::sample(BSDFSamplingRecord &bRec, float &_pdf, const Vec2f
 	if (choseSpecular) {
 		/* Perfect specular reflection based on the microsurface normal */
 		auto m = m_distribution.sample(sample, alphaT);
-		bRec.wo = MonteCarlo::reflect(bRec.wi, m);
+		bRec.wo = FresnelHelper::reflect(bRec.wi, m);
 		bRec.sampledType = EGlossyReflection;
 		bRec.eta = 1.0f;
 
@@ -238,7 +238,7 @@ Spectrum roughcoating::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 		const float D = m_distribution.eval(H, alphaT);
 
 		/* Fresnel term */
-		const float F = MonteCarlo::fresnelDielectricExt(absdot(bRec.wi, H), m_eta);
+		const float F = FresnelHelper::fresnelDielectricExt(absdot(bRec.wi, H), m_eta);
 
 		/* Smith's shadow-masking function */
 		const float G = m_distribution.G(bRec.wi, bRec.wo, H, alphaT);

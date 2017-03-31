@@ -178,7 +178,7 @@ Spectrum dielectric::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &s
 
 	Spectrum f_o;
 	float cosThetaT, eta_pdf, eta = eta_f.sample_eta(bRec, sample.y, f_o, eta_pdf), invEta = 1.0f / eta;//the second component was unused before
-	float F = MonteCarlo::fresnelDielectricExt(Frame::cosTheta(bRec.wi), cosThetaT, eta);
+	float F = FresnelHelper::fresnelDielectricExt(Frame::cosTheta(bRec.wi), cosThetaT, eta);
 
 	if (sampleTransmission && sampleReflection) {
 		//float f0 = m_specularReflectance.Evaluate(bRec.map).average(), f1 = m_specularTransmittance.Evaluate(bRec.map).average(), f = F*f0/(f0+f1);
@@ -233,7 +233,7 @@ Spectrum dielectric::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 	float eta = eta_f.f_eta(bRec, f_o), invEta = 1.0f / eta;
 
 	float cosThetaT;
-	float F = MonteCarlo::fresnelDielectricExt(Frame::cosTheta(bRec.wi), cosThetaT, eta);
+	float F = FresnelHelper::fresnelDielectricExt(Frame::cosTheta(bRec.wi), cosThetaT, eta);
 
 	if (Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) >= 0) {
 		if (!sampleReflection || math::abs(dot(Frame::reflect(bRec.wi), bRec.wo) - 1) > DeltaEpsilon)
@@ -261,7 +261,7 @@ float dielectric::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 	float eta = eta_f.pdf_eta(bRec, eta_pdf), invEta = 1.0f / eta;
 
 	float cosThetaT;
-	float F = MonteCarlo::fresnelDielectricExt(Frame::cosTheta(bRec.wi), cosThetaT, eta);
+	float F = FresnelHelper::fresnelDielectricExt(Frame::cosTheta(bRec.wi), cosThetaT, eta);
 
 	if (Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) >= 0) {
 		if (!sampleReflection || math::abs(dot(Frame::reflect(bRec.wi), bRec.wo) - 1) > DeltaEpsilon)
@@ -281,7 +281,7 @@ float thindielectric::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) cons
 	bool sampleReflection   = (bRec.typeMask & EDeltaReflection) && measure == EDiscrete;
 	bool sampleTransmission = (bRec.typeMask & ENull) && measure == EDiscrete;
 
-	float R = MonteCarlo::fresnelDielectricExt(math::abs(Frame::cosTheta(bRec.wi)), m_eta), T = 1-R;
+	float R = FresnelHelper::fresnelDielectricExt(math::abs(Frame::cosTheta(bRec.wi)), m_eta), T = 1-R;
 
 	// Account for internal reflections: R' = R + TRT + TR^3T + ..
 	if (R < 1)
@@ -305,7 +305,7 @@ Spectrum thindielectric::f(const BSDFSamplingRecord &bRec, EMeasure measure) con
 	bool sampleReflection   = (bRec.typeMask & EDeltaReflection) && measure == EDiscrete;
 	bool sampleTransmission = (bRec.typeMask & ENull) && measure == EDiscrete;
 
-	float R = MonteCarlo::fresnelDielectricExt(math::abs(Frame::cosTheta(bRec.wi)), m_eta), T = 1-R;
+	float R = FresnelHelper::fresnelDielectricExt(math::abs(Frame::cosTheta(bRec.wi)), m_eta), T = 1-R;
 
 	// Account for internal reflections: R' = R + TRT + TR^3T + ..
 	if (R < 1)
@@ -329,7 +329,7 @@ Spectrum thindielectric::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2
 	bool sampleReflection = (bRec.typeMask & EDeltaReflection) != 0;
 	bool sampleTransmission = (bRec.typeMask & ENull) != 0;
 
-	float R = MonteCarlo::fresnelDielectricExt(Frame::cosTheta(bRec.wi), m_eta), T = 1-R;
+	float R = FresnelHelper::fresnelDielectricExt(Frame::cosTheta(bRec.wi), m_eta), T = 1-R;
 
 	// Account for internal reflections: R' = R + TRT + TR^3T + ..
 	if (R < 1)
@@ -429,7 +429,7 @@ float roughdielectric::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) con
 	float prob = m_distribution.pdf(H, alphaU, alphaV);
 
 	if (hasTransmission && hasReflection) {
-		float F = MonteCarlo::fresnelDielectricExt(dot(bRec.wi, H), m_eta);
+		float F = FresnelHelper::fresnelDielectricExt(dot(bRec.wi, H), m_eta);
 		prob *= reflect ? F : (1-F);
 	}
 
@@ -481,7 +481,7 @@ Spectrum roughdielectric::f(const BSDFSamplingRecord &bRec, EMeasure measure) co
 		return Spectrum(0.0f);
 
 	/* Fresnel factor */
-	const float F = MonteCarlo::fresnelDielectricExt(dot(bRec.wi, H), m_eta);
+	const float F = FresnelHelper::fresnelDielectricExt(dot(bRec.wi, H), m_eta);
 
 	/* Smith's shadow-masking function */
 	const float G = m_distribution.G(bRec.wi, bRec.wo, H, alphaU, alphaV);
@@ -553,7 +553,7 @@ Spectrum roughdielectric::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec
 	pdf = microfacetPDF;
 
 	float cosThetaT, numerator = 1.0f;
-	float F = MonteCarlo::fresnelDielectricExt(dot(bRec.wi, m), cosThetaT, m_eta);
+	float F = FresnelHelper::fresnelDielectricExt(dot(bRec.wi, m), cosThetaT, m_eta);
 
 	if (hasReflection && hasTransmission) {
 		if (sample_z > F) {
@@ -574,7 +574,7 @@ Spectrum roughdielectric::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec
 
 	if (sampleReflection) {
 		/* Perfect specular reflection based on the microsurface normal */
-		bRec.wo = MonteCarlo::reflect(bRec.wi, m);
+		bRec.wo = FresnelHelper::reflect(bRec.wi, m);
 		bRec.eta = 1.0f;
 		bRec.sampledType = EGlossyReflection;
 
@@ -592,7 +592,7 @@ Spectrum roughdielectric::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec
 			return Spectrum(0.0f);
 
 		/* Perfect specular transmission based on the microsurface normal */
-		bRec.wo = MonteCarlo::refract(bRec.wi, m, m_eta, cosThetaT).normalized();
+		bRec.wo = FresnelHelper::refract(bRec.wi, m, m_eta, cosThetaT).normalized();
 		bRec.eta = cosThetaT < 0 ? m_eta : m_invEta;
 		bRec.sampledType = EGlossyTransmission;
 
@@ -635,7 +635,7 @@ Spectrum conductor::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sa
 	bRec.eta = 1.0f;
 	pdf = 1;
 
-	return m_specularReflectance.Evaluate(bRec.dg) * MonteCarlo::fresnelConductorExact(Frame::cosTheta(bRec.wi), m_eta, m_k);
+	return m_specularReflectance.Evaluate(bRec.dg) * FresnelHelper::fresnelConductorExact(Frame::cosTheta(bRec.wi), m_eta, m_k);
 }
 
 Spectrum conductor::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
@@ -650,7 +650,7 @@ Spectrum conductor::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 		math::abs(dot(Frame::reflect(bRec.wi), bRec.wo)-1) > DeltaEpsilon)
 		return Spectrum(0.0f);
 
-	return m_specularReflectance.Evaluate(bRec.dg) * MonteCarlo::fresnelConductorExact(Frame::cosTheta(bRec.wi), m_eta, m_k);
+	return m_specularReflectance.Evaluate(bRec.dg) * FresnelHelper::fresnelConductorExact(Frame::cosTheta(bRec.wi), m_eta, m_k);
 }
 
 float conductor::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
@@ -687,7 +687,7 @@ Spectrum roughconductor::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2
 		return 0.0f;
 
 	/* Perfect specular reflection based on the microsurface normal */
-	bRec.wo = MonteCarlo::reflect(bRec.wi, m);
+	bRec.wo = FresnelHelper::reflect(bRec.wi, m);
 	bRec.eta = 1.0f;
 	bRec.sampledType = EGlossyReflection;
 
@@ -695,7 +695,7 @@ Spectrum roughconductor::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2
 	if (Frame::cosTheta(bRec.wo) <= 0)
 		return 0.0f;
 
-	const Spectrum F = MonteCarlo::fresnelConductorExact(dot(bRec.wi, m),
+	const Spectrum F = FresnelHelper::fresnelConductorExact(dot(bRec.wi, m),
 			m_eta, m_k);
 
 	float numerator = m_distribution.eval(m, alphaU, alphaV)
@@ -731,7 +731,7 @@ Spectrum roughconductor::f(const BSDFSamplingRecord &bRec, EMeasure measure) con
 		return 0.0f;
 
 	/* Fresnel factor */
-	const Spectrum F = MonteCarlo::fresnelConductorExact(dot(bRec.wi, H), m_eta, m_k);
+	const Spectrum F = FresnelHelper::fresnelConductorExact(dot(bRec.wi, H), m_eta, m_k);
 
 	/* Smith's shadow-masking function */
 	const float G = m_distribution.G(bRec.wi, bRec.wo, H, alphaU, alphaV);
@@ -768,7 +768,7 @@ Spectrum plastic::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &samp
 	if ((!hasDiffuse && !hasSpecular) || Frame::cosTheta(bRec.wi) <= 0)
 		return 0.0f;
 
-	float Fi = MonteCarlo::fresnelDielectricExt(Frame::cosTheta(bRec.wi), m_eta);
+	float Fi = FresnelHelper::fresnelDielectricExt(Frame::cosTheta(bRec.wi), m_eta);
 
 	bRec.eta = 1.0f;
 	if (hasDiffuse && hasSpecular) {
@@ -791,7 +791,7 @@ Spectrum plastic::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &samp
 				(sample.x - probSpecular) / (1 - probSpecular),
 				sample.y
 			));
-			float Fo = MonteCarlo::fresnelDielectricExt(Frame::cosTheta(bRec.wo), m_eta);
+			float Fo = FresnelHelper::fresnelDielectricExt(Frame::cosTheta(bRec.wo), m_eta);
 
 			Spectrum diff = m_diffuseReflectance.Evaluate(bRec.dg);
 			if (m_nonlinear)
@@ -812,7 +812,7 @@ Spectrum plastic::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &samp
 	} else {
 		bRec.sampledType = EDiffuseReflection;
 		bRec.wo = Warp::squareToCosineHemisphere(sample);
-		float Fo = MonteCarlo::fresnelDielectricExt(Frame::cosTheta(bRec.wo), m_eta);
+		float Fo = FresnelHelper::fresnelDielectricExt(Frame::cosTheta(bRec.wo), m_eta);
 
 		Spectrum diff = m_diffuseReflectance.Evaluate(bRec.dg);
 		if (m_nonlinear)
@@ -834,7 +834,7 @@ Spectrum plastic::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 	if (Frame::cosTheta(bRec.wo) <= 0 || Frame::cosTheta(bRec.wi) <= 0)
 		return Spectrum(0.0f);
 
-	float Fi = MonteCarlo::fresnelDielectricExt(Frame::cosTheta(bRec.wi), m_eta);
+	float Fi = FresnelHelper::fresnelDielectricExt(Frame::cosTheta(bRec.wi), m_eta);
 
 	if (hasSpecular) {
 		/* Check if the provided direction pair matches an ideal
@@ -842,7 +842,7 @@ Spectrum plastic::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 		if (math::abs(dot(Frame::reflect(bRec.wi), bRec.wo)-1) < DeltaEpsilon)
 			return m_specularReflectance.Evaluate(bRec.dg) * Fi;
 	} else if (hasDiffuse) {
-		float Fo = MonteCarlo::fresnelDielectricExt(Frame::cosTheta(bRec.wo), m_eta);
+		float Fo = FresnelHelper::fresnelDielectricExt(Frame::cosTheta(bRec.wo), m_eta);
 
 		Spectrum diff = m_diffuseReflectance.Evaluate(bRec.dg);
 
@@ -868,7 +868,7 @@ float plastic::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 
 	float probSpecular = hasSpecular ? 1.0f : 0.0f;
 	if (hasSpecular && hasDiffuse) {
-		float Fi = MonteCarlo::fresnelDielectricExt(Frame::cosTheta(bRec.wi), m_eta);
+		float Fi = FresnelHelper::fresnelDielectricExt(Frame::cosTheta(bRec.wi), m_eta);
 		probSpecular = (Fi*m_specularSamplingWeight) /
 			(Fi*m_specularSamplingWeight +
 			(1-Fi) * (1-m_specularSamplingWeight));
@@ -921,7 +921,7 @@ Spectrum roughplastic::sample(BSDFSamplingRecord &bRec, float &_pdf, const Vec2f
 	if (choseSpecular) {
 		/* Perfect specular reflection based on the microsurface normal */
 		auto m = m_distribution.sample(sample, alphaT);
-		bRec.wo = MonteCarlo::reflect(bRec.wi, m);
+		bRec.wo = FresnelHelper::reflect(bRec.wi, m);
 		bRec.sampledType = EGlossyReflection;
 
 		/* Side check */
@@ -967,7 +967,7 @@ Spectrum roughplastic::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 		const float D = m_distribution.eval(H, alphaT);
 
 		/* Fresnel term */
-		const float F = MonteCarlo::fresnelDielectricExt(dot(bRec.wi, H), m_eta);
+		const float F = FresnelHelper::fresnelDielectricExt(dot(bRec.wi, H), m_eta);
 
 		/* Smith's shadow-masking function */
 		const float G = m_distribution.G(bRec.wi, bRec.wo, H, alphaT);
@@ -1201,8 +1201,8 @@ Spectrum ward::sample(BSDFSamplingRecord &bRec, float &_pdf, const Vec2f &_sampl
 				(cosPhiH*cosPhiH) / (alphaU*alphaU) +
 				(sinPhiH*sinPhiH) / (alphaV*alphaV)
 		)));
-		NormalizedT<Vec3f> H = MonteCarlo::SphericalDirection(thetaH, phiH);
-		bRec.wo = MonteCarlo::reflect(bRec.wi, H);
+		NormalizedT<Vec3f> H = Warp::SphericalDirection(thetaH, phiH);
+		bRec.wo = FresnelHelper::reflect(bRec.wi, H);
 
 		bRec.sampledType = EGlossyReflection;
 

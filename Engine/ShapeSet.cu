@@ -1,10 +1,11 @@
 #include "ShapeSet.h"
-#include <Math/Sampling.h>
+#include <Math/AlgebraHelper.h>
 #include "Samples.h"
 #include "TriIntersectorData.h"
 #include "TriangleData.h"
 #include <Kernel/TraceHelper.h>
 #include <Math/Warp.h>
+#include <Math/Sampling.h>
 
 namespace CudaTracerLib {
 
@@ -58,7 +59,7 @@ bool ShapeSet::getPosition(const Vec3f& pos, Vec2f* bary, Vec2f* uv) const
 	{
 		const triData& sn = triangles[i];
 		Vec2f b;
-		if (MonteCarlo::Barycentric(pos, sn.p[0], sn.p[1], sn.p[2], b.x, b.y))
+		if (AlgebraHelper::Barycentric(pos, sn.p[0], sn.p[1], sn.p[2], b.x, b.y))
 		{
 			if (bary)
 				*bary = b;
@@ -76,7 +77,7 @@ float ShapeSet::PdfTriangle(const Vec3f& pos) const
 	{
 		const triData& sn = triangles[i];
 		Vec2f b;
-		if (MonteCarlo::Barycentric(pos, sn.p[0], sn.p[1], sn.p[2], b.x, b.y))
+		if (AlgebraHelper::Barycentric(pos, sn.p[0], sn.p[1], sn.p[2], b.x, b.y))
 			return areaDistribution.operator*()[i + 1] - areaDistribution.operator*()[i];
 	}
 	return 0.0f;

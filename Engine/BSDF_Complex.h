@@ -55,13 +55,13 @@ private:
 	/// Refract into the material, preserve sign of direction
 	CUDA_FUNC_IN NormalizedT<Vec3f> refractIn(const NormalizedT<Vec3f> &wi, float &R) const {
 		float cosThetaT;
-		R = MonteCarlo::fresnelDielectricExt(math::abs(Frame::cosTheta(wi)), cosThetaT, m_eta);
+		R = FresnelHelper::fresnelDielectricExt(math::abs(Frame::cosTheta(wi)), cosThetaT, m_eta);
 		return Vec3f(m_invEta*wi.x, m_invEta*wi.y, -math::sign(Frame::cosTheta(wi)) * cosThetaT).normalized();
 	}
 	/// Refract out of the material, preserve sign of direction
 	CUDA_FUNC_IN NormalizedT<Vec3f> refractOut(const NormalizedT<Vec3f> &wi, float &R) const {
 		float cosThetaT;
-		R = MonteCarlo::fresnelDielectricExt(math::abs(Frame::cosTheta(wi)), cosThetaT, m_invEta);
+		R = FresnelHelper::fresnelDielectricExt(math::abs(Frame::cosTheta(wi)), cosThetaT, m_invEta);
 		return Vec3f(m_eta*wi.x, m_eta*wi.y, -math::sign(Frame::cosTheta(wi)) * cosThetaT).normalized();
 	}
 };
