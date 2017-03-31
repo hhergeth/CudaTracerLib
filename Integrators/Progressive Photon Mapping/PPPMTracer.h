@@ -5,8 +5,6 @@
 #include <CudaMemoryManager.h>
 #include "VolEstimators/BeamBeamGrid.h"
 #include "VolEstimators/BeamGrid.h"
-#include <map>
-#include <boost/variant.hpp>
 #include <Engine/BlockLoclizedCudaBuffer.h>
 #include "SurfEstimators/EntryEstimator.h"
 
@@ -195,9 +193,9 @@ public:
 		nVolume = m_uPhotonEmittedPassVolume;
 	}
 
-	std::map<std::string, boost::variant<int, float>> getPixelInfo(int x, int y) const;
 	APPM_PixelData& getPixelData(int x, int y) const
 	{
+		m_pPixelBuffer->Synchronize();
 		return m_pPixelBuffer->operator[](y * w + x);
 	}
 	CTL_EXPORT k_AdaptiveStruct getAdaptiveData() const;

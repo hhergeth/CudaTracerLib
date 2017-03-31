@@ -136,26 +136,6 @@ float PPPMTracer::getSplatScale() const
 	return 1.0f / m_uPassesDone * (m_uPhotonEmittedPassVolume ? (float)(w * h) / m_uPhotonEmittedPassVolume : 1);
 }
 
-typedef boost::variant<int, float> pixel_variant;
-std::map<std::string, pixel_variant> PPPMTracer::getPixelInfo(int x, int y) const
-{
-	m_pPixelBuffer->Synchronize();
-	auto pixelInfo = m_pPixelBuffer->operator[](y * w + x);
-	auto res = std::map<std::string, pixel_variant>();
-	auto dat = getAdaptiveData();
-
-	res["pl_surf"] = pixelInfo.surf_density.computeDensityEstimate(m_uTotalPhotonsEmittedSurface, m_uPassesDone);
-	res["pl_vol"] = pixelInfo.vol_density.computeDensityEstimate(m_uTotalPhotonsEmittedVolume, m_uPassesDone);
-
-	res["RadiiComputationTypeSurf"] = m_sParameters.getValue(KEY_RadiiComputationTypeSurf());
-	res["RadiiComputationTypeVol"] = m_sParameters.getValue(KEY_RadiiComputationTypeVol());
-
-	res["r_surf_uni"] = dat.m_radSurf;
-	res["r_surf_kNN"] = dat.computekNNRadiusSurf(pixelInfo);
-
-	return res;
-}
-
 void PPPMTracer::StartNewTrace(Image* I)
 {
 	m_useDirectLighting = !m_pScene->getVolumes().hasElements() && m_sParameters.getValue(KEY_Direct());
