@@ -38,6 +38,7 @@ file(GLOB_RECURSE CTL_SRC
        ${PROJECT_SOURCE_DIR}/Integrators/*.cpp
        ${PROJECT_SOURCE_DIR}/Kernel/*.cpp
        ${PROJECT_SOURCE_DIR}/Math/*.cpp
+       ${PROJECT_SOURCE_DIR}/SceneTypes/*.cpp
 )
 
 file(GLOB CTL_CU_ROOT
@@ -48,6 +49,7 @@ file(GLOB_RECURSE CTL_CU
        ${PROJECT_SOURCE_DIR}/Integrators/*.cu
        ${PROJECT_SOURCE_DIR}/Kernel/*.cu
        ${PROJECT_SOURCE_DIR}/Math/*.cu
+       ${PROJECT_SOURCE_DIR}/SceneTypes/*.cu
 )
 
 
