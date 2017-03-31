@@ -1,6 +1,7 @@
 #pragma once
 #include "PointStorage.h"
 #include <functional>
+#include <Math/AlgebraHelper.h>
 
 namespace CudaTracerLib {
 
@@ -104,7 +105,7 @@ struct BeamGrid : public PointStorage
 					L_n += p * ph.getL() / NumEmitted * tauToPhoton * Kernel::k<2>(math::sqrt(isectRadSqr), ph_rad1);
 				}
 				/*float t1, t2;
-				if (sphere_line_intersection(ph_pos, ph_rad2, r, t1, t2))
+				if (AlgebraHelper::sphere_line_intersection(ph_pos, ph_rad2, r, t1, t2))
 				{
 				float t = (t1 + t2) / 2;
 				auto b = r(t);

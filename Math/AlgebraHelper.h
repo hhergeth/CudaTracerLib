@@ -57,6 +57,25 @@ public:
 		u = 1.0f - v - w;
 		return 0 <= v && v <= 1 && 0 <= u && u <= 1 && 0 <= w && w <= 1;
 	}
+
+	CUDA_FUNC_IN static float sqrDistanceToRay(const Ray& r, const Vec3f& pos, float& distanceAlongRay)
+	{
+		distanceAlongRay = dot(pos - r.ori(), r.dir());
+		return distanceSquared(pos, r(distanceAlongRay));
+	}
+
+	CUDA_FUNC_IN static bool sphere_line_intersection(const Vec3f& p, float radSqr, const Ray& r, float& t_min, float& t_max)
+	{
+		auto d = r.dir(), o = r.ori();
+		float a = lenSqr(d), b = 2 * dot(d, o - p), c = lenSqr(p) + lenSqr(o) - 2 * dot(p, o) - radSqr;
+		float disc = b * b - 4 * a* c;
+		if (disc < 0)
+			return false;
+		float q = math::sqrt(disc);
+		t_min = (-b - q) / (2 * a);
+		t_max = (-b + q) / (2 * a);
+		return true;
+	}
 };
 
 }
