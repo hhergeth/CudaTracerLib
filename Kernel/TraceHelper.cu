@@ -8,7 +8,7 @@
 #include <Engine/TriIntersectorData.h>
 #include <SceneTypes/Node.h>
 #include <Engine/DynamicScene.h>
-#include <Engine/SpatialStructures/BVHTraversal.h>
+#include <Engine/SpatialStructures/BVH/BVHTraversal.h>
 #include <Base/Timer.h>
 #include "Sampler.h"
 

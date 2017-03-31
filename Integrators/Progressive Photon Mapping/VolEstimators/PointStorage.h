@@ -1,6 +1,6 @@
 #pragma once
 #include "Beam.h"
-#include <Engine/SpatialStructures/SpatialGrid.h>
+#include <Engine/SpatialStructures/Grid/SpatialGridList.h>
 #include <Math/half.h>
 #include <Math/Compression.h>
 
@@ -72,7 +72,7 @@ protected:
 
 	}
 public:
-	SpatialLinkedMap<_VolumetricPhoton> m_sStorage;
+	SpatialGridList_Linked<_VolumetricPhoton> m_sStorage;
 
 	CUDA_FUNC_IN static constexpr int DIM()
 	{

@@ -7,7 +7,7 @@
 #include <Engine/Mesh.h>
 #include <Engine/Material.h>
 #include <iomanip>
-#include <Engine/SpatialStructures/SpatialGridTraversal.h>
+#include <Engine/SpatialStructures/Grid/SpatialGridTraversal.h>
 
 namespace CudaTracerLib {
 

@@ -1,8 +1,7 @@
 #pragma once
 
-#include "Grid.h"
+#include "SpatialGrid.h"
 #include <Base/SynchronizedBuffer.h>
-#include <Base/Timer.h>
 #ifdef __CUDACC__
 #pragma warning (disable : 4267)
 #include <thrust/device_ptr.h>
@@ -13,43 +12,7 @@
 
 namespace CudaTracerLib {
 
-template<typename T, typename HASHER> class SpatialGridBase
-{
-protected:
-	HashGrid_Reg hashMap;
-public:
-	virtual ~SpatialGridBase()
-	{
-
-	}
-	CUDA_FUNC_IN const HashGrid_Reg& getHashGrid() const
-	{
-		return hashMap;
-	}
-
-	template<typename CLB> CUDA_FUNC_IN void ForAllCells(const Vec3u& min_cell, const Vec3u& max_cell, CLB clb)
-	{
-		Vec3u a = min(min_cell, hashMap.m_gridDim - Vec3u(1)), b = min(max_cell, hashMap.m_gridDim - Vec3u(1));
-		for (unsigned int ax = a.x; ax <= b.x; ax++)
-			for (unsigned int ay = a.y; ay <= b.y; ay++)
-				for (unsigned int az = a.z; az <= b.z; az++)
-				{
-					clb(Vec3u(ax, ay, az));
-				}
-	}
-
-	template<typename CLB> CUDA_FUNC_IN void ForAllCells(const Vec3f& min, const Vec3f& max, CLB clb)
-	{
-		ForAllCells(hashMap.Transform(min), hashMap.Transform(max), clb);
-	}
-
-	template<typename CLB> CUDA_FUNC_IN void ForAllCells(CLB clb)
-	{
-		ForAllCells(Vec3u(0), hashMap.m_gridDim - Vec3u(1), clb);
-	}
-};
-
-template<typename T, typename HASHER> class SpatialGrid : public SpatialGridBase<T, HASHER>
+template<typename T, typename HASHER> class SpatialGridListBase : public SpatialGridBase<T, HASHER>
 {
 	typedef SpatialGridBase<T, HASHER> BaseType;
 public:
@@ -77,9 +40,9 @@ public:
 };
 
 //a mapping from R^3 -> T^n, ie. associating variable number of values with each point in the grid
-template<typename T> class SpatialLinkedMap : public SpatialGrid<T, SpatialLinkedMap<T>>, public ISynchronizedBufferParent
+template<typename T> class SpatialGridList_Linked : public SpatialGridListBase<T, SpatialGridList_Linked<T>>, public ISynchronizedBufferParent
 {
-typedef SpatialGrid<T, SpatialLinkedMap<T>> BaseType;
+	typedef SpatialGridListBase<T, SpatialGridList_Linked<T>> BaseType;
 public:
 	struct linkedEntry
 	{
@@ -93,9 +56,9 @@ private:
 	SynchronizedBuffer<linkedEntry> m_dataBuffer;
 	SynchronizedBuffer<unsigned int> m_mapBuffer;
 public:
-	SpatialLinkedMap(const Vec3u& gridSize, unsigned int numData)
+	SpatialGridList_Linked(const Vec3u& gridSize, unsigned int numData)
 		: ISynchronizedBufferParent(m_dataBuffer, m_mapBuffer), numData(numData), m_gridSize(gridSize),
-		  m_dataBuffer(numData), m_mapBuffer(m_gridSize.x * m_gridSize.y * m_gridSize.z)
+		m_dataBuffer(numData), m_mapBuffer(m_gridSize.x * m_gridSize.y * m_gridSize.z)
 	{
 		m_dataBuffer.Memset(0xff);
 	}
@@ -269,9 +232,9 @@ template<typename T, int N_PER_THREAD, int N_MAX_PER_CELL> __global__ void build
 }
 #endif
 
-template<typename T> class SpatialFlatMap : public SpatialGrid<T, SpatialFlatMap<T>>, public ISynchronizedBufferParent
+template<typename T> class SpatialGridList_Flat : public SpatialGridListBase<T, SpatialGridList_Flat<T>>, public ISynchronizedBufferParent
 {
-typedef SpatialGrid<T, SpatialFlatMap<T>> BaseType;
+	typedef SpatialGridListBase<T, SpatialGridList_Flat<T>> BaseType;
 public:
 	Vec3u m_gridSize;
 	unsigned int numData, idxData;
@@ -280,10 +243,10 @@ public:
 	SynchronizedBuffer<unsigned int> m_gridBuffer;
 	SynchronizedBuffer<Vec2u> m_listBuffer;
 
-	SpatialFlatMap(const Vec3u& gridSize, unsigned int numData)
+	SpatialGridList_Flat(const Vec3u& gridSize, unsigned int numData)
 		: ISynchronizedBufferParent(m_buffer1, m_buffer2, m_gridBuffer, m_listBuffer),
-		  numData(numData), m_gridSize(gridSize), idxData(0),
-		  m_buffer1(numData), m_buffer2(numData), m_gridBuffer(m_gridSize.x * m_gridSize.y * m_gridSize.z), m_listBuffer(numData)
+		numData(numData), m_gridSize(gridSize), idxData(0),
+		m_buffer1(numData), m_buffer2(numData), m_gridBuffer(m_gridSize.x * m_gridSize.y * m_gridSize.z), m_listBuffer(numData)
 	{
 		CUDA_MALLOC(&m_deviceIdxCounter, sizeof(unsigned int));
 	}
@@ -315,31 +278,31 @@ public:
 		throw std::runtime_error("Use this from a cuda file please!");
 		/*
 		{
-			auto bl = Tt.StartBlock("sort");
-			thrust::sort(thrust::device_ptr<Vec2u>(m_listBuffer.getDevicePtr()), thrust::device_ptr<Vec2u>(m_listBuffer.getDevicePtr() + idxData), __interal_spatialMap__::order());
-			m_listBuffer.Synchronize();
+		auto bl = Tt.StartBlock("sort");
+		thrust::sort(thrust::device_ptr<Vec2u>(m_listBuffer.getDevicePtr()), thrust::device_ptr<Vec2u>(m_listBuffer.getDevicePtr() + idxData), __interal_spatialMap__::order());
+		m_listBuffer.Synchronize();
 		}
 		{
-			auto bl = Tt.StartBlock("reset");
-			m_gridBuffer.Memset((unsigned char)0xff);
+		auto bl = Tt.StartBlock("reset");
+		m_gridBuffer.Memset((unsigned char)0xff);
 		}
 		{
-			auto bl = Tt.StartBlock("build");
-			m_buffer1.Synchronize();
-			unsigned int i = 0;
-			while (i < idxData)
-			{
-				unsigned int cellHash = m_listBuffer[i].y;
-				m_gridBuffer[cellHash] = i;
-				while (i < idxData && m_listBuffer[i].y == cellHash)
-				{
-					m_buffer2[i] = m_buffer1[m_listBuffer[i].x];
-					i++;
-				}
-				m_buffer2[i - 1].setFlag();
-			}
-			m_gridBuffer.setOnCPU(); m_gridBuffer.Synchronize();
-			m_buffer2.setOnCPU(); m_buffer2.Synchronize();
+		auto bl = Tt.StartBlock("build");
+		m_buffer1.Synchronize();
+		unsigned int i = 0;
+		while (i < idxData)
+		{
+		unsigned int cellHash = m_listBuffer[i].y;
+		m_gridBuffer[cellHash] = i;
+		while (i < idxData && m_listBuffer[i].y == cellHash)
+		{
+		m_buffer2[i] = m_buffer1[m_listBuffer[i].x];
+		i++;
+		}
+		m_buffer2[i - 1].setFlag();
+		}
+		m_gridBuffer.setOnCPU(); m_gridBuffer.Synchronize();
+		m_buffer2.setOnCPU(); m_buffer2.Synchronize();
 		}
 		*/
 #else
@@ -415,64 +378,6 @@ public:
 	CUDA_FUNC_IN T& operator()(unsigned int idx)
 	{
 		return m_buffer1[idx];
-	}
-};
-
-//a mapping from R^3 -> T, ie. associating one element with each point in the grid
-template<typename T> struct SpatialSet : public SpatialGridBase<T, SpatialSet<T>>, public ISynchronizedBufferParent
-{
-	typedef SpatialGridBase<T, SpatialSet<T>> BaseType;
-	Vec3u m_gridSize;
-	SynchronizedBuffer<T> m_buffer;
-public:
-	SpatialSet(const Vec3u& gridSize)
-		: ISynchronizedBufferParent(m_buffer), m_gridSize(gridSize), m_buffer(m_gridSize.x * m_gridSize.y * m_gridSize.z)
-	{
-	}
-
-	void SetGridDimensions(const AABB& box)
-	{
-		BaseType::hashMap = HashGrid_Reg(box, m_gridSize);
-	}
-
-	void ResetBuffer()
-	{
-		m_buffer.Memset((unsigned char)0);
-	}
-
-	CUDA_FUNC_IN unsigned int getNumCells() const
-	{
-		return m_gridSize.x * m_gridSize.y * m_gridSize.z;
-	}
-
-	CUDA_FUNC_IN const T& operator()(const Vec3f& p) const
-	{
-		return m_buffer[BaseType::getHashGrid().Hash(p)].value;
-	}
-
-	CUDA_FUNC_IN T& operator()(const Vec3f& p)
-	{
-		return m_buffer[BaseType::getHashGrid().Hash(p)];
-	}
-
-	CUDA_FUNC_IN const T& operator()(const Vec3u& p) const
-	{
-		return m_buffer[BaseType::getHashGrid().Hash(p)].value;
-	}
-
-	CUDA_FUNC_IN T& operator()(const Vec3u& p)
-	{
-		return m_buffer[BaseType::getHashGrid().Hash(p)];
-	}
-
-	CUDA_FUNC_IN const T& operator()(unsigned int idx) const
-	{
-		return m_buffer[idx];
-	}
-
-	CUDA_FUNC_IN T& operator()(unsigned int idx)
-	{
-		return m_buffer[idx];
 	}
 };
 

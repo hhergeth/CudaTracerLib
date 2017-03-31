@@ -3,7 +3,7 @@
 #include <Kernel/TraceAlgorithms.h>
 #include <SceneTypes/Light.h>
 #include "../PhotonMapHelper.h"
-#include <Engine/SpatialStructures/SpatialGrid.h>
+#include <Engine/SpatialStructures/Grid/SpatialGridList.h>
 
 namespace CudaTracerLib {
 
@@ -326,7 +326,7 @@ template<bool TEST_VISIBILITY = true> CUDA_FUNC_IN Spectrum connectVertices(BPTV
 	return Spectrum(0.0f);
 }
 
-typedef SpatialLinkedMap<k_MISPhoton> VCMSurfMap;
+typedef SpatialGridList_Linked<k_MISPhoton> VCMSurfMap;
 
 template<bool F_IS_GLOSSY> CUDA_FUNC_IN Spectrum L_Surface2(VCMSurfMap& g_CurrentMap, BPTSubPathState& aCameraState, BSDFSamplingRecord& bRec, float r, const Material* mat, float mMisVcWeightFactor, float nPhotons, bool use_mis)
 {

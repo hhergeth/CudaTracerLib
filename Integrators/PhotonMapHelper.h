@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Kernel/Tracer.h>
-#include <Engine/SpatialStructures/Grid.h>
+#include <Engine/SpatialStructures/Grid/HashGrid.h>
 #include <Math/Compression.h>
 #include <Base/FileStream.h>
 #include <Base/CudaMemoryManager.h>

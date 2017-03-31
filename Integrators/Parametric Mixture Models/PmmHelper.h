@@ -309,7 +309,7 @@ struct DirectionModel
 			stats[i].zero();
 	}
 
-	template<int MAX_SAMPLES> CUDA_FUNC_IN void Update(SpatialLinkedMap<SpatialEntry>& sMap, const Vec3f& mi, const Vec3f& ma, float ny)
+	template<int MAX_SAMPLES> CUDA_FUNC_IN void Update(SpatialGridList_Linked<SpatialEntry>& sMap, const Vec3f& mi, const Vec3f& ma, float ny)
 	{
 		qMatrix<float, 2, 1> samples[MAX_SAMPLES];
 		int N = 0;

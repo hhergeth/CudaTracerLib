@@ -3,8 +3,8 @@
 #include "SceneBVH.h"
 #include "Mesh.h"
 #include <SceneTypes/Node.h>
-#include "SpatialStructures/SplitBVHBuilder.hpp"
-#include "SpatialStructures/BVHRebuilder.h"
+#include "SpatialStructures/BVH/SplitBVHBuilder.hpp"
+#include "SpatialStructures/BVH/BVHRebuilder.h"
 
 namespace CudaTracerLib {
 

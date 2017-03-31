@@ -4,8 +4,8 @@
 
 namespace CudaTracerLib {
 
-CUDA_DEVICE CudaStaticWrapper<SpatialLinkedMap<SpatialEntry>> g_sMap;
-CUDA_DEVICE CudaStaticWrapper<SpatialSet<DirectionModel>> g_dMap;
+CUDA_DEVICE CudaStaticWrapper<SpatialGridList_Linked<SpatialEntry>> g_sMap;
+CUDA_DEVICE CudaStaticWrapper<SpatialGridSet<DirectionModel>> g_dMap;
 
 __global__ void tracePhotons()
 {

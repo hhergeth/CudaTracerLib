@@ -6,7 +6,7 @@
 #include "TriangleData.h"
 #include "Material.h"
 #include "TriIntersectorData.h"
-#include "SpatialStructures/BVHRebuilder.h"
+#include "SpatialStructures/BVH/BVHRebuilder.h"
 
 namespace CudaTracerLib {
 

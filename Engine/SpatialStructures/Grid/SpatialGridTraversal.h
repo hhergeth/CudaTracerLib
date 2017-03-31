@@ -2,7 +2,7 @@
 
 #include <Math/Ray.h>
 #include <Math/AABB.h>
-#include <Engine/SpatialStructures/SpatialGrid.h>
+#include "SpatialGrid.h"
 
 namespace CudaTracerLib {
 
@@ -44,12 +44,12 @@ template<typename F> CUDA_FUNC_IN void TraverseGridRay(const Ray& r, float tmin,
 	}
 }
 
-template<typename F> CUDA_FUNC_IN void TraverseGridRay(const Ray& r, float tmin, float tmax, const HashGrid_Reg& grid, F clb)
+template<template<class> class Grid, typename T, typename F> CUDA_FUNC_IN void TraverseGridRay(const Ray& r, float tmin, float tmax, const Grid<T>& grid, F clb)
 {
-	return TraverseGridRay(r, tmin, tmax, grid.m_sBox, Vec3f(grid.m_gridDim), clb);
+	return TraverseGridRay(r, tmin, tmax, grid.getHashGrid().getAABB(), Vec3f(grid.getHashGrid().m_gridDim), clb);
 }
 
-template<template<class> class Grid, typename T, typename F1, typename F2, typename F3, typename F4> CUDA_FUNC_IN void TraverseGridBeamExt(const Ray& r, float tmin, float tmax, Grid<T>& grid, F1 clbRad, F2 clbDist,
+template<template<class> class Grid, typename T, typename F1, typename F2, typename F3, typename F4> CUDA_FUNC_IN void TraverseGridBeamExt(const Ray& r, float tmin, float tmax, const Grid<T>& grid, F1 clbRad, F2 clbDist,
 																																		   F3 clbElement, F4 clbEndCell)
 {
 	auto last_min = Vec3u(0xffffffff), last_max = Vec3u(0xffffffff);
@@ -86,7 +86,7 @@ template<template<class> class Grid, typename T, typename F1, typename F2, typen
 		last_max = idx_max_cell;
 	});
 }
-template<template<class> class Grid, typename T, typename F1, typename F2, typename F3> CUDA_FUNC_IN void TraverseGridBeam(const Ray& r, float tmin, float tmax, Grid<T>& grid, F1 clbRad, F2 clbDist, F3 clbElement)
+template<template<class> class Grid, typename T, typename F1, typename F2, typename F3> CUDA_FUNC_IN void TraverseGridBeam(const Ray& r, float tmin, float tmax, const Grid<T>& grid, F1 clbRad, F2 clbDist, F3 clbElement)
 {
 	return TraverseGridBeamExt(r, tmin, tmax, grid, clbRad, clbDist, clbElement, [&](float rayT, float cellEndT, float minT, float maxT, const Vec3u& cell_idx) { });
 }

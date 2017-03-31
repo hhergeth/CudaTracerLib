@@ -3,7 +3,7 @@
 #include <Kernel/TraceHelper.h>
 #include <vector>
 #include <Base/Platform.h>
-#include <Engine/SpatialStructures/Grid.h>
+#include <Engine/SpatialStructures/Grid/HashGrid.h>
 #include <Math/Compression.h>
 #include <Base/SynchronizedBuffer.h>
 #include <Math/FunctionModel.h>

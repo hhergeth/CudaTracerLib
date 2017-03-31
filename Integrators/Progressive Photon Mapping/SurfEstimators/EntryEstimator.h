@@ -1,16 +1,16 @@
 #pragma once
 
 #include "../../PhotonMapHelper.h"
-#include <Engine/SpatialStructures/SpatialGrid.h>
+#include <Engine/SpatialStructures/Grid/SpatialGridList.h>
 #include <SceneTypes/Samples.h>
 
 namespace CudaTracerLib {
 
-class EntryEstimator : public SpatialLinkedMap<PPPMPhoton>
+class EntryEstimator : public SpatialGridList_Linked<PPPMPhoton>
 {
 public:
 	EntryEstimator(const Vec3u& size, unsigned long numPhotons)
-		: SpatialLinkedMap<PPPMPhoton>(size, numPhotons)
+		: SpatialGridList_Linked<PPPMPhoton>(size, numPhotons)
 	{
 
 	}

@@ -23,6 +23,7 @@ template<int LEFT_BITS = 0, typename STORAGE_TYPE> CUDA_FUNC_IN Vec3f DecodePos(
 	return math::lerp(box.minV, box.maxV, Vec3f((float)x, (float)y, (float)z) / mask);
 }
 
+//takes a Vec3f and returns a hashed unsigned int based on a volume
 template<bool REGULAR> struct HashGrid
 {
 	Vec3u m_gridDim;

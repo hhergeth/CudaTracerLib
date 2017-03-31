@@ -39,7 +39,7 @@ struct BeamGrid : public PointStorage
 		}
 	};
 
-	SpatialLinkedMap<entry> m_sBeamGridStorage;
+	SpatialGridList_Linked<entry> m_sBeamGridStorage;
 
 	kNN_clb_t m_kNNClb;
 
@@ -86,7 +86,7 @@ struct BeamGrid : public PointStorage
 	{
 		Spectrum Tau = Spectrum(0.0f);
 		Spectrum L_n = Spectrum(0.0f);
-		TraverseGridRay(r, tmin, tmax, m_sStorage.getHashGrid(), [&](float minT, float rayT, float maxT, float cellEndT, const Vec3u& cell_pos, bool& cancelTraversal)
+		TraverseGridRay(r, tmin, tmax, m_sStorage, [&](float minT, float rayT, float maxT, float cellEndT, const Vec3u& cell_pos, bool& cancelTraversal)
 		{
 			m_sBeamGridStorage.ForAllCellEntries(cell_pos, [&](unsigned int, entry beam_idx)
 			{

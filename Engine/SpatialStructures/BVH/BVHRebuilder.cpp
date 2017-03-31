@@ -1,7 +1,7 @@
 #include <StdAfx.h>
 #include <Base/Buffer.h>
 #include "BVHRebuilder.h"
-#include <Engine/SpatialStructures/SplitBVHBuilder.hpp>
+#include <Engine/SpatialStructures/BVH/SplitBVHBuilder.hpp>
 #include <Engine/Mesh.h>
 #include <algorithm>
 

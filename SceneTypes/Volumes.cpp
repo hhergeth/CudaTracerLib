@@ -3,7 +3,6 @@
 #include <Base/Buffer.h>
 #include <Base/CudaRandom.h>
 #include "Samples.h"
-#include <Engine/SpatialStructures/Grid.h>
 #include <Math/MonteCarlo.h>
 
 namespace CudaTracerLib {

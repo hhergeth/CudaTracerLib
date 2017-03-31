@@ -1,7 +1,8 @@
 #pragma once
 
 #include <Kernel/Tracer.h>
-#include <Engine/SpatialStructures/SpatialGrid.h>
+#include <Engine/SpatialStructures/Grid/SpatialGridList.h>
+#include <Engine/SpatialStructures/Grid/SpatialGridSet.h>
 #include "PmmHelper.h"
 
 namespace CudaTracerLib {
@@ -28,8 +29,8 @@ protected:
 	CTL_EXPORT virtual void DebugInternal(Image* I, const Vec2i& pixel);
 private:
 	int passIteration;
-	SpatialLinkedMap<SpatialEntry> sMap;
-	SpatialSet<DirectionModel> dMap;
+	SpatialGridList_Linked<SpatialEntry> sMap;
+	SpatialGridSet<DirectionModel> dMap;
 };
 
 }

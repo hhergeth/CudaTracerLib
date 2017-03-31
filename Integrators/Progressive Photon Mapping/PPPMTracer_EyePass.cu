@@ -3,7 +3,7 @@
 #include <Kernel/TraceAlgorithms.h>
 #include <Math/half.h>
 #include <SceneTypes/Light.h>
-#include <Engine/SpatialStructures/SpatialGridTraversal.h>
+#include <Engine/SpatialStructures/Grid/SpatialGridTraversal.h>
 #include <Base/RuntimeTemplateHelper.h>
 
 namespace CudaTracerLib {

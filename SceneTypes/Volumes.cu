@@ -1,7 +1,7 @@
 #include "Volumes.h"
 #include <Base/CudaRandom.h>
 #include "Samples.h"
-#include <Engine/SpatialStructures/SpatialGridTraversal.h>
+#include <Engine/SpatialStructures/Grid/SpatialGridTraversal.h>
 #include <Math/MonteCarlo.h>
 
 namespace CudaTracerLib {

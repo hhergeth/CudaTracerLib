@@ -1,5 +1,5 @@
 #include "AnimatedMesh.h"
-#include "SpatialStructures/BVHRebuilder.h"
+#include "SpatialStructures/BVH/BVHRebuilder.h"
 #include "TriangleData.h"
 #include "TriIntersectorData.h"
 

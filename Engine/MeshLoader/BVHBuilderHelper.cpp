@@ -1,7 +1,7 @@
 #include <StdAfx.h>
 #include <Base/FileStream.h>
 #include "BVHBuilderHelper.h"
-#include <Engine/SpatialStructures/SplitBVHBuilder.hpp>
+#include <Engine/SpatialStructures/BVH/SplitBVHBuilder.hpp>
 
 namespace CudaTracerLib {
 
