@@ -21,7 +21,7 @@ list(APPEND CUDA_NVCC_FLAGS "-std=c++11;-rdc=true")
 set(
     CUDA_NVCC_FLAGS
     ${CUDA_NVCC_FLAGS};
-    -O3 -gencode arch=compute_61,code=sm_61
+    -O3 -gencode arch=compute_30,code=sm_30
     )
 set(CUDA_SEPARABLE_COMPILATION ON)
 
