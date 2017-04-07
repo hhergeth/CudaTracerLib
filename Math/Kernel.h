@@ -5,22 +5,6 @@
 
 namespace CudaTracerLib {
 
-template<int DIM> struct pow_int_compile
-{
-	CUDA_FUNC_IN static float pow(float f)
-	{
-		return f * pow_int_compile<DIM - 1>::pow(f);
-	}
-};
-
-template<> struct pow_int_compile<0>
-{
-	CUDA_FUNC_IN static float pow(float f)
-	{
-		return 1.0f;
-	}
-};
-
 //the coefficient of the kernel volume
 template<int DIM> CUDA_FUNC_IN static float c_d()
 {

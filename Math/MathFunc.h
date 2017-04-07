@@ -294,7 +294,7 @@ public:
 	CUDA_FUNC_IN static float exp2(unsigned int a)
 	{
 #ifdef ISCUDA
-		return ::exp2f((float)a); 
+		return ::exp2f((float)a);
 #else
 		return int_as_float_(clamp(a + 127, 1u, 254u) << 23);
 #endif
@@ -368,6 +368,22 @@ public:
 
 	CUDA_FUNC_IN static float spanBeginKepler(float a0, float a1, float b0, float b1, float c0, float c1, float d) { return fmax_fmax(min(a0, a1), min(b0, b1), fmin_fmax(c0, c1, d)); }
 	CUDA_FUNC_IN static float spanEndKepler(float a0, float a1, float b0, float b1, float c0, float c1, float d) { return fmin_fmin(max(a0, a1), max(b0, b1), fmax_fmin(c0, c1, d)); }
+};
+
+template<int DIM> struct pow_int_compile
+{
+	template<typename T> CUDA_FUNC_IN static float pow(const T& f)
+	{
+		return f * pow_int_compile<DIM - 1>::pow(f);
+	}
+};
+
+template<> struct pow_int_compile<0>
+{
+	template<typename T>  CUDA_FUNC_IN static float pow(const T& f)
+	{
+		return (T)1;
+	}
 };
 
 }
