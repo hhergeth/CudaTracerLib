@@ -68,7 +68,7 @@ void Image::Splat(float sx, float sy, const Spectrum &_L)
 
 }
 
-void Image::SetSample(int x, int y, RGBCOL c)
+CUDA_DEVICE void Image::SetSample(int x, int y, RGBCOL c)
 {
 	m_viewTarget[y * xResolution + x] = c;
 }
