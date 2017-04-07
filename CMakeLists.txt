@@ -7,7 +7,7 @@ FIND_PACKAGE( Boost COMPONENTS system filesystem iostreams REQUIRED )
 INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIR} )
 
 # Specify include directories
-set(QMATRIX_INCLUDE_DIR "qMatrix" CACHE FILEPATH "qMatrix")
+set(QMATRIX_INCLUDE_DIR "qMatrixLib" CACHE FILEPATH "Path to qMatrixLib")
 include_directories(${QMATRIX_INCLUDE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
