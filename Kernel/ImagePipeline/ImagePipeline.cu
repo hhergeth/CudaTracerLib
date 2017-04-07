@@ -57,7 +57,7 @@ void applyImagePipeline(const TracerBase& tracer, Image& img, ImageSamplesFilter
 	auto splatScale = tracer.getSplatScale();
 	auto pixelVarianceBuffer = tracer.getPixelVarianceBuffer();
 
-	int block = 32, xResolution = img.getWidth(), yResolution = img.getHeight();
+	int block = 16, xResolution = img.getWidth(), yResolution = img.getHeight();
 	if (!filter && !process) //copy directly to output
 	{
 		copySamplesToOutput << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(img, xResolution, yResolution, splatScale);
