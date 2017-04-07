@@ -50,7 +50,7 @@ public:
 
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST void AddSample(float sx, float sy, const Spectrum &L);
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST void ClearSample(int sx, int sy);
-	CTL_EXPORT CUDA_DEVICE CUDA_HOST void SetSample(int sx, int sy, RGBCOL c);
+	CUDA_DEVICE void SetSample(int sx, int sy, RGBCOL c);
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST void Splat(float sx, float sy, const Spectrum &L);
 
 	CTL_EXPORT void WriteDisplayImage(const std::string& fileName);
