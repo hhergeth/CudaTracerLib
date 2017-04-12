@@ -26,6 +26,7 @@ CudaStaticWrapper<SamplerData> g_SamplerDataDevice;
 
 KernelDynamicScene g_SceneDataHost;
 unsigned int g_RayTracedCounterHost;
+//CudaStaticWrapper  definition in Defines.h, SamplerData in Kernel/Sampler_device.h
 CudaStaticWrapper<SamplerData> g_SamplerDataHost;
 
 SamplingSequenceGeneratorHost<IndependantSamplingSequenceGenerator> g_SamplingSequenceGenerator;

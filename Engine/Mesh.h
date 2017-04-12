@@ -60,15 +60,21 @@ public:
 	std::vector<MeshPartLight> m_sAreaLights;
 	FixedString<64> m_uPath;
 public:
-	CTL_EXPORT Mesh(const std::string& path, IInStream& a_In, Stream<TriIntersectorData>* a_Stream0, Stream<TriangleData>* a_Stream1, Stream<BVHNodeData>* a_Stream2, Stream<TriIntersectorData2>* a_Stream3, Stream<Material>* a_Stream4, Stream<char>* a_Stream5);
-	CTL_EXPORT void Free(Stream<TriIntersectorData>* a_Stream0, Stream<TriangleData>* a_Stream1, Stream<BVHNodeData>* a_Stream2, Stream<TriIntersectorData2>* a_Stream3, Stream<Material>* a_Stream4);
+	CTL_EXPORT Mesh(const std::string& path, IInStream& a_In, Stream<TriIntersectorData>* a_Stream0, 
+			Stream<TriangleData>* a_Stream1, Stream<BVHNodeData>* a_Stream2, Stream<TriIntersectorData2>* a_Stream3, 
+			Stream<Material>* a_Stream4, Stream<char>* a_Stream5);
+	CTL_EXPORT void Free(Stream<TriIntersectorData>* a_Stream0, Stream<TriangleData>* a_Stream1, Stream<BVHNodeData>* a_Stream2, 
+			Stream<TriIntersectorData2>* a_Stream3, Stream<Material>* a_Stream4);
 	CTL_EXPORT KernelMesh getKernelData();
 	unsigned int getTriangleCount()
 	{
 		return m_sTriInfo.getLength();
 	}
-	CTL_EXPORT static void CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2f* uvs, const unsigned int* indices, unsigned int nIndices, const Material& mat, const Spectrum& Le, FileOutputStream& out);
-	CTL_EXPORT static void CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2f** uvs, unsigned int nUV_Sets, const unsigned int* indices, unsigned int nIndices, const std::vector<Material>& mats, const std::vector<Spectrum>& Le, const std::vector<unsigned int>& subMeshes, const unsigned char* extraData, FileOutputStream& out);
+	CTL_EXPORT static void CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2f* uvs, 
+			const unsigned int* indices, unsigned int nIndices, const Material& mat, const Spectrum& Le, FileOutputStream& out);
+	CTL_EXPORT static void CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2f** uvs, 
+			unsigned int nUV_Sets, const unsigned int* indices, unsigned int nIndices, const std::vector<Material>& mats, 
+			const std::vector<Spectrum>& Le, const std::vector<unsigned int>& subMeshes, const unsigned char* extraData, FileOutputStream& out);
 	CTL_EXPORT static SceneInitData ParseBinary(const std::string& a_InputFile);
 };
 
