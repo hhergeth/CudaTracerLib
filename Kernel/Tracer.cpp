@@ -14,6 +14,7 @@ TracerBase::TracerBase()
 	ThrowCudaErrors(cudaEventCreate(&start));
 	ThrowCudaErrors(cudaEventCreate(&stop));
 	m_sParameters << KEY_SamplingSequenceType() << SamplingSequenceGeneratorTypes::Independent;
+	setCorrectSamplingSequenceGenerator();
 }
 
 TracerBase::~TracerBase()
