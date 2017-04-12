@@ -25,6 +25,10 @@ struct DifferentialGeometry
 
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST void computePartials(const Ray& r, const Ray& rx, const Ray& ry);
 
+	//combines the partials to compute the differential of the position(pixel) function
+	//returns the columns of the jacobian
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST void compute_dp_ds(Vec3f& dp_dx, Vec3f& dp_dy) const;
+
 	CUDA_FUNC_IN NormalizedT<Vec3f> toWorld(const NormalizedT<Vec3f>& v) const
 	{
 		return sys.toWorld(v);

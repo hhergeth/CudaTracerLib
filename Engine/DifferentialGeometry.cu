@@ -89,4 +89,10 @@ void DifferentialGeometry::computePartials(const Ray& r, const Ray& rx, const Ra
 	}
 }
 
+void DifferentialGeometry::compute_dp_ds(Vec3f& dp_dx, Vec3f& dp_dy) const
+{
+	dp_dx = dpdu * dudx + dpdv * dvdx;
+	dp_dy = dpdu * dudy + dpdv * dvdy;
+}
+
 }
