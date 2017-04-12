@@ -24,8 +24,11 @@ private:
 	}
 public:
 	SequenceSamplerData(unsigned int num_sequences, unsigned int sequence_length)
-		: m_d1Data(num_sequences * sequence_length), m_d2Data(num_sequences * sequence_length), ISynchronizedBufferParent(m_d1Data, m_d2Data),
-		  num_sequences(num_sequences), sequence_length(sequence_length)
+		: m_d1Data(num_sequences * sequence_length), 
+		m_d2Data(num_sequences * sequence_length), 
+		ISynchronizedBufferParent(m_d1Data, m_d2Data),
+		num_sequences(num_sequences), 
+		sequence_length(sequence_length)
 	{
 
 	}
