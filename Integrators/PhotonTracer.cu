@@ -46,7 +46,7 @@ template<bool CORRECT_DIFFERENTIALS> struct PhotonTracerParticleProcessHandler
 			bRec.wo = bRec.dg.toLocal(dRec.d);
 
 			//compute pixel differentials
-			if (false&&CORRECT_DIFFERENTIALS)
+			if (CORRECT_DIFFERENTIALS)
 			{
 				NormalizedT<Ray> r, rX, rY;
 				g_SceneData.sampleSensorRay(r, rX, rY, dRec.uv, Vec2f(0));
