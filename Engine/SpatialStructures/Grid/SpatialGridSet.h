@@ -34,7 +34,7 @@ public:
 
 	CUDA_FUNC_IN const T& operator()(const Vec3f& p) const
 	{
-		return m_buffer[BaseType::getHashGrid().Hash(p)].value;
+		return m_buffer[BaseType::getHashGrid().Hash(p)];
 	}
 
 	CUDA_FUNC_IN T& operator()(const Vec3f& p)
@@ -44,7 +44,7 @@ public:
 
 	CUDA_FUNC_IN const T& operator()(const Vec3u& p) const
 	{
-		return m_buffer[BaseType::getHashGrid().Hash(p)].value;
+		return m_buffer[BaseType::getHashGrid().Hash(p)];
 	}
 
 	CUDA_FUNC_IN T& operator()(const Vec3u& p)
