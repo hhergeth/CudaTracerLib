@@ -50,6 +50,14 @@ public:
 
 	CUDA_FUNC_IN static float squareToUniformHemispherePdf() { return INV_TWOPI; }
 
+	CUDA_FUNC_IN static Vec2f uniformHemisphereToSquare(const NormalizedT<Vec3f>& dir)
+	{
+		float z = dir.z;
+		float tmp = math::sqrt(1.0f - z*z);
+		float phi = math::acos(dir.x / tmp);
+		return Vec2f(z, phi / PI);
+	}
+
 	CUDA_FUNC_IN static NormalizedT<Vec3f> squareToCosineHemisphere(const Vec2f &sample)
 	{
 		Vec2f p = Warp::squareToUniformDiskConcentric(sample);
