@@ -33,6 +33,12 @@ template<int D, int N_BINS_PER_DIM> struct DiscretizedModel
 	bin bins[NUM_CELLS];
 	int num_samples;
 
+	DiscretizedModel()
+		: num_samples(0)
+	{
+
+	}
+
 	DiscretizedModel(CudaRNG& rng, const vec& range_min, const vec& range_max)
 		: num_samples(0)
 	{
@@ -67,7 +73,7 @@ template<int D, int N_BINS_PER_DIM> struct DiscretizedModel
 	CUDA_FUNC_IN void TrainSample(const vec& sample, const vec& range_min, const vec& range_max)
 	{
 		auto idx = getIndex(sample, range_min, range_max);
-		if (idx == 0xffffffff)
+		if (idx == 0xffffffff || idx >= NUM_CELLS)
 			return;
 		bins[idx].N++;
 		num_samples++;
@@ -100,6 +106,8 @@ template<int D, int N_BINS_PER_DIM> struct DiscretizedModel
 	CUDA_FUNC_IN float pdf(const vec& v, const vec& range_min, const vec& range_max) const
 	{
 		auto idx = getIndex(v, range_min, range_max);
+		if (idx == 0xffffffff || idx >= NUM_CELLS)
+			return 0.0f;
 		float pdf_bin = float(bins[idx].N) / num_samples;
 		auto dim_bin = (range_max - range_min);
 		float length_bin = 1;
@@ -109,16 +117,12 @@ template<int D, int N_BINS_PER_DIM> struct DiscretizedModel
 		return pdf_bin * 1.0f / length_bin;
 	}
 private:
-	CUDA_FUNC_IN unsigned int getIndex(const vec& v, const vec& range_min, const vec& range_max) const
+	CUDA_FUNC_IN static unsigned int getIndex(const vec& v, const vec& range_min, const vec& range_max)
 	{
-		vec cell_idx = (v - range_min);
-		for (int i = 0; i < D; i++)
-			cell_idx(i) /= (range_max - range_min)(i);
-		cell_idx = cell_idx * (float)N_BINS_PER_DIM;
+		vec cell_idx = (v - range_min).DivElement(range_max - range_min) * (float)N_BINS_PER_DIM;
 
-		for (int i = 0; i < D; i++)
-			if (cell_idx(i) < 0 || cell_idx(i) >= N_BINS_PER_DIM)
-				return 0xffffffff;
+		if (cell_idx.max() >= N_BINS_PER_DIM)
+			return 0xffffffff;
 
 		unsigned int flattened_idx = 0;
 		unsigned int hyper_area = 1;
@@ -129,7 +133,7 @@ private:
 		}
 		return flattened_idx;
 	}
-	CUDA_FUNC_IN vec getCoords(unsigned int flattened_idx) const
+	CUDA_FUNC_IN static vec getCoords(unsigned int flattened_idx)
 	{
 		vec coords = vec::Zero();
 		for (int i = 0; i < D; i++)

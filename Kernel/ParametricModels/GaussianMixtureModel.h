@@ -31,7 +31,10 @@ template<int D, int K> struct GaussianMixtureModel
 		float pdf_coeff;
 		mat sample_mat;
 
-		CUDA_FUNC_IN Component(){}
+		Component()
+		{
+			*this = Component(vec::Zero(), mat::Id());
+		}
 
 		CUDA_FUNC_IN Component(const vec& mean, const mat& covariance)
 			: mean(mean)
@@ -56,13 +59,13 @@ template<int D, int K> struct GaussianMixtureModel
 			return mean + sample_mat * x;
 		}
 
-		CUDA_FUNC_IN static Component Random(CudaRNG& rng, const vec& min, const vec& max)
+		static Component Random(CudaRNG& rng, const vec& min, const vec& max)
 		{
 			vec mean;
 			mat coVar;
 			for (int i = 0; i < D; i++)
 				mean(i) = rng.randomFloat();
-			float d = 0.2f;
+			float d = 0.05f;
 			vec l = min + (max - min) * d, h = min + (max - min) * (1.0f - d);
 			mean = l + mean.MulElement(h - l);
 			for (int i = 0; i < D; i++)
@@ -78,9 +81,10 @@ template<int D, int K> struct GaussianMixtureModel
 	Component components[K];
 	float weights[K];
 
-	CUDA_FUNC_IN GaussianMixtureModel()
+	GaussianMixtureModel()
 	{
-
+		for (int i = 0; i < K; i++)
+			weights[i] = 0.0f;
 	}
 
 	CUDA_FUNC_IN float pdf(const vec& x, const vec& range_min, const vec& range_max) const
@@ -108,7 +112,7 @@ template<int D, int K> struct GaussianMixtureModel
 		return vec();
 	}
 
-	CUDA_FUNC_IN static GaussianMixtureModel<D, K> Random(CudaRNG& rng, const vec& mi, const vec& ma)
+	static GaussianMixtureModel<D, K> Random(CudaRNG& rng, const vec& mi, const vec& ma)
 	{
 		GaussianMixtureModel<D, K> res;
 		for (int i = 0; i < K; i++)
@@ -230,7 +234,8 @@ template <int D, int K> struct OnlineEMGaussianMixtureModel : public GaussianMix
 		float u;
 		vec s;
 		mat ss;
-		SufStat()
+
+		CUDA_FUNC_IN SufStat()
 		{
 			u = 0;
 			s.zero();
@@ -273,6 +278,11 @@ template <int D, int K> struct OnlineEMGaussianMixtureModel : public GaussianMix
 	float w_avg;
 
 	enum {N_TRAINING_DATA = 10};
+
+	OnlineEMGaussianMixtureModel()
+		: num_samples(0), n_iteration(0), w_avg(0)
+	{
+	}
 
 	OnlineEMGaussianMixtureModel(CudaRNG& rng, const vec& range_min, const vec& range_max)
 		: num_samples(0), n_iteration(0), w_avg(0)
@@ -321,7 +331,7 @@ template <int D, int K> struct OnlineEMGaussianMixtureModel : public GaussianMix
 		CTL_ASSERT(N <= N_TRAINING_DATA);
 		num_samples += N;
 		n_iteration++;
-		float n = n_iteration;
+		float n = (float)n_iteration;
 		const float alpha = 0.7f;
 		float ny = math::pow(n, -alpha);
 
@@ -359,7 +369,7 @@ template <int D, int K> struct OnlineEMGaussianMixtureModel : public GaussianMix
 		//update averaged total particle weight
 		w_avg = (1 - ny) * w_avg + ny * w_all;
 
-		const float a = 2.01f, b = 5.0f * 1e-4, v = 1.01f;
+		const float a = 2.01f, b = 5.0f * 1e-4f, v = 1.01f;
 		mat b_nI = b / float(n) * mat::Id();
 		for (int j = 0; j < K; j++)
 		{
