@@ -84,7 +84,7 @@ template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(unsigned int N, 
 		{
 			traversalResult& res = g_IntersectorWPT.res(dat.dIdx, 1);
 			traversalRay& ray = g_IntersectorWPT(dat.dIdx, 1);
-			if (res.dist >= dat.dDist * (1 - EPSILON))
+			if (res.dist >= dat.dDist * (1 - 0.01f))
 				dat.L += dat.directF;
 			dat.dIdx = UINT_MAX;
 			dat.directF = 0.0f;
@@ -108,10 +108,11 @@ template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(unsigned int N, 
 			if (pathDepth + 1 != maxPathDepth)
 			{
 				Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
+				dat.specular_bounce = (bRec.sampledType & EDelta) != 0;
 				if (pathDepth > maxPathDepth - 3)
 				{
-					if (rng.randomFloat() < f.max())
-						f = f / f.max();
+					if (rng.randomFloat() < dat.throughput.max())
+						dat.throughput /= dat.throughput.max();
 					else goto labelAdd;
 				}
 				unsigned int idx2 = g_Intersector2WPT.insertRay(0);
@@ -119,24 +120,26 @@ template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(unsigned int N, 
 				ray2.a = Vec4f(bRec.dg.P, 1e-2f);
 				ray2.b = Vec4f(bRec.getOutgoing(), FLT_MAX);
 
-				DirectSamplingRecord dRec(bRec.dg.P, bRec.dg.sys.n);
-				Spectrum value = g_SceneData.sampleEmitterDirect(dRec, rng.randomFloat2());
-				dat.specular_bounce = (bRec.sampledType & EDelta) != 0;
-				if (NEXT_EVENT_EST && r2.getMat().bsdf.hasComponent(ESmooth) && !value.isZero())
+				dat.dIdx = UINT_MAX;
+				if (NEXT_EVENT_EST)
 				{
-					bRec.typeMask = EBSDFType(EAll & ~EDelta);
-					bRec.wo = bRec.dg.toLocal(dRec.d);
-					Spectrum bsdfVal = r2.getMat().bsdf.f(bRec);
-					const float bsdfPdf = r2.getMat().bsdf.pdf(bRec);
-					const float weight = MonteCarlo::PowerHeuristic(1, dRec.pdf, 1, bsdfPdf);
-					dat.directF = dat.throughput * value * bsdfVal * weight;
-					dat.dDist = dRec.dist;
-					dat.dIdx = g_Intersector2WPT.insertRay(1);
-					traversalRay& ray3 = g_Intersector2WPT(dat.dIdx, 1);
-					ray3.a = Vec4f(bRec.dg.P, 1e-2f);
-					ray3.b = Vec4f(dRec.d, FLT_MAX);
+					DirectSamplingRecord dRec(bRec.dg.P, bRec.dg.sys.n);
+					Spectrum value = g_SceneData.sampleEmitterDirect(dRec, rng.randomFloat2());
+					if (r2.getMat().bsdf.hasComponent(ESmooth) && !value.isZero())
+					{
+						bRec.typeMask = EBSDFType(EAll & ~EDelta);
+						bRec.wo = bRec.dg.toLocal(dRec.d);
+						Spectrum bsdfVal = r2.getMat().bsdf.f(bRec);
+						const float bsdfPdf = r2.getMat().bsdf.pdf(bRec);
+						const float weight = MonteCarlo::PowerHeuristic(1, dRec.pdf, 1, bsdfPdf);
+						dat.directF = dat.throughput * value * bsdfVal * weight;
+						dat.dDist = dRec.dist;
+						dat.dIdx = g_Intersector2WPT.insertRay(1);
+						traversalRay& ray3 = g_Intersector2WPT(dat.dIdx, 1);
+						ray3.a = Vec4f(bRec.dg.P, 1e-2f);
+						ray3.b = Vec4f(dRec.d, FLT_MAX);
+					}
 				}
-				else dat.dIdx = UINT_MAX;
 				dat.throughput *= f;
 				g_Intersector2WPT(idx2) = dat;
 			}
