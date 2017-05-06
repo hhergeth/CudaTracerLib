@@ -15,6 +15,7 @@ struct WavefrontPTRayData
 	Spectrum directF;
 	float dDist;
 	unsigned int dIdx;
+	bool specular_bounce;
 };
 
 typedef RayBuffer<WavefrontPTRayData, 2> WavefrontPathTracerBuffer;

@@ -49,6 +49,7 @@ __global__ void pathCreateKernelWPT(unsigned int w, unsigned int h)
 		dat.throughput = W;
 		dat.L = Spectrum(0.0f);
 		dat.dIdx = UINT_MAX;
+		dat.specular_bounce = true;
 	} while (true);
 }
 
@@ -83,8 +84,10 @@ template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(unsigned int N, 
 		{
 			traversalResult& res = g_IntersectorWPT.res(dat.dIdx, 1);
 			traversalRay& ray = g_IntersectorWPT(dat.dIdx, 1);
-			if (res.dist >= dat.dDist * 0.95f)
+			if (res.dist >= dat.dDist * (1 - EPSILON))
 				dat.L += dat.directF;
+			dat.dIdx = UINT_MAX;
+			dat.directF = 0.0f;
 		}
 
 		traversalResult& res = g_IntersectorWPT.res(rayidx, 0);
@@ -100,12 +103,12 @@ template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(unsigned int N, 
 			res.toResult(&r2, g_SceneData);
 			BSDFSamplingRecord bRec;
 			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance);
-			if (pathDepth == 0 || dat.dIdx == UINT_MAX)
+			if (!NEXT_EVENT_EST || (pathDepth == 0 || dat.specular_bounce))
 				dat.L += r2.Le(bRec.dg.P, bRec.dg.sys, -r.dir()) * dat.throughput;
 			if (pathDepth + 1 != maxPathDepth)
 			{
 				Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
-				if (pathDepth > 3)
+				if (pathDepth > maxPathDepth - 3)
 				{
 					if (rng.randomFloat() < f.max())
 						f = f / f.max();
@@ -118,8 +121,10 @@ template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(unsigned int N, 
 
 				DirectSamplingRecord dRec(bRec.dg.P, bRec.dg.sys.n);
 				Spectrum value = g_SceneData.sampleEmitterDirect(dRec, rng.randomFloat2());
+				dat.specular_bounce = (bRec.sampledType & EDelta) != 0;
 				if (NEXT_EVENT_EST && r2.getMat().bsdf.hasComponent(ESmooth) && !value.isZero())
 				{
+					bRec.typeMask = EBSDFType(EAll & ~EDelta);
 					bRec.wo = bRec.dg.toLocal(dRec.d);
 					Spectrum bsdfVal = r2.getMat().bsdf.f(bRec);
 					const float bsdfPdf = r2.getMat().bsdf.pdf(bRec);
