@@ -53,7 +53,7 @@ __global__ void pathCreateKernelWPT(unsigned int w, unsigned int h)
 	} while (true);
 }
 
-template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(unsigned int N, Image I, int pathDepth, int iterationIdx, int maxPathDepth, bool depthImage)
+template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(unsigned int N, Image I, int pathDepth, int iterationIdx, int maxPathDepth, int RRStartDepth, bool depthImage)
 {
 	int rayidx;
 	__shared__ volatile int nextRayArray[MaxBlockHeight];
@@ -109,7 +109,7 @@ template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(unsigned int N, 
 			{
 				Spectrum f = r2.getMat().bsdf.sample(bRec, rng.randomFloat2());
 				dat.specular_bounce = (bRec.sampledType & EDelta) != 0;
-				if (pathDepth > maxPathDepth - 3)
+				if (pathDepth >= RRStartDepth)
 				{
 					if (rng.randomFloat() < dat.throughput.max())
 						dat.throughput /= dat.throughput.max();
@@ -164,7 +164,7 @@ void WavefrontPathTracer::DoRender(Image* I)
 	pathCreateKernelWPT << < dim3(180, 1, 1), dim3(32, 6, 1) >> >(w, h);
 	CopyFromSymbol(*bufA, g_IntersectorWPT);
 	bufA->setNumRays(w * h, 0);
-	int pass = 0, maxPathLength = m_sParameters.getValue(KEY_MaxPathLength());
+	int pass = 0, maxPathLength = m_sParameters.getValue(KEY_MaxPathLength()), rrStart = m_sParameters.getValue(KEY_RRStartDepth());
 	WavefrontPathTracerBuffer* srcBuf = bufA, *destBuf = bufB;
 	do
 	{
@@ -173,8 +173,8 @@ void WavefrontPathTracer::DoRender(Image* I)
 		CopyToSymbol(g_IntersectorWPT, *srcBuf); CopyToSymbol(g_Intersector2WPT, *destBuf);
 		ZeroSymbol(g_NextRayCounterWPT);
 		if (m_sParameters.getValue(KEY_Direct()))
-			pathIterateKernel<true> << < dim3(180, 1, 1), dim3(32, 6, 1) >> >(srcBuf->getNumRays(0), *I, pass, m_uPassesDone, maxPathLength, hasDepthBuffer());
-		else pathIterateKernel<false> << < dim3(180, 1, 1), dim3(32, 6, 1) >> >(srcBuf->getNumRays(0), *I, pass, m_uPassesDone, maxPathLength, hasDepthBuffer());
+			pathIterateKernel<true> << < dim3(180, 1, 1), dim3(32, 6, 1) >> >(srcBuf->getNumRays(0), *I, pass, m_uPassesDone, maxPathLength, rrStart, hasDepthBuffer());
+		else pathIterateKernel<false> << < dim3(180, 1, 1), dim3(32, 6, 1) >> >(srcBuf->getNumRays(0), *I, pass, m_uPassesDone, maxPathLength, rrStart, hasDepthBuffer());
 		CopyFromSymbol(*srcBuf, g_IntersectorWPT); CopyFromSymbol(*destBuf, g_Intersector2WPT);
 		swapk(srcBuf, destBuf);
 	} while (srcBuf->getNumRays(0) && ++pass < maxPathLength);

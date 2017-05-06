@@ -7,7 +7,7 @@ namespace CudaTracerLib {
 
 CUDA_ALIGN(16) CUDA_DEVICE unsigned int g_NextRayCounter;
 
-template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(NormalizedT<Ray>& r, const NormalizedT<Ray>& rX, const NormalizedT<Ray>& rY, Sampler& rnd)
+template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(NormalizedT<Ray>& r, const NormalizedT<Ray>& rX, const NormalizedT<Ray>& rY, Sampler& rnd, int maxPathLength, int rrStartDepth)
 {
 	Spectrum cl = Spectrum(0.0f);   // accumulated color
 	Spectrum cf = Spectrum(1.0f);  // accumulated reflectance
@@ -17,7 +17,7 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(NormalizedT<Ray>& r, const
 	KernelAggregateVolume& V = g_SceneData.m_sVolume;
 	MediumSamplingRecord mRec;
 	TraceResult r2;
-	while (depth++ < 10)
+	while (depth++ < maxPathLength)
 	{
 		r2 = traceRay(r);
 		float minT, maxT;
@@ -64,7 +64,7 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(NormalizedT<Ray>& r, const
 			cf = cf * f;
 			r = NormalizedT<Ray>(bRec.dg.P, bRec.getOutgoing());
 		}
-		if (depth > 5)
+		if (depth > rrStartDepth)
 		{
 			if (rnd.randomFloat() >= cf.max())
 				break;
@@ -76,7 +76,7 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(NormalizedT<Ray>& r, const
 	return cl;
 }
 
-template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTraceRegularization(NormalizedT<Ray>& r, const NormalizedT<Ray>& rX, const NormalizedT<Ray>& rY, Sampler& rnd, float g_fRMollifier)
+template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTraceRegularization(NormalizedT<Ray>& r, const NormalizedT<Ray>& rX, const NormalizedT<Ray>& rY, Sampler& rnd, float g_fRMollifier, int maxPathLength, int rrStartDepth)
 {
 	TraceResult r2;
 	r2.Init();
@@ -86,7 +86,7 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTraceRegularization(NormalizedT<
 	bool specularBounce = false;
 	BSDFSamplingRecord bRec;
 	//bool hadDelta = false;
-	while (traceRay(r.dir(), r.ori(), &r2) && depth++ < 7)
+	while (traceRay(r.dir(), r.ori(), &r2) && depth++ < maxPathLength)
 	{
 		r2.getBsdfSample(r, bRec, ETransportMode::ERadiance);// return (Spectrum(bRec.map.sys.n) + Spectrum(1)) / 2.0f; //return bRec.map.sys.n;
 		if (depth == 1)
@@ -116,13 +116,13 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTraceRegularization(NormalizedT<
 			else cl += cf * UniformSampleAllLights(bRec, r2.getMat(), 1, rnd);
 		}
 		specularBounce = (bRec.sampledType & EDelta) != 0;
-		if (depth > 5)
+		cf = cf * f;
+		if (depth > rrStartDepth)
 		{
-			if (rnd.randomFloat() < f.max())
-				f = f / f.max();
+			if (rnd.randomFloat() < cf.max())
+				cf = cf / cf.max();
 			else break;
 		}
-		cf = cf * f;
 		r = NormalizedT<Ray>(bRec.dg.P, bRec.getOutgoing());
 		r2.Init();
 	}
@@ -139,10 +139,11 @@ void PathTracer::DebugInternal(Image* I, const Vec2i& p)
 	auto rng = g_SamplerData(p.y * I->getWidth() + p.x);
 	NormalizedT<Ray> r, rX, rY;
 	Spectrum throughput = g_SceneData.sampleSensorRay(r, rX, rY, Vec2f((float)p.x, (float)p.y), rng.randomFloat2());
-	PathTrace<true>(r, rX, rY, rng);
+	int maxPathLength = m_sParameters.getValue(KEY_MaxPathLength()), rrStart = m_sParameters.getValue(KEY_RRStartDepth());
+	PathTrace<true>(r, rX, rY, rng, maxPathLength, rrStart);
 }
 
-template<bool DIRECT, bool REGU> __global__ void pathKernel2(unsigned int w, unsigned int h, unsigned int xoff, unsigned int yoff, Image img, float m)
+template<bool DIRECT, bool REGU> __global__ void pathKernel2(unsigned int w, unsigned int h, unsigned int xoff, unsigned int yoff, Image img, float m, int maxPathLength, int rrStart)
 {
 	Vec2i pixel = TracerBase::getPixelPos(xoff, yoff);
 	auto rng = g_SamplerData(TracerBase::getPixelIndex(xoff, yoff, w, h));
@@ -151,7 +152,7 @@ template<bool DIRECT, bool REGU> __global__ void pathKernel2(unsigned int w, uns
 		NormalizedT<Ray> r, rX, rY;
 		Vec2f pX = Vec2f(pixel.x, pixel.y) + rng.randomFloat2();
 		Spectrum imp = g_SceneData.sampleSensorRay(r, rX, rY, pX, rng.randomFloat2());
-		Spectrum col = imp * (REGU ? PathTraceRegularization<DIRECT>(r, rX, rY, rng, m) : PathTrace<DIRECT>(r, rX, rY, rng));
+		Spectrum col = imp * (REGU ? PathTraceRegularization<DIRECT>(r, rX, rY, rng, m, maxPathLength, rrStart) : PathTrace<DIRECT>(r, rX, rY, rng, maxPathLength, rrStart));
 		img.AddSample(pX.x, pX.y, col);
 	}
 }
@@ -163,17 +164,19 @@ void PathTracer::RenderBlock(Image* I, int x, int y, int blockW, int blockH)
 	float ALPHA = 0.75f;
 	float radius2 = math::pow(math::pow(m_fInitialRadius, float(2)) / math::pow(float(m_uPassesDone), 0.5f * (1 - ALPHA)), 1.0f / 2.0f);
 
+	int maxPathLength = m_sParameters.getValue(KEY_MaxPathLength()), rrStart = m_sParameters.getValue(KEY_RRStartDepth());
+
 	if (m_sParameters.getValue(KEY_Regularization()))
 	{
 		if (m_sParameters.getValue(KEY_Direct()))
-			pathKernel2<true, true> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> > (w, h, x, y, *I, radius2);
-		else pathKernel2<false, true> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> > (w, h, x, y, *I, radius2);
+			pathKernel2<true, true> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> > (w, h, x, y, *I, radius2, maxPathLength, rrStart);
+		else pathKernel2<false, true> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> > (w, h, x, y, *I, radius2, maxPathLength, rrStart);
 	}
 	else
 	{
 		if (m_sParameters.getValue(KEY_Direct()))
-			pathKernel2<true, false> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> > (w, h, x, y, *I, radius2);
-		else pathKernel2<false, false> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> > (w, h, x, y, *I, radius2);
+			pathKernel2<true, false> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> > (w, h, x, y, *I, radius2, maxPathLength, rrStart);
+		else pathKernel2<false, false> << <BLOCK_SAMPLER_LAUNCH_CONFIG >> > (w, h, x, y, *I, radius2, maxPathLength, rrStart);
 	}
 }
 

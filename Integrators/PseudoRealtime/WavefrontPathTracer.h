@@ -25,11 +25,14 @@ class WavefrontPathTracer : public Tracer<true>, public IDepthTracer
 public:
 	PARAMETER_KEY(bool, Direct)
 	PARAMETER_KEY(int, MaxPathLength)
+	PARAMETER_KEY(int, RRStartDepth)
 
 	WavefrontPathTracer()
 		: bufA(0), bufB(0)
 	{
-		m_sParameters << KEY_Direct() << CreateSetBool(true) << KEY_MaxPathLength() << CreateInterval<int>(7, 1, INT_MAX);
+		m_sParameters << KEY_Direct()				<< CreateSetBool(true)
+					  << KEY_MaxPathLength()		<< CreateInterval<int>(7, 1, INT_MAX)
+					  << KEY_RRStartDepth()			<< CreateInterval(5, 1, INT_MAX);
 	}
 	~WavefrontPathTracer()
 	{
