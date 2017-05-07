@@ -89,7 +89,7 @@ template<bool CORRECT_DIFFERENTIALS> struct PhotonTracerParticleProcessHandler
 	}
 };
 
-template<bool CORRECT_DIFFERENTIALS> __global__ void pathKernel(unsigned int N, Image g_Image)
+template<bool CORRECT_DIFFERENTIALS> __global__ void pathKernel(unsigned int N, Image g_Image, int maxPathLength, int rrStart)
 {
 	__shared__ volatile int nextRayArray[MaxBlockHeight];
 	volatile int& rayBase = nextRayArray[threadIdx.y], i = 0;
@@ -104,7 +104,7 @@ template<bool CORRECT_DIFFERENTIALS> __global__ void pathKernel(unsigned int N, 
 
 		auto rng = g_SamplerData(rayidx);
 		auto process = PhotonTracerParticleProcessHandler<CORRECT_DIFFERENTIALS>(g_Image, rng);
-		ParticleProcess(12, 7, rng, process);
+		ParticleProcess(maxPathLength, rrStart, rng, process);
 	} while (true);
 }
 
@@ -112,9 +112,11 @@ void PhotonTracer::DoRender(Image* I)
 {
 	unsigned int zero = 0;
 	ThrowCudaErrors(cudaMemcpyToSymbol(g_NextRayCounter3, &zero, sizeof(unsigned int)));
+	int maxPathLength = m_sParameters.getValue(KEY_MaxPathLength());
+	int rrStart = m_sParameters.getValue(KEY_RRStartingDepth());
 	if (m_sParameters.getValue(KEY_CorrectDifferentials()))
-		pathKernel<true> << < 180, dim3(32, MaxBlockHeight, 1) >> >(w * h, *I);
-	else pathKernel<false> << < 180, dim3(32, MaxBlockHeight, 1) >> >(w * h, *I);
+		pathKernel<true> << < 180, dim3(32, MaxBlockHeight, 1) >> >(w * h, *I, maxPathLength, rrStart);
+	else pathKernel<false> << < 180, dim3(32, MaxBlockHeight, 1) >> >(w * h, *I, maxPathLength, rrStart);
 	ThrowCudaErrors(cudaDeviceSynchronize());
 }
 

@@ -8,10 +8,15 @@ class PhotonTracer : public Tracer<true>
 {
 public:
 	PARAMETER_KEY(bool, CorrectDifferentials)
+	PARAMETER_KEY(int, MaxPathLength)
+	PARAMETER_KEY(int, RRStartingDepth)
 	PhotonTracer()
 	{
-		m_sParameters << KEY_CorrectDifferentials() << CreateSetBool(false);
+		m_sParameters << KEY_CorrectDifferentials()			<< CreateSetBool(false);
+		m_sParameters << KEY_MaxPathLength()				<< CreateInterval(12, 1, INT_MAX);
+		m_sParameters << KEY_RRStartingDepth()				<< CreateInterval(7, 1, INT_MAX);
 	}
+
 	virtual void PrintStatus(std::vector<std::string>& a_Buf) const
 	{
 		float nPhotons = math::floor((float)(m_uPassesDone * w * h) / 1000000.0f);
