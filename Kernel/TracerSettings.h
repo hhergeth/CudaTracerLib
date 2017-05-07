@@ -222,6 +222,7 @@ template<typename T> struct TracerParameterKey
 class TracerParameterCollection
 {
 	std::map<std::string, ITracerParameter*> parameter;
+	std::map<std::string, TracerParameterCollection*> collections;
 	template<typename T, typename... Ts> void add(TracerParameter<T>* a, const std::string& name, Ts&&... rest)
 	{
 		add(a, name);
@@ -241,11 +242,15 @@ public:
 		for (auto& i : parameter)
 			delete i.second;
 	}
-	void iterate(const std::function<void(const std::string&, ITracerParameter*)>& f) const
+	void iterate(const std::function<void(const std::string&, ITracerParameter*)>& f_para, const std::function<void(const std::string&, TracerParameterCollection*)>& f_coll) const
 	{
 		for (auto& i : parameter)
 		{
-			f(i.first, i.second);
+			f_para(i.first, i.second);
+		}
+		for (auto& i : collections)
+		{
+			f_coll(i.first, i.second);
 		}
 	}
 	ITracerParameter* operator[](const std::string& name) const
@@ -276,6 +281,20 @@ public:
 		if (p)
 			p->setValue(val);
 		else throw std::runtime_error("Invalid access to parameter value!");
+	}
+
+	void addChildParameterCollection(const std::string& name, TracerParameterCollection* col)
+	{
+		if (collections.find(name) != collections.end())
+			throw std::runtime_error("Trying to add collection with identical name!");
+		collections[name] = col;
+	}
+	TracerParameterCollection* getCollection(const std::string& name)
+	{
+		auto it = collections.find(name);
+		if (it == collections.end())
+			return 0;
+		else return it->second;
 	}
 
 	friend class InitHelper;
