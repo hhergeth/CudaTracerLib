@@ -58,6 +58,10 @@ public:
 ENUMIZE(SamplingSequenceGeneratorTypes, SSGT)
 #undef SSGT
 
+#define BST(X) X(Uniform) X(Variance) X(Difference)
+ENUMIZE(BlockSamplerTypes, BST)
+#undef BST
+
 class TracerBase
 {
 public:
@@ -67,6 +71,7 @@ public:
 	CTL_EXPORT static void RenderDepth(DeviceDepthImage dImg, DynamicScene* s);
 
 	PARAMETER_KEY(SamplingSequenceGeneratorTypes, SamplingSequenceType)
+	PARAMETER_KEY(BlockSamplerTypes, BlockSamplerType)
 
 	CUDA_DEVICE static Vec2i getPixelPos(unsigned int xoff, unsigned int yoff)
 	{
@@ -171,6 +176,7 @@ protected:
 
 	}
 	virtual void setCorrectSamplingSequenceGenerator();
+	virtual void setCorrectBlockSampler();
 	virtual void generateNewRandomSequences();
 };
 
@@ -179,6 +185,8 @@ template<bool PROGRESSIVE> class Tracer : public TracerBase
 public:
 	virtual void Resize(unsigned int _w, unsigned int _h)
 	{
+		TracerBase::Resize(_w, _h);
+		setCorrectBlockSampler();
 		if (PROGRESSIVE)
 		{
 			auto oldSampler = m_pBlockSampler;
@@ -186,10 +194,11 @@ public:
 			oldSampler->Free();
 			delete oldSampler;
 		}
-		TracerBase::Resize(_w, _h);
 	}
 	virtual void DoPass(Image* I, bool a_NewTrace)
 	{
+		setCorrectBlockSampler();
+		setCorrectSamplingSequenceGenerator();
 		ThrowCudaErrors(cudaEventRecord(start, 0));
 		// do not clear because of block samplers
 		//m_debugVisualizerManager.ClearAll();
@@ -206,7 +215,6 @@ public:
 			}
 			StartNewTrace(I);
 		}
-		setCorrectSamplingSequenceGenerator();
 		UpdateKernel(m_pScene, *m_pSamplingSequenceGenerator);
 		k_setNumRaysTraced(0);
 		m_uPassesDone++;
