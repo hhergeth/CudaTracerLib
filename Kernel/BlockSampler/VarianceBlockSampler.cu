@@ -55,7 +55,7 @@ void VarianceBlockSampler::AddPass(Image* img, TracerBase* tracer, const PixelVa
 {
 	m_uPassesDone++;
 
-	const int cBlock = 32;
+	const int cBlock = 16;
 	int nx = (img->getWidth() + cBlock - 1) / cBlock, ny = (img->getHeight() + cBlock - 1) / cBlock;
 
 	m_blockInfo.Memset(0);
@@ -88,31 +88,7 @@ void VarianceBlockSampler::IterateBlocks(iterate_blocks_clb_t clb) const
 {
 	if(m_uPassesDone < 10)
 		IterateAllBlocksUniform(clb);
-	else
-	{
-		for (int i = 0; i < getNumTotalBlocks() / 4; i++)
-		{
-			auto flattened_idx = m_indices[i];
-			int block_x, block_y, x, y, bw, bh;
-			getIdxComponents(flattened_idx, block_x, block_y);
-
-			getBlockRect(block_x, block_y, x, y, bw, bh);
-
-			clb(flattened_idx, x, y, bw, bh);
-		}
-
-		int num_deterministic = 2;
-		int start_deterministic = m_uPassesDone % num_deterministic;//deterministically sample the same number of blocks every n passes
-		for (int i = start_deterministic; i < getNumTotalBlocks(); i += num_deterministic)
-		{
-			int block_x, block_y, x, y, bw, bh;
-			getIdxComponents(i, block_x, block_y);
-
-			getBlockRect(block_x, block_y, x, y, bw, bh);
-
-			clb(i, x, y, bw, bh);
-		}
-	}
+	else MixedBlockIterate(m_indices, clb, m_uPassesDone);
 }
 
 }

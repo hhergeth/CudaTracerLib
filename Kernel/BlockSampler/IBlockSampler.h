@@ -4,6 +4,7 @@
 #include <vector>
 #include <algorithm>
 #include <Kernel/PixelVarianceBuffer.h>
+#include <vector>
 
 namespace CudaTracerLib {
 
@@ -116,6 +117,33 @@ public:
 	const BlockInfo* getBlockInfo() const
 	{
 		return &m_sBlockInfo[0];
+	}
+
+protected:
+	//splits between sampling blocks deterministically and based on the weighting scheme present in indices
+	void MixedBlockIterate(const std::vector<int>& indices, iterate_blocks_clb_t clb, int passCounter, int num_deterministic = 2) const
+	{
+		for (int i = 0; i < getNumTotalBlocks() / 4; i++)
+		{
+			auto flattened_idx = indices[i];
+			int block_x, block_y, x, y, bw, bh;
+			getIdxComponents(flattened_idx, block_x, block_y);
+
+			getBlockRect(block_x, block_y, x, y, bw, bh);
+
+			clb(flattened_idx, x, y, bw, bh);
+		}
+
+		int start_deterministic = passCounter % num_deterministic;//deterministically sample the same number of blocks every n passes
+		for (int i = start_deterministic; i < getNumTotalBlocks(); i += num_deterministic)
+		{
+			int block_x, block_y, x, y, bw, bh;
+			getIdxComponents(i, block_x, block_y);
+
+			getBlockRect(block_x, block_y, x, y, bw, bh);
+
+			clb(i, x, y, bw, bh);
+		}
 	}
 };
 
