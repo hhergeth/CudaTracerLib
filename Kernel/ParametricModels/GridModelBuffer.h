@@ -13,22 +13,34 @@ namespace CudaTracerLib {
 
 namespace __ParametricMixtureModelBuffer__
 {
-	template <int D> using vec = qMatrix<float, D, 1>;
+	template<int D> using vec = qMatrix<float, D, 1>;
+	template<int D> struct entry
+	{
+		vec<D> val;
+		float weight;
+		entry()
+		{
+		}
+		CUDA_FUNC_IN entry(const vec<D>& v, float w)
+			: val(v), weight(w)
+		{
+		}
+	};
 
-	template<typename Model, int D> CUDA_FUNC_IN void updateCell(const Vec3u& idx, SpatialGridList_Linked<vec<D>>& entryBuffer, SpatialGridSet<Model>& mixtureBuffer, const vec<D>& range_min, const vec<D>& range_max)
+	template<typename Model, int D> CUDA_FUNC_IN void updateCell(const Vec3u& idx, SpatialGridList_Linked<entry<D>>& entryBuffer, SpatialGridSet<Model>& mixtureBuffer, const vec<D>& range_min, const vec<D>& range_max)
 	{
 		auto& model = mixtureBuffer(idx);
 		auto helper = model.getTrainingHelper();
 
 		//collect all samples for this mixture model
-		entryBuffer.ForAllCellEntries(idx, [&](unsigned int entry_idx, const vec<D>& entry)
+		entryBuffer.ForAllCellEntries(idx, [&](unsigned int entry_idx, const entry<D>& entry)
 		{
-			helper.addSample(entry, range_min, range_max);
+			helper.addSample(entry.val, entry.weight, range_min, range_max);
 		});
 		helper.finish(range_min, range_max);
 	}
 
-	template<int D, typename Model> CUDA_GLOBAL void updateMixtureModels(SpatialGridList_Linked<vec<D>> entryBuffer, SpatialGridSet<Model> mixtureBuffer, const vec<D> range_min, const vec<D> range_max)
+	template<int D, typename Model> CUDA_GLOBAL void updateMixtureModels(SpatialGridList_Linked<entry<D>> entryBuffer, SpatialGridSet<Model> mixtureBuffer, const vec<D> range_min, const vec<D> range_max)
 	{
 		Vec3u idx = Vec3u(blockIdx.x * blockDim.x + threadIdx.x,
 						  blockIdx.y * blockDim.y + threadIdx.y,
@@ -89,8 +101,9 @@ namespace __ParametricMixtureModelBuffer__
 template<int D, typename Model> class GridModelBuffer : public ISynchronizedBufferParent
 {
 	using vec = __ParametricMixtureModelBuffer__::vec<D>;
+	using entry = __ParametricMixtureModelBuffer__::entry<D>;
 
-	SpatialGridList_Linked<vec> m_valueBuffer;
+	SpatialGridList_Linked<entry> m_valueBuffer;
 	SpatialGridSet<Model> m_mixtureBuffer;
 	int N_TOTAL;
 	vec range_min, range_max;
@@ -132,9 +145,9 @@ public:
 		return __ParametricMixtureModelBuffer__::VisualizeModel<N_SAMPLES_PER_DIM>(model, range_min, range_max);
 	}
 
-	CUDA_FUNC_IN unsigned int StoreEntry(const Vec3f& pos, const vec& val)
+	CUDA_FUNC_IN unsigned int StoreEntry(const Vec3f& pos, const vec& val, float weight)
 	{
-		return m_valueBuffer.Store(pos, val);
+		return m_valueBuffer.Store(pos, entry(val, weight));
 	}
 
 	CUDA_FUNC_IN const Model& getMixtureModel(const Vec3f& pos) const

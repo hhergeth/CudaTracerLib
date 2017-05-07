@@ -22,25 +22,25 @@ template<int D, int N_BINS_PER_DIM> struct DiscretizedModel
 	typedef qMatrix<float, D, 1> vec;
 	struct bin
 	{
-		int N;
+		float sum_weight_patch;
 		bin()
-			: N(0)
+			: sum_weight_patch(0.0f)
 		{
 
 		}
 	};
 	enum { NUM_CELLS = pow_int_compile_type<N_BINS_PER_DIM, D>::VAL };
 	bin bins[NUM_CELLS];
-	int num_samples;
+	float sum_weight;
 
 	DiscretizedModel()
-		: num_samples(0)
+		: sum_weight(0.0f)
 	{
 
 	}
 
 	DiscretizedModel(CudaRNG& rng, const vec& range_min, const vec& range_max)
-		: num_samples(0)
+		: sum_weight(0.0f)
 	{
 	}
 
@@ -54,9 +54,9 @@ template<int D, int N_BINS_PER_DIM> struct DiscretizedModel
 
 		}
 
-		CUDA_FUNC_IN void addSample(const vec& sample, const vec& range_min, const vec& range_max)
+		CUDA_FUNC_IN void addSample(const vec& sample, float weight, const vec& range_min, const vec& range_max)
 		{
-			model.TrainSample(sample, range_min, range_max);
+			model.TrainSample(sample, weight, range_min, range_max);
 		}
 
 		CUDA_FUNC_IN void finish(const vec& range_min, const vec& range_max)
@@ -70,23 +70,23 @@ template<int D, int N_BINS_PER_DIM> struct DiscretizedModel
 		return trainingHelper(*this);
 	}
 
-	CUDA_FUNC_IN void TrainSample(const vec& sample, const vec& range_min, const vec& range_max)
+	CUDA_FUNC_IN void TrainSample(const vec& sample, float weight, const vec& range_min, const vec& range_max)
 	{
 		auto idx = getIndex(sample, range_min, range_max);
 		if (idx == 0xffffffff || idx >= NUM_CELLS)
 			return;
-		bins[idx].N++;
-		num_samples++;
+		bins[idx].sum_weight_patch += weight;
+		sum_weight += weight;
 	}
 
 	CUDA_FUNC_IN vec sample(CudaRNG& rng, const vec& range_min, const vec& range_max, float& pdf) const
 	{
-		int t1 = (int)(rng.randomFloat() * num_samples);
+		int t1 = (int)(rng.randomFloat() * sum_weight);
 
-		int sum = 0;
+		float sum = 0;
 		for (int i = 0; i < NUM_CELLS; i++)
 		{
-			sum += bins[i].N;
+			sum += bins[i].sum_weight_patch;
 			if (sum > t1)
 			{
 				auto coords = getCoords(i);
@@ -108,7 +108,7 @@ template<int D, int N_BINS_PER_DIM> struct DiscretizedModel
 		auto idx = getIndex(v, range_min, range_max);
 		if (idx == 0xffffffff || idx >= NUM_CELLS)
 			return 0.0f;
-		float pdf_bin = float(bins[idx].N) / num_samples;
+		float pdf_bin = float(bins[idx].sum_weight_patch) / sum_weight;
 		auto dim_bin = (range_max - range_min);
 		float length_bin = 1;
 		for (int i = 0; i < D; i++)
