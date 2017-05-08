@@ -51,7 +51,7 @@ public:
 		this->img = img;
 	}
 	bool hasDepthBuffer() const { return hasImage; }
-	const DeviceDepthImage& getDeviceDepthBuffer() const { return img; }
+	DeviceDepthImage& getDeviceDepthBuffer() { return img; }
 };
 
 #define SSGT(X) X(Independent) X(Stratified) X(LowDiscrepency) X(Sobol)

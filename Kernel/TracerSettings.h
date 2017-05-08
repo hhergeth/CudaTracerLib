@@ -239,8 +239,8 @@ public:
 	}
 	~TracerParameterCollection()
 	{
-		for (auto& i : parameter)
-			delete i.second;
+		//for (auto& i : parameter)
+		//	delete i.second;
 	}
 	void iterate(const std::function<void(const std::string&, ITracerParameter*)>& f_para, const std::function<void(const std::string&, TracerParameterCollection*)>& f_coll) const
 	{
