@@ -8,6 +8,7 @@ namespace CudaTracerLib {
 
 class Image;
 class DynamicScene;
+struct DeviceDepthImage;
 
 class PathSpaceFilteringBuffer : public ISynchronizedBufferParent
 {
@@ -36,24 +37,31 @@ public:
 
 	void PrepareForRendering(Image& I, DynamicScene* scene);
 
+	void StartFrame(unsigned int w, unsigned int h, float rad_scale)
+	{
+		auto eye_hit_points = m_hitPointBuffer.getHashGrid().getAABB();
+		m_pixelRad0 = eye_hit_points.Size().length() / max(w, h) * rad_scale;
+		m_numIteration = 0;
+	}
+
 	void StartIteration()
 	{
 		m_numIteration++;
 		m_hitPointBuffer.ResetBuffer();
 	}
 
-	//wi is pointing away from the surface
-	CUDA_DEVICE void add_sample(const DifferentialGeometry& dg, const NormalizedT<Vec3f>& wi, const Spectrum& Li)
+	//wi is pointing away from the surface and in local(!) coordinates
+	CUDA_DEVICE void add_sample(const DifferentialGeometry& dg, const NormalizedT<Vec3f>& wi_local, const Spectrum& Li)
 	{
 		path_entry e;
 		e.Li = Li.toRGBE();
 		e.nor = NormalizedFloat3ToUchar2(dg.sys.n);
 		e.p = dg.P;
-		e.wi = NormalizedFloat3ToUchar2(dg.toLocal(wi));
+		e.wi = NormalizedFloat3ToUchar2(wi_local);
 		m_hitPointBuffer.Store(dg.P, e);
 	}
 
-	void ComputePixelValues(Image& I, DynamicScene* scene);
+	void ComputePixelValues(Image& I, DynamicScene* scene, DeviceDepthImage* depthImage = 0);
 };
 
 }
