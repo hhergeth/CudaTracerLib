@@ -83,8 +83,8 @@ CUDA_GLOBAL void createHitPointKernel(unsigned int w, unsigned int h)
 	if (x < w && y < h)
 	{
 		auto rng = g_SamplerData(y * w + x);
-		NormalizedT<Ray> r;
-		g_SceneData.sampleSensorRay(r, Vec2f(x, y), rng.randomFloat2());
+		NormalizedT<Ray> r, rX, rY;
+		g_SceneData.sampleSensorRay(r, rX, rY, Vec2f(x, y), rng.randomFloat2());
 
 		auto res = traceRay(r);
 		if (res.hasHit())
@@ -95,6 +95,8 @@ CUDA_GLOBAL void createHitPointKernel(unsigned int w, unsigned int h)
 			{
 				res.getMat().bsdf.sample(bRec, rng.randomFloat2());
 				auto Li = PathTrace<true>(NormalizedT<Ray>(bRec.dg.P, bRec.getOutgoing()), rng, 6, 4);
+
+				bRec.dg.computePartials(r, rX, rY);
 				g_Buffer->add_sample(bRec.dg, bRec.wo, Li);
 			}
 		}
@@ -114,6 +116,7 @@ void GameTracer::DoRender(Image* I)
 	int p0 = 16, p1 = p0 * PIXEL_SPACING;
 	createHitPointKernel << <dim3(I->getWidth() / p1 + 1, I->getHeight() / p1 + 1, 1), dim3(p0, p0, 1) >> >(I->getWidth(), I->getHeight());
 	CopyFromSymbol(buf, g_Buffer);
+	buf.setOnGPU();
 	buf.ComputePixelValues(*I, m_pScene, hasDepthBuffer() ? &this->getDeviceDepthBuffer() : 0);
 }
 
@@ -124,7 +127,6 @@ void GameTracer::DebugInternal(Image* I, const Vec2i& pixel)
 
 void GameTracer::Resize(unsigned int w, unsigned int h)
 {
-	buf.ResizeHitPointBuffer(w / PIXEL_SPACING * h / PIXEL_SPACING);
 	buf.getParameterCollection().setValue(PathSpaceFilteringBuffer::KEY_PixelFootprintScale(), (float)PIXEL_SPACING / 2);
 	buf.getParameterCollection().setValue(PathSpaceFilteringBuffer::KEY_GlobalRadiusScale(), (float)PIXEL_SPACING / 2);
 	Tracer<false>::Resize(w, h);

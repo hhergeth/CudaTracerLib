@@ -32,17 +32,28 @@ public:
 	PARAMETER_KEY(float, PrevFrameAlpha)
 	PARAMETER_KEY(bool, UsePreviousFrames)
 
-private:
+public://access from kernel
 	SpatialGridList_Linked<path_entry> m_hitPointBuffer;
 	float m_pixelRad;
 	Sensor m_lastSensor;
 	Vec3f* m_accumBuffer1, *m_accumBuffer2;
 	int buf_w, buf_h;
 	TracerParameterCollection m_paraSettings;
-	bool m_firstPass;
+
+	struct settingsData
+	{
+		float globalRadScale;
+		float pixelFootprintScale;
+		float alpha;
+
+		bool use_global;
+		bool use_footprint;
+		bool use_prevFrames;
+	};
+	settingsData m_settings;
 public:
 	PathSpaceFilteringBuffer(unsigned int numSamples)
-		: m_hitPointBuffer(Vec3u(100), numSamples), m_accumBuffer1(0), m_accumBuffer2(0), buf_w(0), buf_h(0)
+		: m_hitPointBuffer(Vec3u(100), numSamples * 25), m_accumBuffer1(0), m_accumBuffer2(0), buf_w(0), buf_h(0)
 	{
 		m_paraSettings << KEY_GlobalRadiusScale()					<< CreateInterval(1.0f, 0.0f, FLT_MAX)
 					   << KEY_UseRadius_GlobalScale()				<< CreateSetBool(true)
@@ -60,12 +71,6 @@ public:
 			CUDA_FREE(m_accumBuffer1);
 			CUDA_FREE(m_accumBuffer2);
 		}
-	}
-
-	void ResizeHitPointBuffer(int N)
-	{
-		m_hitPointBuffer.Free();
-		m_hitPointBuffer = SpatialGridList_Linked<path_entry>(Vec3u(100), N);
 	}
 
 	TracerParameterCollection& getParameterCollection()
@@ -93,17 +98,44 @@ public:
 			cudaMemset(m_accumBuffer2, 0, sizeof(Vec3f) * w * h);
 		}
 		m_hitPointBuffer.ResetBuffer();
+
+		m_settings.globalRadScale = m_paraSettings.getValue(KEY_GlobalRadiusScale());
+		m_settings.pixelFootprintScale = m_paraSettings.getValue(KEY_PixelFootprintScale());
+		m_settings.alpha = m_paraSettings.getValue(KEY_PrevFrameAlpha());
+		m_settings.use_global = m_paraSettings.getValue(KEY_UseRadius_GlobalScale());
+		m_settings.use_footprint = m_paraSettings.getValue(KEY_UseRadius_PixelFootprintSize());
+		m_settings.use_prevFrames = m_paraSettings.getValue(KEY_UsePreviousFrames());
+	}
+
+	CUDA_FUNC_IN float computeRad(const DifferentialGeometry& dg) const
+	{
+		float query_rad = m_settings.use_global ? m_settings.globalRadScale * m_pixelRad : 0.0f;
+		if (m_settings.use_footprint)
+		{
+			Vec3f dp_dx, dp_dy;
+			dg.compute_dp_ds(dp_dx, dp_dy);
+			float avg_dist_next_pixel = fmaxf(dp_dx.length(), dp_dy.length());
+			float footprint_rad = m_settings.pixelFootprintScale * avg_dist_next_pixel;
+			return m_settings.use_global ? fmaxf(query_rad, footprint_rad) : footprint_rad;
+		}
+		else return query_rad;
 	}
 
 	//wi is pointing away from the surface and in local(!) coordinates
-	CUDA_DEVICE void add_sample(const DifferentialGeometry& dg, const NormalizedT<Vec3f>& wi_local, const Spectrum& Li)
+	CUDA_FUNC_IN void add_sample(const DifferentialGeometry& dg, const NormalizedT<Vec3f>& wi_local, const Spectrum& Li)
 	{
 		path_entry e;
 		e.Li = Li.toRGBE();
 		e.nor = NormalizedFloat3ToUchar2(dg.sys.n);
 		e.p = dg.P;
 		e.wi = NormalizedFloat3ToUchar2(wi_local);
-		m_hitPointBuffer.Store(dg.P, e);
+
+		float rad = computeRad(dg);
+		auto query_box = dg.ComputeOnSurfaceDiskBounds(rad);
+		m_hitPointBuffer.ForAllCells(query_box.minV, query_box.maxV, [&](const Vec3u& cell_idx)
+		{
+			m_hitPointBuffer.Store(cell_idx, e);
+		});
 	}
 
 	void ComputePixelValues(Image& I, DynamicScene* scene, DeviceDepthImage* depthImage = 0);

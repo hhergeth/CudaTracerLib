@@ -10,7 +10,7 @@ class GameTracer : public Tracer<false>, public IDepthTracer
 	PathSpaceFilteringBuffer buf;
 public:
 	GameTracer()
-		: buf(1)
+		: buf(256 * 256)
 	{
 		m_sParameters.addChildParameterCollection("PathSpaceFilterBuffer", &buf.getParameterCollection());
 	}
