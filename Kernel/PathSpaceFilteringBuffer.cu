@@ -2,6 +2,7 @@
 #include "Tracer.h"
 #include "TraceAlgorithms.h"
 #include <Engine/DynamicScene.h>
+#include <Math/Compression.h>
 
 namespace CudaTracerLib {
 
@@ -10,31 +11,28 @@ void PathSpaceFilteringBuffer::PrepareForRendering(Image& I, DynamicScene* scene
 	auto eye_hit_points = scene->getSceneBox();// TracerBase::GetEyeHitPointBox(scene, false);
 	m_hitPointBuffer.SetGridDimensions(eye_hit_points);
 
-	m_settings.alpha = 1.0f;
+	m_settings.alpha_direct = m_settings.alpha_indirect = 1.0f;
 	m_lastSensor = g_SceneData.m_Camera;
 }
 
-template<bool USE_DEPTH_IMAGE> CUDA_FUNC_IN void computePixel(Image& I, DeviceDepthImage& depthImg, PathSpaceFilteringBuffer& path_buffer, unsigned int x, unsigned int y, Vec3f* accumBuffer_old, Vec3f* accumBuffer_new, Sensor lastSensor)
+typedef PathSpaceFilteringBuffer::reuseInfo rInfo_t;
+template<bool USE_DEPTH_IMAGE> CUDA_FUNC_IN void computePixel(Image& I, DeviceDepthImage& depthImg, PathSpaceFilteringBuffer& path_buffer, unsigned int x, unsigned int y, rInfo_t* accumBuffer_old, rInfo_t* accumBuffer_new, Sensor lastSensor)
 {
 	auto rng = g_SamplerData(y * I.getWidth() + x);
 	NormalizedT<Ray> ray, rayX, rayY;
 	auto W = g_SceneData.sampleSensorRay(ray, rayX, rayY, Vec2f((float)x, (float)y) + rng.randomFloat2(), rng.randomFloat2());
 	auto res = traceRay(ray);
 	int depth = 0;
-	float query_rad = path_buffer.m_settings.globalRadScale * path_buffer.m_pixelRad;
+	Spectrum L_emitted = 0.0f;
 	while (res.hasHit() && depth++ < 4)
 	{
 		BSDFSamplingRecord bRec;
 		res.getBsdfSample(ray, bRec, ERadiance);
 
+		L_emitted += W * res.Le(bRec.dg.P, bRec.dg.sys, -ray.dir());
+
 		if (depth == 1)
 		{
-			if (path_buffer.m_settings.use_footprint)
-			{
-				bRec.dg.computePartials(ray, rayX, rayY);
-				query_rad = path_buffer.computeRad(bRec.dg);
-			}
-
 			if (USE_DEPTH_IMAGE)
 				depthImg.Store(x, y, res.m_fDist);
 		}
@@ -49,14 +47,12 @@ template<bool USE_DEPTH_IMAGE> CUDA_FUNC_IN void computePixel(Image& I, DeviceDe
 		{
 			Spectrum L_query = 0.0f;
 			int n_found = 0;
-			path_buffer.m_hitPointBuffer.ForAll<64>(bRec.dg.P, [&]( unsigned int idx, const PathSpaceFilteringBuffer::path_entry& ent)
+			path_buffer.m_hitPointBuffer.ForAllCells(bRec.dg.P, bRec.dg.P, [&](const Vec3u& cell_idx)
 			{
-				if (distanceSquared(ent.p, bRec.dg.P) < query_rad * query_rad && dot(Uchar2ToNormalizedFloat3(ent.nor), bRec.dg.sys.n) > 0.75f)
+				auto& cell = path_buffer.m_hitPointBuffer(cell_idx);
+				if (cell.N)
 				{
-					bRec.wo = Uchar2ToNormalizedFloat3(ent.wi);
-					Spectrum L_i;
-					L_i.fromRGBE(ent.Li);
-					L_query += L_i * Frame::cosTheta(bRec.wo);
+					L_query += cell.L / cell.N;
 					n_found++;
 				}
 			});
@@ -68,37 +64,42 @@ template<bool USE_DEPTH_IMAGE> CUDA_FUNC_IN void computePixel(Image& I, DeviceDe
 			}
 
 			Spectrum L_indirect = L_query;
+			Spectrum L_direct = UniformSampleAllLights(bRec, res.getMat(), 1, rng);
 			if (path_buffer.m_settings.use_prevFrames)
 			{
-				Vec3f& accum_new_rgb = accumBuffer_new[y * I.getWidth() + x];
-				Vec3f query_rgb;
-				L_query.toLinearRGB(query_rgb.x, query_rgb.y, query_rgb.z);
+				PathSpaceFilteringBuffer::reuseInfo& accum_new = accumBuffer_new[y * I.getWidth() + x];
 
 				DirectSamplingRecord dRec(bRec.dg.P, NormalizedT<Vec3f>(0.0f));
 				lastSensor.sampleDirect(dRec, Vec2f(0, 0));
 				if (dRec.pdf)
 				{
-					Vec3f oldAccum = accumBuffer_old[(int)dRec.uv.y * I.getWidth() + (int)dRec.uv.x];
-					if (n_found > 0)
-						accum_new_rgb = oldAccum * (1.0f - path_buffer.m_settings.alpha) + query_rgb * path_buffer.m_settings.alpha;
-					else accum_new_rgb = query_rgb;
-					L_indirect.fromLinearRGB(accum_new_rgb.x, accum_new_rgb.y, accum_new_rgb.z);
+					int old_x = math::clamp((int)dRec.uv.x, 0, (int)I.getWidth()), old_y = math::clamp((int)dRec.uv.y, 0, (int)I.getHeight());
+					auto accum_old = accumBuffer_old[old_y * I.getWidth() + old_x];
+					float rel_d_diff = math::abs(accum_old.d.ToFloat() - res.m_fDist) / accum_old.d;
+					if (rel_d_diff < 0.2f && dot(Uchar2ToNormalizedFloat3(accum_old.n), bRec.dg.n) > 0.5f)
+					{
+						Spectrum old_indirect, old_direct;
+						old_indirect.fromRGBE(accum_old.indirect_col);
+						old_direct.fromRGBE(accum_old.direct_col);
+						if (n_found > 0)
+							L_indirect = old_indirect * (1.0f - path_buffer.m_settings.alpha_indirect) + L_indirect * path_buffer.m_settings.alpha_indirect;
+						L_direct = old_direct * (1.0f - path_buffer.m_settings.alpha_direct) + L_direct * path_buffer.m_settings.alpha_direct;
+					}
 				}
-				else
-				{
-					accum_new_rgb = query_rgb;
-				}
+
+				accum_new.indirect_col = L_indirect.toRGBE();
+				accum_new.direct_col = L_direct.toRGBE();
+				accum_new.d = half(res.m_fDist);
+				accum_new.n = NormalizedFloat3ToUchar2(bRec.dg.n);
 			}
 
-			Spectrum L_direct = UniformSampleOneLight(bRec, res.getMat(), rng);
-
-			I.AddSample(x, y, W * (L_direct + L_indirect));
+			I.AddSample(x, y, W * (L_emitted + L_direct + L_indirect));
 			break;
 		}
 	}
 }
 
-template<bool USE_DEPTH_IMAGE> CUDA_GLOBAL void computePixelsKernel(Image I, DeviceDepthImage depthImg, PathSpaceFilteringBuffer path_buffer, Vec3f* accumBuffer_old, Vec3f* accumBuffer_new, Sensor prevSensor)
+template<bool USE_DEPTH_IMAGE> CUDA_GLOBAL void computePixelsKernel(Image I, DeviceDepthImage depthImg, PathSpaceFilteringBuffer path_buffer, rInfo_t* accumBuffer_old, rInfo_t* accumBuffer_new, Sensor prevSensor)
 {
 	unsigned int x = threadIdx.x + blockDim.x * blockIdx.x, y = threadIdx.y + blockDim.y * blockIdx.y;
 	if (x < I.getWidth() && y < I.getHeight())
@@ -114,7 +115,6 @@ void PathSpaceFilteringBuffer::ComputePixelValues(Image& I, DynamicScene* scene,
 	else computePixelsKernel<false> << <dim3(I.getWidth() / p0 + 1, I.getHeight() / p0 + 1, 1), dim3(p0, p0, 1) >> >(I, DeviceDepthImage(), *this, m_accumBuffer1, m_accumBuffer2, m_lastSensor);
 	ThrowCudaErrors(cudaDeviceSynchronize());
 	m_lastSensor = g_SceneData.m_Camera;
-	m_settings.alpha = m_paraSettings.getValue(KEY_PrevFrameAlpha());
 
 	swapk(m_accumBuffer1, m_accumBuffer2);
 }

@@ -74,7 +74,7 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(NormalizedT<Ray>& r, Sampl
 }
 
 CUDA_DEVICE CudaStaticWrapper<PathSpaceFilteringBuffer> g_Buffer;
-#define PIXEL_SPACING 16
+#define PIXEL_SPACING 4
 
 CUDA_GLOBAL void createHitPointKernel(unsigned int w, unsigned int h)
 {
@@ -127,8 +127,8 @@ void GameTracer::DebugInternal(Image* I, const Vec2i& pixel)
 
 void GameTracer::Resize(unsigned int w, unsigned int h)
 {
-	buf.getParameterCollection().setValue(PathSpaceFilteringBuffer::KEY_PixelFootprintScale(), (float)PIXEL_SPACING / 2);
-	buf.getParameterCollection().setValue(PathSpaceFilteringBuffer::KEY_GlobalRadiusScale(), (float)PIXEL_SPACING / 2);
+	buf.getParameterCollection().setValue(PathSpaceFilteringBuffer::KEY_PixelFootprintScale(), (float)PIXEL_SPACING * 2);
+	buf.getParameterCollection().setValue(PathSpaceFilteringBuffer::KEY_GlobalRadiusScale(), (float)PIXEL_SPACING * 2);
 	Tracer<false>::Resize(w, h);
 }
 

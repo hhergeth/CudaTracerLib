@@ -13,6 +13,9 @@ public:
 		: buf(256 * 256)
 	{
 		m_sParameters.addChildParameterCollection("PathSpaceFilterBuffer", &buf.getParameterCollection());
+
+		buf.getParameterCollection().setValue(PathSpaceFilteringBuffer::KEY_UseRadius_PixelFootprintSize(), false);
+		buf.getParameterCollection().setValue(PathSpaceFilteringBuffer::KEY_PrevFrameAlphaIndirect(), 0.05f);
 	}
 	CTL_EXPORT virtual void Resize(unsigned int _w, unsigned int _h);
 protected:
