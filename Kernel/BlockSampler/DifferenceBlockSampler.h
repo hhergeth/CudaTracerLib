@@ -19,21 +19,17 @@ public:
 		float error(int w, int h) const
 		{
 			float r = math::sqrt(n_pixels / float(w * h));
-			return r / n_pixels * sum_e;
+			return 1.0f / n_pixels * sum_e;
 		}
 	};
 private:
-	Spectrum* lastAccumBuffer;
-	Spectrum* halfAccumBuffer;
 	SynchronizedBuffer<blockInfo> blockBuffer;
 	int m_uPassesDone;
 	std::vector<int> m_indices;
 public:
 	DifferenceBlockSampler(unsigned int w, unsigned int h)
-		: IUserPreferenceSampler(w, h), blockBuffer(getNumTotalBlocks())
+		: IUserPreferenceSampler(w, h), blockBuffer(getNumTotalBlocks()), m_uPassesDone(0)
 	{
-		CUDA_MALLOC(&lastAccumBuffer, sizeof(Spectrum) * w * h);
-		CUDA_MALLOC(&halfAccumBuffer, sizeof(Spectrum) * w * h);
 		int n(0);
 		m_indices.resize(getNumTotalBlocks());
 		std::generate(std::begin(m_indices), std::end(m_indices), [&] { return n++; });
@@ -41,8 +37,6 @@ public:
 
 	virtual void Free()
 	{
-		CUDA_FREE(lastAccumBuffer);
-		CUDA_FREE(halfAccumBuffer);
 		blockBuffer.Free();
 	}
 

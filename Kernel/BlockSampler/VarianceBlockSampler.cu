@@ -16,8 +16,8 @@ CUDA_GLOBAL void updateInfo(VarianceBlockSampler::TmpBlockInfo* a_pTmpBlockInfoD
 		auto I_N = img.getPixelData(x, y).toSpectrum(splatScale);
 
 		auto pInfo = varBuffer(x, y);
-		auto var = pInfo.E_I.Var(num_passes_block) * numPasses / num_passes_block;
-		auto e = pInfo.I.E(num_passes_block);
+		auto var = pInfo.computeVariance();
+		auto e = pInfo.computeAverage();
 
 		auto& bInfo = a_pTmpBlockInfoDevice[bIdx];
 		if (var >= 0 && !math::IsNaN(var))
