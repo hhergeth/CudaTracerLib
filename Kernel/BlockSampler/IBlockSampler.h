@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <Kernel/PixelVarianceBuffer.h>
 #include <vector>
+#include <Kernel/TracerSettings.h>
 
 namespace CudaTracerLib {
 
@@ -27,6 +28,7 @@ public:
 		}
 	};
 protected:
+	TracerParameterCollection m_settings;
 	DynamicScene* m_pScene;
 	unsigned int xResolution, yResolution;
 	SynchronizedBuffer<BlockInfo> m_sBlockInfo;
@@ -42,6 +44,11 @@ public:
 	}
 
 	virtual void Free() = 0;
+
+	virtual TracerParameterCollection& getParameterCollection()
+	{
+		return m_settings;
+	}
 
 	//Creates a new instance of this sampler for the specific image size
 	virtual IBlockSampler* CreateForSize(unsigned int w, unsigned int h) = 0;

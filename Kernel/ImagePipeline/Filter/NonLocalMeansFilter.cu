@@ -6,7 +6,7 @@
 namespace CudaTracerLib
 {
 
-#define CACHE_SIZE 64
+#define CACHE_SIZE 32
 #define BLOCK_SIZE 16
 #define BLOCK_OFF ((CACHE_SIZE - BLOCK_SIZE) / 2)
 #define NUM_PIXELS_COPY_PER_THREAD (CACHE_SIZE / BLOCK_SIZE)
@@ -84,7 +84,7 @@ CUDA_DEVICE float weight(int p_x, int p_y, int q_x, int q_y, int w, int h, int F
 	return math::exp(-max(0.0f, d_range - 2 * sigma2) / (k * k * 2 * sigma2));
 }
 
-CUDA_GLOBAL void applyNonLinear(Image img, RGBE* deviceDataCached, NonLocalMeansFilter::FeatureData* deviceFeatueData, int R, int F, float sigma2, float k)
+CUDA_GLOBAL void applyNonLinear(Image img, RGBE* deviceDataCached, NonLocalMeansFilter::FeatureData* deviceFeatueData, int R, int F, float k, float sigma2Scale, PixelVarianceBuffer varBuf)
 {
 	copyToShared(deviceDataCached, deviceFeatueData, img.getWidth(), img.getHeight());
 	__syncthreads();
@@ -94,7 +94,7 @@ CUDA_GLOBAL void applyNonLinear(Image img, RGBE* deviceDataCached, NonLocalMeans
 	{
 		float C_p = 0;//normalization weight
 		Spectrum c_p_hat(0.0f);
-
+		float sigma2 = varBuf(x,y).computeVariance() * sigma2Scale;
 		for(int xo = -R; xo <= R; xo++)
 			for (int yo = -R; yo <= R; yo++)
 			{
@@ -111,29 +111,13 @@ CUDA_GLOBAL void applyNonLinear(Image img, RGBE* deviceDataCached, NonLocalMeans
 	}
 }
 
-CUDA_DEVICE float g_SUM_ImageConvolve;
 CUDA_GLOBAL void copyToCached(Image img, RGBE* deviceDataCached, float splatScale)
 {
-	const float kernel[] = { 1, -2, 1, -2, 4, -2, 1, -2, 1 };
 	int x = threadIdx.x + blockDim.x * blockIdx.x, y = threadIdx.y + blockDim.y * blockIdx.y, w = img.getWidth(), h = img.getHeight();
 	if (x < img.getWidth() && y < img.getHeight())
 	{
 		auto c_p = img.getPixelData(x, y).toSpectrum(splatScale);
 		deviceDataCached[y * img.getWidth() + x] = c_p.toRGBE();
-
-		if (x > 0 && y > 0 && x < img.getWidth() - 1 && y < img.getHeight() - 1)
-		{
-			float sum = 0;
-			int k_i = 0;
-			for (int yo = -1; yo < 2; yo++)
-				for (int xo = -1; xo < 2; xo++)
-				{
-					float w = kernel[k_i++];
-					Spectrum col = img.getPixelData(x + xo, y + yo).toSpectrum(splatScale).saturate();
-					sum += math::abs(w * col.getLuminance());
-				}
-			atomicAdd(&g_SUM_ImageConvolve, sum);
-		}
 	}
 }
 
@@ -164,7 +148,7 @@ CUDA_GLOBAL void initializeFeatureBuffer(NonLocalMeansFilter::FeatureData* devic
 void NonLocalMeansFilter::Apply(Image& img, int numPasses, float splatScale, const PixelVarianceBuffer& varBuffer)
 {
 	const int R = 5, F = 3;
-	const float k = 1;
+	const float k = m_settings.getValue(KEY_k()), sigma2Scale = m_settings.getValue(KEY_sigma2Scale());
 
 	if (BLOCK_OFF < R + F)
 		throw std::runtime_error("Cache size too small for filtering window size!");
@@ -177,14 +161,9 @@ void NonLocalMeansFilter::Apply(Image& img, int numPasses, float splatScale, con
 	}
 
 	//copy the data to the cached version
-	ZeroSymbol(g_SUM_ImageConvolve);
 	copyToCached << <dim3(xResolution / BLOCK_SIZE + 1, yResolution / BLOCK_SIZE + 1), dim3(BLOCK_SIZE, BLOCK_SIZE) >> >(img, m_cachedImg, splatScale);
 	ThrowCudaErrors(cudaThreadSynchronize());
-	float sum_convolve;
-	CopyFromSymbol(sum_convolve, g_SUM_ImageConvolve);
-	//float sigma = sum_convolve * math::sqrt(0.5 * PI) / (6 * (xResolution - 2) * (yResolution - 2));
-	float sigma = 0.05f;
-	applyNonLinear << <dim3(xResolution / BLOCK_SIZE + 1, yResolution / BLOCK_SIZE + 1), dim3(BLOCK_SIZE, BLOCK_SIZE) >> >(img, m_cachedImg, m_featureBuffer, R, F, sigma * sigma, k);
+	applyNonLinear << <dim3(xResolution / BLOCK_SIZE + 1, yResolution / BLOCK_SIZE + 1), dim3(BLOCK_SIZE, BLOCK_SIZE) >> >(img, m_cachedImg, m_featureBuffer, R, F, k, sigma2Scale, varBuffer);
 	ThrowCudaErrors(cudaThreadSynchronize());
 }
 

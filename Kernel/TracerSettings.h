@@ -289,6 +289,13 @@ public:
 			throw std::runtime_error("Trying to add collection with identical name!");
 		collections[name] = col;
 	}
+	void removeChildCollection(const std::string& name)
+	{
+		auto it = collections.find(name);
+		if (it == collections.end())
+			throw std::runtime_error("Can't remove child collection because it wasn't found!");
+		collections.erase(it);
+	}
 	TracerParameterCollection* getCollection(const std::string& name)
 	{
 		auto it = collections.find(name);

@@ -35,9 +35,14 @@ private:
 	RGBE* m_cachedImg;
 	FeatureData* m_featureBuffer;
 public:
+	PARAMETER_KEY(float, k)
+	PARAMETER_KEY(float, sigma2Scale)
+
 	NonLocalMeansFilter()
 		: m_cachedImg(0)
 	{
+		m_settings	<< KEY_k()					<< CreateInterval(0.45f, 0.0f, FLT_MAX)
+					<< KEY_sigma2Scale()		<< CreateInterval(1.0f, 0.0f, FLT_MAX);
 	}
 	virtual void Free()
 	{
