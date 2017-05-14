@@ -178,6 +178,14 @@ protected:
 	virtual void setCorrectSamplingSequenceGenerator();
 	virtual void setCorrectBlockSampler();
 	virtual void generateNewRandomSequences();
+
+	void addBlockSamplerSettings()
+	{
+		const std::string name = "Block Sampler";
+		if (m_sParameters.getCollection(name))
+			m_sParameters.removeChildCollection(name);
+		m_sParameters.addChildParameterCollection(name, &m_pBlockSampler->getParameterCollection());
+	}
 };
 
 template<bool PROGRESSIVE> class Tracer : public TracerBase
@@ -191,6 +199,7 @@ public:
 		{
 			auto oldSampler = m_pBlockSampler;
 			m_pBlockSampler = oldSampler->CreateForSize(_w, _h);
+			addBlockSamplerSettings();
 			oldSampler->Free();
 			delete oldSampler;
 		}

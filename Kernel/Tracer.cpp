@@ -73,7 +73,7 @@ void TracerBase::setCorrectSamplingSequenceGenerator()
 
 template<typename T> struct check_type_bst
 {
-	void operator()(TracerParameterCollection& col, IBlockSampler*& bSampler, int w, int h, BlockSamplerTypes new_type, BlockSamplerTypes T_type)
+	template<typename F>void operator()(F clb, IBlockSampler*& bSampler, int w, int h, BlockSamplerTypes new_type, BlockSamplerTypes T_type)
 	{
 		if (dynamic_cast<T*>(bSampler) == 0 && new_type == T_type)
 		{
@@ -81,10 +81,7 @@ template<typename T> struct check_type_bst
 			bSampler = new T(w, h);
 
 			//add parameters to settings
-			const std::string name = "Block Sampler";
-			if(col.getCollection(name))
-				col.removeChildCollection(name);
-			col.addChildParameterCollection(name, &bSampler->getParameterCollection());
+			clb();
 		}
 	}
 };
@@ -95,9 +92,10 @@ void TracerBase::setCorrectBlockSampler()
 
 	auto new_type = m_sParameters.getValue(KEY_BlockSamplerType());
 
-	check_type_bst<UniformBlockSampler>()(m_sParameters, m_pBlockSampler, w, h, new_type, BlockSamplerTypes::Uniform);
-	check_type_bst<VarianceBlockSampler>()(m_sParameters, m_pBlockSampler, w, h, new_type, BlockSamplerTypes::Variance);
-	check_type_bst<DifferenceBlockSampler>()(m_sParameters, m_pBlockSampler, w, h, new_type, BlockSamplerTypes::Difference);
+	auto update = [&]() {addBlockSamplerSettings(); };
+	check_type_bst<UniformBlockSampler>()(update, m_pBlockSampler, w, h, new_type, BlockSamplerTypes::Uniform);
+	check_type_bst<VarianceBlockSampler>()(update, m_pBlockSampler, w, h, new_type, BlockSamplerTypes::Variance);
+	check_type_bst<DifferenceBlockSampler>()(update, m_pBlockSampler, w, h, new_type, BlockSamplerTypes::Difference);
 }
 
 }
