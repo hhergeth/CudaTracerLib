@@ -6,16 +6,17 @@
 namespace CudaTracerLib
 {
 
-#define CACHE_SIZE 32
+#define CACHE_SIZE 64
 #define BLOCK_SIZE 16
 #define BLOCK_OFF ((CACHE_SIZE - BLOCK_SIZE) / 2)
 #define NUM_PIXELS_COPY_PER_THREAD (CACHE_SIZE / BLOCK_SIZE)
 CUDA_SHARED RGBE g_cachedImgData[CACHE_SIZE * CACHE_SIZE];
+CUDA_SHARED half g_cachedVarData[CACHE_SIZE * CACHE_SIZE];
 //CUDA_SHARED NonLocalMeansFilter::FeatureData g_cachedFeatureData[CACHE_SIZE * CACHE_SIZE];
 
-CUDA_DEVICE void copyToShared(RGBE* deviceDataCached, NonLocalMeansFilter::FeatureData* deviceFeatureData, int w, int h)
+template<bool USE_FEATURE_BUF, bool USE_VAR_BUF> CUDA_DEVICE void copyToShared(RGBE* deviceDataCached, NonLocalMeansFilter::FeatureData* deviceFeatureData, PixelVarianceBuffer* varBuf, int w, int h, int x_off, int y_off)
 {
-	int block_start_x = blockDim.x * blockIdx.x - BLOCK_OFF, block_start_y = blockDim.y * blockIdx.y - BLOCK_OFF;
+	int block_start_x = blockDim.x * blockIdx.x - BLOCK_OFF + x_off, block_start_y = blockDim.y * blockIdx.y - BLOCK_OFF + y_off;
 	int off_x = threadIdx.x, off_y = threadIdx.y;
 	int n_per_t = NUM_PIXELS_COPY_PER_THREAD;
 	for(int i = 0; i < n_per_t; i++)
@@ -26,14 +27,17 @@ CUDA_DEVICE void copyToShared(RGBE* deviceDataCached, NonLocalMeansFilter::Featu
 			if (x >= 0 && x < w && y >= 0 && y < h)
 			{
 				g_cachedImgData[l_y * CACHE_SIZE + l_x] = deviceDataCached[y * w + x];
-				//g_cachedFeatureData[l_y * CACHE_SIZE + l_x] = deviceFeatureData[y * w + x];
+				if (USE_VAR_BUF)
+					g_cachedVarData[l_y * CACHE_SIZE + l_x] = varBuf->operator()(x, y).computeVariance();
+				//if(USE_FEATURE_BUF)
+					//g_cachedFeatureData[l_y * CACHE_SIZE + l_x] = deviceFeatureData[y * w + x];
 			}
 		}
 }
 
-CUDA_DEVICE Spectrum loadFromShared(int x, int y)
+CUDA_DEVICE Spectrum loadFromShared(int x, int y, int x_off, int y_off, float* var = 0)
 {
-	int block_start_x = blockDim.x * blockIdx.x - BLOCK_OFF, block_start_y = blockDim.y * blockIdx.y - BLOCK_OFF;
+	int block_start_x = blockDim.x * blockIdx.x - BLOCK_OFF + x_off, block_start_y = blockDim.y * blockIdx.y - BLOCK_OFF + y_off;
 	int local_x = x - block_start_x, local_y = y - block_start_y;
 	if (local_x < 0 || local_x >= CACHE_SIZE ||
 		local_y < 0 || local_y >= CACHE_SIZE)
@@ -43,6 +47,8 @@ CUDA_DEVICE Spectrum loadFromShared(int x, int y)
 	}
 	Spectrum col;
 	col.fromRGBE(g_cachedImgData[local_y * CACHE_SIZE + local_x]);
+	if (var)
+		*var = g_cachedVarData[local_y * CACHE_SIZE + local_x].ToFloat();
 	return col;
 }
 
@@ -59,9 +65,11 @@ CUDA_DEVICE Spectrum loadFromShared(int x, int y)
 	return g_cachedFeatureData[local_y * CACHE_SIZE + local_x];
 }*/
 
-CUDA_DEVICE float patchDistance(int p_x, int p_y, int q_x, int q_y, int F, int w, int h)
+CUDA_DEVICE float patchDistance(int p_x, int p_y, int q_x, int q_y, int F, int w, int h, int x_off, int y_off, float k, float sigma2Scale)
 {
-	float d_range = 0, weight = 0;
+	const float eps = 1e-10f;
+	const float alpha = 1.0f;
+	float d_range = 0, weight = 0;;
 	for(int x = -F; x <= F; x++)
 		for (int y = -F; y <= F; y++)
 		{
@@ -69,44 +77,70 @@ CUDA_DEVICE float patchDistance(int p_x, int p_y, int q_x, int q_y, int F, int w
 				q_x + x < 0 || q_x + x >= w || q_y + y < 0 || q_y + y >= h)
 				continue;
 
-			auto c_a = loadFromShared(p_x + x, p_y + y).saturate();
-			auto c_b = loadFromShared(q_x + x, q_y + y).saturate();
-			d_range += math::sqr(c_a - c_b).sum();
-			weight += 3;
+			float var_p, var_q;
+			auto c_p = loadFromShared(p_x + x, p_y + y, x_off, y_off, &var_p);//.saturate();
+			auto c_q = loadFromShared(q_x + x, q_y + y, x_off, y_off, &var_q);//.saturate();
+			var_p *= sigma2Scale; var_q *= sigma2Scale;
+			float u_diff = math::sqr(c_p - c_q).avg();
+			float d = (u_diff - alpha * (var_p + min(var_p, var_q))) / (eps + k * k * (var_p + var_q));
+			d_range += d;
+			weight++;
 		}
 
 	return weight != 0 ? d_range / weight : 0;
 }
 
-CUDA_DEVICE float weight(int p_x, int p_y, int q_x, int q_y, int w, int h, int F, float sigma2, float k)
+CUDA_DEVICE float weight(int p_x, int p_y, int q_x, int q_y, int w, int h, int x_off, int y_off, int F, float k, float sigma2Scale)
 {
-	float d_range = patchDistance(p_x, p_y, q_x, q_y, F, w, h);
-	return math::exp(-max(0.0f, d_range - 2 * sigma2) / (k * k * 2 * sigma2));
+	const float d_range = patchDistance(p_x, p_y, q_x, q_y, F, w, h, x_off, y_off, k, sigma2Scale);
+
+	const float weight = math::exp(-max(0.0f, d_range));
+	return weight < 0.05f ? 0.0f : weight;
 }
 
-CUDA_GLOBAL void applyNonLinear(Image img, RGBE* deviceDataCached, NonLocalMeansFilter::FeatureData* deviceFeatueData, int R, int F, float k, float sigma2Scale, PixelVarianceBuffer varBuf)
+CUDA_GLOBAL void computeWeights(Image img, RGBE* deviceDataCached, NonLocalMeansFilter::FeatureData* deviceFeatueData, int R, int F, float k, float sigma2Scale, PixelVarianceBuffer varBuf, NonLocalMeansFilter::FilterWeightBuffer weightBuffer, int x_off, int y_off)
 {
-	copyToShared(deviceDataCached, deviceFeatueData, img.getWidth(), img.getHeight());
+	copyToShared<true, true>(deviceDataCached, deviceFeatueData, &varBuf, img.getWidth(), img.getHeight(), x_off, y_off);
 	__syncthreads();
 
-	int x = threadIdx.x + blockDim.x * blockIdx.x, y = threadIdx.y + blockDim.y * blockIdx.y, w = img.getWidth(), h = img.getHeight();
+	int x = threadIdx.x + blockDim.x * blockIdx.x + x_off, y = threadIdx.y + blockDim.y * blockIdx.y + y_off, w = img.getWidth(), h = img.getHeight();
 	if (x < w && y < h)
 	{
-		float C_p = 0;//normalization weight
-		Spectrum c_p_hat(0.0f);
-		float sigma2 = varBuf(x,y).computeVariance() * sigma2Scale;
+		auto buffer = weightBuffer(x, y);
 		for(int xo = -R; xo <= R; xo++)
 			for (int yo = -R; yo <= R; yo++)
 			{
 				int q_x = x + xo, q_y = y + yo;
 				if (q_x < 0 || q_x >= w || q_y < 0 || q_y >= h)
 					continue;
-				auto c_q = loadFromShared(q_x, q_y);
-				float we = weight(x, y, q_x, q_y, w, h, F, sigma2, k);
+				float we = weight(x, y, q_x, q_y, w, h, x_off, y_off, F, k, sigma2Scale);
+				buffer(xo, yo) = we;
+			}
+	}
+}
+
+CUDA_GLOBAL void applyWeights(Image img, RGBE* deviceDataCached, NonLocalMeansFilter::FilterWeightBuffer weightBuffer, int R, int F)
+{
+	copyToShared<false, false>(deviceDataCached, 0, 0, img.getWidth(), img.getHeight(), 0, 0);
+	__syncthreads();
+
+	int x = threadIdx.x + blockDim.x * blockIdx.x, y = threadIdx.y + blockDim.y * blockIdx.y, w = img.getWidth(), h = img.getHeight();
+	if (x < w && y < h)
+	{
+		auto buffer = weightBuffer(x, y);
+		Spectrum c_p_hat(0.0f);
+		float C_p = 0;//normalization weight
+		for (int xo = -R; xo <= R; xo++)
+			for (int yo = -R; yo <= R; yo++)
+			{
+				int q_x = x + xo, q_y = y + yo;
+				if (q_x < 0 || q_x >= w || q_y < 0 || q_y >= h)
+					continue;
+				float we = buffer(xo, yo);
+				auto c_q = loadFromShared(q_x, q_y, 0, 0);
 				C_p += we;
 				c_p_hat += we * c_q;
 			}
-
 		img.getFilteredData(x, y) = Spectrum(c_p_hat / C_p).toRGBE();
 	}
 }
@@ -147,24 +181,60 @@ CUDA_GLOBAL void initializeFeatureBuffer(NonLocalMeansFilter::FeatureData* devic
 
 void NonLocalMeansFilter::Apply(Image& img, int numPasses, float splatScale, const PixelVarianceBuffer& varBuffer)
 {
-	const int R = 5, F = 3;
+	const int R = 6, F = 3;
 	const float k = m_settings.getValue(KEY_k()), sigma2Scale = m_settings.getValue(KEY_sigma2Scale());
+	const int n_update = m_settings.getValue(KEY_UpdateWeightPeriodicity());
 
 	if (BLOCK_OFF < R + F)
 		throw std::runtime_error("Cache size too small for filtering window size!");
 
 	int xResolution = img.getWidth(), yResolution = img.getHeight();
 
-	if (numPasses == 0)
+	bool force_update = false;
+	if (!m_weightBuffer.canUseBuffer(R, F))
 	{
-		initializeFeatureBuffer << <dim3(xResolution / BLOCK_SIZE + 1, yResolution / BLOCK_SIZE + 1), dim3(BLOCK_SIZE, BLOCK_SIZE) >> >(m_featureBuffer, xResolution, yResolution);
+		m_weightBuffer.adaptBuffer(R, F, xResolution, yResolution);
+		force_update = true;
+	}
+
+	if (last_iter_weight_update + 1 != numPasses)
+	{
+		initializeFeatureBuffer << <dim3(xResolution / BLOCK_SIZE + 1, yResolution / BLOCK_SIZE + 1), dim3(BLOCK_SIZE, BLOCK_SIZE) >> > (m_featureBuffer, xResolution, yResolution);
 	}
 
 	//copy the data to the cached version
 	copyToCached << <dim3(xResolution / BLOCK_SIZE + 1, yResolution / BLOCK_SIZE + 1), dim3(BLOCK_SIZE, BLOCK_SIZE) >> >(img, m_cachedImg, splatScale);
 	ThrowCudaErrors(cudaThreadSynchronize());
-	applyNonLinear << <dim3(xResolution / BLOCK_SIZE + 1, yResolution / BLOCK_SIZE + 1), dim3(BLOCK_SIZE, BLOCK_SIZE) >> >(img, m_cachedImg, m_featureBuffer, R, F, k, sigma2Scale, varBuffer);
+
+	if (last_iter_weight_update + 1 != numPasses || (numPasses % n_update) == 0 || force_update)
+	{
+		m_weightBuffer.ClearBuffer();
+		cudaFuncSetCacheConfig(computeWeights, cudaFuncCachePreferShared);
+		const int block_width = 200;
+		const int n_blocks_x = (xResolution + block_width - 1) / block_width, n_blocks_y = (yResolution + block_width - 1) / block_width;
+		const int n_cuda_blocks = (block_width + BLOCK_SIZE - 1) / BLOCK_SIZE;
+		for(int i = 0; i < n_blocks_x; i++)
+			for(int j = 0; j < n_blocks_y; j++)
+				computeWeights << <dim3(n_cuda_blocks, n_cuda_blocks), dim3(BLOCK_SIZE, BLOCK_SIZE) >> >(img, m_cachedImg, m_featureBuffer, R, F, k, sigma2Scale, varBuffer, m_weightBuffer, i * block_width, j * block_width);
+		ThrowCudaErrors(cudaThreadSynchronize());
+	}
+
+	cudaFuncSetCacheConfig(applyWeights, cudaFuncCachePreferShared);
+	applyWeights << <dim3(xResolution / BLOCK_SIZE + 1, yResolution / BLOCK_SIZE + 1), dim3(BLOCK_SIZE, BLOCK_SIZE) >> >(img, m_cachedImg, m_weightBuffer, R, F);
 	ThrowCudaErrors(cudaThreadSynchronize());
+
+	last_iter_weight_update = numPasses;
+
+	float B[(2 * R + 1)*(2 * R + 1)];
+	cudaMemcpy(B, m_weightBuffer(300, 300).weights, sizeof(B), cudaMemcpyDeviceToHost);
+	for (int i = -R; i <= R; i++)
+	{
+		for (int j = -R; j <  R; j++)
+			std::cout << B[(i+R) * (2 * R + 1) + (j+R)] << ", ";
+		std::cout << std::endl;
+	}
+	std::cout << std::endl;
+	std::cout << std::endl;
 }
 
 }
