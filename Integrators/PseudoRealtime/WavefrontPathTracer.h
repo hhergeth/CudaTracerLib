@@ -2,7 +2,7 @@
 
 #include <Kernel/Tracer.h>
 #include <Base/CudaMemoryManager.h>
-#include <Kernel/RayBuffer.h>
+#include <Kernel/DoubleRayBuffer.h>
 #include <Math/half.h>
 
 namespace CudaTracerLib {
@@ -18,7 +18,7 @@ struct WavefrontPTRayData
 	bool specular_bounce;
 };
 
-typedef RayBuffer<WavefrontPTRayData, 2> WavefrontPathTracerBuffer;
+typedef DoubleRayBuffer<WavefrontPTRayData> WavefrontPathTracerBuffer;
 
 class WavefrontPathTracer : public Tracer<true>, public IDepthTracer
 {
@@ -28,7 +28,7 @@ public:
 	PARAMETER_KEY(int, RRStartDepth)
 
 	WavefrontPathTracer()
-		: bufA(0), bufB(0)
+		: m_ray_buf(0)
 	{
 		m_sParameters << KEY_Direct()				<< CreateSetBool(true)
 					  << KEY_MaxPathLength()		<< CreateInterval<int>(7, 1, INT_MAX)
@@ -36,24 +36,26 @@ public:
 	}
 	~WavefrontPathTracer()
 	{
-		bufA->Free(); delete bufA;
-		bufB->Free(); delete bufB;
+		if (m_ray_buf)
+		{
+			m_ray_buf->Free();
+			delete m_ray_buf;
+		}
 	}
 	virtual void Resize(unsigned int w, unsigned int h)
 	{
 		Tracer<true>::Resize(w, h);
-		if (bufA)
+		if (m_ray_buf)
 		{
-			bufA->Free(); delete bufA;
-			bufB->Free(); delete bufB;
+			m_ray_buf->Free();
+			delete m_ray_buf;
 		}
-		bufA = new WavefrontPathTracerBuffer(w * h);
-		bufB = new WavefrontPathTracerBuffer(w * h);
+		m_ray_buf = new WavefrontPathTracerBuffer(w * h, w * h);
 	}
 protected:
 	CTL_EXPORT virtual void DoRender(Image* I);
 private:
-	WavefrontPathTracerBuffer* bufA, *bufB;
+	WavefrontPathTracerBuffer* m_ray_buf;
 };
 
 }
