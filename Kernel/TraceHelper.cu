@@ -41,7 +41,7 @@ texture<float4, 1>		t_NodeInvTransforms;
 texture<int2, 1> t_TriDataA;
 texture<float4, 1> t_TriDataB;
 
-void traversalResult::toResult(TraceResult* tR, KernelDynamicScene& data)
+void traversalResult::toResult(TraceResult* tR, KernelDynamicScene& data) const
 {
 	tR->m_fDist = dist;
 	tR->m_fBaryCoords = ((half2*)&bCoords)->ToFloat2();
@@ -339,7 +339,7 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 	float   idiry;
 	float   idirz;
 	Vec2f bCorrds;
-	int nodeIdx = 0;
+	int nodeIdx;
 
 	int ltraversalStack[STACK_SIZE];
 	ltraversalStack[0] = EntrypointSentinel;
@@ -412,6 +412,7 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 			leafAddr = 0;   // No postponed leaf.
 			leafAddr = nodeAddr = g_SceneData.m_sSceneBVH.m_sStartNode;   // Start from the root. set the leafAddr to support scenes with one node
 			hitIndex = -1;  // No triangle intersected so far.
+			nodeIdx = -1;
 		}
 
 		// Traversal loop.
@@ -707,7 +708,7 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 
 		// Remap intersected triangle index, and store the result.
 
-		int4 res = make_int4(0,0,0,0);
+		uint4 res = make_uint4(0, UINT_MAX, UINT_MAX,0);
 		if(hitIndex != -1)
 		{
 			res.x = __float_as_int(hitT);
@@ -716,7 +717,7 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 			half2 h(bCorrds);
 			res.w = *(int*)&h;
 		}
-		((int4*)a_ResBuffer)[rayidx] = res;
+		((uint4*)a_ResBuffer)[rayidx] = res;
 //outerlabel: ;
 	} while(true);
 }

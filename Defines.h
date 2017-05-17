@@ -161,7 +161,7 @@ template<typename T> inline void ZeroMemoryCuda(T* cudaVar)
 	{ \
 		void* tar = 0; \
 		ThrowCudaErrors(cudaGetSymbolAddress(&tar, SYMBOL)); \
-		cudaMemcpy(&value, tar, sizeof(value), cudaMemcpyDeviceToHost); \
+		ThrowCudaErrors(cudaMemcpy(&value, tar, sizeof(value), cudaMemcpyDeviceToHost)); \
 	}
 
 template<typename T> struct CudaStaticWrapper
