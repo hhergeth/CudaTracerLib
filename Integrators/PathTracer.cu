@@ -17,6 +17,8 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(NormalizedT<Ray>& r, const
 	KernelAggregateVolume& V = g_SceneData.m_sVolume;
 	MediumSamplingRecord mRec;
 	TraceResult r2;
+	float brdf_scattering_pdf = 0;
+	NormalizedT<Vec3f> last_nor;
 	while (depth++ < maxPathLength)
 	{
 		r2 = traceRay(r);
@@ -55,16 +57,32 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(NormalizedT<Ray>& r, const
 			r2.getBsdfSample(r, bRec, ETransportMode::ERadiance);
 			if (depth == 1)
 				bRec.dg.computePartials(r, rX, rY);
-			if (!DIRECT || (depth == 1 || specularBounce))
-				cl += cf * r2.Le(bRec.dg.P, bRec.dg.sys, -r.dir());
-			Spectrum f = r2.getMat().bsdf.sample(bRec, rnd.randomFloat2());
+
+			//account for emittance, weighted with MIS if necessary
+			if (r2.LightIndex() != UINT_MAX)
+			{
+				float misWeight = 1.0f;
+				if (!DIRECT || depth == 1 || specularBounce)
+					misWeight = 1.0f;
+				else
+				{
+					DirectSamplingRecord dRec = DirectSamplingRecFromRay(r, r2.m_fDist, last_nor, bRec.dg.P, bRec.dg.n);
+					auto* light = g_SceneData.getLight(r2);
+					float direct_pdf = light->pdfDirect(dRec) * g_SceneData.pdfEmitter(light);
+					misWeight = MonteCarlo::PowerHeuristic(1, brdf_scattering_pdf, 1, direct_pdf);
+				}
+				cl += misWeight * cf * r2.Le(bRec.dg.P, bRec.dg.sys, -r.dir());
+			}
+
+			Spectrum f = r2.getMat().bsdf.sample(bRec, brdf_scattering_pdf, rnd.randomFloat2());
+			last_nor = bRec.dg.sys.n;
 			if (DIRECT)
 				cl += cf * UniformSampleOneLight(bRec, r2.getMat(), rnd, true);
 			specularBounce = (bRec.sampledType & EDelta) != 0;
 			cf = cf * f;
 			r = NormalizedT<Ray>(bRec.dg.P, bRec.getOutgoing());
 		}
-		if (depth > rrStartDepth)
+		if (depth > rrStartDepth && !specularBounce)
 		{
 			if (rnd.randomFloat() >= cf.max())
 				break;
@@ -72,7 +90,19 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(NormalizedT<Ray>& r, const
 		}
 	}
 	if (!r2.hasHit())
-		cl += cf * g_SceneData.EvalEnvironment(r);
+	{
+		float misWeight = 1.0f;
+		if (!DIRECT || depth == 1 || specularBounce)
+			misWeight = 1.0f;
+		else if(g_SceneData.getEnvironmentMap() != 0)
+		{
+			auto dRec = DirectSamplingRecFromRay(r, r2.m_fDist, last_nor, Vec3f(), NormalizedT<Vec3f>());
+			auto* light = g_SceneData.getEnvironmentMap();
+			float direct_pdf = light->pdfDirect(dRec) * g_SceneData.pdfEmitter(light);
+			misWeight = MonteCarlo::PowerHeuristic(1, brdf_scattering_pdf, 1, direct_pdf);
+		}
+		cl += misWeight * cf * g_SceneData.EvalEnvironment(r);
+	}
 	return cl;
 }
 
