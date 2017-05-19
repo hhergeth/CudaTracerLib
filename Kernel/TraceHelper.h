@@ -65,6 +65,7 @@ struct CUDA_ALIGN(16) traversalResult
 	int triIdx;
 	int bCoords;//half2
 	CUDA_DEVICE CUDA_HOST void toResult(TraceResult* tR, KernelDynamicScene& g_SceneData) const;
+	CUDA_DEVICE CUDA_HOST void fromResult(const TraceResult* tR, KernelDynamicScene& g_SceneData);
 };
 
 CTL_EXPORT void __internal__IntersectBuffers(int N, traversalRay* a_RayBuffer, traversalResult* a_ResBuffer, bool SKIP_OUTER, bool ANY_HIT);

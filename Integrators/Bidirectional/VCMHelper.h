@@ -25,16 +25,6 @@ CUDA_FUNC_IN float Mis(float pdf)
 	return pdf;
 }
 
-CUDA_FUNC_IN float PdfWtoA(const float aPdfW, const float aDist2, const float aCosThere)
-{
-	return aPdfW * std::abs(aCosThere) / aDist2;
-}
-
-CUDA_FUNC_IN float PdfAtoW(const float aPdfA, const float aDist2, const float aCosThere)
-{
-	return aPdfA * aDist2 / std::abs(aCosThere);
-}
-
 CUDA_FUNC_IN float pdf(const Material& mat, BSDFSamplingRecord& bRec)
 {
 	bRec.typeMask = EAll;

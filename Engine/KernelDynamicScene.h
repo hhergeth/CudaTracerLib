@@ -57,6 +57,7 @@ struct KernelDynamicScene
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum EvalEnvironment(const Ray& r) const;
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum EvalEnvironment(const Ray& r, const Ray& rX, const Ray& rY) const;
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST const Light* sampleEmitter(float& emPdf, Vec2f& sample) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST float pdfEmitter(const Light* L) const;
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST float pdfEmitterDiscrete(const Light *emitter) const;
 
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sampleEmitterDirect(DirectSamplingRecord &dRec, const Vec2f &sample) const;

@@ -49,6 +49,15 @@ void traversalResult::toResult(TraceResult* tR, KernelDynamicScene& data) const
 	tR->m_triIdx = triIdx;
 }
 
+void traversalResult::fromResult(const TraceResult* tR, KernelDynamicScene& data)
+{
+	half2 X(tR->m_fBaryCoords);
+	bCoords = *(int*)&X;
+	dist = tR->m_fDist;
+	nodeIdx = tR->m_nodeIdx;
+	triIdx = tR->m_triIdx;
+}
+
 CUDA_FUNC_IN void loadModl(int i, float4x4* o)
 {
 #ifdef ISCUDA

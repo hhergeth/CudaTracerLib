@@ -793,6 +793,7 @@ StreamReference<Light> DynamicScene::setEnvironementMap(const Spectrum& power, c
 	if (m_uEnvMapIndex != -1)
 	{
 		//TODO
+		throw std::runtime_error("Can't set environment map when it is already set!");
 	}
 	BufferReference<MIPMap, KernelMIPMap> m = LoadTexture(file, true);
 	m_psSceneBoxEnvLight = getSceneBox();

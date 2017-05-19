@@ -39,6 +39,12 @@ const Light* KernelDynamicScene::sampleEmitter(float& emPdf, Vec2f& sample) cons
 	return getLight(idx);
 }
 
+float KernelDynamicScene::pdfEmitter(const Light* L) const
+{
+	unsigned int idx = L - m_sLightBuf.Data;
+	return m_pLightCDF[idx] - (idx == 0 ? 0.0f : m_pLightCDF[idx - 1]);
+}
+
 float KernelDynamicScene::pdfEmitterDiscrete(const Light *emitter) const
 {
 	unsigned int idx = (unsigned int)(emitter - m_sLightBuf.Data);

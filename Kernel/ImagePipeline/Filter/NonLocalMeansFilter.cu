@@ -224,17 +224,6 @@ void NonLocalMeansFilter::Apply(Image& img, int numPasses, float splatScale, con
 	ThrowCudaErrors(cudaThreadSynchronize());
 
 	last_iter_weight_update = numPasses;
-
-	float B[(2 * R + 1)*(2 * R + 1)];
-	cudaMemcpy(B, m_weightBuffer(300, 300).weights, sizeof(B), cudaMemcpyDeviceToHost);
-	for (int i = -R; i <= R; i++)
-	{
-		for (int j = -R; j <  R; j++)
-			std::cout << B[(i+R) * (2 * R + 1) + (j+R)] << ", ";
-		std::cout << std::endl;
-	}
-	std::cout << std::endl;
-	std::cout << std::endl;
 }
 
 }
