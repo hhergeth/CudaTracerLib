@@ -16,6 +16,8 @@ struct WavefrontPTRayData
 	float dDist;
 	unsigned int dIdx;
 	bool specular_bounce;
+	float bsdf_pdf;
+	unsigned int prev_normal;
 };
 
 typedef DoubleRayBuffer<WavefrontPTRayData> WavefrontPathTracerBuffer;

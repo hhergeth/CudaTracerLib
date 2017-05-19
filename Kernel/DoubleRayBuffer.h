@@ -75,21 +75,26 @@ public:
 		m_num_payload_elements = 0;
 	}
 
-	void FinishIteration(bool skip_outer = false, bool any_hit_secondary = false)
+	//this method has an extra mode COMPUTE_INTERSCTIONS = false where no intersections are computed
+	//this can be used to re-fill already intersected buffers
+	template<bool COMPUTE_INTERSCTIONS = true> void FinishIteration(bool skip_outer = false, bool any_hit_secondary = false)
 	{
 		if (m_insert_payload_index > m_payload_length)
 			throw std::runtime_error("Storing too many primary rays in buffer!");
 		if (m_insert_secondary_index > m_num_secondary_rays)
 			throw std::runtime_error("Storing too many secondary rays in buffer!");
 
-		ThrowCudaErrors(cudaMemset(m_payload_res_buffer, 0, sizeof(traversalResult) * m_payload_length));
-		ThrowCudaErrors(cudaMemset(m_secondary_buf2.m_res_buffer, 0, sizeof(traversalResult) * m_num_secondary_rays));
+		if (COMPUTE_INTERSCTIONS)
+		{
+			ThrowCudaErrors(cudaMemset(m_payload_res_buffer, 0, sizeof(traversalResult) * m_payload_length));
+			ThrowCudaErrors(cudaMemset(m_secondary_buf2.m_res_buffer, 0, sizeof(traversalResult) * m_num_secondary_rays));
 
-		//intersect [0, .., m_insert_payload_index] from payload buffer
-		__internal__IntersectBuffers(m_insert_payload_index, m_payload_ray_buffer, m_payload_res_buffer, skip_outer, false);
-		//intersect [0, .., m_insert_secondary_index] from secondary buffer
-		if(m_insert_secondary_index)
-			__internal__IntersectBuffers(m_insert_secondary_index, m_secondary_buf2.m_ray_buffer, m_secondary_buf2.m_res_buffer, skip_outer, any_hit_secondary);
+			//intersect [0, .., m_insert_payload_index] from payload buffer
+			__internal__IntersectBuffers(m_insert_payload_index, m_payload_ray_buffer, m_payload_res_buffer, skip_outer, false);
+			//intersect [0, .., m_insert_secondary_index] from secondary buffer
+			if (m_insert_secondary_index)
+				__internal__IntersectBuffers(m_insert_secondary_index, m_secondary_buf2.m_ray_buffer, m_secondary_buf2.m_res_buffer, skip_outer, any_hit_secondary);
+		}
 
 		m_num_payload_elements = m_insert_payload_index;
 		m_fetch_index = 0;
@@ -104,10 +109,13 @@ public:
 		return m_insert_payload_index == 0;
 	}
 
+	unsigned int getNumPayloadElementsInQueue() const
+	{
+		return m_num_payload_elements;
+	}
+
 	CUDA_ONLY_FUNC bool tryFetchPayloadElement(T& payload_el, traversalRay& ray, traversalResult& res, unsigned int* idx = 0)
 	{
-		//if (m_fetch_index >= m_num_payload_elements)
-		//	return false;
 		unsigned payload_idx = atomicInc(&m_fetch_index, UINT_MAX);
 		if (payload_idx >= m_num_payload_elements)
 			return false;
@@ -120,11 +128,8 @@ public:
 		return true;
 	}
 
-	CUDA_ONLY_FUNC bool insertPayloadElement(const T& payload_el, const traversalRay& ray, unsigned int* idx = 0)
+	CUDA_ONLY_FUNC bool insertPayloadElement(const T& payload_el, const traversalRay& ray, const traversalResult* res = 0, unsigned int* idx = 0)
 	{
-		// || m_insert_payload_index >= m_fetch_index
-		//if (m_insert_payload_index >= m_payload_length)
-		//	return false;
 		unsigned int payload_idx = atomicInc(&m_insert_payload_index, UINT_MAX);
 		if (payload_idx >= m_payload_length)
 			return false;
@@ -133,6 +138,8 @@ public:
 			*idx = payload_idx;
 		m_payload_buffer[payload_idx] = payload_el;
 		m_payload_ray_buffer[payload_idx] = ray;
+		if (res)
+			m_payload_res_buffer[payload_idx] = *res;
 		return true;
 	}
 
@@ -146,7 +153,7 @@ public:
 		return true;
 	}
 
-	CUDA_ONLY_FUNC bool insertSecondaryRay(const traversalRay& ray, unsigned int& idx)
+	CUDA_ONLY_FUNC bool insertSecondaryRay(const traversalRay& ray, unsigned int& idx, const traversalResult* res = 0)
 	{
 		if (m_insert_secondary_index >= m_num_secondary_rays)
 			return false;
@@ -155,6 +162,8 @@ public:
 			return false;
 
 		m_secondary_buf2.m_ray_buffer[idx] = ray;
+		if (res)
+			m_secondary_buf2.m_res_buffer[idx] = *res;
 		return true;
 	}
 
@@ -171,11 +180,12 @@ public:
 		else return false;
 	}
 
-	CUDA_ONLY_FUNC bool insertPayloadElement(const T& payload_el, const NormalizedT<Ray>& ray, unsigned int* idx = 0)
+	CUDA_ONLY_FUNC bool insertPayloadElement(const T& payload_el, const NormalizedT<Ray>& ray, const TraceResult* res = 0, unsigned int* idx = 0)
 	{
 		traversalRay r1;
-		convert(ray, r1);
-		return insertPayloadElement(payload_el, r1, idx);
+		traversalResult r2;
+		convert(ray, res, r1, r2);
+		return insertPayloadElement(payload_el, r1, res ? &r2 : 0, idx);
 	}
 
 	CUDA_ONLY_FUNC bool accessSecondaryRay(unsigned int idx, NormalizedT<Ray>& ray, TraceResult& res)
@@ -190,11 +200,12 @@ public:
 		else return false;
 	}
 
-	CUDA_ONLY_FUNC bool insertSecondaryRay(const NormalizedT<Ray>& ray, unsigned int& idx)
+	CUDA_ONLY_FUNC bool insertSecondaryRay(const NormalizedT<Ray>& ray, unsigned int& idx, const TraceResult* res = 0)
 	{
 		traversalRay r1;
-		convert(ray, r1);
-		return insertSecondaryRay(r1, idx);
+		traversalResult r2;
+		convert(ray, res, r1, r2);
+		return insertSecondaryRay(r1, idx, res ? &r2 : 0);
 	}
 private:
 	CUDA_FUNC_IN void convert(const traversalRay& r1, const traversalResult& r2, NormalizedT<Ray>& ray, TraceResult& res)
@@ -202,10 +213,12 @@ private:
 		ray = NormalizedT<Ray>(Vec3f(r1.a.getXYZ()), NormalizedT<Vec3f>(r1.b.getXYZ()));
 		r2.toResult(&res, g_SceneData);
 	}
-	CUDA_FUNC_IN void convert(const NormalizedT<Ray>& ray, traversalRay& r1)
+	CUDA_FUNC_IN void convert(const NormalizedT<Ray>& ray, const TraceResult* res, traversalRay& r1, traversalResult& r2)
 	{
 		r1.a = Vec4f(ray.ori(), 1e-2f);
 		r1.b = Vec4f(ray.dir(), FLT_MAX);
+		if (res)
+			r2.fromResult(res, g_SceneData);
 	}
 };
 

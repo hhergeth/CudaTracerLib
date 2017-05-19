@@ -1,4 +1,7 @@
 #include "WavefrontPathTracer.h"
+#include <Math/Compression.h>
+#include <Kernel/TraceAlgorithms.h>
+#include <SceneTypes/Light.h>
 
 namespace CudaTracerLib {
 
@@ -74,8 +77,22 @@ template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(Image I, int pat
 		{
 			BSDFSamplingRecord bRec;
 			res.getBsdfSample(ray, bRec, ETransportMode::ERadiance);
-			if (!NEXT_EVENT_EST || (pathDepth == 0 || payload.specular_bounce))
-				payload.L += res.Le(bRec.dg.P, bRec.dg.sys, -ray.dir()) * payload.throughput;
+
+			//account for emission
+			if (res.LightIndex() != UINT_MAX)
+			{
+				float misWeight = 1.0f;
+				if (!NEXT_EVENT_EST || pathDepth == 0 || payload.specular_bounce)
+					misWeight = 1.0f;
+				else
+				{
+					DirectSamplingRecord dRec = DirectSamplingRecFromRay(ray, res.m_fDist, Uchar2ToNormalizedFloat3((unsigned short)payload.prev_normal), bRec.dg.P, bRec.dg.n);
+					auto* light = g_SceneData.getLight(res);
+					float direct_pdf = light->pdfDirect(dRec) * g_SceneData.pdfEmitter(light);
+					misWeight = MonteCarlo::PowerHeuristic(1, payload.bsdf_pdf, 1, direct_pdf);
+				}
+				payload.L += misWeight * res.Le(bRec.dg.P, bRec.dg.sys, -ray.dir()) * payload.throughput;
+			}
 
 			//do russian roulette
 			bool surviveRR = true;
@@ -88,7 +105,7 @@ template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(Image I, int pat
 
 			if (pathDepth + 1 != maxPathDepth && surviveRR)
 			{
-				Spectrum f = res.getMat().bsdf.sample(bRec, rng.randomFloat2());
+				Spectrum f = res.getMat().bsdf.sample(bRec, payload.bsdf_pdf, rng.randomFloat2());
 				payload.specular_bounce = (bRec.sampledType & EDelta) != 0;
 				auto r_refl = NormalizedT<Ray>(bRec.dg.P, bRec.getOutgoing());
 
@@ -103,7 +120,8 @@ template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(Image I, int pat
 						bRec.wo = bRec.dg.toLocal(dRec.d);
 						Spectrum bsdfVal = res.getMat().bsdf.f(bRec);
 						const float bsdfPdf = res.getMat().bsdf.pdf(bRec);
-						const float weight = MonteCarlo::PowerHeuristic(1, dRec.pdf, 1, bsdfPdf);
+						const float directPdf = dRec.measure == EArea ? PdfAtoW(dRec.pdf, dRec.dist, dot(dRec.n, dRec.d)) : dRec.pdf;
+						const float weight = MonteCarlo::PowerHeuristic(1, directPdf, 1, bsdfPdf);
 						payload.directF = payload.throughput * value * bsdfVal * weight;
 						payload.dDist = dRec.dist;
 						if (!g_ray_buffer->insertSecondaryRay(NormalizedT<Ray>(bRec.dg.P, dRec.d), payload.dIdx))
@@ -111,6 +129,7 @@ template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(Image I, int pat
 					}
 				}
 
+				payload.prev_normal = NormalizedFloat3ToUchar2(bRec.dg.n);
 				payload.throughput *= f;
 				g_ray_buffer->insertPayloadElement(payload, r_refl);
 			}
@@ -119,7 +138,17 @@ template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(Image I, int pat
 		else
 		{
 			path_terminated = true;
-			payload.L += payload.throughput * g_SceneData.EvalEnvironment(ray);
+			float misWeight = 1.0f;
+			if (!NEXT_EVENT_EST || pathDepth == 0 || payload.specular_bounce)
+				misWeight = 1.0f;
+			else if(g_SceneData.getEnvironmentMap() != 0)
+			{
+				DirectSamplingRecord dRec = DirectSamplingRecFromRay(ray, res.m_fDist, Uchar2ToNormalizedFloat3((unsigned short)payload.prev_normal), Vec3f(), NormalizedT<Vec3f>());
+				auto* light = g_SceneData.getEnvironmentMap();
+				float direct_pdf = light->pdfDirect(dRec) * g_SceneData.pdfEmitter(light);
+				misWeight = MonteCarlo::PowerHeuristic(1, payload.bsdf_pdf, 1, direct_pdf);
+			}
+			payload.L += misWeight * payload.throughput * g_SceneData.EvalEnvironment(ray);
 		}
 
 		if (path_terminated)
