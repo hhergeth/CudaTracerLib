@@ -75,36 +75,9 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 					throughput = throughput * Tr;
 				}
 			}
-			if (DIRECT && (!g_SceneData.m_sVolume.HasVolumes() || (g_SceneData.m_sVolume.HasVolumes() && depth == 0)))
-			{
-				float pdf;
-				Vec2f sample = rng.randomFloat2();
-				const Light* light = g_SceneData.sampleEmitter(pdf, sample);
-				DirectSamplingRecord dRec(bRec.dg.P, bRec.dg.sys.n);
-				Spectrum value = light->sampleDirect(dRec, rng.randomFloat2()) / pdf;
-				bRec.wo = bRec.dg.toLocal(dRec.d);
-				bRec.typeMask = EBSDFType(EAll & ~EDelta);
-				Spectrum bsdfVal = r2.getMat().bsdf.f(bRec);
-				if (!bsdfVal.isZero())
-				{
-					const float bsdfPdf = r2.getMat().bsdf.pdf(bRec);
-					const float weight = MonteCarlo::PowerHeuristic(1, dRec.pdf, 1, bsdfPdf);
-					if (g_SceneData.Occluded(Ray(dRec.ref, dRec.d), 0, dRec.dist))
-						value = 0.0f;
-					float tmin, tmax;
-					if (g_SceneData.m_sVolume.HasVolumes() && g_SceneData.m_sVolume.IntersectP(Ray(bRec.dg.P, dRec.d), 0, dRec.dist, &tmin, &tmax))
-					{
-						Spectrum Tr;
-						Spectrum Li = ((VolEstimator*)g_VolEstimator2)->L_Volume(rad_vol, g_NumPhotonEmittedVolume2, NormalizedT<Ray>(bRec.dg.P, dRec.d), tmin, tmax, VolHelper<true>(), Tr, vol_dens_est_it);
-						numVolEstimates++;
-						value = value * Tr + Li;
-					}
-					L += throughput * bsdfVal * weight * value;
-				}
-				bRec.typeMask = EAll;
+			if (DIRECT)
+				L += throughput * UniformSampleOneLight(bRec, r2.getMat(), rng, true, false);
 
-				//L += throughput * UniformSampleOneLight(bRec, r2.getMat(), rng);
-			}
 			L += throughput * r2.Le(bRec.dg.P, bRec.dg.sys, -r.dir());//either it's the first bounce or it's a specular reflection
 			const VolumeRegion* bssrdf;
 			if (r2.getMat().GetBSSRDF(bRec.dg, &bssrdf))
