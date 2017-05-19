@@ -30,7 +30,18 @@ Spectrum Transmittance(const Ray& r, float tmin, float tmax)
 	return Spectrum(1.0f);
 }
 
-CUDA_FUNC_IN Spectrum EstimateDirect(BSDFSamplingRecord bRec, const Material& mat, const Light* light, EBSDFType flags, Sampler& rng, bool attenuated)
+DirectSamplingRecord DirectSamplingRecFromRay(const NormalizedT<Ray>& r, float dist, const NormalizedT<Vec3f>& last_nor, const Vec3f& P, const NormalizedT<Vec3f>& n, EMeasure measure)
+{
+	DirectSamplingRecord dRec(r.ori(), last_nor);
+	dRec.p = P;
+	dRec.n = n;
+	dRec.d = r.dir();
+	dRec.dist = dist;
+	dRec.measure = measure;
+	return dRec;
+}
+
+CUDA_FUNC_IN Spectrum EstimateDirect(BSDFSamplingRecord bRec, const Material& mat, const Light* light, EBSDFType flags, Sampler& rng, bool attenuated, bool use_mis)
 {
 	DirectSamplingRecord dRec(bRec.dg.P, bRec.dg.sys.n);
 	Spectrum value = light->sampleDirect(dRec, rng.randomFloat2());
@@ -43,8 +54,14 @@ CUDA_FUNC_IN Spectrum EstimateDirect(BSDFSamplingRecord bRec, const Material& ma
 		Spectrum bsdfVal = mat.bsdf.f(bRec);
 		if (!bsdfVal.isZero() && !g_SceneData.Occluded(Ray(dRec.ref, dRec.d), 0, dRec.dist))
 		{
-			const float bsdfPdf = mat.bsdf.pdf(bRec);
-			const float weight = MonteCarlo::PowerHeuristic(1, dRec.pdf, 1, bsdfPdf);
+			float weight = 1.0f;
+			if (use_mis && dRec.measure != EDiscrete)//compute MIS weight
+			{
+				const float bsdfPdf = mat.bsdf.pdf(bRec);
+				const float directPdf = dRec.measure == EArea ? PdfAtoW(dRec.pdf, dRec.dist, dot(dRec.n, dRec.d)) : dRec.pdf;
+				weight = MonteCarlo::PowerHeuristic(1, directPdf, 1, bsdfPdf);
+			}
+
 			retVal = value * bsdfVal * weight;
 			if (attenuated)
 				retVal *= Transmittance(Ray(dRec.ref, dRec.d), 0, dRec.dist);
@@ -55,7 +72,7 @@ CUDA_FUNC_IN Spectrum EstimateDirect(BSDFSamplingRecord bRec, const Material& ma
 	return retVal;
 }
 
-Spectrum UniformSampleAllLights(const BSDFSamplingRecord& bRec, const Material& mat, int nSamples, Sampler& rng, bool attenuated)
+Spectrum UniformSampleAllLights(const BSDFSamplingRecord& bRec, const Material& mat, int nSamples, Sampler& rng, bool attenuated, bool use_mis)
 {
 	//only sample the relevant lights and assume the others emit the same
 	Spectrum L = Spectrum(0.0f);
@@ -65,14 +82,14 @@ Spectrum UniformSampleAllLights(const BSDFSamplingRecord& bRec, const Material& 
 		Spectrum Ld = Spectrum(0.0f);
 		for (int j = 0; j < nSamples; j++)
 		{
-			Ld += EstimateDirect((BSDFSamplingRecord&)bRec, mat, light, EBSDFType(EAll & ~EDelta), rng, attenuated);
+			Ld += EstimateDirect((BSDFSamplingRecord&)bRec, mat, light, EBSDFType(EAll & ~EDelta), rng, attenuated, use_mis);
 		}
 		L += Ld / float(nSamples);
 	}
 	return L;
 }
 
-Spectrum UniformSampleOneLight(const BSDFSamplingRecord& bRec, const Material& mat, Sampler& rng, bool attenuated)
+Spectrum UniformSampleOneLight(const BSDFSamplingRecord& bRec, const Material& mat, Sampler& rng, bool attenuated, bool use_mis)
 {
 	if (!g_SceneData.m_numLights)
 		return Spectrum(0.0f);
@@ -80,7 +97,7 @@ Spectrum UniformSampleOneLight(const BSDFSamplingRecord& bRec, const Material& m
 	float pdf;
 	const Light* light = g_SceneData.sampleEmitter(pdf, sample);
 	if (light == 0) return Spectrum(0.0f);
-	return EstimateDirect((BSDFSamplingRecord&)bRec, mat, light, EBSDFType(EAll & ~EDelta), rng, attenuated) / pdf;
+	return EstimateDirect((BSDFSamplingRecord&)bRec, mat, light, EBSDFType(EAll & ~EDelta), rng, attenuated, use_mis) / pdf;
 }
 
 }
