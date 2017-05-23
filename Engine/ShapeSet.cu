@@ -11,6 +11,8 @@ namespace CudaTracerLib {
 void ShapeSet::triData::Recalculate(const float4x4& mat, const TriIntersectorData& T)
 {
 	T.getData(p[0], p[1], p[2]);
+	auto v1 = mat.TransformDirection(p[2] - p[0]), v2 = mat.TransformDirection(p[1] - p[0]);
+	n = cross(v1, v2).normalized();
 	for (unsigned int i = 0; i < 3; i++)
 		p[i] = mat.TransformPoint(p[i]);
 	Vec3f n = -cross(p[2] - p[0], p[1] - p[0]);
@@ -44,7 +46,8 @@ void ShapeSet::SamplePosition(PositionSamplingRecord& pRec, const Vec2f& spatial
 	const triData& sn = triangles[index];
 	Vec2f bary = Warp::squareToUniformTriangle(sample);
 	pRec.p = bary.x * sn.p[0] + bary.y * sn.p[1] + (1.f - bary.x - bary.y) * sn.p[2];
-	pRec.n = normalize(cross(sn.p[1] - sn.p[0], sn.p[2] - sn.p[0]));
+	//pRec.n = normalize(cross(sn.p[1] - sn.p[0], sn.p[2] - sn.p[0]));
+	pRec.n = sn.n;
 	pRec.pdf = 1.0f / sumArea;
 	pRec.measure = EArea;
 	pRec.uv = bary;

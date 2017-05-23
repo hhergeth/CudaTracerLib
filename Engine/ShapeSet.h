@@ -16,6 +16,7 @@ struct ShapeSet
 	struct CUDA_ALIGN(16) triData
 	{
 		Vec3f p[3];
+		NormalizedT<Vec3f> n;
 		float area;
 		unsigned int iDat;
 		unsigned int tDat;
