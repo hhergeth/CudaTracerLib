@@ -797,6 +797,15 @@ void compileobj(IInStream& in, FileOutputStream& a_Out)
 		matData.push_back(mat);
 	}
 
+	if (matData.size() == 0)
+	{
+		auto mat = Material("standard");
+		diffuse d;
+		d.m_reflectance = CreateTexture(0, Spectrum(0.2f));
+		mat.bsdf.SetData(d);
+		matData.push_back(mat);
+	}
+
 	unsigned int m_numTriangles = (unsigned int)state.numTriangles();
 	unsigned int m_numVertices = (unsigned int)state.vertices.size();
 	TriangleData* triData = new TriangleData[m_numTriangles];
@@ -835,7 +844,7 @@ void compileobj(IInStream& in, FileOutputStream& a_Out)
 	{
 		int matIndex = state.materialHash.searchi(state.subMeshes[submesh].material.Name);
 		if (matIndex == -1)
-			throw std::runtime_error(__FUNCTION__);
+			matIndex = 0;
 		for (size_t t_idx = 0; t_idx < state.subMeshes[submesh].indices.size(); t_idx++)
 		{
 			Vec3i& idx = state.subMeshes[submesh].indices[t_idx];
