@@ -14,7 +14,7 @@ AABB ShapeSet::triData::box() const
 	return b;
 }
 
-ShapeSet::ShapeSet(StreamReference<TriIntersectorData>* indices, BufferReference<TriangleData, TriangleData>* tri, unsigned int indexCount, const float4x4& mat, Stream<char>* buffer, Stream<TriIntersectorData>* triIntBuffer)
+ShapeSet::ShapeSet(StreamReference<TriIntersectorData>* indices, BufferReference<TriangleData, TriangleData>* tri, unsigned int indexCount, const float4x4& mat, Stream<char>* buffer, Stream<TriIntersectorData>* triIntBuffer, Stream<TriangleData>* triDataBuffer)
 {
 	count = indexCount;
 	StreamReference<char> buffer2 = buffer->malloc_aligned<triData>(count * sizeof(triData));//buffer->malloc(count * sizeof(triData));
@@ -26,10 +26,10 @@ ShapeSet::ShapeSet(StreamReference<TriIntersectorData>* indices, BufferReference
 		triangles[i].iDat = indices[i].getIndex();
 		triangles[i].tDat = tri[i].getIndex();
 	}
-	Recalculate(mat, buffer, triIntBuffer);
+	Recalculate(mat, buffer, triIntBuffer, triDataBuffer);
 }
 
-void ShapeSet::Recalculate(const float4x4& mat, Stream<char>* buffer, Stream<TriIntersectorData>* indices)
+void ShapeSet::Recalculate(const float4x4& mat, Stream<char>* buffer, Stream<TriIntersectorData>* indices, Stream<TriangleData>* triDataBuffer)
 {
 	buffer->translate(areaDistribution).Invalidate();
 	buffer->translate(triangles).Invalidate();
@@ -37,7 +37,7 @@ void ShapeSet::Recalculate(const float4x4& mat, Stream<char>* buffer, Stream<Tri
 	areaDistribution[0] = 0.0f;
 	for (unsigned int i = 0; i < count; i++)
 	{
-		triangles[i].Recalculate(mat, *indices->operator()(triangles[i].iDat));
+		triangles[i].Recalculate(mat, *indices->operator()(triangles[i].iDat), *triDataBuffer->operator()(triangles[i].tDat));
 		sumArea += triangles[i].area;
 		areaDistribution[i + 1] = areaDistribution[i] + triangles[i].area;
 	}

@@ -657,7 +657,7 @@ StreamReference<Light> DynamicScene::CreateLight(StreamReference<Node> Node, con
 
 void DynamicScene::RecomputeShape(ShapeSet& shape, const float4x4& mat)
 {
-	shape.Recalculate(mat, m_pAnimStream, m_pTriIntStream);
+	shape.Recalculate(mat, m_pAnimStream, m_pTriIntStream, m_pTriDataStream);
 }
 
 ShapeSet DynamicScene::CreateShape(StreamReference<Node> Node, const std::string& name, unsigned int* a_Mi)
@@ -707,7 +707,7 @@ ShapeSet DynamicScene::CreateShape(StreamReference<Node> Node, const std::string
 		i++;
 	}
 
-	ShapeSet r = ShapeSet(&n[0], &n3[0], (unsigned int)n.size(), GetNodeTransform(Node), m_pAnimStream, m_pTriIntStream);
+	ShapeSet r = ShapeSet(&n[0], &n3[0], (unsigned int)n.size(), GetNodeTransform(Node), m_pAnimStream, m_pTriIntStream, m_pTriDataStream);
 	return r;
 }
 

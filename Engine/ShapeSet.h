@@ -22,11 +22,11 @@ struct ShapeSet
 		unsigned int tDat;
 
 		CTL_EXPORT AABB box() const;
-		CTL_EXPORT void Recalculate(const float4x4& mat, const TriIntersectorData& T);
+		CTL_EXPORT void Recalculate(const float4x4& mat, const TriIntersectorData& T, const TriangleData& TData);
 	};
 public:
 	ShapeSet(){}
-	ShapeSet(BufferReference<TriIntersectorData, TriIntersectorData>* indices, BufferReference<TriangleData, TriangleData>* triangles, unsigned int indexCount, const float4x4& mat, Stream<char>* buffer, Stream<TriIntersectorData>* triIntBuffer);
+	ShapeSet(BufferReference<TriIntersectorData, TriIntersectorData>* indices, BufferReference<TriangleData, TriangleData>* triangles, unsigned int indexCount, const float4x4& mat, Stream<char>* buffer, Stream<TriIntersectorData>* triIntBuffer, Stream<TriangleData>* triDataBuffer);
 	CUDA_FUNC_IN float Area() const { return sumArea; }
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST void SamplePosition(PositionSamplingRecord& pRec, const Vec2f& spatialSample, Vec2f* uv) const;
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST bool getPosition(const Vec3f& pos, Vec2f* bary = 0, Vec2f* uv = 0) const;
@@ -43,7 +43,7 @@ public:
 			b = b.Extend(triangles[i].box());
 		return b;
 	}
-	CTL_EXPORT void Recalculate(const float4x4& mat, Stream<char>* buffer, Stream<TriIntersectorData>* indices);
+	CTL_EXPORT void Recalculate(const float4x4& mat, Stream<char>* buffer, Stream<TriIntersectorData>* indices, Stream<TriangleData>* triDataBuffer);
 
 	CUDA_FUNC_IN unsigned int numTriangles() const
 	{

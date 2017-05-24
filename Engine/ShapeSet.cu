@@ -8,15 +8,17 @@
 
 namespace CudaTracerLib {
 
-void ShapeSet::triData::Recalculate(const float4x4& mat, const TriIntersectorData& T)
+void ShapeSet::triData::Recalculate(const float4x4& mat, const TriIntersectorData& T, const TriangleData& TData)
 {
 	T.getData(p[0], p[1], p[2]);
-	auto v1 = mat.TransformDirection(p[2] - p[0]), v2 = mat.TransformDirection(p[1] - p[0]);
-	n = cross(v1, v2).normalized();
+	auto v1 = mat.TransformDirection(p[0] - p[1]), v2 = mat.TransformDirection(p[2] - p[1]);
+	DifferentialGeometry dg;
+	dg.bary = Vec2f(1.0f / 3.0f);
+	TData.fillDG(mat, dg);
+	n = dg.sys.n;
 	for (unsigned int i = 0; i < 3; i++)
 		p[i] = mat.TransformPoint(p[i]);
-	Vec3f n = -cross(p[2] - p[0], p[1] - p[0]);
-	area = 0.5f * length(n);
+	area = 0.5f * length(cross(p[2] - p[0], p[1] - p[0]));
 }
 
 CUDA_FUNC_IN void getUV(TriangleData& dat, const Vec2f& bary, Vec2f& uv)
