@@ -24,8 +24,10 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(NormalizedT<Ray>& r, const
 		r2 = traceRay(r);
 		float minT, maxT;
 		bool isInMedium = V.IntersectP(r, 0, r2.m_fDist, &minT, &maxT);
+		bool mediumInteraction = false;
 		if (V.HasVolumes() && isInMedium && V.sampleDistance(r, 0, r2.m_fDist, rnd.randomFloat(), mRec))
 		{
+			mediumInteraction = true;
 			cf *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
 
 			if (DIRECT)//direct sampling
@@ -82,6 +84,10 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(NormalizedT<Ray>& r, const
 			cf = cf * f;
 			r = NormalizedT<Ray>(bRec.dg.P, bRec.getOutgoing());
 		}
+
+		if (!mediumInteraction && !r2.hasHit())
+			break;
+
 		if (depth > rrStartDepth && !specularBounce)
 		{
 			if (rnd.randomFloat() >= cf.max())
