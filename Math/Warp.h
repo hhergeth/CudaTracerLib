@@ -109,7 +109,7 @@ public:
 		float phi, r;
 		if (r1 == 0 && r2 == 0) {
 			r = phi = 0;
-		} if (r1*r1 > r2*r2) {
+		} else if (r1*r1 > r2*r2) {
 			r = r1;
 			phi = (PI / 4.0f) * (r2 / r1);
 		}
