@@ -281,9 +281,9 @@ void compileply(IInStream& istream, FileOutputStream& a_Out)
 	if (hasPos != 7)
 		throw std::runtime_error(__FUNCTION__);
 
-	Vec3f* Vertices = (Vec3f*)malloc(vertexCount * sizeof(Vec3f));
-	Vec2f* TexCoords = (Vec2f*)malloc(vertexCount * sizeof(Vec2f));
-	unsigned int* Indices = (unsigned int*)malloc(sizeof(unsigned int) * faceCount * 4);
+	std::vector<Vec3f> vertices(vertexCount);
+	std::vector<Vec2f> texCoords(vertexCount);
+	std::vector<unsigned int> indices(sizeof(unsigned int) * faceCount * 6);//don't know if they are triangles or quads
 	unsigned int indexCount = 0;
 
 	varReader fReader("float");
@@ -299,9 +299,9 @@ void compileply(IInStream& istream, FileOutputStream& a_Out)
 			for (int i = 0; i < elementIndex; i++)
 				fReader.read(hlp.nextC(), 0, (float*)stack + i);
 			float* d = (float*)stack;
-			Vertices[v] = Vec3f(d[posStart + 0], d[posStart + 1], d[posStart + 2]);
+			vertices[v] = Vec3f(d[posStart + 0], d[posStart + 1], d[posStart + 2]);
 			if (hasUV)
-				TexCoords[v] = Vec2f(d[uvStart + 0], d[uvStart + 0]);
+				texCoords[v] = Vec2f(d[uvStart + 0], d[uvStart + 0]);
 		}
 		for (int f = 0; f < faceCount; f++)	//1 -> 0
 		{
@@ -313,16 +313,16 @@ void compileply(IInStream& istream, FileOutputStream& a_Out)
 				listElements.read(hlp.nextC(), stack + i, 0);
 			if (verticesPerFace == 3)
 			{
-				Indices[indexCount++] = (stack[0]);
-				Indices[indexCount++] = (stack[1]);
-				Indices[indexCount++] = (stack[2]);
+				indices[indexCount++] = (stack[2]);
+				indices[indexCount++] = (stack[1]);
+				indices[indexCount++] = (stack[0]);
 			}
 			else if (verticesPerFace == 4)
 			{
 				for (unsigned int i = 2; i < 5; i++)
-					Indices[indexCount++] = (stack[i % 4]);
+					indices[indexCount++] = (stack[i % 4]);
 				for (unsigned int i = 0; i < 3; i++)
-					Indices[indexCount++] = (stack[i]);
+					indices[indexCount++] = (stack[i]);
 			}
 			else throw std::runtime_error(__FUNCTION__);
 		}
@@ -333,8 +333,8 @@ void compileply(IInStream& istream, FileOutputStream& a_Out)
 		istream.Read(FILE_BUF, istream.getFileSize() - istream.getPos() - 1);
 		unsigned int file_pos = 0;
 
-		memcpy(Vertices, FILE_BUF + file_pos, sizeof(Vec3f) * vertexCount);
-		float* fData = (float*)Vertices;
+		memcpy(&vertices[0], FILE_BUF + file_pos, sizeof(Vec3f) * vertexCount);
+		float* fData = (float*)&vertices[0];
 		if (format == binary_big_endian_format)
 			for (int i = 0; i < vertexCount * 3; i++)
 				fData[i] = LongSwap(fData[i]);
@@ -346,18 +346,18 @@ void compileply(IInStream& istream, FileOutputStream& a_Out)
 			if (FILE_BUF[file_pos] == 3)
 			{
 				for (int idx = 0; idx < 3; idx++)
-					Indices[indexCount++] = format == binary_little_endian_format ? dat[2 - idx] : LongSwap(dat[idx]);
+					indices[indexCount++] = format == binary_little_endian_format ? dat[2 - idx] : LongSwap(dat[2 - idx]);
 			}
 			else if (FILE_BUF[file_pos] == 4)
 			{
 				for (unsigned int i = 2; i < 5; i++)
-					Indices[indexCount++] = format == binary_little_endian_format ? dat[i % 4] : LongSwap(dat[i % 4]);
+					indices[indexCount++] = format == binary_little_endian_format ? dat[i % 4] : LongSwap(dat[i % 4]);
 				for (unsigned int i = 0; i < 3; i++)
-					Indices[indexCount++] = format == binary_little_endian_format ? dat[i] : LongSwap(dat[i]);
+					indices[indexCount++] = format == binary_little_endian_format ? dat[i] : LongSwap(dat[i]);
 			}
 			else throw std::runtime_error(__FUNCTION__);
 			for (unsigned int i = indexCount - FILE_BUF[file_pos]; i < indexCount; i++)
-				Indices[i] = Indices[i] > (unsigned int)vertexCount ? 0 : Indices[i];
+				indices[i] = indices[i] > (unsigned int)vertexCount ? 0 : indices[i];
 			file_pos += 4 * FILE_BUF[file_pos] + 1;
 		}
 		free(FILE_BUF);
@@ -366,45 +366,11 @@ void compileply(IInStream& istream, FileOutputStream& a_Out)
 	//if(pos != size)
 	//	throw std::runtime_error(__FUNCTION__);
 
-	std::vector<NormalizedT<Vec3f>> normals, tangents, bitangents;
-	normals.resize(vertexCount); tangents.resize(vertexCount); bitangents.resize(vertexCount);
-	ComputeTangentSpace(Vertices, TexCoords, Indices, vertexCount, faceCount, &normals[0], &tangents[0], &bitangents[0]);
-	TriangleData* triData = new TriangleData[indexCount / 3];
-	Vec3f p[3];
-	auto* n = (NormalizedT<Vec3f>*)alloca(sizeof(NormalizedT<Vec3f>) * 3),
-		* ta = (NormalizedT<Vec3f>*)alloca(sizeof(NormalizedT<Vec3f>) * 3),
-		* bi = (NormalizedT<Vec3f>*)alloca(sizeof(NormalizedT<Vec3f>) * 3);
-	Vec2f te[3];
-	AABB box = AABB::Identity();
-	for (unsigned int t = 0; t < indexCount; t += 3)
-	{
-		for (size_t j = 0; j < 3; j++)
-		{
-			int l = Indices[t + j];
-			p[j] = Vertices[l];
-			te[j] = TexCoords[l];
-			ta[j] = tangents[l];
-			bi[j] = bitangents[l];
-			n[j] = normals[l];
-			box = box.Extend(p[j]);
-		}
-		triData[t / 3] = TriangleData(p, (unsigned char)0, te, n, ta, bi);
-	}
-
 	Material defaultMat("Default_Material");
 	diffuse mat;
 	mat.m_reflectance = CreateTexture(Spectrum(1, 0, 0));
 	defaultMat.bsdf.SetData(mat);
-	a_Out << box;
-	a_Out << (unsigned int)0;
-	a_Out << (unsigned int)(indexCount / 3);
-	a_Out.Write(&triData[0], sizeof(TriangleData) * (int)(indexCount / 3));
-	a_Out << 1;
-	a_Out.Write(&defaultMat, sizeof(Material) * 1);
-	ConstructBVH(Vertices, Indices, vertexCount, faceCount * 3, a_Out);
-	::free(Vertices);
-	::free(Indices);
-	delete[] triData;
+	Mesh::CompileMesh(&vertices[0], (unsigned int)vertices.size(), hasUV ? &texCoords[0] : 0, &indices[0], indexCount, defaultMat, Spectrum(0.0f), a_Out);
 }
 
 }

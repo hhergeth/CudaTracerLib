@@ -144,75 +144,55 @@ SceneInitData Mesh::ParseBinary(const std::string& a_InputFile)
 
 void Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2f* uvs, const unsigned int* indices, unsigned int nIndices, const Material& mat, const Spectrum& Le, FileOutputStream& a_Out)
 {
-	std::vector<MeshPartLight> lights;
-	if (!Le.isZero())
-		lights.push_back(MeshPartLight(mat.Name, Le));
-	Vec3f p[3];
-	auto* n = (NormalizedT<Vec3f>*)alloca(sizeof(NormalizedT<Vec3f>) * 3),
-		* ta = (NormalizedT<Vec3f>*)alloca(sizeof(NormalizedT<Vec3f>) * 3),
-		* bi = (NormalizedT<Vec3f>*)alloca(sizeof(NormalizedT<Vec3f>) * 3);
-	Vec2f t[3];
-	t[0] = t[1] = t[2] = Vec2f(0.0f);
-	unsigned int numTriangles = indices ? nIndices / 3 : nVertices / 3;
-	TriangleData* triData = new TriangleData[numTriangles];
-	unsigned int triIndex = 0;
-#ifdef EXT_TRI
-	std::vector<NormalizedT<Vec3f>> normals, tangents, bitangents;
-	normals.resize(nVertices); tangents.resize(nVertices); bitangents.resize(nVertices);
-	ComputeTangentSpace(vertices, uvs, indices, nVertices, numTriangles, &normals[0], &tangents[0], &bitangents[0]);
-#endif
-	AABB box = AABB::Identity();
-	for (size_t ti = 0; ti < numTriangles; ti++)
-	{
-		for (size_t j = 0; j < 3; j++)
-		{
-			size_t l = indices ? indices[ti * 3 + j] : ti * 3 + j;
-			p[j] = vertices[l];
-			box = box.Extend(p[j]);
-#ifdef EXT_TRI
-			if (uvs)
-				t[j] = uvs[l];
-			ta[j] = tangents[l];
-			bi[j] = bitangents[l];
-			n[j] = normals[l];
-#endif
-		}
-		triData[triIndex++] = TriangleData(p, 0, t, n, ta, bi);
-	}
-	a_Out << box;
-	a_Out << (unsigned int)lights.size();
-	if (lights.size())
-		a_Out.Write(&lights[0], lights.size() * sizeof(MeshPartLight));
-	a_Out << numTriangles;
-	a_Out.Write(triData, sizeof(TriangleData) * numTriangles);
-	a_Out << (unsigned int)1;
-	a_Out.Write(&mat, sizeof(Material));
-	ConstructBVH(vertices, indices, nVertices, numTriangles * 3, a_Out);
-	delete[] triData;
-}
+	unsigned int N = indices ? nIndices / 3 : nVertices / 3;
+	CompileMesh(vertices, nVertices, uvs ? &uvs : 0, uvs ? 1 : 0, indices, nIndices, &mat, Le.isZero() ? 0 : &Le, &N, 0, a_Out);
 
-void Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2f** uvs, unsigned int nUV_Sets, const unsigned int* indices, unsigned int nIndices, const std::vector<Material>& mats, const std::vector<Spectrum>& Les, const std::vector<unsigned int>& subMeshes, const unsigned char* extraData, FileOutputStream& a_Out)
+}
+/*
+auto n_face = (p[0] - p[1]).cross(p[2] - p[1]).normalized();
+bool merge = false;
+for (int j = 0; j < 3; j++)
+{
+if (acosf(n_face.dot(n[j])) > theta_thresh)
+merge |= true;
+}
+if (merge)
+{
+n[0] = n[1] = n[2] = n_face;
+}
+*/
+
+void Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2f** uvs, unsigned int nUV_Sets, const unsigned int* indices, unsigned int nIndices, const Material* mats, const Spectrum* Les, const unsigned int* subMeshes, const unsigned char* extraData, FileOutputStream& a_Out)
 {
 	std::vector<MeshPartLight> lights;
+	auto add_light = [&](int submesh_index)
+	{
+		if (Les && !Les[submesh_index].isZero())
+			lights.push_back(MeshPartLight(mats[submesh_index].Name, Les[submesh_index]));
+	};
 	Vec3f p[3];
-	auto* n = (NormalizedT<Vec3f>*)alloca(sizeof(NormalizedT<Vec3f>) * 3),
-		* ta = (NormalizedT<Vec3f>*)alloca(sizeof(NormalizedT<Vec3f>) * 3),
-		* bi = (NormalizedT<Vec3f>*)alloca(sizeof(NormalizedT<Vec3f>) * 3);
+	auto* n = (NormalizedT<Vec3f>*)alloca(sizeof(NormalizedT<Vec3f>) * 3);
 	Vec2f t[3];
 	unsigned int numTriangles = indices ? nIndices / 3 : nVertices / 3;
 	TriangleData* triData = new TriangleData[numTriangles];
-	unsigned int triIndex = 0;
 #ifdef EXT_TRI
-	std::vector<NormalizedT<Vec3f>> normals, tangents, bitangents;
-	normals.resize(nVertices); tangents.resize(nVertices); bitangents.resize(nVertices);
+	std::vector<NormalizedT<Vec3f>> normals;
+	normals.resize(nVertices);
 	//compute the frame for the first set and hope the rest is aligned
-	ComputeTangentSpace(vertices, uvs[0], indices, nVertices, numTriangles, &normals[0], &tangents[0], &bitangents[0]);
+	ComputeTangentSpace(vertices, indices, nVertices, numTriangles, &normals[0]);
 #endif
 	AABB box = AABB::Identity();
-	unsigned int si = 0, pc = 0;
+	unsigned int submesh_index = 0, num_prev_triangles = 0;
 	for (size_t ti = 0; ti < numTriangles; ti++)
 	{
+		if (num_prev_triangles + subMeshes[submesh_index] <= ti)
+		{
+			num_prev_triangles += subMeshes[submesh_index];
+			add_light(submesh_index);
+			submesh_index++;
+		}
 		TriangleData tri;
+		tri.setMatIndex(submesh_index);
 		for (unsigned int uvIdx = 0; uvIdx < DMIN2(nUV_Sets, NUM_UV_SETS); uvIdx++)
 		{
 			for (int j = 0; j < 3; j++)
@@ -228,8 +208,6 @@ void Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2
 			p[j] = vertices[l];
 			box = box.Extend(p[j]);
 #ifdef EXT_TRI
-			ta[j] = tangents[l];
-			bi[j] = bitangents[l];
 			n[j] = normals[l];
 #endif
 		}
@@ -240,23 +218,18 @@ void Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2
 			for (int j = 0; j < 3; j++)
 				tri.m_sHostData.ExtraData = extraData[indices ? indices[ti * 3 + j] : ti * 3 + j];
 #endif
-		triData[triIndex++] = tri;
-		if (subMeshes[si] + pc <= ti)
-		{
-			pc += subMeshes[si];
-			si++;
-			if (!Les[si].isZero())
-				lights.push_back(MeshPartLight(mats[si].Name, Les[si]));
-		}
+		triData[ti] = tri;
 	}
+	add_light(submesh_index);
 	a_Out << box;
 	a_Out << (unsigned int)lights.size();
 	if (lights.size())
 		a_Out.Write(&lights[0], lights.size() * sizeof(MeshPartLight));
 	a_Out << numTriangles;
 	a_Out.Write(triData, sizeof(TriangleData) * numTriangles);
-	a_Out << (unsigned int)mats.size();
-	a_Out.Write(&mats[0], sizeof(Material) * (unsigned int)mats.size());
+	unsigned int nMaterials = submesh_index + 1;
+	a_Out << nMaterials;
+	a_Out.Write(&mats[0], sizeof(Material) * nMaterials);
 	ConstructBVH(vertices, indices, nVertices, numTriangles * 3, a_Out);
 	delete[] triData;
 }

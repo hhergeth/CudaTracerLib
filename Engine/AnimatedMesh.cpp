@@ -160,8 +160,6 @@ public:
 	}
 };
 
-
-
 void AnimatedMesh::k_ComputeState(unsigned int a_Anim, unsigned int a_Frame, float a_lerp, Stream<BVHNodeData>* a_BVHNodeStream, void* a_DeviceTmp, void* a_HostTmp)
 {
 	CTL_ASSERT(a_Anim < m_pAnimations.size());

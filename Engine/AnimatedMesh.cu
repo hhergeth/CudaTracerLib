@@ -40,12 +40,6 @@ __global__ void g_ComputeVertices(e_KernelAnimatedMesh::e_TmpVertex* a_Dest, Ani
 
 		Vec3f n0 = mat0.TransformDirection(v.m_fNormal), n1 = mat1.TransformDirection(v.m_fNormal);
 		a_Dest[N].m_fNormal = normalize(math::lerp(n0, n1, a_lerp));
-
-		Vec3f t0 = mat0.TransformDirection(v.m_fTangent), t1 = mat1.TransformDirection(v.m_fTangent);
-		a_Dest[N].m_fTangent = normalize(math::lerp(t0, t1, a_lerp));
-
-		Vec3f b0 = mat0.TransformDirection(v.m_fBitangent), b1 = mat1.TransformDirection(v.m_fBitangent);
-		a_Dest[N].m_fBiTangent = normalize(math::lerp(b0, b1, a_lerp));
 	}
 }
 

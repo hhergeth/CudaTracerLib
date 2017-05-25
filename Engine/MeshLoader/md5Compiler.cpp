@@ -37,16 +37,25 @@ void compilemd5(IInStream& in, std::vector<IInStream*>& animFiles, FileOutputStr
 	M.loadMesh(in.getFilePath().c_str());
 	for (unsigned int i = 0; i < animFiles.size(); i++)
 		M.loadAnim(animFiles[i]->getFilePath().c_str());
-	AABB box;
-	box = box.Identity();
+
 	std::vector<uint3> triData2;
 	std::vector<Vec3f> v_Pos;
 	std::vector<Vec2f> tCoord;
 	std::vector<AnimatedVertex> v_Data;
 	std::vector<unsigned int> tData;
+	std::vector<Material> matData;
+	std::vector<unsigned int> submeshData;
 	unsigned int off = 0;
 	for (int i = 0; i < M.meshes.size(); i++)
 	{
+		submeshData.push_back((unsigned int)M.meshes[i]->tris.size());
+
+		Material mat(M.meshes[i]->texture.c_str());
+		diffuse stdMaterial;
+		stdMaterial.m_reflectance = CreateTexture(Spectrum(1, 0, 0));
+		mat.bsdf.SetData(stdMaterial);
+		matData.push_back(mat);
+
 		for (int v = 0; v < M.meshes[i]->verts.size(); v++)
 		{
 			AnimatedVertex av;
@@ -69,70 +78,24 @@ void compilemd5(IInStream& in, std::vector<IInStream*>& animFiles, FileOutputStr
 		}
 
 		for (size_t t = 0; t < M.meshes[i]->tris.size(); t++)
+		{
 			for (int j = 0; j < 3; j++)
 				tData.push_back(M.meshes[i]->tris[t].v[j] + off);
+			Vec3u q = *(Vec3u*)&M.meshes[i]->tris[t].v + Vec3u(off);
+			triData2.push_back(q);
+		}
 		off += (unsigned int)M.meshes[i]->verts.size();
 	}
 	unsigned int m_numVertices = (unsigned int)v_Data.size();
-	std::vector<NormalizedT<Vec3f>> normals, tangents, bitangents;
-	normals.resize(m_numVertices); tangents.resize(m_numVertices); bitangents.resize(m_numVertices);
-	ComputeTangentSpace(&v_Pos[0], &tCoord[0], &tData[0], (unsigned int)v_Pos.size(), (unsigned int)tData.size() / 3, &normals[0], &tangents[0], &bitangents[0]);
+	std::vector<NormalizedT<Vec3f>> normals(m_numVertices);
+	ComputeTangentSpace(&v_Pos[0], &tData[0], (unsigned int)v_Pos.size(), (unsigned int)tData.size() / 3, &normals[0]);
 	for (unsigned int v = 0; v < m_numVertices; v++)
 	{
 		v_Data[v].m_fNormal = normals[v];
-		v_Data[v].m_fTangent = tangents[v];
-		v_Data[v].m_fBitangent = bitangents[v];
 	}
 
-	std::vector<TriangleData> triData;
-	std::vector<Material> matData;
-	diffuse stdMaterial;
-	stdMaterial.m_reflectance = CreateTexture(Spectrum(1, 0, 0));
-
-	auto* n = (NormalizedT<Vec3f>*)alloca(sizeof(NormalizedT<Vec3f>) * 3),
-		* ta = (NormalizedT<Vec3f>*)alloca(sizeof(NormalizedT<Vec3f>) * 3),
-		* bi = (NormalizedT<Vec3f>*)alloca(sizeof(NormalizedT<Vec3f>) * 3);
-
-	off = 0;
-	for (int s = 0; s < M.meshes.size(); s++)
-	{
-		Md5Mesh* sm = M.meshes[s];
-
-		Material mat(sm->texture.c_str());
-		mat.NodeLightIndex = -1;
-		mat.bsdf.SetData(stdMaterial);
-		matData.push_back(mat);
-
-		size_t st = triData2.size();
-
-		for (int t = 0; t < sm->tris.size(); t++)
-		{
-			Vec3f P[3];
-			Vec2f T[3];
-			for (int j = 0; j < 3; j++)
-			{
-				unsigned int v = sm->tris[t].v[j] + off;
-				P[j] = v_Pos[v];
-				T[j] = sm->verts[v - off].tc;
-				box = box.Extend(P[j]);
-			}
-			TriangleData d(P, s, T, n, ta, bi);
-			triData.push_back(d);
-			Vec3u q = *(Vec3u*)&sm->tris[t].v + Vec3u(off);
-			triData2.push_back(q);
-		}
-		off += (unsigned int)sm->verts.size();
-	}
-
-	a_Out << box;
-	a_Out << (unsigned int)0;
-
-	a_Out << (unsigned int)triData.size();
-	a_Out.Write(&triData[0], sizeof(TriangleData) * (unsigned int)triData.size());
-	a_Out << (unsigned int)matData.size();
-	a_Out.Write(&matData[0], sizeof(Material) * (unsigned int)matData.size());
-	BVH_Construction_Result bvh;
-	ConstructBVH(&v_Pos[0], (unsigned int*)&triData2[0], (int)v_Pos.size(), (int)triData2.size() * 3, a_Out, &bvh);
+	const Vec2f* uv_sets[1] = {&tCoord[0]};
+	Mesh::CompileMesh(&v_Pos[0], m_numVertices, uv_sets, 1, &tData[0], (unsigned int)tData.size(), &matData[0], 0, &submeshData[0], 0, a_Out);
 
 	e_KernelAnimatedMesh mesh;
 	mesh.m_uAnimCount = (unsigned int)M.anims.size();

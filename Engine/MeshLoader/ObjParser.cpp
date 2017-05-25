@@ -761,12 +761,26 @@ void compileobj(IInStream& in, FileOutputStream& a_Out)
 	ImportState state;
 	parse(state, in);
 
-	std::vector<MeshPartLight> lights;
-	std::vector<Material> matData;
-	matData.reserve(state.materialHash.vec.size());
-	for (size_t i = 0; i < state.materialHash.vec.size(); i++)
+	unsigned int m_numTriangles = (unsigned int)state.numTriangles();
+	unsigned int m_numVertices = (unsigned int)state.vertices.size();
+
+	std::vector<Vec3f> positions(m_numVertices);
+	std::vector<Vec3f> normals(m_numVertices);
+	std::vector<Vec2f> texCoords(m_numVertices);
+	for (size_t i = 0; i < m_numVertices; i++)
 	{
-		ObjMaterial M = state.materialHash.vec[i];
+		auto& v = state.vertices[i];
+		positions[i] = v.p;
+		texCoords[i] = v.t;
+		normals[i] = v.n;
+	}
+	std::vector<unsigned int> submeshes;
+	std::vector<unsigned int> indices;
+	std::vector<Spectrum> lights;
+	std::vector<Material> matData;
+	for (unsigned int submesh = 0; submesh < state.subMeshes.size(); submesh++)
+	{
+		const auto& M = state.subMeshes[submesh].material;
 		Material mat(M.Name.c_str());
 		float f = 0.0f;
 		if (M.IlluminationModel == 2)
@@ -793,87 +807,23 @@ void compileobj(IInStream& in, FileOutputStream& a_Out)
 		}
 
 		if (length(M.emission))
-			lights.push_back(MeshPartLight(M.Name, Spectrum(M.emission.x, M.emission.y, M.emission.z)));
+			lights.push_back(Spectrum(M.emission.x, M.emission.y, M.emission.z));
+		else lights.push_back(Spectrum(0.0f));
 		matData.push_back(mat);
-	}
 
-	if (matData.size() == 0)
-	{
-		auto mat = Material("standard");
-		diffuse d;
-		d.m_reflectance = CreateTexture(0, Spectrum(0.2f));
-		mat.bsdf.SetData(d);
-		matData.push_back(mat);
-	}
-
-	unsigned int m_numTriangles = (unsigned int)state.numTriangles();
-	unsigned int m_numVertices = (unsigned int)state.vertices.size();
-	TriangleData* triData = new TriangleData[m_numTriangles];
-	Vec3f p[3];
-	auto* n = (NormalizedT<Vec3f>*)alloca(sizeof(NormalizedT<Vec3f>) * 3),
-		* ta = (NormalizedT<Vec3f>*)alloca(sizeof(NormalizedT<Vec3f>) * 3),
-		* bi = (NormalizedT<Vec3f>*)alloca(sizeof(NormalizedT<Vec3f>) * 3);
-	Vec2f t[3];
-	std::vector<Vec3f> positions;
-	std::vector<NormalizedT<Vec3f>> normals, tangents, bitangents;
-	positions.resize(m_numVertices); normals.resize(m_numVertices); tangents.resize(m_numVertices); bitangents.resize(m_numVertices);
-	std::vector<Vec2f> texCoords;
-	texCoords.resize(m_numVertices);
-	for (size_t i = 0; i < m_numVertices; i++)
-	{
-		auto& v = state.vertices[i];
-		positions[i] = v.p;
-		texCoords[i] = v.t;
-		normals[i] = NormalizedT<Vec3f>(0.0f);
-		tangents[i] = NormalizedT<Vec3f>(0.0f);
-		bitangents[i] = NormalizedT<Vec3f>(0.0f);
-	}
-	std::vector<Vec3i> indices;
-	indices.resize(state.numTriangles() * 3);
-	size_t k = 0;
-	for (size_t i = 0; i < state.subMeshes.size(); i++)
-		for (size_t j = 0; j < state.subMeshes[i].indices.size(); j++)
-			indices[k++] = state.subMeshes[i].indices[j];
-#ifdef EXT_TRI
-	ComputeTangentSpace(&positions[0], &texCoords[0], (unsigned int*)&indices[0], m_numVertices, m_numTriangles, &normals[0], &tangents[0], &bitangents[0], true);
-#endif
-
-	AABB box = AABB::Identity();
-	unsigned int triCount = 0;
-	for (unsigned int submesh = 0; submesh < state.subMeshes.size(); submesh++)
-	{
-		int matIndex = state.materialHash.searchi(state.subMeshes[submesh].material.Name);
-		if (matIndex == -1)
-			matIndex = 0;
-		for (size_t t_idx = 0; t_idx < state.subMeshes[submesh].indices.size(); t_idx++)
+		auto nTriangles = state.subMeshes[submesh].indices.size();
+		submeshes.push_back((unsigned int)nTriangles);
+		indices.reserve(indices.size() + nTriangles * 3);
+		for (auto& i : state.subMeshes[submesh].indices)
 		{
-			Vec3i& idx = state.subMeshes[submesh].indices[t_idx];
-			for (int j = 0; j < 3; j++)
-			{
-				int l = idx[j];
-				p[j] = positions[l];
-				box = box.Extend(p[j]);
-#ifdef EXT_TRI
-				t[j] = texCoords[l];
-				ta[j] = tangents[l];
-				bi[j] = bitangents[l];
-				n[j] = normals[l];
-#endif
-			}
-			triData[triCount++] = TriangleData(p, (unsigned char)matIndex, t, n, ta, bi);
+			indices.push_back(i.z);
+			indices.push_back(i.y);
+			indices.push_back(i.x);
 		}
 	}
 
-	a_Out << box;
-	a_Out << (unsigned int)lights.size();
-	if (lights.size())
-		a_Out.Write(&lights[0], lights.size() * sizeof(MeshPartLight));
-	a_Out << m_numTriangles;
-	a_Out.Write(triData, sizeof(TriangleData) * m_numTriangles);
-	a_Out << (unsigned int)matData.size();
-	a_Out.Write(&matData[0], sizeof(Material) * (unsigned int)matData.size());
-	ConstructBVH(&positions[0], (unsigned int*)&indices[0], m_numVertices, m_numTriangles * 3, a_Out);
-	delete[] triData;
+	const Vec2f* uv_sets[1] = { &texCoords[0]};
+	Mesh::CompileMesh(&positions[0], m_numVertices, uv_sets, 1, &indices[0], (unsigned int)indices.size(), &matData[0], lights.size() ? &lights[0] : 0, &submeshes[0], 0, a_Out);
 }
 
 }

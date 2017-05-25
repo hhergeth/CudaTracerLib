@@ -7,9 +7,9 @@ namespace CudaTracerLib {
 
 #ifdef EXT_TRI
 
-TriangleData::TriangleData(const Vec3f* P, unsigned char matIndex, const Vec2f* T, const NormalizedT<Vec3f>* N, const Vec3f* Tan, const Vec3f* BiTan)
+TriangleData::TriangleData(const Vec3f* P, unsigned char matIndex, const Vec2f* T, const NormalizedT<Vec3f>* N)
 {
-	m_sHostData.MatIndex = matIndex;
+	setMatIndex(matIndex);
 	setUvSetData(0, T[0], T[1], T[2]);
 	setData(P[0], P[1], P[2], N[0], N[1], N[2]);
 }
@@ -103,7 +103,7 @@ void TriangleData::fillDG(const float4x4& localToWorld, DifferentialGeometry& dg
 		dg.n = NormalizedT<Vec3f>(-dg.n);
 }
 #else
-TriangleData::TriangleData(const Vec3f* P, unsigned char matIndex, const Vec2f* T, const NormalizedT<Vec3f>* N, const Vec3f* Tan, const Vec3f* BiTan)
+TriangleData::TriangleData(const Vec3f* P, unsigned char matIndex, const Vec2f* T, const NormalizedT<Vec3f>* N)
 {
 	Vec3f p = P[0] - P[2];
 	Vec3f q = P[1] - P[2];

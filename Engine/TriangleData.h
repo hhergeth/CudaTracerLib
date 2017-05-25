@@ -35,12 +35,16 @@ public:
 	};
 public:
 	TriangleData(){}
-	CTL_EXPORT TriangleData(const Vec3f* P, unsigned char matIndex, const Vec2f* T, const NormalizedT<Vec3f>* N, const Vec3f* Tan, const Vec3f* BiTan);
+	CTL_EXPORT TriangleData(const Vec3f* P, unsigned char matIndex, const Vec2f* T, const NormalizedT<Vec3f>* N);
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST void fillDG(const float4x4& localToWorld, DifferentialGeometry& dg) const;
 	CUDA_FUNC_IN unsigned int getMatIndex(const unsigned int off) const
 	{
 		unsigned int v = (m_sDeviceData.NorMatExtra.y >> 16) & 0xff;
 		return v + off;
+	}
+	void setMatIndex(unsigned int local_idx)
+	{
+		m_sHostData.MatIndex = local_idx;
 	}
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST void setData(const Vec3f& v0, const Vec3f& v1, const Vec3f& v2,
 									   const NormalizedT<Vec3f>& n0, const NormalizedT<Vec3f>& n1, const NormalizedT<Vec3f>& n3);
@@ -64,12 +68,16 @@ struct TriangleData
 		} m_sDeviceData;
 	};
 	TriangleData(){}
-	CTL_EXPORT TriangleData(const Vec3f* P, unsigned char matIndex, const Vec2f* T, const NormalizedT<Vec3f>* N, const Vec3f* Tan, const Vec3f* BiTan);
+	CTL_EXPORT TriangleData(const Vec3f* P, unsigned char matIndex, const Vec2f* T, const NormalizedT<Vec3f>* N);
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST void fillDG(const float4x4& localToWorld, DifferentialGeometry& dg) const;
 	CUDA_FUNC_IN unsigned int getMatIndex(const unsigned int off) const
 	{
 		unsigned int v = m_sDeviceData.Row0;
 		return unsigned int(v >> 24) + off;
+	}
+	void setMatIndex(unsigned int local_idx)
+	{
+		m_sHostData.MatIndex = local_idx;
 	}
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST void setData(const Vec3f& v0, const Vec3f& v1, const Vec3f& v2,
 									   const NormalizedT<Vec3f>& n0, const NormalizedT<Vec3f>& n1, const NormalizedT<Vec3f>& n3);

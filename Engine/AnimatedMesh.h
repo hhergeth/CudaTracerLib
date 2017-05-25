@@ -11,18 +11,15 @@ struct AnimatedVertex
 {
 	Vec3f m_fVertexPos;
 	NormalizedT<Vec3f> m_fNormal;
-	NormalizedT<Vec3f> m_fTangent;
-	NormalizedT<Vec3f> m_fBitangent;
 	unsigned long long m_cBoneIndices;
 	unsigned long long m_fBoneWeights;
 	AnimatedVertex()
-		: m_fVertexPos(0.0f), m_fNormal(0.0f), m_fTangent(0.0f), m_fBitangent(0.0f),
-		  m_cBoneIndices(0), m_fBoneWeights(0)
+		: m_fVertexPos(0.0f), m_fNormal(0.0f), m_cBoneIndices(0), m_fBoneWeights(0)
 	{
 	}
 };
 
-//frame of an animation, either storing host data for writing to a file or storing device data for compuation
+//frame of an animation, either storing host data for writing to a file or storing device data for computation
 struct AnimationFrame
 {
 	StreamReference<char> m_sMatrices;
@@ -63,8 +60,6 @@ struct e_KernelAnimatedMesh
 	{
 		Vec3f m_fPos;
 		NormalizedT<Vec3f> m_fNormal;
-		NormalizedT<Vec3f> m_fTangent;
-		NormalizedT<Vec3f> m_fBiTangent;
 	};
 	unsigned int m_uVertexCount;
 	unsigned int m_uJointCount;
