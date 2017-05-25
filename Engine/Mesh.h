@@ -70,12 +70,15 @@ public:
 	{
 		return m_sTriInfo.getLength();
 	}
-	CTL_EXPORT static void CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2f* uvs,
-			const unsigned int* indices, unsigned int nIndices, const Material& mat, const Spectrum& Le, FileOutputStream& out);
-	CTL_EXPORT static void CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2f** uvs,
+	///normals, uvs, indices can be null
+	///maxSmoothAngle can be used to use face normals for faces where one of the vertex normals is too different (maxSmoothAngle) from the face normal
+	CTL_EXPORT static void CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec3f* normals, const Vec2f* uvs,
+			const unsigned int* indices, unsigned int nIndices, const Material& mat, const Spectrum& Le, FileOutputStream& out, bool flipNormals = false, bool faceNormals = false, float maxSmoothAngle = 0.0f);
+	CTL_EXPORT static void CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec3f* normals, const Vec2f** uvs,
 			unsigned int nUV_Sets, const unsigned int* indices, unsigned int nIndices, const Material* mats,
-			const Spectrum* Le, const unsigned int* subMeshes, const unsigned char* extraData, FileOutputStream& out);
+			const Spectrum* Le, const unsigned int* subMeshes, const unsigned char* extraData, FileOutputStream& out, bool flipNormals = false, bool faceNormals = false, float maxSmoothAngle = 0.0f);
 	CTL_EXPORT static SceneInitData ParseBinary(const std::string& a_InputFile);
+	CTL_EXPORT static void ComputeVertexNormals(const Vec3f* V, const unsigned int* I, unsigned int vertexCount, unsigned int triCount, NormalizedT<Vec3f>* a_Normals, bool flipNormals);
 };
 
 }

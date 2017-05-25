@@ -1,6 +1,5 @@
 #include "StdAfx.h"
 #include "Mesh.h"
-#include "MeshLoader/TangentSpaceHelper.h"
 #include <SceneTypes/Volumes.h>
 #include <SceneTypes/Light.h>
 #include "MeshLoader/BVHBuilderHelper.h"
@@ -142,27 +141,38 @@ SceneInitData Mesh::ParseBinary(const std::string& a_InputFile)
 	return SceneInitData::CreateForSpecificMesh(m_uTriangleCount, (unsigned int)m_uIntSize, (unsigned int)m_uNodeSize, (unsigned int)m_uIndicesSize, 255, 16, 16, 8);
 }
 
-void Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2f* uvs, const unsigned int* indices, unsigned int nIndices, const Material& mat, const Spectrum& Le, FileOutputStream& a_Out)
+void Mesh::ComputeVertexNormals(const Vec3f* V, const unsigned int* I, unsigned int vertexCount, unsigned int triCount, NormalizedT<Vec3f>* a_Normals, bool flipNormals)
+{
+	Vec3f* NOR = (Vec3f*)a_Normals;
+	for (unsigned int i = 0; i < vertexCount; i++)
+		NOR[i] = Vec3f(0.0f);
+	for (unsigned int f = 0; f < triCount; f++)
+	{
+		unsigned int i1 = I ? I[f * 3 + 0] : f * 3 + 0;
+		unsigned int i2 = I ? I[f * 3 + 1] : f * 3 + 1;
+		unsigned int i3 = I ? I[f * 3 + 2] : f * 3 + 2;
+		const Vec3f v1 = V[i1], v2 = V[i2], v3 = V[i3];
+
+		const Vec3f n1 = v1 - v2, n2 = v3 - v2;
+		const Vec3f normal = (flipNormals ? -1.0f : 1.0f) * cross(n1, n2);
+
+		NOR[i1] += normal;
+		NOR[i2] += normal;
+		NOR[i3] += normal;
+	}
+
+	for (unsigned int a = 0; a < vertexCount; a++)
+		a_Normals[a] = NOR[a].normalized();
+}
+
+void Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec3f* normals, const Vec2f* uvs, const unsigned int* indices, unsigned int nIndices, const Material& mat, const Spectrum& Le, FileOutputStream& a_Out, bool flipNormals, bool faceNormals, float maxSmoothAngle)
 {
 	unsigned int N = indices ? nIndices / 3 : nVertices / 3;
-	CompileMesh(vertices, nVertices, uvs ? &uvs : 0, uvs ? 1 : 0, indices, nIndices, &mat, Le.isZero() ? 0 : &Le, &N, 0, a_Out);
+	CompileMesh(vertices, nVertices, normals, uvs ? &uvs : 0, uvs ? 1 : 0, indices, nIndices, &mat, Le.isZero() ? 0 : &Le, &N, 0, a_Out, flipNormals, faceNormals, maxSmoothAngle);
 
 }
-/*
-auto n_face = (p[0] - p[1]).cross(p[2] - p[1]).normalized();
-bool merge = false;
-for (int j = 0; j < 3; j++)
-{
-if (acosf(n_face.dot(n[j])) > theta_thresh)
-merge |= true;
-}
-if (merge)
-{
-n[0] = n[1] = n[2] = n_face;
-}
-*/
 
-void Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2f** uvs, unsigned int nUV_Sets, const unsigned int* indices, unsigned int nIndices, const Material* mats, const Spectrum* Les, const unsigned int* subMeshes, const unsigned char* extraData, FileOutputStream& a_Out)
+void Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec3f* a_normals, const Vec2f** uvs, unsigned int nUV_Sets, const unsigned int* indices, unsigned int nIndices, const Material* mats, const Spectrum* Les, const unsigned int* subMeshes, const unsigned char* extraData, FileOutputStream& a_Out, bool flipNormals, bool faceNormals, float maxSmoothAngle)
 {
 	std::vector<MeshPartLight> lights;
 	auto add_light = [&](int submesh_index)
@@ -170,21 +180,23 @@ void Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2
 		if (Les && !Les[submesh_index].isZero())
 			lights.push_back(MeshPartLight(mats[submesh_index].Name, Les[submesh_index]));
 	};
+
 	Vec3f p[3];
 	auto* n = (NormalizedT<Vec3f>*)alloca(sizeof(NormalizedT<Vec3f>) * 3);
 	Vec2f t[3];
 	unsigned int numTriangles = indices ? nIndices / 3 : nVertices / 3;
 	TriangleData* triData = new TriangleData[numTriangles];
 #ifdef EXT_TRI
-	std::vector<NormalizedT<Vec3f>> normals;
-	normals.resize(nVertices);
+	std::vector<NormalizedT<Vec3f>> comp_normals(nVertices);
 	//compute the frame for the first set and hope the rest is aligned
-	ComputeTangentSpace(vertices, indices, nVertices, numTriangles, &normals[0]);
+	if(a_normals == 0 || flipNormals)
+		Mesh::ComputeVertexNormals(vertices, indices, nVertices, numTriangles, &comp_normals[0], flipNormals);
 #endif
 	AABB box = AABB::Identity();
 	unsigned int submesh_index = 0, num_prev_triangles = 0;
 	for (size_t ti = 0; ti < numTriangles; ti++)
 	{
+		auto v_idx = [&](unsigned int j) {return indices ? indices[ti * 3 + j] : ti * 3 + j; };
 		if (num_prev_triangles + subMeshes[submesh_index] <= ti)
 		{
 			num_prev_triangles += subMeshes[submesh_index];
@@ -195,28 +207,43 @@ void Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec2
 		tri.setMatIndex(submesh_index);
 		for (unsigned int uvIdx = 0; uvIdx < DMIN2(nUV_Sets, NUM_UV_SETS); uvIdx++)
 		{
-			for (int j = 0; j < 3; j++)
+			for (unsigned int j = 0; j < 3; j++)
 			{
-				size_t l = indices ? indices[ti * 3 + j] : ti * 3 + j;
-				t[j] = uvs[uvIdx][l];
+				t[j] = uvs[uvIdx][v_idx(j)];
 			}
 			tri.setUvSetData(uvIdx, t[0], t[1], t[2]);
 		}
-		for (size_t j = 0; j < 3; j++)
+#ifdef EXT_TRI
+		NormalizedT<Vec3f> n_face = (p[0] - p[1]).cross(p[2] - p[1]).normalized();
+		if (flipNormals)
+			n_face = -n_face;
+#endif
+		for (unsigned int j = 0; j < 3; j++)
 		{
-			size_t l = indices ? indices[ti * 3 + j] : ti * 3 + j;
+			auto l = v_idx(j);
 			p[j] = vertices[l];
 			box = box.Extend(p[j]);
 #ifdef EXT_TRI
-			n[j] = normals[l];
+			n[j] = faceNormals ? n_face : (a_normals && !flipNormals ? a_normals[l].normalized() : comp_normals[l]);
 #endif
 		}
+#ifdef EXT_TRI
+		bool use_face_normal = false;
+		if (!faceNormals && maxSmoothAngle != 0)
+		{
+			for (unsigned int j = 0; j < 3; j++)
+				if (acosf(n_face.dot(n[j])) > maxSmoothAngle)
+					use_face_normal |= true;
+		}
+		if (use_face_normal)
+			n[0] = n[1] = n[2] = n_face;
+#endif
 		tri.setData(p[0], p[1], p[2], n[0], n[1], n[2]);
 
 #ifdef EXT_TRI
 		if (extraData)
-			for (int j = 0; j < 3; j++)
-				tri.m_sHostData.ExtraData = extraData[indices ? indices[ti * 3 + j] : ti * 3 + j];
+			for (unsigned int j = 0; j < 3; j++)
+				tri.m_sHostData.ExtraData = extraData[v_idx(j)];
 #endif
 		triData[ti] = tri;
 	}

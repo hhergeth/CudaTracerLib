@@ -3,8 +3,6 @@
 #include <Engine/TriangleData.h>
 #include <Engine/Material.h>
 #include <Engine/TriIntersectorData.h>
-#include "TangentSpaceHelper.h"
-#include "BVHBuilderHelper.h"
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <Base/FileStream.h>
@@ -761,13 +759,12 @@ void compileobj(IInStream& in, FileOutputStream& a_Out)
 	ImportState state;
 	parse(state, in);
 
-	unsigned int m_numTriangles = (unsigned int)state.numTriangles();
-	unsigned int m_numVertices = (unsigned int)state.vertices.size();
+	unsigned int numVertices = (unsigned int)state.vertices.size();
 
-	std::vector<Vec3f> positions(m_numVertices);
-	std::vector<Vec3f> normals(m_numVertices);
-	std::vector<Vec2f> texCoords(m_numVertices);
-	for (size_t i = 0; i < m_numVertices; i++)
+	std::vector<Vec3f> positions(numVertices);
+	std::vector<Vec3f> normals(numVertices);
+	std::vector<Vec2f> texCoords(numVertices);
+	for (size_t i = 0; i < numVertices; i++)
 	{
 		auto& v = state.vertices[i];
 		positions[i] = v.p;
@@ -823,7 +820,7 @@ void compileobj(IInStream& in, FileOutputStream& a_Out)
 	}
 
 	const Vec2f* uv_sets[1] = { &texCoords[0]};
-	Mesh::CompileMesh(&positions[0], m_numVertices, uv_sets, 1, &indices[0], (unsigned int)indices.size(), &matData[0], lights.size() ? &lights[0] : 0, &submeshes[0], 0, a_Out);
+	Mesh::CompileMesh(&positions[0], numVertices, state.normals.size() != 0 ? &normals[0] : 0, uv_sets, 1, &indices[0], (unsigned int)indices.size(), &matData[0], lights.size() ? &lights[0] : 0, &submeshes[0], 0, a_Out);
 }
 
 }

@@ -35,18 +35,17 @@ void TriangleData::setData(const Vec3f& v0, const Vec3f& v1, const Vec3f& v2,
 						   const NormalizedT<Vec3f>& n0, const NormalizedT<Vec3f>& n1, const NormalizedT<Vec3f>& n2)
 {
 	uint3 uvset = m_sDeviceData.UVSets[0];
-	Vec2f   t0 = Vec2f(half((unsigned short)uvset.x), half((unsigned short)(uvset.x >> 16))),
-		t1 = Vec2f(half((unsigned short)uvset.y), half((unsigned short)(uvset.y >> 16))),
-		t2 = Vec2f(half((unsigned short)uvset.z), half((unsigned short)(uvset.z >> 16)));
+	Vec2f t0 = Vec2f(half((unsigned short)uvset.x), half((unsigned short)(uvset.x >> 16))),
+		  t1 = Vec2f(half((unsigned short)uvset.y), half((unsigned short)(uvset.y >> 16))),
+		  t2 = Vec2f(half((unsigned short)uvset.z), half((unsigned short)(uvset.z >> 16)));
 
 	Vec3f dP1 = v1 - v0, dP2 = v2 - v0;
 	Vec2f dUV1 = t1 - t0, dUV2 = t2 - t0;
-	NormalizedT<Vec3f> n = normalize(cross(dP1, dP2));
 	float determinant = dUV1.x * dUV2.y - dUV1.y * dUV2.x;
 	Vec3f dpdu, dpdv;
 	if (determinant == 0)
 	{
-		NormalizedT<Vec3f> a, b;
+		NormalizedT<Vec3f> a, b, n = normalize(cross(dP1, dP2));
 		coordinateSystem(n, a, b);
 		dpdu = a; dpdv = b;
 	}

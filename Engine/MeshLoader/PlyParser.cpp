@@ -10,8 +10,6 @@
 #include <string>
 #include <vector>
 #include <cctype>
-#include "TangentSpaceHelper.h"
-#include "BVHBuilderHelper.h"
 #include <Base/FileStream.h>
 
 namespace CudaTracerLib {
@@ -370,7 +368,7 @@ void compileply(IInStream& istream, FileOutputStream& a_Out)
 	diffuse mat;
 	mat.m_reflectance = CreateTexture(Spectrum(1, 0, 0));
 	defaultMat.bsdf.SetData(mat);
-	Mesh::CompileMesh(&vertices[0], (unsigned int)vertices.size(), hasUV ? &texCoords[0] : 0, &indices[0], indexCount, defaultMat, Spectrum(0.0f), a_Out);
+	Mesh::CompileMesh(&vertices[0], (unsigned int)vertices.size(), 0, hasUV ? &texCoords[0] : 0, &indices[0], indexCount, defaultMat, Spectrum(0.0f), a_Out);
 }
 
 }

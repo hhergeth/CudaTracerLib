@@ -1,8 +1,6 @@
 #include <StdAfx.h>
 #include <Engine/AnimatedMesh.h>
-#include "TangentSpaceHelper.h"
 #include "MD5Parser.h"
-#include "BVHBuilderHelper.h"
 #include <Base/FileStream.h>
 #include <Engine/TriangleData.h>
 #include <Engine/Material.h>
@@ -88,14 +86,12 @@ void compilemd5(IInStream& in, std::vector<IInStream*>& animFiles, FileOutputStr
 	}
 	unsigned int m_numVertices = (unsigned int)v_Data.size();
 	std::vector<NormalizedT<Vec3f>> normals(m_numVertices);
-	ComputeTangentSpace(&v_Pos[0], &tData[0], (unsigned int)v_Pos.size(), (unsigned int)tData.size() / 3, &normals[0]);
+	Mesh::ComputeVertexNormals(&v_Pos[0], &tData[0], (unsigned int)v_Pos.size(), (unsigned int)tData.size() / 3, &normals[0], false);
 	for (unsigned int v = 0; v < m_numVertices; v++)
-	{
 		v_Data[v].m_fNormal = normals[v];
-	}
 
 	const Vec2f* uv_sets[1] = {&tCoord[0]};
-	Mesh::CompileMesh(&v_Pos[0], m_numVertices, uv_sets, 1, &tData[0], (unsigned int)tData.size(), &matData[0], 0, &submeshData[0], 0, a_Out);
+	Mesh::CompileMesh(&v_Pos[0], m_numVertices, &normals[0], uv_sets, 1, &tData[0], (unsigned int)tData.size(), &matData[0], 0, &submeshData[0], 0, a_Out);
 
 	e_KernelAnimatedMesh mesh;
 	mesh.m_uAnimCount = (unsigned int)M.anims.size();
