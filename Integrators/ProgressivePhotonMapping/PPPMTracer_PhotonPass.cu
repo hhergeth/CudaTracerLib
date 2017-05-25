@@ -46,7 +46,7 @@ template<typename VolEstimator> struct PPPMPhotonParticleProcessHandler
 	{
 	}
 
-	CUDA_FUNC_IN void handleSurfaceInteraction(const Spectrum& weight, float accum_pdf, const Spectrum& f, float pdf, const NormalizedT<Ray>& r, const TraceResult& r2, BSDFSamplingRecord& bRec, bool lastBssrdf, bool lastDelta)
+	CUDA_FUNC_IN void handleSurfaceInteraction(const Spectrum& weight, const Spectrum& f, const NormalizedT<Ray>& r, const TraceResult& r2, BSDFSamplingRecord& bRec, bool lastBssrdf, bool lastDelta)
 	{
 		auto wo = lastBssrdf ? r.dir() : -r.dir();
 		if (rng.randomFloat() < g_Parameters.probSurface && r2.getMat().bsdf.hasComponent(ESmooth) && dot(bRec.dg.sys.n, wo) > 0.0f)
@@ -73,7 +73,7 @@ template<typename VolEstimator> struct PPPMPhotonParticleProcessHandler
 		numSurfaceInteractions++;
 	}
 
-	CUDA_FUNC_IN void handleMediumSampling(const Spectrum& weight, float accum_pdf, const NormalizedT<Ray>& r, const TraceResult& r2, const MediumSamplingRecord& mRec, bool sampleInMedium, const VolumeRegion* bssrdf, bool lastDelta)
+	CUDA_FUNC_IN void handleMediumSampling(const Spectrum& weight, const NormalizedT<Ray>& r, const TraceResult& r2, const MediumSamplingRecord& mRec, bool sampleInMedium, const VolumeRegion* bssrdf, bool lastDelta)
 	{
 		if(rng.randomFloat() < g_Parameters.probVolume)
 		{
@@ -89,7 +89,7 @@ template<typename VolEstimator> struct PPPMPhotonParticleProcessHandler
 		}
 	}
 
-	CUDA_FUNC_IN void handleMediumInteraction(const Spectrum& weight, float accum_pdf, const Spectrum& f, float pdf, MediumSamplingRecord& mRec, const NormalizedT<Vec3f>& wi, const TraceResult& r2, const VolumeRegion* bssrdf, bool lastDelta)
+	CUDA_FUNC_IN void handleMediumInteraction(const Spectrum& weight, const Spectrum& f, MediumSamplingRecord& mRec, const NormalizedT<Vec3f>& wi, const TraceResult& r2, const VolumeRegion* bssrdf, bool lastDelta)
 	{
 		if (rng.randomFloat() < g_Parameters.probVolume)
 		{
@@ -138,7 +138,7 @@ template<typename VolEstimator> __global__ void k_PhotonPass(int photons_per_thr
 		auto photon_idx = blockIdx.x * local_Todo + local_idx;
 		auto rng = g_SamplerData(photon_idx);
 		auto process = PPPMPhotonParticleProcessHandler<VolEstimator>(I, rng, &numStoredSurface, &numStoredVolume);
-		ParticleProcess(PPM_MaxRecursion, PPM_MaxRecursion, rng, process);
+		ParticleProcess<false>(PPM_MaxRecursion, PPM_MaxRecursion, rng, process);
 	}
 
 	__syncthreads();

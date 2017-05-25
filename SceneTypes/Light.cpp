@@ -52,9 +52,6 @@ namespace CudaTracerLib {
 		m_pixelSize = Vec2f(2 * PI / m_size.x, PI / m_size.y);
 		m1.Invalidate(); m2.Invalidate(); m3.Invalidate();
 
-		float lvl = 0.65f, qpdf;
-		unsigned int INDEX = MonteCarlo::sampleReuse(m_cdfRows.operator->(), radianceMap.m_uHeight, lvl, qpdf);
-
 		m_worldTransform = NormalizedT<OrthogonalAffineMap>::Identity();
 	}
 

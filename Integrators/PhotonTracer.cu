@@ -37,7 +37,7 @@ template<bool CORRECT_DIFFERENTIALS> struct PhotonTracerParticleProcessHandler
 		}
 	}
 
-	CUDA_FUNC_IN void handleSurfaceInteraction(const Spectrum& weight, float accum_pdf, const Spectrum& f, float pdf, const NormalizedT<Ray>& r, const TraceResult& r2, BSDFSamplingRecord& bRec, bool lastBssrdf, bool lastDelta)
+	CUDA_FUNC_IN void handleSurfaceInteraction(const Spectrum& weight, const Spectrum& f, const NormalizedT<Ray>& r, const TraceResult& r2, BSDFSamplingRecord& bRec, bool lastBssrdf, bool lastDelta)
 	{
 		DirectSamplingRecord dRec(bRec.dg.P, bRec.dg.sys.n);
 		Spectrum value = weight * g_SceneData.sampleAttenuatedSensorDirect(dRec, rng.randomFloat2());
@@ -67,12 +67,12 @@ template<bool CORRECT_DIFFERENTIALS> struct PhotonTracerParticleProcessHandler
 		}
 	}
 
-	CUDA_FUNC_IN void handleMediumSampling(const Spectrum& weight, float accum_pdf, const NormalizedT<Ray>& r, const TraceResult& r2, const MediumSamplingRecord& mRec, bool sampleInMedium, const VolumeRegion* bssrdf, bool lastDelta)
+	CUDA_FUNC_IN void handleMediumSampling(const Spectrum& weight, const NormalizedT<Ray>& r, const TraceResult& r2, const MediumSamplingRecord& mRec, bool sampleInMedium, const VolumeRegion* bssrdf, bool lastDelta)
 	{
 
 	}
 
-	CUDA_FUNC_IN void handleMediumInteraction(const Spectrum& weight, float accum_pdf, const Spectrum& f, float pdf, const MediumSamplingRecord& mRec, const NormalizedT<Vec3f>& wi, const TraceResult& r2, const VolumeRegion* bssrdf, bool lastDelta)
+	CUDA_FUNC_IN void handleMediumInteraction(const Spectrum& weight, const Spectrum& f, const MediumSamplingRecord& mRec, const NormalizedT<Vec3f>& wi, const TraceResult& r2, const VolumeRegion* bssrdf, bool lastDelta)
 	{
 		if (!bssrdf)
 		{
@@ -104,7 +104,7 @@ template<bool CORRECT_DIFFERENTIALS> __global__ void pathKernel(unsigned int N, 
 
 		auto rng = g_SamplerData(rayidx);
 		auto process = PhotonTracerParticleProcessHandler<CORRECT_DIFFERENTIALS>(g_Image, rng);
-		ParticleProcess(maxPathLength, rrStart, rng, process);
+		ParticleProcess<true>(maxPathLength, rrStart, rng, process);
 	} while (true);
 }
 
@@ -125,7 +125,7 @@ void PhotonTracer::DebugInternal(Image* I, const Vec2i& pixel)
 	auto rng = g_SamplerData(123);
 	auto process = PhotonTracerParticleProcessHandler<false>(*I, rng);
 	for (int i = 0; i < 1000; i++)
-		ParticleProcess(12, 7, rng, process);
+		ParticleProcess<true>(12, 7, rng, process);
 }
 
 }
