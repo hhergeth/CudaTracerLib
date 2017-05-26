@@ -137,11 +137,13 @@ CUDA_GLOBAL void applyWeights(Image img, RGBE* deviceDataCached, NonLocalMeansFi
 				if (q_x < 0 || q_x >= w || q_y < 0 || q_y >= h)
 					continue;
 				float we = buffer(xo, yo);
+				if (math::IsNaN(we))
+					continue;
 				auto c_q = loadFromShared(q_x, q_y, 0, 0);
 				C_p += we;
 				c_p_hat += we * c_q;
 			}
-		img.getFilteredData(x, y) = Spectrum(c_p_hat / C_p).toRGBE();
+		img.getFilteredData(x, y) = Spectrum(C_p > 1e-4f ? c_p_hat / C_p : loadFromShared(x, y, 0, 0)).toRGBE();
 	}
 }
 
