@@ -49,25 +49,26 @@ template<typename VolEstimator> struct PPPMPhotonParticleProcessHandler
 	CUDA_FUNC_IN void handleSurfaceInteraction(const Spectrum& weight, const Spectrum& f, const NormalizedT<Ray>& r, const TraceResult& r2, BSDFSamplingRecord& bRec, bool lastBssrdf, bool lastDelta)
 	{
 		auto wo = lastBssrdf ? r.dir() : -r.dir();
-		if (rng.randomFloat() < g_Parameters.probSurface && r2.getMat().bsdf.hasComponent(ESmooth) && dot(bRec.dg.sys.n, wo) > 0.0f)
+		auto ph = PPPMPhoton(weight, wo, bRec.dg.sys.n);
+
+		if (rng.randomFloat() < g_Parameters.probSurface)
 		{
-			auto ph = PPPMPhoton(weight, wo, bRec.dg.sys.n);
-			bool b = false;
-#ifdef ISCUDA
-			if ((g_Parameters.DIRECT && numSurfaceInteractions > 0) || !g_Parameters.DIRECT)
+			bool countPhoton = true;
+			if (((g_Parameters.DIRECT && numSurfaceInteractions > 0) || !g_Parameters.DIRECT) &&
+				r2.getMat().bsdf.hasComponent(ESmooth) && dot(bRec.dg.sys.n, wo) > 0.0f)
 			{
 				auto idx = (g_Parameters.finalGathering && !lastDelta) || !g_Parameters.finalGathering ? g_SurfaceMap->storePhoton(ph, bRec.dg.P) : 0xffffffff;
-				b |= idx != 0xffffffff;
+				countPhoton &= idx != 0xffffffff;
 				if (g_Parameters.finalGathering && lastDelta)
-					b |= g_SurfaceMapCaustic->storePhoton(ph, bRec.dg.P) != 0xffffffff;
+					countPhoton &= g_SurfaceMapCaustic->storePhoton(ph, bRec.dg.P) != 0xffffffff;
 			}
-#endif
-			if (b && !wasStoredSurface)
+
+			if (countPhoton && !wasStoredSurface)
 			{
+				wasStoredSurface = true;
 #ifdef ISCUDA
 				atomicInc(numStoredSurface, UINT_MAX);
 #endif
-				wasStoredSurface = true;
 			}
 		}
 		numSurfaceInteractions++;
