@@ -146,6 +146,7 @@ void Mesh::ComputeVertexNormals(const Vec3f* V, const unsigned int* I, unsigned 
 	Vec3f* NOR = (Vec3f*)a_Normals;
 	for (unsigned int i = 0; i < vertexCount; i++)
 		NOR[i] = Vec3f(0.0f);
+	float flip_coeff = (flipNormals ? -1.0f : 1.0f);
 	for (unsigned int f = 0; f < triCount; f++)
 	{
 		unsigned int i1 = I ? I[f * 3 + 0] : f * 3 + 0;
@@ -153,12 +154,28 @@ void Mesh::ComputeVertexNormals(const Vec3f* V, const unsigned int* I, unsigned 
 		unsigned int i3 = I ? I[f * 3 + 2] : f * 3 + 2;
 		const Vec3f v1 = V[i1], v2 = V[i2], v3 = V[i3];
 
-		const Vec3f n1 = v1 - v2, n2 = v3 - v2;
-		const Vec3f normal = (flipNormals ? -1.0f : 1.0f) * cross(n1, n2);
+		//normalized facet normal
+		Vec3f face_nor = cross(v1 - v2, v3 - v2);
+		float face_area = 0.5f * face_nor.length();
+		face_nor = face_nor.normalized();
 
-		NOR[i1] += normal;
-		NOR[i2] += normal;
-		NOR[i3] += normal;
+		//weighting by size of triangle
+		//const Vec3f normal = flip_coeff * face_area * face_nor;
+		//NOR[i1] += normal;
+		//NOR[i2] += normal;
+		//NOR[i3] += normal;
+
+		//tip angle weighting
+		//auto nor = [&](const Vec3f& p_base, const Vec3f& p_neigh1, const Vec3f& p_neigh2) {return flip_coeff * face_nor * math::acos(dot(p_neigh1 - p_base, p_neigh2 - p_base) / (length(p_neigh1 - p_base) * length(p_neigh2 - p_base))); };
+		//NOR[i1] += nor(v1, v2, v3);
+		//NOR[i2] += nor(v2, v1, v3);
+		//NOR[i3] += nor(v3, v1, v2);
+
+		//sphere inscribed polytope
+		auto nor = [&](const Vec3f& p_base, const Vec3f& p_neigh1, const Vec3f& p_neigh2) {return flip_coeff * cross(p_neigh1 - p_base, p_neigh2 - p_base) / (lenSqr(p_neigh1 - p_base) * lenSqr(p_neigh2 - p_base)); };
+		NOR[i1] += nor(v1, v3, v2);
+		NOR[i2] += nor(v2, v1, v3);
+		NOR[i3] += nor(v3, v2, v1);
 	}
 
 	for (unsigned int a = 0; a < vertexCount; a++)
@@ -213,6 +230,12 @@ void Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec3
 			}
 			tri.setUvSetData(uvIdx, t[0], t[1], t[2]);
 		}
+		//copy positions first so they can be used to compute face normal
+		for (unsigned int j = 0; j < 3; j++)
+		{
+			p[j] = vertices[v_idx(j)];
+			box = box.Extend(p[j]);
+		}
 #ifdef EXT_TRI
 		NormalizedT<Vec3f> n_face = (p[0] - p[1]).cross(p[2] - p[1]).normalized();
 		if (flipNormals)
@@ -221,8 +244,6 @@ void Mesh::CompileMesh(const Vec3f* vertices, unsigned int nVertices, const Vec3
 		for (unsigned int j = 0; j < 3; j++)
 		{
 			auto l = v_idx(j);
-			p[j] = vertices[l];
-			box = box.Extend(p[j]);
 #ifdef EXT_TRI
 			n[j] = faceNormals ? n_face : (a_normals && !flipNormals ? a_normals[l].normalized() : comp_normals[l]);
 #endif
