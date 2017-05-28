@@ -6,6 +6,8 @@
 
 namespace CudaTracerLib {
 
+#define MIN_RAYTRACE_DISTANCE (1e-5f)
+
 class ISamplingSequenceGenerator;
 
 extern CUDA_ALIGN(16) CUDA_CONST KernelDynamicScene g_SceneDataDevice;

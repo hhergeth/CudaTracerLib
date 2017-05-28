@@ -215,7 +215,7 @@ private:
 	}
 	CUDA_FUNC_IN void convert(const NormalizedT<Ray>& ray, const TraceResult* res, traversalRay& r1, traversalResult& r2)
 	{
-		r1.a = Vec4f(ray.ori(), 1e-2f);
+		r1.a = Vec4f(ray.ori(), MIN_RAYTRACE_DISTANCE);
 		r1.b = Vec4f(ray.dir(), FLT_MAX);
 		if (res)
 			r2.fromResult(res, g_SceneData);

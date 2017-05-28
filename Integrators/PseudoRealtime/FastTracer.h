@@ -2,7 +2,7 @@
 
 #include <Kernel/Tracer.h>
 #include <Base/CudaMemoryManager.h>
-#include <Kernel/RayBuffer.h>
+#include <Kernel/DoubleRayBuffer.h>
 
 namespace CudaTracerLib {
 
@@ -11,7 +11,7 @@ struct EmptyRayData
 
 };
 
-typedef RayBuffer<EmptyRayData, 2> FastTracerBuffer;
+typedef DoubleRayBuffer<EmptyRayData> FastTracerBuffer;
 
 class FastTracer : public Tracer<false>, public IDepthTracer
 {
@@ -29,7 +29,7 @@ public:
 		Tracer<false>::Resize(w, h);
 		if (bufA)
 			delete bufA;
-		bufA = new FastTracerBuffer(w * h);
+		bufA = new FastTracerBuffer(w * h, 1);
 	}
 protected:
 	CTL_EXPORT virtual void DoRender(Image* I);
