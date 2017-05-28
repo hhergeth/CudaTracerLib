@@ -23,7 +23,7 @@ CUDA_FUNC_IN NormalizedT<Vec3f> Uchar2ToNormalizedFloat3_Spherical(unsigned shor
 	unsigned char x = v >> 8, y = v & 0xff;
 	//handling of "singularities" (directions near the coordinate axes)
 	float theta = x == 63 ? PI_4 : (x == 127 ? PI_2 : (x == 191 ? 3*PI_4 : float(x)*(1.0f / 255.0f)*PI));
-	float phi = y == 63 ? PI_2 : (y == 127 ? PI : (x == 191 ? 3* PI_2 : float(y)*(1.0f / 255.0f)*PI*2.0f));
+	float phi = y == 63 ? PI_2 : (y == 127 ? PI : (y == 191 ? 3* PI_2 : float(y)*(1.0f / 255.0f)*PI*2.0f));
 	float sinphi, cosphi, costheta, sintheta;
 	sincos(phi, &sinphi, &cosphi);
 	sincos(theta, &sintheta, &costheta);
