@@ -20,6 +20,7 @@ struct BSDF : public BaseType//, public BaseTypeHelper<4608834>
 {
 	unsigned int m_combinedType;
 	unsigned int m_uTextureOffsets[NUM_TEX_PER_BSDF];
+	bool m_enableTwoSided;
 private:
 	template<int COUNT> void initTextureOffsets_intern(){}
 	template<int COUNT, typename... Textures> void initTextureOffsets_intern(Texture& tex, Textures&&... tail)
@@ -55,11 +56,11 @@ public:
 		return (type & m_combinedType) != 0;
 	}
 	BSDF()
-		: m_combinedType(0)
+		: m_combinedType(0), m_enableTwoSided(false)
 	{
 	}
 	BSDF(EBSDFType type)
-		: m_combinedType(type)
+		: m_combinedType(type), m_enableTwoSided(false)
 	{
 	}
 	CUDA_FUNC_IN static EMeasure getMeasure(unsigned int componentType)
@@ -139,6 +140,29 @@ namespace CudaTracerLib
 
 struct BSDFALL : public CudaVirtualAggregate<BSDF, diffuse, roughdiffuse, dielectric, thindielectric, roughdielectric, conductor, roughconductor, plastic, roughplastic, phong, ward, hk, coating, roughcoating, blend>
 {
+private:
+	template<bool wi, bool wo> CUDA_FUNC_IN bool start_two_sided(BSDFSamplingRecord& bRec) const
+	{
+		bool flip = bRec.wi.z < 0 && As()->m_enableTwoSided;
+		if (flip)
+		{
+			if (wi)
+				bRec.wi.z *= -1.0f;
+			if(wo)
+				bRec.wo.z *= -1.0f;
+		}
+		return flip;
+	}
+	template<bool wi, bool wo> CUDA_FUNC_IN void end_two_sided(BSDFSamplingRecord& bRec, bool flip) const
+	{
+		if (flip)
+		{
+			if (wi)
+				bRec.wi.z *= -1.0f;
+			if (wo)
+				bRec.wo.z *= -1.0f;
+		}
+	}
 public:
 	BSDFALL()
 	{
@@ -147,7 +171,10 @@ public:
 	CALLER(sample)
 	CUDA_FUNC_IN Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &_sample) const
 	{
-		return sample_Helper::Caller<Spectrum>(this, bRec, pdf, _sample);
+		bool flip = start_two_sided<true, false>(bRec);
+		auto res = sample_Helper::Caller<Spectrum>(this, bRec, pdf, _sample);
+		end_two_sided<true, true>(bRec, flip);
+		return res;
 	}
 	CUDA_FUNC_IN Spectrum sample(BSDFSamplingRecord &bRec, const Vec2f &_sample) const
 	{
@@ -157,12 +184,18 @@ public:
 	CALLER(f)
 	CUDA_FUNC_IN Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
 	{
-		return f_Helper::Caller<Spectrum>(this, bRec, measure);
+		bool flip = start_two_sided<true, false>((BSDFSamplingRecord&)bRec);
+		auto res = f_Helper::Caller<Spectrum>(this, bRec, measure);
+		end_two_sided<true, true>((BSDFSamplingRecord&)bRec, flip);
+		return res;
 	}
 	CALLER(pdf)
 	CUDA_FUNC_IN float pdf(const BSDFSamplingRecord &bRec, EMeasure measure = ESolidAngle) const
 	{
-		return pdf_Helper::Caller<float>(this, bRec, measure);
+		bool flip = start_two_sided<true, false>((BSDFSamplingRecord&)bRec);
+		float res = pdf_Helper::Caller<float>(this, bRec, measure);
+		end_two_sided<true, true>((BSDFSamplingRecord&)bRec, flip);
+		return res;
 	}
 	CUDA_FUNC_IN unsigned int getType() const
 	{
