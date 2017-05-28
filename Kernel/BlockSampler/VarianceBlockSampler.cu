@@ -11,8 +11,6 @@ CUDA_GLOBAL void updateInfo(VarianceBlockSampler::TmpBlockInfo* a_pTmpBlockInfoD
 
 	if (x < img.getWidth() && y < img.getHeight())
 	{
-		auto num_passes_block = a_pPersBlockInfoDevice[bIdx].passesDone;
-
 		auto I_N = img.getPixelData(x, y).toSpectrum(splatScale);
 
 		auto pInfo = varBuffer(x, y);

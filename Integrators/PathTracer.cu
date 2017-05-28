@@ -78,7 +78,7 @@ template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(NormalizedT<Ray>& r, const
 
 			Spectrum f = r2.getMat().bsdf.sample(bRec, brdf_scattering_pdf, rnd.randomFloat2());
 			last_nor = bRec.dg.sys.n;
-			if (DIRECT)
+			if (DIRECT && r2.getMat().bsdf.hasComponent(ESmooth))
 				cl += cf * UniformSampleOneLight(bRec, r2.getMat(), rnd, true);
 			specularBounce = (bRec.sampledType & EDelta) != 0;
 			cf = cf * f;

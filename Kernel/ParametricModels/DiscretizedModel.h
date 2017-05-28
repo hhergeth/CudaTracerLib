@@ -99,7 +99,7 @@ template<int D, int N_BINS_PER_DIM> struct DiscretizedModel
 				return x;
 			}
 		}
-		printf("Illegal state, t1 = %d, N = %d\n", t1, num_samples);
+		printf("Illegal state, t1 = %d, W = %f\n", t1, sum_weight);
 		return vec();
 	}
 

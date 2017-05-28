@@ -110,11 +110,11 @@ template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(Image I, int pat
 				auto r_refl = NormalizedT<Ray>(bRec.dg.P, bRec.getOutgoing());
 
 				payload.dIdx = UINT_MAX;
-				if (NEXT_EVENT_EST)
+				if (NEXT_EVENT_EST && res.getMat().bsdf.hasComponent(ESmooth))
 				{
 					DirectSamplingRecord dRec(bRec.dg.P, bRec.dg.sys.n);
 					Spectrum value = g_SceneData.sampleEmitterDirect(dRec, rng.randomFloat2());
-					if (res.getMat().bsdf.hasComponent(ESmooth) && !value.isZero())
+					if (!value.isZero())
 					{
 						bRec.typeMask = EBSDFType(EAll & ~EDelta);
 						bRec.wo = bRec.dg.toLocal(dRec.d);

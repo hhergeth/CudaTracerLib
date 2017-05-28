@@ -13,7 +13,7 @@ public:
 	PhotonTracer()
 	{
 		m_sParameters << KEY_CorrectDifferentials()			<< CreateSetBool(false);
-		m_sParameters << KEY_MaxPathLength()				<< CreateInterval(12, 1, INT_MAX);
+		m_sParameters << KEY_MaxPathLength()				<< CreateInterval(50, 1, INT_MAX);
 		m_sParameters << KEY_RRStartingDepth()				<< CreateInterval(7, 1, INT_MAX);
 	}
 

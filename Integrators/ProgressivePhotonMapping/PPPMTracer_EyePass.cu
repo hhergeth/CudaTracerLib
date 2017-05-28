@@ -75,7 +75,7 @@ template<typename VolEstimator>  __global__ void k_EyePass(Vec2i off, int w, int
 					throughput = throughput * Tr;
 				}
 			}
-			if (DIRECT)
+			if (DIRECT && r2.getMat().bsdf.hasComponent(ESmooth))
 				L += throughput * UniformSampleOneLight(bRec, r2.getMat(), rng, true, false);
 
 			L += throughput * r2.Le(bRec.dg.P, bRec.dg.sys, -r.dir());//either it's the first bounce or it's a specular reflection

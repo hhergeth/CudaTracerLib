@@ -33,7 +33,7 @@ public:
 		: m_ray_buf(0)
 	{
 		m_sParameters << KEY_Direct()				<< CreateSetBool(true)
-					  << KEY_MaxPathLength()		<< CreateInterval<int>(7, 1, INT_MAX)
+					  << KEY_MaxPathLength()		<< CreateInterval<int>(50, 1, INT_MAX)
 					  << KEY_RRStartDepth()			<< CreateInterval(5, 1, INT_MAX);
 	}
 	~WavefrontPathTracer()
