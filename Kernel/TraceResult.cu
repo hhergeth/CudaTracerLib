@@ -32,6 +32,14 @@ void TraceResult::getBsdfSample(const NormalizedT<Vec3f>& wi, const Vec3f& p, BS
 	if (wo)
 		bRec.wo = bRec.dg.toLocal(*wo);
 	getMat().SampleNormalMap(bRec.dg, wi * m_fDist);
+	if (getMat().bsdf.As()->m_enableTwoSided && bRec.wi.z < 0)
+	{
+		bRec.dg.n = -bRec.dg.n;
+		bRec.dg.sys.n = -bRec.dg.sys.n;
+		bRec.wi.z *= -1.0f;
+		if(wo)
+			bRec.wo.z *= -1.0f;
+	}
 }
 
 Spectrum TraceResult::Le(const Vec3f& p, const Frame& sys, const NormalizedT<Vec3f>& w) const
