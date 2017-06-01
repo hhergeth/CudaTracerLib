@@ -75,25 +75,26 @@ struct roughcoating : public BSDF//, public e_DerivedTypeHelper<14>
 	};
 
 	BSDFFirst m_nested;
-	MicrofacetDistribution m_distribution;
 	Texture m_sigmaA;
 	Texture m_alpha;
 	Texture m_specularReflectance;
 	float m_specularSamplingWeight;
 	float m_eta, m_invEta;
 	float m_thickness;
+	bool m_sampleVisible;
+	MicrofacetDistribution::EType m_type;
+
 	roughcoating()
-		: BSDF(EGlossyReflection)
+		: BSDF(EGlossyReflection), m_type(MicrofacetDistribution::EBeckmann)
 	{
 		initTextureOffsets(m_sigmaA, m_specularReflectance, m_alpha);
+		Update();
 	}
 	roughcoating(MicrofacetDistribution::EType type, const BSDFFirst& nested, float eta, float thickness, const Texture& sig, const Texture& alpha, const Texture& specular)
-		: BSDF(EBSDFType(EGlossyReflection | nested.getType())), m_nested(nested), m_eta(eta), m_invEta(1.0f / eta), m_thickness(thickness), m_sigmaA(sig), m_alpha(alpha), m_specularReflectance(specular)
+		: BSDF(EBSDFType(EGlossyReflection | nested.getType())), m_nested(nested), m_eta(eta), m_invEta(1.0f / eta), m_thickness(thickness), m_sigmaA(sig), m_alpha(alpha), m_specularReflectance(specular), m_type(type)
 	{
-		initTextureOffsets2(nested.As()->getTextureList(), m_sigmaA, m_specularReflectance, m_alpha);
-		m_distribution.m_type = type;
-		float avgAbsorption = (m_sigmaA.Average()*(-2*m_thickness)).exp().avg();
-		m_specularSamplingWeight = 1.0f / (avgAbsorption + 1.0f);
+		initTextureOffsets(m_sigmaA, m_specularReflectance, m_alpha);
+		Update();
 	}
 	virtual void Update()
 	{
@@ -102,6 +103,7 @@ struct roughcoating : public BSDF//, public e_DerivedTypeHelper<14>
 		m_invEta = 1.0f / m_eta;
 		float avgAbsorption = (m_sigmaA.Average()*(-2*m_thickness)).exp().avg();
 		m_specularSamplingWeight = 1.0f / (avgAbsorption + 1.0f);
+		m_sampleVisible = MicrofacetDistribution::getSampleVisible(m_type, true);
 	}
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const;
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;

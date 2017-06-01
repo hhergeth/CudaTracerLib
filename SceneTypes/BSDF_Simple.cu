@@ -329,7 +329,7 @@ Spectrum thindielectric::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2
 	bool sampleReflection = (bRec.typeMask & EDeltaReflection) != 0;
 	bool sampleTransmission = (bRec.typeMask & ENull) != 0;
 
-	float R = FresnelHelper::fresnelDielectricExt(Frame::cosTheta(bRec.wi), m_eta), T = 1-R;
+	float R = FresnelHelper::fresnelDielectricExt(math::abs(Frame::cosTheta(bRec.wi)), m_eta), T = 1-R;
 
 	// Account for internal reflections: R' = R + TRT + TR^3T + ..
 	if (R < 1)
@@ -413,20 +413,18 @@ float roughdielectric::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) con
 		same hemisphere as the macrosurface normal */
 	H = NormalizedT<Vec3f>(H * math::signum(Frame::cosTheta(H)));
 
-	/* Evaluate the roughness */
-	float alphaU = m_distribution.transformRoughness(
-				m_alphaU.Evaluate(bRec.dg).avg()),
-			alphaV = m_distribution.transformRoughness(
-				m_alphaV.Evaluate(bRec.dg).avg());
-
-#if ENLARGE_LOBE_TRICK == 1
-	Float factor = (1.2f - 0.2f * std::sqrt(
-		math::abs(Frame::cosTheta(bRec.wi))));
-	alphaU *= factor; alphaV *= factor;
-#endif
+	MicrofacetDistribution sampleDistr(
+		m_type,
+		m_alphaU.Evaluate(bRec.dg).avg(),
+		m_alphaV.Evaluate(bRec.dg).avg(),
+		m_sampleVisible
+	);
+	if (!m_sampleVisible)
+		sampleDistr.scaleAlpha(1.2f - 0.2f * std::sqrt(std::abs(Frame::cosTheta(bRec.wi))));
 
 	/* Evaluate the microsurface normal sampling density */
-	float prob = m_distribution.pdf(H, alphaU, alphaV);
+	float sign = math::signum(Frame::cosTheta(bRec.wi));
+	float prob = sampleDistr.pdf(sign < 0 ? -bRec.wi : bRec.wi, H);
 
 	if (hasTransmission && hasReflection) {
 		float F = FresnelHelper::fresnelDielectricExt(dot(bRec.wi, H), m_eta);
@@ -469,14 +467,15 @@ Spectrum roughdielectric::f(const BSDFSamplingRecord &bRec, EMeasure measure) co
 		same hemisphere as the macrosurface normal */
 	H = NormalizedT<Vec3f>(H * math::signum(Frame::cosTheta(H)));
 
-	/* Evaluate the roughness */
-	float alphaU = m_distribution.transformRoughness(
-				m_alphaU.Evaluate(bRec.dg).avg()),
-		  alphaV = m_distribution.transformRoughness(
-				m_alphaV.Evaluate(bRec.dg).avg());
+	MicrofacetDistribution distr(
+		m_type,
+		m_alphaU.Evaluate(bRec.dg).avg(),
+		m_alphaV.Evaluate(bRec.dg).avg(),
+		m_sampleVisible
+	);
 
 	/* Evaluate the microsurface normal distribution */
-	const float D = m_distribution.eval(H, alphaU, alphaV);
+	const float D = distr.eval(H);
 	if (D == 0)
 		return Spectrum(0.0f);
 
@@ -484,7 +483,7 @@ Spectrum roughdielectric::f(const BSDFSamplingRecord &bRec, EMeasure measure) co
 	const float F = FresnelHelper::fresnelDielectricExt(dot(bRec.wi, H), m_eta);
 
 	/* Smith's shadow-masking function */
-	const float G = m_distribution.G(bRec.wi, bRec.wo, H, alphaU, alphaV);
+	const float G = distr.G(bRec.wi, bRec.wo, H);
 
 	if (reflect) {
 		/* Calculate the total amount of reflection */
@@ -523,37 +522,32 @@ Spectrum roughdielectric::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec
 	if (!hasReflection && !hasTransmission)
 		return Spectrum(0.0f);
 
-	/* Evaluate the roughness */
-	float alphaU = m_distribution.transformRoughness(
-		m_alphaU.Evaluate(bRec.dg).avg()),
-		alphaV = m_distribution.transformRoughness(
-		m_alphaV.Evaluate(bRec.dg).avg());
+	MicrofacetDistribution distr(
+		m_type,
+		m_alphaU.Evaluate(bRec.dg).avg(),
+		m_alphaV.Evaluate(bRec.dg).avg(),
+		m_sampleVisible
+	);
 
-#if ENLARGE_LOBE_TRICK == 1
-	Float factor = (1.2f - 0.2f * std::sqrt(
-		math::abs(Frame::cosTheta(bRec.wi))));
-	Float sampleAlphaU = alphaU * factor,
-		sampleAlphaV = alphaV * factor;
-#else
-	float sampleAlphaU = alphaU,
-		sampleAlphaV = alphaV;
-#endif
+	MicrofacetDistribution sampleDistr(distr);
+	if (!m_sampleVisible)
+		sampleDistr.scaleAlpha(1.2f - 0.2f * math::sqrt(math::abs(Frame::cosTheta(bRec.wi))));
 
-	/* Sample M, the microsurface normal */
+	/* Sample M, the microfacet normal */
+	float microfacetPDF;
+	float sign = math::signum(Frame::cosTheta(bRec.wi));
+	const auto m = sampleDistr.sample(sign < 0 ? -bRec.wi : bRec.wi, sample, microfacetPDF);
+	if (microfacetPDF == 0)
+		return Spectrum(0.0f);
+	pdf = microfacetPDF;
+
+	float cosThetaT;
+	float F = FresnelHelper::fresnelDielectricExt(dot(bRec.wi, m), cosThetaT, m_eta);
+	Spectrum weight(1.0f);
+
 	unsigned int N_REUSE = 10, slot;
 	MonteCarlo::sampleReuse(N_REUSE, sample.x, slot);
 	float sample_z = slot / (float)N_REUSE;
-	float microfacetPDF;
-	const auto m = m_distribution.sample(sample,
-		sampleAlphaU, sampleAlphaV, microfacetPDF);
-
-	if (microfacetPDF == 0)
-		return Spectrum(0.0f);
-
-	pdf = microfacetPDF;
-
-	float cosThetaT, numerator = 1.0f;
-	float F = FresnelHelper::fresnelDielectricExt(dot(bRec.wi, m), cosThetaT, m_eta);
 
 	if (hasReflection && hasTransmission) {
 		if (sample_z > F) {
@@ -562,16 +556,13 @@ Spectrum roughdielectric::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec
 		}
 		else {
 			pdf *= F;
-			sampleReflection = true;
 		}
 	}
 	else {
-		numerator = hasReflection ? F : (1 - F);
+		weight *= hasReflection ? F : (1 - F);
 	}
 
-	Spectrum result;
 	float dwh_dwo;
-
 	if (sampleReflection) {
 		/* Perfect specular reflection based on the microsurface normal */
 		bRec.wo = FresnelHelper::reflect(bRec.wi, m);
@@ -582,7 +573,7 @@ Spectrum roughdielectric::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec
 		if (Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) <= 0)
 			return Spectrum(0.0f);
 
-		result = m_specularReflectance.Evaluate(bRec.dg);
+		weight *= m_specularReflectance.Evaluate(bRec.dg);
 
 		/* Jacobian of the half-direction mapping */
 		dwh_dwo = 1.0f / (4.0f * dot(bRec.wo, m));
@@ -605,22 +596,22 @@ Spectrum roughdielectric::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec
 		float factor = (bRec.mode == ETransportMode::ERadiance)
 			? (cosThetaT < 0 ? m_invEta : m_eta) : (1.0f);
 
-		result = m_specularTransmittance.Evaluate(bRec.dg) * (factor * factor);
+		weight *= m_specularTransmittance.Evaluate(bRec.dg) * (factor * factor);
 
 		/* Jacobian of the half-direction mapping */
 		float sqrtDenom = dot(bRec.wi, m) + bRec.eta * dot(bRec.wo, m);
 		dwh_dwo = (bRec.eta*bRec.eta * dot(bRec.wo, m)) / (sqrtDenom*sqrtDenom);
 	}
 
-	numerator *= m_distribution.eval(m, alphaU, alphaV)
-		* m_distribution.G(bRec.wi, bRec.wo, m, alphaU, alphaV)
-		* dot(bRec.wi, m);
-
-	float denominator = microfacetPDF * Frame::cosTheta(bRec.wi);
+	if (m_sampleVisible)
+		weight *= distr.smithG1(bRec.wo, m);
+	else
+		weight *= std::abs(distr.eval(m) * distr.G(bRec.wi, bRec.wo, m)
+			* dot(bRec.wi, m) / (microfacetPDF * Frame::cosTheta(bRec.wi)));
 
 	pdf *= math::abs(dwh_dwo);
 
-	return result * math::abs(numerator / denominator);
+	return weight;
 }
 
 Spectrum conductor::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const
@@ -673,15 +664,15 @@ Spectrum roughconductor::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2
 	if (Frame::cosTheta(bRec.wi) < 0 ||	!(bRec.typeMask & EGlossyReflection))
 		return Spectrum(0.0f);
 
-	/* Evaluate the roughness */
-	float alphaU = m_distribution.transformRoughness(
-				m_alphaU.Evaluate(bRec.dg).avg()),
-		  alphaV = m_distribution.transformRoughness(
-				m_alphaV.Evaluate(bRec.dg).avg());
+	MicrofacetDistribution distr(
+		m_type,
+		m_alphaU.Evaluate(bRec.dg).avg(),
+		m_alphaV.Evaluate(bRec.dg).avg(),
+		m_sampleVisible
+	);
 
 	/* Sample M, the microsurface normal */
-	const auto m = m_distribution.sample(sample,
-		alphaU, alphaV, pdf);
+	const auto m = distr.sample(bRec.wi, sample, pdf);
 
 	if (pdf == 0)
 		return 0.0f;
@@ -695,19 +686,20 @@ Spectrum roughconductor::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2
 	if (Frame::cosTheta(bRec.wo) <= 0)
 		return 0.0f;
 
-	const Spectrum F = FresnelHelper::fresnelConductorExact(dot(bRec.wi, m),
-			m_eta, m_k);
+	const Spectrum F = FresnelHelper::fresnelConductorExact(dot(bRec.wi, m), m_eta, m_k) * m_specularReflectance.Evaluate(bRec.dg);
 
-	float numerator = m_distribution.eval(m, alphaU, alphaV)
-		* m_distribution.G(bRec.wi, bRec.wo, m, alphaU, alphaV)
-		* dot(bRec.wi, m);
-
-	float denominator = pdf * Frame::cosTheta(bRec.wi);
+	float weight;
+	if (m_sampleVisible) {
+		weight = distr.smithG1(bRec.wo, m);
+	}
+	else {
+		weight = distr.eval(m) * distr.G(bRec.wi, bRec.wo, m) * dot(bRec.wi, m) / (pdf * Frame::cosTheta(bRec.wi));
+	}
 
 	/* Jacobian of the half-direction mapping */
 	pdf /= 4.0f * dot(bRec.wo, m);
 
-	return m_specularReflectance.Evaluate(bRec.dg) * F	* (numerator / denominator);
+	return F * weight;
 }
 
 Spectrum roughconductor::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
@@ -721,25 +713,28 @@ Spectrum roughconductor::f(const BSDFSamplingRecord &bRec, EMeasure measure) con
 	/* Calculate the reflection half-vector */
 	NormalizedT<Vec3f> H = normalize(bRec.wo + bRec.wi);
 
-	/* Evaluate the roughness */
-	float alphaU = m_distribution.transformRoughness(m_alphaU.Evaluate(bRec.dg).avg()),
-		  alphaV = m_distribution.transformRoughness(m_alphaV.Evaluate(bRec.dg).avg());
+	MicrofacetDistribution distr(
+		m_type,
+		m_alphaU.Evaluate(bRec.dg).avg(),
+		m_alphaV.Evaluate(bRec.dg).avg(),
+		m_sampleVisible
+	);
 
 	/* Evaluate the microsurface normal distribution */
-	const float D = m_distribution.eval(H, alphaU, alphaV);
+	const float D = distr.eval(H);
 	if (D == 0)
 		return 0.0f;
 
 	/* Fresnel factor */
-	const Spectrum F = FresnelHelper::fresnelConductorExact(dot(bRec.wi, H), m_eta, m_k);
+	const Spectrum F = FresnelHelper::fresnelConductorExact(dot(bRec.wi, H), m_eta, m_k) * m_specularReflectance.Evaluate(bRec.dg);
 
 	/* Smith's shadow-masking function */
-	const float G = m_distribution.G(bRec.wi, bRec.wo, H, alphaU, alphaV);
+	const float G = distr.G(bRec.wi, bRec.wo, H);
 
 	/* Calculate the total amount of reflection */
 	float value = D * G / (4.0f * Frame::cosTheta(bRec.wi));
 
-	return m_specularReflectance.Evaluate(bRec.dg) * F * value;
+	return F * value;
 }
 
 float roughconductor::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
@@ -753,11 +748,18 @@ float roughconductor::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) cons
 	/* Calculate the reflection half-vector */
 	NormalizedT<Vec3f> H = normalize(bRec.wo + bRec.wi);
 
-	/* Evaluate the roughness */
-	float alphaU = m_distribution.transformRoughness(m_alphaU.Evaluate(bRec.dg).avg()),
-			alphaV = m_distribution.transformRoughness(m_alphaV.Evaluate(bRec.dg).avg());
+	MicrofacetDistribution distr(
+		m_type,
+		m_alphaU.Evaluate(bRec.dg).avg(),
+		m_alphaV.Evaluate(bRec.dg).avg(),
+		m_sampleVisible
+	);
 
-	return m_distribution.pdf(H, alphaU, alphaV) / (4 * absdot(bRec.wo, H));
+	if (m_sampleVisible)
+		return distr.eval(H) * distr.smithG1(bRec.wi, H)
+		/ (4.0f * Frame::cosTheta(bRec.wi));
+	else
+		return distr.pdf(bRec.wi, H) / (4 * absdot(bRec.wo, H));
 }
 
 Spectrum plastic::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const
@@ -775,7 +777,6 @@ Spectrum plastic::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &samp
 		float probSpecular = (Fi*m_specularSamplingWeight) /
 			(Fi*m_specularSamplingWeight +
 			(1-Fi) * (1-m_specularSamplingWeight));
-		probSpecular = math::clamp01(probSpecular);
 
 		/* Importance sample wrt. the Fresnel reflectance */
 		if (sample.x < probSpecular) {
@@ -795,9 +796,9 @@ Spectrum plastic::sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &samp
 
 			Spectrum diff = m_diffuseReflectance.Evaluate(bRec.dg);
 			if (m_nonlinear)
-				diff = diff / (Spectrum(1.0f) - diff*m_fdrInt);
+				diff /= (Spectrum(1.0f) - diff*m_fdrInt);
 			else
-				diff = diff / (1 - m_fdrInt);
+				diff /= (1 - m_fdrInt);
 
 			pdf = (1-probSpecular) *
 				Warp::squareToCosineHemispherePdf(bRec.wo);
@@ -897,14 +898,16 @@ Spectrum roughplastic::sample(BSDFSamplingRecord &bRec, float &_pdf, const Vec2f
 	bool choseSpecular = hasSpecular;
 	Vec2f sample = _sample;
 
-	/* Evaluate the roughness texture */
-	float alpha = m_alpha.Evaluate(bRec.dg).avg();
-	float alphaT = m_distribution.transformRoughness(alpha);
+	MicrofacetDistribution distr(
+		m_type,
+		m_alpha.Evaluate(bRec.dg).avg(),
+		m_sampleVisible
+	);
 
 	float probSpecular;
 	if (hasSpecular && hasDiffuse) {
 		/* Find the probability of sampling the specular component */
-		probSpecular = 1 - RoughTransmittanceManager::Evaluate(m_distribution.m_type, Frame::cosTheta(bRec.wi), alpha, m_eta);//m_externalRoughTransmittance->eval(Frame::cosTheta(bRec.wi), alpha)
+		probSpecular = 1 - RoughTransmittanceManager::Evaluate(m_type, Frame::cosTheta(bRec.wi), distr.getAlpha(), m_eta);//m_externalRoughTransmittance->eval(Frame::cosTheta(bRec.wi), alpha)
 		/* Reallocate samples */
 		probSpecular = (probSpecular*m_specularSamplingWeight) /
 			(probSpecular*m_specularSamplingWeight +
@@ -920,7 +923,7 @@ Spectrum roughplastic::sample(BSDFSamplingRecord &bRec, float &_pdf, const Vec2f
 
 	if (choseSpecular) {
 		/* Perfect specular reflection based on the microsurface normal */
-		auto m = m_distribution.sample(sample, alphaT);
+		auto m = distr.sample(bRec.wi, sample);
 		bRec.wo = FresnelHelper::reflect(bRec.wi, m);
 		bRec.sampledType = EGlossyReflection;
 
@@ -953,9 +956,11 @@ Spectrum roughplastic::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 			(!hasSpecular && !hasDiffuse))
 			return Spectrum(0.0f);
 
-	/* Evaluate the roughness texture */
-	float alpha = m_alpha.Evaluate(bRec.dg).avg();
-	float alphaT = m_distribution.transformRoughness(alpha);
+	MicrofacetDistribution distr(
+		m_type,
+		m_alpha.Evaluate(bRec.dg).avg(),
+		m_sampleVisible
+	);
 
 	Spectrum result(0.0f);
 	if (hasSpecular)
@@ -964,13 +969,13 @@ Spectrum roughplastic::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 		const NormalizedT<Vec3f> H = normalize(bRec.wo + bRec.wi);
 
 		/* Evaluate the microsurface normal distribution */
-		const float D = m_distribution.eval(H, alphaT);
+		const float D = distr.eval(H);
 
 		/* Fresnel term */
 		const float F = FresnelHelper::fresnelDielectricExt(dot(bRec.wi, H), m_eta);
 
 		/* Smith's shadow-masking function */
-		const float G = m_distribution.G(bRec.wi, bRec.wo, H, alphaT);
+		const float G = distr.G(bRec.wi, bRec.wo, H);
 
 		/* Calculate the specular reflection component */
 		float value = F * D * G /
@@ -984,9 +989,9 @@ Spectrum roughplastic::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 		//Float T12 = m_externalRoughTransmittance->eval(Frame::cosTheta(bRec.wi), alpha);
 		//Float T21 = m_externalRoughTransmittance->eval(Frame::cosTheta(bRec.wo), alpha);
 		//Float Fdr = 1-m_internalRoughTransmittance->evalDiffuse(alpha);
-		float T12 = RoughTransmittanceManager::Evaluate(m_distribution.m_type, Frame::cosTheta(bRec.wi), alpha, m_eta);
-		float T21 = RoughTransmittanceManager::Evaluate(m_distribution.m_type, Frame::cosTheta(bRec.wo), alpha, m_eta);
-		float Fdr = RoughTransmittanceManager::EvaluateDiffuse(m_distribution.m_type, alpha, m_eta);
+		float T12 = RoughTransmittanceManager::Evaluate(m_type, Frame::cosTheta(bRec.wi), distr.getAlpha(), m_eta);
+		float T21 = RoughTransmittanceManager::Evaluate(m_type, Frame::cosTheta(bRec.wo), distr.getAlpha(), m_eta);
+		float Fdr = RoughTransmittanceManager::EvaluateDiffuse(m_type, distr.getAlpha(), m_eta);
 
 		if (m_nonlinear)
 			diff /= Spectrum(1.0f) - diff * Fdr;
@@ -1010,9 +1015,11 @@ float roughplastic::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 		(!hasSpecular && !hasDiffuse))
 		return 0.0f;
 
-	/* Evaluate the roughness texture */
-	float alpha = m_alpha.Evaluate(bRec.dg).avg();
-	float alphaT = m_distribution.transformRoughness(alpha);
+	MicrofacetDistribution distr(
+		m_type,
+		m_alpha.Evaluate(bRec.dg).avg(),
+		m_sampleVisible
+	);
 
 	/* Calculate the reflection half-vector */
 	const NormalizedT<Vec3f> H = normalize(bRec.wo + bRec.wi);
@@ -1020,7 +1027,7 @@ float roughplastic::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 	float probDiffuse, probSpecular;
 	if (hasSpecular && hasDiffuse) {
 		/* Find the probability of sampling the specular component */
-		probSpecular = 1-RoughTransmittanceManager::Evaluate(m_distribution.m_type, Frame::cosTheta(bRec.wi), alpha, m_eta);
+		probSpecular = 1-RoughTransmittanceManager::Evaluate(m_type, Frame::cosTheta(bRec.wi), distr.getAlpha(), m_eta);
 
 		/* Reallocate samples */
 		probSpecular = (probSpecular*m_specularSamplingWeight) /
@@ -1038,7 +1045,7 @@ float roughplastic::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 		const float dwh_dwo = 1.0f / (4.0f * dot(bRec.wo, H));
 
 		/* Evaluate the microsurface normal distribution */
-		const float prob = m_distribution.pdf(H, alphaT);
+		const float prob = distr.pdf(bRec.wi, H);
 
 		result = prob * dwh_dwo * probSpecular;
 	}

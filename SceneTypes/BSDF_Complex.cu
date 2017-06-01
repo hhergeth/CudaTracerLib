@@ -164,14 +164,16 @@ Spectrum roughcoating::sample(BSDFSamplingRecord &bRec, float &_pdf, const Vec2f
 	bool choseSpecular = hasSpecular;
 	Vec2f sample = _sample;
 
-	/* Evaluate the roughness texture */
-	float alpha = m_alpha.Evaluate(bRec.dg).avg();
-	float alphaT = m_distribution.transformRoughness(alpha);
+	MicrofacetDistribution distr(
+		m_type,
+		m_alpha.Evaluate(bRec.dg).avg(),
+		m_sampleVisible
+	);
 
 	float probSpecular;
 	if (hasSpecular && hasNested) {
 		/* Find the probability of sampling the diffuse component */
-		probSpecular = 1 - RoughTransmittanceManager::Evaluate(m_distribution.m_type, Frame::cosTheta(bRec.wi), alpha, m_eta);
+		probSpecular = 1 - RoughTransmittanceManager::Evaluate(m_type, math::abs(Frame::cosTheta(bRec.wi)), distr.getAlpha(), m_eta);
 
 		/* Reallocate samples */
 		probSpecular = (probSpecular*m_specularSamplingWeight) /
@@ -189,7 +191,7 @@ Spectrum roughcoating::sample(BSDFSamplingRecord &bRec, float &_pdf, const Vec2f
 
 	if (choseSpecular) {
 		/* Perfect specular reflection based on the microsurface normal */
-		auto m = m_distribution.sample(sample, alphaT);
+		auto m = distr.sample(bRec.wi, sample);
 		bRec.wo = FresnelHelper::reflect(bRec.wi, m);
 		bRec.sampledType = EGlossyReflection;
 		bRec.eta = 1.0f;
@@ -225,9 +227,11 @@ Spectrum roughcoating::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 	bool hasNested = (bRec.typeMask & m_nested.getType() & EAll) != 0;
 	bool hasSpecular = (bRec.typeMask & EGlossyReflection) != 0 && measure == ESolidAngle;
 
-	/* Evaluate the roughness texture */
-	float alpha = m_alpha.Evaluate(bRec.dg).avg();
-	float alphaT = m_distribution.transformRoughness(alpha);
+	MicrofacetDistribution distr(
+		m_type,
+		m_alpha.Evaluate(bRec.dg).avg(),
+		m_sampleVisible
+	);
 
 	Spectrum result(0.0f);
 	if (hasSpecular && Frame::cosTheta(bRec.wo) * Frame::cosTheta(bRec.wi) > 0) {
@@ -235,13 +239,13 @@ Spectrum roughcoating::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 		const auto H = NormalizedT<Vec3f>(normalize(bRec.wo + bRec.wi)	* math::signum(Frame::cosTheta(bRec.wo)));
 
 		/* Evaluate the microsurface normal distribution */
-		const float D = m_distribution.eval(H, alphaT);
+		const float D = distr.eval(H);
 
 		/* Fresnel term */
 		const float F = FresnelHelper::fresnelDielectricExt(absdot(bRec.wi, H), m_eta);
 
 		/* Smith's shadow-masking function */
-		const float G = m_distribution.G(bRec.wi, bRec.wo, H, alphaT);
+		const float G = distr.G(bRec.wi, bRec.wo, H);
 
 		/* Calculate the specular reflection component */
 		float value = F * D * G /
@@ -256,8 +260,8 @@ Spectrum roughcoating::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 		bRecInt.wo = refractTo(EInterior, bRec.wo);
 
 		Spectrum nestedResult = m_nested.f(bRecInt, measure) *
-			RoughTransmittanceManager::Evaluate(m_distribution.m_type, Frame::cosTheta(bRec.wi), alpha, m_eta) *
-			RoughTransmittanceManager::Evaluate(m_distribution.m_type, Frame::cosTheta(bRec.wo), alpha, m_eta);
+			RoughTransmittanceManager::Evaluate(m_type, Frame::cosTheta(bRec.wi), distr.getAlpha(), m_eta) *
+			RoughTransmittanceManager::Evaluate(m_type, Frame::cosTheta(bRec.wo), distr.getAlpha(), m_eta);
 
 		Spectrum sigmaA = m_sigmaA.Evaluate(bRec.dg) * m_thickness;
 		if (!sigmaA.isZero())
@@ -286,14 +290,16 @@ float roughcoating::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 	/* Calculate the reflection half-vector */
 	const auto H = NormalizedT<Vec3f>(normalize(bRec.wo + bRec.wi) * math::signum(Frame::cosTheta(bRec.wo)));
 
-	/* Evaluate the roughness texture */
-	float alpha = m_alpha.Evaluate(bRec.dg).avg();
-	float alphaT = m_distribution.transformRoughness(alpha);
+	MicrofacetDistribution distr(
+		m_type,
+		m_alpha.Evaluate(bRec.dg).avg(),
+		m_sampleVisible
+	);
 
 	float probNested, probSpecular;
 	if (hasSpecular && hasNested) {
 		/* Find the probability of sampling the specular component */
-		probSpecular = 1 - RoughTransmittanceManager::Evaluate(m_distribution.m_type, Frame::cosTheta(bRec.wi), alpha, m_eta);
+		probSpecular = 1 - RoughTransmittanceManager::Evaluate(m_type, math::abs(Frame::cosTheta(bRec.wi)), distr.getAlpha(), m_eta);
 
 		/* Reallocate samples */
 		probSpecular = (probSpecular*m_specularSamplingWeight) /
@@ -312,7 +318,7 @@ float roughcoating::pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const
 		const float dwh_dwo = 1.0f / (4.0f * absdot(bRec.wo, H));
 
 		/* Evaluate the microsurface normal distribution */
-		const float prob = m_distribution.pdf(H, alphaT);
+		const float prob = distr.pdf(bRec.wi, H);
 
 		result = prob * dwh_dwo * probSpecular;
 	}
