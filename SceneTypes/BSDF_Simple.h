@@ -263,56 +263,14 @@ struct plastic : public BSDF//, public e_DerivedTypeHelper<8>
 	virtual void Update()
 	{
 		m_invEta2 = 1.0f / (m_eta * m_eta);
-		m_fdrInt = fresnelDiffuseReflectance(1/m_eta);
-		m_fdrExt = fresnelDiffuseReflectance(m_eta);
+		m_fdrInt = FresnelHelper::fresnelDiffuseReflectance(1/m_eta, false);
+		m_fdrExt = FresnelHelper::fresnelDiffuseReflectance(m_eta, false);
 		float dAvg = m_diffuseReflectance.Average().getLuminance(), sAvg = m_specularReflectance.Average().getLuminance();
 		m_specularSamplingWeight = sAvg / (dAvg + sAvg);
 	}
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const;
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const;
-private:
-	float fresnelDiffuseReflectance(float eta) const {
-		/* Fast mode: the following code approximates the
-		 * diffuse Frensel reflectance for the eta<1 and
-		 * eta>1 cases. An evalution of the accuracy led
-		 * to the following scheme, which cherry-picks
-		 * fits from two papers where they are best.
-		 */
-		if (eta < 1) {
-			/* Fit by Egan and Hilgeman (1973). Works
-			   reasonably well for "normal" IOR values (<2).
-
-			   Max rel. error in 1.0 - 1.5 : 0.1%
-			   Max rel. error in 1.5 - 2   : 0.6%
-			   Max rel. error in 2.0 - 5   : 9.5%
-			*/
-			return -1.4399f * (eta * eta)
-				  + 0.7099f * eta
-				  + 0.6681f
-				  + 0.0636f / eta;
-		} else {
-			/* Fit by d'Eon and Irving (2011)
-			 *
-			 * Maintains a good accuracy even for
-			 * unrealistic IOR values.
-			 *
-			 * Max rel. error in 1.0 - 2.0   : 0.1%
-			 * Max rel. error in 2.0 - 10.0  : 0.2%
-			 */
-			float invEta = 1.0f / eta,
-				  invEta2 = invEta*invEta,
-				  invEta3 = invEta2*invEta,
-				  invEta4 = invEta3*invEta,
-				  invEta5 = invEta4*invEta;
-
-			return 0.919317f - 3.4793f * invEta
-				 + 6.75335f * invEta2
-				 - 7.80989f * invEta3
-				 + 4.98554f * invEta4
-				 - 1.36881f * invEta5;
-		}
-	}
 };
 
 struct roughplastic : public BSDF//, public e_DerivedTypeHelper<9>

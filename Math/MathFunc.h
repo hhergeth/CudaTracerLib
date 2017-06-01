@@ -322,6 +322,75 @@ public:
 #endif
 	}
 
+	CUDA_FUNC_IN static float hypot2(float a, float b)
+	{
+		float r;
+		if (math::abs(a) > math::abs(b)) {
+			r = b / a;
+			r = math::abs(a) * math::sqrt(1.0f + r*r);
+		}
+		else if (b != 0.0f) {
+			r = a / b;
+			r = math::abs(b) * math::sqrt(1.0f + r*r);
+		}
+		else {
+			r = 0.0f;
+		}
+		return r;
+	}
+
+	CUDA_FUNC_IN static float erfinv(float x)
+	{
+		// Based on "Approximating the erfinv function" by Mark Giles
+		float w = -math::log((1.0f - x)*(1.0f + x));
+		float p;
+		if (w < 5.0f) {
+			w = w - 2.5f;
+			p =  2.81022636e-08f;
+			p =  3.43273939e-07f + p*w;
+			p = -3.5233877e-06f + p*w;
+			p = -4.39150654e-06f + p*w;
+			p =  0.00021858087f + p*w;
+			p = -0.00125372503f + p*w;
+			p = -0.00417768164f + p*w;
+			p =  0.246640727f + p*w;
+			p =  1.50140941f + p*w;
+		}
+		else {
+			w = math::sqrt(w) - 3;
+			p = -0.000200214257f;
+			p =  0.000100950558f + p*w;
+			p =  0.00134934322f + p*w;
+			p = -0.00367342844f + p*w;
+			p =  0.00573950773f + p*w;
+			p = -0.0076224613f + p*w;
+			p =  0.00943887047f + p*w;
+			p =  1.00167406f + p*w;
+			p =  2.83297682f + p*w;
+		}
+		return p*x;
+	}
+
+	CUDA_FUNC_IN float static erf(float x)
+	{
+		float a1 =   0.254829592f;
+		float a2 = -0.284496736f;
+		float a3 =   1.421413741f;
+		float a4 = -1.453152027f;
+		float a5 =   1.061405429f;
+		float p =   0.3275911f;
+
+		// Save the sign of x
+		float sign = math::signum(x);
+		x = math::abs(x);
+
+		// A&S formula 7.1.26
+		float t = 1.0f / (1.0f + p*x);
+		float y = 1.0f - (((((a5*t + a4)*t) + a3)*t + a2)*t + a1)*t*math::exp(-x*x);
+
+		return sign*y;
+	}
+
 	CUDA_FUNC_IN static float    scale(float a, int b)  { return a * exp2((float)b); }
 	CUDA_FUNC_IN static float    fastclamp(float v, float lo, float hi) { return fastMin(fastMax(v, lo), hi); }
 

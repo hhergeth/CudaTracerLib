@@ -143,7 +143,7 @@ public:
 
 	CUDA_FUNC_IN static NormalizedT<Vec3f> reflect(const NormalizedT<Vec3f> &wi, const NormalizedT<Vec3f> &n)
 	{
-		return NormalizedT<Vec3f>(2 * dot(wi, n) * (n)-wi);
+		return (2 * dot(wi, n) * (n)-wi).normalized();
 	}
 
 	CUDA_FUNC_IN static Vec3f refract(const Vec3f &wi, const Vec3f &n, float eta, float cosThetaT)
@@ -193,6 +193,8 @@ public:
 		float cosThetaT;
 		return fresnelDielectricExt(cosThetaI, cosThetaT, eta);
 	}
+
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST static float fresnelDiffuseReflectance(float eta, bool fast);
 };
 
 }
