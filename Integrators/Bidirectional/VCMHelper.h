@@ -91,7 +91,7 @@ CUDA_FUNC_IN void sampleEmitter(BPTSubPathState& v, Sampler& rng, float mMisVcWe
 	v.dVCM = Mis(directPdfW / emissionPdfW);
 	if (!l->As()->IsDegenerate())
 	{
-		float usedCosLight = dot(pRec.n, dRec.d);
+		float usedCosLight = absdot(pRec.n, dRec.d);
 		v.dVC = Mis(usedCosLight / emissionPdfW);
 	}
 	else v.dVC = 0;

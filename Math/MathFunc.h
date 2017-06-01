@@ -15,9 +15,13 @@ namespace CudaTracerLib {
 #define INV_FOURPI (1.0f / (4.0f * PI))
 #define SQRT_TWO      1.41421356237309504880f
 #define INV_SQRT_TWO  0.70710678118654752440f
-#define ONE_minUS_EPS 0.999999940395355225f
-#define EPSILON 0.000001f
 #define RCPOVERFLOW   2.93873587705571876e-39f
+
+//general epsilon used everywhere none of the specific ones is applicable
+#define EPSILON 0.000001f
+//epsilon for checking the next ray triangle intersection
+#define MIN_RAYTRACE_DISTANCE (1e-4f)
+//epsilon used for comparing given directions to perfect specular/delta directions
 #define DeltaEpsilon 1e-3f
 
 CUDA_FUNC_IN float int_as_float_(int i)

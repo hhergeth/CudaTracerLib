@@ -63,7 +63,7 @@ void MonteCarlo::StratifiedSample1D(float *samples, int nSamples, CudaRNG &rng, 
 	for (int i = 0; i < nSamples; ++i)
 	{
 		float delta = jitter ? rng.randomFloat() : 0.5f;
-		*samples++ = min((i + delta) * invTot, ONE_minUS_EPS);
+		*samples++ = min((i + delta) * invTot, (1- EPSILON));
 	}
 }
 
@@ -75,8 +75,8 @@ void MonteCarlo::StratifiedSample2D(float *samples, int nx, int ny, CudaRNG &rng
 		{
 			float jx = jitter ? rng.randomFloat() : 0.5f;
 			float jy = jitter ? rng.randomFloat() : 0.5f;
-			*samples++ = min((x + jx) * dx, ONE_minUS_EPS);
-			*samples++ = min((y + jy) * dy, ONE_minUS_EPS);
+			*samples++ = min((x + jx) * dx, (1 - EPSILON));
+			*samples++ = min((y + jy) * dy, (1 - EPSILON));
 		}
 }
 

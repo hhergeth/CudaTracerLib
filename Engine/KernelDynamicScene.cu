@@ -41,7 +41,7 @@ const Light* KernelDynamicScene::sampleEmitter(float& emPdf, Vec2f& sample) cons
 
 float KernelDynamicScene::pdfEmitter(const Light* L) const
 {
-	unsigned int idx = L - m_sLightBuf.Data;
+	unsigned int idx = (unsigned int)(L - m_sLightBuf.Data);
 	return m_pLightCDF[idx] - (idx == 0 ? 0.0f : m_pLightCDF[idx - 1]);
 }
 
@@ -69,15 +69,14 @@ Spectrum KernelDynamicScene::EvalEnvironment(const Ray& r, const Ray& rX, const 
 
 bool KernelDynamicScene::Occluded(const Ray& r, float tmin, float tmax, TraceResult* res) const
 {
-	const float eps = 0.01f;//remember this is an occluded test, so we shrink the interval!
+	//remember this is an occluded test, so we shrink the interval!
 	TraceResult r2 = traceRay(r);
 	if (r2.hasHit() && res)
 		*res = r2;
-	bool end = r2.m_fDist < tmax * (1.0f - eps);
+	bool end = r2.m_fDist < tmax - MIN_RAYTRACE_DISTANCE;
 	if (isinf(tmax) && !r2.hasHit())
 		end = false;
-	return r2.m_fDist > tmin * (1.0f + eps) && end;
-	//return tmin < r2.m_fDist && r2.m_fDist < tmax;
+	return r2.m_fDist > tmin + MIN_RAYTRACE_DISTANCE && end;
 }
 
 Spectrum KernelDynamicScene::evalTransmittance(const Vec3f& p1, const Vec3f& p2) const
