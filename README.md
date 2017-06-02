@@ -1,7 +1,7 @@
 <p align="center">
 <a href='https://github.com/hhergeth/CudaTracerLib/wiki/Example-Renderings' style='font-size:2.2em'>Examples</span></a> <br>
 <a href="https://github.com/hhergeth/CudaTracerLib/wiki/Example-Renderings">
-<img src="http://hhergeth.markab.uberspace.de/Git-Wiki-Files/thumbnails/loadBox_20150716_080109_PPPM.jpg" style="width:880px;">
+<img src="http://hhergeth.markab.uberspace.de/Git-Wiki-Files/thumbnails/loadBathroom2_20170528_102711_PPPM.jpg" style="width:880px;">
 </a>
 </p>
 
