@@ -14,7 +14,7 @@ CUDA_DEVICE int g_NextRayCounterWPT;
 CUDA_DEVICE CudaStaticWrapper<WavefrontPathTracerBuffer> g_ray_buffer;
 CUDA_DEVICE DeviceDepthImage g_DepthImageWPT;
 
-__global__ void pathCreateKernelWPT(unsigned int w, unsigned int h)
+__global__ void pathCreateKernelWPT(unsigned int w, unsigned int h, BlockSamplerBuffer blockBuf)
 {
 	__shared__ volatile int nextRayArray[MaxBlockHeight];
 	const int tidx = threadIdx.x;
@@ -27,19 +27,24 @@ __global__ void pathCreateKernelWPT(unsigned int w, unsigned int h)
 		int rayidx = rayBase + tidx;
 		if (rayidx >= w * h)
 			break;
-
+		
 		int x = rayidx % w, y = rayidx / w;
-		NormalizedT<Ray> r;
+		unsigned int numSamples = blockBuf.getNumSamplesPerPixel(x, y);
 		auto rng = g_SamplerData(rayidx);
-		Spectrum W = g_SceneData.sampleSensorRay(r, Vec2f(x, y) + rng.randomFloat2(), rng.randomFloat2());
-		WavefrontPTRayData dat;
-		dat.x = x;
-		dat.y = y;
-		dat.throughput = W;
-		dat.L = Spectrum(0.0f);
-		dat.dIdx = UINT_MAX;
-		dat.specular_bounce = true;
-		g_ray_buffer->insertPayloadElement(dat, r);
+
+		for (unsigned int i = 0; i < numSamples; i++)
+		{
+			NormalizedT<Ray> r;
+			Spectrum W = g_SceneData.sampleSensorRay(r, Vec2f(x, y) + rng.randomFloat2(), rng.randomFloat2());
+			WavefrontPTRayData dat;
+			dat.x = x;
+			dat.y = y;
+			dat.throughput = W;
+			dat.L = Spectrum(0.0f);
+			dat.dIdx = UINT_MAX;
+			dat.specular_bounce = true;
+			g_ray_buffer->insertPayloadElement(dat, r);
+		}
 	} while (true);
 }
 
@@ -160,14 +165,16 @@ template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(Image I, int pat
 
 void WavefrontPathTracer::DoRender(Image* I)
 {
-	int maxPathLength = m_sParameters.getValue(KEY_MaxPathLength()), rrStart = m_sParameters.getValue(KEY_RRStartDepth());
+	m_blockBuffer.Update(getBlockSampler());
 
+	int maxPathLength = m_sParameters.getValue(KEY_MaxPathLength()), rrStart = m_sParameters.getValue(KEY_RRStartDepth());
+	
 	if (hasDepthBuffer())
 		CopyToSymbol(g_DepthImageWPT, getDeviceDepthBuffer());
 	m_ray_buf->StartFrame();
 	CopyToSymbol(g_ray_buffer, *m_ray_buf);
 	ZeroSymbol(g_NextRayCounterWPT);
-	pathCreateKernelWPT << < dim3(180, 1, 1), dim3(32, 6, 1) >> >(w, h);
+	pathCreateKernelWPT << < dim3(180, 1, 1), dim3(32, 6, 1) >> >(w, h, m_blockBuffer);
 	CopyFromSymbol(*m_ray_buf, g_ray_buffer);
 
 	int pass = 0;
