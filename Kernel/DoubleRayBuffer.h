@@ -99,8 +99,12 @@ public:
 		m_num_payload_elements = m_insert_payload_index;
 		m_fetch_index = 0;
 		m_insert_payload_index = 0;
-		m_insert_secondary_index = 0;
-		std::swap(m_secondary_buf1, m_secondary_buf2);
+		//if we are not computing intersections (ie only refilling the buffer) we don't want to throw away the secondary rays
+		if (COMPUTE_INTERSCTIONS)
+		{
+			m_insert_secondary_index = 0;
+			std::swap(m_secondary_buf1, m_secondary_buf2);
+		}
 	}
 
 	//checks whether the buffer will be empty (<=> no more payload elements) in the next iteration
