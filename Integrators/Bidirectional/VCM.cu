@@ -74,7 +74,8 @@ CUDA_FUNC_IN void _VCM(const Vec2f& pixelPosition, Image& img, Sampler& rng, int
 		BSDFSamplingRecord bRec;
 		r2.getBsdfSample(cameraState.r, bRec, ETransportMode::ERadiance);
 
-		cameraState.dVCM *= r2.m_fDist * r2.m_fDist;
+		if (camPathLength > 1)
+			cameraState.dVCM *= r2.m_fDist * r2.m_fDist;
 		cameraState.dVCM /= math::abs(Frame::cosTheta(bRec.wi));
 		cameraState.dVC /= math::abs(Frame::cosTheta(bRec.wi));
 		cameraState.dVM /= math::abs(Frame::cosTheta(bRec.wi));
