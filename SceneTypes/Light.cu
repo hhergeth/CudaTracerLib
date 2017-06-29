@@ -475,7 +475,7 @@ float InfiniteLight::internalPdfDirection(const Vec3f &d) const
 
 Spectrum InfiniteLight::evalEnvironment(const Ray &ray) const
 {
-	Vec3f v = normalize(m_worldTransform.TransformDirectionTranspose(ray.dir()));
+	Vec3f v = m_worldTransform.TransformDirectionTranspose(ray.dir());
 
 	/* Convert to latitude-longitude texture coordinates */
 	Vec2f uv = Vec2f(
@@ -490,7 +490,7 @@ Spectrum InfiniteLight::evalEnvironment(const Ray &ray) const
 
 Spectrum InfiniteLight::evalEnvironment(const Ray &ray, const Ray& rX, const Ray& rY) const
 {
-	Vec3f v = normalize(m_worldTransform.TransformDirectionTranspose(ray.dir()));
+	Vec3f v = m_worldTransform.TransformDirectionTranspose(ray.dir());
 
 	/* Convert to latitude-longitude texture coordinates */
 	Vec2f uv = Vec2f(
@@ -498,14 +498,14 @@ Spectrum InfiniteLight::evalEnvironment(const Ray &ray, const Ray& rX, const Ray
 		math::safe_acos(v.y) * INV_PI
 		);
 
-	Vec3f  dvdx = rX.dir() - v,
-		dvdy = rY.dir() - v;
+	Vec3f dvdx = m_worldTransform.TransformDirectionTranspose(rX.dir()) - v,
+		  dvdy = m_worldTransform.TransformDirectionTranspose(rY.dir()) - v;
 
-	float	t1 = INV_TWOPI / (v.x*v.x + v.z*v.z),
-		t2 = -INV_PI / max(math::safe_sqrt(1.0f - v.y*v.y), 1e-4f);
+	float t1 = INV_TWOPI / (v.x*v.x + v.z*v.z),
+		  t2 = -INV_PI / max(math::safe_sqrt(1.0f - v.y*v.y), 1e-4f);
 
-	Vec2f	dudx = Vec2f(t1 * (dvdx.z*v.x - dvdx.x*v.z), t2 * dvdx.y),
-		dudy = Vec2f(t1 * (dvdy.z*v.x - dvdy.x*v.z), t2 * dvdy.y);
+	Vec2f dudx = Vec2f(t1 * (dvdx.z*v.x - dvdx.x*v.z), t2 * dvdx.y),
+    	  dudy = Vec2f(t1 * (dvdy.z*v.x - dvdy.x*v.z), t2 * dvdy.y);
 
 	Spectrum value = radianceMap.eval(uv, dudx, dudy);
 
