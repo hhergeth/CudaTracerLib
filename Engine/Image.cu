@@ -153,7 +153,7 @@ void Image::ComputeLuminanceInfo(Spectrum& avgColor, float& minLum, float& maxLu
 	Synchronize();
 	return;*/
 
-	const int block = 32;
+	const int block = 16;
 	int iMinLum = INT_MAX, iMaxLum;
 	ZeroSymbol(g_maxLum) ZeroSymbol(g_avgLum) ZeroSymbol(g_avgLogLum) CopyToSymbol(g_minLum, iMinLum) ZeroSymbol(g_avgColor)
 	computeLuminanceInfo << <dim3(xResolution / block + 1, yResolution / block + 1), dim3(block, block) >> >(*this);

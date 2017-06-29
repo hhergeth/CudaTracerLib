@@ -4,6 +4,7 @@
 #include <Base/CudaMemoryManager.h>
 #include <Kernel/DoubleRayBuffer.h>
 #include <Math/half.h>
+#include <Kernel/BlockSampler/BlockSamplerBuffer.h>
 
 namespace CudaTracerLib {
 
@@ -43,21 +44,27 @@ public:
 			m_ray_buf->Free();
 			delete m_ray_buf;
 		}
+
+		m_blockBuffer.Free();
 	}
 	virtual void Resize(unsigned int w, unsigned int h)
 	{
 		Tracer<true>::Resize(w, h);
+
 		if (m_ray_buf)
 		{
 			m_ray_buf->Free();
 			delete m_ray_buf;
 		}
 		m_ray_buf = new WavefrontPathTracerBuffer(w * h, w * h);
+
+		m_blockBuffer.Resize(w, h);
 	}
 protected:
 	CTL_EXPORT virtual void DoRender(Image* I);
 private:
 	WavefrontPathTracerBuffer* m_ray_buf;
+	BlockSamplerBuffer m_blockBuffer;
 };
 
 }

@@ -41,7 +41,7 @@ DirectSamplingRecord DirectSamplingRecFromRay(const NormalizedT<Ray>& r, float d
 	return dRec;
 }
 
-CUDA_FUNC_IN Spectrum EstimateDirect(BSDFSamplingRecord bRec, const Material& mat, const Light* light, EBSDFType flags, Sampler& rng, bool attenuated, bool use_mis)
+CUDA_FUNC_IN Spectrum EstimateDirect(BSDFSamplingRecord bRec, const Material& mat, const Light* light, float light_pdf, EBSDFType flags, Sampler& rng, bool attenuated, bool use_mis)
 {
 	DirectSamplingRecord dRec(bRec.dg.P, bRec.dg.sys.n);
 	Spectrum value = light->sampleDirect(dRec, rng.randomFloat2());
@@ -58,7 +58,7 @@ CUDA_FUNC_IN Spectrum EstimateDirect(BSDFSamplingRecord bRec, const Material& ma
 			if (use_mis && dRec.measure != EDiscrete)//compute MIS weight
 			{
 				const float bsdfPdf = mat.bsdf.pdf(bRec);
-				const float directPdf = dRec.measure == EArea ? PdfAtoW(dRec.pdf, dRec.dist, dot(dRec.n, dRec.d)) : dRec.pdf;
+				const float directPdf = (dRec.measure == EArea ? PdfAtoW(dRec.pdf, dRec.dist, dot(dRec.n, dRec.d)) : dRec.pdf) * light_pdf;
 				weight = MonteCarlo::PowerHeuristic(1, directPdf, 1, bsdfPdf);
 			}
 
@@ -82,7 +82,7 @@ Spectrum UniformSampleAllLights(const BSDFSamplingRecord& bRec, const Material& 
 		Spectrum Ld = Spectrum(0.0f);
 		for (int j = 0; j < nSamples; j++)
 		{
-			Ld += EstimateDirect((BSDFSamplingRecord&)bRec, mat, light, EBSDFType(EAll & ~EDelta), rng, attenuated, use_mis);
+			Ld += EstimateDirect((BSDFSamplingRecord&)bRec, mat, light, 1.0f, EBSDFType(EAll & ~EDelta), rng, attenuated, use_mis);
 		}
 		L += Ld / float(nSamples);
 	}
@@ -97,7 +97,7 @@ Spectrum UniformSampleOneLight(const BSDFSamplingRecord& bRec, const Material& m
 	float pdf;
 	const Light* light = g_SceneData.sampleEmitter(pdf, sample);
 	if (light == 0) return Spectrum(0.0f);
-	return EstimateDirect((BSDFSamplingRecord&)bRec, mat, light, EBSDFType(EAll & ~EDelta), rng, attenuated, use_mis) / pdf;
+	return EstimateDirect((BSDFSamplingRecord&)bRec, mat, light, pdf, EBSDFType(EAll & ~EDelta), rng, attenuated, use_mis) / pdf;
 }
 
 }
