@@ -54,6 +54,7 @@ struct KernelDynamicScene
 	float* m_pLightPDF;
 
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST bool Occluded(const Ray& r, float tmin, float tmax, TraceResult* res = 0) const;
+	CTL_EXPORT CUDA_DEVICE CUDA_HOST bool Occluded(const Ray& r, float tmin, float tmax, float t) const;
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum EvalEnvironment(const Ray& r) const;
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum EvalEnvironment(const Ray& r, const Ray& rX, const Ray& rY) const;
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST const Light* sampleEmitter(float& emPdf, Vec2f& sample) const;
