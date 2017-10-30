@@ -13,16 +13,16 @@ This library, for simplicity called CudaTracerLib, is a CUDA based ray tracer li
 
 ### Building from Source
 
-##### For Windows users there is a Visual Studio 2015 project file (with dependencies included) available:
+##### For Windows users there is a Visual Studio 2017 project file (with dependencies included) available:
 
-- Install the CUDA 8.0 toolkit from the official Nvidia site.
-- Extract the [windows dependencies](http://hhergeth.markab.uberspace.de/CudaTracerLib%20dependencies_8_0.rar) somewhere.
+- Install the CUDA 9.0 toolkit from the official Nvidia site.
+- Extract the [windows dependencies](http://hhergeth.markab.uberspace.de/CudaTracerLib%20dependencies_9_0.rar) somewhere.
 - Clone this repository into a subdirectory.
 - Move the CudaTracerLib.vcxproj* project files into this subdirectory. Open the solution file (use the CPU_Debug configuration).
 
 ##### All other platforms can use the accompanying CMake file:
 
-- Install the CUDA 8.0 toolkit from the official Nvidia site.
+- Install the CUDA 9.0 toolkit from the official Nvidia site.
 - Do the same for boost.
 - There are multiple unofficial CMake versions of FreeImage available. Use one of these to compile the library or check if there are precompiled versions available as for example for Debian.
 - Download [qMatrixLib](https://github.com/hhergeth/qMatrixLib) and extract it somewhere handy.

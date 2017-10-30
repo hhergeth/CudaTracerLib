@@ -3,6 +3,9 @@
 #include <Defines.h>
 #include "Vector.h"
 #include <iostream>
+#ifdef ISCUDA
+#include "cuda_fp16.h"
+#endif
 
 namespace CudaTracerLib {
 

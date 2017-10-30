@@ -382,7 +382,7 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 		// Fetch new rays from the global pool using lane 0.
 
 		const bool          terminated     = nodeAddr==EntrypointSentinel;
-		const unsigned int  maskTerminated = __ballot(terminated);
+		const unsigned int  maskTerminated = __ballot_sync(UINT_MAX, terminated);
 		const int           numTerminated  = __popc(maskTerminated);
 		const int           idxTerminated  = __popc(maskTerminated & ((1u<<tidx)-1));
 

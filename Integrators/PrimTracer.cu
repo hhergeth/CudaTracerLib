@@ -187,7 +187,7 @@ __global__ void primaryKernel(int width, int height, Image g_Image, bool depthIm
 		volatile int& rayBase = nextRayArray[threadIdx.y];
 
 		const bool          terminated = 1;//nodeAddr == EntrypointSentinel;
-		const unsigned int  maskTerminated = __ballot(terminated);
+		const unsigned int  maskTerminated = __ballot_sync(UINT_MAX, terminated);
 		const int           numTerminated = __popc(maskTerminated);
 		const int           idxTerminated = __popc(maskTerminated & ((1u << tidx) - 1));
 

@@ -19,7 +19,7 @@ public:
 	typedef T          Scalar;
 	enum { DIMENSION = N };
 
-	CUDA_FUNC_IN TSpectrum() = default;
+	TSpectrum() = default;
 
 	CUDA_FUNC_IN TSpectrum(Scalar v) {
 		for (int i = 0; i < N; i++)
@@ -331,7 +331,7 @@ public:
 		EIlluminant
 	};
 
-	CUDA_FUNC_IN Spectrum() = default;
+	Spectrum() = default;
 
 	CUDA_FUNC_IN Spectrum(float r, float g, float b)
 	{
