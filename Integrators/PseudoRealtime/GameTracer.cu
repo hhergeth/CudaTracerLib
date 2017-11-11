@@ -6,8 +6,9 @@
 
 namespace CudaTracerLib {
 
-template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(NormalizedT<Ray>& r, Sampler& rnd, int maxPathLength, int rrStartDepth)
+template<bool DIRECT> CUDA_FUNC_IN Spectrum PathTrace(const NormalizedT<Ray>& _r, Sampler& rnd, int maxPathLength, int rrStartDepth)
 {
+    auto r = _r;
 	Spectrum cl = Spectrum(0.0f);   // accumulated color
 	Spectrum cf = Spectrum(1.0f);  // accumulated reflectance
 	int depth = 0;

@@ -1,4 +1,4 @@
-#include <stdafx.h>
+#include <StdAfx.h>
 #include "Light.h"
 #include <Engine/MIPMap.h>
 #include <Math/MonteCarlo.h>

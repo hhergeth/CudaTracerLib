@@ -115,7 +115,7 @@ public:
 	{
 		if (Frame::cosTheta(wi) == 0)
 			return 0.0f;
-		return smithG1(wi, m) * absdot(wi, m) * eval(m) / std::abs(Frame::cosTheta(wi));
+		return smithG1(wi, m) * absdot(wi, m) * eval(m) / math::abs(Frame::cosTheta(wi));
 	}
 
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST float smithG1(const NormalizedT<Vec3f> &v, const NormalizedT<Vec3f> &m) const;
@@ -134,7 +134,7 @@ private:
 		float cosPhi2 = v.x * v.x * invSinTheta2;
 		float sinPhi2 = v.y * v.y * invSinTheta2;
 
-		return std::sqrt(cosPhi2 * m_alphaU * m_alphaU + sinPhi2 * m_alphaV * m_alphaV);
+		return math::sqrt(cosPhi2 * m_alphaU * m_alphaU + sinPhi2 * m_alphaV * m_alphaV);
 	}
 
 	CUDA_FUNC_IN float interpolatePhongExponent(const NormalizedT<Vec3f>& v) const {
