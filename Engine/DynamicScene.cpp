@@ -19,6 +19,13 @@
 
 namespace CudaTracerLib {
 
+std::string IFileManager::getDataPath()
+{
+	boost::filesystem::path p(getCompiledMeshPath("x.obj"));
+	boost::filesystem::path dir = p.parent_path().parent_path();
+	return dir.string();
+}
+
 using namespace boost::filesystem;
 using namespace boost::algorithm;
 

@@ -33,6 +33,8 @@ public:
 	virtual std::string getCompiledMeshPath(const std::string& name) = 0;
 	virtual std::string getTexturePath(const std::string& name) = 0;
 	virtual std::string getCompiledTexturePath(const std::string& name) = 0;
+	//this is only for standard folder layouts
+	virtual std::string getDataPath();
 };
 
 class DynamicScene
@@ -146,6 +148,10 @@ public:
 	void setShapeCreationClb(const std::function<bool(StreamReference<TriangleData>, StreamReference<TriIntersectorData>)>& clb)
 	{
 		m_sShapeCreationClb = clb;
+	}
+	IFileManager* getFileManager()
+	{
+		return m_pFileManager;
 	}
 	CTL_EXPORT void RecomputeShape(ShapeSet& shape, const float4x4& mat);
 
