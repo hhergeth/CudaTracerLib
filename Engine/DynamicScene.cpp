@@ -19,6 +19,9 @@
 
 namespace CudaTracerLib {
 
+using namespace boost::filesystem;
+using namespace boost::algorithm;
+
 std::string IFileManager::getDataPath()
 {
 	boost::filesystem::path p(getCompiledMeshPath("x.obj"));
@@ -26,8 +29,37 @@ std::string IFileManager::getDataPath()
 	return dir.string();
 }
 
-using namespace boost::filesystem;
-using namespace boost::algorithm;
+static path make_relative(path from, path to)
+{
+   // Start at the root path and while they are the same then do nothing then when they first
+   // diverge take the entire from path, swap it with '..' segments, and then append the remainder of the to path.
+   path::const_iterator fromIter = from.begin();
+   path::const_iterator toIter = to.begin();
+
+   // Loop through both while they are the same to find nearest common directory
+   while (fromIter != from.end() && toIter != to.end() && (*toIter) == (*fromIter))
+   {
+      ++toIter;
+      ++fromIter;
+   }
+
+   // Replace from path segments with '..' (from => nearest common directory)
+   path finalPath;
+   while (fromIter != from.end())
+   {
+      finalPath /= "..";
+      ++fromIter;
+   }
+
+   // Append the remainder of the to path (nearest common directory => to)
+   while (toIter != to.end())
+   {
+      finalPath /= *toIter;
+      ++toIter;
+   }
+
+   return finalPath;
+}
 
 struct textureLoader
 {
@@ -259,9 +291,10 @@ StreamReference<Node> DynamicScene::CreateNode(const std::string& a_Token, IInSt
 	{
 		IInStream* xmshStream = 0;
 		bool freeStream = false;
+		path cmpFilePath;
 		if (token.find(".xmsh") == std::string::npos)
 		{
-			path cmpFilePath = path(m_pFileManager->getCompiledMeshPath(a_Token)).replace_extension(".xmsh");
+			cmpFilePath = path(m_pFileManager->getCompiledMeshPath(a_Token)).replace_extension(".xmsh");
 			create_directories(cmpFilePath.parent_path());
 			boost::uintmax_t si = exists(cmpFilePath) ? file_size(cmpFilePath) : 0;
 			time_t cmpStamp = si != 0 ? last_write_time(cmpFilePath) : time(0);
@@ -278,13 +311,20 @@ StreamReference<Node> DynamicScene::CreateNode(const std::string& a_Token, IInSt
 			xmshStream = OpenFile(cmpFilePath.string());
 			freeStream = true;
 		}
-		else xmshStream = &in;
+		else
+		{
+			xmshStream = &in;
+			cmpFilePath = path(a_Token);
+		}
+
+		auto rel_cmp_path = make_relative(canonical(path(m_pFileManager->getCompiledMeshPath(""))), canonical(cmpFilePath)).string();
+
 		unsigned int t;
 		*xmshStream >> t;
 		if (t == (unsigned int)MeshCompileType::Static)
-			new(M(0)) Mesh(token, *xmshStream, m_pTriIntStream, m_pTriDataStream, m_pBVHStream, m_pBVHIndicesStream, m_pMaterialBuffer, m_pAnimStream);
+			new(M(0)) Mesh(rel_cmp_path, *xmshStream, m_pTriIntStream, m_pTriDataStream, m_pBVHStream, m_pBVHIndicesStream, m_pMaterialBuffer, m_pAnimStream);
 		else if (t == (unsigned int)MeshCompileType::Animated)
-			new(M(0)) AnimatedMesh(token, *xmshStream, m_pTriIntStream, m_pTriDataStream, m_pBVHStream, m_pBVHIndicesStream, m_pMaterialBuffer, m_pAnimStream);
+			new(M(0)) AnimatedMesh(rel_cmp_path, *xmshStream, m_pTriIntStream, m_pTriDataStream, m_pBVHStream, m_pBVHIndicesStream, m_pMaterialBuffer, m_pAnimStream);
 		else throw std::runtime_error("Mesh file parser error.");
 		if (freeStream)
 			delete xmshStream;
@@ -317,7 +357,7 @@ StreamReference<Node> DynamicScene::CreateNode(const std::string& a_Token, IInSt
 StreamReference<Node> DynamicScene::CreateNode(const std::string& a_MeshFile2, bool force_recompile)
 {
 	IInStream* in = OpenFile(a_MeshFile2);
-	StreamReference<Node> n = CreateNode(boost::filesystem::path(std::string(a_MeshFile2)).filename().string(), *in, force_recompile);
+	StreamReference<Node> n = CreateNode(a_MeshFile2, *in, force_recompile);
 	delete in;
 	return n;
 }
