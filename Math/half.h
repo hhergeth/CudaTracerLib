@@ -336,6 +336,9 @@ inline s10e5::s10e5() { } // no initialization
 
 inline s10e5::s10e5(float f)
 {
+#ifdef ISCUDA
+	_h = __float2half(f);
+#else
 	u_u32_s23e8 x;
 
 	x.f = f;
@@ -384,6 +387,7 @@ inline s10e5::s10e5(float f)
 		// zero, or underflow
 		_h = s;
 	}
+#endif
 }
 
 inline s10e5::s10e5(unsigned short s)

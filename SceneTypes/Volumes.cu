@@ -143,8 +143,8 @@ Spectrum VolumeGrid::integrateDensity(const Ray& ray, float t0, float t1) const
 	float minTL = t0 * Td, maxTL = t1 * Td;
 	rayL.dir() = normalize(rayL.dir());
 	float D_s = 0.0f, D_a = 0.0f;
-	Vec3f cell_size = Vec3f(1) / grid.dimF, dir = rayL.dir() / cell_size;
-	TraverseGridRay(rayL, minTL, maxTL, AABB(Vec3f(0), Vec3f(1)), grid.dimF, [&](float minT, float rayT, float maxT, float cellEndT, Vec3u& cell_pos, bool& cancelTraversal)
+	auto dimF = singleGrid ? grid.dimF : max(gridS.dimF, gridA.dimF);
+	TraverseGridRay(rayL, minTL, maxTL, AABB(Vec3f(0), Vec3f(1)), dimF, [&](float minT, float rayT, float maxT, float cellEndT, Vec3u& cell_pos, bool& cancelTraversal)
 	{
 		float d_s, d_a;
 		if (singleGrid)
@@ -175,7 +175,8 @@ bool VolumeGrid::invertDensityIntegral(const Ray& ray, float t0, float t1, float
 	bool found = false;
 	densityAtMinT = sigma_t(ray(t0), NormalizedT<Vec3f>(rayL.dir())).avg();
 	float Lcl_To_World = (t1 - t0) / (maxTL - minTL);
-	TraverseGridRay(rayL, minTL, maxTL, AABB(Vec3f(0), Vec3f(1)), grid.dimF, [&](float minT, float rayT, float maxT, float cellEndT, Vec3u& cell_pos, bool& cancelTraversal)
+	auto dimF = singleGrid ? grid.dimF : max(gridS.dimF, gridA.dimF);
+	TraverseGridRay(rayL, minTL, maxTL, AABB(Vec3f(0), Vec3f(1)), dimF, [&](float minT, float rayT, float maxT, float cellEndT, Vec3u& cell_pos, bool& cancelTraversal)
 	{
 		float d_s, d_a;
 		if (singleGrid)

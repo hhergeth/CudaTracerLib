@@ -19,6 +19,8 @@ struct DeviceDepthImage
 	int w, h;
 	CUDA_FUNC_IN void Store(int x, int y, float d)
 	{
+		if (x < 0 || x >= w || y < 0 || y >= h)
+			return;
 		m_pData[w * y + x] = NormalizeDepthD3D(d);
 	}
 	CUDA_FUNC_IN static float NormalizeDepthD3D(float d)
