@@ -718,7 +718,7 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 
 		// Remap intersected triangle index, and store the result.
 
-		uint4 res = make_uint4(0, UINT_MAX, UINT_MAX,0);
+		uint4 res = make_uint4(__float_as_int(hitT), UINT_MAX, UINT_MAX, 0);
 		if(hitIndex != -1)
 		{
 			res.x = __float_as_int(hitT);

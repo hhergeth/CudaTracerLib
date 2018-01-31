@@ -27,7 +27,7 @@ __global__ void pathCreateKernelWPT(unsigned int w, unsigned int h, BlockSampler
 		int rayidx = rayBase + tidx;
 		if (rayidx >= w * h)
 			break;
-		
+
 		int x = rayidx % w, y = rayidx / w;
 		unsigned int numSamples = blockBuf.getNumSamplesPerPixel(x, y);
 		auto rng = g_SamplerData(rayidx);
@@ -37,8 +37,8 @@ __global__ void pathCreateKernelWPT(unsigned int w, unsigned int h, BlockSampler
 			NormalizedT<Ray> r;
 			Spectrum W = g_SceneData.sampleSensorRay(r, Vec2f(x, y) + rng.randomFloat2(), rng.randomFloat2());
 			WavefrontPTRayData dat;
-			dat.x = x;
-			dat.y = y;
+			dat.x = half((float)x);
+			dat.y = half((float)y);
 			dat.throughput = W;
 			dat.L = Spectrum(0.0f);
 			dat.dIdx = UINT_MAX;
@@ -76,7 +76,7 @@ template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(Image I, int pat
 			g_DepthImageWPT.Store((int)payload.x.ToFloat(), (int)payload.y.ToFloat(), res.m_fDist);
 
 		//if true the contribution will be added at the end of the loop body
-		bool path_terminated = false;
+		bool path_terminated = (pathDepth + 1 == maxPathDepth);
 
 		if (res.hasHit())
 		{
@@ -134,7 +134,7 @@ template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(Image I, int pat
 					}
 				}
 
-				payload.prev_normal = NormalizedFloat3ToUchar2(bRec.dg.n);
+				payload.prev_normal = NormalizedFloat3ToUchar2(bRec.dg.sys.n);
 				payload.throughput *= f;
 				g_ray_buffer->insertPayloadElement(payload, r_refl);
 			}
@@ -168,7 +168,7 @@ void WavefrontPathTracer::DoRender(Image* I)
 	m_blockBuffer.Update(getBlockSampler());
 
 	int maxPathLength = m_sParameters.getValue(KEY_MaxPathLength()), rrStart = m_sParameters.getValue(KEY_RRStartDepth());
-	
+
 	if (hasDepthBuffer())
 		CopyToSymbol(g_DepthImageWPT, getDeviceDepthBuffer());
 	m_ray_buf->StartFrame();
