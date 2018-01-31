@@ -54,18 +54,20 @@ CUDA_FUNC_IN void computePixel(int x, int y, Sampler& rng, Image& g_Image, bool 
 				L = Spectrum(bRec.dg.bary.x, bRec.dg.bary.y, 0);
 			else
 			{
+				bRec.wo = NormalizedT<Vec3f>(0.0f, 0.0f, 1.0f);
+				Spectrum f_avg = prim_res.getMat().bsdf.f(bRec);
 				Spectrum Le = prim_res.Le(bRec.dg.P, bRec.dg.sys, -r.dir());
-				Spectrum f = prim_res.getMat().bsdf.sample(bRec, rng.randomFloat2());
 				through = Transmittance(r, 0, prim_res.m_fDist);
 				bool isDelta = prim_res.getMat().bsdf.hasComponent(EDelta);
 				if (mode == PathTrace_DrawMode::first_Le || (!isDelta && mode == PathTrace_DrawMode::first_non_delta_Le))
 					L = through * Le;
 				else if (mode == PathTrace_DrawMode::first_f || (!isDelta && mode == PathTrace_DrawMode::first_non_delta_f))
-					L = through * f;
+					L = through * f_avg;
 				else if (mode == PathTrace_DrawMode::first_f_direct || (!isDelta && mode == PathTrace_DrawMode::first_non_delta_f_direct))
-					L = Le + through * (UniformSampleOneLight(bRec, prim_res.getMat(), rng) + f * 0.5f);
+					L = Le + through * (UniformSampleOneLight(bRec, prim_res.getMat(), rng) + f_avg * 0.5f);
 				else
 				{
+					Spectrum f = prim_res.getMat().bsdf.sample(bRec, rng.randomFloat2());
 					through *= f;
 					int depth = 0;
 					do
@@ -227,6 +229,7 @@ void PrimTracer::DoRender(Image* I)
 	unsigned int zero = 0;
 	cudaMemcpyToSymbol(g_NextRayCounter2, &zero, sizeof(unsigned int));
 	primaryKernel << < 180, dim3(32, MaxBlockHeight, 1) >> >(w, h, *I, hasDepthBuffer(), m_sParameters.getValue(KEY_DrawingMode()), m_sParameters.getValue(KEY_MaxPathLength()));
+    ThrowCudaErrors(cudaDeviceSynchronize());
 }
 
 void PrimTracer::DebugInternal(class Image* I, const Vec2i& pixel)
