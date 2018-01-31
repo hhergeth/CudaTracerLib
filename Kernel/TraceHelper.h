@@ -63,7 +63,7 @@ struct CUDA_ALIGN(16) traversalResult
 	float dist;
 	int nodeIdx;
 	int triIdx;
-	int bCoords;//half2
+	int bCoords;//2 x uint16_t
 	CUDA_DEVICE CUDA_HOST void toResult(TraceResult* tR, KernelDynamicScene& g_SceneData) const;
 	CUDA_DEVICE CUDA_HOST void fromResult(const TraceResult* tR, KernelDynamicScene& g_SceneData);
 };

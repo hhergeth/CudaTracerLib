@@ -44,15 +44,16 @@ texture<float4, 1> t_TriDataB;
 void traversalResult::toResult(TraceResult* tR, KernelDynamicScene& data) const
 {
 	tR->m_fDist = dist;
-	tR->m_fBaryCoords = ((half2*)&bCoords)->ToFloat2();
+	uint16_t x_disc = bCoords & 0xffff, y_disc = bCoords >> 16;
+	tR->m_fBaryCoords = Vec2f(x_disc, y_disc) / UINT16_MAX;
 	tR->m_nodeIdx = nodeIdx;
 	tR->m_triIdx = triIdx;
 }
 
 void traversalResult::fromResult(const TraceResult* tR, KernelDynamicScene& data)
 {
-	half2 X(tR->m_fBaryCoords);
-	bCoords = *(int*)&X;
+	uint16_t x_disc = (uint16_t)(tR->m_fBaryCoords.x * UINT16_MAX), y_disc = (uint16_t)(tR->m_fBaryCoords.y * UINT16_MAX);
+	bCoords = (int)(y_disc << 16) | (uint32_t)x_disc;
 	dist = tR->m_fDist;
 	nodeIdx = tR->m_nodeIdx;
 	triIdx = tR->m_triIdx;
@@ -723,8 +724,8 @@ template<bool ANY_HIT> __global__ void intersectKernel(int numRays, traversalRay
 			res.x = __float_as_int(hitT);
 			res.y = nodeIdx;
 			res.z = hitIndex;
-			half2 h(bCorrds);
-			res.w = *(int*)&h;
+			uint16_t x_disc = (uint16_t)(bCorrds.x * UINT16_MAX), y_disc = (uint16_t)(bCorrds.y * UINT16_MAX);
+			res.w = (uint32_t)(y_disc << 16) | (uint32_t)x_disc;
 		}
 		((uint4*)a_ResBuffer)[rayidx] = res;
 //outerlabel: ;
