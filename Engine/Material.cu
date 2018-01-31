@@ -140,19 +140,19 @@ CUDA_FUNC_IN Spectrum sample_fast(const Texture& tex, const Vec2f& bary, const V
 {
 	Spectrum val;
 	if (tex.Is<ConstantTexture>())
-		val = tex.As<ConstantTexture>()->val.avg();
+		val = tex.As<ConstantTexture>()->val;
 	else if (tex.Is<WireframeTexture>())
-		val = tex.As<WireframeTexture>()->Evaluate(bary).avg();
+		val = tex.As<WireframeTexture>()->Evaluate(bary);
 	else
 	{
 		if (tex.Is<ImageTexture>())
-			val = tex.As<ImageTexture>()->tex->SampleAlpha(tex.As<ImageTexture>()->mapping.TransformPoint(uv));
+			val = tex.As<ImageTexture>()->Evaluate(uv);
 		else if (tex.Is<BilerpTexture>())
-			val = tex.As<BilerpTexture>()->Evaluate(uv).avg();
+			val = tex.As<BilerpTexture>()->Evaluate(uv);
 		else if (tex.Is<CheckerboardTexture>())
-			val = tex.As<CheckerboardTexture>()->Evaluate(uv).avg();
+			val = tex.As<CheckerboardTexture>()->Evaluate(uv);
 		else if (tex.Is<UVTexture>())
-			val = tex.As<UVTexture>()->Evaluate(uv).avg();
+			val = tex.As<UVTexture>()->Evaluate(uv);
 	}
 	return val;
 }

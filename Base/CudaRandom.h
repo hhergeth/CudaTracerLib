@@ -292,7 +292,7 @@ public:
 
 struct CudaRNG : public Curand_GENERATOR
 {
-	CudaRNG() = default;
+	explicit CudaRNG() = default;
 	CUDA_FUNC_IN explicit CudaRNG(unsigned int seed)
 		: Curand_GENERATOR(seed)
 	{

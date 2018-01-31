@@ -66,7 +66,14 @@ Mesh::Mesh(const std::string& path, IInStream& a_In, Stream<TriIntersectorData>*
 	m_sMatInfo = a_Stream4->malloc(m_uMaterialCount);
 	a_In >> m_sMatInfo;
 	for (unsigned int i = 0; i < m_uMaterialCount; i++)
-		m_sMatInfo(i)->bsdf.SetVtable();
+	{
+		auto& mat = *m_sMatInfo(i);
+		mat.bsdf.SetVtable();
+		mat.bssrdf.SetVtable();
+		mat.AlphaMap.tex.SetVtable();
+		mat.HeightMap.tex.SetVtable();
+		mat.NormalMap.tex.SetVtable();
+	}
 	m_sMatInfo.Invalidate();
 
 	unsigned long long m_uNodeSize;
