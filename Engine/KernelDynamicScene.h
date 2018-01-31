@@ -23,7 +23,7 @@ struct Material;
 struct KernelMIPMap;
 struct TraceResult;
 
-#define MAX_NUM_LIGHTS 16
+#define MAX_NUM_LIGHTS 128
 
 struct KernelDynamicScene
 {
