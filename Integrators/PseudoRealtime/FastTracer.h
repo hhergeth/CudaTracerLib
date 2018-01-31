@@ -8,7 +8,7 @@ namespace CudaTracerLib {
 
 struct EmptyRayData
 {
-
+	unsigned short x, y;
 };
 
 typedef DoubleRayBuffer<EmptyRayData> FastTracerBuffer;

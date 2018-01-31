@@ -30,7 +30,7 @@ __global__ void pathCreateKernelFT(unsigned int w, unsigned int h)
 		int x = rayidx % w, y = rayidx / w;
 		NormalizedT<Ray> r;
 		Spectrum W = g_SceneData.sampleSensorRay(r, Vec2f(x, y), Vec2f(0, 0));
-		g_primary_ray_buffer->insertPayloadElement(EmptyRayData(), r);
+		g_primary_ray_buffer->insertPayloadElement({(unsigned short)x, (unsigned short)y}, r);
 	} while (true);
 }
 
@@ -40,22 +40,12 @@ __global__ void doDirectKernel(unsigned int w, unsigned int h, Image I, float SC
 	NormalizedT<Ray> ray;
 	TraceResult res;
 	unsigned int rayIdx;
-	while (g_primary_ray_buffer->tryFetchPayloadElement(payload, ray, res, &rayIdx))
+	while (g_primary_ray_buffer->tryFetchPayloadElement(payload, ray, res))
 	{
-		RGBCOL col;
-		col.x = col.w = 255;
-		col.y = col.z = 0;
-		if (res.m_fDist)
-		{
-			//tar[rayidx] = Spectrum(a_ResBuffer[rayidx].m_fDist/SCALE).toRGBCOL();
-			float f = res.m_fDist / SCALE * 255.0f;
-			unsigned char c = (unsigned char)f;
-			unsigned int i = (255 << 24) | (c << 16) | (c << 8) | c;
-			col = *(RGBCOL*)&i;
-		}
-		Spectrum s;
-		s.fromRGBCOL(col);
-		I.AddSample(rayIdx % w, rayIdx / w, s);
+		Spectrum s = 0.0f;
+		if (res.hasHit())
+			s = Spectrum(res.m_fDist / SCALE);
+		I.AddSample(payload.x, payload.y, s);
 		if (depthImage)
 			dImg.Store(rayIdx % w, rayIdx / w, res.m_fDist);
 	}
@@ -63,6 +53,8 @@ __global__ void doDirectKernel(unsigned int w, unsigned int h, Image I, float SC
 
 void FastTracer::DoRender(Image* I)
 {
+	bufA->StartFrame();
+
 	ZeroSymbol(g_NextRayCounterFT);
 	CopyToSymbol(g_primary_ray_buffer, *bufA);
 	pathCreateKernelFT << < dim3(180, 1, 1), dim3(32, 6, 1) >> >(w, h);
