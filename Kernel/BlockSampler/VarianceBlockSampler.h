@@ -62,6 +62,8 @@ public:
 	VarianceBlockSampler(unsigned int w, unsigned int h)
 		: IUserPreferenceSampler(w, h), m_blockInfo(getNumTotalBlocks())
 	{
+		initializeMixedSettings();
+
 		int n(0);
 		m_indices.resize(getNumTotalBlocks());
 		std::generate(std::begin(m_indices), std::end(m_indices), [&] { return n++; });

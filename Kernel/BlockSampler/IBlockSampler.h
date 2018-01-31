@@ -128,9 +128,9 @@ public:
 
 protected:
 	//splits between sampling blocks deterministically and based on the weighting scheme present in indices
-	void MixedBlockIterate(const std::vector<int>& indices, iterate_blocks_clb_t clb, int passCounter, int num_deterministic = 2) const
+	void MixedBlockIterate(const std::vector<int>& indices, iterate_blocks_clb_t clb, int passCounter, int frac_deterministic, int frac_weighted) const
 	{
-		for (int i = 0; i < getNumTotalBlocks() / 4; i++)
+		for (int i = 0; i < getNumTotalBlocks() / frac_weighted; i++)
 		{
 			auto flattened_idx = indices[i];
 			int block_x, block_y, x, y, bw, bh;
@@ -141,8 +141,8 @@ protected:
 			clb(flattened_idx, x, y, bw, bh);
 		}
 
-		int start_deterministic = passCounter % num_deterministic;//deterministically sample the same number of blocks every n passes
-		for (int i = start_deterministic; i < getNumTotalBlocks(); i += num_deterministic)
+		int start_deterministic = passCounter % frac_deterministic;//deterministically sample the same number of blocks every n passes
+		for (int i = start_deterministic; i < getNumTotalBlocks(); i += frac_deterministic)
 		{
 			int block_x, block_y, x, y, bw, bh;
 			getIdxComponents(i, block_x, block_y);
@@ -151,6 +151,15 @@ protected:
 
 			clb(i, x, y, bw, bh);
 		}
+	}
+
+	//parameter settings for mixed sampling
+	PARAMETER_KEY(int, FractionDeterministic)
+	PARAMETER_KEY(int, FractionWeighted)
+	void initializeMixedSettings()
+	{
+		m_settings << KEY_FractionDeterministic() << CreateInterval(2, 1, INT_MAX)
+			<< KEY_FractionWeighted() << CreateInterval(4, 1, INT_MAX);
 	}
 };
 
@@ -169,7 +178,7 @@ public:
 
 	}
 
-	float getWeight(int block_x, int block_y)
+	float getWeight(int block_x, int block_y) const
 	{
 		return m_userWeights[getFlattenedIdx(block_x, block_y)];
 	}

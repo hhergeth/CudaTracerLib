@@ -86,7 +86,7 @@ void VarianceBlockSampler::IterateBlocks(iterate_blocks_clb_t clb) const
 {
 	if(m_uPassesDone < 10)
 		IterateAllBlocksUniform(clb);
-	else MixedBlockIterate(m_indices, clb, m_uPassesDone);
+	else MixedBlockIterate(m_indices, clb, m_uPassesDone, m_settings.getValue(KEY_FractionDeterministic()), m_settings.getValue(KEY_FractionWeighted()));
 }
 
 }

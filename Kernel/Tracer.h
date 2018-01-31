@@ -60,7 +60,7 @@ public:
 ENUMIZE(SamplingSequenceGeneratorTypes, SSGT)
 #undef SSGT
 
-#define BST(X) X(Uniform) X(Variance) X(Difference)
+#define BST(X) X(Uniform) X(Variance) X(Difference) X(Select)
 ENUMIZE(BlockSamplerTypes, BST)
 #undef BST
 

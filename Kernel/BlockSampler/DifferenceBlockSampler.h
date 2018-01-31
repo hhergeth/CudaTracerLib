@@ -30,6 +30,8 @@ public:
 	DifferenceBlockSampler(unsigned int w, unsigned int h)
 		: IUserPreferenceSampler(w, h), blockBuffer(getNumTotalBlocks()), m_uPassesDone(0)
 	{
+		initializeMixedSettings();
+
 		int n(0);
 		m_indices.resize(getNumTotalBlocks());
 		std::generate(std::begin(m_indices), std::end(m_indices), [&] { return n++; });

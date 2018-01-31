@@ -5,6 +5,7 @@
 #include "BlockSampler/UniformBlockSampler.h"
 #include "BlockSampler/VarianceBlockSampler.h"
 #include "BlockSampler/DifferenceBlockSampler.h"
+#include "BlockSampler/SelectBlockSampler.h"
 #include "Sampler.h"
 
 namespace CudaTracerLib {
@@ -96,6 +97,7 @@ void TracerBase::setCorrectBlockSampler()
 	check_type_bst<UniformBlockSampler>()(update, m_pBlockSampler, w, h, new_type, BlockSamplerTypes::Uniform);
 	check_type_bst<VarianceBlockSampler>()(update, m_pBlockSampler, w, h, new_type, BlockSamplerTypes::Variance);
 	check_type_bst<DifferenceBlockSampler>()(update, m_pBlockSampler, w, h, new_type, BlockSamplerTypes::Difference);
+	check_type_bst<SelectBlockSampler>()(update, m_pBlockSampler, w, h, new_type, BlockSamplerTypes::Select);
 }
 
 }
