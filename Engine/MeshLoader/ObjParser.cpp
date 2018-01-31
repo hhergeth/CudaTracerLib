@@ -193,6 +193,7 @@ bool parseFloat(const char*& ptr, float& value)
 enum TextureType
 {
 	TextureType_Diffuse = 0,    // Diffuse color map.
+	TextureType_Specular,
 	TextureType_Alpha,          // Alpha map (green = opacity).
 	TextureType_Displacement,   // Displacement map (green = height).
 	TextureType_Normal,         // Tangent-space normal map.
@@ -477,6 +478,12 @@ void loadMtl(ImportState& s, IInStream& mtlIn, const std::string& dirName)
 			mat.textures[TextureType_Diffuse] = std::string(ptr);
 			valid = parseTexture(ptr, tex, dirName);
 		}
+		else if (parseLiteral(ptr, "map_Ks ")) // specular texture
+		{
+			TextureSpec tex;
+			mat.textures[TextureType_Specular] = std::string(ptr);
+			valid = parseTexture(ptr, tex, dirName);
+		}
 		else if (parseLiteral(ptr, "Ke "))
 		{
 			if (parseFloats(ptr, (float*)&mat.emission, 3) && parseSpace(ptr) && !*ptr)
@@ -500,16 +507,16 @@ void loadMtl(ImportState& s, IInStream& mtlIn, const std::string& dirName)
 		else if (parseLiteral(ptr, "map_d ") || parseLiteral(ptr, "map_D ") || parseLiteral(ptr, "map_opacity ")) // alpha texture
 		{
 			TextureSpec tex;
+			mat.textures[TextureType_Alpha] = std::string(ptr);
 			valid = parseTexture(ptr, tex, dirName);
-			mat.textures[TextureType_Alpha] = tex.texture;
 		}
 		else if (parseLiteral(ptr, "disp ")) // displacement map
 		{
 			TextureSpec tex;
-			valid = parseTexture(ptr, tex, dirName);
 			mat.displacementCoef = tex.gain;
 			mat.displacementBias = tex.base * tex.gain;
-			mat.textures[TextureType_Displacement] = tex.texture;
+			mat.textures[TextureType_Displacement] = std::string(ptr);
+			valid = parseTexture(ptr, tex, dirName);
 		}
 		else if (parseLiteral(ptr, "bump ") || parseLiteral(ptr, "map_bump ") || parseLiteral(ptr, "map_Bump ")) // bump map
 		{
@@ -522,8 +529,8 @@ void loadMtl(ImportState& s, IInStream& mtlIn, const std::string& dirName)
 		else if (parseLiteral(ptr, "refl ")) // environment map
 		{
 			TextureSpec tex;
+			mat.textures[TextureType_Environment] = std::string(ptr);
 			valid = parseTexture(ptr, tex, dirName);
-			mat.textures[TextureType_Environment] = tex.texture;
 		}
 		else if (
 			parseLiteral(ptr, "vp ") ||             // parameter space vertex
@@ -780,11 +787,21 @@ void compileobj(IInStream& in, FileOutputStream& a_Out)
 		const auto& M = state.subMeshes[submesh].material;
 		Material mat(M.Name.c_str());
 		float f = 0.0f;
+
 		if (M.IlluminationModel == 2)
 		{
-			diffuse d;
-			d.m_reflectance = CreateTexture(M.textures[0].c_str(), Spectrum(M.diffuse.x, M.diffuse.y, M.diffuse.z));
-			mat.bsdf.SetData(d);
+			bool hasSpecular = !M.specular.isZero() || M.textures[TextureType_Specular].size() != 0;
+
+			auto diff_tex = CreateTexture(M.textures[TextureType_Diffuse].c_str(), Spectrum(M.diffuse.x, M.diffuse.y, M.diffuse.z));
+			if (hasSpecular)
+			{
+				auto spec_tex = CreateTexture(M.textures[TextureType_Specular].c_str(), Spectrum(M.specular.x, M.specular.y, M.specular.z));
+				mat.bsdf.SetData(phong(diff_tex, spec_tex, CreateTexture(0, Spectrum(M.glossiness))));
+			}
+			else
+			{
+				mat.bsdf.SetData(diffuse(diff_tex));
+			}
 		}
 		else if (M.IlluminationModel == 5)
 		{
@@ -798,10 +815,17 @@ void compileobj(IInStream& in, FileOutputStream& a_Out)
 		{
 			mat.bsdf.SetData(dielectric(M.IndexOfRefraction, CreateTexture(0, Spectrum(0.0f)), CreateTexture(0, Spectrum(M.Tf.x, M.Tf.y, M.Tf.z))));
 		}
+
 		if (M.textures[TextureType_Displacement].size())
 		{
 			mat.SetHeightMap(CreateTexture(M.textures[TextureType_Displacement].c_str(), Spectrum()));
 		}
+		if (M.textures[TextureType_Alpha].size() != 0)
+		{
+			mat.SetAlphaMap(CreateTexture(M.textures[TextureType_Alpha].c_str(), Spectrum()), AlphaBlendState::AlphaMap_Alpha);
+			mat.AlphaMap.test_val_scalar = 1.0f;
+		}
+
 
 		if (length(M.emission))
 			lights.push_back(Spectrum(M.emission.x, M.emission.y, M.emission.z));
