@@ -142,7 +142,7 @@ template<bool USE_ALPHA> CUDA_FUNC_IN bool __traceRay_internal__(const Vec3f& di
 #ifdef ISCUDA
 									float4 rowC = tex1Dfetch(t_TriDataB, ti * 4 + 2);
 									float4 rowD = tex1Dfetch(t_TriDataB, ti * 4 + 3);
-									Vec2f b = Vec2f(rowC.z, rowC.w), a = Vec2f(rowD.x, rowD.y), c = Vec2f(rowD.z, rowD.w);
+									Vec2f a = Vec2f(rowC.z, rowC.w), b = Vec2f(rowD.x, rowD.y), c = Vec2f(rowD.z, rowD.w);
 #else
 									Vec2f a, b, c;
 									tri->getUVSetData(0, a, b, c);

@@ -350,6 +350,13 @@ bool parseTexture(const char*& ptr, TextureSpec& value, const std::string& dirNa
 	return true;
 }
 
+std::string get_texture_path(const std::string& path, const std::string& dirName)
+{
+	if (boost::filesystem::exists(dirName + "/" + path))
+		return dirName + "/" + path;
+	else return path;
+}
+
 struct SubMesh
 {
 	std::vector<Vec3i>   indices;
@@ -475,13 +482,13 @@ void loadMtl(ImportState& s, IInStream& mtlIn, const std::string& dirName)
 		else if (parseLiteral(ptr, "map_Kd ")) // diffuse texture
 		{
 			TextureSpec tex;
-			mat.textures[TextureType_Diffuse] = std::string(ptr);
+			mat.textures[TextureType_Diffuse] = get_texture_path(std::string(ptr), dirName);
 			valid = parseTexture(ptr, tex, dirName);
 		}
 		else if (parseLiteral(ptr, "map_Ks ")) // specular texture
 		{
 			TextureSpec tex;
-			mat.textures[TextureType_Specular] = std::string(ptr);
+			mat.textures[TextureType_Specular] = get_texture_path(std::string(ptr), dirName);
 			valid = parseTexture(ptr, tex, dirName);
 		}
 		else if (parseLiteral(ptr, "Ke "))
@@ -507,7 +514,7 @@ void loadMtl(ImportState& s, IInStream& mtlIn, const std::string& dirName)
 		else if (parseLiteral(ptr, "map_d ") || parseLiteral(ptr, "map_D ") || parseLiteral(ptr, "map_opacity ")) // alpha texture
 		{
 			TextureSpec tex;
-			mat.textures[TextureType_Alpha] = std::string(ptr);
+			mat.textures[TextureType_Alpha] = get_texture_path(std::string(ptr), dirName);
 			valid = parseTexture(ptr, tex, dirName);
 		}
 		else if (parseLiteral(ptr, "disp ")) // displacement map
@@ -515,7 +522,7 @@ void loadMtl(ImportState& s, IInStream& mtlIn, const std::string& dirName)
 			TextureSpec tex;
 			mat.displacementCoef = tex.gain;
 			mat.displacementBias = tex.base * tex.gain;
-			mat.textures[TextureType_Displacement] = std::string(ptr);
+			mat.textures[TextureType_Displacement] = get_texture_path(std::string(ptr), dirName);
 			valid = parseTexture(ptr, tex, dirName);
 		}
 		else if (parseLiteral(ptr, "bump ") || parseLiteral(ptr, "map_bump ") || parseLiteral(ptr, "map_Bump ")) // bump map
@@ -523,13 +530,13 @@ void loadMtl(ImportState& s, IInStream& mtlIn, const std::string& dirName)
 			TextureSpec tex;
 			mat.displacementCoef = tex.gain;
 			mat.displacementBias = tex.base * tex.gain;
-			mat.textures[TextureType_Displacement] = std::string(ptr);
+			mat.textures[TextureType_Displacement] = get_texture_path(std::string(ptr), dirName);
 			valid = parseTexture(ptr, tex, dirName);
 		}
 		else if (parseLiteral(ptr, "refl ")) // environment map
 		{
 			TextureSpec tex;
-			mat.textures[TextureType_Environment] = std::string(ptr);
+			mat.textures[TextureType_Environment] = get_texture_path(std::string(ptr), dirName);
 			valid = parseTexture(ptr, tex, dirName);
 		}
 		else if (
@@ -822,7 +829,7 @@ void compileobj(IInStream& in, FileOutputStream& a_Out)
 		}
 		if (M.textures[TextureType_Alpha].size() != 0)
 		{
-			mat.SetAlphaMap(CreateTexture(M.textures[TextureType_Alpha].c_str(), Spectrum()), AlphaBlendState::AlphaMap_Alpha);
+			mat.SetAlphaMap(CreateTexture(M.textures[TextureType_Alpha].c_str(), Spectrum()), AlphaBlendState::AlphaMap_Luminance);
 			mat.AlphaMap.test_val_scalar = 1.0f;
 		}
 
