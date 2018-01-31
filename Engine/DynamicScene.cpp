@@ -287,23 +287,31 @@ StreamReference<Node> DynamicScene::CreateNode(const std::string& a_Token, IInSt
 {
 	std::string token(a_Token);
 	boost::algorithm::to_lower(token);
+	path cmpFilePath = "";
+	if (token.find(".xmsh") == std::string::npos)
+	{
+		cmpFilePath = path(m_pFileManager->getCompiledMeshPath(token)).replace_extension(".xmsh");
+	}
+	else cmpFilePath = path(token);
+	auto compiled_folder_can = canonical(path(m_pFileManager->getCompiledMeshPath("")));
+	auto compiled_mesh_can = weakly_canonical(cmpFilePath);//the file might not yet exist but that is a requirement for canonical
+	auto rel_cmp_path = make_relative(compiled_folder_can, compiled_mesh_can).string();
+
 	bool load;
-	BufferReference<Mesh, KernelMesh> M = m_pMeshBuffer->LoadCached(token, load);
+	BufferReference<Mesh, KernelMesh> M = m_pMeshBuffer->LoadCached(rel_cmp_path, load);
 	if (load || force_recompile)
 	{
 		IInStream* xmshStream = 0;
 		bool freeStream = false;
-		path cmpFilePath;
 		if (token.find(".xmsh") == std::string::npos)
 		{
-			cmpFilePath = path(m_pFileManager->getCompiledMeshPath(a_Token)).replace_extension(".xmsh");
 			create_directories(cmpFilePath.parent_path());
 			boost::uintmax_t si = exists(cmpFilePath) ? file_size(cmpFilePath) : 0;
 			time_t cmpStamp = si != 0 ? last_write_time(cmpFilePath) : time(0);
 			time_t rawStamp = exists(in.getFilePath()) ? last_write_time(in.getFilePath()) : 0;
 			if (si <= 4 || rawStamp != cmpStamp)
 			{
-				std::cout << "Started compiling mesh : " << a_Token << "\n";
+				std::cout << "Started compiling mesh : " << token << "\n";
 				FileOutputStream a_Out(cmpFilePath.string());
 				MeshCompileType t;
 				m_sCmpManager.Compile(in, token, a_Out, &t);
@@ -316,10 +324,7 @@ StreamReference<Node> DynamicScene::CreateNode(const std::string& a_Token, IInSt
 		else
 		{
 			xmshStream = &in;
-			cmpFilePath = path(a_Token);
 		}
-
-		auto rel_cmp_path = make_relative(canonical(path(m_pFileManager->getCompiledMeshPath(""))), canonical(cmpFilePath)).string();
 
 		unsigned int t;
 		*xmshStream >> t;
