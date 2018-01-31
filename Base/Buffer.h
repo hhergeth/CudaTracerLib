@@ -99,7 +99,8 @@ protected:
 		else
 		{
 			//BAD_EXCEPTION("Cuda data stream malloc failure, %d elements requested, %d available.", a_Count, m_uLength - m_uPos)
-			size_t newLength = m_uPos + a_Length;
+			size_t newLength = std::max(m_uPos + a_Length, m_uLength + m_uLength / 2);
+			std::cout << __FUNCTION__ << " :: Resizing buffer from " << m_uLength << " to " << newLength << " elements" << std::endl;
 			CUDA_FREE(device);
 			H* newHost = (H*)::malloc(m_uBlockSize * newLength);
 			::memcpy(newHost, host, m_uPos * m_uBlockSize);

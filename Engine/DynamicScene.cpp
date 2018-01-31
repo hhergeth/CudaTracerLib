@@ -177,8 +177,8 @@ protected:
 		Stream<Light>::reallocAfterResize();
 		size_t L = this->getBufferLength();
 		m_lightWeights.resize(L, 1.0f);
-		delete[] m_pDeviceLightWeights;
-		m_pDeviceLightWeights = new float[L];
+		delete[] m_pHostLeightWeights;
+		m_pHostLeightWeights = new float[L];
 		CUDA_FREE(m_pDeviceLightWeights);
 		CUDA_MALLOC(&m_pDeviceLightWeights, sizeof(float) * L);
 	}
@@ -224,6 +224,8 @@ public:
 			m_pHostLeightWeights[a.getIndex()] = pdf;
 			r.m_pLightCDF[i] = (i > 0 ? r.m_pLightCDF[i - 1] : 0.0f) + pdf;
 			i++;
+			if (i >= r.m_numLights)
+				break;
 		}
 		CUDA_MEMCPY_TO_DEVICE(m_pDeviceLightWeights, m_pHostLeightWeights, sizeof(float) * r.m_numLights);
 		r.m_pLightPDF = device ? m_pDeviceLightWeights : m_pHostLeightWeights;
@@ -862,8 +864,6 @@ AnimatedMesh* DynamicScene::AccessAnimatedMesh(StreamReference<Node> n)
 
 float4x4 DynamicScene::GetNodeTransform(StreamReference<Node> n)
 {
-	if (n.getIndex() >= m_pNodeStream->numElements())
-		throw std::runtime_error("Invalid idx!");
 	return m_pBVH->getNodeTransform(n);
 }
 
