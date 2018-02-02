@@ -20,7 +20,8 @@ namespace CudaTracerLib {
 //general epsilon used everywhere none of the specific ones is applicable
 #define EPSILON 0.000001f
 //epsilon for checking the next ray triangle intersection
-#define MIN_RAYTRACE_DISTANCE (1e-4f)
+//this is relative to the current scene size
+#define MIN_RAYTRACE_DISTANCE_RELATIVE (1e-4f)
 //epsilon used for comparing given directions to perfect specular/delta directions
 #define DeltaEpsilon 1e-3f
 

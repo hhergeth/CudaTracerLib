@@ -87,6 +87,7 @@ CUDA_FUNC_IN void loadInvModl(int i, float4x4* o)
 
 template<bool USE_ALPHA> CUDA_FUNC_IN bool __traceRay_internal__(const Vec3f& dir, const Vec3f& ori, TraceResult* a_Result)
 {
+    float rayEps = g_SceneData.m_rayTraceEps;
 	return TracerayTemplate(Ray(ori, dir), a_Result->m_fDist, [&](int nodeIdx)
 	{
 		Node* N = g_SceneData.m_sNodeData.Data + nodeIdx;
@@ -117,7 +118,7 @@ template<bool USE_ALPHA> CUDA_FUNC_IN bool __traceRay_internal__(const Vec3f& di
 				float Oz = v00.w - o.x*v00.x - o.y*v00.y - o.z*v00.z;
 				float invDz = 1.0f / (d.x*v00.x + d.y*v00.y + d.z*v00.z);
 				float t = Oz * invDz;
-				if (t > MIN_RAYTRACE_DISTANCE && t < a_Result->m_fDist)
+				if (t > rayEps && t < a_Result->m_fDist)
 				{
 					float Ox = v11.w + o.x*v11.x + o.y*v11.y + o.z*v11.z;
 					float Dx = d.x*v11.x + d.y*v11.y + d.z*v11.z;

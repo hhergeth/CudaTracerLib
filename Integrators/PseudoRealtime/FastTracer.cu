@@ -53,7 +53,7 @@ __global__ void doDirectKernel(unsigned int w, unsigned int h, Image I, float SC
 
 void FastTracer::DoRender(Image* I)
 {
-	bufA->StartFrame();
+	bufA->StartFrame(g_SceneData.m_rayTraceEps);
 
 	ZeroSymbol(g_NextRayCounterFT);
 	CopyToSymbol(g_primary_ray_buffer, *bufA);

@@ -49,6 +49,9 @@ template<typename T> class DoubleRayBuffer
 	unsigned int m_insert_payload_index;
 	//insert index for secondary buffer
 	unsigned int m_insert_secondary_index;
+
+    //this is used to initialize the min ray distances
+    float m_rayTraceEps;
 public:
 	DoubleRayBuffer(unsigned int payload_length, unsigned int secondary_length)
 		: m_payload_length(payload_length), m_num_secondary_rays(secondary_length), m_fetch_index(0), m_insert_payload_index(0), m_insert_secondary_index(0), m_secondary_buf1(secondary_length), m_secondary_buf2(secondary_length)
@@ -67,12 +70,13 @@ public:
 		m_secondary_buf2.Free();
 	}
 
-	void StartFrame()
+	void StartFrame(float rayTraceEps)
 	{
 		m_fetch_index = 0;
 		m_insert_payload_index = 0;
 		m_insert_secondary_index = 0;
 		m_num_payload_elements = 0;
+        m_rayTraceEps = rayTraceEps;
 	}
 
 	//this method has an extra mode COMPUTE_INTERSCTIONS = false where no intersections are computed
@@ -219,7 +223,7 @@ private:
 	}
 	CUDA_FUNC_IN void convert(const NormalizedT<Ray>& ray, const TraceResult* res, traversalRay& r1, traversalResult& r2)
 	{
-		r1.a = Vec4f(ray.ori(), MIN_RAYTRACE_DISTANCE);
+		r1.a = Vec4f(ray.ori(), m_rayTraceEps);
 		r1.b = Vec4f(ray.dir(), FLT_MAX);
 		if (res)
 			r2.fromResult(res, g_SceneData);

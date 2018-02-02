@@ -171,7 +171,7 @@ void WavefrontPathTracer::DoRender(Image* I)
 
 	if (hasDepthBuffer())
 		CopyToSymbol(g_DepthImageWPT, getDeviceDepthBuffer());
-	m_ray_buf->StartFrame();
+	m_ray_buf->StartFrame(g_SceneData.m_rayTraceEps);
 	CopyToSymbol(g_ray_buffer, *m_ray_buf);
 	ZeroSymbol(g_NextRayCounterWPT);
 	pathCreateKernelWPT << < dim3(180, 1, 1), dim3(32, 6, 1) >> >(w, h, m_blockBuffer);

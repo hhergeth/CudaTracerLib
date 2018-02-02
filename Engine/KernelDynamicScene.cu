@@ -73,18 +73,18 @@ bool KernelDynamicScene::Occluded(const Ray& r, float tmin, float tmax, TraceRes
 	TraceResult r2 = traceRay(r);
 	if (r2.hasHit() && res)
 		*res = r2;
-	bool end = r2.m_fDist < tmax - MIN_RAYTRACE_DISTANCE;
+	bool end = r2.m_fDist < tmax - m_rayTraceEps;
 	if (isinf(tmax) && !r2.hasHit())
 		end = false;
-	return r2.m_fDist > tmin + MIN_RAYTRACE_DISTANCE && end;
+	return r2.m_fDist > tmin + m_rayTraceEps && end;
 }
 
 bool KernelDynamicScene::Occluded(const Ray& r, float tmin, float tmax, float t) const
 {
-	bool end = t < tmax - MIN_RAYTRACE_DISTANCE;
+	bool end = t < tmax - m_rayTraceEps;
 	if (isinf(tmax) && t == FLT_MAX)
 		end = false;
-	return t > tmin + MIN_RAYTRACE_DISTANCE && end;
+	return t > tmin + m_rayTraceEps && end;
 }
 
 Spectrum KernelDynamicScene::evalTransmittance(const Vec3f& p1, const Vec3f& p2) const

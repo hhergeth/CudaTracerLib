@@ -590,6 +590,7 @@ KernelDynamicScene DynamicScene::getKernelSceneData(bool devicePointer)
 	r.m_Camera = *m_pCamera;
 	m_pLightStream->fillDeviceData(devicePointer, r);
 	r.doAlphaMapping = m_pMaterialBuffer->hasAlphaMappings();
+    r.m_rayTraceEps = MIN_RAYTRACE_DISTANCE_RELATIVE * r.m_sBox.Size().length();
 	return r;
 }
 

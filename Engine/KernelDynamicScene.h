@@ -53,6 +53,9 @@ struct KernelDynamicScene
 	//pdf of length m_sLightBuf.Length(!), for each light with its correct index
 	float* m_pLightPDF;
 
+    //this is the epsilon used by the reay tracing routines
+    float m_rayTraceEps;
+
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST bool Occluded(const Ray& r, float tmin, float tmax, TraceResult* res = 0) const;
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST bool Occluded(const Ray& r, float tmin, float tmax, float t) const;
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum EvalEnvironment(const Ray& r) const;
