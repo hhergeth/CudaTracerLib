@@ -1360,9 +1360,8 @@ public:
 	{
 		bool flipNormals = S.def_storage.prop_bool(node, "flipNormals", false);
 
-		auto obj = load_virtual("cube", S, get_cube_obj_text());
-		float s = flipNormals ? -2.0f : 2.0f;
-		parseGeneric(obj, node, S, float4x4::Scale(Vec3f(s,s,s*1e-3f)) % float4x4::Translate(Vec3f(-0.5f)));
+		auto obj = load_virtual("rect", S, get_plane_obj_text());
+		parseGeneric(obj, node, S, float4x4::RotateX(PI / 2) % float4x4::Scale(Vec3f(1,1,flipNormals ? -1.0f : 1.0f)) );
 		return obj;
 	}
 

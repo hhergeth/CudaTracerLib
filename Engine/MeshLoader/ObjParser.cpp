@@ -773,6 +773,9 @@ void compileobj(IInStream& in, FileOutputStream& a_Out)
 	ImportState state;
 	parse(state, in);
 
+	if (state.subMeshes.size() == 0)
+		throw std::runtime_error("Invalid obj file, did not find submeshes!");
+
 	unsigned int numVertices = (unsigned int)state.vertices.size();
 
 	std::vector<Vec3f> positions(numVertices);
@@ -850,8 +853,8 @@ void compileobj(IInStream& in, FileOutputStream& a_Out)
 		}
 	}
 
-	const Vec2f* uv_sets[1] = { &texCoords[0]};
-	Mesh::CompileMesh(&positions[0], numVertices, state.normals.size() != 0 ? &normals[0] : 0, uv_sets, 1, &indices[0], (unsigned int)indices.size(), &matData[0], lights.size() ? &lights[0] : 0, &submeshes[0], 0, a_Out);
+	std::vector<const Vec2f*> uv_sets = { texCoords.size() ? &texCoords[0] : 0};
+	Mesh::CompileMesh(&positions[0], numVertices, state.normals.size() != 0 ? &normals[0] : 0, uv_sets.data(), uv_sets[0] ? 1 : 0 , &indices[0], (unsigned int)indices.size(), &matData[0], lights.size() ? &lights[0] : 0, &submeshes[0], 0, a_Out);
 }
 
 }
