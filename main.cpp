@@ -5,6 +5,7 @@
 #include <boost/filesystem.hpp>
 #include <cctype>
 #include <boost/optional.hpp>
+#include <boost/progress.hpp>
 #include <algorithm>
 #include <Engine/Core.h>
 #include <Engine/DynamicScene.h>
@@ -74,7 +75,7 @@ boost::optional<options> parse_arguments(int ac, char** av)
         std::cout << "accepts 4 arguments : data path, scene file path, number of passes and tracer type {";
         for (auto& t : tracers)
             std::cout << t << ", ";
-        std::cout << "}" << std::endl << arg << " could not be used, exiting now";
+        std::cout << "}" << std::endl << arg << " could not be used, exiting now" << std::endl;
     };
 
     int n_args_used = 0;
@@ -146,8 +147,13 @@ int main(int ac, char** av)
     options.tracer->Resize(width, height);
     options.tracer->InitializeScene(&scene);
     scene.UpdateScene();
+
+    boost::progress_display show_progress(options.n_passes);
     for (int i = 0; i < options.n_passes; i++)
+    {
         options.tracer->DoPass(&outImage, !i);
+        ++show_progress;
+    }
 
     applyImagePipeline(*options.tracer, outImage, CreateAggregate<Filter>(BoxFilter(0.5f, 0.5f)));
 
