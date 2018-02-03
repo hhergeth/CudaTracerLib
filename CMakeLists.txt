@@ -56,6 +56,13 @@ file(GLOB_RECURSE CTL_CU
 
 set(LIB_NAME "CudaTracerLib")
 
-cuda_add_library(${LIB_NAME} ${CTL_SRC} ${CTL_CU} ${CTL_SRC_ROOT} ${CTL_CU_ROOT})
+set(BUILD_LIBRARY true CACHE BOOL "Whether to build a library or an executable")
+
+if (BUILD_LIBRARY)
+    cuda_add_library(${LIB_NAME} ${CTL_SRC} ${CTL_CU} ${CTL_SRC_ROOT} ${CTL_CU_ROOT})
+else ()
+    CUDA_ADD_EXECUTABLE(${LIB_NAME} ${CTL_SRC} ${CTL_CU} ${CTL_SRC_ROOT} ${CTL_CU_ROOT})
+endif ()
+
 target_link_libraries(${LIB_NAME} freeimage.so)
 target_link_libraries(${LIB_NAME} ${Boost_LIBRARIES})
