@@ -545,7 +545,7 @@ public:
             the [0..255] range. Afterwards, divide by max so that
             any color component multiplied by the result will be in [0,255] */
             //max_ = math::frexp(max_, &e) * 256.0f / max_;
-            max_ = frexp_self((double)max_, &e) * 256.0f / max_;
+            max_ = (float)frexp_self((double)max_, &e) * 256.0f / max_;
             rgbe.x = (unsigned char)(c.x * max_);
             rgbe.y = (unsigned char)(c.y * max_);
             rgbe.z = (unsigned char)(c.z * max_);

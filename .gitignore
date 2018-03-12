@@ -30,6 +30,7 @@ _ReSharper*/
 Compiled/
 Scenes/
 Build/
+build/
 *.dll
 *.bin
 *.lib
