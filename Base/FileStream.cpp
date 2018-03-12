@@ -43,7 +43,9 @@ void FileInputStream::Read(void* a_Data, size_t a_Size)
 {
 	if (numBytesRead + a_Size <= m_uFileSize)
 	{
-		fread(a_Data, a_Size, 1, m_ptr);
+		auto elements_read = fread(a_Data, a_Size, 1, m_ptr);
+		if(elements_read != a_Size)
+                    throw std::runtime_error("Error reading from file!");
 		numBytesRead += a_Size;
 	}
 	else throw std::runtime_error("Passed end of file!");
