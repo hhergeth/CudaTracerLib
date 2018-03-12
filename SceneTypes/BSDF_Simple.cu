@@ -991,7 +991,7 @@ Spectrum roughplastic::f(const BSDFSamplingRecord &bRec, EMeasure measure) const
 		//Float Fdr = 1-m_internalRoughTransmittance->evalDiffuse(alpha);
 		float T12 = RoughTransmittanceManager::Evaluate(m_type, Frame::cosTheta(bRec.wi), distr.getAlpha(), m_eta);
 		float T21 = RoughTransmittanceManager::Evaluate(m_type, Frame::cosTheta(bRec.wo), distr.getAlpha(), m_eta);
-		float Fdr = RoughTransmittanceManager::EvaluateDiffuse(m_type, distr.getAlpha(), m_eta);
+		float Fdr = 1-RoughTransmittanceManager::EvaluateDiffuse(m_type, distr.getAlpha(), m_eta);
 
 		if (m_nonlinear)
 			diff /= Spectrum(1.0f) - diff * Fdr;
