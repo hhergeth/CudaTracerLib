@@ -22,18 +22,20 @@ set_property(TARGET miniz example1 example2 example3 example4 example5 example6 
 
 # Pass options to NVCC
 find_package(CUDA REQUIRED)
+# Cmake automatically links with CUBLAS which we don't want
 SET(CUDA_cublas_device_LIBRARY "" CACHE PATH "ABC" FORCE)
 set(CUDA_PROPAGATE_HOST_FLAGS ON)
 #set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS}; -std=c++11; -gencode arch=compute_30,code=sm_30")
 set(CUDA_SEPARABLE_COMPILATION ON)
 
+# CUDA needs PIC so enable it on all relevant targets and use the CMAKE_LANG_FLAGS to pass it to the CUDA compiler
+target_compile_options(miniz PRIVATE -fPIC)
+target_compile_options(pugixml PRIVATE -fPIC)
+SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+
 # openexr is still using binary_function which has been deprecated in c++17
 target_compile_definitions(openexr PRIVATE _HAS_AUTO_PTR_ETC=1)
-#SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -m64")
-#SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -m64 -D_GLIBCXX_USE_CXX11_ABI=0")
-#SET(CMAKE_EXE_LINKER_FLAGS "-m64")
-#SET(CMAKE_MODULE_LINKER_FLAGS "-m64")
-#SET(CMAKE_SHARED_LINKER_FLAGS "-m64")
 
 # find all source files
 function(add_files root rec)

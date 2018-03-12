@@ -2,10 +2,9 @@
 //All that is done here is using the Mitsuba loader to load a scene and render a number of passes with a specified integrator.
 
 #include <StdAfx.h>
+#include <algorithm>
 #include <filesystem.h>
 #include <cctype>
-#include <optional.h>
-#include <algorithm>
 #include <Engine/Core.h>
 #include <Engine/DynamicScene.h>
 #include <SceneTypes/Node.h>
