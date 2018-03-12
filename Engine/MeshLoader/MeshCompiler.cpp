@@ -4,17 +4,15 @@
 #include <algorithm>
 #include <string>
 #include <iostream>
-#define BOOST_FILESYSTEM_NO_DEPRECATED
-#include <boost/filesystem.hpp>
-#include <boost/algorithm/string.hpp>
-using namespace boost::filesystem;
+#include <filesystem.h>
+#include <Base/Platform.h>
 
 namespace CudaTracerLib {
 
 bool hasEnding(std::string const &fullString, std::string const &_ending)
 {
 	std::string ending = _ending;
-	boost::algorithm::to_lower(ending);
+	to_lower(ending);
 	if (fullString.length() >= ending.length()) {
 		return (0 == fullString.compare(fullString.length() - ending.length(), ending.length(), ending));
 	}
@@ -47,11 +45,11 @@ bool e_Md5Compiler::IsApplicable(const std::string& a_InputFile, IInStream& in, 
 void e_Md5Compiler::Compile(IInStream& in, FileOutputStream& a_Out)
 {
 	std::vector<IInStream*> animFiles;
-	boost::filesystem::path p_file(in.getFilePath());
-	for (directory_iterator it(p_file.parent_path()); it != directory_iterator(); ++it)
+	std::filesystem::path p_file(in.getFilePath());
+	for (std::filesystem::directory_iterator it(p_file.parent_path()); it != std::filesystem::directory_iterator(); ++it)
 	{
 		std::string ext = it->path().extension().string();
-		boost::algorithm::to_lower(ext);
+		to_lower(ext);
 		if (ext == ".md5anim")
 		{
 			animFiles.push_back(new FileInputStream(it->path().string()));

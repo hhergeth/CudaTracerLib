@@ -1,7 +1,6 @@
 #include <StdAfx.h>
 #include "FileStream.h"
-#include <boost/filesystem.hpp>
-#include <boost/iostreams/device/mapped_file.hpp> 
+#include <filesystem.h>
 
 namespace CudaTracerLib {
 
@@ -27,28 +26,24 @@ FileInputStream::FileInputStream(const std::string& a_Name)
 	: path(a_Name)
 {
 	numBytesRead = 0;
-	H = new boost::iostreams::mapped_file(a_Name, boost::iostreams::mapped_file::readonly);
-	boost::iostreams::mapped_file& mmap = *(boost::iostreams::mapped_file*)H;
-	m_uFileSize = mmap.size();
+	m_ptr = fopen(a_Name.c_str(), "rb");
+	m_uFileSize = std::filesystem::file_size(a_Name);
 }
 
 void FileInputStream::Close()
 {
-	if (H)
+	if (m_ptr)
 	{
-		boost::iostreams::mapped_file* mmap = (boost::iostreams::mapped_file*)H;
-		mmap->close();
-		delete mmap;
-		H = 0;
+		fclose(m_ptr);
+		m_ptr = 0;
 	}
 }
 
 void FileInputStream::Read(void* a_Data, size_t a_Size)
 {
-	boost::iostreams::mapped_file& mmap = *(boost::iostreams::mapped_file*)H;
 	if (numBytesRead + a_Size <= m_uFileSize)
 	{
-		memcpy(a_Data, mmap.const_data() + numBytesRead, a_Size);
+		fread(a_Data, a_Size, 1, m_ptr);
 		numBytesRead += a_Size;
 	}
 	else throw std::runtime_error("Passed end of file!");
@@ -100,7 +95,7 @@ void MemInputStream::Read(void* a_Data, size_t a_Size)
 
 IInStream* OpenFile(const std::string& filename)
 {
-	if (boost::filesystem::file_size(filename) < 1024 * 1024 * 512)
+	if (std::filesystem::file_size(filename) < 1024 * 1024 * 512)
 		return new MemInputStream(filename);
 	else return new FileInputStream(filename);
 	return 0;

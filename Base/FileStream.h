@@ -129,7 +129,7 @@ class FileInputStream : public IInStream
 {
 private:
 	size_t numBytesRead;
-	void* H;
+	FILE* m_ptr;
 	std::string path;
 public:
 	CTL_EXPORT explicit FileInputStream(const std::string& a_Name);

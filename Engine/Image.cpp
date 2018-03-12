@@ -5,7 +5,7 @@
 #include <Base/CudaMemoryManager.h>
 
 #define FREEIMAGE_LIB
-#include <FreeImage.h>
+#include <FreeImage/FreeImage.h>
 
 namespace CudaTracerLib {
 

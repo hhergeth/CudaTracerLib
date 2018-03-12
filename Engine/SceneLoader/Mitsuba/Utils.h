@@ -4,20 +4,14 @@
 #include <map>
 #include <algorithm>
 
-#include <boost/filesystem.hpp>
-#include <boost/property_tree/ptree.hpp>
-#include <boost/optional.hpp>
-#include <boost/algorithm/string.hpp>
-#include <boost/lexical_cast.hpp>
+#include <filesystem.h>
+#include <optional.h>
 
 #include <Engine/DynamicScene.h>
 
-namespace CudaTracerLib {
+#include <pugixml/src/pugixml.hpp>
 
-inline std::string str_tolower(const std::string& s)
-{
-    return boost::algorithm::to_lower_copy(s);
-}
+namespace CudaTracerLib {
 
 //https://stackoverflow.com/questions/14265581/parse-split-a-string-in-c-using-string-delimiter-standard-c
 inline bool endsWith(const std::string& s, const std::string& suffix)
@@ -71,73 +65,61 @@ class XMLNode
 {
 	public:
 	std::string m_name;
-	boost::property_tree::ptree m_pt;
-
-	boost::optional<const boost::property_tree::ptree&> get_attribs() const
-	{
-		return m_pt.get_child_optional("<xmlattr>");
-	}
-
+	pugi::xml_node node;
 public:
-	XMLNode(const std::string& n, const boost::property_tree::ptree& pt)
-		: m_name(n), m_pt(pt)
+	XMLNode(const std::string& n, const pugi::xml_node& pt)
+		: m_name(n), node(pt)
 	{
 
 	}
 
 	std::string name() const
 	{
-		return str_tolower(m_name);
+		return to_lower(m_name);
 	}
 
 	template<typename F> void iterate_child_nodes(F clb) const
 	{
-		for (auto& x : m_pt)
-			if(x.first != "<xmlattr>" && x.first != "<xmlcomment>")
-				clb(XMLNode(x.first, x.second));
+		for (auto& x : node.children())
+			clb(XMLNode(x.name(), x));
 	}
 
 	XMLNode get_child_node(const std::string& name) const
 	{
-		return XMLNode(name, m_pt.get_child(str_tolower(name)));
+		return XMLNode(name, node.child(to_lower(name).c_str()));
 	}
 
 	bool has_child_node(const std::string& name) const
 	{
-		return (bool)m_pt.get_child_optional(str_tolower(name));
+		return !node.child(to_lower(name).c_str()).empty();
 	}
 
 	template<typename F> void iterate_attributes(F clb) const
 	{
-		auto q = get_attribs();
-		if(q)
-			for (auto& x : q.get())
-				clb(str_tolower(x.first), x.second.data());
+		for (auto& x : node.attributes())
+			clb(to_lower(x.name()), x.value());
 	}
 
 	std::string get_attribute(const std::string& name) const
 	{
-		auto q = get_attribs();
-		if (q)
-			return q.get().get_child(str_tolower(name)).get_value<std::string>();
-		else throw std::runtime_error("no attributes in node!");
+		auto a = node.attribute(to_lower(name).c_str());
+		if(a.empty())
+			throw std::runtime_error("no attributes in node!");
+		else return a.value();
 	}
 
 	bool has_attribute(const std::string& name) const
 	{
-		auto q = get_attribs();
-		if (q)
-			return (bool)q.get().get_child_optional(str_tolower(name));
-		else return false;
+		return !node.attribute(to_lower(name).c_str()).empty();
 	}
 
 	//helper functions specifically for mitsuba xmls
 	bool has_property(const std::string& name) const
 	{
-		for (auto& x : m_pt)
+		for (auto& x : node.children())
 		{
-			auto n = XMLNode(x.first, x.second);
-			if (n.has_attribute("name") && str_tolower(n.get_attribute("name")) == str_tolower(name))
+			auto n = XMLNode(x.name(), x);
+			if (n.has_attribute("name") && to_lower(n.get_attribute("name")) == to_lower(name))
 				return true;
 		}
 		return false;
@@ -145,10 +127,10 @@ public:
 
 	XMLNode get_property(const std::string& name) const
 	{
-		for (auto& x : m_pt)
+		for (auto& x : node.children())
 		{
-			auto n = XMLNode(x.first, x.second);
-			if (n.has_attribute("name") && str_tolower(n.get_attribute("name")) == str_tolower(name))
+			auto n = XMLNode(x.name(), x);
+			if (n.has_attribute("name") && to_lower(n.get_attribute("name")) == to_lower(name))
 				return n;
 		}
 		throw std::runtime_error("no property of that name : " + name);
@@ -211,35 +193,35 @@ public:
 		return val == "True";
 	}
 
-	float as_float(const XMLNode& node, const std::string& attrib_name, boost::optional<float> def_val = boost::none) const
+	float as_float(const XMLNode& node, const std::string& attrib_name, std::optional<float> def_val = {}) const
 	{
 		if (!node.has_attribute(attrib_name) && def_val)
-			return def_val.get();
+			return def_val.value();
 		else return as_float(node.get_attribute(attrib_name));
 	}
 
-	int as_int(const XMLNode& node, const std::string& attrib_name, boost::optional<int> def_val = boost::none) const
+	int as_int(const XMLNode& node, const std::string& attrib_name, std::optional<int> def_val = {}) const
 	{
 		if (!node.has_attribute(attrib_name) && def_val)
-			return def_val.get();
+			return def_val.value();
 		else return as_int(node.get_attribute(attrib_name));
 	}
 
-	std::string as_string(const XMLNode& node, const std::string& attrib_name, boost::optional<std::string> def_val = boost::none) const
+	std::string as_string(const XMLNode& node, const std::string& attrib_name, std::optional<std::string> def_val = {}) const
 	{
 		if (!node.has_attribute(attrib_name) && def_val)
-			return def_val.get();
+			return def_val.value();
 		else return as_string(node.get_attribute(attrib_name));
 	}
 
-	bool as_bool(const XMLNode& node, const std::string& attrib_name, boost::optional<bool> def_val = boost::none) const
+	bool as_bool(const XMLNode& node, const std::string& attrib_name, std::optional<bool> def_val = {}) const
 	{
 		if (!node.has_attribute(attrib_name) && def_val)
-			return def_val.get();
+			return def_val.value();
 		else return as_bool(node.get_attribute(attrib_name));
 	}
 
-	float prop_float(const XMLNode& node, const std::string& prop_name, boost::optional<float> def_val = boost::none, const std::string& attrib_name = "value") const
+	float prop_float(const XMLNode& node, const std::string& prop_name, std::optional<float> def_val = {}, const std::string& attrib_name = "value") const
 	{
 		if (node.has_property(prop_name))
 			return as_float(node.get_property(prop_name), attrib_name, def_val);
@@ -247,11 +229,11 @@ public:
 		{
 			if (!def_val)
 				throw std::runtime_error("no default value passed but property doesn't exist!");
-			return def_val.get();
+			return def_val.value();
 		}
 	}
 
-	int prop_int(const XMLNode& node, const std::string& prop_name, boost::optional<int> def_val = boost::none, const std::string& attrib_name = "value") const
+	int prop_int(const XMLNode& node, const std::string& prop_name, std::optional<int> def_val = {}, const std::string& attrib_name = "value") const
 	{
 		if (node.has_property(prop_name))
 			return as_int(node.get_property(prop_name), attrib_name, def_val);
@@ -259,11 +241,11 @@ public:
 		{
 			if (!def_val)
 				throw std::runtime_error("no default value passed but property doesn't exist!");
-			return def_val.get();
+			return def_val.value();
 		}
 	}
 
-	std::string prop_string(const XMLNode& node, const std::string& prop_name, boost::optional<std::string> def_val = boost::none, const std::string& attrib_name = "value") const
+	std::string prop_string(const XMLNode& node, const std::string& prop_name, std::optional<std::string> def_val = {}, const std::string& attrib_name = "value") const
 	{
 		if (node.has_property(prop_name))
 			return as_string(node.get_property(prop_name), attrib_name, def_val);
@@ -271,11 +253,11 @@ public:
 		{
 			if (!def_val)
 				throw std::runtime_error("no default value passed but property doesn't exist!");
-			return def_val.get();
+			return def_val.value();
 		}
 	}
 
-	bool prop_bool(const XMLNode& node, const std::string& prop_name, boost::optional<bool> def_val = boost::none, const std::string& attrib_name = "value") const
+	bool prop_bool(const XMLNode& node, const std::string& prop_name, std::optional<bool> def_val = {}, const std::string& attrib_name = "value") const
 	{
 		if (node.has_property(prop_name))
 			return as_bool(node.get_property(prop_name), attrib_name, def_val);
@@ -283,7 +265,7 @@ public:
 		{
 			if (!def_val)
 				throw std::runtime_error("no default value passed but property doesn't exist!");
-			return def_val.get();
+			return def_val.value();
 		}
 	}
 };
@@ -324,13 +306,13 @@ public:
 		};
 	}
 
-	float get(const XMLNode& node, const DefaultValueStorage& def_storage, const boost::optional<std::string>& def_name = boost::none) const
+	float get(const XMLNode& node, const DefaultValueStorage& def_storage, const std::optional<std::string>& def_name = {}) const
 	{
 		auto xml_val = node.get_attribute("value");
 		xml_val = def_storage.as_string(xml_val);
 		try
 		{
-			return boost::lexical_cast<float>(xml_val);
+			return std::stof(xml_val);
 		}
 		catch (...)
 		{
@@ -338,7 +320,7 @@ public:
 			if (ent == entries.end() && !def_name)
 				throw std::runtime_error("Invalid IOR material name");
 			else if (ent == entries.end())
-				return get(def_name.get());
+				return get(def_name.value());
 			else return ent->second;
 		}
 	}
@@ -407,14 +389,14 @@ public:
 	IoRLibrary ior_lib;
 	DynamicScene& scene;
 	std::string scenefile_location;
-	boost::optional<Vec2i> film_size;
+	std::optional<Vec2i> film_size;
 	float4x4 id_matrix;
 	bool create_interior_bssrdf;
 	bool create_exterior_bssrdf;
 	std::vector<StreamReference<Node>> nodes_to_remove;
 
 	ParserState(DynamicScene& scene, const std::string& mitsuba_scene_xml_loc, bool assume_rotated_coords, bool create_exterior_bssrdf, bool create_interior_bssrdf)
-		: scene(scene), scenefile_location(mitsuba_scene_xml_loc), film_size(boost::none), create_exterior_bssrdf(create_exterior_bssrdf), create_interior_bssrdf(create_interior_bssrdf)
+		: scene(scene), scenefile_location(mitsuba_scene_xml_loc), create_exterior_bssrdf(create_exterior_bssrdf), create_interior_bssrdf(create_interior_bssrdf)
 	{
 		id_matrix = assume_rotated_coords ? float4x4::RotateX(PI) : float4x4::Identity();
 	}
@@ -437,7 +419,7 @@ public:
 
 	std::string get_scene_name() const
 	{
-		return boost::filesystem::path(scenefile_location).stem().string();
+		return std::filesystem::path(scenefile_location).stem().string();
 	}
 };
 

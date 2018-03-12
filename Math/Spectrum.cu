@@ -259,52 +259,28 @@ void Spectrum::fromSRGB(float r, float g, float b)
 
 RGBE Spectrum::toRGBE() const
 {
-	float r, g, b;
-	toLinearRGB(r, g, b);
-	/* Find the largest contribution */
-	float max_ = CudaTracerLib::max(r, g, b);
-	RGBE rgbe;
-	if (max_ < 1e-32) {
-		rgbe.x = rgbe.y = rgbe.z = rgbe.w = 0;
-	} else {
-		int e;
-		/* Extract exponent and convert the fractional part into
-		 the [0..255] range. Afterwards, divide by max so that
-		 any color component multiplied by the result will be in [0,255] */
-		max_ = frexp(max_, &e) * (float) 256 / max_;
-		rgbe.x = (unsigned char) (r * max_);
-		rgbe.y = (unsigned char) (g * max_);
-		rgbe.z = (unsigned char) (b * max_);
-		rgbe.w = e+128; /* Exponent value in bias format */
-	}
-	return rgbe;
+    float r, g, b;
+    toLinearRGB(r, g, b);
+    return SpectrumConverter::Float3ToRGBE(Vec3f(r,g,b));
 }
 
 void Spectrum::fromRGBE(RGBE rgbe, Spectrum::EConversionIntent intent)
 {
-	if (rgbe.w) {
-		/* Calculate exponent/256 */
-		float exp = ldexp((float) 1, (int) rgbe.w - (128+8));
-		fromLinearRGB(rgbe.x*exp, rgbe.y*exp, rgbe.z*exp, intent);
-	} else {
-		s[0] = s[1] = s[2] = 0.0f;
-	}
+    auto col = SpectrumConverter::RGBEToFloat3(rgbe);
+    fromLinearRGB(col.x, col.y, col.z);
 }
 
 RGBCOL Spectrum::toRGBCOL() const
 {
 	float r,g,b;
 	toLinearRGB(r,g,b);
-//#define toInt(x) (unsigned char((float)math::pow(math::clamp01(x),1.0f/1.2f)*255.0f+0.5f))
-#define toInt(x) (unsigned char)(math::clamp01(x) * 255.0f)
-	return make_uchar4(toInt(r), toInt(g), toInt(b), 255);
-#undef toInt
+    return SpectrumConverter::Float3ToCOLORREF(Vec3f(r,g,b));
 }
 
-void Spectrum::fromRGBCOL(RGBCOL col)
+void Spectrum::fromRGBCOL(RGBCOL c)
 {
-	float r = float(col.x) / 255.0f, g = float(col.y) / 255.0f, b = float(col.z) / 255.0f;
-	fromLinearRGB(r,g,b);
+    auto col = SpectrumConverter::COLORREFToFloat3(c);
+	fromLinearRGB(col.x, col.y, col.z);
 }
 
 void Spectrum::toYxy(float &_Y, float &x, float &y) const

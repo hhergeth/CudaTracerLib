@@ -1,6 +1,6 @@
 #pragma once
 
-#include <boost/filesystem.hpp>
+#include <filesystem.h>
 
 #include "Primitives.h"
 #include "Utils.h"
@@ -251,7 +251,7 @@ public:
 			}
 		};
 
-		boost::optional<float4x4> volume_to_world;
+		std::optional<float4x4> volume_to_world;
 		auto parse_volume = [&](const XMLNode& vol_node)
 		{
 			VolData dat;
@@ -271,7 +271,7 @@ public:
 				dat.is_constant = false;
 				auto filename = S.def_storage.prop_string(vol_node, "filename");
 				filename = S.map_asset_filepath(filename);
-				boost::optional<std::tuple<Vec3f, Vec3f>> optional_aabb;
+				std::optional<std::tuple<Vec3f, Vec3f>> optional_aabb;
 				if(vol_node.has_property("toWorld") || vol_node.has_property("min"))
 				{
 					if(volume_to_world)
@@ -335,9 +335,9 @@ public:
 				}
 
 				if(optional_aabb)
-					dat.box = AABB(std::get<0>(optional_aabb.get()), std::get<1>(optional_aabb.get()));
+					dat.box = AABB(std::get<0>(optional_aabb.value()), std::get<1>(optional_aabb.value()));
 
-				auto vtow = volume_to_world ? volume_to_world.get() : float4x4::Identity();
+				auto vtow = volume_to_world ? volume_to_world.value() : float4x4::Identity();
 				if(distance(dat.box.minV, Vec3f(0)) > 1e-3f || distance(dat.box.maxV, Vec3f(1)) > 1e-3f)
 					volume_to_world = vtow % float4x4::Translate(dat.box.minV) % float4x4::Scale(dat.box.Size());
 			}
@@ -353,7 +353,7 @@ public:
 		if(node.has_property("albedo"))
 			albedo_data = parse_volume(node.get_property("albedo"));
 
-		auto vol_to_world = volume_to_world ? volume_to_world.get() : parseMatrix_Id(S);
+		auto vol_to_world = volume_to_world ? volume_to_world.value() : parseMatrix_Id(S);
 		vol_to_world = toWorld % vol_to_world;// the order here is unclear
 		if(density_data.is_constant && albedo_data.is_constant)
 		{
@@ -677,8 +677,8 @@ public:
 
 	StreamReference<Light> spot(const XMLNode& node, ParserState& S)
 	{
-		auto emission = tryParseColor(node, S, "intensity", 1.0);
-		float cutoffAngle = S.def_storage.prop_float(node, "cutoffAngle", 20);
+		auto emission = tryParseColor(node, S, "intensity", 1.0f);
+		float cutoffAngle = S.def_storage.prop_float(node, "cutoffAngle", 20.0f);
 		float beamWidth = S.def_storage.prop_float(node, "beamWidth", 20 * 0.75f);
 		auto T = parseMatrix(node.get_property("toWorld"), S);
 
@@ -771,8 +771,8 @@ class BsdfParser
 	struct BsdfData
 	{
 		BSDFALL bsdf;
-		boost::optional<Texture> heightmap;
-		boost::optional<Texture> alphamap;
+		std::optional<Texture> heightmap;
+		std::optional<Texture> alphamap;
 		bool two_sided;
 	};
 
@@ -788,9 +788,9 @@ class BsdfParser
 			{
 				data.two_sided |= child_bsdf.two_sided;
 				if (!data.heightmap && child_bsdf.heightmap)
-					data.heightmap = child_bsdf.heightmap.get();
+					data.heightmap = child_bsdf.heightmap.value();
 				if (!data.alphamap && child_bsdf.alphamap)
-					data.alphamap = child_bsdf.alphamap.get();
+					data.alphamap = child_bsdf.alphamap.value();
 			}
 		}
 
@@ -996,9 +996,7 @@ public:
 		parseGenericIOR(node, S, _1, _2, ior);
 		parseGenericPlastic(node, S, spec, diff, nonlinear);
 		parseGenericRough(node, S, alphaU, alphaV, dist);
-		return create(CudaTracerLib::plastic(ior, diff, spec, nonlinear));
-		//return create(CudaTracerLib::ward(ward::EModelVariant::EWard, diff, CreateAggregate<Texture>(ConstantTexture(0.2f)), alphaU, alphaV));
-		//return create(CudaTracerLib::roughplastic(dist, ior, alphaU, diff, spec, nonlinear));
+		return create(CudaTracerLib::roughplastic(dist, ior, alphaU, diff, spec, nonlinear));
 	}
 
 	BsdfData coating(const XMLNode& node, ParserState& S)
@@ -1110,7 +1108,7 @@ public:
 
 		if (child.bsdf.Is<CudaTracerLib::diffuse>())
 		{
-			auto r = create(CudaTracerLib::diffuse(child.alphamap.get()), &nested);
+			auto r = create(CudaTracerLib::diffuse(child.alphamap.value()), &nested);
 			r.bsdf.As<CudaTracerLib::diffuse>()->setModus(EDiffuseTransmission);
 			return r;
 		}
@@ -1173,9 +1171,9 @@ public:
 		mat->bsdf = data.bsdf;
 		mat->bsdf.As()->m_enableTwoSided = data.two_sided;
 		if (data.heightmap)
-			mat->SetHeightMap(data.heightmap.get());
+			mat->SetHeightMap(data.heightmap.value());
 		if (data.alphamap)
-			mat->SetAlphaMap(data.alphamap.get(), AlphaBlendState::AlphaMap_Luminance);
+			mat->SetAlphaMap(data.alphamap.value(), AlphaBlendState::AlphaMap_Luminance);
 		mat.Invalidate();
 	}
 };
@@ -1188,10 +1186,10 @@ class ShapeParser
 		auto token = S.get_scene_name() + "/" + name;
 
 		auto xmsh_path = S.scene.getFileManager()->getCompiledMeshPath(token);
-		auto xmsh_folder = boost::filesystem::path(xmsh_path).parent_path();
+		auto xmsh_folder = std::filesystem::path(xmsh_path).parent_path();
 
-		if(!boost::filesystem::exists(xmsh_folder))
-			boost::filesystem::create_directories(xmsh_folder);
+		if(!std::filesystem::exists(xmsh_folder))
+			std::filesystem::create_directories(xmsh_folder);
 
 		auto* str = OpenFile(filename);
 		auto obj = S.scene.CreateNode(token, *str);

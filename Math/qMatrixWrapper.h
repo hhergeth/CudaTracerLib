@@ -1,6 +1,6 @@
 #pragma once
-#include <qMatrix.h>
-#include <qMatrixHelper.h>
+#include <qMatrixLib/qMatrix.h>
+#include <qMatrixLib/qMatrixHelper.h>
 #include "Vector.h"
 #include "float4x4.h"
 

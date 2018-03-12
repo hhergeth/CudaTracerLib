@@ -6,7 +6,7 @@
 #include <ctime>
 #include <cuda_runtime.h>
 #define FREEIMAGE_LIB
-#include <FreeImage.h>
+#include <FreeImage/FreeImage.h>
 #include <Kernel/TraceHelper.h>
 
 namespace CudaTracerLib {

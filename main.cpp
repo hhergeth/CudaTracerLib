@@ -2,10 +2,9 @@
 //All that is done here is using the Mitsuba loader to load a scene and render a number of passes with a specified integrator.
 
 #include <StdAfx.h>
-#include <boost/filesystem.hpp>
+#include <filesystem.h>
 #include <cctype>
-#include <boost/optional.hpp>
-#include <boost/progress.hpp>
+#include <optional.h>
 #include <algorithm>
 #include <Engine/Core.h>
 #include <Engine/DynamicScene.h>
@@ -56,7 +55,7 @@ struct options
     int n_passes;
     TracerBase* tracer;
 };
-boost::optional<options> parse_arguments(int ac, char** av)
+std::optional<options> parse_arguments(int ac, char** av)
 {
     options opt;
 
@@ -82,9 +81,9 @@ boost::optional<options> parse_arguments(int ac, char** av)
     for (int i = 1; i < ac; i++)
     {
         std::string arg = av[i];
-        if (boost::filesystem::is_directory(boost::filesystem::path(arg)))
+        if (std::filesystem::is_directory(std::filesystem::path(arg)))
             opt.data_path = arg + "/";
-        else if (boost::filesystem::is_regular_file(boost::filesystem::path(arg)))
+        else if (std::filesystem::is_regular_file(std::filesystem::path(arg)))
             opt.scene_file = arg;
         else if (is_number(arg))
             opt.n_passes = std::stoi(arg);
@@ -105,7 +104,7 @@ boost::optional<options> parse_arguments(int ac, char** av)
         {
             print_error(arg);
 
-            return boost::none;
+			return {};
         }
 
         n_args_used++;
@@ -114,10 +113,24 @@ boost::optional<options> parse_arguments(int ac, char** av)
     if (n_args_used != 4)
     {
         print_error("");
-        return boost::none;
+		return {};
     }
 
     return opt;
+}
+
+
+//https://stackoverflow.com/a/36315819
+#define PBSTR "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+#define PBWIDTH 60
+
+void printProgress(double percentage)
+{
+	int val = (int)(percentage * 100);
+	int lpad = (int)(percentage * PBWIDTH);
+	int rpad = PBWIDTH - lpad;
+	printf("\r%3d%% [%.*s%*s]", val, lpad, PBSTR, rpad, "");
+	fflush(stdout);
 }
 
 int main(int ac, char** av)
@@ -125,7 +138,8 @@ int main(int ac, char** av)
     auto opt_options = parse_arguments(ac, av);
     if (!opt_options)
         return 1;
-    auto options = opt_options.get();
+    auto options = opt_options.value();
+
 
     int width = 1024, height = 1024;
     const float fov = 90;
@@ -134,12 +148,12 @@ int main(int ac, char** av)
     Sensor camera = CreateAggregate<Sensor>(PerspectiveSensor(width, height, fov));
     DynamicScene scene(&camera, SceneInitData::CreateForScene(1000, 30000, 100), &fManager);
 
-    boost::optional<Vec2i> img_size;
+    std::optional<Vec2i> img_size;
     ParseMitsubaScene(scene, options.scene_file, std::map<std::string, std::string>(), img_size, false, false, false);
     if (img_size)
     {
-        width = img_size.get().x;
-        height = img_size.get().y;
+        width = img_size.value().x;
+        height = img_size.value().y;
     }
 
     Image outImage(width, height);
@@ -148,11 +162,12 @@ int main(int ac, char** av)
     options.tracer->InitializeScene(&scene);
     scene.UpdateScene();
 
-    boost::progress_display show_progress(options.n_passes);
+	options.tracer->Debug(&outImage, Vec2i(132, 472));
+
     for (int i = 0; i < options.n_passes; i++)
     {
         options.tracer->DoPass(&outImage, !i);
-        ++show_progress;
+		printProgress(i / double(options.n_passes));
     }
 
     applyImagePipeline(*options.tracer, outImage, CreateAggregate<Filter>(BoxFilter(0.5f, 0.5f)));

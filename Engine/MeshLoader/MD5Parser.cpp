@@ -1,7 +1,6 @@
 // MD5 Loader, by A.J. Tavakoli
 #include "StdAfx.h"
 #include "MD5Parser.h"
-#include <boost/algorithm/string.hpp>
 #include <iostream>
 #include <string>
 #include <cstdlib>
@@ -9,6 +8,7 @@
 #include <cstring>
 #include <cstddef>
 #include <cctype>
+#include <Base/Platform.h>
 
 namespace CudaTracerLib {
 
@@ -204,7 +204,7 @@ void MD5Model::readAnimElements(std::ifstream &fin, Anim &anim) {
 	while (!fin.eof()) {
 		std::string str;
 		TOKEN tok = getNextToken(fin, &str);
-		boost::algorithm::to_lower(str);
+		to_lower(str);
 
 		// token is TOKEN_INVALID when end of file is reached
 		if (TOKEN_INVALID == tok)

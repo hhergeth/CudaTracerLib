@@ -4,7 +4,7 @@
 #include <Base/FileStream.h>
 #include <Base/CudaMemoryManager.h>
 #define FREEIMAGE_LIB
-#include <FreeImage.h>
+#include <FreeImage/FreeImage.h>
 
 //MipMap evaluation copied from Mitsuba.
 

@@ -1,0 +1,15 @@
+[submodule "ext/FreeImage"]
+	path = ext/FreeImage
+	url = https://github.com/Kanma/FreeImage.git
+[submodule "ext/pugixml"]
+	path = ext/pugixml
+	url = https://github.com/zeux/pugixml.git
+[submodule "ext/qMatrixLib"]
+	path = ext/qMatrixLib
+	url = https://github.com/hhergeth/qMatrixLib.git
+[submodule "ext/miniz"]
+	path = ext/miniz
+	url = https://github.com/richgel999/miniz.git
+[submodule "ext/ext-boost"]
+	path = ext/ext-boost
+	url = https://github.com/citra-emu/ext-boost.git

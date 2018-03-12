@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Vector.h"
+#include "MathFunc.h"
 
 //The general design of the class is copied from PBRT, the conversion/integration routines from Mitsuba.
 
@@ -475,6 +476,41 @@ public:
 
 class SpectrumConverter
 {
+    //https://people.freebsd.org/~jake/frexp.c
+    CUDA_FUNC_IN static double frexp_self(double value, int* eptr)
+    {
+        struct ieee_double {
+            uint32_t   dbl_fracl;
+            uint32_t   dbl_frach : 20;
+            uint32_t   dbl_exp : 11;
+            uint32_t   dbl_sign : 1;
+        };
+
+        union {
+            double v;
+            struct ieee_double s;
+        } u;
+
+        if (value) {
+            /*
+            * Fractions in [0.5..1.0) have an exponent of 2^-1.
+            * Leave Inf and NaN alone, however.
+            * WHAT ABOUT DENORMS?
+            */
+            u.v = value;
+            const uint32_t DBL_EXP_BIAS = 1023;
+            const uint32_t DBL_EXP_INFNAN = 2047;
+            if (u.s.dbl_exp != DBL_EXP_INFNAN) {
+                *eptr = u.s.dbl_exp - (DBL_EXP_BIAS - 1);
+                u.s.dbl_exp = DBL_EXP_BIAS - 1;
+            }
+            return (u.v);
+        }
+        else {
+            *eptr = 0;
+            return (0.0);
+        }
+    }
 public:
 	static CUDA_FUNC_IN float y(const Vec3f& v)
 	{
@@ -482,47 +518,50 @@ public:
 		return YWeight[0] * v.x + YWeight[1] * v.y + YWeight[2] * v.z;
 	}
 
-#define toInt(x) (int((float)math::pow(math::clamp01(x),1.0f/1.2f)*255.0f+0.5f))
-	//#define toInt(x) (unsigned char(x * 255.0f))
-
-	static CUDA_FUNC_IN RGBCOL Float4ToCOLORREF(const Vec4f& c)
-	{
-		return make_uchar4(toInt(c.x), toInt(c.y), toInt(c.z), toInt(c.w));
-	}
-
-	static CUDA_FUNC_IN Vec4f COLORREFToFloat4(RGBCOL c)
-	{
-		return Vec4f((float)c.x / 255.0f, (float)c.y / 255.0f, (float)c.z / 255.0f, (float)c.w / 255.0f);
-	}
-
 	static CUDA_FUNC_IN RGBCOL Float3ToCOLORREF(const Vec3f& c)
 	{
-		return make_uchar4(toInt(c.x), toInt(c.y), toInt(c.z), 255);
+#define toInt(x) (unsigned char)(math::clamp01(x) * 255.0f)
+        return make_uchar4(toInt(c.x), toInt(c.y), toInt(c.z), 255);
+#undef toInt
 	}
 
-	static CUDA_FUNC_IN Vec3f COLORREFToFloat3(RGBCOL c)
+	static CUDA_FUNC_IN Vec3f COLORREFToFloat3(RGBCOL col)
 	{
-		return Vec3f((float)c.x / 255.0f, (float)c.y / 255.0f, (float)c.z / 255.0f);
+        float r = float(col.x) / 255.0f, g = float(col.y) / 255.0f, b = float(col.z) / 255.0f;
+		return Vec3f(r, g, b);
 	}
-#undef toInt
 
 	static CUDA_FUNC_IN RGBE Float3ToRGBE(const Vec3f& c)
 	{
-		float v = c.max();
-		if (v < 1e-32)
-			return make_uchar4(0, 0, 0, 0);
-		else
-		{
-			int e;
-			v = frexp(v, &e) * 256.0f / v;
-			return make_uchar4((unsigned char)(c.x * v), (unsigned char)(c.y * v), (unsigned char)(c.z * v), e + 128);
-		}
+        /* Find the largest contribution */
+        float max_ = CudaTracerLib::max(c.x, c.y, c.z);
+        RGBE rgbe;
+        if (max_ < 1e-32) {
+            rgbe.x = rgbe.y = rgbe.z = rgbe.w = 0;
+        }
+        else {
+            int e;
+            /* Extract exponent and convert the fractional part into
+            the [0..255] range. Afterwards, divide by max so that
+            any color component multiplied by the result will be in [0,255] */
+            //max_ = math::frexp(max_, &e) * 256.0f / max_;
+            max_ = frexp_self((double)max_, &e) * 256.0f / max_;
+            rgbe.x = (unsigned char)(c.x * max_);
+            rgbe.y = (unsigned char)(c.y * max_);
+            rgbe.z = (unsigned char)(c.z * max_);
+            rgbe.w = (unsigned char)(e + 128); /* Exponent value in bias format */
+        }
+        return rgbe;
 	}
 
-	static CUDA_FUNC_IN Vec3f RGBEToFloat3(RGBE a)
+	static CUDA_FUNC_IN Vec3f RGBEToFloat3(RGBE rgbe)
 	{
-		float f = ldexp(1.0f, a.w - (int)(128 + 8));
-		return Vec3f((float)a.x * f, (float)a.y * f, (float)a.z * f);
+        if (rgbe.w) {
+            /* Calculate exponent/256 */
+            float exp = ldexp(1.0f, int(rgbe.w) - (128 + 8));
+            return Vec3f(rgbe.x*exp, rgbe.y*exp, rgbe.z*exp);
+        }
+        else return Vec3f(0.0f);
 	}
 
 	///this is not luminence! This is some strange msdn stuff, no idea

@@ -1,68 +1,80 @@
 cmake_minimum_required(VERSION 3.0)
 project(CudaTracerLib)
 
-set (CMAKE_CXX_STANDARD 14)
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-FIND_PACKAGE( Boost COMPONENTS system filesystem iostreams REQUIRED )
-INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIR} )
+set (CMAKE_CXX_STANDARD 17)
 
-# Specify include directories
-set(QMATRIX_INCLUDE_DIR "qMatrixLib" CACHE FILEPATH "Path to qMatrixLib")
-include_directories(${QMATRIX_INCLUDE_DIR})
+# so that better include paths are possible
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-find_path(FREEIMAGE_INCLUDE_DIR FreeImage.h)
-include_directories(${FREEIMAGE_INCLUDE_DIR})
+# add external dependencies
+include_directories(ext)
+include_directories("ext/ext-boost")
+add_subdirectory(ext/FreeImage)
+add_subdirectory(ext/pugixml)
+add_subdirectory(ext/miniz)
 
-find_package(CUDA REQUIRED)
+# hide the external dependencies in visual studio
+set_property(TARGET freeimage jpeg openexr openjpeg rawlite tiff zlib png mng PROPERTY FOLDER "dependencies")
+set_property(TARGET pugixml PROPERTY FOLDER "dependencies")
+set_property(TARGET miniz example1 example2 example3 example4 example5 example6 PROPERTY FOLDER "dependencies")
+
 # Pass options to NVCC
-set(CUDA_PROPAGATE_HOST_FLAGS OFF)
-list(APPEND CUDA_NVCC_FLAGS "-std=c++11;-rdc=true")
-set(
-    CUDA_NVCC_FLAGS
-    ${CUDA_NVCC_FLAGS};
-    -O3 -gencode arch=compute_30,code=sm_30
-    )
+find_package(CUDA REQUIRED)
+SET(CUDA_cublas_device_LIBRARY "" CACHE PATH "ABC" FORCE)
+set(CUDA_PROPAGATE_HOST_FLAGS ON)
+#set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS}; -std=c++11; -gencode arch=compute_30,code=sm_30")
 set(CUDA_SEPARABLE_COMPILATION ON)
 
-SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -m64")
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -m64 -D_GLIBCXX_USE_CXX11_ABI=0 -std=c++11")
-SET(CMAKE_EXE_LINKER_FLAGS "-m64")
-SET(CMAKE_MODULE_LINKER_FLAGS "-m64")
-SET(CMAKE_SHARED_LINKER_FLAGS "-m64")
+# openexr is still using binary_function which has been deprecated in c++17
+target_compile_definitions(openexr PRIVATE _HAS_AUTO_PTR_ETC=1)
+#SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -m64")
+#SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -m64 -D_GLIBCXX_USE_CXX11_ABI=0")
+#SET(CMAKE_EXE_LINKER_FLAGS "-m64")
+#SET(CMAKE_MODULE_LINKER_FLAGS "-m64")
+#SET(CMAKE_SHARED_LINKER_FLAGS "-m64")
 
-file(GLOB CTL_SRC_ROOT
-       ${PROJECT_SOURCE_DIR}/*.cpp)
-file(GLOB_RECURSE CTL_SRC
-       ${PROJECT_SOURCE_DIR}/Base/*.cpp
-       ${PROJECT_SOURCE_DIR}/Engine/*.cpp
-       ${PROJECT_SOURCE_DIR}/Integrators/*.cpp
-       ${PROJECT_SOURCE_DIR}/Kernel/*.cpp
-       ${PROJECT_SOURCE_DIR}/Math/*.cpp
-       ${PROJECT_SOURCE_DIR}/SceneTypes/*.cpp
-)
+# find all source files
+function(add_files root rec)
+	file(
+		${rec} _source_list 
+		LIST_DIRECTORIES false
+		"${root}*.cpp*"
+		"${root}*.h*"
+		"${root}*.cu*"
+	)
+	set(INC_FILES ${INC_FILES} ${_source_list} PARENT_SCOPE)
+endfunction(add_files)
 
-file(GLOB CTL_CU_ROOT
-       ${PROJECT_SOURCE_DIR}/*.cu)
-file(GLOB_RECURSE CTL_CU
-       ${PROJECT_SOURCE_DIR}/Base/*.cu
-       ${PROJECT_SOURCE_DIR}/Engine/*.cu
-       ${PROJECT_SOURCE_DIR}/Integrators/*.cu
-       ${PROJECT_SOURCE_DIR}/Kernel/*.cu
-       ${PROJECT_SOURCE_DIR}/Math/*.cu
-       ${PROJECT_SOURCE_DIR}/SceneTypes/*.cu
-)
+add_files("" GLOB)
+add_files("Base/" GLOB_RECURSE)
+add_files("Engine/" GLOB_RECURSE)
+add_files("Integrators/" GLOB_RECURSE)
+add_files("Kernel/" GLOB_RECURSE)
+add_files("Math/" GLOB_RECURSE)
+add_files("SceneTypes/" GLOB_RECURSE)
 
-
+# create target
 set(LIB_NAME "CudaTracerLib")
 
 set(BUILD_LIBRARY true CACHE BOOL "Whether to build a library or an executable")
 
 if (BUILD_LIBRARY)
-    cuda_add_library(${LIB_NAME} ${CTL_SRC} ${CTL_CU} ${CTL_SRC_ROOT} ${CTL_CU_ROOT})
+    cuda_add_library(${LIB_NAME} ${INC_FILES} SHARED)
 else ()
-    CUDA_ADD_EXECUTABLE(${LIB_NAME} ${CTL_SRC} ${CTL_CU} ${CTL_SRC_ROOT} ${CTL_CU_ROOT})
+    CUDA_ADD_EXECUTABLE(${LIB_NAME} ${INC_FILES})
 endif ()
 
-target_link_libraries(${LIB_NAME} freeimage.so)
-target_link_libraries(${LIB_NAME} ${Boost_LIBRARIES})
+# add filters for visual studio projects
+foreach(_source IN ITEMS ${INC_FILES})
+    get_filename_component(_source_path "${_source}" PATH)
+    file(RELATIVE_PATH _source_path_rel "${CMAKE_CURRENT_SOURCE_DIR}" "${_source_path}")
+    string(REPLACE "/" "\\" _group_path "${_source_path_rel}")
+    source_group("${_group_path}" FILES "${_source}")
+endforeach()
+
+# link with all the previously defined external dependencies
+target_link_libraries(${LIB_NAME} freeimage jpeg openexr openjpeg rawlite tiff zlib png mng)
+target_link_libraries(${LIB_NAME} pugixml)
+target_link_libraries(${LIB_NAME} miniz)

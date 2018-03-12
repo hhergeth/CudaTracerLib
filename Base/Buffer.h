@@ -13,7 +13,6 @@
 #include <utility>
 #include <type_traits>
 #include <boost/icl/interval_set.hpp>
-
 #include "Buffer_device.h"
 #include <Base/Platform.h>
 #include <Base/CudaMemoryManager.h>

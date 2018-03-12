@@ -12,53 +12,17 @@
 #include <SceneTypes/Light.h>
 #include <Base/Buffer.h>
 #include<iomanip>
-
+#include <filesystem.h>
 #include <algorithm>
-#include <boost/filesystem.hpp>
-#include <boost/algorithm/string.hpp>
+#include <sstream>
 
 namespace CudaTracerLib {
 
-using namespace boost::filesystem;
-using namespace boost::algorithm;
-
 std::string IFileManager::getDataPath()
 {
-	boost::filesystem::path p(getCompiledMeshPath("x.obj"));
-	boost::filesystem::path dir = p.parent_path().parent_path();
+	std::filesystem::path p(getCompiledMeshPath("x.obj"));
+	std::filesystem::path dir = p.parent_path().parent_path();
 	return dir.string();
-}
-
-static path make_relative(path from, path to)
-{
-   // Start at the root path and while they are the same then do nothing then when they first
-   // diverge take the entire from path, swap it with '..' segments, and then append the remainder of the to path.
-   path::const_iterator fromIter = from.begin();
-   path::const_iterator toIter = to.begin();
-
-   // Loop through both while they are the same to find nearest common directory
-   while (fromIter != from.end() && toIter != to.end() && (*toIter) == (*fromIter))
-   {
-      ++toIter;
-      ++fromIter;
-   }
-
-   // Replace from path segments with '..' (from => nearest common directory)
-   path finalPath;
-   while (fromIter != from.end())
-   {
-      finalPath /= "..";
-      ++fromIter;
-   }
-
-   // Append the remainder of the to path (nearest common directory => to)
-   while (toIter != to.end())
-   {
-      finalPath /= *toIter;
-      ++toIter;
-   }
-
-   return finalPath;
 }
 
 struct textureLoader
@@ -283,42 +247,62 @@ DynamicScene::~DynamicScene()
 	m_pBVH = 0;
 }
 
+//given either an absolute or relative path to a non xmsh
+//compute a path "unique" for this mesh
+//easiest way is to use the two parent folders
+//also returns a token which is identifies this mesh and can be used to load it again
+std::tuple<std::filesystem::path, std::string> get_compiled_path(const std::string token, IFileManager* man)
+{
+    auto p = std::filesystem::path(token);
+    std::string parent1 = p.has_parent_path() ? p.parent_path().filename().string() + "/" : "";
+    std::string parent2 = "";
+    if (p.has_parent_path() && p.parent_path().has_parent_path())
+        parent2 = p.parent_path().parent_path().filename().string() + "/";
+
+    auto compiled_folder_can = std::filesystem::canonical(std::filesystem::path(man->getCompiledMeshPath("")));
+    std::string T = parent2 + parent1 + p.filename().string();
+    auto path = (compiled_folder_can / T).replace_extension(".xmsh");
+
+    return std::make_tuple(path, T);
+}
+
 StreamReference<Node> DynamicScene::CreateNode(const std::string& a_Token, IInStream& in, bool force_recompile)
 {
-	std::string token(a_Token);
-	boost::algorithm::to_lower(token);
-	path cmpFilePath = "";
-	if (token.find(".xmsh") == std::string::npos)
+	std::string token = to_lower(a_Token);
+    bool is_compiled = token.find(".xmsh") != std::string::npos;
+	auto cmp_id = is_compiled ? std::make_tuple(std::filesystem::path(token), token) : get_compiled_path(token, m_pFileManager);
+    auto compiled_path = std::get<0>(cmp_id);
+    auto mesh_token = std::get<1>(cmp_id);
+
+	//visual studio doesn't support weakly_canonical at the moment so instead create the file with zero size
+	create_directories(compiled_path.parent_path());
+	if (!std::filesystem::exists(compiled_path))
 	{
-		cmpFilePath = path(m_pFileManager->getCompiledMeshPath(token)).replace_extension(".xmsh");
+		std::ofstream file;
+		file.open(compiled_path, std::ios::out);
 	}
-	else cmpFilePath = path(token);
-	auto compiled_folder_can = canonical(path(m_pFileManager->getCompiledMeshPath("")));
-	auto compiled_mesh_can = weakly_canonical(cmpFilePath);//the file might not yet exist but that is a requirement for canonical
-	auto rel_cmp_path = make_relative(compiled_folder_can, compiled_mesh_can).string();
 
 	bool load;
-	BufferReference<Mesh, KernelMesh> M = m_pMeshBuffer->LoadCached(rel_cmp_path, load);
+	BufferReference<Mesh, KernelMesh> M = m_pMeshBuffer->LoadCached(mesh_token, load);
 	if (load || force_recompile)
 	{
 		IInStream* xmshStream = 0;
 		bool freeStream = false;
-		if (token.find(".xmsh") == std::string::npos)
+		if (!is_compiled)
 		{
-			create_directories(cmpFilePath.parent_path());
-			boost::uintmax_t si = exists(cmpFilePath) ? file_size(cmpFilePath) : 0;
-			time_t cmpStamp = si != 0 ? last_write_time(cmpFilePath) : time(0);
-			time_t rawStamp = exists(in.getFilePath()) ? last_write_time(in.getFilePath()) : 0;
+			auto si = exists(compiled_path) ? file_size(compiled_path) : 0;
+			auto cmpStamp = si != 0 ? std::filesystem::last_write_time(compiled_path) : std::filesystem::file_time_type::clock::now();
+			auto rawStamp = std::filesystem::exists(in.getFilePath()) ? std::filesystem::last_write_time(in.getFilePath()) : std::filesystem::file_time_type::clock::from_time_t(0);
 			if (si <= 4 || rawStamp != cmpStamp)
 			{
 				std::cout << "Started compiling mesh : " << token << "\n";
-				FileOutputStream a_Out(cmpFilePath.string());
+				FileOutputStream a_Out(compiled_path.string());
 				MeshCompileType t;
 				m_sCmpManager.Compile(in, token, a_Out, &t);
 				a_Out.Close();
-				boost::filesystem::last_write_time(cmpFilePath, rawStamp);
+				std::filesystem::last_write_time(compiled_path, rawStamp);
 			}
-			xmshStream = OpenFile(cmpFilePath.string());
+			xmshStream = OpenFile(compiled_path.string());
 			freeStream = true;
 		}
 		else
@@ -329,9 +313,9 @@ StreamReference<Node> DynamicScene::CreateNode(const std::string& a_Token, IInSt
 		unsigned int t;
 		*xmshStream >> t;
 		if (t == (unsigned int)MeshCompileType::Static)
-			new(M(0)) Mesh(rel_cmp_path, *xmshStream, m_pTriIntStream, m_pTriDataStream, m_pBVHStream, m_pBVHIndicesStream, m_pMaterialBuffer, m_pAnimStream);
+			new(M(0)) Mesh(mesh_token, *xmshStream, m_pTriIntStream, m_pTriDataStream, m_pBVHStream, m_pBVHIndicesStream, m_pMaterialBuffer, m_pAnimStream);
 		else if (t == (unsigned int)MeshCompileType::Animated)
-			new(M(0)) AnimatedMesh(rel_cmp_path, *xmshStream, m_pTriIntStream, m_pTriDataStream, m_pBVHStream, m_pBVHIndicesStream, m_pMaterialBuffer, m_pAnimStream);
+			new(M(0)) AnimatedMesh(mesh_token, *xmshStream, m_pTriIntStream, m_pTriDataStream, m_pBVHStream, m_pBVHIndicesStream, m_pMaterialBuffer, m_pAnimStream);
 		else throw std::runtime_error("Mesh file parser error.");
 		if (freeStream)
 			delete xmshStream;
@@ -401,11 +385,11 @@ void DynamicScene::DeleteNode(StreamReference<Node> ref)
 
 BufferReference<MIPMap, KernelMIPMap> DynamicScene::LoadTexture(const std::string& file, bool a_MipMap)
 {
-	path rawFilePath = file;
-	if (!exists(rawFilePath) || is_directory(rawFilePath))
+	std::filesystem::path rawFilePath = file;
+	if (!std::filesystem::exists(rawFilePath) || std::filesystem::is_directory(rawFilePath))
 		rawFilePath = m_pFileManager->getTexturePath(file);
 
-	if (!exists(rawFilePath) || is_directory(rawFilePath))
+	if (!std::filesystem::exists(rawFilePath) || std::filesystem::is_directory(rawFilePath))
 	{
 		std::cout << "Texture : " << file << "mapped to : " << rawFilePath << " was not found\n";
 		return LoadTexture("404.jpg", a_MipMap);
@@ -414,16 +398,16 @@ BufferReference<MIPMap, KernelMIPMap> DynamicScene::LoadTexture(const std::strin
 	BufferReference<MIPMap, KernelMIPMap> T = m_pTextureBuffer->LoadCached(file, load);
 	if (load)
 	{
-		path cmpFilePath(m_pFileManager->getCompiledTexturePath(rawFilePath.filename().string()));
-		create_directories(path(cmpFilePath).parent_path());
-		time_t rawStamp = exists(rawFilePath) ? last_write_time(rawFilePath) : time(0);
-		time_t cmpStamp = exists(cmpFilePath) ? last_write_time(cmpFilePath) : 0;
-		if (cmpStamp == 0 || rawStamp != cmpStamp)
+		std::filesystem::path cmpFilePath(m_pFileManager->getCompiledTexturePath(rawFilePath.filename().string()));
+		std::filesystem::create_directories(std::filesystem::path(cmpFilePath).parent_path());
+		auto rawStamp = std::filesystem::exists(rawFilePath) ? std::filesystem::last_write_time(rawFilePath) : std::filesystem::file_time_type::clock::now();
+		auto cmpStamp = std::filesystem::exists(cmpFilePath) ? std::filesystem::last_write_time(cmpFilePath) : std::filesystem::file_time_type::clock::from_time_t(0);
+		if (std::filesystem::file_time_type::clock::to_time_t(cmpStamp) == 0 || rawStamp != cmpStamp)
 		{
 			FileOutputStream a_Out(cmpFilePath.string().c_str());
 			MIPMap::CompileToBinary(rawFilePath.string().c_str(), a_Out, a_MipMap);
 			a_Out.Close();
-			boost::filesystem::last_write_time(cmpFilePath, rawStamp);
+			std::filesystem::last_write_time(cmpFilePath, rawStamp);
 		}
 		FileInputStream I(cmpFilePath.string().c_str());
 		new(T)MIPMap(file, I);

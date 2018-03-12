@@ -4,7 +4,6 @@
 #include <vector>
 #include <sstream>
 #include <functional>
-#include <boost/mpl/string.hpp>
 #include <memory>
 #include <algorithm>
 #include <Base/EnumConverter.h>

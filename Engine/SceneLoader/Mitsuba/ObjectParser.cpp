@@ -1,7 +1,7 @@
 #include <StdAfx.h>
 #include "ObjectParser.h"
-
-#include "miniz.h"
+#include <filesystem.h>
+#include <miniz/miniz.h>
 
 namespace CudaTracerLib {
 
@@ -13,7 +13,7 @@ ShapeParser::ShapeParseResult ShapeParser::serialized(const XMLNode& node, Parse
 	bool faceNormals = S.def_storage.prop_bool(node, "faceNormals", false);
 	float maxSmoothAngle = S.def_storage.prop_float(node, "maxSmoothAngle", 0.0f);
 
-	auto name = boost::filesystem::path(filename).stem().string();
+	auto name = std::filesystem::path(filename).stem().string();
 	auto compiled_tar_folder = S.scene.getFileManager()->getCompiledMeshPath("") + name + "/";
 
 	auto get_compiled_submesh_filename = [&](size_t i)
@@ -21,9 +21,9 @@ ShapeParser::ShapeParseResult ShapeParser::serialized(const XMLNode& node, Parse
 		return compiled_tar_folder + std::to_string(i) + ".xmsh";
 	};
 
-	if (!boost::filesystem::exists(compiled_tar_folder) || !boost::filesystem::exists(get_compiled_submesh_filename(0)))
+	if (!std::filesystem::exists(compiled_tar_folder) || !std::filesystem::exists(get_compiled_submesh_filename(0)))
 	{
-		boost::filesystem::create_directory(compiled_tar_folder);
+		std::filesystem::create_directory(compiled_tar_folder);
 
 		enum DataPresentFlag : uint32_t
 		{
@@ -110,7 +110,7 @@ ShapeParser::ShapeParseResult ShapeParser::serialized(const XMLNode& node, Parse
 		ser_str.seekg(-4, ser_str.end);
 		uint32_t n_meshes;
 		ser_str.read((char*)&n_meshes, sizeof(n_meshes));
-		ser_str.seekg(-(sizeof(uint32_t) + (version_maj == 4 ? sizeof(uint64_t) : sizeof(uint32_t)) * n_meshes), ser_str.end);
+		ser_str.seekg((sizeof(uint32_t) + (version_maj == 4 ? sizeof(uint64_t) : sizeof(uint32_t)) * n_meshes), ser_str.end);
 		std::vector<uint64_t> mesh_offsets(n_meshes);
 		if (version_maj == 4)
 			ser_str.read((char*)mesh_offsets.data(), n_meshes * sizeof(uint64_t));

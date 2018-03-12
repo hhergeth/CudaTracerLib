@@ -65,7 +65,7 @@ template<bool NEXT_EVENT_EST> __global__ void pathIterateKernel(Image I, int pat
 			traversalResult shadow_ray_res;
 			if (g_ray_buffer->accessSecondaryRay(payload.dIdx, shadow_ray, shadow_ray_res))
 			{
-				if (shadow_ray_res.dist >= payload.dDist * (1 - 0.01f))
+				if (shadow_ray_res.dist >= payload.dDist * (1 - g_SceneData.m_rayTraceEps))
 					payload.L += payload.directF;
 			}
 			payload.dIdx = UINT_MAX;

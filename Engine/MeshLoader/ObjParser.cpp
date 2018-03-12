@@ -3,10 +3,32 @@
 #include <Engine/TriangleData.h>
 #include <Engine/Material.h>
 #include <Engine/TriIntersectorData.h>
-#include <boost/algorithm/string.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem.h>
 #include <Base/FileStream.h>
-#include <boost/unordered_map.hpp>
+#include <Base/Platform.h>
+#include <unordered_map>
+#include <iterator>
+
+template <class T>
+inline void hash_combine(std::size_t& seed, const T& v)
+{
+	std::hash<T> hasher;
+	seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+}
+namespace std
+{
+template<> struct hash<CudaTracerLib::Vec3i>
+{
+	size_t operator()(const CudaTracerLib::Vec3i & e) const
+	{
+		std::size_t seed = 0;
+		hash_combine(seed, e.x);
+		hash_combine(seed, e.y);
+		hash_combine(seed, e.z);
+		return seed;
+	}
+};
+}
 
 namespace CudaTracerLib {
 
@@ -19,18 +41,9 @@ bool operator==(const Vec3i &v0, const Vec3i &v1)
 		);
 }
 
-std::size_t hash_value(const Vec3i &e)
-{
-	std::size_t seed = 0;
-	boost::hash_combine(seed, e.x);
-	boost::hash_combine(seed, e.y);
-	boost::hash_combine(seed, e.z);
-	return seed;
-}
-
 class VertexHash
 {
-	boost::unordered_map<Vec3i, int> entries;
+	std::unordered_map<Vec3i, int> entries;
 public:
 	bool search(const Vec3i& key, int& val)
 	{
@@ -326,16 +339,16 @@ bool parseTexture(const char*& ptr, TextureSpec& value, const std::string& dirNa
 		{
 			if (*ptr == '-' || name.size())
 				return false;
-			while (*ptr && (*ptr != '-' || !boost::algorithm::ends_with(name, " ")))
+			while (*ptr && (*ptr != '-' || !ends_with(name, " ")))
 				name += *ptr++;
 		}
 	}
 
 	// Process file name.
 
-	while (boost::algorithm::starts_with(name, "/"))
+	while (starts_with(name, "/"))
 		name = name.substr(1);
-	while (boost::algorithm::ends_with(name, " "))
+	while (ends_with(name, " "))
 		name = name.substr(0, name.size() - 1);
 
 	// Zero-length file name => ignore.
@@ -352,7 +365,7 @@ bool parseTexture(const char*& ptr, TextureSpec& value, const std::string& dirNa
 
 std::string get_texture_path(const std::string& path, const std::string& dirName)
 {
-	if (boost::filesystem::exists(dirName + "/" + path))
+	if (std::filesystem::exists(dirName + "/" + path))
 		return dirName + "/" + path;
 	else return path;
 }
@@ -419,7 +432,7 @@ void loadMtl(ImportState& s, IInStream& mtlIn, const std::string& dirName)
 	std::string lineS;
 	while (mtlIn.getline(lineS))
 	{
-		boost::algorithm::trim(lineS);
+		trim(lineS);
 		const char* ptr = lineS.c_str();
 		parseSpace(ptr);
 		bool valid = false;
@@ -581,13 +594,13 @@ template<typename T> void push(std::vector<T>& left, const std::vector<T>& right
 
 void parse(ImportState& s, IInStream& in)
 {
-	std::string dirName = boost::filesystem::path(in.getFilePath()).parent_path().string();
+	std::string dirName = std::filesystem::path(in.getFilePath()).parent_path().string();
 	int submesh = -1;
 	int defaultSubmesh = -1;
 	std::string line;
 	while (in.getline(line))
 	{
-		boost::algorithm::trim(line);
+		trim(line);
 		const char* ptr = line.c_str();
 		parseSpace(ptr);
 		bool valid = false;
@@ -713,7 +726,7 @@ void parse(ImportState& s, IInStream& in)
 			if (dirName.size())
 			{
 				std::string str = std::string(ptr);
-				boost::algorithm::trim(str);
+				trim(str);
 				std::string fileName = dirName + "/" + ptr;
 				MemInputStream mtlIn(fileName.c_str());
 				loadMtl(s, mtlIn, dirName);

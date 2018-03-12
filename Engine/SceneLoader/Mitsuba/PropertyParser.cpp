@@ -162,7 +162,7 @@ Spectrum parseSpectrum(const XMLNode& node, ParserState& S)
 	{
 		try
 		{
-			C = Spectrum(boost::lexical_cast<float>(data));
+			C = Spectrum(std::stof(data));
 		}
 		catch (...)
 		{
