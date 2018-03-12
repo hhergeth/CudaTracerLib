@@ -16,7 +16,7 @@ For ease of usability the library can be compiled as an executable with a minima
 ### Building from Source
 
 - Install the CUDA 9.0 toolkit from the official Nvidia site.
-- Clone the repository to your computer and use CMake to create build files (only x64 and v140 toolset for Visual Studio [see below]) for your system, all dependencies are handled automatically.
+- Clone the repository to your computer and use CMake to create build files for your system (only x64 and v140 toolset for Visual Studio [see below]), all dependencies are handled automatically.
 - The microfacet and spectral probability distribution files from Mitsuba/PBRT are also necessary. They can be obtained from the [Mitsuba build](http://www.mitsuba-renderer.org/download.html) or [here from the repository](https://github.com/mitsuba-renderer/mitsuba). Only the _data/ior_ and _data/microfacet_ folders are required.
 
 Examples of how to use this library and an implementation of a custom rendering algorithm can be found in the [Github wiki](https://github.com/hhergeth/CudaTracerLib/wiki/Code-Examples).

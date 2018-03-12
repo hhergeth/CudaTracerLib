@@ -27,7 +27,7 @@ SET(CUDA_cublas_device_LIBRARY "" CACHE PATH "ABC" FORCE)
 set(CUDA_PROPAGATE_HOST_FLAGS ON)
 set(CUDA_SEPARABLE_COMPILATION ON)
 
-if(LINUX)
+if(UNIX)
     # CUDA needs PIC so enable it on all relevant targets and use the CMAKE_LANG_FLAGS to pass it to the CUDA compiler
     target_compile_options(miniz PRIVATE -fPIC)
     target_compile_options(pugixml PRIVATE -fPIC)
