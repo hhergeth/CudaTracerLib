@@ -15,6 +15,7 @@
 #include <filesystem.h>
 #include <algorithm>
 #include <sstream>
+#include <Kernel/TraceHelper.h>
 
 namespace CudaTracerLib {
 
@@ -32,20 +33,19 @@ struct textureLoader
 	{
 		S = A;
 	}
-	e_Variable<KernelMIPMap> operator()(const std::string& file, e_Variable<KernelMIPMap>& lastVal) const
+	unsigned int operator()(const std::string& file, unsigned int& lastVal) const
 	{
-		if (lastVal.host)
+		if (lastVal != 0xffffffff)
 		{
-			BufferReference<MIPMap, KernelMIPMap> ref = S->m_pTextureBuffer->translate(lastVal);
-			if (ref.getIndex() < S->m_pTextureBuffer->numElements())
-			{
-				if (ref->m_pPath == file)
-					return lastVal;
-				S->m_pTextureBuffer->Release(ref->m_pPath);
-			}
+			BufferReference<MIPMap, KernelMIPMap> ref = S->m_pTextureBuffer->operator()(lastVal, 1);
+
+			if (ref->m_pPath == file)
+				return lastVal;
+			S->m_pTextureBuffer->Release(ref->m_pPath);
+            lastVal = 0xffffffff;
 		}
 		auto r = S->LoadTexture(file, true);
-		return r.AsVar();
+		return r.getIndex();
 	};
 };
 
@@ -54,19 +54,7 @@ class DynamicScene::MatStream : public Stream<Material>
 	std::vector<int> refCounter;
 	std::vector<StreamReference<Material>> unusedRefs;
 
-	struct matUpdater
-	{
-		const textureLoader& L;
-		matUpdater(const textureLoader& l)
-			: L(l)
-		{
-		}
-		void operator()(StreamReference<Material> m) const
-		{
-			m->LoadTextures(L);
-			m->bsdf.As()->Update();
-		}
-	};
+    std::vector<size_t> updated_indices;
 
 protected:
 	virtual void reallocAfterResize()
@@ -80,13 +68,25 @@ public:
 	{
 		refCounter.resize(L);
 		std::fill(refCounter.begin(), refCounter.end(), 1);
+        updated_indices.reserve(1024 * 128);
 	}
 
-	void UpdateMaterials(const textureLoader& loader)
+	void UpdateMaterialsPhase1(const textureLoader& loader)
 	{
-		matUpdater upd(loader);
-		UpdateInvalidated(upd);
+        updated_indices.clear();
+        UpdateInvalidated([&](StreamReference<Material> m)
+        {
+            m->LoadTextures(loader);
+            updated_indices.push_back(m.getIndex());
+        });
 	}
+
+    void UpdateMaterialsPhase2()
+    {
+        for(size_t i : updated_indices)
+            this->operator()(i, 1)->bsdf.As()->Update();
+        updated_indices.clear();
+    }
 
 	void IncrementRef(StreamReference<Material> mats)
 	{
@@ -456,7 +456,15 @@ void DynamicScene::InvalidateMeshesInBVH(BufferReference<Mesh, KernelMesh> m)
 
 void DynamicScene::ReloadTextures()
 {
-	m_pMaterialBuffer->UpdateMaterials(textureLoader(this));
+	m_pMaterialBuffer->UpdateMaterialsPhase1(textureLoader(this));
+
+    //this is necessary so that textures can have access to their mipmaps
+    //UpdateKernel(this);
+    //same thing but not the overhead of computing the random sequence and BVH
+    g_SceneDataHost.m_sMatData = m_pMaterialBuffer->getKernelData(false);
+    g_SceneDataHost.m_sTexData = m_pTextureBuffer->getKernelData(false);
+
+    m_pMaterialBuffer->UpdateMaterialsPhase2();
 
 	textureLoader t(this);
 	m_pLightStream->UpdateInvalidated([&](StreamReference<Light> l)
@@ -506,8 +514,10 @@ bool DynamicScene::UpdateScene()
 		{
 
 		}
-		void operator()(const std::string& path, e_Variable<KernelMIPMap> var)
+		void operator()(const std::string& path, unsigned int tex_idx)
 		{
+            if (tex_idx == 0xffffffff)
+                return;
 			m_pTextureBuffer->Release(path);
 		}
 	};
@@ -580,12 +590,15 @@ KernelDynamicScene DynamicScene::getKernelSceneData(bool devicePointer)
 
 void DynamicScene::instanciateNodeMaterials(StreamReference<Node> n)
 {
+    if (n->m_uInstanciatedMaterial)
+        return;
 	StreamReference<Material> newMaterials = m_pMaterialBuffer->malloc(getMesh(n)->m_sMatInfo);
-	m_pMaterialBuffer->DecrementRef(getMaterials(n));
+    //in its current form this functionality is broken
+	//m_pMaterialBuffer->DecrementRef(getMaterials(n));
 	n->m_uMaterialOffset = newMaterials.getIndex();
 	n->m_uInstanciatedMaterial = true;
 	n.Invalidate();
-	bool b;
+    bool b;
 	for (size_t i = 0; i < newMaterials.getLength(); i++)
 	{
 		Material* m2 = newMaterials(i);
