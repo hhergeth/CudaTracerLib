@@ -42,7 +42,7 @@ Material::Material(const std::string& name)
 	initbssrdf(bssrdf);
 }
 
-CUDA_FUNC_IN void parallaxOcclusion(Vec2f& texCoord, KernelMIPMap* tex, const Vec3f& vViewTS, float HeightScale, int MinSamples, int MaxSamples)
+CUDA_FUNC_IN void parallaxOcclusion(Vec2f& texCoord, const KernelMIPMap& tex, const Vec3f& vViewTS, float HeightScale, int MinSamples, int MaxSamples)
 {
 	const Vec2f vParallaxDirection = normalize(vViewTS.getXY());
 	float fLength = length(vViewTS);
@@ -67,7 +67,7 @@ CUDA_FUNC_IN void parallaxOcclusion(Vec2f& texCoord, KernelMIPMap* tex, const Ve
 	while (StepIndex < nNumSteps)
 	{
 		TexCurrentOffset -= TexOffsetPerStep;
-		CurrHeight = tex->Sample(TexCurrentOffset).avg();
+		CurrHeight = tex.Sample(TexCurrentOffset).avg();
 		CurrentBound -= StepSize;
 		if (CurrHeight > CurrentBound)
 		{
@@ -111,12 +111,12 @@ bool Material::SampleNormalMap(DifferentialGeometry& dg, const Vec3f& wi) const
 		Vec2f uv = map.Map(dg);
 		if (enableParallaxOcclusion)
 		{
-			parallaxOcclusion(uv, HeightMap.tex.As<ImageTexture>()->tex.operator->(), dg.sys.toLocal(-wi), HeightScale, parallaxMinSamples, parallaxMaxSamples);
+			parallaxOcclusion(uv, HeightMap.tex.As<ImageTexture>()->getTexture(), dg.sys.toLocal(-wi), HeightScale, parallaxMinSamples, parallaxMaxSamples);
 			dg.uv[map.setId] = map.TransformPointInverse(uv);
 		}
 
 		Spectrum grad[2];
-		HeightMap.tex.As<ImageTexture>()->tex->evalGradient(uv, grad);
+		HeightMap.tex.As<ImageTexture>()->getTexture().evalGradient(uv, grad);
 		float dDispDu = grad[0].getLuminance();
 		float dDispDv = grad[1].getLuminance();
 		Vec3f dpdu = dg.dpdu + dg.sys.n * (
@@ -171,8 +171,8 @@ bool Material::AlphaTest(const Vec2f& bary, const Vec2f& uv) const
 		{
 			float alpha = FLT_MAX;
 			if (AlphaMap.state == AlphaBlendState::AlphaMap_Alpha)
-				alpha = alpha_img->tex->SampleAlpha(alpha_img->mapping.TransformPoint(uv));
-			else alpha = refl_img->tex->SampleAlpha(refl_uv);
+				alpha = alpha_img->getTexture().SampleAlpha(alpha_img->mapping.TransformPoint(uv));
+			else alpha = refl_img->getTexture().SampleAlpha(refl_uv);
 			return alpha >= AlphaMap.test_val_scalar;
 		}
 		else

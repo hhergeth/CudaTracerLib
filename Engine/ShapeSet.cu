@@ -29,9 +29,17 @@ CUDA_FUNC_IN void getUV(TriangleData& dat, const Vec2f& bary, Vec2f& uv)
 	uv = u * a + v * b + w * c;
 }
 
+template<typename T> CUDA_FUNC_IN T* getData(unsigned int idx)
+{
+    return (T*)&g_SceneData.m_sAnimData[idx];
+}
+
 unsigned int ShapeSet::sampleTriangle(Vec3f& p0, Vec3f& p1, Vec3f& p2, Vec2f& uv0, Vec2f& uv1, Vec2f& uv2, float& pdf, float sample) const
 {
-	unsigned int index = MonteCarlo::sampleReuse(areaDistribution.operator*(), count, sample, pdf);
+    float* areaDistribution = getData<float>(m_areaDistributionIndex);
+    triData* triangles = getData<triData>(m_trianglesIndex);
+
+	unsigned int index = MonteCarlo::sampleReuse(areaDistribution, count, sample, pdf);
 	const triData& sn = triangles[index];
 	g_SceneData.m_sTriData[sn.tDat].getUVSetData(0, uv0, uv1, uv2);
 	p0 = sn.p[0];
@@ -42,9 +50,12 @@ unsigned int ShapeSet::sampleTriangle(Vec3f& p0, Vec3f& p1, Vec3f& p2, Vec2f& uv
 
 void ShapeSet::SamplePosition(PositionSamplingRecord& pRec, const Vec2f& spatialSample, Vec2f* uv) const
 {
+    float* areaDistribution = getData<float>(m_areaDistributionIndex);
+    triData* triangles = getData<triData>(m_trianglesIndex);
+
 	float pdf;
 	Vec2f sample = spatialSample;
-	unsigned int index = MonteCarlo::sampleReuse(areaDistribution.operator*(), count, sample.y, pdf);
+	unsigned int index = MonteCarlo::sampleReuse(areaDistribution, count, sample.y, pdf);
 	const triData& sn = triangles[index];
 	Vec2f bary = Warp::squareToUniformTriangle(sample);
 	pRec.p = bary.x * sn.p[0] + bary.y * sn.p[1] + (1.f - bary.x - bary.y) * sn.p[2];
@@ -59,6 +70,9 @@ void ShapeSet::SamplePosition(PositionSamplingRecord& pRec, const Vec2f& spatial
 
 bool ShapeSet::getPosition(const Vec3f& pos, Vec2f* bary, Vec2f* uv) const
 {
+    float* areaDistribution = getData<float>(m_areaDistributionIndex);
+    triData* triangles = getData<triData>(m_trianglesIndex);
+
 	for (unsigned int i = 0; i < count; i++)
 	{
 		const triData& sn = triangles[i];
@@ -77,14 +91,28 @@ bool ShapeSet::getPosition(const Vec3f& pos, Vec2f* bary, Vec2f* uv) const
 
 float ShapeSet::PdfTriangle(const Vec3f& pos) const
 {
+    float* areaDistribution = getData<float>(m_areaDistributionIndex);
+    triData* triangles = getData<triData>(m_trianglesIndex);
+
 	for (unsigned int i = 0; i < count; i++)
 	{
 		const triData& sn = triangles[i];
 		Vec2f b;
 		if (AlgebraHelper::Barycentric(pos, sn.p[0], sn.p[1], sn.p[2], b.x, b.y))
-			return areaDistribution.operator*()[i + 1] - areaDistribution.operator*()[i];
+			return areaDistribution[i + 1] - areaDistribution[i];
 	}
 	return 0.0f;
+}
+
+AABB ShapeSet::getBox() const
+{
+    float* areaDistribution = getData<float>(m_areaDistributionIndex);
+    triData* triangles = getData<triData>(m_trianglesIndex);
+
+    AABB b = AABB::Identity();
+    for (unsigned int i = 0; i < count; i++)
+        b = b.Extend(triangles[i].box());
+    return b;
 }
 
 }

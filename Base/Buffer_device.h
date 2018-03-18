@@ -112,16 +112,6 @@ public:
 		buf->CopyFromDevice(*this);
 	}
 
-	e_Variable<D> AsVar()
-	{
-		return AsVar<D>();
-	}
-
-	template<typename T> e_Variable<T> AsVar()
-	{
-		return e_Variable<T>((T*)(buf->getDeviceMappedData() + p), (T*)atD(p));
-	}
-
 	size_t getHostSize() const
 	{
 		return l * buf->m_uBlockSize;

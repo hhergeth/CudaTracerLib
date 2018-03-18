@@ -17,22 +17,34 @@ AABB ShapeSet::triData::box() const
 ShapeSet::ShapeSet(StreamReference<TriIntersectorData>* indices, BufferReference<TriangleData, TriangleData>* tri, unsigned int indexCount, const float4x4& mat, Stream<char>* buffer, Stream<TriIntersectorData>* triIntBuffer, Stream<TriangleData>* triDataBuffer)
 {
 	count = indexCount;
+    StreamReference<char> buffer1 = buffer->malloc_aligned<float>((count + 1) * sizeof(float));//buffer->malloc((count + 1) * sizeof(float));
 	StreamReference<char> buffer2 = buffer->malloc_aligned<triData>(count * sizeof(triData));//buffer->malloc(count * sizeof(triData));
-	StreamReference<char> buffer1 = buffer->malloc_aligned<float>((count + 1) * sizeof(float));//buffer->malloc((count + 1) * sizeof(float));
-	areaDistribution = buffer1.AsVar<float>();
-	triangles = buffer2.AsVar<triData>();
+    triData* triangles = (triData*)buffer2.operator char *();
 	for (unsigned int i = 0; i < count; i++)
 	{
 		triangles[i].iDat = indices[i].getIndex();
 		triangles[i].tDat = tri[i].getIndex();
 	}
-	Recalculate(mat, buffer, triIntBuffer, triDataBuffer);
+
+    m_areaDistributionIndex = buffer1.getIndex();
+    m_areaDistributionLength = buffer1.getLength();
+    m_trianglesIndex = buffer2.getIndex();
+    m_trianglesLength = buffer2.getLength();
+
+    Recalculate(mat, buffer, triIntBuffer, triDataBuffer);
 }
 
 void ShapeSet::Recalculate(const float4x4& mat, Stream<char>* buffer, Stream<TriIntersectorData>* indices, Stream<TriangleData>* triDataBuffer)
 {
-	buffer->translate(areaDistribution).Invalidate();
-	buffer->translate(triangles).Invalidate();
+    StreamReference<char> buffer1 = buffer->operator()(m_areaDistributionIndex, m_areaDistributionLength);
+    StreamReference<char> buffer2 = buffer->operator()(m_trianglesIndex, m_trianglesLength);
+
+    buffer1.Invalidate();
+    buffer2.Invalidate();
+
+    triData* triangles = (triData*)buffer2.operator char *();
+    float* areaDistribution = (float*)buffer1.operator char *();
+
 	sumArea = 0;
 	areaDistribution[0] = 0.0f;
 	for (unsigned int i = 0; i < count; i++)

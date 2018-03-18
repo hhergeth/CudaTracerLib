@@ -2,6 +2,7 @@
 #include "ObjectParser.h"
 #include <filesystem.h>
 #include <miniz/miniz.h>
+#include <Kernel/TraceHelper.h>
 
 namespace CudaTracerLib {
 
@@ -200,6 +201,178 @@ ShapeParser::ShapeParseResult ShapeParser::serialized(const XMLNode& node, Parse
 	auto obj = S.scene.CreateNode(get_compiled_submesh_filename(submesh_index));
 	parseGeneric(obj, node, S);
 	return obj;
+}
+
+VolumeRegion MediumParser::heterogeneous(const XMLNode& node, ParserState& S)
+{
+    PhaseFunction f = CreateAggregate<PhaseFunction>(IsotropicPhaseFunction());
+    if (node.has_child_node("phase"))
+        f = PhaseFunctionParser::parse(node.get_child_node("phase"), S);
+    float scale = S.def_storage.prop_float(node, "scale", 1.0f);
+
+    struct VolData
+    {
+        bool is_constant = true;
+
+        Spectrum const_value = 0.0f;
+
+        Vec3u cell_dims;
+        std::vector<float> data;
+        AABB box;
+
+        Vec3u dims() const
+        {
+            return is_constant ? Vec3u(1) : cell_dims;
+        }
+
+        //pos is [0,1]^3
+        float eval(const Vec3f& pos) const
+        {
+            if (is_constant)
+                return const_value.getLuminance();
+
+            int x = int(pos.x * cell_dims.x), y = int(pos.y * cell_dims.y), z = int(pos.z * cell_dims.z);
+            return data[idx(x, y, z)];
+        }
+
+        size_t idx(int xpos, int ypos, int zpos, int chan = 0, int num_channels = 1) const
+        {
+            return ((zpos*cell_dims.y + ypos)*cell_dims.x + xpos)*num_channels + chan;
+        }
+    };
+
+    std::optional<float4x4> volume_to_world;
+    auto parse_volume = [&](const XMLNode& vol_node)
+    {
+        VolData dat;
+        if (vol_node.get_attribute("type") == "constvolume")
+        {
+            dat.is_constant = true;
+            dat.const_value = parseColor(vol_node.get_property("value"), S);
+            if (vol_node.has_property("toWorld"))
+            {
+                if (volume_to_world)
+                    throw std::runtime_error("only one volume to world matrix allowed!");
+                volume_to_world = parseMatrix(vol_node.get_property("toWorld"), S);
+            }
+        }
+        else if (vol_node.get_attribute("type") == "gridvolume")
+        {
+            dat.is_constant = false;
+            auto filename = S.def_storage.prop_string(vol_node, "filename");
+            filename = S.map_asset_filepath(filename);
+            std::optional<std::tuple<Vec3f, Vec3f>> optional_aabb;
+            if (vol_node.has_property("toWorld") || vol_node.has_property("min"))
+            {
+                if (volume_to_world)
+                    throw std::runtime_error("only one volume to world matrix allowed!");
+                if (vol_node.has_property("toWorld"))
+                    volume_to_world = parseMatrix(vol_node.get_property("toWorld"), S);
+                if (vol_node.has_property("min"))//max must also exist
+                {
+                    auto min_vol = parseVector(vol_node.get_property("min"), S);
+                    auto max_vol = parseVector(vol_node.get_property("max"), S);
+                    optional_aabb = std::make_tuple(min_vol, max_vol);
+                }
+            }
+
+            std::ifstream ser_str(filename, std::ios::binary);
+            enum EVolumeType {
+                EFloat32 = 1,
+                EFloat16 = 2,
+                EUInt8 = 3,
+                EQuantizedDirections = 4
+            };
+            uint8_t header[4];
+            ser_str.read((char*)header, 4);
+            if (header[0] != 'V' || header[1] != 'O' || header[2] != 'L' || header[3] != 3)
+                throw std::runtime_error("expected VOL3 header");
+            EVolumeType data_type;
+            ser_str.read((char*)&data_type, sizeof(data_type));
+            ser_str.read((char*)&dat.cell_dims, sizeof(dat.cell_dims));
+            uint32_t num_channels;
+            ser_str.read((char*)&num_channels, sizeof(num_channels));
+            ser_str.read((char*)&dat.box, sizeof(dat.box));
+
+            size_t N = dat.cell_dims.x * dat.cell_dims.y * dat.cell_dims.z;
+            dat.data.resize(N);
+            size_t val_size = data_type == EVolumeType::EFloat32 ? sizeof(float) : (data_type == EVolumeType::EFloat16 ? sizeof(half) : sizeof(uint8_t));
+            std::vector<uint8_t> buffer(N * num_channels * val_size);
+            ser_str.read((char*)buffer.data(), buffer.size());
+
+            for (size_t i = 0; i < N; i++)
+            {
+                float sum = 0;
+                for (uint32_t channel = 0; channel < num_channels; channel++)
+                {
+                    uint8_t* ptr = &buffer[(i * num_channels + channel) * val_size];
+                    if (data_type == EVolumeType::EFloat32)
+                    {
+                        sum += *(float*)ptr;
+                    }
+                    else if (data_type == EVolumeType::EFloat16)
+                    {
+                        sum += ((half*)ptr)->ToFloat();
+                    }
+                    else if (data_type == EVolumeType::EUInt8)
+                    {
+                        sum += (*ptr) / 255.0f;
+                    }
+                    else throw std::runtime_error("unsopported volume data type : " + std::to_string((int)data_type));
+                }
+
+                dat.data[i] = sum / num_channels;
+            }
+
+            if (optional_aabb)
+                dat.box = AABB(std::get<0>(optional_aabb.value()), std::get<1>(optional_aabb.value()));
+
+            auto vtow = volume_to_world ? volume_to_world.value() : float4x4::Identity();
+            if (distance(dat.box.minV, Vec3f(0)) > 1e-3f || distance(dat.box.maxV, Vec3f(1)) > 1e-3f)
+                volume_to_world = vtow % float4x4::Translate(dat.box.minV) % float4x4::Scale(dat.box.Size());
+        }
+        else throw std::runtime_error("invalid volume type : " + vol_node.get_attribute("type"));
+        return dat;
+    };
+
+    VolData density_data;
+    VolData albedo_data;
+
+    if (node.has_property("density"))
+        density_data = parse_volume(node.get_property("density"));
+    if (node.has_property("albedo"))
+        albedo_data = parse_volume(node.get_property("albedo"));
+
+    auto vol_to_world = volume_to_world ? volume_to_world.value() : parseMatrix_Id(S);
+    vol_to_world = toWorld % vol_to_world;// the order here is unclear
+    if (density_data.is_constant && albedo_data.is_constant)
+    {
+        Spectrum sigma_s = albedo_data.const_value * density_data.const_value * scale;
+        Spectrum sigma_a = density_data.const_value  * scale - sigma_s;
+        return CreateAggregate<VolumeRegion>(HomogeneousVolumeDensity(f, vol_to_world, sigma_a, sigma_s, 0.0f));
+    }
+    else
+    {
+        auto max_dims = max(density_data.dims(), albedo_data.dims());
+        auto G = VolumeGrid(f, vol_to_world, S.scene.getTempBuffer(), max_dims, max_dims, Vec3u(1));
+        UpdateKernel(&S.scene);
+        G.sigAMax = G.sigSMax = 1.0f;
+
+        auto scaleF = Vec3f((float)max_dims.x, (float)max_dims.y, (float)max_dims.z);
+        for (unsigned int x = 0; x < max_dims.x; x++)
+            for (unsigned int y = 0; y < max_dims.y; y++)
+                for (unsigned int z = 0; z < max_dims.z; z++)
+                {
+                    auto pos = Vec3f((float)x, (float)y, (float)z) / scaleF;
+                    float density = density_data.eval(pos) * scale;
+                    float albedo = albedo_data.eval(pos);
+                    G.gridS.value(x, y, z) = albedo * density;
+                    G.gridA.value(x, y, z) = density * (1.0f - albedo);
+                }
+
+        G.Update();
+        return CreateAggregate<VolumeRegion>(G);
+    }
 }
 
 }

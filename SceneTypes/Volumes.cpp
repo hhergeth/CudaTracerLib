@@ -10,13 +10,21 @@ namespace CudaTracerLib {
 	DenseVolGridBaseType::DenseVolGridBaseType(Stream<char>* a_Buffer, Vec3u dim, size_t sizePerElement, size_t alignment)
 	{
 		StreamReference<char> streamRef = a_Buffer->malloc_aligned(dim.x * dim.y * dim.z * (unsigned int)sizePerElement, (unsigned int)alignment);
-		data = streamRef.AsVar<char>();
+        m_dataIndex = streamRef.getIndex();
+        m_datLength = streamRef.getLength();
 	}
 
 	void DenseVolGridBaseType::InvalidateDeviceData(Stream<char>* a_Buffer)
 	{
-		a_Buffer->translate(data).Invalidate();
+        StreamReference<char> streamRef = a_Buffer->operator()(m_dataIndex, m_datLength);
+        streamRef.Invalidate();
 	}
+    
+    void DenseVolGridBaseType::Clear(Stream<char>* a_Buffer)
+    {
+        auto ref = a_Buffer->operator()(m_dataIndex, m_datLength);
+        a_Buffer->memset(ref, 0);
+    }
 
 	KernelAggregateVolume::KernelAggregateVolume(Stream<VolumeRegion>* D, bool devicePointer)
 	{

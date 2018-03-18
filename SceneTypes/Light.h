@@ -295,7 +295,8 @@ struct InfiniteLight : public LightBase//, public e_DerivedTypeHelper<5>
 {
 	TYPE_FUNC(5)
 	KernelMIPMap radianceMap;
-	e_Variable<float> m_cdfRows, m_cdfCols, m_rowWeights;
+	unsigned int m_cdfRowsIdx, m_cdfColsIdx, m_rowWeightsIdx;
+    unsigned int m_cdfRowsLength, m_cdfColsLength, m_rowWeightsLength;
 	Vec3f m_SceneCenter;
 	float m_SceneRadius;
 	float m_normalization;

@@ -21,7 +21,7 @@ struct ShapeSet
 		unsigned int iDat;
 		unsigned int tDat;
 
-		CTL_EXPORT AABB box() const;
+        CTL_EXPORT CUDA_DEVICE CUDA_HOST AABB box() const;
 		CTL_EXPORT void Recalculate(const float4x4& mat, const TriIntersectorData& T, const TriangleData& TData);
 	};
 public:
@@ -36,26 +36,18 @@ public:
 	{
 		return 1.0f / sumArea;
 	}
-	CUDA_FUNC_IN AABB getBox() const
-	{
-		AABB b = AABB::Identity();
-		for (unsigned int i = 0; i < count; i++)
-			b = b.Extend(triangles[i].box());
-		return b;
-	}
+    CTL_EXPORT CUDA_DEVICE CUDA_HOST AABB getBox() const;
 	CTL_EXPORT void Recalculate(const float4x4& mat, Stream<char>* buffer, Stream<TriIntersectorData>* indices, Stream<TriangleData>* triDataBuffer);
 
 	CUDA_FUNC_IN unsigned int numTriangles() const
 	{
 		return count;
 	}
-	CUDA_FUNC_IN const triData& getTriangle(unsigned int index) const
-	{
-		return triangles[index];
-	}
 private:
-	e_Variable<float> areaDistribution;
-	e_Variable<triData> triangles;
+    unsigned int m_areaDistributionIndex;
+    unsigned int m_areaDistributionLength;
+    unsigned int m_trianglesIndex;
+    unsigned int m_trianglesLength;
 	float sumArea;
 	unsigned int count;
 };

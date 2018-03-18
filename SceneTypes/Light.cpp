@@ -12,45 +12,50 @@ namespace CudaTracerLib {
 	{
 		m_size = Vec2f((float)radianceMap.m_uWidth, (float)radianceMap.m_uHeight);
 		unsigned int nEntries = (radianceMap.m_uWidth + 1) * radianceMap.m_uHeight;
-		StreamReference<char> m1 = a_Buffer->malloc_aligned<float>(nEntries * sizeof(float)),
-			m2 = a_Buffer->malloc_aligned<float>((radianceMap.m_uHeight + 1) * sizeof(float)),
-			m3 = a_Buffer->malloc_aligned<float>(radianceMap.m_uHeight * sizeof(float));
-		m_cdfCols = m1.AsVar<float>();
-		m_cdfRows = m2.AsVar<float>();
-		m_rowWeights = m3.AsVar<float>();
+		StreamReference<char> cdfColsRef = a_Buffer->malloc_aligned<float>(nEntries * sizeof(float)),
+            cdfRowsRef = a_Buffer->malloc_aligned<float>((radianceMap.m_uHeight + 1) * sizeof(float)),
+            rowWeightsRef = a_Buffer->malloc_aligned<float>(radianceMap.m_uHeight * sizeof(float));
+
+        float* cdfCols = (float*)cdfColsRef.operator char *();
+        float* cdfRows = (float*)cdfRowsRef.operator char *();
+        float* rowWeights = (float*)rowWeightsRef.operator char *();
+	
 		unsigned int colPos = 0, rowPos = 0;
 		float rowSum = 0.0f;
-		m_cdfRows[rowPos++] = 0;
+        cdfRows[rowPos++] = 0;
 		for (unsigned int y = 0; y < radianceMap.m_uHeight; ++y)
 		{
 			float colSum = 0;
 
-			m_cdfCols[colPos++] = 0;
+            cdfCols[colPos++] = 0;
 			for (unsigned int x = 0; x < radianceMap.m_uWidth; ++x)
 			{
 				Spectrum value = radianceMap.Sample(0, (int)x, (int)y);
 
 				colSum += value.getLuminance();
-				m_cdfCols[colPos++] = (float)colSum;
+                cdfCols[colPos++] = (float)colSum;
 			}
 
 			float normalization = 1.0f / (float)colSum;
 			for (unsigned int x = 1; x < radianceMap.m_uWidth; ++x)
-				m_cdfCols[colPos - x - 1] *= normalization;
-			m_cdfCols[colPos - 1] = 1.0f;
+                cdfCols[colPos - x - 1] *= normalization;
+            cdfCols[colPos - 1] = 1.0f;
 
 			float weight = sinf((y + 0.5f) * PI / m_size.y);
-			m_rowWeights[y] = weight;
+            rowWeights[y] = weight;
 			rowSum += colSum * weight;
-			m_cdfRows[rowPos++] = (float)rowSum;
+            cdfRows[rowPos++] = (float)rowSum;
 		}
 		float normalization = 1.0f / (float)rowSum;
 		for (unsigned int y = 1; y < radianceMap.m_uHeight; ++y)
-			m_cdfRows[rowPos - y - 1] *= normalization;
-		m_cdfRows[rowPos - 1] = 1.0f;
+            cdfRows[rowPos - y - 1] *= normalization;
+        cdfRows[rowPos - 1] = 1.0f;
 		m_normalization = 1.0f / (rowSum * (2 * PI / m_size.x) * (PI / m_size.y));
 		m_pixelSize = Vec2f(2 * PI / m_size.x, PI / m_size.y);
-		m1.Invalidate(); m2.Invalidate(); m3.Invalidate();
+
+        cdfColsRef.Invalidate(); cdfRowsRef.Invalidate(); rowWeightsRef.Invalidate();
+        m_cdfColsIdx = cdfColsRef.getIndex(); m_cdfRowsIdx = cdfRowsRef.getIndex(); m_rowWeightsIdx = rowWeightsRef.getIndex();
+        m_cdfColsLength = cdfColsRef.getLength(); m_cdfRowsLength = cdfRowsRef.getLength(); m_rowWeightsLength = rowWeightsRef.getLength();
 
 		m_worldTransform = NormalizedT<OrthogonalAffineMap>::Identity();
 	}

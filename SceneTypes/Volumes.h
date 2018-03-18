@@ -100,22 +100,22 @@ public:
 
 struct DenseVolGridBaseType
 {
-	e_Variable<char> data;
+    unsigned int m_dataIndex;
+    unsigned int m_datLength;
 	DenseVolGridBaseType()
-		: data(0, 0)
+		: m_dataIndex(0)
 	{
 
 	}
 	CTL_EXPORT DenseVolGridBaseType(Stream<char>* a_Buffer, Vec3u dim, size_t sizePerElement, size_t alignment);
 	CTL_EXPORT void InvalidateDeviceData(Stream<char>* a_Buffer);
-	template<typename T> CUDA_FUNC_IN e_Variable<T> getVar() const
-	{
-		return data.As<T>();
-	}
+    void Clear(Stream<char>* a_Buffer);
+    CTL_EXPORT CUDA_DEVICE CUDA_HOST char* getData() const;
 };
 
 template<typename T> struct DenseVolGrid : public DenseVolGridBaseType
 {
+
 public:
 	Vec3u dim;
 	Vec3f dimF;
@@ -128,11 +128,6 @@ public:
 		: DenseVolGridBaseType(a_Buffer, dim, sizeof(T), std::alignment_of<T>::value), dim(dim)
 	{
 		dimF = Vec3f((float)dim.x, (float)dim.y, (float)dim.z);
-	}
-	void Clear()
-	{
-		Platform::SetMemory(DenseVolGridBaseType::data.host, sizeof(T)* dim.x * dim.y * dim.z);
-		cudaMemset(DenseVolGridBaseType::data.device, 0, sizeof(T) * dim.x * dim.y * dim.z);
 	}
 	void Set(const T& val)
 	{
@@ -151,11 +146,13 @@ public:
 	}
 	CUDA_FUNC_IN T& value(unsigned int i, unsigned int j, unsigned int k)
 	{
-		return getVar<T>()[idx(i, j, k)];
+        T* data = (T*)getData();
+		return data[idx(i, j, k)];
 	}
 	CUDA_FUNC_IN const T& value(unsigned int i, unsigned int j, unsigned int k) const
 	{
-		return getVar<T>()[idx(i, j, k)];
+        T* data = (T*)getData();
+		return data[idx(i, j, k)];
 	}
 	CUDA_FUNC_IN T sampleTrilinear(const Vec3f& vsP) const
 	{

@@ -3,6 +3,7 @@
 #include "Samples.h"
 #include <Engine/SpatialStructures/Grid/SpatialGridTraversal.h>
 #include <Math/MonteCarlo.h>
+#include <Kernel/TraceHelper.h>
 
 namespace CudaTracerLib {
 
@@ -81,6 +82,11 @@ bool HomogeneousVolumeDensity::sampleDistance(const Ray& ray, float minT, float 
 		mRec.transmittance = Spectrum(0.0f);
 
 	return success;
+}
+
+char* DenseVolGridBaseType::getData() const
+{
+    return &g_SceneData.m_sAnimData[m_dataIndex];
 }
 
 VolumeGrid::VolumeGrid()

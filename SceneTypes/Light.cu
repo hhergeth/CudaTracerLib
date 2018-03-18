@@ -3,6 +3,7 @@
 #include <Math/AlgebraHelper.h>
 #include <Math/Warp.h>
 #include <Math/MonteCarlo.h>
+#include <Kernel/TraceHelper.h>
 
 namespace CudaTracerLib {
 
@@ -418,9 +419,11 @@ Spectrum InfiniteLight::evalDirection(const DirectionSamplingRecord &dRec, const
 
 void InfiniteLight::internalSampleDirection(Vec2f sample, Vec3f &d, Spectrum &value, float &pdf) const
 {
+    float* cdfRows = (float*)&g_SceneData.m_sAnimData[m_cdfRowsIdx], *cdfCols = (float*)&g_SceneData.m_sAnimData[m_cdfColsIdx], *rowWeights = (float*)&g_SceneData.m_sAnimData[m_rowWeightsIdx];
+
 	float qpdf;
-	unsigned int row = MonteCarlo::sampleReuse(m_cdfRows.operator->(), (unsigned int)m_size.y, sample.y, qpdf),
-				 col = MonteCarlo::sampleReuse(m_cdfCols.operator->() + row * (unsigned int)(m_size.x + 1), (unsigned int)m_size.x, sample.x, qpdf);
+	unsigned int row = MonteCarlo::sampleReuse(cdfRows, (unsigned int)m_size.y, sample.y, qpdf),
+				 col = MonteCarlo::sampleReuse(cdfCols + row * (unsigned int)(m_size.x + 1), (unsigned int)m_size.x, sample.x, qpdf);
 
 	/* Using the remaining bits of precision to shift the sample by an offset
 		drawn from a tent function. This effectively creates a sampling strategy
@@ -441,8 +444,8 @@ void InfiniteLight::internalSampleDirection(Vec2f sample, Vec3f &d, Spectrum &va
 
 	/* Compute the final color and probability density of the sample */
 	value = (value1 + value2) * m_scale;
-	pdf = (value1.getLuminance() * m_rowWeights[(int)math::clamp((float)yPos, 0.0f, m_size.y - 1.0f)] +
-		value2.getLuminance() * m_rowWeights[(int)math::clamp((float)(yPos + 1), 0.0f, m_size.y - 1.0f)]) * m_normalization;
+	pdf = (value1.getLuminance() * rowWeights[(int)math::clamp((float)yPos, 0.0f, m_size.y - 1.0f)] +
+		value2.getLuminance() * rowWeights[(int)math::clamp((float)(yPos + 1), 0.0f, m_size.y - 1.0f)]) * m_normalization;
 
 	/* Turn into a proper direction on the sphere */
 	float sinPhi, cosPhi, sinTheta, cosTheta;
@@ -455,6 +458,8 @@ void InfiniteLight::internalSampleDirection(Vec2f sample, Vec3f &d, Spectrum &va
 
 float InfiniteLight::internalPdfDirection(const Vec3f &d) const
 {
+    float* cdfRows = (float*)&g_SceneData.m_sAnimData[m_cdfRowsIdx], *cdfCols = (float*)&g_SceneData.m_sAnimData[m_cdfColsIdx], *rowWeights = (float*)&g_SceneData.m_sAnimData[m_rowWeightsIdx];
+
 	Vec2f uv = Vec2f(
 		atan2f(d.x, -d.z) * INV_TWOPI,
 		math::safe_acos(d.y) * INV_PI
@@ -468,8 +473,8 @@ float InfiniteLight::internalPdfDirection(const Vec3f &d) const
 	Spectrum value2 = radianceMap.Sample(0, xPos, yPos + 1) * dx2 * dy1
 		+ radianceMap.Sample(0, xPos + 1, yPos + 1) * dx1 * dy1;
 	float sinTheta = math::safe_sqrt(1 - d.y*d.y);
-	return (value1.getLuminance() * m_rowWeights[math::clamp(yPos, 0, (int)m_size.y - 1)] +
-		value2.getLuminance() * m_rowWeights[math::clamp(yPos + 1, 0, (int)m_size.y - 1)])
+	return (value1.getLuminance() * rowWeights[math::clamp(yPos, 0, (int)m_size.y - 1)] +
+		value2.getLuminance() * rowWeights[math::clamp(yPos + 1, 0, (int)m_size.y - 1)])
 		* m_normalization / max(math::abs(sinTheta), EPSILON);
 }
 

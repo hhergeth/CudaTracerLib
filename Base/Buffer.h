@@ -49,8 +49,6 @@ public:
 	{
 		return num_in_iterator(*this, MINUS_ONE);
 	}
-
-	virtual BufferReference<H, D> translate(e_Variable<D> var) = 0;
 };
 template<typename T> using StreamRange = BufferRange<T, T>;
 
@@ -282,6 +280,14 @@ public:
 		__UpdateInvalidated_internal<false>(_f);
 	}
 
+    void memset(BufferReference<H, D> ref, char val)
+    {
+        ref.Invalidate();
+
+        Platform::SetMemory(ref.operator H *(), ref.getHostSize(), val);
+        cudaMemset(ref.getDevice(), (int)ref.getDeviceSize(), val);
+    }
+
 	template<typename CLB> void UpdateInvalidated(const CLB& f)
 	{
 		__UpdateInvalidated_internal<true>(f);
@@ -334,18 +340,6 @@ public:
 	}
 
 	virtual KernelBuffer<D> getKernelData(bool devicePointer = true) const = 0;
-
-	virtual BufferReference<H, D> translate(e_Variable<D> var)
-	{
-		size_t idx = var.device - device;
-		return BufferReference<H, D>(this, idx, 1);
-	}
-
-	template<typename T> BufferReference<H, D> translate(e_Variable<T> var)
-	{
-		size_t idx = (D*)var.device - device;
-		return BufferReference<H, D>(this, idx, (unsigned int)(sizeof(T) / sizeof(D)));
-	}
 };
 
 template<typename H, typename D> class BufferIterator
@@ -430,7 +424,7 @@ protected:
 	{
 		free(deviceMapped);
 		deviceMapped = (D*)::malloc(BufferBase<H, D>::m_uLength * sizeof(D));
-		memset(deviceMapped, 0, sizeof(D) * BufferBase<H, D>::m_uLength);
+		::memset(deviceMapped, 0, sizeof(D) * BufferBase<H, D>::m_uLength);
 	}
 	virtual D* getDeviceMappedData()
 	{
@@ -441,7 +435,7 @@ public:
 		: BufferBase<H, D>(a_NumElements, a_ElementSize, true)
 	{
 		deviceMapped = (D*)::malloc(a_NumElements * sizeof(D));
-		memset(deviceMapped, 0, sizeof(D) * a_NumElements);
+		::memset(deviceMapped, 0, sizeof(D) * a_NumElements);
 	}
 	virtual ~Buffer()
 	{

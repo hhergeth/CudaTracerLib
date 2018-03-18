@@ -159,43 +159,24 @@ struct CheckerboardTexture : public TextureBase//, public e_DerivedTypeHelper<3>
 struct ImageTexture : public TextureBase//, public e_DerivedTypeHelper<4>
 {
 	TYPE_FUNC(4)
-		ImageTexture() :tex(0, 0){}
+	ImageTexture() : tex_idx(0xffffffff){}
 	ImageTexture(const TextureMapping2D& m, const std::string& _file, const Spectrum& scale)
-		: mapping(m), file(_file), tex(0, 0), m_scale(scale)
+		: mapping(m), file(_file), tex_idx(0xffffffff), m_scale(scale)
 	{
 	}
-	CUDA_FUNC_IN Spectrum Evaluate(const Vec2f& _uv) const
-	{
-		Vec2f uv = mapping.TransformPoint(_uv);
-		return tex->Sample(uv) * m_scale;
-	}
-	CUDA_FUNC_IN Spectrum Evaluate(const DifferentialGeometry& its) const
-	{
-		if (its.hasUVPartials)
-		{
-			Vec2f uv = mapping.Map(its);
-			float dsdx, dsdy,
-				  dtdx, dtdy;
-			mapping.differentiate(its, dsdx, dsdy, dtdx, dtdy);
-			return tex->eval(uv, Vec2f(dsdx, dtdx), Vec2f(dsdy, dtdy)) * m_scale;
-		}
-		else return Evaluate(its.uv[mapping.setId]);
-	}
-	CUDA_FUNC_IN Spectrum Average() const
-	{
-		if (tex.operator*())
-			return tex->Sample(Vec2f(0), 1) * m_scale;
-		else return Spectrum(0.0f);
-	}
+    CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum Evaluate(const Vec2f& _uv) const;
+    CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum Evaluate(const DifferentialGeometry& its) const;
+    CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum Average() const;
+    CTL_EXPORT CUDA_DEVICE CUDA_HOST const KernelMIPMap& getTexture() const;
 	template<typename L> void LoadTextures(L& callback)
 	{
-		tex = callback(file, tex);
+        tex_idx = callback(file, tex_idx);
 	}
 	template<typename L> void UnloadTexture(L& callback)
 	{
-		callback(file, tex);
+		callback(file, tex_idx);
 	}
-	e_Variable<KernelMIPMap> tex;
+	unsigned int tex_idx;
 	TextureMapping2D mapping;
 	Spectrum m_scale;
 	FixedString<128> file;
