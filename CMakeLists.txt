@@ -61,13 +61,56 @@ add_files("SceneTypes/" GLOB_RECURSE)
 # create target
 set(LIB_NAME "CudaTracerLib")
 
-set(BUILD_LIBRARY true CACHE BOOL "Whether to build a library or an executable")
+# this is a modified version from FindCUDA because under windows the maximum argument length of CMD.exe
+# is only 8kb which is not enough for the CUDA link step
+# therefore this version (only used for windows) converts absolute obj file paths to relative ones
+# this is done to circumvent the issue since there is no solution
+macro(CUDA_ADD_EXECUTABLE_EXT cuda_target)
 
-if (BUILD_LIBRARY)
-    cuda_add_library(${LIB_NAME} ${INC_FILES} SHARED)
-else ()
+  CUDA_ADD_CUDA_INCLUDE_ONCE()
+
+  # Separate the sources from the options
+  CUDA_GET_SOURCES_AND_OPTIONS(_sources _cmake_options _options ${ARGN})
+  # Create custom commands and targets for each file.
+  CUDA_WRAP_SRCS( ${cuda_target} OBJ _generated_files ${_sources} OPTIONS ${_options} )
+    
+  # Remove all absolute paths and make the object paths relative to the binary directory
+  string(REPLACE "${CMAKE_BINARY_DIR}/" "" cnv_cmp_targets "${${cuda_target}_SEPARABLE_COMPILATION_OBJECTS}")
+    
+  # Compute the file name of the intermedate link file used for separable
+  # compilation.
+  CUDA_COMPUTE_SEPARABLE_COMPILATION_OBJECT_FILE_NAME(link_file ${cuda_target} "${cnv_cmp_targets}")
+
+  # Add the library.
+  add_executable(${cuda_target} ${_cmake_options}
+    ${_generated_files}
+    ${_sources}
+    ${link_file}
+    )
+
+  # Add a link phase for the separable compilation if it has been enabled.  If
+  # it has been enabled then the ${cuda_target}_SEPARABLE_COMPILATION_OBJECTS
+  # variable will have been defined.
+  CUDA_LINK_SEPARABLE_COMPILATION_OBJECTS("${link_file}" ${cuda_target} "${_options}" "${cnv_cmp_targets}")
+
+  target_link_libraries(${cuda_target} ${CUDA_LINK_LIBRARIES_KEYWORD}
+    ${CUDA_LIBRARIES}
+    )
+
+  # We need to set the linker language based on what the expected generated file
+  # would be. CUDA_C_OR_CXX is computed based on CUDA_HOST_COMPILATION_CPP.
+  set_target_properties(${cuda_target}
+    PROPERTIES
+    LINKER_LANGUAGE ${CUDA_C_OR_CXX}
+    )
+
+endmacro()
+
+if(WIN32)
+    CUDA_ADD_EXECUTABLE_EXT(${LIB_NAME} ${INC_FILES})
+else()
     CUDA_ADD_EXECUTABLE(${LIB_NAME} ${INC_FILES})
-endif ()
+endif()
 
 # add filters for visual studio projects
 foreach(_source IN ITEMS ${INC_FILES})
