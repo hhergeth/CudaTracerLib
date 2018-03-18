@@ -39,6 +39,7 @@ inline std::vector<std::string> split_string(const std::string& s, const std::ve
 		std::string token = s.substr(start, end - start);
 		if (!removeEmptyEntries || !token.empty())
 		{
+            trim(token);
 			tokens.push_back(token);
 		}
 	}
@@ -58,7 +59,7 @@ inline std::vector<std::string> split_string(const std::string& s, const std::ve
 
 inline std::vector<std::string> split_string_array(const std::string& data)
 {
-	return split_string(data, {", ", " "}, true);
+	return split_string(data, {",", " "}, true);
 }
 
 class XMLNode

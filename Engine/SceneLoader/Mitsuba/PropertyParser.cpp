@@ -87,7 +87,7 @@ Spectrum parseRGB(const XMLNode& node, ParserState& S, bool srgb)
 		return *S.ref_storage.get<Spectrum>(node);
 
 	auto intent = node.has_attribute("intent") ? S.def_storage.as_string(node, "intent") : "reflectance";
-	auto intent_e = intent == "reflectence" ? Spectrum::EConversionIntent::EReflectance : Spectrum::EConversionIntent::EIlluminant;
+	auto intent_e = intent == std::string("reflectance") ? Spectrum::EConversionIntent::EReflectance : Spectrum::EConversionIntent::EIlluminant;
 	auto s = S.def_storage.as_string(node, "value");
 
 	Spectrum C;
@@ -99,6 +99,8 @@ Spectrum parseRGB(const XMLNode& node, ParserState& S, bool srgb)
 	else
 	{
 		std::vector<std::string> strs = split_string_array(s);
+        if (strs.size() == 1)
+            strs = { strs[0] , strs[0] , strs[0] };
 		if (srgb)
 			C.fromSRGB(std::stof(strs[0]), std::stof(strs[1]), std::stof(strs[2]));
 		else C.fromLinearRGB(std::stof(strs[0]), std::stof(strs[1]), std::stof(strs[2]), intent_e);

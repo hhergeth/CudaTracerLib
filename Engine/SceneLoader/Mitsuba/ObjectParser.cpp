@@ -111,7 +111,7 @@ ShapeParser::ShapeParseResult ShapeParser::serialized(const XMLNode& node, Parse
 		ser_str.seekg(-4, ser_str.end);
 		uint32_t n_meshes;
 		ser_str.read((char*)&n_meshes, sizeof(n_meshes));
-		ser_str.seekg((sizeof(uint32_t) + (version_maj == 4 ? sizeof(uint64_t) : sizeof(uint32_t)) * n_meshes), ser_str.end);
+		ser_str.seekg(-((int)sizeof(uint32_t) + (int)(version_maj == 4 ? sizeof(uint64_t) : sizeof(uint32_t)) * (int)n_meshes), ser_str.end);
 		std::vector<uint64_t> mesh_offsets(n_meshes);
 		if (version_maj == 4)
 			ser_str.read((char*)mesh_offsets.data(), n_meshes * sizeof(uint64_t));
