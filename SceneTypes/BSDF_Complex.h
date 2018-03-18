@@ -23,14 +23,14 @@ struct coating : public BSDF//, public e_DerivedTypeHelper<13>
 	coating(const BSDFFirst& nested, float eta, float thickness, const Texture& sig)
 		: BSDF(EBSDFType(EDeltaReflection | nested.getType())), m_nested(nested), m_eta(eta), m_invEta(1.0f / eta), m_thickness(thickness), m_sigmaA(sig), m_specularReflectance(CreateTexture(Spectrum(1.0f)))
 	{
-		BSDF::initTextureOffsets2(nested.As()->getTextureList(), m_sigmaA, m_specularReflectance);
+		BSDF::initTextureOffsets2(m_nested.As()->getTextureList(), m_sigmaA, m_specularReflectance);
 		float avgAbsorption = (m_sigmaA.Average()*(-2*m_thickness)).exp().avg();
 		m_specularSamplingWeight = 1.0f / (avgAbsorption + 1.0f);
 	}
 	coating(const BSDFFirst& nested, float eta, float thickness, const Texture& sig, const Texture& specular)
 		: BSDF(EBSDFType(EDeltaReflection | nested.getType())), m_nested(nested), m_eta(eta), m_invEta(1.0f / eta), m_thickness(thickness), m_sigmaA(sig), m_specularReflectance(specular)
 	{
-		BSDF::initTextureOffsets2(nested.As()->getTextureList(), m_sigmaA, m_specularReflectance);
+		BSDF::initTextureOffsets2(m_nested.As()->getTextureList(), m_sigmaA, m_specularReflectance);
 		float avgAbsorption = (m_sigmaA.Average()*(-2*m_thickness)).exp().avg();
 		m_specularSamplingWeight = 1.0f / (avgAbsorption + 1.0f);
 	}
@@ -161,9 +161,9 @@ public:
 	blend(const BSDFFirst& nested1, const BSDFFirst& nested2, const Texture& _weight)
 		: BSDF(EBSDFType(nested1.getType() | nested2.getType())), weight(_weight)
 	{
-		initTextureOffsets2(join(nested1, nested2), weight);
 		bsdfs[0] = nested1;
 		bsdfs[1] = nested2;
+        Update();
 	}
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum sample(BSDFSamplingRecord &bRec, float &pdf, const Vec2f &sample) const;
 	CTL_EXPORT CUDA_DEVICE CUDA_HOST Spectrum f(const BSDFSamplingRecord &bRec, EMeasure measure) const;
