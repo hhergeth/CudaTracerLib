@@ -1,0 +1,100 @@
+\documentclass[footinclude=false,11pt,DIV11,landscape]{scrartcl}
+
+\usepackage{tikz}
+\usepackage[english]{babel}
+\usepackage{tikz-uml}
+\usepackage[top=0.2in,bottom=0.1in,left=0.2in,right=0.2in]{geometry}
+
+
+\begin{document}
+
+\newcommand{\comment}[1]{(\textit{#1})}
+
+\section{Device Side Class Overview}
+\vspace{1.3cm}
+\resizebox{\textwidth}{!}{
+\begin{tikzpicture} 
+
+\umlclass[x=17,y=15]{TraceResult}
+{
+	dist : float \\
+	node : Node* \\
+	triangle : Triangle* \\
+}
+{
+	getMat() : Material \\
+	fillDG() : DifferentialGeometry \\
+	getBsdfSample(ray) : BSDFSamplingRecord \\
+	Le(p,sys,$\omega$) : Spectrum
+}
+
+\umlclass[x=15,y=10]{BSDFSamplingRecord}
+{
+	dg : DifferentialGeometry \\
+	$\omega_i$ : Vec3f \comment{local coords} \\
+	$\omega_o$ : Vec3f \comment{local coords} \\
+}
+{
+	getOutgoing() : Vec3f \\
+}
+
+\umlclass[x=15,y=5]{DifferentialGeometry}
+{
+	P : Vec3f \\
+	sys : Frame \\
+	n : Vec3f \\
+}
+{
+	toLocal(v) : Vec3f \comment{world to local} \\
+	toWorld(v) : Vec3f \comment{local to world} \\
+	computePartials(r,rX,rY) \\
+}
+
+\umlclass[x=23,y=5,type=interface]{BSDF}{}
+{
+	f($\omega_i$,$\omega_o$) : Spectrum \\
+	sample($\omega_i$,sample,pdf) : Spectrum \\
+	pdf($\omega_i$,$\omega_o$) : float
+}
+
+\umlclass[x=33,y=14.5]{KernelDynamicScene}{}
+{
+	Occluded(r,min,max) \\
+	EvalEnvironment(r,rX,rY) \\
+	evalTransmittance(p1,p1) \\ \\
+	
+	sampleEmitterDirect()   --   sampleSensorDirect() \\
+	pdfEmitterDirect()      --   pdfEmitterDirect()\\
+	sampleEmitterPosition() --   sampleSensorPosition() \\
+	pdfEmitterPosition()    --   pdfSensorPosition() \\
+	sampleEmitterRay()      --   sampleSensorRay() \\
+}
+
+\umlclass[x=33,y=8]{KernelAggregateVolume}{}
+{
+	IntersectP(r,min,max) : $t_0, t_1$ \\
+	sigma\_a(p,$\omega$) : Spectrum \\
+	sigma\_s(p,$\omega$) : Spectrum \\
+	Lve(p,$\omega$) : Spectrum \\
+	tau(ray,min,max) : Spectrum \\
+	Sample(p,$\omega_o$) : wi \\
+	sampleDistance(ray,min,max) : MediumRecord
+}
+
+%umlsimpleclass before will cause the other umlclasses to be displayed incorrectly
+
+\umlsimpleclass[x=33,y=4]{Volume}{}{}
+
+\umlsimpleclass[x=23,y=10]{Material}{}{}
+
+\umlcompo[mult2=1]{Material}{BSDF}
+\umlassoc{TraceResult}{Material}
+\umlassoc{TraceResult}{BSDFSamplingRecord}
+\umlaggreg[mult2=1]{BSDFSamplingRecord}{DifferentialGeometry}
+\umlcompo[mult2=1]{KernelDynamicScene}{KernelAggregateVolume}
+\umlaggreg[mult2=0..*]{KernelAggregateVolume}{Volume}
+\umlCNaggreg[mult=0..1,pos=1.9]{Material}{28,6}{Volume}
+
+\end{tikzpicture}}
+
+\end{document}

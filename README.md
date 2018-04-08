@@ -2,7 +2,7 @@
 <p align="center">
 <a href='https://github.com/hhergeth/CudaTracerLib/wiki/Example-Renderings' style='font-size:2.2em'>Examples</span></a> <br>
 <a href="https://github.com/hhergeth/CudaTracerLib/wiki/Example-Renderings">
-<img src="http://hhergeth.markab.uberspace.de/Git-Wiki-Files/thumbnails/loadSanMiguel_20170812_023949_WavefrontPath.jpg" style="width:880px;">
+<img src="docs/images/loadSanMiguel_20170812_023949_WavefrontPath.jpg?raw=true" style="width:880px;">
 </a>
 </p>
 
@@ -10,7 +10,7 @@
 
 ### Introduction
 This library, for simplicity called CudaTracerLib, is a CUDA based ray tracer library implementing standard rendering algorithms like Path Tracing, Progressive Photon Mapping, Bidirectional Path Tracing and many more.
-For ease of usability the library can be compiled as an executable with a minimalistic main loop which uses the Mitsuba file loader to render most of the scenes found [here](https://benedikt-bitterli.me/resources/).
+For ease of usability the library is compiled as an executable with a minimalistic main loop which uses the Mitsuba file loader to render most of the scenes found [here](https://benedikt-bitterli.me/resources/).
 
 
 ### Building from Source
